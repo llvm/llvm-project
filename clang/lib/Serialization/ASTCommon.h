@@ -72,7 +72,7 @@ TypeID MakeTypeID(ASTContext &Context, QualType T, IdxForTypeTy IdxForType) {
 
 unsigned ComputeHash(Selector Sel);
 
-/// Retrieve the "definitive" declaration that provides all of the
+/// \brief Retrieve the "definitive" declaration that provides all of the
 /// visible entries for the given declaration context, if there is one.
 ///
 /// The "definitive" declaration is the only place where we need to look to
@@ -84,14 +84,14 @@ unsigned ComputeHash(Selector Sel);
 /// multiple definitions.
 const DeclContext *getDefinitiveDeclContext(const DeclContext *DC);
 
-/// Determine whether the given declaration kind is redeclarable.
+/// \brief Determine whether the given declaration kind is redeclarable.
 bool isRedeclarableDeclKind(unsigned Kind);
 
-/// Determine whether the given declaration needs an anonymous
+/// \brief Determine whether the given declaration needs an anonymous
 /// declaration number.
 bool needsAnonymousDeclarationNumber(const NamedDecl *D);
 
-/// Visit each declaration within \c DC that needs an anonymous
+/// \brief Visit each declaration within \c DC that needs an anonymous
 /// declaration number and call \p Visit with the declaration and its number.
 template<typename Fn> void numberAnonymousDeclsWithin(const DeclContext *DC,
                                                       Fn Visit) {

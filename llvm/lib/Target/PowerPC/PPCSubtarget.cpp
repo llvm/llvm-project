@@ -106,7 +106,6 @@ void PPCSubtarget::initializeEnvironment() {
   HasFloat128 = false;
   IsISA3_0 = false;
   UseLongCalls = false;
-  SecurePlt = false;
 
   HasPOPCNTD = POPCNTD_Unavailable;
 }

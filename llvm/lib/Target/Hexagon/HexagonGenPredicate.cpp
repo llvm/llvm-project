@@ -222,12 +222,13 @@ void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
 }
 
 void HexagonGenPredicate::processPredicateGPR(const Register &Reg) {
-  LLVM_DEBUG(dbgs() << __func__ << ": " << printReg(Reg.R, TRI, Reg.S) << "\n");
+  DEBUG(dbgs() << __func__ << ": "
+               << printReg(Reg.R, TRI, Reg.S) << "\n");
   using use_iterator = MachineRegisterInfo::use_iterator;
 
   use_iterator I = MRI->use_begin(Reg.R), E = MRI->use_end();
   if (I == E) {
-    LLVM_DEBUG(dbgs() << "Dead reg: " << printReg(Reg.R, TRI, Reg.S) << '\n');
+    DEBUG(dbgs() << "Dead reg: " << printReg(Reg.R, TRI, Reg.S) << '\n');
     MachineInstr *DefI = MRI->getVRegDef(Reg.R);
     DefI->eraseFromParent();
     return;
@@ -249,7 +250,7 @@ Register HexagonGenPredicate::getPredRegFor(const Register &Reg) {
   if (F != G2P.end())
     return F->second;
 
-  LLVM_DEBUG(dbgs() << __func__ << ": " << PrintRegister(Reg, *TRI));
+  DEBUG(dbgs() << __func__ << ": " << PrintRegister(Reg, *TRI));
   MachineInstr *DefI = MRI->getVRegDef(Reg.R);
   assert(DefI);
   unsigned Opc = DefI->getOpcode();
@@ -257,7 +258,7 @@ Register HexagonGenPredicate::getPredRegFor(const Register &Reg) {
     assert(DefI->getOperand(0).isDef() && DefI->getOperand(1).isUse());
     Register PR = DefI->getOperand(1);
     G2P.insert(std::make_pair(Reg, PR));
-    LLVM_DEBUG(dbgs() << " -> " << PrintRegister(PR, *TRI) << '\n');
+    DEBUG(dbgs() << " -> " << PrintRegister(PR, *TRI) << '\n');
     return PR;
   }
 
@@ -273,8 +274,7 @@ Register HexagonGenPredicate::getPredRegFor(const Register &Reg) {
     BuildMI(B, std::next(DefIt), DL, TII->get(TargetOpcode::COPY), NewPR)
       .addReg(Reg.R, 0, Reg.S);
     G2P.insert(std::make_pair(Reg, Register(NewPR)));
-    LLVM_DEBUG(dbgs() << " -> !" << PrintRegister(Register(NewPR), *TRI)
-                      << '\n');
+    DEBUG(dbgs() << " -> !" << PrintRegister(Register(NewPR), *TRI) << '\n');
     return Register(NewPR);
   }
 
@@ -364,7 +364,7 @@ bool HexagonGenPredicate::isScalarPred(Register PredReg) {
 }
 
 bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
-  LLVM_DEBUG(dbgs() << __func__ << ": " << MI << " " << *MI);
+  DEBUG(dbgs() << __func__ << ": " << MI << " " << *MI);
 
   unsigned Opc = MI->getOpcode();
   assert(isConvertibleToPredForm(MI));
@@ -426,7 +426,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
     Register Pred = getPredRegFor(GPR);
     MIB.addReg(Pred.R, 0, Pred.S);
   }
-  LLVM_DEBUG(dbgs() << "generated: " << *MIB);
+  DEBUG(dbgs() << "generated: " << *MIB);
 
   // Generate a copy-out: NewGPR = NewPR, and replace all uses of OutR
   // with NewGPR.
@@ -449,7 +449,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
 }
 
 bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << __func__ << "\n");
+  DEBUG(dbgs() << __func__ << "\n");
   const TargetRegisterClass *PredRC = &Hexagon::PredRegsRegClass;
   bool Changed = false;
   VectOfInst Erase;

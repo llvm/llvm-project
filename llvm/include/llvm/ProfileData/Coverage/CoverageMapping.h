@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
@@ -507,7 +506,7 @@ public:
 /// This is the main interface to get coverage information, using a profile to
 /// fill out execution counts.
 class CoverageMapping {
-  DenseMap<size_t, DenseSet<size_t>> RecordProvenance;
+  StringSet<> FunctionNames;
   std::vector<FunctionRecord> Functions;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
   std::vector<std::pair<std::string, uint64_t>> FuncCounterMismatches;

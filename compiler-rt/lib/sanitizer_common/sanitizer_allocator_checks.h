@@ -44,18 +44,16 @@ INLINE void *SetErrnoOnNull(void *ptr) {
 // of alignment.
 INLINE bool CheckAlignedAllocAlignmentAndSize(uptr alignment, uptr size) {
 #if SANITIZER_POSIX
-  return alignment != 0 && IsPowerOfTwo(alignment) &&
-         (size & (alignment - 1)) == 0;
+  return IsPowerOfTwo(alignment) && (size & (alignment - 1)) == 0;
 #else
-  return alignment != 0 && size % alignment == 0;
+  return size % alignment == 0;
 #endif
 }
 
 // Checks posix_memalign() parameters, verifies that alignment is a power of two
 // and a multiple of sizeof(void *).
 INLINE bool CheckPosixMemalignAlignment(uptr alignment) {
-  return alignment != 0 && IsPowerOfTwo(alignment) &&
-         (alignment % sizeof(void *)) == 0; // NOLINT
+  return IsPowerOfTwo(alignment) && (alignment % sizeof(void *)) == 0; // NOLINT
 }
 
 // Returns true if calloc(size, n) call overflows on size*n calculation.

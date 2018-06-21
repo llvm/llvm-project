@@ -380,8 +380,7 @@ void StackAddressDescription::Print() const {
   StackTrace alloca_stack(&frame_pc, 1);
   alloca_stack.Print();
 
-  InternalMmapVector<StackVarDescr> vars;
-  vars.reserve(16);
+  InternalMmapVector<StackVarDescr> vars(16);
   if (!ParseFrameDescription(frame_descr, &vars)) {
     Printf(
         "AddressSanitizer can't parse the stack frame "
@@ -403,7 +402,7 @@ void StackAddressDescription::Print() const {
   }
   Printf(
       "HINT: this may be a false positive if your program uses "
-      "some custom stack unwind mechanism, swapcontext or vfork\n");
+      "some custom stack unwind mechanism or swapcontext\n");
   if (SANITIZER_WINDOWS)
     Printf("      (longjmp, SEH and C++ exceptions *are* supported)\n");
   else

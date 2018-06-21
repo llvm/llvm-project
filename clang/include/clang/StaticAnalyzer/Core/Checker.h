@@ -548,7 +548,7 @@ public:
   }
 };
 
-/// We dereferenced a location that may be null.
+/// \brief We dereferenced a location that may be null.
 struct ImplicitNullDerefEvent {
   SVal Location;
   bool IsLoad;
@@ -560,7 +560,7 @@ struct ImplicitNullDerefEvent {
   bool IsDirectDereference;
 };
 
-/// A helper class which wraps a boolean value set to false by default.
+/// \brief A helper class which wraps a boolean value set to false by default.
 ///
 /// This class should behave exactly like 'bool' except that it doesn't need to
 /// be explicitly initialized.

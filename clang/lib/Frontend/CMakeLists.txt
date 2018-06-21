@@ -29,7 +29,6 @@ add_clang_library(clangFrontend
   FrontendAction.cpp
   FrontendActions.cpp
   FrontendOptions.cpp
-  FrontendTiming.cpp
   HeaderIncludeGen.cpp
   InitHeaderSearch.cpp
   InitPreprocessor.cpp
@@ -54,6 +53,7 @@ add_clang_library(clangFrontend
   ${optional_deps}
 
   LINK_LIBS
+  clangAPINotes
   clangAST
   clangBasic
   clangDriver

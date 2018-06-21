@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ffreestanding -target-feature +adx -emit-llvm -o - %s | FileCheck %s
 
-#include <immintrin.h>
+#include <x86intrin.h>
 
 unsigned char test_addcarryx_u32(unsigned char __cf, unsigned int __x,
                                  unsigned int __y, unsigned int *__p) {

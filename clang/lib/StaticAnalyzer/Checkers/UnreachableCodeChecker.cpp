@@ -132,8 +132,7 @@ void UnreachableCodeChecker::checkEndAnalysis(ExplodedGraph &G,
            ci != ce; ++ci) {
         if (Optional<CFGStmt> S = (*ci).getAs<CFGStmt>())
           if (const CallExpr *CE = dyn_cast<CallExpr>(S->getStmt())) {
-            if (CE->getBuiltinCallee() == Builtin::BI__builtin_unreachable ||
-                CE->isBuiltinAssumeFalse(Eng.getContext())) {
+            if (CE->getBuiltinCallee() == Builtin::BI__builtin_unreachable) {
               foundUnreachable = true;
               break;
             }

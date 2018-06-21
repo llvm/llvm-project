@@ -24,16 +24,16 @@
 ; with the Orders insertion point vector.
 
 ; CHECK-LABEL: f: # @f
-; CHECK: .LBB0_2:                                # %while.body
+; CHECK: .LBB0_1:                                # %while.body
 ; CHECK:         movl    $32, %ecx
 ; CHECK:         testl   {{.*}}
-; CHECK:         jne     .LBB0_4
-; CHECK: # %bb.3:                                 # %if.then
+; CHECK:         jne     .LBB0_3
+; CHECK: # %bb.2:                                 # %if.then
 ; CHECK:         callq   if_then
 ; CHECK:         movl    %eax, %ecx
-; CHECK: .LBB0_4:                                # %if.end
+; CHECK: .LBB0_3:                                # %if.end
 ;        Check that this DEBUG_VALUE comes before the left shift.
-; CHECK:         #DEBUG_VALUE: bit_offset <- $ecx
+; CHECK:         #DEBUG_VALUE: bit_offset <- %ecx
 ; CHECK:         .cv_loc 0 1 8 28                # t.c:8:28
 ; CHECK:         movl    $1, %[[reg:[^ ]*]]
 ; CHECK:         shll    %cl, %[[reg]]
@@ -102,7 +102,7 @@ attributes #1 = { nounwind readnone speculatable }
 !3 = !{!4}
 !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = distinct !DIGlobalVariable(name: "pages", scope: !6, file: !1, line: 18, type: !10, isLocal: true, isDefinition: true)
-!6 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 17, type: !7, isLocal: false, isDefinition: true, scopeLine: 17, isOptimized: true, unit: !0, retainedNodes: !2)
+!6 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 17, type: !7, isLocal: false, isDefinition: true, scopeLine: 17, isOptimized: true, unit: !0, variables: !2)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -115,7 +115,7 @@ attributes #1 = { nounwind readnone speculatable }
 !16 = !{i32 1, !"wchar_size", i32 2}
 !17 = !{i32 7, !"PIC Level", i32 2}
 !18 = !{!"clang version 6.0.0 "}
-!31 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !32, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !35)
+!31 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 4, type: !32, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !35)
 !32 = !DISubroutineType(types: !33)
 !33 = !{null, !11, !34}
 !34 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !11, size: 64)

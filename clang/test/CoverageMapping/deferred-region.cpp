@@ -7,12 +7,11 @@
 void foo(int x) {
   if (x == 0) {
     return;
-  } // CHECK-NOT: Gap,File 0, [[@LINE]]:4
-    //< Don't complete the last deferred region in a decl, even though it may
-    //< leave some whitespace marked with the same counter as the final return.
+  } // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+2]]:2 = (#0 - #1)
+
 }
 
-// CHECK-LABEL: _Z4foooi:
+// CHECK-NEXT: _Z4foooi:
 void fooo(int x) {
   if (x == 0) {
     return;
@@ -20,7 +19,7 @@ void fooo(int x) {
 
   if (x == 1) {
     return;
-  } // CHECK-NOT: Gap,File 0, [[@LINE]]:4
+  } // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+2]]:2 = ((#0 - #1) - #2)
 
 }
 
@@ -109,7 +108,7 @@ void weird_if() {
   }
 
   if (false)
-    return; // CHECK-NOT: Gap,File 0, [[@LINE]]:11
+    return; // CHECK: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:2
 }
 
 // CHECK-LABEL: _Z8for_loopv:
@@ -168,18 +167,7 @@ void gotos() {
   return; // CHECK: [[@LINE]]:3 -> [[@LINE+4]]:2 = (#0 - #1)
 
 out:
-	return; // CHECK-NOT: Gap,File 0, [[@LINE]]:8
-}
-
-// CHECK-LABEL: _Z8switchesv:
-void switches() {
-  int x;
-  switch (x) {
-    case 0:
-      return;
-    default:
-      return; // CHECK-NOT: Gap,File 0, [[@LINE]]
-  }
+	return; // CHECK: Gap,File 0, [[@LINE]]:8 -> [[@LINE+1]]:2 = 0
 }
 
 #include "deferred-region-helper.h"

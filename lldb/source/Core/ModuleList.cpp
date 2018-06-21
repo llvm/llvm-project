@@ -26,7 +26,7 @@
 #include "lldb/Utility/UUID.h"    // for UUID, operator!=, operator==
 #include "lldb/lldb-defines.h"    // for LLDB_INVALID_INDEX32
 
-#if defined(_WIN32)
+#if defined(LLVM_ON_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 
@@ -63,6 +63,8 @@ class TypeList;
 
 using namespace lldb;
 using namespace lldb_private;
+
+static bool KeepLookingInDylinker(SymbolContextList &sc_list, size_t start_idx);
 
 namespace {
 
@@ -108,7 +110,6 @@ bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
       nullptr, ePropertyClangModulesCachePath, path);
 }
 
-
 ModuleList::ModuleList()
     : m_modules(), m_modules_mutex(), m_notifier(nullptr) {}
 
@@ -132,8 +133,8 @@ const ModuleList &ModuleList::operator=(const ModuleList &rhs) {
     //  in thread A: | in thread B:
     //    x = y;     |   y = x;
     //
-    // This establishes correct(same) lock taking order and thus avoids
-    // priority inversion.
+    // This establishes correct(same) lock taking order and thus
+    // avoids priority inversion.
     if (uintptr_t(this) > uintptr_t(&rhs)) {
       std::lock_guard<std::recursive_mutex> lhs_guard(m_modules_mutex);
       std::lock_guard<std::recursive_mutex> rhs_guard(rhs.m_modules_mutex);
@@ -406,16 +407,27 @@ size_t ModuleList::FindFunctionSymbols(const ConstString &name,
 size_t ModuleList::FindFunctions(const RegularExpression &name,
                                  bool include_symbols, bool include_inlines,
                                  bool append, SymbolContextList &sc_list) {
-  const size_t old_size = sc_list.GetSize();
+  const size_t initial_size = sc_list.GetSize();
 
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
+  collection dylinker_modules;
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindFunctions(name, include_symbols, include_inlines, append,
-                          sc_list);
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindFunctions(name, include_symbols, include_inlines, append,
+                            sc_list);
+    else
+      dylinker_modules.push_back(*pos);
   }
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
 
-  return sc_list.GetSize() - old_size;
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; pos++)
+      (*pos)->FindFunctions(name, include_symbols, include_inlines, append,
+                            sc_list);
+  }
+  return sc_list.GetSize() - initial_size;
 }
 
 size_t ModuleList::FindCompileUnits(const FileSpec &path, bool append,
@@ -432,28 +444,59 @@ size_t ModuleList::FindCompileUnits(const FileSpec &path, bool append,
   return sc_list.GetSize();
 }
 
-size_t ModuleList::FindGlobalVariables(const ConstString &name,
+size_t ModuleList::FindGlobalVariables(const ConstString &name, bool append,
                                        size_t max_matches,
                                        VariableList &variable_list) const {
   size_t initial_size = variable_list.GetSize();
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindGlobalVariables(name, nullptr, max_matches, variable_list);
+    (*pos)->FindGlobalVariables(name, nullptr, append, max_matches,
+                                variable_list);
   }
   return variable_list.GetSize() - initial_size;
 }
 
 size_t ModuleList::FindGlobalVariables(const RegularExpression &regex,
-                                       size_t max_matches,
+                                       bool append, size_t max_matches,
                                        VariableList &variable_list) const {
   size_t initial_size = variable_list.GetSize();
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
-    (*pos)->FindGlobalVariables(regex, max_matches, variable_list);
+    (*pos)->FindGlobalVariables(regex, append, max_matches, variable_list);
   }
   return variable_list.GetSize() - initial_size;
+}
+
+// We don't want to find symbols in the dylinker file if we've found
+// a viable candidate anywhere else.  This function looks at the symbols
+// added to the sc_list since start_idx, and if there's one in there that
+// looks real, returns false, in which case we should terminate the search.
+// If it returns true, we should go on to look in the dylinker.
+
+static bool KeepLookingInDylinker(SymbolContextList &sc_list,
+                                  size_t start_idx) {
+  bool keep_looking = true;
+  if (sc_list.GetSize() == start_idx) {
+    return true;
+  }
+
+  SymbolContext sc;
+  size_t num_symbols = sc_list.GetSize();
+  for (size_t idx = start_idx; idx < num_symbols; idx++) {
+    sc_list.GetContextAtIndex(idx, sc);
+    if (sc.symbol && sc.symbol->GetType() != lldb::eSymbolTypeUndefined) {
+      keep_looking = false;
+      break;
+    }
+    // If we have a function it's not going to be an undefined symbol...
+    if (sc.function) {
+      keep_looking = false;
+      break;
+    }
+  }
+  return keep_looking;
 }
 
 size_t ModuleList::FindSymbolsWithNameAndType(const ConstString &name,
@@ -466,8 +509,24 @@ size_t ModuleList::FindSymbolsWithNameAndType(const ConstString &name,
   size_t initial_size = sc_list.GetSize();
 
   collection::const_iterator pos, end = m_modules.end();
-  for (pos = m_modules.begin(); pos != end; ++pos)
-    (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+  collection dylinker_modules;
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+    else
+      dylinker_modules.push_back(*pos);
+  }
+
+  // Lets see if we found anything but undefined symbols.  If so, then we'll
+  // also look in the dylinker.
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; ++pos)
+      (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+  }
+
   return sc_list.GetSize() - initial_size;
 }
 
@@ -480,8 +539,21 @@ size_t ModuleList::FindSymbolsMatchingRegExAndType(
   size_t initial_size = sc_list.GetSize();
 
   collection::const_iterator pos, end = m_modules.end();
-  for (pos = m_modules.begin(); pos != end; ++pos)
-    (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+  collection dylinker_modules;
+  for (pos = m_modules.begin(); pos != end; ++pos) {
+    if (!(*pos)->GetIsDynamicLinkEditor())
+      (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+    else
+      dylinker_modules.push_back(*pos);
+  }
+
+  bool keep_looking = KeepLookingInDylinker(sc_list, initial_size);
+
+  if (keep_looking) {
+    end = dylinker_modules.end();
+    for (pos = dylinker_modules.begin(); pos != end; ++pos)
+      (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
+  }
   return sc_list.GetSize() - initial_size;
 }
 
@@ -544,8 +616,8 @@ ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
   size_t total_matches = 0;
   collection::const_iterator pos, end = m_modules.end();
   if (sc.module_sp) {
-    // The symbol context "sc" contains a module so we want to search that one
-    // first if it is in our list...
+    // The symbol context "sc" contains a module so we want to search that
+    // one first if it is in our list...
     for (pos = m_modules.begin(); pos != end; ++pos) {
       if (sc.module_sp.get() == (*pos).get()) {
         total_matches +=
@@ -562,8 +634,8 @@ ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
     SymbolContext world_sc;
     for (pos = m_modules.begin(); pos != end; ++pos) {
       // Search the module if the module is not equal to the one in the symbol
-      // context "sc". If "sc" contains a empty module shared pointer, then the
-      // comparison will always be true (valid_module_ptr != nullptr).
+      // context "sc". If "sc" contains a empty module shared pointer, then
+      // the comparison will always be true (valid_module_ptr != nullptr).
       if (sc.module_sp.get() != (*pos).get())
         total_matches +=
             (*pos)->FindTypes(world_sc, name, name_is_fully_qualified,
@@ -790,8 +862,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
   const ArchSpec &arch = module_spec.GetArchitecture();
 
   // Make sure no one else can try and get or create a module while this
-  // function is actively working on it by doing an extra lock on the global
-  // mutex list.
+  // function is actively working on it by doing an extra lock on the
+  // global mutex list.
   if (!always_create) {
     ModuleList matching_module_list;
     const size_t num_matching_modules =
@@ -814,8 +886,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
           shared_module_list.Remove(module_sp);
           module_sp.reset();
         } else {
-          // The module matches and the module was not modified from when it
-          // was last loaded.
+          // The module matches and the module was not modified from
+          // when it was last loaded.
           return error;
         }
       }
@@ -826,12 +898,12 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
     return error;
 
   module_sp.reset(new Module(module_spec));
-  // Make sure there are a module and an object file since we can specify a
-  // valid file path with an architecture that might not be in that file. By
-  // getting the object file we can guarantee that the architecture matches
+  // Make sure there are a module and an object file since we can specify
+  // a valid file path with an architecture that might not be in that file.
+  // By getting the object file we can guarantee that the architecture matches
   if (module_sp->GetObjectFile()) {
-    // If we get in here we got the correct arch, now we just need to verify
-    // the UUID if one was given
+    // If we get in here we got the correct arch, now we just need
+    // to verify the UUID if one was given
     if (uuid_ptr && *uuid_ptr != module_sp->GetUUID()) {
       module_sp.reset();
     } else {
@@ -870,8 +942,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
       resolved_module_spec.GetFileSpec() = search_path_spec;
       module_sp.reset(new Module(resolved_module_spec));
       if (module_sp->GetObjectFile()) {
-        // If we get in here we got the correct arch, now we just need to
-        // verify the UUID if one was given
+        // If we get in here we got the correct arch, now we just need
+        // to verify the UUID if one was given
         if (uuid_ptr && *uuid_ptr != module_sp->GetUUID()) {
           module_sp.reset();
         } else {
@@ -896,8 +968,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
   // we now have to use more extreme measures to try and find the appropriate
   // module.
 
-  // Fixup the incoming path in case the path points to a valid file, yet the
-  // arch or UUID (if one was passed in) don't match.
+  // Fixup the incoming path in case the path points to a valid file, yet
+  // the arch or UUID (if one was passed in) don't match.
   ModuleSpec located_binary_modulespec =
       Symbols::LocateExecutableObjectFile(module_spec);
 
@@ -934,8 +1006,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
     }
 
     // Make sure no one else can try and get or create a module while this
-    // function is actively working on it by doing an extra lock on the global
-    // mutex list.
+    // function is actively working on it by doing an extra lock on the
+    // global mutex list.
     ModuleSpec platform_module_spec(module_spec);
     platform_module_spec.GetFileSpec() =
         located_binary_modulespec.GetFileSpec();
@@ -966,8 +1038,8 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
 
     if (!module_sp) {
       module_sp.reset(new Module(platform_module_spec));
-      // Make sure there are a module and an object file since we can specify a
-      // valid file path with an architecture that might not be in that file.
+      // Make sure there are a module and an object file since we can specify
+      // a valid file path with an architecture that might not be in that file.
       // By getting the object file we can guarantee that the architecture
       // matches
       if (module_sp && module_sp->GetObjectFile()) {
@@ -1054,4 +1126,10 @@ void ModuleList::ForEach(
     if (!callback(module))
       break;
   }
+}
+
+void ModuleList::ClearModuleDependentCaches() {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  for (const auto &module : m_modules)
+    module->ClearModuleDependentCaches();
 }

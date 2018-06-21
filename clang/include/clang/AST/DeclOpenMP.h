@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines OpenMP nodes for declarative directives.
+/// \brief This file defines OpenMP nodes for declarative directives.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,7 @@
 
 namespace clang {
 
-/// This represents '#pragma omp threadprivate ...' directive.
+/// \brief This represents '#pragma omp threadprivate ...' directive.
 /// For example, in the following, both 'a' and 'A::b' are threadprivate:
 ///
 /// \code
@@ -89,7 +89,7 @@ public:
   static bool classofKind(Kind K) { return K == OMPThreadPrivate; }
 };
 
-/// This represents '#pragma omp declare reduction ...' directive.
+/// \brief This represents '#pragma omp declare reduction ...' directive.
 /// For example, in the following, declared reduction 'foo' for types 'int' and
 /// 'float':
 ///
@@ -109,14 +109,14 @@ public:
 
 private:
   friend class ASTDeclReader;
-  /// Combiner for declare reduction construct.
+  /// \brief Combiner for declare reduction construct.
   Expr *Combiner;
-  /// Initializer for declare reduction construct.
+  /// \brief Initializer for declare reduction construct.
   Expr *Initializer;
   /// Kind of initializer - function call or omp_priv<init_expr> initializtion.
   InitKind InitializerKind = CallInit;
 
-  /// Reference to the previous declare reduction construct in the same
+  /// \brief Reference to the previous declare reduction construct in the same
   /// scope with the same name. Required for proper templates instantiation if
   /// the declare reduction construct is declared inside compound statement.
   LazyDeclPtr PrevDeclInScope;
@@ -135,33 +135,33 @@ private:
   }
 
 public:
-  /// Create declare reduction node.
+  /// \brief Create declare reduction node.
   static OMPDeclareReductionDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation L, DeclarationName Name,
          QualType T, OMPDeclareReductionDecl *PrevDeclInScope);
-  /// Create deserialized declare reduction node.
+  /// \brief Create deserialized declare reduction node.
   static OMPDeclareReductionDecl *CreateDeserialized(ASTContext &C,
                                                      unsigned ID);
 
-  /// Get combiner expression of the declare reduction construct.
+  /// \brief Get combiner expression of the declare reduction construct.
   Expr *getCombiner() { return Combiner; }
   const Expr *getCombiner() const { return Combiner; }
-  /// Set combiner expression for the declare reduction construct.
+  /// \brief Set combiner expression for the declare reduction construct.
   void setCombiner(Expr *E) { Combiner = E; }
 
-  /// Get initializer expression (if specified) of the declare reduction
+  /// \brief Get initializer expression (if specified) of the declare reduction
   /// construct.
   Expr *getInitializer() { return Initializer; }
   const Expr *getInitializer() const { return Initializer; }
   /// Get initializer kind.
   InitKind getInitializerKind() const { return InitializerKind; }
-  /// Set initializer expression for the declare reduction construct.
+  /// \brief Set initializer expression for the declare reduction construct.
   void setInitializer(Expr *E, InitKind IK) {
     Initializer = E;
     InitializerKind = IK;
   }
 
-  /// Get reference to previous declare reduction construct in the same
+  /// \brief Get reference to previous declare reduction construct in the same
   /// scope with the same name.
   OMPDeclareReductionDecl *getPrevDeclInScope();
   const OMPDeclareReductionDecl *getPrevDeclInScope() const;
@@ -189,10 +189,9 @@ class OMPCapturedExprDecl final : public VarDecl {
   void anchor() override;
 
   OMPCapturedExprDecl(ASTContext &C, DeclContext *DC, IdentifierInfo *Id,
-                      QualType Type, TypeSourceInfo *TInfo,
-                      SourceLocation StartLoc)
-      : VarDecl(OMPCapturedExpr, C, DC, StartLoc, StartLoc, Id, Type, TInfo,
-                SC_None) {
+                      QualType Type, SourceLocation StartLoc)
+      : VarDecl(OMPCapturedExpr, C, DC, StartLoc, SourceLocation(), Id, Type,
+                nullptr, SC_None) {
     setImplicit();
   }
 

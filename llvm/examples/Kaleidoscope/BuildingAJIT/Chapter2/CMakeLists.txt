@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   ExecutionEngine
   InstCombine
   Object
-  OrcJIT
   RuntimeDyld
   ScalarOpts
   Support

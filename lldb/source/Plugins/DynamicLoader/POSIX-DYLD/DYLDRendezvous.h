@@ -29,12 +29,12 @@ class Process;
 }
 
 /// @class DYLDRendezvous
-/// Interface to the runtime linker.
+/// @brief Interface to the runtime linker.
 ///
 /// A structure is present in a processes memory space which is updated by the
-/// runtime liker each time a module is loaded or unloaded.  This class
-/// provides an interface to this structure and maintains a consistent
-/// snapshot of the currently loaded modules.
+/// runtime liker each time a module is loaded or unloaded.  This class provides
+/// an interface to this structure and maintains a consistent snapshot of the
+/// currently loaded modules.
 class DYLDRendezvous {
 
   // This structure is used to hold the contents of the debug rendezvous
@@ -119,13 +119,13 @@ public:
 
   void DumpToLog(lldb_private::Log *log) const;
 
-  /// Constants describing the state of the rendezvous.
+  /// @brief Constants describing the state of the rendezvous.
   ///
   /// @see GetState().
   enum RendezvousState { eConsistent, eAdd, eDelete };
 
-  /// Structure representing the shared objects currently loaded into the
-  /// inferior process.
+  /// @brief Structure representing the shared objects currently loaded into
+  /// the inferior process.
   ///
   /// This object is a rough analogue to the struct link_map object which
   /// actually lives in the inferiors memory.
@@ -194,8 +194,7 @@ protected:
   /// List of SOEntry objects corresponding to the current link map state.
   SOEntryList m_soentries;
 
-  /// List of SOEntry's added to the link map since the last call to
-  /// Resolve().
+  /// List of SOEntry's added to the link map since the last call to Resolve().
   SOEntryList m_added_soentries;
 
   /// List of SOEntry's removed from the link map since the last call to

@@ -47,6 +47,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
                                            VS, ICIS_NoInit);
     if (FnD) {
       Actions.ProcessDeclAttributeList(getCurScope(), FnD, AccessAttrs);
+      Actions.ProcessAPINotes(FnD);
       if (PureSpecLoc.isValid())
         Actions.ActOnPureSpecifier(FnD, PureSpecLoc);
     }
@@ -733,7 +734,7 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
   }
 }
 
-/// Consume tokens and store them in the passed token container until
+/// \brief Consume tokens and store them in the passed token container until
 /// we've passed the try keyword and constructor initializers and have consumed
 /// the opening brace of the function body. The opening brace will be consumed
 /// if and only if there was no error.
@@ -937,7 +938,7 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
   }
 }
 
-/// Consume and store tokens from the '?' to the ':' in a conditional
+/// \brief Consume and store tokens from the '?' to the ':' in a conditional
 /// expression.
 bool Parser::ConsumeAndStoreConditional(CachedTokens &Toks) {
   // Consume '?'.
@@ -962,7 +963,7 @@ bool Parser::ConsumeAndStoreConditional(CachedTokens &Toks) {
   return true;
 }
 
-/// A tentative parsing action that can also revert token annotations.
+/// \brief A tentative parsing action that can also revert token annotations.
 class Parser::UnannotatedTentativeParsingAction : public TentativeParsingAction {
 public:
   explicit UnannotatedTentativeParsingAction(Parser &Self,

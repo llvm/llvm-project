@@ -105,14 +105,6 @@ def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
 def ARMSmlsldx       : SDNode<"ARMISD::SMLSLDX", SDT_LongMac>;
 
-def SDT_MulHSR       : SDTypeProfile<1, 3, [SDTCisVT<0,i32>,
-                                            SDTCisSameAs<0, 1>,
-                                            SDTCisSameAs<0, 2>,
-                                            SDTCisSameAs<0, 3>]>;
-
-def ARMsmmlar      : SDNode<"ARMISD::SMMLAR", SDT_MulHSR>;
-def ARMsmmlsr      : SDNode<"ARMISD::SMMLSR", SDT_MulHSR>;
-
 // Node definitions.
 def ARMWrapper       : SDNode<"ARMISD::Wrapper",     SDTIntUnaryOp>;
 def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
@@ -883,16 +875,6 @@ def bf_inv_mask_imm : Operand<i32>,
   let PrintMethod = "printBitfieldInvMaskImmOperand";
   let DecoderMethod = "DecodeBitfieldMaskOperand";
   let ParserMatchClass = BitfieldAsmOperand;
-  let GISelPredicateCode = [{
-    // There's better methods of implementing this check. IntImmLeaf<> would be
-    // equivalent and have less boilerplate but we need a test for C++
-    // predicates and this one causes new rules to be imported into GlobalISel
-    // without requiring additional features first.
-    const auto &MO = MI.getOperand(1);
-    if (!MO.isCImm())
-      return false;
-    return ARM::isBitFieldInvertedMask(MO.getCImm()->getZExtValue());
-  }];
 }
 
 def imm1_32_XFORM: SDNodeXForm<imm, [{
@@ -2014,7 +1996,6 @@ def : InstAlias<"wfi$p", (HINT 3, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"sev$p", (HINT 4, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"sevl$p", (HINT 5, pred:$p)>, Requires<[IsARM, HasV8]>;
 def : InstAlias<"esb$p", (HINT 16, pred:$p)>, Requires<[IsARM, HasRAS]>;
-def : InstAlias<"csdb$p", (HINT 20, pred:$p)>, Requires<[IsARM, HasV6K]>;
 
 def SEL : AI<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm), DPFrm, NoItinerary, "sel",
              "\t$Rd, $Rn, $Rm",
@@ -3350,7 +3331,7 @@ defm sysSTM : arm_ldst_mult<"stm", " ^", 0, 1, LdStMulFrm, IIC_iStore_m,
 //  Move Instructions.
 //
 
-let hasSideEffects = 0, isMoveReg = 1 in
+let hasSideEffects = 0 in
 def MOVr : AsI1<0b1101, (outs GPR:$Rd), (ins GPR:$Rm), DPFrm, IIC_iMOVr,
                 "mov", "\t$Rd, $Rm", []>, UnaryDP, Sched<[WriteALU]> {
   bits<4> Rd;
@@ -3923,8 +3904,6 @@ def  MVNr  : AsI1<0b1111, (outs GPR:$Rd), (ins GPR:$Rm), DPFrm, IIC_iMVNr,
   let Inst{11-4} = 0b00000000;
   let Inst{15-12} = Rd;
   let Inst{3-0} = Rm;
-
-  let Unpredictable{19-16} = 0b1111;
 }
 def  MVNsi  : AsI1<0b1111, (outs GPR:$Rd), (ins so_reg_imm:$shift),
                   DPSoRegImmFrm, IIC_iMVNsr, "mvn", "\t$Rd, $shift",
@@ -3938,12 +3917,10 @@ def  MVNsi  : AsI1<0b1111, (outs GPR:$Rd), (ins so_reg_imm:$shift),
   let Inst{11-5} = shift{11-5};
   let Inst{4} = 0;
   let Inst{3-0} = shift{3-0};
-
-  let Unpredictable{19-16} = 0b1111;
 }
-def  MVNsr  : AsI1<0b1111, (outs GPRnopc:$Rd), (ins so_reg_reg:$shift),
+def  MVNsr  : AsI1<0b1111, (outs GPR:$Rd), (ins so_reg_reg:$shift),
                   DPSoRegRegFrm, IIC_iMVNsr, "mvn", "\t$Rd, $shift",
-                  [(set GPRnopc:$Rd, (not so_reg_reg:$shift))]>, UnaryDP,
+                  [(set GPR:$Rd, (not so_reg_reg:$shift))]>, UnaryDP,
                   Sched<[WriteALU]> {
   bits<4> Rd;
   bits<12> shift;
@@ -3955,8 +3932,6 @@ def  MVNsr  : AsI1<0b1111, (outs GPRnopc:$Rd), (ins so_reg_reg:$shift),
   let Inst{6-5} = shift{6-5};
   let Inst{4} = 1;
   let Inst{3-0} = shift{3-0};
-
-  let Unpredictable{19-16} = 0b1111;
 }
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in
 def  MVNi  : AsI1<0b1111, (outs GPR:$Rd), (ins mod_imm:$imm), DPFrm,
@@ -4168,8 +4143,7 @@ def SMMUL : AMul2I <0b0111010, 0b0001, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
 }
 
 def SMMULR : AMul2I <0b0111010, 0b0011, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
-               IIC_iMUL32, "smmulr", "\t$Rd, $Rn, $Rm",
-               [(set GPR:$Rd, (ARMsmmlar GPR:$Rn, GPR:$Rm, (i32 0)))]>,
+               IIC_iMUL32, "smmulr", "\t$Rd, $Rn, $Rm", []>,
             Requires<[IsARM, HasV6]>,
              Sched<[WriteMUL32, ReadMUL, ReadMUL]>  {
   let Inst{15-12} = 0b1111;
@@ -4184,8 +4158,7 @@ def SMMLA : AMul2Ia <0b0111010, 0b0001, (outs GPR:$Rd),
 
 def SMMLAR : AMul2Ia <0b0111010, 0b0011, (outs GPR:$Rd),
                (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
-               IIC_iMAC32, "smmlar", "\t$Rd, $Rn, $Rm, $Ra",
-               [(set GPR:$Rd, (ARMsmmlar GPR:$Rn, GPR:$Rm, GPR:$Ra))]>,
+               IIC_iMAC32, "smmlar", "\t$Rd, $Rn, $Rm, $Ra", []>,
             Requires<[IsARM, HasV6]>,
              Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]>;
 
@@ -4197,8 +4170,7 @@ def SMMLS : AMul2Ia <0b0111010, 0b1101, (outs GPR:$Rd),
 
 def SMMLSR : AMul2Ia <0b0111010, 0b1111, (outs GPR:$Rd),
                (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
-               IIC_iMAC32, "smmlsr", "\t$Rd, $Rn, $Rm, $Ra",
-               [(set GPR:$Rd, (ARMsmmlsr GPR:$Rn, GPR:$Rm, GPR:$Ra))]>,
+               IIC_iMAC32, "smmlsr", "\t$Rd, $Rn, $Rm, $Ra", []>,
             Requires<[IsARM, HasV6]>,
              Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]>;
 

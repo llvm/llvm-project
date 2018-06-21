@@ -13,10 +13,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: target triple = "x86_64-unknown-linux-gnu"
 
-; WARN-A-NOT: warning
+; WARN-A-NOT: WARNING
 
 ; i386 and x86_64 map to different ArchType enums.
-; WARN-B: warning: Linking two modules of different target triples:
+; WARN-B: WARNING: Linking two modules of different target triples:
 
 ; x86_64h and x86_64 map to the same ArchType enum.
-; WARN-C-NOT: warning
+; WARN-C-NOT: WARNING

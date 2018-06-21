@@ -27,3 +27,12 @@ add_lldb_library(lldbDataFormatters
   LINK_COMPONENTS
     Support
   )
+
+include(AddLLVM)
+include(SwiftAddCustomCommandTarget)
+
+set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
+
+install(
+  CODE "file(MAKE_DIRECTORY ${lib_dir}/lldb)")
+

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the WebAssembly implementation of
+/// \brief This file contains the WebAssembly implementation of
 /// TargetFrameLowering class.
 ///
 /// On WebAssembly, there aren't a lot of things to do here. There are no

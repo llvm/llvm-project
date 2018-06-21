@@ -36,11 +36,11 @@ void DwarfFile::emitStringOffsetsTableHeader(MCSection *Section) {
   // FIXME: DWARF64
   // We are emitting the header for a contribution to the string offsets
   // table. The header consists of an entry with the contribution's
-  // size (not including the size of the length field), the DWARF version and
+  // size (not including the size of the header), the DWARF version and
   // 2 bytes of padding.
-  Asm->emitInt32(StrPool.size() * EntrySize + 4);
-  Asm->emitInt16(Asm->getDwarfVersion());
-  Asm->emitInt16(0);
+  Asm->EmitInt32(StrPool.size() * EntrySize);
+  Asm->EmitInt16(Asm->getDwarfVersion());
+  Asm->EmitInt16(0);
   // Define the symbol that marks the start of the contribution. It is
   // referenced by most unit headers via DW_AT_str_offsets_base.
   // Split units do not use the attribute.

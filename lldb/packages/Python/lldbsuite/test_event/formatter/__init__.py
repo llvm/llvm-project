@@ -40,6 +40,9 @@ class CreatedFormatter(object):
         self.cleanup_func = cleanup_func
 
 
+SOCKET_ACK_BYTE_VALUE = b'*'  # ASCII for chr(42)
+
+
 def create_results_formatter(config):
     """Sets up a test results formatter.
 
@@ -75,7 +78,9 @@ def create_results_formatter(config):
         # listener socket gets spun up; otherwise,
         # we lose the test result info.
         read_bytes = sock.recv(1)
-        if read_bytes is None or (len(read_bytes) < 1) or (read_bytes != b'*'):
+        if read_bytes is None or (
+                len(read_bytes) < 1) or (
+                read_bytes[0] != SOCKET_ACK_BYTE_VALUE):
             raise Exception(
                 "listening socket did not respond with ack byte: response={}".format(read_bytes))
 

@@ -12,7 +12,7 @@
 
 namespace llvm {
 
-/// Target independent information on a fixup kind.
+/// \brief Target independent information on a fixup kind.
 struct MCFixupKindInfo {
   enum FixupKindFlags {
     /// Is this fixup kind PCrelative? This is used by the assembler backend to

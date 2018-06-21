@@ -20,9 +20,3 @@ TEST(Host, WaitStatusFormat) {
   EXPECT_EQ("Exited with status 4",
             formatv("{0}", WaitStatus{WaitStatus::Exit, 4}).str());
 }
-
-TEST(Host, GetEnvironment) {
-  putenv(const_cast<char *>("LLDB_TEST_ENVIRONMENT_VAR=Host::GetEnvironment"));
-  ASSERT_EQ("Host::GetEnvironment",
-            Host::GetEnvironment().lookup("LLDB_TEST_ENVIRONMENT_VAR"));
-}

@@ -378,7 +378,8 @@ bool ClassDescriptorV2::Describe(
     AppleObjCRuntime::ClassDescriptorSP metaclass(GetMetaclass());
 
     // We don't care about the metaclass's superclass, or its class methods.
-    // Its instance methods are our class methods.
+    // Its instance methods are
+    // our class methods.
 
     if (metaclass) {
       metaclass->Describe(

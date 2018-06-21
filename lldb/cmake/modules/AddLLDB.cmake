@@ -48,7 +48,7 @@ function(add_lldb_library name)
                                 ${PARAM_LINK_LIBS}
                                 DEPENDS ${PARAM_DEPENDS})
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "liblldb")
+    if (${name} STREQUAL "liblldb")
       if (PARAM_SHARED)
         set(out_dir lib${LLVM_LIBDIR_SUFFIX})
         if(${name} STREQUAL "liblldb" AND LLDB_BUILD_FRAMEWORK)
@@ -86,7 +86,7 @@ endfunction(add_lldb_library)
 
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
-    "INCLUDE_IN_SUITE;GENERATE_INSTALL"
+    "INCLUDE_IN_FRAMEWORK;GENERATE_INSTALL"
     ""
     "LINK_LIBS;LINK_COMPONENTS"
     ${ARGN}
@@ -99,9 +99,8 @@ function(add_lldb_executable name)
   set_target_properties(${name} PROPERTIES
     FOLDER "lldb executables")
 
-  if(ARG_INCLUDE_IN_SUITE)
-    add_dependencies(lldb-suite ${name})
-    if(LLDB_BUILD_FRAMEWORK)
+  if(LLDB_BUILD_FRAMEWORK)
+    if(ARG_INCLUDE_IN_FRAMEWORK)
       if(NOT IOS)
         set(resource_dir "/Resources")
         set(resource_dots "../")
@@ -123,16 +122,14 @@ function(add_lldb_executable name)
         add_custom_target(install-${name}-stripped DEPENDS ${name})
         add_dependencies(install-liblldb-stripped ${name})
       endif()
+    else()
+      set_target_properties(${name} PROPERTIES
+            BUILD_WITH_INSTALL_RPATH On
+            INSTALL_RPATH "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
     endif()
   endif()
 
-  if(LLDB_BUILD_FRAMEWORK AND NOT ARG_INCLUDE_IN_SUITE)
-    set_target_properties(${name} PROPERTIES
-          BUILD_WITH_INSTALL_RPATH On
-          INSTALL_RPATH "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
-  endif()
-
-  if(ARG_GENERATE_INSTALL AND NOT (ARG_INCLUDE_IN_SUITE AND LLDB_BUILD_FRAMEWORK ))
+  if(ARG_GENERATE_INSTALL AND NOT (ARG_INCLUDE_IN_FRAMEWORK AND LLDB_BUILD_FRAMEWORK ))
     install(TARGETS ${name}
           COMPONENT ${name}
           RUNTIME DESTINATION bin)
@@ -143,7 +140,7 @@ function(add_lldb_executable name)
     endif()
   endif()
 
-  if(ARG_INCLUDE_IN_SUITE AND LLDB_BUILD_FRAMEWORK)
+  if(ARG_INCLUDE_IN_FRAMEWORK AND LLDB_BUILD_FRAMEWORK)
     add_llvm_tool_symlink(${name} ${name} ALWAYS_GENERATE SKIP_INSTALL
                             OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
   endif()

@@ -11,7 +11,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/RegionInfoImpl.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -90,7 +89,7 @@ bool MachineRegionInfoPass::runOnMachineFunction(MachineFunction &F) {
 
   RI.recalculate(F, DT, PDT, DF);
 
-  LLVM_DEBUG(RI.dump());
+  DEBUG(RI.dump());
 
   return false;
 }

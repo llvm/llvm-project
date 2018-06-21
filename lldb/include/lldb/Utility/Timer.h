@@ -20,7 +20,7 @@ class Stream;
 
 //----------------------------------------------------------------------
 /// @class Timer Timer.h "lldb/Utility/Timer.h"
-/// A timer class that simplifies common timing metrics.
+/// @brief A timer class that simplifies common timing metrics.
 //----------------------------------------------------------------------
 
 class Timer {

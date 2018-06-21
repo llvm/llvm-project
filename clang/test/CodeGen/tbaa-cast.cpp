@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux -O1 -disable-llvm-passes %s \
-// RUN:     -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,OLD-PATH
-// RUN: %clang_cc1 -triple x86_64-linux -O1 -disable-llvm-passes %s \
-// RUN:     -emit-llvm -new-struct-path-tbaa -o - | FileCheck %s -check-prefixes=CHECK,NEW-PATH
+// RUN:     -emit-llvm -o - | FileCheck %s
 //
 // Check that we generate correct TBAA information for lvalues constructed
 // with use of casts.
@@ -20,9 +18,6 @@ void foo(S *p) {
   ((V*)p->bytes)->n = 5;
 }
 
-// OLD-PATH-DAG: [[TAG_V_n]] = !{[[TYPE_V:!.*]], [[TYPE_int:!.*]], i64 0}
-// OLD-PATH-DAG: [[TYPE_V]] = !{!"_ZTS1V", !{{.*}}, i64 0}
-// OLD-PATH-DAG: [[TYPE_int]] = !{!"int", !{{.*}}, i64 0}
-// NEW-PATH-DAG: [[TAG_V_n]] = !{[[TYPE_V:!.*]], [[TYPE_int:!.*]], i64 0, i64 4}
-// NEW-PATH-DAG: [[TYPE_V]] = !{[[TYPE_char:!.*]], i64 4, !"_ZTS1V", [[TYPE_int]], i64 0, i64 4}
-// NEW-PATH-DAG: [[TYPE_int]] = !{[[TYPE_char]], i64 4, !"int"}
+// CHECK-DAG: [[TAG_V_n]] = !{[[TYPE_V:!.*]], [[TYPE_int:!.*]], i64 0}
+// CHECK-DAG: [[TYPE_V]] = !{!"_ZTS1V", !{{.*}}, i64 0}
+// CHECK-DAG: [[TYPE_int]] = !{!"int", !{{.*}}, i64 0}

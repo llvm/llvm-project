@@ -36,7 +36,7 @@ template <typename> struct simplify_type;
 class User;
 class Value;
 
-/// A Use represents the edge between a Value definition and its users.
+/// \brief A Use represents the edge between a Value definition and its users.
 ///
 /// This is notionally a two-dimensional linked list. It supports traversing
 /// all of the uses for a particular value definition. It also supports jumping
@@ -57,7 +57,7 @@ class Use {
 public:
   Use(const Use &U) = delete;
 
-  /// Provide a fast substitute to std::swap<Use>
+  /// \brief Provide a fast substitute to std::swap<Use>
   /// that also works with less standard-compliant compilers
   void swap(Use &RHS);
 
@@ -107,7 +107,7 @@ public:
   operator Value *() const { return Val; }
   Value *get() const { return Val; }
 
-  /// Returns the User that contains this Use.
+  /// \brief Returns the User that contains this Use.
   ///
   /// For an instruction operand, for example, this will return the
   /// instruction.
@@ -123,16 +123,16 @@ public:
 
   Use *getNext() const { return Next; }
 
-  /// Return the operand # of this use in its User.
+  /// \brief Return the operand # of this use in its User.
   unsigned getOperandNo() const;
 
-  /// Initializes the waymarking tags on an array of Uses.
+  /// \brief Initializes the waymarking tags on an array of Uses.
   ///
   /// This sets up the array of Uses such that getUser() can find the User from
   /// any of those Uses.
   static Use *initTags(Use *Start, Use *Stop);
 
-  /// Destroys Use operands when the number of operands of
+  /// \brief Destroys Use operands when the number of operands of
   /// a User changes.
   static void zap(Use *Start, const Use *Stop, bool del = false);
 
@@ -161,7 +161,7 @@ private:
   }
 };
 
-/// Allow clients to treat uses just like values when using
+/// \brief Allow clients to treat uses just like values when using
 /// casting operators.
 template <> struct simplify_type<Use> {
   using SimpleType = Value *;

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple arm-- -global-isel -run-pass=legalizer %s -o - | FileCheck %s
 --- |
   define void @test_sext_s8() { ret void }
   define void @test_zext_s16() { ret void }
@@ -50,11 +50,6 @@
 
   define void @test_brcond() { ret void }
 
-  define void @test_phi_s32() { ret void }
-  define void @test_phi_p0() { ret void }
-  define void @test_phi_s64() #0 { ret void }
-  define void @test_phi_s8() { ret void }
-
   @a_global = global i32 42
   define void @test_global_variable() { ret void }
 
@@ -74,15 +69,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0(p0) :: (load 1)
     %2(s32) = G_SEXT %1
     ; G_SEXT with s8 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SEXT {{%[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_zext_s16
@@ -98,15 +93,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
     %2(s32) = G_ZEXT %1
     ; G_ZEXT with s16 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ZEXT {{%[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_inttoptr_s32
@@ -121,14 +116,14 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
+    %0(s32) = COPY %r0
     %1(p0) = G_INTTOPTR %0(s32)
     ; G_INTTOPTR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(p0) = G_INTTOPTR {{%[0-9]+}}
-    $r0 = COPY %1(p0)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %1(p0)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_ptrtoint_s32
@@ -143,14 +138,14 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s32) = G_PTRTOINT %0(p0)
     ; G_PTRTOINT with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_PTRTOINT {{%[0-9]+}}
-    $r0 = COPY %1(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_s8
@@ -169,11 +164,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0 :: (load 1)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s8) = G_LOAD %2 :: (load 1)
     %4(s8) = G_ADD %1, %3
     ; G_ADD with s8 should widen
@@ -181,8 +176,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_ADD {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_s16
@@ -201,11 +196,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s16) = G_LOAD %2 :: (load 2)
     %4(s16) = G_ADD %1, %3
     ; G_ADD with s16 should widen
@@ -213,8 +208,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_ADD {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_add_s32
@@ -230,15 +225,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_ADD %0, %1
     ; G_ADD with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ADD {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -258,11 +253,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0 :: (load 1)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s8) = G_LOAD %2 :: (load 1)
     %4(s8) = G_SUB %1, %3
     ; G_SUB with s8 should widen
@@ -270,8 +265,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_SUB {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sub_s16
@@ -290,11 +285,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s16) = G_LOAD %2 :: (load 2)
     %4(s16) = G_SUB %1, %3
     ; G_SUB with s16 should widen
@@ -302,8 +297,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_SUB {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_sub_s32
@@ -319,15 +314,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_SUB %0, %1
     ; G_SUB with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SUB {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -347,11 +342,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0 :: (load 1)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s8) = G_LOAD %2 :: (load 1)
     %4(s8) = G_MUL %1, %3
     ; G_MUL with s8 should widen
@@ -359,8 +354,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_MUL {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mul_s16
@@ -379,11 +374,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s16) = G_LOAD %2 :: (load 2)
     %4(s16) = G_MUL %1, %3
     ; G_MUL with s16 should widen
@@ -391,8 +386,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_MUL {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_mul_s32
@@ -408,15 +403,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_MUL %0, %1
     ; G_MUL with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_MUL {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -436,11 +431,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0 :: (load 1)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s8) = G_LOAD %2 :: (load 1)
     %4(s8) = G_AND %1, %3
     ; G_AND with s8 should widen
@@ -448,8 +443,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_AND {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_AND {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_and_s16
@@ -468,11 +463,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s16) = G_LOAD %2 :: (load 2)
     %4(s16) = G_AND %1, %3
     ; G_AND with s16 should widen
@@ -480,8 +475,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_AND {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_AND {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_and_s32
@@ -497,15 +492,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_AND %0, %1
     ; G_AND with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_AND {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -525,11 +520,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0 :: (load 1)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s8) = G_LOAD %2 :: (load 1)
     %4(s8) = G_OR %1, %3
     ; G_OR with s8 should widen
@@ -537,8 +532,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_OR {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_OR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_or_s16
@@ -557,11 +552,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s16) = G_LOAD %2 :: (load 2)
     %4(s16) = G_OR %1, %3
     ; G_OR with s16 should widen
@@ -569,8 +564,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_OR {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_OR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_or_s32
@@ -586,15 +581,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_OR %0, %1
     ; G_OR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_OR {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -614,11 +609,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0 :: (load 1)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s8) = G_LOAD %2 :: (load 1)
     %4(s8) = G_XOR %1, %3
     ; G_XOR with s8 should widen
@@ -626,8 +621,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s8) = G_XOR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s8)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_xor_s16
@@ -646,11 +641,11 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
-    %2(p0) = COPY $r0
+    %2(p0) = COPY %r0
     %3(s16) = G_LOAD %2 :: (load 2)
     %4(s16) = G_XOR %1, %3
     ; G_XOR with s16 should widen
@@ -658,8 +653,8 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s16) = G_XOR {{%[0-9]+, %[0-9]+}}
     %5(s32) = G_SEXT %4(s16)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_xor_s32
@@ -675,15 +670,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_XOR %0, %1
     ; G_XOR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -700,15 +695,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_LSHR %0, %1
     ; G_LSHR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_LSHR {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -725,15 +720,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_ASHR %0, %1
     ; G_ASHR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_ASHR {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -750,15 +745,15 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s32) = G_SHL %0, %1
     ; G_SHL with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SHL {{%[0-9]+, %[0-9]+}}
-    $r0 = COPY %2(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(s32)
+    BX_RET 14, %noreg, implicit %r0
 
 ...
 ---
@@ -781,15 +776,15 @@ fixedStack:
   # CHECK: id: [[FRAME_INDEX:[0-9]+]], type: default, offset: 8
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2, $r3
+    liveins: %r0, %r1, %r2, %r3
 
     ; This is legal, so we should find it unchanged in the output
     ; CHECK: [[FIVREG:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[FRAME_INDEX]]
     ; CHECK: {{%[0-9]+}}:_(s32) = G_LOAD [[FIVREG]](p0) :: (load 4)
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
     %1(s32) = G_LOAD %0(p0) :: (load 4)
-    $r0 = COPY %1(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_legal_loads_stores
@@ -809,7 +804,7 @@ registers:
   - { id: 6, class: _ }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
     ; These are all legal, so we should find them unchanged in the output
     ; CHECK-DAG: G_STORE {{%[0-9]+}}(s64), %0(p0)
@@ -824,7 +819,7 @@ body:             |
     ; CHECK-DAG: {{%[0-9]+}}:_(s8) = G_LOAD %0(p0)
     ; CHECK-DAG: {{%[0-9]+}}:_(s1) = G_LOAD %0(p0)
     ; CHECK-DAG: {{%[0-9]+}}:_(p0) = G_LOAD %0(p0)
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s64) = G_LOAD %0(p0) :: (load 8)
     G_STORE %1(s64), %0(p0) :: (store 8)
     %2(s32) = G_LOAD %0(p0) :: (load 4)
@@ -837,7 +832,7 @@ body:             |
     G_STORE %5(s1), %0(p0) :: (store 1)
     %6(p0) = G_LOAD %0(p0) :: (load 4)
     G_STORE %6(p0), %0(p0) :: (store 4)
-    BX_RET 14, $noreg
+    BX_RET 14, %noreg
 ...
 ---
 name:            test_gep
@@ -853,16 +848,16 @@ registers:
   - { id: 2, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(p0) = COPY %r0
+    %1(s32) = COPY %r1
 
     ; CHECK: {{%[0-9]+}}:_(p0) = G_GEP {{%[0-9]+}}, {{%[0-9]+}}(s32)
     %2(p0) = G_GEP %0, %1(s32)
 
-    $r0 = COPY %2(p0)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %2(p0)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_constants
@@ -879,14 +874,11 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
   - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %4(p0) = COPY $r0
+    %4(p0) = COPY %r0
 
     %0(s32) = G_CONSTANT 42
     ; CHECK: {{%[0-9]+}}:_(s32) = G_CONSTANT 42
@@ -916,16 +908,8 @@ body:             |
     G_STORE %5(p0), %4(p0) :: (store 4)
     ; CHECK: {{%[0-9]+}}:_(p0) = G_CONSTANT 0
 
-    %6(s64) = G_CONSTANT i64 17179869200 ; = 4 * 2 ^ 32 + 16
-    %7(s32), %8(s32) = G_UNMERGE_VALUES %6(s64)
-    G_STORE %7(s32), %4(p0) :: (store 4)
-    G_STORE %8(s32), %4(p0) :: (store 4)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 4
-    ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NOT: G_CONSTANT i64
-
-    $r0 = COPY %0(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %0(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_icmp_s8
@@ -944,19 +928,19 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s8) = G_LOAD %0 :: (load 1)
-    %2(p0) = COPY $r1
+    %2(p0) = COPY %r1
     %3(s8) = G_LOAD %2 :: (load 1)
     %4(s1) = G_ICMP intpred(ne), %1(s8), %3
     ; G_ICMP with s8 should widen
     ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s32), {{%[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(ne), {{%[0-9]+}}(s8), {{%[0-9]+}}
     %5(s32) = G_ZEXT %4(s1)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_icmp_s16
@@ -975,19 +959,19 @@ registers:
   - { id: 5, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(p0) = COPY $r0
+    %0(p0) = COPY %r0
     %1(s16) = G_LOAD %0 :: (load 2)
-    %2(p0) = COPY $r1
+    %2(p0) = COPY %r1
     %3(s16) = G_LOAD %2 :: (load 2)
     %4(s1) = G_ICMP intpred(slt), %1(s16), %3
     ; G_ICMP with s16 should widen
     ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s32), {{%[0-9]+}}
     ; CHECK-NOT: {{%[0-9]+}}:_(s1) = G_ICMP intpred(slt), {{%[0-9]+}}(s16), {{%[0-9]+}}
     %5(s32) = G_ZEXT %4(s1)
-    $r0 = COPY %5(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %5(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_icmp_s32
@@ -1004,16 +988,16 @@ registers:
   - { id: 3, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s1) = G_ICMP intpred(eq), %0(s32), %1
     ; G_ICMP with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), {{%[0-9]+}}
     %3(s32) = G_ZEXT %2(s1)
-    $r0 = COPY %3(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %3(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_select_s32
@@ -1030,16 +1014,16 @@ registers:
   - { id: 3, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2
+    liveins: %r0, %r1, %r2
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s1) = G_CONSTANT i1 1
     %3(s32) = G_SELECT %2(s1), %0, %1
     ; G_SELECT with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(s32) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
-    $r0 = COPY %3(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %3(s32)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_select_ptr
@@ -1056,16 +1040,16 @@ registers:
   - { id: 3, class: _ }
 body:             |
   bb.0:
-    liveins: $r0, $r1, $r2
+    liveins: %r0, %r1, %r2
 
-    %0(p0) = COPY $r0
-    %1(p0) = COPY $r1
+    %0(p0) = COPY %r0
+    %1(p0) = COPY %r1
     %2(s1) = G_CONSTANT i1 0
     %3(p0) = G_SELECT %2(s1), %0, %1
     ; G_SELECT with p0 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(p0) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
-    $r0 = COPY %3(p0)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %3(p0)
+    BX_RET 14, %noreg, implicit %r0
 ...
 ---
 name:            test_brcond
@@ -1082,10 +1066,10 @@ registers:
 body:             |
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $r0, $r1
+    liveins: %r0, %r1
 
-    %0(s32) = COPY $r0
-    %1(s32) = COPY $r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
     %2(s1) = G_ICMP intpred(sgt), %0(s32), %1
     G_BRCOND %2(s1), %bb.1
     ; G_BRCOND with s1 is legal, so we should find it unchanged in the output
@@ -1093,178 +1077,13 @@ body:             |
     G_BR %bb.2
 
   bb.1:
-    $r0 = COPY %1(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %1(s32)
+    BX_RET 14, %noreg, implicit %r0
 
   bb.2:
-    $r0 = COPY %0(s32)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %0(s32)
+    BX_RET 14, %noreg, implicit %r0
 
-...
----
-name:            test_phi_s32
-# CHECK-LABEL: name: test_phi_s32
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $r1, $r2
-
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-
-    %2(s32) = COPY $r1
-    %3(s32) = COPY $r2
-
-    G_BRCOND %1(s1), %bb.1
-    G_BR %bb.2
-
-  bb.1:
-    G_BR %bb.2
-
-  bb.2:
-    %4(s32) = G_PHI %2(s32), %bb.0, %3(s32), %bb.1
-    ; G_PHI with s32 is legal, so we should find it unchanged in the output
-    ; CHECK: G_PHI {{%[0-9]+}}(s32), %bb.0, {{%[0-9]+}}(s32), %bb.1
-    $r0 = COPY %4(s32)
-    BX_RET 14, $noreg, implicit $r0
-...
----
-name:            test_phi_p0
-# CHECK-LABEL: name: test_phi_p0
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $r1, $r2
-
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-
-    %2(p0) = COPY $r1
-    %3(p0) = COPY $r2
-
-    G_BRCOND %1(s1), %bb.1
-    G_BR %bb.2
-
-  bb.1:
-    G_BR %bb.2
-
-  bb.2:
-    %4(p0) = G_PHI %2(p0), %bb.0, %3(p0), %bb.1
-    ; G_PHI with p0 is legal, so we should find it unchanged in the output
-    ; CHECK: G_PHI {{%[0-9]+}}(p0), %bb.0, {{%[0-9]+}}(p0), %bb.1
-    $r0 = COPY %4(p0)
-    BX_RET 14, $noreg, implicit $r0
-...
----
-name:            test_phi_s64
-# CHECK-LABEL: name: test_phi_s64
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $d0, $d1
-
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-
-    %2(s64) = COPY $d0
-    %3(s64) = COPY $d1
-
-    G_BRCOND %1(s1), %bb.1
-    G_BR %bb.2
-
-  bb.1:
-    G_BR %bb.2
-
-  bb.2:
-    %4(s64) = G_PHI %2(s64), %bb.0, %3(s64), %bb.1
-    ; G_PHI with s64 is legal when we have floating point support, so we should
-    ; find it unchanged in the output
-    ; CHECK: G_PHI {{%[0-9]+}}(s64), %bb.0, {{%[0-9]+}}(s64), %bb.1
-    $d0 = COPY %4(s64)
-    BX_RET 14, $noreg, implicit $d0
-...
----
-name:            test_phi_s8
-# CHECK-LABEL: name: test_phi_s8
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $r1, $r2
-
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-
-    %2(s32) = COPY $r1
-    %3(s8) = G_TRUNC %2(s32)
-    ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
-
-    %4(s32) = COPY $r2
-    %5(s8) = G_TRUNC %4(s32)
-    ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $r2
-
-    ; CHECK: [[V1:%[0-9]+]]:_(s32) = COPY [[R1]]
-
-    G_BRCOND %1(s1), %bb.1
-    G_BR %bb.2
-
-  bb.1:
-    ; CHECK: [[V2:%[0-9]+]]:_(s32) = COPY [[R2]]
-    G_BR %bb.2
-
-  bb.2:
-    %6(s8) = G_PHI %3(s8), %bb.0, %5(s8), %bb.1
-    ; G_PHI with s8 should widen, and all the truncs and exts should be combined
-    ; away into a bunch of redundant copies
-    ; CHECK: [[V:%[0-9]+]]:_(s32) = G_PHI [[V1]](s32), %bb.0, [[V2]](s32), %bb.1
-
-    %7(s32) = G_ANYEXT %6(s8)
-    $r0 = COPY %7(s32)
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = COPY [[V]]
-    ; CHECK: $r0 = COPY [[R]](s32)
-    BX_RET 14, $noreg, implicit $r0
 ...
 ---
 name:            test_global_variable
@@ -1279,13 +1098,13 @@ registers:
   - { id: 1, class: _ }
 body:             |
   bb.0:
-    liveins: $r0
+    liveins: %r0
 
-    %0(s32) = COPY $r0
+    %0(s32) = COPY %r0
     %1(p0) = G_GLOBAL_VALUE @a_global
     ; G_GLOBAL_VALUE is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(p0) = G_GLOBAL_VALUE @a_global
-    $r0 = COPY %1(p0)
-    BX_RET 14, $noreg, implicit $r0
+    %r0 = COPY %1(p0)
+    BX_RET 14, %noreg, implicit %r0
 
 ...

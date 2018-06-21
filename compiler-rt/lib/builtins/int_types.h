@@ -60,7 +60,7 @@ typedef union
     }s;
 } udwords;
 
-#if (defined(__LP64__) || defined(__wasm__) || defined(__mips64)) || defined(__riscv)
+#if (defined(__LP64__) || defined(__wasm__) || defined(__mips64))
 #define CRT_HAS_128BIT
 #endif
 

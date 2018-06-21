@@ -20,7 +20,6 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
-protected:
   uint64_t KernArgSize;
   unsigned MaxKernArgAlign;
 
@@ -31,17 +30,11 @@ protected:
   /// Start of implicit kernel args
   unsigned ABIArgOffset;
 
-  // Kernels + shaders. i.e. functions called by the driver and not called
+  // Kernels + shaders. i.e. functions called by the driver and not not called
   // by other functions.
   bool IsEntryFunction;
 
   bool NoSignedZerosFPMath;
-
-  // Function may be memory bound.
-  bool MemoryBound;
-
-  // Kernel may need limited waves per EU for better performance.
-  bool WaveLimiter;
 
 public:
   AMDGPUMachineFunction(const MachineFunction &MF);
@@ -83,14 +76,6 @@ public:
 
   bool hasNoSignedZerosFPMath() const {
     return NoSignedZerosFPMath;
-  }
-
-  bool isMemoryBound() const {
-    return MemoryBound;
-  }
-
-  bool needsWaveLimiter() const {
-    return WaveLimiter;
   }
 
   unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalValue &GV);

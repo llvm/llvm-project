@@ -15,10 +15,6 @@
 # define alloca _alloca
 #endif
 
-#if defined(__sun__) && defined(__svr4__)
-#include <alloca.h>
-#endif
-
 void *top, *bot;
 
 __attribute__((noinline)) void foo(int len) {

@@ -109,8 +109,8 @@ static bool should_show_stop_column_with_ansi(DebuggerSP debugger_sp) {
   if (!debugger_sp)
     return false;
 
-  // We don't use ANSI stop column formatting if the debugger doesn't think it
-  // should be using color.
+  // We don't use ANSI stop column formatting if the debugger doesn't think
+  // it should be using color.
   if (!debugger_sp->GetUseColor())
     return false;
 
@@ -128,8 +128,8 @@ static bool should_show_stop_column_with_caret(DebuggerSP debugger_sp) {
   if (!debugger_sp)
     return false;
 
-  // If we're asked to show the first available of ANSI or caret, then we do
-  // show the caret when ANSI is not available.
+  // If we're asked to show the first available of ANSI or caret, then
+  // we do show the caret when ANSI is not available.
   const auto value = debugger_sp->GetStopShowColumn();
   if ((value == eStopShowColumnAnsiOrCaret) && !debugger_sp->GetUseColor())
     return true;
@@ -255,9 +255,9 @@ size_t SourceManager::DisplayMoreWithLineNumbers(
 
     if (m_last_line > 0) {
       if (reverse) {
-        // If this is the first time we've done a reverse, then back up one
-        // more time so we end up showing the chunk before the last one we've
-        // shown:
+        // If this is the first time we've done a reverse, then back up one more
+        // time so we end
+        // up showing the chunk before the last one we've shown:
         if (m_last_line > m_last_count)
           m_last_line -= m_last_count;
         else
@@ -289,6 +289,57 @@ bool SourceManager::SetDefaultFileAndLine(const FileSpec &file_spec,
   }
 }
 
+// this is a vector of pairs that each represent a legitimate interesting
+// entry point to the user program. the bool argument means whether
+// we want to skip the prologue code or not when trying to resolve
+// this name to a line entry
+// FindEntryPoint() will attempt to resolve these to a valid line entry in the
+// order
+// in which they are provided. This could probably be extended with a notion
+// of "main language", i.e. the language in which the main executable module is
+// coded
+static const std::vector<std::pair<ConstString, bool>> &GetEntryPointNames() {
+  static std::vector<std::pair<ConstString, bool>> g_entry_point_names;
+  if (g_entry_point_names.size() == 0) {
+    g_entry_point_names.push_back({ConstString("main"), false});
+    g_entry_point_names.push_back({ConstString("top_level_code"), true});
+  }
+  return g_entry_point_names;
+}
+
+static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
+  if (!exe_module)
+    return LineEntry();
+  const std::vector<std::pair<ConstString, bool>> &entry_points(
+      GetEntryPointNames());
+  for (std::pair<ConstString, bool> entry_point : entry_points) {
+    const ConstString entry_point_name = entry_point.first;
+    const bool skip_prologue = entry_point.second;
+    SymbolContextList sc_list;
+    bool symbols_okay = false; // Force it to be a debug symbol.
+    bool inlines_okay = true;
+    bool append = false;
+    size_t num_matches = exe_module->FindFunctions(
+        entry_point_name, NULL, lldb::eFunctionNameTypeBase, inlines_okay,
+        symbols_okay, append, sc_list);
+    for (size_t idx = 0; idx < num_matches; idx++) {
+      SymbolContext sc;
+      sc_list.GetContextAtIndex(idx, sc);
+      if (sc.function) {
+        lldb_private::LineEntry line_entry;
+        Address base_address = sc.function->GetAddressRange().GetBaseAddress();
+        if (skip_prologue)
+          base_address.SetOffset(sc.function->GetPrologueByteSize() +
+                                 base_address.GetOffset());
+        if (base_address.CalculateSymbolContextLineEntry(line_entry)) {
+          return line_entry;
+        }
+      }
+    }
+  }
+  return LineEntry();
+}
+
 bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
   if (m_last_file_sp) {
     file_spec = m_last_file_sp->GetFileSpec();
@@ -299,33 +350,18 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
 
     if (target_sp) {
       // If nobody has set the default file and line then try here.  If there's
-      // no executable, then we will try again later when there is one.
-      // Otherwise, if we can't find it we won't look again, somebody will have
-      // to set it (for instance when we stop somewhere...)
+      // no executable, then we
+      // will try again later when there is one.  Otherwise, if we can't find it
+      // we won't look again,
+      // somebody will have to set it (for instance when we stop somewhere...)
       Module *executable_ptr = target_sp->GetExecutableModulePointer();
       if (executable_ptr) {
-        SymbolContextList sc_list;
-        ConstString main_name("main");
-        bool symbols_okay = false; // Force it to be a debug symbol.
-        bool inlines_okay = true;
-        bool append = false;
-        size_t num_matches = executable_ptr->FindFunctions(
-            main_name, NULL, lldb::eFunctionNameTypeBase, inlines_okay,
-            symbols_okay, append, sc_list);
-        for (size_t idx = 0; idx < num_matches; idx++) {
-          SymbolContext sc;
-          sc_list.GetContextAtIndex(idx, sc);
-          if (sc.function) {
-            lldb_private::LineEntry line_entry;
-            if (sc.function->GetAddressRange()
-                    .GetBaseAddress()
-                    .CalculateSymbolContextLineEntry(line_entry)) {
-              SetDefaultFileAndLine(line_entry.file, line_entry.line);
-              file_spec = m_last_file_sp->GetFileSpec();
-              line = m_last_line;
-              return true;
-            }
-          }
+        lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
+        if (line_entry.IsValid()) {
+          SetDefaultFileAndLine(line_entry.file, line_entry.line);
+          file_spec = m_last_file_sp->GetFileSpec();
+          line = m_last_line;
+          return true;
         }
       }
     }
@@ -409,7 +445,9 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         FileSpec new_file_spec;
         // Check target specific source remappings first, then fall back to
         // modules objects can have individual path remappings that were
-        // detected when the debug info for a module was found. then
+        // detected
+        // when the debug info for a module was found.
+        // then
         if (target->GetSourcePathMap().FindFile(m_file_spec, new_file_spec) ||
             target->GetImages().FindSourceFile(m_file_spec, new_file_spec)) {
           m_file_spec = new_file_spec;
@@ -535,8 +573,8 @@ size_t SourceManager::File::DisplaySourceLines(uint32_t line, uint32_t column,
       if (column && (column < count)) {
         auto debugger_sp = m_debugger_wp.lock();
         if (should_show_stop_column_with_ansi(debugger_sp) && debugger_sp) {
-          // Check if we have any ANSI codes with which to mark this column. If
-          // not, no need to do this work.
+          // Check if we have any ANSI codes with which to mark this column.
+          // If not, no need to do this work.
           auto ansi_prefix_entry = debugger_sp->GetStopShowColumnAnsiPrefix();
           auto ansi_suffix_entry = debugger_sp->GetStopShowColumnAnsiSuffix();
 

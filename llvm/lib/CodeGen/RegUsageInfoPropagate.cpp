@@ -105,9 +105,9 @@ bool RegUsageInfoPropagationPass::runOnMachineFunction(MachineFunction &MF) {
   const Module *M = MF.getFunction().getParent();
   PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
 
-  LLVM_DEBUG(dbgs() << " ++++++++++++++++++++ " << getPassName()
-                    << " ++++++++++++++++++++  \n");
-  LLVM_DEBUG(dbgs() << "MachineFunction : " << MF.getName() << "\n");
+  DEBUG(dbgs() << " ++++++++++++++++++++ " << getPassName()
+               << " ++++++++++++++++++++  \n");
+  DEBUG(dbgs() << "MachineFunction : " << MF.getName() << "\n");
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.hasCalls() && !MFI.hasTailCall())
@@ -119,10 +119,9 @@ bool RegUsageInfoPropagationPass::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : MBB) {
       if (!MI.isCall())
         continue;
-      LLVM_DEBUG(
-          dbgs()
-          << "Call Instruction Before Register Usage Info Propagation : \n");
-      LLVM_DEBUG(dbgs() << MI << "\n");
+      DEBUG(dbgs()
+            << "Call Instruction Before Register Usage Info Propagation : \n");
+      DEBUG(dbgs() << MI << "\n");
 
       auto UpdateRegMask = [&](const Function *F) {
         const auto *RegMask = PRUI->getRegUsageInfo(F);
@@ -135,17 +134,15 @@ bool RegUsageInfoPropagationPass::runOnMachineFunction(MachineFunction &MF) {
       if (const Function *F = findCalledFunction(*M, MI)) {
         UpdateRegMask(F);
       } else {
-        LLVM_DEBUG(dbgs() << "Failed to find call target function\n");
+        DEBUG(dbgs() << "Failed to find call target function\n");
       }
 
-      LLVM_DEBUG(
-          dbgs() << "Call Instruction After Register Usage Info Propagation : "
-                 << MI << '\n');
+      DEBUG(dbgs() << "Call Instruction After Register Usage Info Propagation : "
+            << MI << '\n');
     }
   }
 
-  LLVM_DEBUG(
-      dbgs() << " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-                "++++++ \n");
+  DEBUG(dbgs() << " +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+                  "++++++ \n");
   return Changed;
 }

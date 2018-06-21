@@ -199,9 +199,7 @@ enum Kind {
   kw_nonnull,
   kw_noredzone,
   kw_noreturn,
-  kw_nocf_check,
   kw_nounwind,
-  kw_optforfuzzing,
   kw_optnone,
   kw_optsize,
   kw_readnone,
@@ -214,7 +212,6 @@ enum Kind {
   kw_sspreq,
   kw_sspstrong,
   kw_safestack,
-  kw_shadowcallstack,
   kw_sret,
   kw_sanitize_thread,
   kw_sanitize_memory,
@@ -351,7 +348,6 @@ enum Kind {
   GlobalID,   // @42
   LocalVarID, // %42
   AttrGrpID,  // #42
-  SummaryID,  // ^42
 
   // String valued tokens (StrVal).
   LabelStr,         // foo:

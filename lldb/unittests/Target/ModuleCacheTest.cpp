@@ -44,7 +44,7 @@ static const uint32_t uuid_bytes = 20;
 static const size_t module_size = 5602;
 
 static FileSpec GetDummyRemotePath() {
-  FileSpec fs("/", false, FileSpec::Style::posix);
+  FileSpec fs("/", false, FileSpec::ePathSyntaxPosix);
   fs.AppendPathComponent(dummy_remote_dir);
   fs.AppendPathComponent(module_name);
   return fs;
@@ -68,7 +68,8 @@ void ModuleCacheTest::SetUpTestCase() {
   HostInfo::Initialize();
   ObjectFileELF::Initialize();
 
-  s_cache_dir = HostInfo::GetProcessTempDir();
+  FileSpec tmpdir_spec;
+  HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir, s_cache_dir);
   s_test_executable = GetInputFilePath(module_name);
 }
 
@@ -93,7 +94,7 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
   ModuleCache mc;
   ModuleSpec module_spec;
   module_spec.GetFileSpec() = GetDummyRemotePath();
-  module_spec.GetUUID().SetFromStringRef(module_uuid, uuid_bytes);
+  module_spec.GetUUID().SetFromCString(module_uuid, uuid_bytes);
   module_spec.SetObjectSize(module_size);
   ModuleSP module_sp;
   bool did_create;
@@ -101,8 +102,8 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
 
   Status error = mc.GetAndPut(
       cache_dir, hostname, module_spec,
-      [&download_called](const ModuleSpec &module_spec,
-                         const FileSpec &tmp_download_file_spec) {
+      [this, &download_called](const ModuleSpec &module_spec,
+                               const FileSpec &tmp_download_file_spec) {
         download_called = true;
         EXPECT_STREQ(GetDummyRemotePath().GetCString(),
                      module_spec.GetFileSpec().GetCString());

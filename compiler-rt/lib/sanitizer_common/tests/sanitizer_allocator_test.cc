@@ -444,7 +444,7 @@ TEST(SanitizerCommon, SizeClassAllocator32MapUnmapCallback) {
 TEST(SanitizerCommon, LargeMmapAllocatorMapUnmapCallback) {
   TestMapUnmapCallback::map_count = 0;
   TestMapUnmapCallback::unmap_count = 0;
-  LargeMmapAllocator<TestMapUnmapCallback> a;
+  LargeMmapAllocator<TestMapUnmapCallback, DieOnFailure> a;
   a.Init();
   AllocatorStats stats;
   stats.Init();
@@ -482,7 +482,7 @@ TEST(SanitizerCommon, SizeClassAllocator64Overflow) {
 #endif
 
 TEST(SanitizerCommon, LargeMmapAllocator) {
-  LargeMmapAllocator<NoOpMapUnmapCallback> a;
+  LargeMmapAllocator<NoOpMapUnmapCallback, DieOnFailure> a;
   a.Init();
   AllocatorStats stats;
   stats.Init();
@@ -565,6 +565,7 @@ void TestCombinedAllocator() {
   typedef
       CombinedAllocator<PrimaryAllocator, AllocatorCache, SecondaryAllocator>
       Allocator;
+  SetAllocatorMayReturnNull(true);
   Allocator *a = new Allocator;
   a->Init(kReleaseToOSIntervalNever);
   std::mt19937 r;
@@ -578,7 +579,11 @@ void TestCombinedAllocator() {
   EXPECT_EQ(a->Allocate(&cache, (uptr)-1 - 1024, 1), (void*)0);
   EXPECT_EQ(a->Allocate(&cache, (uptr)-1 - 1024, 1024), (void*)0);
   EXPECT_EQ(a->Allocate(&cache, (uptr)-1 - 1023, 1024), (void*)0);
-  EXPECT_EQ(a->Allocate(&cache, -1, 1), (void*)0);
+
+  // Set to false
+  SetAllocatorMayReturnNull(false);
+  EXPECT_DEATH(a->Allocate(&cache, -1, 1),
+               "allocator is terminating the process");
 
   const uptr kNumAllocs = 100000;
   const uptr kNumIter = 10;
@@ -813,11 +818,11 @@ TEST(Allocator, LargeAlloc) {
 TEST(Allocator, ScopedBuffer) {
   const int kSize = 512;
   {
-    InternalMmapVector<int> int_buf(kSize);
-    EXPECT_EQ((uptr)kSize, int_buf.size()); // NOLINT
+    InternalScopedBuffer<int> int_buf(kSize);
+    EXPECT_EQ(sizeof(int) * kSize, int_buf.size());  // NOLINT
   }
-  InternalMmapVector<char> char_buf(kSize);
-  EXPECT_EQ((uptr)kSize, char_buf.size()); // NOLINT
+  InternalScopedBuffer<char> char_buf(kSize);
+  EXPECT_EQ(sizeof(char) * kSize, char_buf.size());  // NOLINT
   internal_memset(char_buf.data(), 'c', kSize);
   for (int i = 0; i < kSize; i++) {
     EXPECT_EQ('c', char_buf[i]);
@@ -888,7 +893,7 @@ TEST(SanitizerCommon, SizeClassAllocator32Iteration) {
 }
 
 TEST(SanitizerCommon, LargeMmapAllocatorIteration) {
-  LargeMmapAllocator<NoOpMapUnmapCallback> a;
+  LargeMmapAllocator<NoOpMapUnmapCallback, DieOnFailure> a;
   a.Init();
   AllocatorStats stats;
   stats.Init();
@@ -915,7 +920,7 @@ TEST(SanitizerCommon, LargeMmapAllocatorIteration) {
 }
 
 TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
-  LargeMmapAllocator<NoOpMapUnmapCallback> a;
+  LargeMmapAllocator<NoOpMapUnmapCallback, DieOnFailure> a;
   a.Init();
   AllocatorStats stats;
   stats.Init();
@@ -1289,7 +1294,7 @@ TEST(SanitizerCommon, TwoLevelByteMap) {
   const u64 kSize1 = 1 << 6, kSize2 = 1 << 12;
   const u64 n = kSize1 * kSize2;
   TwoLevelByteMap<kSize1, kSize2> m;
-  m.Init();
+  m.TestOnlyInit();
   for (u64 i = 0; i < n; i += 7) {
     m.set(i, (i % 100) + 1);
   }
@@ -1324,7 +1329,7 @@ void *TwoLevelByteMapUserThread(void *param) {
 
 TEST(SanitizerCommon, ThreadedTwoLevelByteMap) {
   TestByteMap m;
-  m.Init();
+  m.TestOnlyInit();
   TestMapUnmapCallback::map_count = 0;
   TestMapUnmapCallback::unmap_count = 0;
   static const int kNumThreads = 4;

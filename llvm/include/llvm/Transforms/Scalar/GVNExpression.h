@@ -159,7 +159,7 @@ public:
     return ET > ET_BasicStart && ET < ET_BasicEnd;
   }
 
-  /// Swap two operands. Used during GVN to put commutative operands in
+  /// \brief Swap two operands. Used during GVN to put commutative operands in
   /// order.
   void swapOperands(unsigned First, unsigned Second) {
     std::swap(Operands[First], Operands[Second]);

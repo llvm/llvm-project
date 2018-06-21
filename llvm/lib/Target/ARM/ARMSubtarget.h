@@ -198,9 +198,6 @@ protected:
   /// register allocation.
   bool DisablePostRAScheduler = false;
 
-  /// UseAA - True if using AA during codegen (DAGCombine, MISched, etc)
-  bool UseAA = false;
-
   /// HasThumb2 - True if Thumb2 instructions are supported.
   bool HasThumb2 = false;
 
@@ -601,7 +598,7 @@ public:
   bool hasFullFP16() const { return HasFullFP16; }
 
   bool hasFuseAES() const { return HasFuseAES; }
-  /// Return true if the CPU supports any kind of instruction fusion.
+  /// \brief Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const { return hasFuseAES(); }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
@@ -725,10 +722,6 @@ public:
 
   /// True for some subtargets at > -O0.
   bool enablePostRAScheduler() const override;
-
-  /// Enable use of alias analysis during code generation (during MI
-  /// scheduling, DAGCombine, etc.).
-  bool useAA() const override { return UseAA; }
 
   // enableAtomicExpand- True if we need to expand our atomics.
   bool enableAtomicExpand() const override;

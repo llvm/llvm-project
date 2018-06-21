@@ -100,7 +100,7 @@ TEST(Local, RemoveDuplicatePHINodes) {
   EXPECT_EQ(3U, BB->size());
 }
 
-static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
+std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
   std::unique_ptr<Module> Mod = parseAssemblyString(IR, Err, C);
   if (!Mod)
@@ -130,7 +130,7 @@ TEST(Local, ReplaceDbgDeclare) {
       !2 = !{}
       !3 = !{i32 2, !"Dwarf Version", i32 4}
       !4 = !{i32 2, !"Debug Info Version", i32 3}
-      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: !2)
       !9 = !DISubroutineType(types: !10)
       !10 = !{null}
       !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)
@@ -208,130 +208,6 @@ TEST(Local, MergeBasicBlockIntoOnlyPred) {
       });
 }
 
-TEST(Local, ConstantFoldTerminator) {
-  LLVMContext C;
-
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"(
-      define void @br_same_dest() {
-      entry:
-        br i1 false, label %bb0, label %bb0
-      bb0:
-        ret void
-      }
-
-      define void @br_different_dest() {
-      entry:
-        br i1 true, label %bb0, label %bb1
-      bb0:
-        br label %exit
-      bb1:
-        br label %exit
-      exit:
-        ret void
-      }
-
-      define void @switch_2_different_dest() {
-      entry:
-        switch i32 0, label %default [ i32 0, label %bb0 ]
-      default:
-        ret void
-      bb0:
-        ret void
-      }
-      define void @switch_2_different_dest_default() {
-      entry:
-        switch i32 1, label %default [ i32 0, label %bb0 ]
-      default:
-        ret void
-      bb0:
-        ret void
-      }
-      define void @switch_3_different_dest() {
-      entry:
-        switch i32 0, label %default [ i32 0, label %bb0
-                                       i32 1, label %bb1 ]
-      default:
-        ret void
-      bb0:
-        ret void
-      bb1:
-        ret void
-      }
-
-      define void @switch_variable_2_default_dest(i32 %arg) {
-      entry:
-        switch i32 %arg, label %default [ i32 0, label %default ]
-      default:
-        ret void
-      }
-
-      define void @switch_constant_2_default_dest() {
-      entry:
-        switch i32 1, label %default [ i32 0, label %default ]
-      default:
-        ret void
-      }
-
-      define void @switch_constant_3_repeated_dest() {
-      entry:
-        switch i32 0, label %default [ i32 0, label %bb0
-                                       i32 1, label %bb0 ]
-       bb0:
-         ret void
-      default:
-        ret void
-      }
-
-      define void @indirectbr() {
-      entry:
-        indirectbr i8* blockaddress(@indirectbr, %bb0), [label %bb0, label %bb1]
-      bb0:
-        ret void
-      bb1:
-        ret void
-      }
-
-      define void @indirectbr_repeated() {
-      entry:
-        indirectbr i8* blockaddress(@indirectbr_repeated, %bb0), [label %bb0, label %bb0]
-      bb0:
-        ret void
-      }
-
-      define void @indirectbr_unreachable() {
-      entry:
-        indirectbr i8* blockaddress(@indirectbr_unreachable, %bb0), [label %bb1]
-      bb0:
-        ret void
-      bb1:
-        ret void
-      }
-        )");
-
-  auto CFAllTerminators = [&](Function &F, DominatorTree *DT) {
-    DeferredDominance DDT(*DT);
-    for (Function::iterator I = F.begin(), E = F.end(); I != E;) {
-      BasicBlock *BB = &*I++;
-      ConstantFoldTerminator(BB, true, nullptr, &DDT);
-    }
-
-    EXPECT_TRUE(DDT.flush().verify());
-  };
-
-  runWithDomTree(*M, "br_same_dest", CFAllTerminators);
-  runWithDomTree(*M, "br_different_dest", CFAllTerminators);
-  runWithDomTree(*M, "switch_2_different_dest", CFAllTerminators);
-  runWithDomTree(*M, "switch_2_different_dest_default", CFAllTerminators);
-  runWithDomTree(*M, "switch_3_different_dest", CFAllTerminators);
-  runWithDomTree(*M, "switch_variable_2_default_dest", CFAllTerminators);
-  runWithDomTree(*M, "switch_constant_2_default_dest", CFAllTerminators);
-  runWithDomTree(*M, "switch_constant_3_repeated_dest", CFAllTerminators);
-  runWithDomTree(*M, "indirectbr", CFAllTerminators);
-  runWithDomTree(*M, "indirectbr_repeated", CFAllTerminators);
-  runWithDomTree(*M, "indirectbr_unreachable", CFAllTerminators);
-}
-
 struct SalvageDebugInfoTest : ::testing::Test {
   LLVMContext C;
   std::unique_ptr<Module> M;
@@ -356,7 +232,7 @@ struct SalvageDebugInfoTest : ::testing::Test {
       !2 = !{}
       !3 = !{i32 2, !"Dwarf Version", i32 4}
       !4 = !{i32 2, !"Debug Info Version", i32 3}
-      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, variables: !2)
       !9 = !DISubroutineType(types: !10)
       !10 = !{null}
       !11 = !DILocalVariable(name: "x", scope: !8, file: !1, line: 2, type: !12)

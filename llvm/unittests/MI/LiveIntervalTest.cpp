@@ -313,7 +313,7 @@ TEST(LiveIntervalTest, MoveUpValNos) {
   liveIntervalTest(R"MIR(
     successors: %bb.1, %bb.2
     %0 = IMPLICIT_DEF
-    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
     S_BRANCH %bb.1
   bb.2:
     S_NOP 0, implicit %0
@@ -343,10 +343,10 @@ TEST(LiveIntervalTest, MoveOverUndefUse0) {
 TEST(LiveIntervalTest, MoveOverUndefUse1) {
   // findLastUseBefore() used by handleMoveUp() must ignore undef operands.
   liveIntervalTest(R"MIR(
-    $sgpr0 = IMPLICIT_DEF
+    %sgpr0 = IMPLICIT_DEF
     S_NOP 0
-    S_NOP 0, implicit undef $sgpr0
-    $sgpr0 = IMPLICIT_DEF implicit $sgpr0(tied-def 0)
+    S_NOP 0, implicit undef %sgpr0
+    %sgpr0 = IMPLICIT_DEF implicit %sgpr0(tied-def 0)
 )MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
     testHandleMove(MF, LIS, 3, 1);
   });
@@ -358,7 +358,7 @@ TEST(LiveIntervalTest, SubRegMoveDown) {
   liveIntervalTest(R"MIR(
     successors: %bb.1, %bb.2
     %0 = IMPLICIT_DEF
-    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
     S_BRANCH %bb.1
   bb.2:
     successors: %bb.1
@@ -384,7 +384,7 @@ TEST(LiveIntervalTest, SubRegMoveUp) {
     successors: %bb.1, %bb.2
     undef %0.sub0 = IMPLICIT_DEF
     %0.sub1 = IMPLICIT_DEF
-    S_CBRANCH_VCCNZ %bb.2, implicit undef $vcc
+    S_CBRANCH_VCCNZ %bb.2, implicit undef %vcc
     S_BRANCH %bb.1
   bb.1:
     S_NOP 0, implicit %0.sub1
@@ -392,31 +392,6 @@ TEST(LiveIntervalTest, SubRegMoveUp) {
     S_NOP 0, implicit %0.sub1
 )MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
     testHandleMove(MF, LIS, 1, 0);
-  });
-}
-
-TEST(LiveIntervalTest, DeadSubRegMoveUp) {
-  // handleMoveUp had a bug where moving a dead subreg def into the middle of
-  // an earlier segment resulted in an invalid live range.
-  liveIntervalTest(R"MIR(
-    undef %125.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
-    %125.sub1:vreg_128 = COPY %125.sub0
-    %125.sub2:vreg_128 = COPY %125.sub0
-    undef %51.sub0:vreg_128 = V_MOV_B32_e32 898625526, implicit $exec
-    %51.sub1:vreg_128 = COPY %51.sub0
-    %51.sub2:vreg_128 = COPY %51.sub0
-    %52:vgpr_32 = V_MOV_B32_e32 986714345, implicit $exec
-    %54:vgpr_32 = V_MOV_B32_e32 1742342378, implicit $exec
-    %57:vgpr_32 = V_MOV_B32_e32 3168768712, implicit $exec
-    %59:vgpr_32 = V_MOV_B32_e32 1039972644, implicit $exec
-    %60:vgpr_32 = V_MAD_F32 0, %52, 0, undef %61:vgpr_32, 0, %59, 0, 0, implicit $exec
-    %63:vgpr_32 = V_ADD_F32_e32 %51.sub3, undef %64:vgpr_32, implicit $exec
-    dead %66:vgpr_32 = V_MAD_F32 0, %60, 0, undef %67:vgpr_32, 0, %125.sub2, 0, 0, implicit $exec
-    undef %124.sub1:vreg_128 = V_MAD_F32 0, %57, 0, undef %70:vgpr_32, 0, %125.sub1, 0, 0, implicit $exec
-    %124.sub0:vreg_128 = V_MAD_F32 0, %54, 0, undef %73:vgpr_32, 0, %125.sub0, 0, 0, implicit $exec
-    dead undef %125.sub3:vreg_128 = V_MAC_F32_e32 %63, undef %76:vgpr_32, %125.sub3, implicit $exec
-)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
-    testHandleMove(MF, LIS, 15, 12);
   });
 }
 

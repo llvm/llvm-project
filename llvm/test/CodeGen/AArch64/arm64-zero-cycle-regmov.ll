@@ -4,10 +4,8 @@
 define i32 @t(i32 %a, i32 %b, i32 %c, i32 %d) nounwind ssp {
 entry:
 ; CHECK-LABEL: t:
-; CHECK: mov [[REG2:x[0-9]+]], x3
-; CHECK: mov [[REG1:x[0-9]+]], x2
-; CHECK: mov x0, x2
-; CHECK: mov x1, x3
+; CHECK: mov x0, [[REG1:x[0-9]+]]
+; CHECK: mov x1, [[REG2:x[0-9]+]]
 ; CHECK: bl _foo
 ; CHECK: mov x0, [[REG1]]
 ; CHECK: mov x1, [[REG2]]

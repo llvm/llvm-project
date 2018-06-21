@@ -25,7 +25,7 @@ class DiagnosticOptions;
 
 namespace serialized_diags {
 
-/// Returns a DiagnosticConsumer that serializes diagnostics to
+/// \brief Returns a DiagnosticConsumer that serializes diagnostics to
 ///  a bitcode file.
 ///
 /// The created DiagnosticConsumer is designed for quick and lightweight

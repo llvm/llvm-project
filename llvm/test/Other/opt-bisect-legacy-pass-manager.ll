@@ -38,7 +38,7 @@
 ; utils/bisect) to locate the optimization that inlines the call to
 ; f2() in f3().
 
-; RUN: '%python' %S/opt-bisect-helper.py --start=0 --end=256 --optcmd=opt \
+; RUN: %python %S/opt-bisect-helper.py --start=0 --end=256 --optcmd=opt \
 ; RUN:         --filecheckcmd=FileCheck --test=%s \
 ; RUN:         --prefix=CHECK-BISECT-INLINE-HELPER \
 ; RUN:         | FileCheck %s --check-prefix=CHECK-BISECT-INLINE-RESULT

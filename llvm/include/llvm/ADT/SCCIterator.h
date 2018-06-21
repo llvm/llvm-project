@@ -33,7 +33,7 @@
 
 namespace llvm {
 
-/// Enumerate the SCCs of a directed graph in reverse topological order
+/// \brief Enumerate the SCCs of a directed graph in reverse topological order
 /// of the SCC DAG.
 ///
 /// This is implemented using Tarjan's DFS algorithm using an internal stack to
@@ -104,7 +104,7 @@ public:
   }
   static scc_iterator end(const GraphT &) { return scc_iterator(); }
 
-  /// Direct loop termination test which is more efficient than
+  /// \brief Direct loop termination test which is more efficient than
   /// comparison with \c end().
   bool isAtEnd() const {
     assert(!CurrentSCC.empty() || VisitStack.empty());
@@ -125,7 +125,7 @@ public:
     return CurrentSCC;
   }
 
-  /// Test if the current SCC has a loop.
+  /// \brief Test if the current SCC has a loop.
   ///
   /// If the SCC has more than one node, this is trivially true.  If not, it may
   /// still contain a loop if the node has an edge back to itself.
@@ -222,12 +222,12 @@ bool scc_iterator<GraphT, GT>::hasLoop() const {
     return false;
   }
 
-/// Construct the begin iterator for a deduced graph type T.
+/// \brief Construct the begin iterator for a deduced graph type T.
 template <class T> scc_iterator<T> scc_begin(const T &G) {
   return scc_iterator<T>::begin(G);
 }
 
-/// Construct the end iterator for a deduced graph type T.
+/// \brief Construct the end iterator for a deduced graph type T.
 template <class T> scc_iterator<T> scc_end(const T &G) {
   return scc_iterator<T>::end(G);
 }

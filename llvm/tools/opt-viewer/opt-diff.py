@@ -19,6 +19,7 @@ except ImportError:
 import optrecord
 import argparse
 from collections import defaultdict
+from multiprocessing import cpu_count, Pool
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
@@ -33,22 +34,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '--jobs',
         '-j',
-        default=None,
+        default=cpu_count(),
         type=int,
         help='Max job count (defaults to %(default)s, the current CPU count)')
-    parser.add_argument(
-        '--max-size',
-        '-m',
-        default=100000,
-        type=int,
-        help='Maximum number of remarks stored in an output file')
     parser.add_argument(
         '--no-progress-indicator',
         '-n',
         action='store_true',
         default=False,
         help='Do not display any indicator of how many YAML files were read.')
-    parser.add_argument('--output', '-o', default='diff{}.opt.yaml')
+    parser.add_argument('--output', '-o', default='diff.opt.yaml')
     args = parser.parse_args()
 
     files1 = optrecord.find_opt_files(args.yaml_dir_or_file_1)
@@ -66,10 +61,9 @@ if __name__ == '__main__':
     for r in removed:
         r.Added = False
 
-    result = list(added | removed)
+    result = added | removed
     for r in result:
         r.recover_yaml_structure()
 
-    for i in range(0, len(result), args.max_size):
-        with open(args.output.format(i / args.max_size), 'w') as stream:
-            yaml.dump_all(result[i:i + args.max_size], stream)
+    with open(args.output, 'w') as stream:
+        yaml.dump_all(result, stream)

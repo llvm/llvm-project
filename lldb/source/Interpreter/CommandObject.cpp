@@ -90,8 +90,8 @@ void CommandObject::SetHelpLong(llvm::StringRef str) { m_cmd_help_long = str; }
 void CommandObject::SetSyntax(llvm::StringRef str) { m_cmd_syntax = str; }
 
 Options *CommandObject::GetOptions() {
-  // By default commands don't have options unless this virtual function is
-  // overridden by base classes.
+  // By default commands don't have options unless this virtual function
+  // is overridden by base classes.
   return nullptr;
 }
 
@@ -104,16 +104,20 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
     options->NotifyOptionParsingStarting(&exe_ctx);
 
+    // ParseOptions calls getopt_long_only, which always skips the zero'th item
+    // in the array and starts at position 1,
+    // so we need to push a dummy value into position zero.
+    args.Unshift(llvm::StringRef("dummy_string"));
     const bool require_validation = true;
-    llvm::Expected<Args> args_or = options->Parse(
-        args, &exe_ctx, GetCommandInterpreter().GetPlatform(true),
-        require_validation);
+    error = args.ParseOptions(*options, &exe_ctx,
+                              GetCommandInterpreter().GetPlatform(true),
+                              require_validation);
 
-    if (args_or) {
-      args = std::move(*args_or);
+    // The "dummy_string" will have already been removed by ParseOptions,
+    // so no need to remove it.
+
+    if (error.Success())
       error = options->NotifyOptionParsingFinished(&exe_ctx);
-    } else
-      error = args_or.takeError();
 
     if (error.Success()) {
       if (options->VerifyOptions(result))
@@ -138,10 +142,10 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
 
 bool CommandObject::CheckRequirements(CommandReturnObject &result) {
 #ifdef LLDB_CONFIGURATION_DEBUG
-  // Nothing should be stored in m_exe_ctx between running commands as
-  // m_exe_ctx has shared pointers to the target, process, thread and frame and
-  // we don't want any CommandObject instances to keep any of these objects
-  // around longer than for a single command. Every command should call
+  // Nothing should be stored in m_exe_ctx between running commands as m_exe_ctx
+  // has shared pointers to the target, process, thread and frame and we don't
+  // want any CommandObject instances to keep any of these objects around
+  // longer than for a single command. Every command should call
   // CommandObject::Cleanup() after it has completed
   assert(m_exe_ctx.GetTargetPtr() == NULL);
   assert(m_exe_ctx.GetProcessPtr() == NULL);
@@ -149,9 +153,9 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   assert(m_exe_ctx.GetFramePtr() == NULL);
 #endif
 
-  // Lock down the interpreter's execution context prior to running the command
-  // so we guarantee the selected target, process, thread and frame can't go
-  // away during the execution
+  // Lock down the interpreter's execution context prior to running the
+  // command so we guarantee the selected target, process, thread and frame
+  // can't go away during the execution
   m_exe_ctx = m_interpreter.GetExecutionContext();
 
   const uint32_t flags = GetFlags().Get();
@@ -266,8 +270,9 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
                                     int max_return_elements,
                                     bool &word_complete, StringList &matches) {
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
-  // Subclasses who want raw command string but desire, for example, argument
-  // completion should override WantsCompletion() to return true, instead.
+  // Subclasses who want raw command string but desire, for example,
+  // argument completion should override WantsCompletion() to return true,
+  // instead.
   if (WantsRawCommandString() && !WantsCompletion()) {
     // FIXME: Abstract telling the completion to insert the completion
     // character.
@@ -280,7 +285,20 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
     OptionElementVector opt_element_vector;
 
     if (cur_options != nullptr) {
-      opt_element_vector = cur_options->ParseForCompletion(input, cursor_index);
+      // Re-insert the dummy command name string which will have been
+      // stripped off:
+      input.Unshift(llvm::StringRef("dummy-string"));
+      cursor_index++;
+
+      // I stick an element on the end of the input, because if the last element
+      // is option that requires an argument, getopt_long_only will freak out.
+
+      input.AppendArgument(llvm::StringRef("<FAKE-VALUE>"));
+
+      input.ParseArgsForCompletion(*cur_options, opt_element_vector,
+                                   cursor_index);
+
+      input.DeleteArgumentAtIndex(input.GetArgumentCount() - 1);
 
       bool handled_by_options;
       handled_by_options = cur_options->HandleOptionCompletion(
@@ -423,10 +441,9 @@ OptSetFiltered(uint32_t opt_set_mask,
   return ret_val;
 }
 
-// Default parameter value of opt_set_mask is LLDB_OPT_SET_ALL, which means
-// take all the argument data into account.  On rare cases where some argument
-// sticks with certain option sets, this function returns the option set
-// filtered args.
+// Default parameter value of opt_set_mask is LLDB_OPT_SET_ALL, which means take
+// all the argument data into account.  On rare cases where some argument sticks
+// with certain option sets, this function returns the option set filtered args.
 void CommandObject::GetFormattedCommandArguments(Stream &str,
                                                  uint32_t opt_set_mask) {
   int num_args = m_arguments.size();
@@ -466,7 +483,8 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
                    first_name, second_name);
         break;
       // Explicitly test for all the rest of the cases, so if new types get
-      // added we will notice the missing case statement(s).
+      // added we will notice the
+      // missing case statement(s).
       case eArgRepeatPlain:
       case eArgRepeatOptional:
       case eArgRepeatPlus:
@@ -502,7 +520,8 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
         str.Printf("<%s_1> .. <%s_n>", name_str.c_str(), name_str.c_str());
         break;
       // Explicitly test for all the rest of the cases, so if new types get
-      // added we will notice the missing case statement(s).
+      // added we will notice the
+      // missing case statement(s).
       case eArgRepeatPairPlain:
       case eArgRepeatPairOptional:
       case eArgRepeatPairPlus:
@@ -510,8 +529,8 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
       case eArgRepeatPairRange:
       case eArgRepeatPairRangeOptional:
         // These should not be hit, as they should pass the IsPairType test
-        // above, and control should have gone into the other branch of the if
-        // statement.
+        // above, and control should
+        // have gone into the other branch of the if statement.
         break;
       }
     }
@@ -855,8 +874,9 @@ void CommandObject::GenerateHelpText(Stream &output_strm) {
   if (!IsDashDashCommand() && options && options->NumCommandOptions() > 0) {
     if (WantsRawCommandString() && !WantsCompletion()) {
       // Emit the message about using ' -- ' between the end of the command
-      // options and the raw input conditionally, i.e., only if the command
-      // object does not want completion.
+      // options and the raw input
+      // conditionally, i.e., only if the command object does not want
+      // completion.
       interpreter.OutputFormattedHelpText(
           output_strm, "", "",
           "\nImportant Note: Because this command takes 'raw' input, if you "
@@ -896,8 +916,8 @@ void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
   id_range_arg.arg_repetition = eArgRepeatOptional;
 
   // The first (and only) argument for this command could be either an id or an
-  // id_range. Push both variants into the entry for the first argument for
-  // this command.
+  // id_range.
+  // Push both variants into the entry for the first argument for this command.
   arg.push_back(id_arg);
   arg.push_back(id_range_arg);
 }

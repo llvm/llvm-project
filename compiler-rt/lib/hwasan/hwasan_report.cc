@@ -1,4 +1,4 @@
-//===-- hwasan_report.cc --------------------------------------------------===//
+//===-- hwasan_report.cc ----------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,7 +14,6 @@
 
 #include "hwasan.h"
 #include "hwasan_allocator.h"
-#include "hwasan_mapping.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -37,9 +36,9 @@ static StackTrace GetStackTraceFromId(u32 id) {
 class Decorator: public __sanitizer::SanitizerCommonDecorator {
  public:
   Decorator() : SanitizerCommonDecorator() { }
-  const char *Allocation() const { return Magenta(); }
-  const char *Origin() const { return Magenta(); }
-  const char *Name() const { return Green(); }
+  const char *Allocation() { return Magenta(); }
+  const char *Origin() { return Magenta(); }
+  const char *Name() { return Green(); }
 };
 
 struct HeapAddressDescription {
@@ -129,5 +128,6 @@ void ReportTagMismatch(StackTrace *stack, uptr addr, uptr access_size,
 
   ReportErrorSummary("tag-mismatch", stack);
 }
+
 
 }  // namespace __hwasan

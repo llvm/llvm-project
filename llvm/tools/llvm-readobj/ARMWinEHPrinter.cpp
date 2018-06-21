@@ -33,7 +33,7 @@
 // (.pdata) entry.
 //
 // The exception data contains information about the frame setup, all of the
-// epilogue scopes (for functions for which there are multiple exit points) and
+// epilouge scopes (for functions for which there are multiple exit points) and
 // the associated exception handler.  Additionally, the entry contains byte-code
 // describing how to unwind the function (c.f. Decoder::decodeOpcodes).
 //

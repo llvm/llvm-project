@@ -320,8 +320,6 @@ public:
     static const char *
     StateAsCString (lldb::StateType state);
 
-    static SBStructuredData GetBuildConfiguration();
-
     static bool
     StateIsRunningState (lldb::StateType state);
 

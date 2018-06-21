@@ -34,10 +34,10 @@ void InitializePlatformInterceptors();
 
 }  // namespace __asan
 
-// There is no general interception at all on Fuchsia and RTEMS.
+// There is no general interception at all on Fuchsia.
 // Only the functions in asan_interceptors_memintrinsics.h are
 // really defined to replace libc functions.
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#if !SANITIZER_FUCHSIA
 
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
@@ -46,11 +46,13 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT__LONGJMP 1
 # define ASAN_INTERCEPT_INDEX 1
 # define ASAN_INTERCEPT_PTHREAD_CREATE 1
+# define ASAN_INTERCEPT_FORK 1
 #else
 # define ASAN_INTERCEPT_ATOLL_AND_STRTOLL 0
 # define ASAN_INTERCEPT__LONGJMP 0
 # define ASAN_INTERCEPT_INDEX 0
 # define ASAN_INTERCEPT_PTHREAD_CREATE 0
+# define ASAN_INTERCEPT_FORK 0
 #endif
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
@@ -78,20 +80,13 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT___LONGJMP_CHK 0
 #endif
 
-#if ASAN_HAS_EXCEPTIONS && !SANITIZER_WINDOWS && !SANITIZER_SOLARIS && \
-    !SANITIZER_NETBSD
+// Android bug: https://code.google.com/p/android/issues/detail?id=61799
+#if ASAN_HAS_EXCEPTIONS && !SANITIZER_WINDOWS && \
+    !(SANITIZER_ANDROID && defined(__i386)) && \
+    !SANITIZER_SOLARIS
 # define ASAN_INTERCEPT___CXA_THROW 1
-# define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 1
-# if defined(_GLIBCXX_SJLJ_EXCEPTIONS) || (SANITIZER_IOS && defined(__arm__))
-#  define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 1
-# else
-#  define ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION 1
-# endif
 #else
 # define ASAN_INTERCEPT___CXA_THROW 0
-# define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 0
-# define ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION 0
-# define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 0
 #endif
 
 #if !SANITIZER_WINDOWS

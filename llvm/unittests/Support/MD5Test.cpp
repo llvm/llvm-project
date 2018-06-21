@@ -19,7 +19,7 @@
 using namespace llvm;
 
 namespace {
-/// Tests an arbitrary set of bytes passed as \p Input.
+/// \brief Tests an arbitrary set of bytes passed as \p Input.
 void TestMD5Sum(ArrayRef<uint8_t> Input, StringRef Final) {
   MD5 Hash;
   Hash.update(Input);

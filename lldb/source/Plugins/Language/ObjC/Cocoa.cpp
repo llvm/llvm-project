@@ -33,6 +33,8 @@
 
 #include "llvm/ADT/APInt.h"
 
+#include "llvm/ADT/APInt.h"
+
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 
 #include "NSString.h"
@@ -40,6 +42,15 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
+
+namespace lldb_private {
+namespace formatters {
+namespace swift {
+bool NSContiguousString_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                        const TypeSummaryOptions &options);
+}
+}
+}
 
 bool lldb_private::formatters::NSBundleSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
@@ -817,9 +828,9 @@ bool lldb_private::formatters::NSDateSummaryProvider(
     stream.Printf("0001-12-30 00:00:00 +0000");
     return true;
   }
-  // this snippet of code assumes that time_t == seconds since Jan-1-1970 this
-  // is generally true and POSIXly happy, but might break if a library vendor
-  // decides to get creative
+  // this snippet of code assumes that time_t == seconds since Jan-1-1970
+  // this is generally true and POSIXly happy, but might break if a library
+  // vendor decides to get creative
   time_t epoch = GetOSXEpoch();
   epoch = epoch + (time_t)date_value;
   tm *tm_date = gmtime(&epoch);

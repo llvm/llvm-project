@@ -17,9 +17,9 @@ class DWARFFormValue;
 class SymbolFileDWARF;
 
 struct DIERef {
-  DIERef() = default;
+  DIERef();
 
-  DIERef(dw_offset_t c, dw_offset_t d) : cu_offset(c), die_offset(d) {}
+  DIERef(dw_offset_t c, dw_offset_t d);
 
   //----------------------------------------------------------------------
   // In order to properly decode a lldb::user_id_t back into a DIERef we
@@ -45,12 +45,8 @@ struct DIERef {
 
   bool operator<(const DIERef &ref) { return die_offset < ref.die_offset; }
 
-  explicit operator bool() const {
-    return cu_offset != DW_INVALID_OFFSET || die_offset != DW_INVALID_OFFSET;
-  }
-
-  dw_offset_t cu_offset = DW_INVALID_OFFSET;
-  dw_offset_t die_offset = DW_INVALID_OFFSET;
+  dw_offset_t cu_offset;
+  dw_offset_t die_offset;
 };
 
 typedef std::vector<DIERef> DIEArray;

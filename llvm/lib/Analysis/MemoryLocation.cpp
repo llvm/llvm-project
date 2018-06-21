@@ -65,14 +65,6 @@ MemoryLocation MemoryLocation::get(const AtomicRMWInst *RMWI) {
 }
 
 MemoryLocation MemoryLocation::getForSource(const MemTransferInst *MTI) {
-  return getForSource(cast<AnyMemTransferInst>(MTI));
-}
-
-MemoryLocation MemoryLocation::getForSource(const AtomicMemTransferInst *MTI) {
-  return getForSource(cast<AnyMemTransferInst>(MTI));
-}
-
-MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
   uint64_t Size = UnknownSize;
   if (ConstantInt *C = dyn_cast<ConstantInt>(MTI->getLength()))
     Size = C->getValue().getZExtValue();
@@ -85,25 +77,17 @@ MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
   return MemoryLocation(MTI->getRawSource(), Size, AATags);
 }
 
-MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MI) {
-  return getForDest(cast<AnyMemIntrinsic>(MI));
-}
-
-MemoryLocation MemoryLocation::getForDest(const AtomicMemIntrinsic *MI) {
-  return getForDest(cast<AnyMemIntrinsic>(MI));
-}
-
-MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
+MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MTI) {
   uint64_t Size = UnknownSize;
-  if (ConstantInt *C = dyn_cast<ConstantInt>(MI->getLength()))
+  if (ConstantInt *C = dyn_cast<ConstantInt>(MTI->getLength()))
     Size = C->getValue().getZExtValue();
 
   // memcpy/memmove can have AA tags. For memcpy, they apply
   // to both the source and the destination.
   AAMDNodes AATags;
-  MI->getAAMetadata(AATags);
+  MTI->getAAMetadata(AATags);
 
-  return MemoryLocation(MI->getRawDest(), Size, AATags);
+  return MemoryLocation(MTI->getRawDest(), Size, AATags);
 }
 
 MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,

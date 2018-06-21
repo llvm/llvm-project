@@ -21,9 +21,7 @@
 ; CHECK-NOT: # %for.body
 ; CHECK: .loc  1 6 3
 ; CHECK-NEXT: je  [[BB:.LBB[^ ]+]]
-; CHECK: [[BB]]:
-; CHECK: xorl %ebp, %ebp
-; CHECK-NEXT: .LBB{{.*}} # %for.end
+; CHECK: [[BB]]:{{.}}# %for.end
 
 target triple = "x86_64-unknown-linux-gnu"
 

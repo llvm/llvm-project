@@ -106,8 +106,9 @@ public:
 
 #ifndef SWIG
   // The SourceFileCache class separates the source manager from the cache of
-  // source files, so the cache can be stored in the Debugger, but the source
-  // managers can be per target.
+  // source files, so the
+  // cache can be stored in the Debugger, but the source managers can be per
+  // target.
   class SourceFileCache {
   public:
     SourceFileCache() = default;

@@ -17,9 +17,7 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Regex.h"
 #include <system_error>
 
 namespace clang {
@@ -43,27 +41,27 @@ public:
 const std::error_category &getParseCategory();
 std::error_code make_error_code(ParseError e);
 
-/// The ``FormatStyle`` is used to configure the formatting to follow
+/// \brief The ``FormatStyle`` is used to configure the formatting to follow
 /// specific guidelines.
 struct FormatStyle {
-  /// The extra indent or outdent of access modifiers, e.g. ``public:``.
+  /// \brief The extra indent or outdent of access modifiers, e.g. ``public:``.
   int AccessModifierOffset;
 
-  /// Different styles for aligning after open brackets.
+  /// \brief Different styles for aligning after open brackets.
   enum BracketAlignmentStyle {
-    /// Align parameters on the open bracket, e.g.:
+    /// \brief Align parameters on the open bracket, e.g.:
     /// \code
     ///   someLongFunction(argument1,
     ///                    argument2);
     /// \endcode
     BAS_Align,
-    /// Don't align, instead use ``ContinuationIndentWidth``, e.g.:
+    /// \brief Don't align, instead use ``ContinuationIndentWidth``, e.g.:
     /// \code
     ///   someLongFunction(argument1,
     ///       argument2);
     /// \endcode
     BAS_DontAlign,
-    /// Always break after an open bracket, if the parameters don't fit
+    /// \brief Always break after an open bracket, if the parameters don't fit
     /// on a single line, e.g.:
     /// \code
     ///   someLongFunction(
@@ -72,13 +70,13 @@ struct FormatStyle {
     BAS_AlwaysBreak,
   };
 
-  /// If ``true``, horizontally aligns arguments after an open bracket.
+  /// \brief If ``true``, horizontally aligns arguments after an open bracket.
   ///
   /// This applies to round brackets (parentheses), angle brackets and square
   /// brackets.
   BracketAlignmentStyle AlignAfterOpenBracket;
 
-  /// If ``true``, aligns consecutive assignments.
+  /// \brief If ``true``, aligns consecutive assignments.
   ///
   /// This will align the assignment operators of consecutive lines. This
   /// will result in formattings like
@@ -89,7 +87,7 @@ struct FormatStyle {
   /// \endcode
   bool AlignConsecutiveAssignments;
 
-  /// If ``true``, aligns consecutive declarations.
+  /// \brief If ``true``, aligns consecutive declarations.
   ///
   /// This will align the declaration names of consecutive lines. This
   /// will result in formattings like
@@ -100,9 +98,9 @@ struct FormatStyle {
   /// \endcode
   bool AlignConsecutiveDeclarations;
 
-  /// Different styles for aligning escaped newlines.
+  /// \brief Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle {
-    /// Don't align escaped newlines.
+    /// \brief Don't align escaped newlines.
     /// \code
     ///   #define A \
     ///     int aaaa; \
@@ -110,7 +108,7 @@ struct FormatStyle {
     ///     int dddddddddd;
     /// \endcode
     ENAS_DontAlign,
-    /// Align escaped newlines as far left as possible.
+    /// \brief Align escaped newlines as far left as possible.
     /// \code
     ///   true:
     ///   #define A   \
@@ -121,7 +119,7 @@ struct FormatStyle {
     ///   false:
     /// \endcode
     ENAS_Left,
-    /// Align escaped newlines in the right-most column.
+    /// \brief Align escaped newlines in the right-most column.
     /// \code
     ///   #define A                                                                      \
     ///     int aaaa;                                                                    \
@@ -131,10 +129,10 @@ struct FormatStyle {
     ENAS_Right,
   };
 
-  /// Options for aligning backslashes in escaped newlines.
+  /// \brief Options for aligning backslashes in escaped newlines.
   EscapedNewlineAlignmentStyle AlignEscapedNewlines;
 
-  /// If ``true``, horizontally align operands of binary and ternary
+  /// \brief If ``true``, horizontally align operands of binary and ternary
   /// expressions.
   ///
   /// Specifically, this aligns operands of a single expression that needs to be
@@ -145,7 +143,7 @@ struct FormatStyle {
   /// \endcode
   bool AlignOperands;
 
-  /// If ``true``, aligns trailing comments.
+  /// \brief If ``true``, aligns trailing comments.
   /// \code
   ///   true:                                   false:
   ///   int a;     // My comment a      vs.     int a; // My comment a
@@ -153,7 +151,7 @@ struct FormatStyle {
   /// \endcode
   bool AlignTrailingComments;
 
-  /// If the function declaration doesn't fit on a line,
+  /// \brief If the function declaration doesn't fit on a line,
   /// allow putting all parameters of a function declaration onto
   /// the next line even if ``BinPackParameters`` is ``false``.
   /// \code
@@ -170,12 +168,12 @@ struct FormatStyle {
   /// \endcode
   bool AllowAllParametersOfDeclarationOnNextLine;
 
-  /// Allows contracting simple braced statements to a single line.
+  /// \brief Allows contracting simple braced statements to a single line.
   ///
   /// E.g., this allows ``if (a) { return; }`` to be put on a single line.
   bool AllowShortBlocksOnASingleLine;
 
-  /// If ``true``, short case labels will be contracted to a single line.
+  /// \brief If ``true``, short case labels will be contracted to a single line.
   /// \code
   ///   true:                                   false:
   ///   switch (a) {                    vs.     switch (a) {
@@ -188,12 +186,12 @@ struct FormatStyle {
   /// \endcode
   bool AllowShortCaseLabelsOnASingleLine;
 
-  /// Different styles for merging short functions containing at most one
+  /// \brief Different styles for merging short functions containing at most one
   /// statement.
   enum ShortFunctionStyle {
-    /// Never merge functions into a single line.
+    /// \brief Never merge functions into a single line.
     SFS_None,
-    /// Only merge functions defined inside a class. Same as "inline",
+    /// \brief Only merge functions defined inside a class. Same as "inline",
     /// except it does not implies "empty": i.e. top level empty functions
     /// are not merged either.
     /// \code
@@ -207,7 +205,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     SFS_InlineOnly,
-    /// Only merge empty functions.
+    /// \brief Only merge empty functions.
     /// \code
     ///   void f() {}
     ///   void f2() {
@@ -215,7 +213,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     SFS_Empty,
-    /// Only merge functions defined inside a class. Implies "empty".
+    /// \brief Only merge functions defined inside a class. Implies "empty".
     /// \code
     ///   class Foo {
     ///     void f() { foo(); }
@@ -226,7 +224,7 @@ struct FormatStyle {
     ///   void f() {}
     /// \endcode
     SFS_Inline,
-    /// Merge all functions fitting on a single line.
+    /// \brief Merge all functions fitting on a single line.
     /// \code
     ///   class Foo {
     ///     void f() { foo(); }
@@ -236,18 +234,18 @@ struct FormatStyle {
     SFS_All,
   };
 
-  /// Dependent on the value, ``int f() { return 0; }`` can be put on a
+  /// \brief Dependent on the value, ``int f() { return 0; }`` can be put on a
   /// single line.
   ShortFunctionStyle AllowShortFunctionsOnASingleLine;
 
-  /// If ``true``, ``if (a) return;`` can be put on a single line.
+  /// \brief If ``true``, ``if (a) return;`` can be put on a single line.
   bool AllowShortIfStatementsOnASingleLine;
 
-  /// If ``true``, ``while (true) continue;`` can be put on a single
+  /// \brief If ``true``, ``while (true) continue;`` can be put on a single
   /// line.
   bool AllowShortLoopsOnASingleLine;
 
-  /// Different ways to break after the function definition return type.
+  /// \brief Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle {
     /// Break after return type automatically.
@@ -259,7 +257,7 @@ struct FormatStyle {
     DRTBS_TopLevel,
   };
 
-  /// Different ways to break after the function definition or
+  /// \brief Different ways to break after the function definition or
   /// declaration return type.
   enum ReturnTypeBreakingStyle {
     /// Break after return type automatically.
@@ -330,14 +328,14 @@ struct FormatStyle {
     RTBS_TopLevelDefinitions,
   };
 
-  /// The function definition return type breaking style to use.  This
+  /// \brief The function definition return type breaking style to use.  This
   /// option is **deprecated** and is retained for backwards compatibility.
   DefinitionReturnTypeBreakingStyle AlwaysBreakAfterDefinitionReturnType;
 
-  /// The function declaration return type breaking style to use.
+  /// \brief The function declaration return type breaking style to use.
   ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
 
-  /// If ``true``, always break before multiline string literals.
+  /// \brief If ``true``, always break before multiline string literals.
   ///
   /// This flag is mean to make cases where there are multiple multiline strings
   /// in a file look more consistent. Thus, it will only take effect if wrapping
@@ -351,46 +349,16 @@ struct FormatStyle {
   /// \endcode
   bool AlwaysBreakBeforeMultilineStrings;
 
-  /// Different ways to break after the template declaration.
-  enum BreakTemplateDeclarationsStyle {
-      /// Do not force break before declaration.
-      /// ``PenaltyBreakTemplateDeclaration`` is taken into account.
-      /// \code
-      ///    template <typename T> T foo() {
-      ///    }
-      ///    template <typename T> T foo(int aaaaaaaaaaaaaaaaaaaaa,
-      ///                                int bbbbbbbbbbbbbbbbbbbbb) {
-      ///    }
-      /// \endcode
-      BTDS_No,
-      /// Force break after template declaration only when the following
-      /// declaration spans multiple lines.
-      /// \code
-      ///    template <typename T> T foo() {
-      ///    }
-      ///    template <typename T>
-      ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
-      ///          int bbbbbbbbbbbbbbbbbbbbb) {
-      ///    }
-      /// \endcode
-      BTDS_MultiLine,
-      /// Always break after template declaration.
-      /// \code
-      ///    template <typename T>
-      ///    T foo() {
-      ///    }
-      ///    template <typename T>
-      ///    T foo(int aaaaaaaaaaaaaaaaaaaaa,
-      ///          int bbbbbbbbbbbbbbbbbbbbb) {
-      ///    }
-      /// \endcode
-      BTDS_Yes
-  };
+  /// \brief If ``true``, always break after the ``template<...>`` of a template
+  /// declaration.
+  /// \code
+  ///    true:                                  false:
+  ///    template <typename T>          vs.     template <typename T> class C {};
+  ///    class C {};
+  /// \endcode
+  bool AlwaysBreakTemplateDeclarations;
 
-  /// The template declaration breaking style to use.
-  BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
-
-  /// If ``false``, a function call's arguments will either be all on the
+  /// \brief If ``false``, a function call's arguments will either be all on the
   /// same line or will have one line each.
   /// \code
   ///   true:
@@ -408,7 +376,7 @@ struct FormatStyle {
   /// \endcode
   bool BinPackArguments;
 
-  /// If ``false``, a function declaration's or function definition's
+  /// \brief If ``false``, a function declaration's or function definition's
   /// parameters will either all be on the same line or will have one line each.
   /// \code
   ///   true:
@@ -422,18 +390,7 @@ struct FormatStyle {
   /// \endcode
   bool BinPackParameters;
 
-  /// The style of wrapping parameters on the same line (bin-packed) or
-  /// on one line each.
-  enum BinPackStyle {
-    /// Automatically determine parameter bin-packing behavior.
-    BPS_Auto,
-    /// Always bin-pack parameters.
-    BPS_Always,
-    /// Never bin-pack parameters.
-    BPS_Never,
-  };
-
-  /// The style of breaking before or after binary operators.
+  /// \brief The style of breaking before or after binary operators.
   enum BinaryOperatorStyle {
     /// Break after operators.
     /// \code
@@ -473,10 +430,10 @@ struct FormatStyle {
     BOS_All,
   };
 
-  /// The way to wrap binary operators.
+  /// \brief The way to wrap binary operators.
   BinaryOperatorStyle BreakBeforeBinaryOperators;
 
-  /// Different ways to attach braces to their surrounding context.
+  /// \brief Different ways to attach braces to their surrounding context.
   enum BraceBreakingStyle {
     /// Always attach braces to surrounding context.
     /// \code
@@ -611,10 +568,10 @@ struct FormatStyle {
     BS_Custom
   };
 
-  /// The brace breaking style to use.
+  /// \brief The brace breaking style to use.
   BraceBreakingStyle BreakBeforeBraces;
 
-  /// Precise control over the wrapping of braces.
+  /// \brief Precise control over the wrapping of braces.
   /// \code
   ///   # Should be declared this way:
   ///   BreakBeforeBraces: Custom
@@ -622,7 +579,7 @@ struct FormatStyle {
   ///       AfterClass: true
   /// \endcode
   struct BraceWrappingFlags {
-    /// Wrap class definitions.
+    /// \brief Wrap class definitions.
     /// \code
     ///   true:
     ///   class foo {};
@@ -632,7 +589,7 @@ struct FormatStyle {
     ///   {};
     /// \endcode
     bool AfterClass;
-    /// Wrap control statements (``if``/``for``/``while``/``switch``/..).
+    /// \brief Wrap control statements (``if``/``for``/``while``/``switch``/..).
     /// \code
     ///   true:
     ///   if (foo())
@@ -650,7 +607,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterControlStatement;
-    /// Wrap enum definitions.
+    /// \brief Wrap enum definitions.
     /// \code
     ///   true:
     ///   enum X : int
@@ -662,7 +619,7 @@ struct FormatStyle {
     ///   enum X : int { B };
     /// \endcode
     bool AfterEnum;
-    /// Wrap function definitions.
+    /// \brief Wrap function definitions.
     /// \code
     ///   true:
     ///   void foo()
@@ -678,7 +635,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterFunction;
-    /// Wrap namespace definitions.
+    /// \brief Wrap namespace definitions.
     /// \code
     ///   true:
     ///   namespace
@@ -694,11 +651,9 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterNamespace;
-    /// Wrap ObjC definitions (interfaces, implementations...).
-    /// \note @autoreleasepool and @synchronized blocks are wrapped
-    /// according to `AfterControlStatement` flag.
+    /// \brief Wrap ObjC definitions (``@autoreleasepool``, interfaces, ..).
     bool AfterObjCDeclaration;
-    /// Wrap struct definitions.
+    /// \brief Wrap struct definitions.
     /// \code
     ///   true:
     ///   struct foo
@@ -712,7 +667,7 @@ struct FormatStyle {
     ///   };
     /// \endcode
     bool AfterStruct;
-    /// Wrap union definitions.
+    /// \brief Wrap union definitions.
     /// \code
     ///   true:
     ///   union foo
@@ -726,7 +681,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterUnion;
-    /// Wrap extern blocks.
+    /// \brief Wrap extern blocks.
     /// \code
     ///   true:
     ///   extern "C"
@@ -740,7 +695,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterExternBlock;
-    /// Wrap before ``catch``.
+    /// \brief Wrap before ``catch``.
     /// \code
     ///   true:
     ///   try {
@@ -756,7 +711,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool BeforeCatch;
-    /// Wrap before ``else``.
+    /// \brief Wrap before ``else``.
     /// \code
     ///   true:
     ///   if (foo()) {
@@ -770,9 +725,9 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool BeforeElse;
-    /// Indent the wrapped braces themselves.
+    /// \brief Indent the wrapped braces themselves.
     bool IndentBraces;
-    /// If ``false``, empty function body can be put on a single line.
+    /// \brief If ``false``, empty function body can be put on a single line.
     /// This option is used only if the opening brace of the function has
     /// already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
     /// set, and the function could/should not be put on a single line (as per
@@ -784,7 +739,7 @@ struct FormatStyle {
     /// \endcode
     ///
     bool SplitEmptyFunction;
-    /// If ``false``, empty record (e.g. class, struct or union) body
+    /// \brief If ``false``, empty record (e.g. class, struct or union) body
     /// can be put on a single line. This option is used only if the opening
     /// brace of the record has already been wrapped, i.e. the `AfterClass`
     /// (for classes) brace wrapping mode is set.
@@ -795,7 +750,7 @@ struct FormatStyle {
     /// \endcode
     ///
     bool SplitEmptyRecord;
-    /// If ``false``, empty namespace body can be put on a single line.
+    /// \brief If ``false``, empty namespace body can be put on a single line.
     /// This option is used only if the opening brace of the namespace has
     /// already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
     /// set.
@@ -808,7 +763,7 @@ struct FormatStyle {
     bool SplitEmptyNamespace;
   };
 
-  /// Control of individual brace wrapping cases.
+  /// \brief Control of individual brace wrapping cases.
   ///
   /// If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
   /// each individual brace case should be handled. Otherwise, this is ignored.
@@ -822,7 +777,7 @@ struct FormatStyle {
   /// \endcode
   BraceWrappingFlags BraceWrapping;
 
-  /// If ``true``, ternary operators will be placed after line breaks.
+  /// \brief If ``true``, ternary operators will be placed after line breaks.
   /// \code
   ///    true:
   ///    veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription
@@ -836,36 +791,36 @@ struct FormatStyle {
   /// \endcode
   bool BreakBeforeTernaryOperators;
 
-  /// Different ways to break initializers.
+  /// \brief Different ways to break initializers.
   enum BreakConstructorInitializersStyle {
     /// Break constructor initializers before the colon and after the commas.
     /// \code
-    ///    Constructor()
-    ///        : initializer1(),
-    ///          initializer2()
+    /// Constructor()
+    ///     : initializer1(),
+    ///       initializer2()
     /// \endcode
     BCIS_BeforeColon,
     /// Break constructor initializers before the colon and commas, and align
     /// the commas with the colon.
     /// \code
-    ///    Constructor()
-    ///        : initializer1()
-    ///        , initializer2()
+    /// Constructor()
+    ///     : initializer1()
+    ///     , initializer2()
     /// \endcode
     BCIS_BeforeComma,
     /// Break constructor initializers after the colon and commas.
     /// \code
-    ///    Constructor() :
-    ///        initializer1(),
-    ///        initializer2()
+    /// Constructor() :
+    ///     initializer1(),
+    ///     initializer2()
     /// \endcode
     BCIS_AfterColon
   };
 
-  /// The constructor initializers style to use.
+  /// \brief The constructor initializers style to use.
   BreakConstructorInitializersStyle BreakConstructorInitializers;
 
-  /// Break after each annotation on a field in Java files.
+  /// \brief Break after each annotation on a field in Java files.
   /// \code{.java}
   ///    true:                                  false:
   ///    @Partial                       vs.     @Partial @Mock DataLoad loader;
@@ -874,17 +829,17 @@ struct FormatStyle {
   /// \endcode
   bool BreakAfterJavaFieldAnnotations;
 
-  /// Allow breaking string literals when formatting.
+  /// \brief Allow breaking string literals when formatting.
   bool BreakStringLiterals;
 
-  /// The column limit.
+  /// \brief The column limit.
   ///
   /// A column limit of ``0`` means that there is no column limit. In this case,
   /// clang-format will respect the input's line breaking decisions within
   /// statements unless they contradict other rules.
   unsigned ColumnLimit;
 
-  /// A regular expression that describes comments with special meaning,
+  /// \brief A regular expression that describes comments with special meaning,
   /// which should not be split into lines or otherwise changed.
   /// \code
   ///    // CommentPragmas: '^ FOOBAR pragma:'
@@ -893,39 +848,18 @@ struct FormatStyle {
   /// \endcode
   std::string CommentPragmas;
 
-  /// Different ways to break inheritance list.
-  enum BreakInheritanceListStyle {
-    /// Break inheritance list before the colon and after the commas.
-    /// \code
-    ///    class Foo
-    ///        : Base1,
-    ///          Base2
-    ///    {};
-    /// \endcode
-    BILS_BeforeColon,
-    /// Break inheritance list before the colon and commas, and align
-    /// the commas with the colon.
-    /// \code
-    ///    class Foo
-    ///        : Base1
-    ///        , Base2
-    ///    {};
-    /// \endcode
-    BILS_BeforeComma,
-    /// Break inheritance list after the colon and commas.
-    /// \code
-    ///    class Foo :
-    ///        Base1,
-    ///        Base2
-    ///    {};
-    /// \endcode
-    BILS_AfterColon
-  };
+  /// \brief If ``true``, in the class inheritance expression clang-format will
+  /// break before ``:`` and ``,`` if there is multiple inheritance.
+  /// \code
+  ///    true:                                  false:
+  ///    class MyClass                  vs.     class MyClass : public X, public Y {
+  ///        : public X                         };
+  ///        , public Y {
+  ///    };
+  /// \endcode
+  bool BreakBeforeInheritanceComma;
 
-  /// The inheritance list style to use.
-  BreakInheritanceListStyle BreakInheritanceList;
-
-  /// If ``true``, consecutive namespace declarations will be on the same
+  /// \brief If ``true``, consecutive namespace declarations will be on the same
   /// line. If ``false``, each namespace is declared on a new line.
   /// \code
   ///   true:
@@ -948,7 +882,7 @@ struct FormatStyle {
   /// \endcode
   bool CompactNamespaces;
 
-  /// If the constructor initializers don't fit on a line, put each
+  /// \brief If the constructor initializers don't fit on a line, put each
   /// initializer on its own line.
   /// \code
   ///   true:
@@ -966,11 +900,11 @@ struct FormatStyle {
   /// \endcode
   bool ConstructorInitializerAllOnOneLineOrOnePerLine;
 
-  /// The number of characters to use for indentation of constructor
-  /// initializer lists as well as inheritance lists.
+  /// \brief The number of characters to use for indentation of constructor
+  /// initializer lists.
   unsigned ConstructorInitializerIndentWidth;
 
-  /// Indent width for line continuations.
+  /// \brief Indent width for line continuations.
   /// \code
   ///    ContinuationIndentWidth: 2
   ///
@@ -980,7 +914,7 @@ struct FormatStyle {
   /// \endcode
   unsigned ContinuationIndentWidth;
 
-  /// If ``true``, format braced lists as best suited for C++11 braced
+  /// \brief If ``true``, format braced lists as best suited for C++11 braced
   /// lists.
   ///
   /// Important differences:
@@ -1002,17 +936,17 @@ struct FormatStyle {
   /// \endcode
   bool Cpp11BracedListStyle;
 
-  /// If ``true``, analyze the formatted file for the most common
+  /// \brief If ``true``, analyze the formatted file for the most common
   /// alignment of ``&`` and ``*``.
   /// Pointer and reference alignment styles are going to be updated according
   /// to the preferences found in the file.
   /// ``PointerAlignment`` is then used only as fallback.
   bool DerivePointerAlignment;
 
-  /// Disables formatting completely.
+  /// \brief Disables formatting completely.
   bool DisableFormat;
 
-  /// If ``true``, clang-format detects whether function calls and
+  /// \brief If ``true``, clang-format detects whether function calls and
   /// definitions are formatted with one parameter per line.
   ///
   /// Each call can be bin-packed, one-per-line or inconclusive. If it is
@@ -1024,7 +958,7 @@ struct FormatStyle {
   /// not use this in config files, etc. Use at your own risk.
   bool ExperimentalAutoDetectBinPacking;
 
-  /// If ``true``, clang-format adds missing namespace end comments and
+  /// \brief If ``true``, clang-format adds missing namespace end comments and
   /// fixes invalid existing ones.
   /// \code
   ///    true:                                  false:
@@ -1034,7 +968,7 @@ struct FormatStyle {
   /// \endcode
   bool FixNamespaceComments;
 
-  /// A vector of macros that should be interpreted as foreach loops
+  /// \brief A vector of macros that should be interpreted as foreach loops
   /// instead of as function calls.
   ///
   /// These are expected to be macros of the form:
@@ -1051,9 +985,93 @@ struct FormatStyle {
   /// For example: BOOST_FOREACH.
   std::vector<std::string> ForEachMacros;
 
-  tooling::IncludeStyle IncludeStyle;
+  /// \brief Styles for sorting multiple ``#include`` blocks.
+  enum IncludeBlocksStyle {
+    /// \brief Sort each ``#include`` block separately.
+    /// \code
+    ///    #include "b.h"               into      #include "b.h"
+    ///
+    ///    #include <lib/main.h>                  #include "a.h"
+    ///    #include "a.h"                         #include <lib/main.h>
+    /// \endcode
+    IBS_Preserve,
+    /// \brief Merge multiple ``#include`` blocks together and sort as one.
+    /// \code
+    ///    #include "b.h"               into      #include "a.h"
+    ///                                           #include "b.h"
+    ///    #include <lib/main.h>                  #include <lib/main.h>
+    ///    #include "a.h"
+    /// \endcode
+    IBS_Merge,
+    /// \brief Merge multiple ``#include`` blocks together and sort as one.
+    /// Then split into groups based on category priority. See
+    /// ``IncludeCategories``.
+    /// \code
+    ///    #include "b.h"               into      #include "a.h"
+    ///                                           #include "b.h"
+    ///    #include <lib/main.h>
+    ///    #include "a.h"                         #include <lib/main.h>
+    /// \endcode
+    IBS_Regroup,
+  };
 
-  /// Indent case labels one level from the switch statement.
+  /// \brief Dependent on the value, multiple ``#include`` blocks can be sorted
+  /// as one and divided based on category.
+  IncludeBlocksStyle IncludeBlocks;
+
+  /// \brief See documentation of ``IncludeCategories``.
+  struct IncludeCategory {
+    /// \brief The regular expression that this category matches.
+    std::string Regex;
+    /// \brief The priority to assign to this category.
+    int Priority;
+    bool operator==(const IncludeCategory &Other) const {
+      return Regex == Other.Regex && Priority == Other.Priority;
+    }
+  };
+
+  /// \brief Regular expressions denoting the different ``#include`` categories
+  /// used for ordering ``#includes``.
+  ///
+  /// These regular expressions are matched against the filename of an include
+  /// (including the <> or "") in order. The value belonging to the first
+  /// matching regular expression is assigned and ``#includes`` are sorted first
+  /// according to increasing category number and then alphabetically within
+  /// each category.
+  ///
+  /// If none of the regular expressions match, INT_MAX is assigned as
+  /// category. The main header for a source file automatically gets category 0.
+  /// so that it is generally kept at the beginning of the ``#includes``
+  /// (http://llvm.org/docs/CodingStandards.html#include-style). However, you
+  /// can also assign negative priorities if you have certain headers that
+  /// always need to be first.
+  ///
+  /// To configure this in the .clang-format file, use:
+  /// \code{.yaml}
+  ///   IncludeCategories:
+  ///     - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+  ///       Priority:        2
+  ///     - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+  ///       Priority:        3
+  ///     - Regex:           '.*'
+  ///       Priority:        1
+  /// \endcode
+  std::vector<IncludeCategory> IncludeCategories;
+
+  /// \brief Specify a regular expression of suffixes that are allowed in the
+  /// file-to-main-include mapping.
+  ///
+  /// When guessing whether a #include is the "main" include (to assign
+  /// category 0, see above), use this regex of allowed suffixes to the header
+  /// stem. A partial match is done, so that:
+  /// - "" means "arbitrary suffix"
+  /// - "$" means "no suffix"
+  ///
+  /// For example, if configured to "(_test)?$", then a header a.h would be seen
+  /// as the "main" include in both a.cc and a_test.cc.
+  std::string IncludeIsMainRegex;
+
+  /// \brief Indent case labels one level from the switch statement.
   ///
   /// When ``false``, use the same indentation level as for the switch statement.
   /// Switch statement body is always indented one level more than case labels.
@@ -1069,7 +1087,7 @@ struct FormatStyle {
   /// \endcode
   bool IndentCaseLabels;
 
-  /// Options for indenting preprocessor directives.
+  /// \brief Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle {
     /// Does not indent any directives.
     /// \code
@@ -1091,10 +1109,10 @@ struct FormatStyle {
     PPDIS_AfterHash
   };
 
-  /// The preprocessor directive indenting style to use.
+  /// \brief The preprocessor directive indenting style to use.
   PPDirectiveIndentStyle IndentPPDirectives;
 
-  /// The number of columns to use for indentation.
+  /// \brief The number of columns to use for indentation.
   /// \code
   ///    IndentWidth: 3
   ///
@@ -1107,7 +1125,7 @@ struct FormatStyle {
   /// \endcode
   unsigned IndentWidth;
 
-  /// Indent if a function definition or declaration is wrapped after the
+  /// \brief Indent if a function definition or declaration is wrapped after the
   /// type.
   /// \code
   ///    true:
@@ -1120,7 +1138,7 @@ struct FormatStyle {
   /// \endcode
   bool IndentWrappedFunctionNames;
 
-  /// Quotation styles for JavaScript strings. Does not affect template
+  /// \brief Quotation styles for JavaScript strings. Does not affect template
   /// strings.
   enum JavaScriptQuoteStyle {
     /// Leave string quotes as they are.
@@ -1143,10 +1161,10 @@ struct FormatStyle {
     JSQS_Double
   };
 
-  /// The JavaScriptQuoteStyle to use for JavaScript strings.
+  /// \brief The JavaScriptQuoteStyle to use for JavaScript strings.
   JavaScriptQuoteStyle JavaScriptQuotes;
 
-  /// Whether to wrap JavaScript import/export statements.
+  /// \brief Whether to wrap JavaScript import/export statements.
   /// \code{.js}
   ///    true:
   ///    import {
@@ -1160,7 +1178,7 @@ struct FormatStyle {
   /// \endcode
   bool JavaScriptWrapImports;
 
-  /// If true, the empty line at the start of blocks is kept.
+  /// \brief If true, the empty line at the start of blocks is kept.
   /// \code
   ///    true:                                  false:
   ///    if (foo) {                     vs.     if (foo) {
@@ -1170,7 +1188,7 @@ struct FormatStyle {
   /// \endcode
   bool KeepEmptyLinesAtTheStartOfBlocks;
 
-  /// Supported languages.
+  /// \brief Supported languages.
   ///
   /// When stored in a configuration file, specifies the language, that the
   /// configuration targets. When passed to the ``reformat()`` function, enables
@@ -1197,10 +1215,10 @@ struct FormatStyle {
   };
   bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
 
-  /// Language, this format style is targeted at.
+  /// \brief Language, this format style is targeted at.
   LanguageKind Language;
 
-  /// A regular expression matching macros that start a block.
+  /// \brief A regular expression matching macros that start a block.
   /// \code
   ///    # With:
   ///    MacroBlockBegin: "^NS_MAP_BEGIN|\
@@ -1228,10 +1246,10 @@ struct FormatStyle {
   /// \endcode
   std::string MacroBlockBegin;
 
-  /// A regular expression matching macros that end a block.
+  /// \brief A regular expression matching macros that end a block.
   std::string MacroBlockEnd;
 
-  /// The maximum number of consecutive empty lines to keep.
+  /// \brief The maximum number of consecutive empty lines to keep.
   /// \code
   ///    MaxEmptyLinesToKeep: 1         vs.     MaxEmptyLinesToKeep: 0
   ///    int f() {                              int f() {
@@ -1244,7 +1262,7 @@ struct FormatStyle {
   /// \endcode
   unsigned MaxEmptyLinesToKeep;
 
-  /// Different ways to indent namespace contents.
+  /// \brief Different ways to indent namespace contents.
   enum NamespaceIndentationKind {
     /// Don't indent in namespaces.
     /// \code
@@ -1278,42 +1296,10 @@ struct FormatStyle {
     NI_All
   };
 
-  /// The indentation used for namespaces.
+  /// \brief The indentation used for namespaces.
   NamespaceIndentationKind NamespaceIndentation;
 
-  /// Controls bin-packing Objective-C protocol conformance list
-  /// items into as few lines as possible when they go over ``ColumnLimit``.
-  ///
-  /// If ``Auto`` (the default), delegates to the value in
-  /// ``BinPackParameters``. If that is ``true``, bin-packs Objective-C
-  /// protocol conformance list items into as few lines as possible
-  /// whenever they go over ``ColumnLimit``.
-  ///
-  /// If ``Always``, always bin-packs Objective-C protocol conformance
-  /// list items into as few lines as possible whenever they go over
-  /// ``ColumnLimit``.
-  ///
-  /// If ``Never``, lays out Objective-C protocol conformance list items
-  /// onto individual lines whenever they go over ``ColumnLimit``.
-  ///
-  /// \code
-  ///    Always (or Auto, if BinPackParameters=true):
-  ///    @interface ccccccccccccc () <
-  ///        ccccccccccccc, ccccccccccccc,
-  ///        ccccccccccccc, ccccccccccccc> {
-  ///    }
-  ///
-  ///    Never (or Auto, if BinPackParameters=false):
-  ///    @interface ddddddddddddd () <
-  ///        ddddddddddddd,
-  ///        ddddddddddddd,
-  ///        ddddddddddddd,
-  ///        ddddddddddddd> {
-  ///    }
-  /// \endcode
-  BinPackStyle ObjCBinPackProtocolList;
-
-  /// The number of characters to use for indentation of ObjC blocks.
+  /// \brief The number of characters to use for indentation of ObjC blocks.
   /// \code{.objc}
   ///    ObjCBlockIndentWidth: 4
   ///
@@ -1323,40 +1309,37 @@ struct FormatStyle {
   /// \endcode
   unsigned ObjCBlockIndentWidth;
 
-  /// Add a space after ``@property`` in Objective-C, i.e. use
+  /// \brief Add a space after ``@property`` in Objective-C, i.e. use
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
   bool ObjCSpaceAfterProperty;
 
-  /// Add a space in front of an Objective-C protocol list, i.e. use
+  /// \brief Add a space in front of an Objective-C protocol list, i.e. use
   /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
   bool ObjCSpaceBeforeProtocolList;
 
-  /// The penalty for breaking around an assignment operator.
+  /// \brief The penalty for breaking around an assignment operator.
   unsigned PenaltyBreakAssignment;
 
-  /// The penalty for breaking a function call after ``call(``.
+  /// \brief The penalty for breaking a function call after ``call(``.
   unsigned PenaltyBreakBeforeFirstCallParameter;
 
-  /// The penalty for each line break introduced inside a comment.
+  /// \brief The penalty for each line break introduced inside a comment.
   unsigned PenaltyBreakComment;
 
-  /// The penalty for breaking before the first ``<<``.
+  /// \brief The penalty for breaking before the first ``<<``.
   unsigned PenaltyBreakFirstLessLess;
 
-  /// The penalty for each line break introduced inside a string literal.
+  /// \brief The penalty for each line break introduced inside a string literal.
   unsigned PenaltyBreakString;
 
-  /// The penalty for breaking after template declaration.
-  unsigned PenaltyBreakTemplateDeclaration;
-
-  /// The penalty for each character outside of the column limit.
+  /// \brief The penalty for each character outside of the column limit.
   unsigned PenaltyExcessCharacter;
 
-  /// Penalty for putting the return type of a function onto its own
+  /// \brief Penalty for putting the return type of a function onto its own
   /// line.
   unsigned PenaltyReturnTypeOnItsOwnLine;
 
-  /// The ``&`` and ``*`` alignment style.
+  /// \brief The ``&`` and ``*`` alignment style.
   enum PointerAlignmentStyle {
     /// Align pointer to the left.
     /// \code
@@ -1375,42 +1358,27 @@ struct FormatStyle {
     PAS_Middle
   };
 
-  /// Pointer and reference alignment style.
+  /// \brief Pointer and reference alignment style.
   PointerAlignmentStyle PointerAlignment;
 
   /// See documentation of ``RawStringFormats``.
   struct RawStringFormat {
-    /// The language of this raw string.
+    /// \brief The delimiter that this raw string format matches.
+    std::string Delimiter;
+    /// \brief The language of this raw string.
     LanguageKind Language;
-    /// A list of raw string delimiters that match this language.
-    std::vector<std::string> Delimiters;
-    /// A list of enclosing function names that match this language.
-    std::vector<std::string> EnclosingFunctions;
-    /// The canonical delimiter for this language.
-    std::string CanonicalDelimiter;
-    /// The style name on which this raw string format is based on.
+    /// \brief The style name on which this raw string format is based on.
     /// If not specified, the raw string format is based on the style that this
     /// format is based on.
     std::string BasedOnStyle;
     bool operator==(const RawStringFormat &Other) const {
-      return Language == Other.Language && Delimiters == Other.Delimiters &&
-             EnclosingFunctions == Other.EnclosingFunctions &&
-             CanonicalDelimiter == Other.CanonicalDelimiter &&
+      return Delimiter == Other.Delimiter && Language == Other.Language &&
              BasedOnStyle == Other.BasedOnStyle;
     }
   };
 
-  /// Defines hints for detecting supported languages code blocks in raw
-  /// strings.
-  ///
-  /// A raw string with a matching delimiter or a matching enclosing function
-  /// name will be reformatted assuming the specified language based on the
-  /// style for that language defined in the .clang-format file. If no style has
-  /// been defined in the .clang-format file for the specific language, a
-  /// predefined style given by 'BasedOnStyle' is used. If 'BasedOnStyle' is not
-  /// found, the formatting is based on llvm style. A matching delimiter takes
-  /// precedence over a matching enclosing function name for determining the
-  /// language of the raw string contents.
+  /// \brief Raw string delimiters denoting that the raw string contents are
+  /// code in a particular language and can be reformatted.
   ///
   /// If a canonical delimiter is specified, occurrences of other delimiters for
   /// the same language will be updated to the canonical if possible.
@@ -1421,23 +1389,16 @@ struct FormatStyle {
   /// To configure this in the .clang-format file, use:
   /// \code{.yaml}
   ///   RawStringFormats:
-  ///     - Language: TextProto
-  ///         Delimiters:
-  ///           - 'pb'
-  ///           - 'proto'
-  ///         EnclosingFunctions:
-  ///           - 'PARSE_TEXT_PROTO'
-  ///         BasedOnStyle: google
-  ///     - Language: Cpp
-  ///         Delimiters:
-  ///           - 'cc'
-  ///           - 'cpp'
-  ///         BasedOnStyle: llvm
-  ///         CanonicalDelimiter: 'cc'
+  ///     - Delimiter: 'pb'
+  ///       Language:  TextProto
+  ///       BasedOnStyle: llvm
+  ///     - Delimiter: 'proto'
+  ///       Language:  TextProto
+  ///       BasedOnStyle: google
   /// \endcode
   std::vector<RawStringFormat> RawStringFormats;
 
-  /// If ``true``, clang-format will attempt to re-flow comments.
+  /// \brief If ``true``, clang-format will attempt to re-flow comments.
   /// \code
   ///    false:
   ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
@@ -1451,7 +1412,7 @@ struct FormatStyle {
   /// \endcode
   bool ReflowComments;
 
-  /// If ``true``, clang-format will sort ``#includes``.
+  /// \brief If ``true``, clang-format will sort ``#includes``.
   /// \code
   ///    false:                                 true:
   ///    #include "b.h"                 vs.     #include "a.h"
@@ -1459,7 +1420,7 @@ struct FormatStyle {
   /// \endcode
   bool SortIncludes;
 
-  /// If ``true``, clang-format will sort using declarations.
+  /// \brief If ``true``, clang-format will sort using declarations.
   ///
   /// The order of using declarations is defined as follows:
   /// Split the strings by "::" and discard any initial empty strings. The last
@@ -1475,21 +1436,21 @@ struct FormatStyle {
   /// \endcode
   bool SortUsingDeclarations;
 
-  /// If ``true``, a space is inserted after C style casts.
+  /// \brief If ``true``, a space is inserted after C style casts.
   /// \code
   ///    true:                                  false:
-  ///    (int) i;                       vs.     (int)i;
+  ///    (int)i;                        vs.     (int) i;
   /// \endcode
   bool SpaceAfterCStyleCast;
 
-  /// If \c true, a space will be inserted after the 'template' keyword.
+  /// \brief If \c true, a space will be inserted after the 'template' keyword.
   /// \code
   ///    true:                                  false:
   ///    template <int> void foo();     vs.     template<int> void foo();
   /// \endcode
   bool SpaceAfterTemplateKeyword;
 
-  /// If ``false``, spaces will be removed before assignment operators.
+  /// \brief If ``false``, spaces will be removed before assignment operators.
   /// \code
   ///    true:                                  false:
   ///    int a = 5;                     vs.     int a=5;
@@ -1497,33 +1458,7 @@ struct FormatStyle {
   /// \endcode
   bool SpaceBeforeAssignmentOperators;
 
-  /// If ``true``, a space will be inserted before a C++11 braced list
-  /// used to initialize an object (after the preceding identifier or type).
-  /// \code
-  ///    true:                                  false:
-  ///    Foo foo { bar };               vs.     Foo foo{ bar };
-  ///    Foo {};                                Foo{};
-  ///    vector<int> { 1, 2, 3 };               vector<int>{ 1, 2, 3 };
-  ///    new int[3] { 1, 2, 3 };                new int[3]{ 1, 2, 3 };
-  /// \endcode
-  bool SpaceBeforeCpp11BracedList;
-
-  /// If ``false``, spaces will be removed before constructor initializer
-  /// colon.
-  /// \code
-  ///    true:                                  false:
-  ///    Foo::Foo() : a(a) {}                   Foo::Foo(): a(a) {}
-  /// \endcode
-  bool SpaceBeforeCtorInitializerColon;
-
-  /// If ``false``, spaces will be removed before inheritance colon.
-  /// \code
-  ///    true:                                  false:
-  ///    class Foo : Bar {}             vs.     class Foo: Bar {}
-  /// \endcode
-  bool SpaceBeforeInheritanceColon;
-
-  /// Different ways to put a space before opening parentheses.
+  /// \brief Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensOptions {
     /// Never put a space before opening parentheses.
     /// \code
@@ -1558,18 +1493,10 @@ struct FormatStyle {
     SBPO_Always
   };
 
-  /// Defines in which cases to put a space before opening parentheses.
+  /// \brief Defines in which cases to put a space before opening parentheses.
   SpaceBeforeParensOptions SpaceBeforeParens;
 
-  /// If ``false``, spaces will be removed before range-based for loop
-  /// colon.
-  /// \code
-  ///    true:                                  false:
-  ///    for (auto v : values) {}       vs.     for(auto v: values) {}
-  /// \endcode
-  bool SpaceBeforeRangeBasedForLoopColon;
-
-  /// If ``true``, spaces may be inserted into ``()``.
+  /// \brief If ``true``, spaces may be inserted into ``()``.
   /// \code
   ///    true:                                false:
   ///    void f( ) {                    vs.   void f() {
@@ -1581,7 +1508,7 @@ struct FormatStyle {
   /// \endcode
   bool SpaceInEmptyParentheses;
 
-  /// The number of spaces before trailing line comments
+  /// \brief The number of spaces before trailing line comments
   /// (``//`` - comments).
   ///
   /// This does not affect trailing block comments (``/*`` - comments) as
@@ -1597,7 +1524,7 @@ struct FormatStyle {
   /// \endcode
   unsigned SpacesBeforeTrailingComments;
 
-  /// If ``true``, spaces will be inserted after ``<`` and before ``>``
+  /// \brief If ``true``, spaces will be inserted after ``<`` and before ``>``
   /// in template argument lists.
   /// \code
   ///    true:                                  false:
@@ -1606,7 +1533,7 @@ struct FormatStyle {
   /// \endcode
   bool SpacesInAngles;
 
-  /// If ``true``, spaces are inserted inside container literals (e.g.
+  /// \brief If ``true``, spaces are inserted inside container literals (e.g.
   /// ObjC and Javascript array and dict literals).
   /// \code{.js}
   ///    true:                                  false:
@@ -1615,21 +1542,21 @@ struct FormatStyle {
   /// \endcode
   bool SpacesInContainerLiterals;
 
-  /// If ``true``, spaces may be inserted into C style casts.
+  /// \brief If ``true``, spaces may be inserted into C style casts.
   /// \code
   ///    true:                                  false:
   ///    x = ( int32 )y                 vs.     x = (int32)y
   /// \endcode
   bool SpacesInCStyleCastParentheses;
 
-  /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
+  /// \brief If ``true``, spaces will be inserted after ``(`` and before ``)``.
   /// \code
   ///    true:                                  false:
   ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
   /// \endcode
   bool SpacesInParentheses;
 
-  /// If ``true``, spaces will be inserted after ``[`` and before ``]``.
+  /// \brief If ``true``, spaces will be inserted after ``[`` and before ``]``.
   /// Lambdas or unspecified size array declarations will not be affected.
   /// \code
   ///    true:                                  false:
@@ -1638,7 +1565,7 @@ struct FormatStyle {
   /// \endcode
   bool SpacesInSquareBrackets;
 
-  /// Supported language standards.
+  /// \brief Supported language standards.
   enum LanguageStandard {
     /// Use C++03-compatible syntax.
     LS_Cpp03,
@@ -1649,14 +1576,14 @@ struct FormatStyle {
     LS_Auto
   };
 
-  /// Format compatible with this standard, e.g. use ``A<A<int> >``
+  /// \brief Format compatible with this standard, e.g. use ``A<A<int> >``
   /// instead of ``A<A<int>>`` for ``LS_Cpp03``.
   LanguageStandard Standard;
 
-  /// The number of columns used for tab stops.
+  /// \brief The number of columns used for tab stops.
   unsigned TabWidth;
 
-  /// Different ways to use tab in formatting.
+  /// \brief Different ways to use tab in formatting.
   enum UseTabStyle {
     /// Never use tab.
     UT_Never,
@@ -1669,7 +1596,7 @@ struct FormatStyle {
     UT_Always
   };
 
-  /// The way to use tab characters in the resulting file.
+  /// \brief The way to use tab characters in the resulting file.
   UseTabStyle UseTab;
 
   bool operator==(const FormatStyle &R) const {
@@ -1705,7 +1632,7 @@ struct FormatStyle {
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
-           BreakInheritanceList == R.BreakInheritanceList &&
+           BreakBeforeInheritanceComma == R.BreakBeforeInheritanceComma &&
            ConstructorInitializerAllOnOneLineOrOnePerLine ==
                R.ConstructorInitializerAllOnOneLineOrOnePerLine &&
            ConstructorInitializerIndentWidth ==
@@ -1718,8 +1645,8 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
-           IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
-           IncludeStyle.IncludeCategories == R.IncludeStyle.IncludeCategories &&
+           IncludeBlocks == R.IncludeBlocks &&
+           IncludeCategories == R.IncludeCategories &&
            IndentCaseLabels == R.IndentCaseLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentWidth == R.IndentWidth && Language == R.Language &&
@@ -1732,11 +1659,11 @@ struct FormatStyle {
            MacroBlockEnd == R.MacroBlockEnd &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
-           ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
-           PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
+           PenaltyBreakAssignment ==
+               R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
@@ -1744,20 +1671,12 @@ struct FormatStyle {
            PenaltyBreakString == R.PenaltyBreakString &&
            PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
            PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
-           PenaltyBreakTemplateDeclaration ==
-               R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&
            SpaceBeforeAssignmentOperators == R.SpaceBeforeAssignmentOperators &&
-           SpaceBeforeCpp11BracedList == R.SpaceBeforeCpp11BracedList &&
-           SpaceBeforeCtorInitializerColon ==
-               R.SpaceBeforeCtorInitializerColon &&
-           SpaceBeforeInheritanceColon == R.SpaceBeforeInheritanceColon &&
            SpaceBeforeParens == R.SpaceBeforeParens &&
-           SpaceBeforeRangeBasedForLoopColon ==
-               R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceInEmptyParentheses == R.SpaceInEmptyParentheses &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
@@ -1768,75 +1687,38 @@ struct FormatStyle {
            Standard == R.Standard && TabWidth == R.TabWidth &&
            UseTab == R.UseTab;
   }
-
-  llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;
-
-  // Stores per-language styles. A FormatStyle instance inside has an empty
-  // StyleSet. A FormatStyle instance returned by the Get method has its
-  // StyleSet set to a copy of the originating StyleSet, effectively keeping the
-  // internal representation of that StyleSet alive.
-  //
-  // The memory management and ownership reminds of a birds nest: chicks
-  // leaving the nest take photos of the nest with them.
-  struct FormatStyleSet {
-    typedef std::map<FormatStyle::LanguageKind, FormatStyle> MapType;
-
-    llvm::Optional<FormatStyle> Get(FormatStyle::LanguageKind Language) const;
-
-    // Adds \p Style to this FormatStyleSet. Style must not have an associated
-    // FormatStyleSet.
-    // Style.Language should be different than LK_None. If this FormatStyleSet
-    // already contains an entry for Style.Language, that gets replaced with the
-    // passed Style.
-    void Add(FormatStyle Style);
-
-    // Clears this FormatStyleSet.
-    void Clear();
-
-  private:
-    std::shared_ptr<MapType> Styles;
-  };
-
-  static FormatStyleSet BuildStyleSetFromConfiguration(
-      const FormatStyle &MainStyle,
-      const std::vector<FormatStyle> &ConfigurationStyles);
-
-private:
-  FormatStyleSet StyleSet;
-
-  friend std::error_code parseConfiguration(StringRef Text, FormatStyle *Style);
 };
 
-/// Returns a format style complying with the LLVM coding standards:
+/// \brief Returns a format style complying with the LLVM coding standards:
 /// http://llvm.org/docs/CodingStandards.html.
 FormatStyle getLLVMStyle();
 
-/// Returns a format style complying with one of Google's style guides:
+/// \brief Returns a format style complying with one of Google's style guides:
 /// http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml.
 /// http://google-styleguide.googlecode.com/svn/trunk/javascriptguide.xml.
 /// https://developers.google.com/protocol-buffers/docs/style.
 FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language);
 
-/// Returns a format style complying with Chromium's style guide:
+/// \brief Returns a format style complying with Chromium's style guide:
 /// http://www.chromium.org/developers/coding-style.
 FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language);
 
-/// Returns a format style complying with Mozilla's style guide:
+/// \brief Returns a format style complying with Mozilla's style guide:
 /// https://developer.mozilla.org/en-US/docs/Developer_Guide/Coding_Style.
 FormatStyle getMozillaStyle();
 
-/// Returns a format style complying with Webkit's style guide:
+/// \brief Returns a format style complying with Webkit's style guide:
 /// http://www.webkit.org/coding/coding-style.html
 FormatStyle getWebKitStyle();
 
-/// Returns a format style complying with GNU Coding Standards:
+/// \brief Returns a format style complying with GNU Coding Standards:
 /// http://www.gnu.org/prep/standards/standards.html
 FormatStyle getGNUStyle();
 
-/// Returns style indicating formatting should be not applied at all.
+/// \brief Returns style indicating formatting should be not applied at all.
 FormatStyle getNoStyle();
 
-/// Gets a predefined style for the specified language by name.
+/// \brief Gets a predefined style for the specified language by name.
 ///
 /// Currently supported names: LLVM, Google, Chromium, Mozilla. Names are
 /// compared case-insensitively.
@@ -1845,64 +1727,66 @@ FormatStyle getNoStyle();
 bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
                         FormatStyle *Style);
 
-/// Parse configuration from YAML-formatted text.
+/// \brief Parse configuration from YAML-formatted text.
 ///
 /// Style->Language is used to get the base style, if the ``BasedOnStyle``
 /// option is present.
-///
-/// The FormatStyleSet of Style is reset.
 ///
 /// When ``BasedOnStyle`` is not present, options not present in the YAML
 /// document, are retained in \p Style.
 std::error_code parseConfiguration(StringRef Text, FormatStyle *Style);
 
-/// Gets configuration in a YAML string.
+/// \brief Gets configuration in a YAML string.
 std::string configurationAsText(const FormatStyle &Style);
 
-/// Returns the replacements necessary to sort all ``#include`` blocks
+/// \brief Returns the replacements necessary to sort all ``#include`` blocks
 /// that are affected by ``Ranges``.
 tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName,
                                    unsigned *Cursor = nullptr);
 
-/// Returns the replacements corresponding to applying and formatting
+/// \brief Returns the replacements corresponding to applying and formatting
 /// \p Replaces on success; otheriwse, return an llvm::Error carrying
 /// llvm::StringError.
 llvm::Expected<tooling::Replacements>
 formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
                    const FormatStyle &Style);
 
-/// Returns the replacements corresponding to applying \p Replaces and
+/// \brief Returns the replacements corresponding to applying \p Replaces and
 /// cleaning up the code after that on success; otherwise, return an llvm::Error
 /// carrying llvm::StringError.
 /// This also supports inserting/deleting C++ #include directives:
 /// - If a replacement has offset UINT_MAX, length 0, and a replacement text
 ///   that is an #include directive, this will insert the #include into the
-///   correct block in the \p Code.
+///   correct block in the \p Code. When searching for points to insert new
+///   header, this ignores #include's after the #include block(s) in the
+///   beginning of a file to avoid inserting headers into code sections where
+///   new #include's should not be added by default. These code sections
+///   include:
+///     - raw string literals (containing #include).
+///     - #if blocks.
+///     - Special #include's among declarations (e.g. functions).
 /// - If a replacement has offset UINT_MAX, length 1, and a replacement text
 ///   that is the name of the header to be removed, the header will be removed
 ///   from \p Code if it exists.
-/// The include manipulation is done via `tooling::HeaderInclude`, see its
-/// documentation for more details on how include insertion points are found and
-/// what edits are produced.
 llvm::Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);
 
-/// Represents the status of a formatting attempt.
+/// \brief Represents the status of a formatting attempt.
 struct FormattingAttemptStatus {
-  /// A value of ``false`` means that any of the affected ranges were not
+  /// \brief A value of ``false`` means that any of the affected ranges were not
   /// formatted due to a non-recoverable syntax error.
   bool FormatComplete = true;
 
-  /// If ``FormatComplete`` is false, ``Line`` records a one-based
+  /// \brief If ``FormatComplete`` is false, ``Line`` records a one-based
   /// original line number at which a syntax error might have occurred. This is
   /// based on a best-effort analysis and could be imprecise.
   unsigned Line = 0;
 };
 
-/// Reformats the given \p Ranges in \p Code.
+/// \brief Reformats the given \p Ranges in \p Code.
 ///
 /// Each range is extended on either end to its next bigger logic unit, i.e.
 /// everything that might influence its formatting or might be influenced by its
@@ -1918,7 +1802,7 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
                                StringRef FileName = "<stdin>",
                                FormattingAttemptStatus *Status = nullptr);
 
-/// Same as above, except if ``IncompleteFormat`` is non-null, its value
+/// \brief Same as above, except if ``IncompleteFormat`` is non-null, its value
 /// will be set to true if any of the affected ranges were not formatted due to
 /// a non-recoverable syntax error.
 tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
@@ -1926,7 +1810,7 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
                                StringRef FileName,
                                bool *IncompleteFormat);
 
-/// Clean up any erroneous/redundant code in the given \p Ranges in \p
+/// \brief Clean up any erroneous/redundant code in the given \p Ranges in \p
 /// Code.
 ///
 /// Returns the ``Replacements`` that clean up all \p Ranges in \p Code.
@@ -1934,7 +1818,7 @@ tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,
                               ArrayRef<tooling::Range> Ranges,
                               StringRef FileName = "<stdin>");
 
-/// Fix namespace end comments in the given \p Ranges in \p Code.
+/// \brief Fix namespace end comments in the given \p Ranges in \p Code.
 ///
 /// Returns the ``Replacements`` that fix the namespace comments in all
 /// \p Ranges in \p Code.
@@ -1943,7 +1827,7 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName = "<stdin>");
 
-/// Sort consecutive using declarations in the given \p Ranges in
+/// \brief Sort consecutive using declarations in the given \p Ranges in
 /// \p Code.
 ///
 /// Returns the ``Replacements`` that sort the using declarations in all
@@ -1953,17 +1837,17 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
                                             ArrayRef<tooling::Range> Ranges,
                                             StringRef FileName = "<stdin>");
 
-/// Returns the ``LangOpts`` that the formatter expects you to set.
+/// \brief Returns the ``LangOpts`` that the formatter expects you to set.
 ///
 /// \param Style determines specific settings for lexing mode.
 LangOptions getFormattingLangOpts(const FormatStyle &Style = getLLVMStyle());
 
-/// Description to be used for help text for a ``llvm::cl`` option for
+/// \brief Description to be used for help text for a ``llvm::cl`` option for
 /// specifying format style. The description is closely related to the operation
 /// of ``getStyle()``.
 extern const char *StyleOptionHelpDescription;
 
-/// Construct a FormatStyle based on ``StyleName``.
+/// \brief Construct a FormatStyle based on ``StyleName``.
 ///
 /// ``StyleName`` can take several forms:
 /// * "{<key>: <value>, ...}" - Set specic style parameters.
@@ -1992,11 +1876,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef Code = "",
                                      vfs::FileSystem *FS = nullptr);
 
-// Guesses the language from the ``FileName`` and ``Code`` to be formatted.
-// Defaults to FormatStyle::LK_Cpp.
-FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code);
-
-// Returns a string representation of ``Language``.
+// \brief Returns a string representation of ``Language``.
 inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
   switch (Language) {
   case FormatStyle::LK_Cpp:

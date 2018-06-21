@@ -38,7 +38,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
-/// Calculate the cost of materializing a 64-bit value. This helper
+/// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
 int AArch64TTIImpl::getIntImmCost(int64_t Val) {
@@ -54,7 +54,7 @@ int AArch64TTIImpl::getIntImmCost(int64_t Val) {
   return (64 - LZ + 15) / 16;
 }
 
-/// Calculate the cost of materializing the given constant.
+/// \brief Calculate the cost of materializing the given constant.
 int AArch64TTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
@@ -277,7 +277,7 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       // same as the second operand. In this case, we will generate a "long"
       // version of the widening instruction.
       if (auto *Cast = dyn_cast<CastInst>(SingleUser->getOperand(1)))
-        if (I->getOpcode() == unsigned(Cast->getOpcode()) &&
+        if (I->getOpcode() == Cast->getOpcode() &&
             cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy())
           return 0;
     }
@@ -493,70 +493,32 @@ int AArch64TTIImpl::getArithmeticInstrCost(
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
+  if (ISD == ISD::SDIV &&
+      Opd2Info == TargetTransformInfo::OK_UniformConstantValue &&
+      Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
+    // On AArch64, scalar signed division by constants power-of-two are
+    // normally expanded to the sequence ADD + CMP + SELECT + SRA.
+    // The OperandValue properties many not be same as that of previous
+    // operation; conservatively assume OP_None.
+    Cost += getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info, Opd2Info,
+                                   TargetTransformInfo::OP_None,
+                                   TargetTransformInfo::OP_None);
+    Cost += getArithmeticInstrCost(Instruction::Sub, Ty, Opd1Info, Opd2Info,
+                                   TargetTransformInfo::OP_None,
+                                   TargetTransformInfo::OP_None);
+    Cost += getArithmeticInstrCost(Instruction::Select, Ty, Opd1Info, Opd2Info,
+                                   TargetTransformInfo::OP_None,
+                                   TargetTransformInfo::OP_None);
+    Cost += getArithmeticInstrCost(Instruction::AShr, Ty, Opd1Info, Opd2Info,
+                                   TargetTransformInfo::OP_None,
+                                   TargetTransformInfo::OP_None);
+    return Cost;
+  }
+
   switch (ISD) {
   default:
     return Cost + BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
                                                 Opd1PropInfo, Opd2PropInfo);
-  case ISD::SDIV:
-    if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue &&
-        Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
-      // On AArch64, scalar signed division by constants power-of-two are
-      // normally expanded to the sequence ADD + CMP + SELECT + SRA.
-      // The OperandValue properties many not be same as that of previous
-      // operation; conservatively assume OP_None.
-      Cost += getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::Select, Ty, Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, Opd1Info, Opd2Info,
-                                     TargetTransformInfo::OP_None,
-                                     TargetTransformInfo::OP_None);
-      return Cost;
-    }
-    LLVM_FALLTHROUGH;
-  case ISD::UDIV:
-    if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue) {
-      auto VT = TLI->getValueType(DL, Ty);
-      if (TLI->isOperationLegalOrCustom(ISD::MULHU, VT)) {
-        // Vector signed division by constant are expanded to the
-        // sequence MULHS + ADD/SUB + SRA + SRL + ADD, and unsigned division
-        // to MULHS + SUB + SRL + ADD + SRL.
-        int MulCost = getArithmeticInstrCost(Instruction::Mul, Ty, Opd1Info,
-                                             Opd2Info,
-                                             TargetTransformInfo::OP_None,
-                                             TargetTransformInfo::OP_None);
-        int AddCost = getArithmeticInstrCost(Instruction::Add, Ty, Opd1Info,
-                                             Opd2Info,
-                                             TargetTransformInfo::OP_None,
-                                             TargetTransformInfo::OP_None);
-        int ShrCost = getArithmeticInstrCost(Instruction::AShr, Ty, Opd1Info,
-                                             Opd2Info,
-                                             TargetTransformInfo::OP_None,
-                                             TargetTransformInfo::OP_None);
-        return MulCost * 2 + AddCost * 2 + ShrCost * 2 + 1;
-      }
-    }
-
-    Cost += BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
-                                          Opd1PropInfo, Opd2PropInfo);
-    if (Ty->isVectorTy()) {
-      // On AArch64, vector divisions are not supported natively and are
-      // expanded into scalar divisions of each pair of elements.
-      Cost += getArithmeticInstrCost(Instruction::ExtractElement, Ty, Opd1Info,
-                                     Opd2Info, Opd1PropInfo, Opd2PropInfo);
-      Cost += getArithmeticInstrCost(Instruction::InsertElement, Ty, Opd1Info,
-                                     Opd2Info, Opd1PropInfo, Opd2PropInfo);
-      // TODO: if one of the arguments is scalar, then it's not necessary to
-      // double the cost of handling the vector elements.
-      Cost += Cost;
-    }
-    return Cost;
-
   case ISD::ADD:
   case ISD::MUL:
   case ISD::XOR:
@@ -728,14 +690,14 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   };
 
   int StridedLoads = countStridedLoads(L, SE);
-  LLVM_DEBUG(dbgs() << "falkor-hwpf: detected " << StridedLoads
-                    << " strided loads\n");
+  DEBUG(dbgs() << "falkor-hwpf: detected " << StridedLoads
+               << " strided loads\n");
   // Pick the largest power of 2 unroll count that won't result in too many
   // strided loads.
   if (StridedLoads) {
     UP.MaxCount = 1 << Log2_32(MaxStridedLoads / StridedLoads);
-    LLVM_DEBUG(dbgs() << "falkor-hwpf: setting unroll MaxCount to "
-                      << UP.MaxCount << '\n');
+    DEBUG(dbgs() << "falkor-hwpf: setting unroll MaxCount to " << UP.MaxCount
+                 << '\n');
   }
 }
 
@@ -905,59 +867,4 @@ bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
     llvm_unreachable("Unhandled reduction opcode");
   }
   return false;
-}
-
-int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
-                                               bool IsPairwiseForm) {
-
-  if (IsPairwiseForm)
-    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm);
-
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
-  MVT MTy = LT.second;
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  assert(ISD && "Invalid opcode");
-
-  // Horizontal adds can use the 'addv' instruction. We model the cost of these
-  // instructions as normal vector adds. This is the only arithmetic vector
-  // reduction operation for which we have an instruction.
-  static const CostTblEntry CostTblNoPairwise[]{
-      {ISD::ADD, MVT::v8i8,  1},
-      {ISD::ADD, MVT::v16i8, 1},
-      {ISD::ADD, MVT::v4i16, 1},
-      {ISD::ADD, MVT::v8i16, 1},
-      {ISD::ADD, MVT::v4i32, 1},
-  };
-
-  if (const auto *Entry = CostTableLookup(CostTblNoPairwise, ISD, MTy))
-    return LT.first * Entry->Cost;
-
-  return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm);
-}
-
-int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
-                                   Type *SubTp) {
-
-  // Transpose shuffle kinds can be performed with 'trn1/trn2' and 'zip1/zip2'
-  // instructions.
-  if (Kind == TTI::SK_Transpose) {
-    static const CostTblEntry TransposeTbl[] = {
-        {ISD::VECTOR_SHUFFLE, MVT::v8i8,  1},
-        {ISD::VECTOR_SHUFFLE, MVT::v16i8, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v4i16, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v8i16, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v4i32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v4f32, 1},
-        {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
-    };
-    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
-    if (const auto *Entry =
-            CostTableLookup(TransposeTbl, ISD::VECTOR_SHUFFLE, LT.second))
-      return LT.first * Entry->Cost;
-  }
-
-  return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
 }

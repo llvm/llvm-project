@@ -217,11 +217,6 @@ void AMDGPUInstPrinter::printLWE(const MCInst *MI, unsigned OpNo,
   printNamedBit(MI, OpNo, O, "lwe");
 }
 
-void AMDGPUInstPrinter::printD16(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "d16");
-}
-
 void AMDGPUInstPrinter::printExpCompr(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
@@ -272,9 +267,6 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   case AMDGPU::FLAT_SCR:
     O << "flat_scratch";
     return;
-  case AMDGPU::XNACK_MASK:
-    O << "xnack_mask";
-    return;
   case AMDGPU::VCC_LO:
     O << "vcc_lo";
     return;
@@ -304,12 +296,6 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
     return;
   case AMDGPU::FLAT_SCR_HI:
     O << "flat_scratch_hi";
-    return;
-  case AMDGPU::XNACK_MASK_LO:
-    O << "xnack_mask_lo";
-    return;
-  case AMDGPU::XNACK_MASK_HI:
-    O << "xnack_mask_hi";
     return;
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:
@@ -379,16 +365,6 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
     O << "_dpp ";
   else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SDWA)
     O << "_sdwa ";
-  else
-    O << "_e32 ";
-
-  printOperand(MI, OpNo, STI, O);
-}
-
-void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI, raw_ostream &O) {
-  if (AMDGPU::isSI(STI) || AMDGPU::isCI(STI))
-    O << " ";
   else
     O << "_e32 ";
 
@@ -636,45 +612,40 @@ void AMDGPUInstPrinter::printOperandAndIntInputMods(const MCInst *MI,
 void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  using namespace AMDGPU::DPP;
-
   unsigned Imm = MI->getOperand(OpNo).getImm();
-  if (Imm <= DppCtrl::QUAD_PERM_LAST) {
+  if (Imm <= 0x0ff) {
     O << " quad_perm:[";
     O << formatDec(Imm & 0x3)         << ',';
     O << formatDec((Imm & 0xc)  >> 2) << ',';
     O << formatDec((Imm & 0x30) >> 4) << ',';
     O << formatDec((Imm & 0xc0) >> 6) << ']';
-  } else if ((Imm >= DppCtrl::ROW_SHL_FIRST) &&
-             (Imm <= DppCtrl::ROW_SHL_LAST)) {
+  } else if ((Imm >= 0x101) && (Imm <= 0x10f)) {
     O << " row_shl:";
     printU4ImmDecOperand(MI, OpNo, O);
-  } else if ((Imm >= DppCtrl::ROW_SHR_FIRST) &&
-             (Imm <= DppCtrl::ROW_SHR_LAST)) {
+  } else if ((Imm >= 0x111) && (Imm <= 0x11f)) {
     O << " row_shr:";
     printU4ImmDecOperand(MI, OpNo, O);
-  } else if ((Imm >= DppCtrl::ROW_ROR_FIRST) &&
-             (Imm <= DppCtrl::ROW_ROR_LAST)) {
+  } else if ((Imm >= 0x121) && (Imm <= 0x12f)) {
     O << " row_ror:";
     printU4ImmDecOperand(MI, OpNo, O);
-  } else if (Imm == DppCtrl::WAVE_SHL1) {
+  } else if (Imm == 0x130) {
     O << " wave_shl:1";
-  } else if (Imm == DppCtrl::WAVE_ROL1) {
+  } else if (Imm == 0x134) {
     O << " wave_rol:1";
-  } else if (Imm == DppCtrl::WAVE_SHR1) {
+  } else if (Imm == 0x138) {
     O << " wave_shr:1";
-  } else if (Imm == DppCtrl::WAVE_ROR1) {
+  } else if (Imm == 0x13c) {
     O << " wave_ror:1";
-  } else if (Imm == DppCtrl::ROW_MIRROR) {
+  } else if (Imm == 0x140) {
     O << " row_mirror";
-  } else if (Imm == DppCtrl::ROW_HALF_MIRROR) {
+  } else if (Imm == 0x141) {
     O << " row_half_mirror";
-  } else if (Imm == DppCtrl::BCAST15) {
+  } else if (Imm == 0x142) {
     O << " row_bcast:15";
-  } else if (Imm == DppCtrl::BCAST31) {
+  } else if (Imm == 0x143) {
     O << " row_bcast:31";
   } else {
-    O << " /* Invalid dpp_ctrl value */";
+    llvm_unreachable("Invalid dpp_ctrl value");
   }
 }
 
@@ -1283,10 +1254,7 @@ void AMDGPUInstPrinter::printHwreg(const MCInst *MI, unsigned OpNo,
   const unsigned Width = ((SImm16 & WIDTH_M1_MASK_) >> WIDTH_M1_SHIFT_) + 1;
 
   O << "hwreg(";
-  unsigned Last = ID_SYMBOLIC_LAST_;
-  if (AMDGPU::isSI(STI) || AMDGPU::isCI(STI) || AMDGPU::isVI(STI))
-    Last = ID_SYMBOLIC_FIRST_GFX9_;
-  if (ID_SYMBOLIC_FIRST_ <= Id && Id < Last && IdSymbolic[Id]) {
+  if (ID_SYMBOLIC_FIRST_ <= Id && Id < ID_SYMBOLIC_LAST_) {
     O << IdSymbolic[Id];
   } else {
     O << Id;

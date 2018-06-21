@@ -29,6 +29,7 @@ class Declaration;
 }
 
 using namespace lldb_private;
+using namespace lldb;
 
 ValueObjectDynamicValue::ValueObjectDynamicValue(
     ValueObject &parent, lldb::DynamicValueType use_dynamic)
@@ -55,6 +56,8 @@ CompilerType ValueObjectDynamicValue::GetCompilerTypeImpl() {
 ConstString ValueObjectDynamicValue::GetTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
+    if (m_dynamic_type_info.HasType())
+      return GetCompilerType().GetConstTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -72,6 +75,8 @@ TypeImpl ValueObjectDynamicValue::GetTypeImpl() {
 ConstString ValueObjectDynamicValue::GetQualifiedTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
+    if (m_dynamic_type_info.HasType())
+      return GetCompilerType().GetConstQualifiedTypeName();
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
@@ -112,6 +117,11 @@ lldb::ValueType ValueObjectDynamicValue::GetValueType() const {
 }
 
 bool ValueObjectDynamicValue::UpdateValue() {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+  Log *verbose_log(
+      GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
   SetValueIsValid(false);
   m_error.Clear();
 
@@ -122,8 +132,8 @@ bool ValueObjectDynamicValue::UpdateValue() {
     return false;
   }
 
-  // Setting our type_sp to NULL will route everything back through our parent
-  // which is equivalent to not using dynamic values.
+  // Setting our type_sp to NULL will route everything back through our
+  // parent which is equivalent to not using dynamic values.
   if (m_use_dynamic == lldb::eNoDynamicValues) {
     m_dynamic_type_info.Clear();
     return true;
@@ -173,16 +183,31 @@ bool ValueObjectDynamicValue::UpdateValue() {
   }
 
   // Getting the dynamic value may have run the program a bit, and so marked us
-  // as needing updating, but we really don't...
+  // as needing updating, but we really
+  // don't...
 
   m_update_point.SetUpdated();
 
   if (runtime && found_dynamic_type) {
+    if (verbose_log)
+      verbose_log->Printf("[%s %p] might have a dynamic type",
+                          GetName().GetCString(), (void *)this);
     if (class_type_or_name.HasType()) {
-      m_type_impl =
-          TypeImpl(m_parent->GetCompilerType(),
-                   runtime->FixUpDynamicType(class_type_or_name, *m_parent)
-                       .GetCompilerType());
+      // TypeSP are always generated from debug info
+      const bool prefer_parent_type = false;
+
+      if (prefer_parent_type) {
+        m_type_impl =
+            TypeImpl(m_parent->GetCompilerType(),
+                     runtime->FixUpDynamicType(class_type_or_name, *m_parent)
+                         .GetCompilerType());
+        class_type_or_name.SetCompilerType(CompilerType());
+      } else {
+        m_type_impl =
+            TypeImpl(m_parent->GetCompilerType(),
+                     runtime->FixUpDynamicType(class_type_or_name, *m_parent)
+                         .GetCompilerType());
+      }
     } else {
       m_type_impl.Clear();
     }
@@ -191,21 +216,19 @@ bool ValueObjectDynamicValue::UpdateValue() {
   }
 
   // If we don't have a dynamic type, then make ourselves just a echo of our
-  // parent. Or we could return false, and make ourselves an echo of our
-  // parent?
+  // parent.
+  // Or we could return false, and make ourselves an echo of our parent?
   if (!found_dynamic_type) {
     if (m_dynamic_type_info)
       SetValueDidChange(true);
     ClearDynamicTypeInformation();
     m_dynamic_type_info.Clear();
     m_value = m_parent->GetValue();
-    m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+    m_error = GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
     return m_error.Success();
   }
 
   Value old_value(m_value);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
   bool has_changed_type = false;
 
@@ -247,14 +270,14 @@ bool ValueObjectDynamicValue::UpdateValue() {
                 static_cast<void *>(this), GetTypeName().GetCString());
 
   if (m_address.IsValid() && m_dynamic_type_info) {
-    // The variable value is in the Scalar value inside the m_value. We can
-    // point our m_data right to it.
-    m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+    // The variable value is in the Scalar value inside the m_value.
+    // We can point our m_data right to it.
+    m_error = GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
     if (m_error.Success()) {
       if (!CanProvideValue()) {
-        // this value object represents an aggregate type whose children have
-        // values, but this object does not. So we say we are changed if our
-        // location has changed.
+        // this value object represents an aggregate type whose
+        // children have values, but this object does not. So we
+        // say we are changed if our location has changed.
         SetValueDidChange(m_value.GetValueType() != old_value.GetValueType() ||
                           m_value.GetScalar() != old_value.GetScalar());
       }
@@ -286,11 +309,13 @@ bool ValueObjectDynamicValue::SetValueFromCString(const char *value_str,
     return false;
   }
 
-  // if we are at an offset from our parent, in order to set ourselves
-  // correctly we would need to change the new value so that it refers to the
-  // correct dynamic type. we choose not to deal with that - if anything more
-  // than a value overwrite is required, you should be using the expression
-  // parser instead of the value editing facility
+  // if we are at an offset from our parent, in order to set ourselves correctly
+  // we would need
+  // to change the new value so that it refers to the correct dynamic type. we
+  // choose not to deal
+  // with that - if anything more than a value overwrite is required, you should
+  // be using the
+  // expression parser instead of the value editing facility
   if (my_value != parent_value) {
     // but NULL'ing out a value should always be allowed
     if (strcmp(value_str, "0")) {
@@ -319,11 +344,13 @@ bool ValueObjectDynamicValue::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  // if we are at an offset from our parent, in order to set ourselves
-  // correctly we would need to change the new value so that it refers to the
-  // correct dynamic type. we choose not to deal with that - if anything more
-  // than a value overwrite is required, you should be using the expression
-  // parser instead of the value editing facility
+  // if we are at an offset from our parent, in order to set ourselves correctly
+  // we would need
+  // to change the new value so that it refers to the correct dynamic type. we
+  // choose not to deal
+  // with that - if anything more than a value overwrite is required, you should
+  // be using the
+  // expression parser instead of the value editing facility
   if (my_value != parent_value) {
     // but NULL'ing out a value should always be allowed
     lldb::offset_t offset = 0;

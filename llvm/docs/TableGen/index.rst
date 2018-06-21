@@ -171,6 +171,13 @@ factor out the common features that instructions of its class share.  A key
 feature of TableGen is that it allows the end-user to define the abstractions
 they prefer to use when describing their information.
 
+Each ``def`` record has a special entry called "NAME".  This is the name of the
+record ("``ADD32rr``" above).  In the general case ``def`` names can be formed
+from various kinds of string processing expressions and ``NAME`` resolves to the
+final value obtained after resolving all of those expressions.  The user may
+refer to ``NAME`` anywhere she desires to use the ultimate name of the ``def``.
+``NAME`` should not be defined anywhere else in user code to avoid conflicts.
+
 Syntax
 ======
 
@@ -217,7 +224,7 @@ definitions of a particular class, such as "Instruction".
 
  class ProcNoItin<string Name, list<SubtargetFeature> Features>
        : Processor<Name, NoItineraries, Features>;
-
+  
 Here, the class ProcNoItin, receiving parameters `Name` of type `string` and
 a list of target features is specializing the class Processor by passing the
 arguments down as well as hard-coding NoItineraries.

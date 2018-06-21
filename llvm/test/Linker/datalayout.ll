@@ -8,6 +8,6 @@
 target datalayout = "e"
 
 
-; WARN-A-NOT: warning
+; WARN-A-NOT: WARNING
 
-; WARN-B: warning: Linking two modules of different data layouts:
+; WARN-B: WARNING: Linking two modules of different data layouts:

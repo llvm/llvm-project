@@ -467,9 +467,10 @@ static bool DumpAddressOffsetFromFunction(Stream &s, const SymbolContext *sc,
       if (sc->function) {
         func_addr = sc->function->GetAddressRange().GetBaseAddress();
         if (sc->block && !concrete_only) {
-          // Check to make sure we aren't in an inline function. If we are, use
-          // the inline block range that contains "format_addr" since blocks
-          // can be discontiguous.
+          // Check to make sure we aren't in an inline
+          // function. If we are, use the inline block
+          // range that contains "format_addr" since
+          // blocks can be discontiguous.
           Block *inline_block = sc->block->GetContainingInlinedBlock();
           AddressRange inline_range;
           if (inline_block &&
@@ -821,7 +822,8 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   if (do_deref_pointer && !is_array_range) {
     // I have not deref-ed yet, let's do it
     // this happens when we are not going through
-    // GetValueForVariableExpressionPath to get to the target ValueObject
+    // GetValueForVariableExpressionPath
+    // to get to the target ValueObject
     Status error;
     target = target->Dereference(error).get();
     if (error.Fail()) {
@@ -840,9 +842,9 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     return false;
   }
 
-  // we do not want to use the summary for a bitfield of type T:n if we were
-  // originally dealing with just a T - that would get us into an endless
-  // recursion
+  // we do not want to use the summary for a bitfield of type T:n
+  // if we were originally dealing with just a T - that would get
+  // us into an endless recursion
   if (target->IsBitfield() && was_var_indexed) {
     // TODO: check for a (T:n)-specific summary - we should still obey that
     StreamString bitfield_name;
@@ -903,7 +905,8 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   }
 
   // if directly trying to print ${var}, and this is an aggregate, display a
-  // nice type @ location message
+  // nice
+  // type @ location message
   if (is_aggregate && was_plain_var) {
     s << target->GetTypeName() << " @ " << target->GetLocationAsCString();
     return true;
@@ -1139,8 +1142,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (!success)
         break;
     }
-    // Only if all items in a scope succeed, then do we print the output into
-    // the main stream
+    // Only if all items in a scope succeed, then do we
+    // print the output into the main stream
     if (success)
       s.Write(scope_stream.GetString().data(), scope_stream.GetString().size());
   }
@@ -1203,8 +1206,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           // Watch for the special "tid" format...
           if (entry.printf_format == "tid") {
             // TODO(zturner): Rather than hardcoding this to be platform
-            // specific, it should be controlled by a setting and the default
-            // value of the setting can be different depending on the platform.
+            // specific, it should be controlled by a
+            // setting and the default value of the setting can be different
+            // depending on the platform.
             Target &target = thread->GetProcess()->GetTarget();
             ArchSpec arch(target.GetArchitecture());
             llvm::Triple::OSType ostype = arch.IsValid()
@@ -1299,10 +1303,16 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
-          ValueObjectSP return_valobj_sp =
-              StopInfo::GetReturnValueObject(stop_info_sp);
+          bool is_swift_error_return = false;
+          ValueObjectSP return_valobj_sp = StopInfo::GetReturnValueObject(
+              stop_info_sp, is_swift_error_return);
           if (return_valobj_sp) {
-            return_valobj_sp->Dump(s);
+            DumpValueObjectOptions options;
+            if (return_valobj_sp->IsDynamic())
+              options.SetUseDynamicType(eDynamicCanRunTarget);
+            if (return_valobj_sp->DoesProvideSyntheticValue())
+              options.SetUseSyntheticValue(true);
+            return_valobj_sp->Dump(s, options);
             return true;
           }
         }
@@ -1910,9 +1920,9 @@ static Status ParseEntry(const llvm::StringRef &format_str,
             error.SetErrorStringWithFormat("%s", error_strm.GetData());
           } else if (sep_char == ':') {
             // Any value whose separator is a with a ':' means this value has a
-            // string argument that needs to be stored in the entry (like
-            // "${script.var:}"). In this case the string value is the empty
-            // string which is ok.
+            // string argument
+            // that needs to be stored in the entry (like "${script.var:}").
+            // In this case the string value is the empty string which is ok.
           } else {
             error.SetErrorStringWithFormat("%s", "invalid entry definitions");
           }
@@ -1922,7 +1932,8 @@ static Status ParseEntry(const llvm::StringRef &format_str,
           error = ParseEntry(value, entry_def, entry);
         } else if (sep_char == ':') {
           // Any value whose separator is a with a ':' means this value has a
-          // string argument that needs to be stored in the entry (like
+          // string argument
+          // that needs to be stored in the entry (like
           // "${script.var:modulename.function}")
           entry.string = value.str();
         } else {
@@ -2060,17 +2071,17 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
       case '0':
         // 1 to 3 octal chars
         {
-          // Make a string that can hold onto the initial zero char, up to 3
-          // octal digits, and a terminating NULL.
+          // Make a string that can hold onto the initial zero char,
+          // up to 3 octal digits, and a terminating NULL.
           char oct_str[5] = {0, 0, 0, 0, 0};
 
           int i;
           for (i = 0; (format[i] >= '0' && format[i] <= '7') && i < 4; ++i)
             oct_str[i] = format[i];
 
-          // We don't want to consume the last octal character since the main
-          // for loop will do this for us, so we advance p by one less than i
-          // (even if i is zero)
+          // We don't want to consume the last octal character since
+          // the main for loop will do this for us, so we advance p by
+          // one less than i (even if i is zero)
           format = format.drop_front(i);
           unsigned long octal_value = ::strtoul(oct_str, nullptr, 8);
           if (octal_value <= UINT8_MAX) {
@@ -2110,8 +2121,8 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
         break;
 
       default:
-        // Just desensitize any other character by just printing what came
-        // after the '\'
+        // Just desensitize any other character by just printing what
+        // came after the '\'
         parent_entry.AppendChar(desens_char);
         break;
       }
@@ -2137,9 +2148,10 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
           if (!variable_format.empty()) {
             entry.printf_format = variable_format.str();
 
-            // If the format contains a '%' we are going to assume this is a
-            // printf style format. So if you want to format your thread ID
-            // using "0x%llx" you can use: ${thread.id%0x%llx}
+            // If the format contains a '%' we are going to assume this is
+            // a printf style format. So if you want to format your thread ID
+            // using "0x%llx" you can use:
+            // ${thread.id%0x%llx}
             //
             // If there is no '%' in the format, then it is assumed to be a
             // LLDB format name, or one of the extended formats specified in
@@ -2258,9 +2270,9 @@ Status FormatEntity::ParseInternal(llvm::StringRef &format, Entry &parent_entry,
               return error;
             }
           }
-          // Check if this entry just wants to insert a constant string value
-          // into the parent_entry, if so, insert the string with AppendText,
-          // else append the entry to the parent_entry.
+          // Check if this entry just wants to insert a constant string
+          // value into the parent_entry, if so, insert the string with
+          // AppendText, else append the entry to the parent_entry.
           if (entry.type == Entry::Type::InsertString)
             parent_entry.AppendText(entry.string.c_str());
           else

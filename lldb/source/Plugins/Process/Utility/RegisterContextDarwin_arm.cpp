@@ -7,8 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(__APPLE__)
+
 #include "RegisterContextDarwin_arm.h"
-#include "RegisterContextDarwinConstants.h"
+
+// C Includes
+#include <mach/mach_types.h>
+#include <mach/thread_act.h>
 
 // C++ Includes
 // Other libraries and framework includes
@@ -29,7 +34,7 @@
 #endif
 
 // Project includes
-#include "Utility/ARM_DWARF_Registers.h"
+#include "ARM_DWARF_Registers.h"
 #include "Utility/ARM_ehframe_Registers.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -963,9 +968,9 @@ const size_t k_num_fpu_registers = llvm::array_lengthof(g_fpu_regnums);
 const size_t k_num_exc_registers = llvm::array_lengthof(g_exc_regnums);
 
 //----------------------------------------------------------------------
-// Register set definitions. The first definitions at register set index of
-// zero is for all registers, followed by other registers sets. The register
-// information for the all register set need not be filled in.
+// Register set definitions. The first definitions at register set index
+// of zero is for all registers, followed by other registers sets. The
+// register information for the all register set need not be filled in.
 //----------------------------------------------------------------------
 static const RegisterSet g_reg_sets[] = {
     {
@@ -1505,7 +1510,7 @@ uint32_t RegisterContextDarwin_arm::ConvertRegisterKindToRegisterNumber(
 }
 
 uint32_t RegisterContextDarwin_arm::NumSupportedHardwareBreakpoints() {
-#if defined(__APPLE__) && defined(__arm__)
+#if defined(__arm__)
   // Set the init value to something that will let us know that we need to
   // autodetect how many breakpoints are supported dynamically...
   static uint32_t g_num_supported_hw_breakpoints = UINT32_MAX;
@@ -1637,7 +1642,7 @@ bool RegisterContextDarwin_arm::ClearHardwareBreakpoint(uint32_t hw_index) {
 }
 
 uint32_t RegisterContextDarwin_arm::NumSupportedHardwareWatchpoints() {
-#if defined(__APPLE__) && defined(__arm__)
+#if defined(__arm__)
   // Set the init value to something that will let us know that we need to
   // autodetect how many watchpoints are supported dynamically...
   static uint32_t g_num_supported_hw_watchpoints = UINT32_MAX;
@@ -1761,3 +1766,5 @@ bool RegisterContextDarwin_arm::ClearHardwareWatchpoint(uint32_t hw_index) {
   }
   return false;
 }
+
+#endif

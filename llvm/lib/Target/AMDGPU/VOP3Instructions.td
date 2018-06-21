@@ -153,24 +153,19 @@ class getVOP3VCC<VOPProfile P, SDPatternOperator node> {
             (i1 VCC)))];
 }
 
-class VOP3Features<bit Clamp, bit OpSel, bit Packed> {
+class VOP3Features<bit Clamp, bit OpSel> {
   bit HasClamp = Clamp;
   bit HasOpSel = OpSel;
-  bit IsPacked = Packed;
 }
 
-def VOP3_REGULAR : VOP3Features<0, 0, 0>;
-def VOP3_CLAMP   : VOP3Features<1, 0, 0>;
-def VOP3_OPSEL   : VOP3Features<1, 1, 0>;
-def VOP3_PACKED  : VOP3Features<1, 1, 1>;
+def VOP3_REGULAR : VOP3Features<0, 0>;
+def VOP3_CLAMP   : VOP3Features<1, 0>;
+def VOP3_OPSEL   : VOP3Features<1, 1>;
 
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile<P.ArgVT> {
 
   let HasClamp = !if(Features.HasClamp, 1, P.HasClamp);
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
-  let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
-
-  let HasModifiers = !if(Features.IsPacked, 1, P.HasModifiers);
 
   // FIXME: Hack to stop printing _e64
   let Outs64 = (outs DstRC.RegClass:$vdst);
@@ -288,10 +283,10 @@ def V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, fmad>;
 def V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 def V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 def V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, fma>;
+def V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP3_Profile<VOP_F64_F64_F64_F64>, fma>;
 def V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
 let SchedRW = [WriteDoubleAdd] in {
-def V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP3_Profile<VOP_F64_F64_F64_F64>, fma>;
 def V_ADD_F64 : VOP3Inst <"v_add_f64", VOP3_Profile<VOP_F64_F64_F64>, fadd, 1>;
 def V_MUL_F64 : VOP3Inst <"v_mul_f64", VOP3_Profile<VOP_F64_F64_F64>, fmul, 1>;
 def V_MIN_F64 : VOP3Inst <"v_min_f64", VOP3_Profile<VOP_F64_F64_F64>, fminnum, 1>;
@@ -360,12 +355,14 @@ def V_LDEXP_F64 : VOP3Inst <"v_ldexp_f64", VOP3_Profile<VOP_F64_F64_I32>, AMDGPU
 
 def V_DIV_SCALE_F32 : VOP3_Pseudo <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32, [], 1> {
   let SchedRW = [WriteFloatFMA, WriteSALU];
+  let hasExtraSrcRegAllocReq = 1;
   let AsmMatchConverter = "";
 }
 
 // Double precision division pre-scale.
 def V_DIV_SCALE_F64 : VOP3_Pseudo <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64, [], 1> {
   let SchedRW = [WriteDouble, WriteSALU];
+  let hasExtraSrcRegAllocReq = 1;
   let AsmMatchConverter = "";
 }
 
@@ -379,7 +376,6 @@ def V_TRIG_PREOP_F64 : VOP3Inst <"v_trig_preop_f64", VOP3_Profile<VOP_F64_F64_I3
   let SchedRW = [WriteDouble];
 }
 
-let SchedRW = [Write64Bit] in {
 // These instructions only exist on SI and CI
 let SubtargetPredicate = isSICI in {
 def V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_I64_I64_I32>>;
@@ -393,17 +389,17 @@ def V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>>;
 def V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>>;
 def V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>>;
 } // End SubtargetPredicate = isVI
-} // End SchedRW = [Write64Bit]
+
 
 let SubtargetPredicate = isCIVI in {
 
-let Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32] in {
+let Constraints = "@earlyclobber $vdst" in {
 def V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64, VOP3_CLAMP>>;
 def V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOP3_Profile<VOP_V4I32_I64_I32_V4I32, VOP3_CLAMP>>;
-} // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
+} // End Constraints = "@earlyclobber $vdst"
 
 let isCommutable = 1 in {
-let SchedRW = [WriteQuarterRate32, WriteSALU] in {
+let SchedRW = [WriteDouble, WriteSALU] in {
 def V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
 def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 } // End SchedRW = [WriteDouble, WriteSALU]
@@ -412,16 +408,16 @@ def V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64>;
 } // End SubtargetPredicate = isCIVI
 
 
-def V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup> {
-  let Predicates = [Has16BitInsts, isVIOnly];
+let SubtargetPredicate = Has16BitInsts in {
+
+let renamedInGFX9 = 1 in {
+def V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
 }
-def V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9",
-                                      VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUdiv_fixup> {
-  let renamedInGFX9 = 1;
-  let Predicates = [Has16BitInsts, isGFX9];
+let SubtargetPredicate = isGFX9 in {
+def V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 }
 
-let SubtargetPredicate = Has16BitInsts, isCommutable = 1 in {
+let isCommutable = 1 in {
 
 let renamedInGFX9 = 1 in {
 def V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
@@ -442,14 +438,15 @@ def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f1
 def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>>;
 def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>>;
 
-} // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
+}  // End isCommutable = 1
+} // End SubtargetPredicate = Has16BitInsts
 
 let SubtargetPredicate = isVI in {
 def V_INTERP_P1_F32_e64  : VOP3Interp <"v_interp_p1_f32", VOP3_INTERP>;
 def V_INTERP_P2_F32_e64  : VOP3Interp <"v_interp_p2_f32", VOP3_INTERP>;
 def V_INTERP_MOV_F32_e64 : VOP3Interp <"v_interp_mov_f32", VOP3_INTERP_MOV>;
 
-def V_PERM_B32 : VOP3Inst <"v_perm_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, AMDGPUperm>;
+def V_PERM_B32 : VOP3Inst <"v_perm_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
 } // End SubtargetPredicate = isVI
 
 let Predicates = [Has16BitInsts] in {
@@ -700,7 +697,7 @@ multiclass VOP3Interp_F16_Real_vi<bits<10> op> {
 let AssemblerPredicates = [isGFX9], DecoderNamespace = "GFX9" in {
 
 multiclass VOP3_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
-  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
             VOP3e_vi <op, !cast<VOP3_Pseudo>(OpName).Pfl> {
               VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName);
               let AsmString = AsmName # ps.AsmOperands;
@@ -708,7 +705,7 @@ multiclass VOP3_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
 }
 
 multiclass VOP3OpSel_F16_Real_gfx9<bits<10> op, string AsmName> {
-  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
             VOP3OpSel_gfx9 <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
               VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME);
               let AsmString = AsmName # ps.AsmOperands;
@@ -716,7 +713,7 @@ multiclass VOP3OpSel_F16_Real_gfx9<bits<10> op, string AsmName> {
 }
 
 multiclass VOP3Interp_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
-  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
             VOP3Interp_vi <op, !cast<VOP3_Pseudo>(OpName).Pfl> {
               VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName);
               let AsmString = AsmName # ps.AsmOperands;
@@ -724,9 +721,9 @@ multiclass VOP3Interp_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> 
 }
 
 multiclass VOP3_Real_gfx9<bits<10> op, string AsmName> {
-  def _gfx9 : VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.GFX9>,
-              VOP3e_vi <op, !cast<VOP_Pseudo>(NAME).Pfl> {
-              VOP_Pseudo ps = !cast<VOP_Pseudo>(NAME);
+  def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.GFX9>,
+              VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
+              VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME);
               let AsmString = AsmName # ps.AsmOperands;
             }
 }

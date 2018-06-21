@@ -724,17 +724,11 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) {
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm5[0]
 ; SSE3-NEXT:    popq %rbx
-; SSE3-NEXT:    .cfi_def_cfa_offset 48
 ; SSE3-NEXT:    popq %r12
-; SSE3-NEXT:    .cfi_def_cfa_offset 40
 ; SSE3-NEXT:    popq %r13
-; SSE3-NEXT:    .cfi_def_cfa_offset 32
 ; SSE3-NEXT:    popq %r14
-; SSE3-NEXT:    .cfi_def_cfa_offset 24
 ; SSE3-NEXT:    popq %r15
-; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    popq %rbp
-; SSE3-NEXT:    .cfi_def_cfa_offset 8
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: avx2_vphadd_w_test:
@@ -902,16 +896,16 @@ define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
 ; SSE-LABEL: not_a_hsub_2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1],xmm0[2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
 ; SSE-NEXT:    subss %xmm3, %xmm2
 ; SSE-NEXT:    movshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; SSE-NEXT:    subss %xmm3, %xmm0
 ; SSE-NEXT:    movaps %xmm1, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1],xmm1[2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
 ; SSE-NEXT:    movaps %xmm1, %xmm4
-; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm1[1],xmm4[1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm4 = xmm4[1,1]
 ; SSE-NEXT:    subss %xmm4, %xmm3
 ; SSE-NEXT:    movshdup {{.*#+}} xmm4 = xmm1[1,1,3,3]
 ; SSE-NEXT:    subss %xmm4, %xmm1
@@ -959,10 +953,10 @@ define <2 x double> @not_a_hsub_3(<2 x double> %A, <2 x double> %B) {
 ; SSE-LABEL: not_a_hsub_3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm1[1],xmm2[1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    subsd %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    subsd %xmm0, %xmm2
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE-NEXT:    movapd %xmm2, %xmm0
@@ -1357,17 +1351,11 @@ define <16 x i16> @avx2_hadd_w(<16 x i16> %a, <16 x i16> %b) {
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm5[0]
 ; SSE3-NEXT:    popq %rbx
-; SSE3-NEXT:    .cfi_def_cfa_offset 48
 ; SSE3-NEXT:    popq %r12
-; SSE3-NEXT:    .cfi_def_cfa_offset 40
 ; SSE3-NEXT:    popq %r13
-; SSE3-NEXT:    .cfi_def_cfa_offset 32
 ; SSE3-NEXT:    popq %r14
-; SSE3-NEXT:    .cfi_def_cfa_offset 24
 ; SSE3-NEXT:    popq %r15
-; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    popq %rbp
-; SSE3-NEXT:    .cfi_def_cfa_offset 8
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: avx2_hadd_w:

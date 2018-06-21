@@ -120,9 +120,10 @@ static bool ReverseFindMatchingChars(const llvm::StringRef &s,
 
 static bool IsTrivialBasename(const llvm::StringRef &basename) {
   // Check that the basename matches with the following regular expression
-  // "^~?([A-Za-z_][A-Za-z_0-9]*)$" We are using a hand written implementation
-  // because it is significantly more efficient then using the general purpose
-  // regular expression library.
+  // "^~?([A-Za-z_][A-Za-z_0-9]*)$"
+  // We are using a hand written implementation because it is significantly more
+  // efficient then
+  // using the general purpose regular expression library.
   size_t idx = 0;
   if (basename.size() > 0 && basename[0] == '~')
     idx = 1;
@@ -150,9 +151,10 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
 }
 
 bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
-  // This method tries to parse simple method definitions which are presumably
-  // most comman in user programs. Definitions that can be parsed by this
-  // function don't have return types and templates in the name.
+  // This method tries to parse simple method definitions
+  // which are presumably most comman in user programs.
+  // Definitions that can be parsed by this function don't have return types
+  // and templates in the name.
   // A::B::C::fun(std::vector<T> &) const
   size_t arg_start, arg_end;
   llvm::StringRef full(m_full.GetCString());
@@ -249,17 +251,13 @@ std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
 }
 
 bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
-  // FIXME!! we should really run through all the known C++ Language plugins
-  // and ask each one if this is a C++ mangled name
-  
-  if (name == nullptr)
-    return false;
-  
-  // MSVC style mangling 
-  if (name[0] == '?')
-    return true;
-  
-  return (name[0] != '\0' && name[0] == '_' && name[1] == 'Z');
+  // FIXME, we should really run through all the known C++ Language plugins and
+  // ask each one if
+  // this is a C++ mangled name, but we can put that off till there is actually
+  // more than one
+  // we care about.
+
+  return (name != nullptr && name[0] == '_' && name[1] == 'Z');
 }
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
@@ -309,15 +307,13 @@ static ConstString SubsPrimitiveParmItanium(llvm::StringRef mangled,
 
   // FastDemangle will call our hook for each instance of a primitive type,
   // allowing us to perform substitution
-  char *const demangled =
+  const char *const demangled =
       FastDemangle(mangled.str().c_str(), mangled.size(), swap_parms_hook);
 
   if (log)
     log->Printf("substituted mangling for %s:{%s} %s:{%s}\n",
                 mangled.str().c_str(), demangled, output_buf.c_str(),
                 FastDemangle(output_buf.c_str()));
-  // FastDemangle malloc'd this string.
-  free(demangled);
 
   return output_buf == mangled ? ConstString() : ConstString(output_buf);
 }
@@ -873,7 +869,7 @@ std::unique_ptr<Language::TypeScavenger> CPlusPlusLanguage::GetTypeScavenger() {
 }
 
 lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
@@ -889,7 +885,7 @@ lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
 
 HardcodedFormatters::HardcodedSummaryFinder
 CPlusPlusLanguage::GetHardcodedSummaries() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static ConstString g_vectortypes("VectorTypes");
   static HardcodedFormatters::HardcodedSummaryFinder g_formatters;
 
@@ -953,15 +949,14 @@ CPlusPlusLanguage::GetHardcodedSummaries() {
 
 HardcodedFormatters::HardcodedSyntheticFinder
 CPlusPlusLanguage::GetHardcodedSynthetics() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static ConstString g_vectortypes("VectorTypes");
   static HardcodedFormatters::HardcodedSyntheticFinder g_formatters;
 
   llvm::call_once(g_initialize, []() -> void {
     g_formatters.push_back([](lldb_private::ValueObject &valobj,
-                              lldb::DynamicValueType,
-                              FormatManager &
-                                  fmt_mgr) -> SyntheticChildren::SharedPointer {
+                              lldb::DynamicValueType, FormatManager &fmt_mgr)
+                               -> SyntheticChildren::SharedPointer {
       static CXXSyntheticChildren::SharedPointer formatter_sp(
           new CXXSyntheticChildren(
               SyntheticChildren::Flags()
@@ -978,9 +973,8 @@ CPlusPlusLanguage::GetHardcodedSynthetics() {
       return nullptr;
     });
     g_formatters.push_back([](lldb_private::ValueObject &valobj,
-                              lldb::DynamicValueType,
-                              FormatManager &
-                                  fmt_mgr) -> SyntheticChildren::SharedPointer {
+                              lldb::DynamicValueType, FormatManager &fmt_mgr)
+                               -> SyntheticChildren::SharedPointer {
       static CXXSyntheticChildren::SharedPointer formatter_sp(
           new CXXSyntheticChildren(
               SyntheticChildren::Flags()

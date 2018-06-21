@@ -70,9 +70,9 @@ void SBModuleSpec::SetObjectName(const char *name) {
 
 const char *SBModuleSpec::GetTriple() {
   std::string triple(m_opaque_ap->GetArchitecture().GetTriple().str());
-  // Unique the string so we don't run into ownership issues since the const
-  // strings put the string into the string pool once and the strings never
-  // comes out
+  // Unique the string so we don't run into ownership issues since
+  // the const strings put the string into the string pool once and
+  // the strings never comes out
   ConstString const_triple(triple.c_str());
   return const_triple.GetCString();
 }
@@ -82,11 +82,11 @@ void SBModuleSpec::SetTriple(const char *triple) {
 }
 
 const uint8_t *SBModuleSpec::GetUUIDBytes() {
-  return m_opaque_ap->GetUUID().GetBytes().data();
+  return (const uint8_t *)m_opaque_ap->GetUUID().GetBytes();
 }
 
 size_t SBModuleSpec::GetUUIDLength() {
-  return m_opaque_ap->GetUUID().GetBytes().size();
+  return m_opaque_ap->GetUUID().GetByteSize();
 }
 
 bool SBModuleSpec::SetUUIDBytes(const uint8_t *uuid, size_t uuid_len) {

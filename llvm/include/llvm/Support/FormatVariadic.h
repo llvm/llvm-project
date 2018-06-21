@@ -168,7 +168,7 @@ public:
   }
 };
 
-// Format text given a format string and replacement parameters.
+// \brief Format text given a format string and replacement parameters.
 //
 // ===General Description===
 //

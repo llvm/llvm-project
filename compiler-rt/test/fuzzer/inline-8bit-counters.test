@@ -1,0 +1,4 @@
+RUN: %cpp_compiler %S/SimpleTest.cpp -fno-sanitize-coverage=trace-pc-guard -fsanitize-coverage=inline-8bit-counters -o %t-SimpleTest-Inline8bitCounters
+CHECK: INFO: Loaded 1 modules ({{.*}} inline 8-bit counters)
+CHECK: BINGO
+RUN: not %t-SimpleTest-Inline8bitCounters -runs=1000000 -seed=1 2>&1 | FileCheck %s

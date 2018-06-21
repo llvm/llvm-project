@@ -779,18 +779,15 @@ bool BT::UseQueueType::Cmp::operator()(const MachineInstr *InstA,
     return BA->getNumber() > BB->getNumber();
   }
 
-  auto getDist = [this] (const MachineInstr *MI) {
-    auto F = Dist.find(MI);
-    if (F != Dist.end())
-      return F->second;
-    MachineBasicBlock::const_iterator I = MI->getParent()->begin();
-    MachineBasicBlock::const_iterator E = MI->getIterator();
-    unsigned D = std::distance(I, E);
-    Dist.insert(std::make_pair(MI, D));
-    return D;
-  };
-
-  return getDist(InstA) > getDist(InstB);
+  MachineBasicBlock::const_iterator ItA = InstA->getIterator();
+  MachineBasicBlock::const_iterator ItB = InstB->getIterator();
+  MachineBasicBlock::const_iterator End = BA->end();
+  while (ItA != End) {
+    if (ItA == ItB)
+      return false;   // ItA was before ItB.
+    ++ItA;
+  }
+  return true;
 }
 
 // Main W-Z implementation.
@@ -843,7 +840,7 @@ void BT::visitPHI(const MachineInstr &PI) {
 void BT::visitNonBranch(const MachineInstr &MI) {
   if (Trace)
     dbgs() << "Visit MI(" << printMBBReference(*MI.getParent()) << "): " << MI;
-  if (MI.isDebugInstr())
+  if (MI.isDebugValue())
     return;
   assert(!MI.isBranch() && "Unexpected branch instruction");
 
@@ -1141,7 +1138,6 @@ void BT::run() {
     runEdgeQueue(BlockScanned);
     runUseQueue();
   }
-  UseQ.reset();
 
   if (Trace)
     print_cells(dbgs() << "Cells after propagation:\n");

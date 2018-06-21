@@ -14,9 +14,9 @@ stack:
   - { id: 1, type: default, size: 4, alignment: 4 }
 body: |
   bb.0:
-    liveins: $r0
-    S2_storeri_io $r29, 0, $r0 :: (store 4 into %stack.0)
-    $r1 = L2_loadri_io $r29, 4 :: (load 4 from %stack.1)
+    liveins: %r0
+    S2_storeri_io %r29, 0, %r0 :: (store 4 into %stack.0)
+    %r1 = L2_loadri_io %r29, 4 :: (load 4 from %stack.1)
 ...
 
 
@@ -24,8 +24,8 @@ body: |
 # if these instructions are aliased.
 # CHECK-LABEL: name: sammy
 # CHECK-NOT: BUNDLE
-# CHECK: S2_storeri_io $r29, 0, $r0
-# CHECK: $r1 = L2_loadri_io $r29, 0
+# CHECK: S2_storeri_io %r29, 0, %r0
+# CHECK: %r1 = L2_loadri_io %r29, 0
 
 ---
 name: sammy
@@ -34,8 +34,8 @@ stack:
   - { id: 0, type: default, size: 4, alignment: 4 }
 body: |
   bb.0:
-    liveins: $r0
-    S2_storeri_io $r29, 0, $r0 :: (store 4 into %stack.0)
-    $r1 = L2_loadri_io $r29, 0 :: (load 4 from %stack.0)
+    liveins: %r0
+    S2_storeri_io %r29, 0, %r0 :: (store 4 into %stack.0)
+    %r1 = L2_loadri_io %r29, 0 :: (load 4 from %stack.0)
 ...
 

@@ -22,8 +22,9 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -58,11 +59,6 @@ static cl::opt<bool> PreserveBitcodeUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM bitcode."),
     cl::init(true), cl::Hidden);
 
-static cl::opt<std::string> ClDataLayout("data-layout",
-                                         cl::desc("data layout string to use"),
-                                         cl::value_desc("layout-string"),
-                                         cl::init(""));
-
 static void WriteOutputFile(const Module *M) {
   // Infer the output filename if needed.
   if (OutputFilename.empty()) {
@@ -84,7 +80,7 @@ static void WriteOutputFile(const Module *M) {
   }
 
   if (Force || !CheckBitcodeOutputToConsole(Out->os(), true))
-    WriteBitcodeToFile(*M, Out->os(), PreserveBitcodeUseListOrder, nullptr,
+    WriteBitcodeToFile(M, Out->os(), PreserveBitcodeUseListOrder, nullptr,
                        EmitModuleHash);
 
   // Declare success.
@@ -92,14 +88,17 @@ static void WriteOutputFile(const Module *M) {
 }
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+  // Print a stack trace if we signal out.
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
   LLVMContext Context;
+  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm .ll -> .bc assembler\n");
 
   // Parse the file now...
   SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyFile(
-      InputFilename, Err, Context, nullptr, !DisableVerify, ClDataLayout);
+  std::unique_ptr<Module> M =
+      parseAssemblyFile(InputFilename, Err, Context, nullptr, !DisableVerify);
   if (!M.get()) {
     Err.print(argv[0], errs());
     return 1;

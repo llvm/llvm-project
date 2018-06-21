@@ -1,4 +1,4 @@
-//===- CompilationDatabase.cpp --------------------------------------------===//
+//===--- CompilationDatabase.cpp - ----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,9 +17,7 @@
 
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -28,38 +26,20 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/LineIterator.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cassert>
-#include <cstring>
-#include <iterator>
-#include <memory>
 #include <sstream>
-#include <string>
 #include <system_error>
-#include <utility>
-#include <vector>
-
 using namespace clang;
 using namespace tooling;
 
 LLVM_INSTANTIATE_REGISTRY(CompilationDatabasePluginRegistry)
 
-CompilationDatabase::~CompilationDatabase() = default;
+CompilationDatabase::~CompilationDatabase() {}
 
 std::unique_ptr<CompilationDatabase>
 CompilationDatabase::loadFromDirectory(StringRef BuildDirectory,
@@ -141,20 +121,20 @@ std::vector<CompileCommand> CompilationDatabase::getAllCompileCommands() const {
   return Result;
 }
 
-CompilationDatabasePlugin::~CompilationDatabasePlugin() = default;
+CompilationDatabasePlugin::~CompilationDatabasePlugin() {}
 
 namespace {
-
 // Helper for recursively searching through a chain of actions and collecting
 // all inputs, direct and indirect, of compile jobs.
 struct CompileJobAnalyzer {
-  SmallVector<std::string, 2> Inputs;
-
   void run(const driver::Action *A) {
     runImpl(A, false);
   }
 
+  SmallVector<std::string, 2> Inputs;
+
 private:
+
   void runImpl(const driver::Action *A, bool Collect) {
     bool CollectChildren = Collect;
     switch (A->getKind()) {
@@ -162,16 +142,16 @@ private:
       CollectChildren = true;
       break;
 
-    case driver::Action::InputClass:
+    case driver::Action::InputClass: {
       if (Collect) {
-        const auto *IA = cast<driver::InputAction>(A);
+        const driver::InputAction *IA = cast<driver::InputAction>(A);
         Inputs.push_back(IA->getInputArg().getSpelling());
       }
-      break;
+    } break;
 
     default:
       // Don't care about others
-      break;
+      ;
     }
 
     for (const driver::Action *AI : A->inputs())
@@ -188,7 +168,7 @@ public:
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override {
-    if (Info.getID() == diag::warn_drv_input_file_unused) {
+    if (Info.getID() == clang::diag::warn_drv_input_file_unused) {
       // Arg 1 for this diagnostic is the option that didn't get used.
       UnusedInputs.push_back(Info.getArgStdStr(0));
     } else if (DiagLevel >= DiagnosticsEngine::Error) {
@@ -206,21 +186,18 @@ public:
 // S2 in Arr where S1 == S2?"
 struct MatchesAny {
   MatchesAny(ArrayRef<std::string> Arr) : Arr(Arr) {}
-
   bool operator() (StringRef S) {
     for (const std::string *I = Arr.begin(), *E = Arr.end(); I != E; ++I)
       if (*I == S)
         return true;
     return false;
   }
-
 private:
   ArrayRef<std::string> Arr;
 };
-
 } // namespace
 
-/// Strips any positional args and possible argv[0] from a command-line
+/// \brief Strips any positional args and possible argv[0] from a command-line
 /// provided by the user to construct a FixedCompilationDatabase.
 ///
 /// FixedCompilationDatabase requires a command line to be in this format as it
@@ -247,7 +224,7 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
   TextDiagnosticPrinter DiagnosticPrinter(Output, &*DiagOpts);
   UnusedInputDiagConsumer DiagClient(DiagnosticPrinter);
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()),
+      IntrusiveRefCntPtr<clang::DiagnosticIDs>(new DiagnosticIDs()),
       &*DiagOpts, &DiagClient, false);
 
   // The clang executable path isn't required since the jobs the driver builds
@@ -385,10 +362,10 @@ class FixedCompilationDatabasePlugin : public CompilationDatabasePlugin {
   }
 };
 
-} // namespace
-
 static CompilationDatabasePluginRegistry::Add<FixedCompilationDatabasePlugin>
 X("fixed-compilation-database", "Reads plain-text flags file");
+
+} // namespace
 
 namespace clang {
 namespace tooling {
@@ -398,5 +375,5 @@ namespace tooling {
 extern volatile int JSONAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED JSONAnchorDest = JSONAnchorSource;
 
-} // namespace tooling
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang

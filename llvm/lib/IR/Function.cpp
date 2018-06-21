@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -55,7 +56,6 @@
 #include <string>
 
 using namespace llvm;
-using ProfileCount = Function::ProfileCount;
 
 // Explicit instantiations of SymbolTableListTraits since some of the methods
 // are not in the public header file...
@@ -192,14 +192,6 @@ bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
 
 LLVMContext &Function::getContext() const {
   return getType()->getContext();
-}
-
-unsigned Function::getInstructionCount() {
-  unsigned NumInstrs = 0;
-  for (BasicBlock &BB : BasicBlocks)
-    NumInstrs += std::distance(BB.instructionsWithoutDebug().begin(),
-                               BB.instructionsWithoutDebug().end());
-  return NumInstrs;
 }
 
 void Function::removeFromParent() {
@@ -487,13 +479,13 @@ void Function::copyAttributesFrom(const Function *Src) {
 static const char * const IntrinsicNameTable[] = {
   "not_intrinsic",
 #define GET_INTRINSIC_NAME_TABLE
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/Intrinsics.gen"
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
 /// Table of per-target intrinsic name tables.
 #define GET_INTRINSIC_TARGET_DATA
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/Intrinsics.gen"
 #undef GET_INTRINSIC_TARGET_DATA
 
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same
@@ -516,7 +508,7 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   return makeArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
 }
 
-/// This does the actual lookup of an intrinsic ID which
+/// \brief This does the actual lookup of an intrinsic ID which
 /// matches the given function name.
 Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
   ArrayRef<const char *> NameTable = findTargetSubtable(Name);
@@ -530,11 +522,9 @@ Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
   Intrinsic::ID ID = static_cast<Intrinsic::ID>(Idx + Adjust);
 
   // If the intrinsic is not overloaded, require an exact match. If it is
-  // overloaded, require either exact or prefix match.
-  const auto MatchSize = strlen(NameTable[Idx]);
-  assert(Name.size() >= MatchSize && "Expected either exact or prefix match");
-  bool IsExactMatch = Name.size() == MatchSize;
-  return IsExactMatch || isOverloaded(ID) ? ID : Intrinsic::not_intrinsic;
+  // overloaded, require a prefix match.
+  bool IsPrefixMatch = Name.size() > strlen(NameTable[Idx]);
+  return IsPrefixMatch == isOverloaded(ID) ? ID : Intrinsic::not_intrinsic;
 }
 
 void Function::recalculateIntrinsicID() {
@@ -558,7 +548,10 @@ void Function::recalculateIntrinsicID() {
 /// which can't be confused with it's prefix.  This ensures we don't have
 /// collisions between two unrelated function types. Otherwise, you might
 /// parse ffXX as f(fXX) or f(fX)X.  (X is a placeholder for any other type.)
-///
+/// Manglings of integers, floats, and vectors ('i', 'f', and 'v' prefix in most
+/// cases) fall back to the MVT codepath, where they could be mangled to
+/// 'x86mmx', for example; matching on derived types is not sufficient to mangle
+/// everything.
 static std::string getMangledTypeStr(Type* Ty) {
   std::string Result;
   if (PointerType* PTyp = dyn_cast<PointerType>(Ty)) {
@@ -586,26 +579,11 @@ static std::string getMangledTypeStr(Type* Ty) {
       Result += "vararg";
     // Ensure nested function types are distinguishable.
     Result += "f"; 
-  } else if (isa<VectorType>(Ty)) {
+  } else if (isa<VectorType>(Ty))
     Result += "v" + utostr(Ty->getVectorNumElements()) +
       getMangledTypeStr(Ty->getVectorElementType());
-  } else if (Ty) {
-    switch (Ty->getTypeID()) {
-    default: llvm_unreachable("Unhandled type");
-    case Type::VoidTyID:      Result += "isVoid";   break;
-    case Type::MetadataTyID:  Result += "Metadata"; break;
-    case Type::HalfTyID:      Result += "f16";      break;
-    case Type::FloatTyID:     Result += "f32";      break;
-    case Type::DoubleTyID:    Result += "f64";      break;
-    case Type::X86_FP80TyID:  Result += "f80";      break;
-    case Type::FP128TyID:     Result += "f128";     break;
-    case Type::PPC_FP128TyID: Result += "ppcf128";  break;
-    case Type::X86_MMXTyID:   Result += "x86mmx";   break;
-    case Type::IntegerTyID:
-      Result += "i" + utostr(cast<IntegerType>(Ty)->getBitWidth());
-      break;
-    }
-  }
+  else if (Ty)
+    Result += EVT::getEVT(Ty).getEVTString();
   return Result;
 }
 
@@ -840,7 +818,7 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 }
 
 #define GET_INTRINSIC_GENERATOR_GLOBAL
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/Intrinsics.gen"
 #undef GET_INTRINSIC_GENERATOR_GLOBAL
 
 void Intrinsic::getIntrinsicInfoTableEntries(ID id,
@@ -977,7 +955,7 @@ FunctionType *Intrinsic::getType(LLVMContext &Context,
 
 bool Intrinsic::isOverloaded(ID id) {
 #define GET_INTRINSIC_OVERLOAD_TABLE
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/Intrinsics.gen"
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
@@ -995,7 +973,7 @@ bool Intrinsic::isLeaf(ID id) {
 
 /// This defines the "Intrinsic::getAttributes(ID id)" method.
 #define GET_INTRINSIC_ATTRIBUTES
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/Intrinsics.gen"
 #undef GET_INTRINSIC_ATTRIBUTES
 
 Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
@@ -1008,12 +986,12 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
 
 // This defines the "Intrinsic::getIntrinsicForGCCBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/Intrinsics.gen"
 #undef GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
 
 // This defines the "Intrinsic::getIntrinsicForMSBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/Intrinsics.gen"
 #undef GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 
 bool Intrinsic::matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
@@ -1342,43 +1320,26 @@ void Function::setValueSubclassDataBit(unsigned Bit, bool On) {
     setValueSubclassData(getSubclassDataFromValue() & ~(1 << Bit));
 }
 
-void Function::setEntryCount(ProfileCount Count,
+void Function::setEntryCount(uint64_t Count,
                              const DenseSet<GlobalValue::GUID> *S) {
-  assert(Count.hasValue());
-#if !defined(NDEBUG)
-  auto PrevCount = getEntryCount();
-  assert(!PrevCount.hasValue() || PrevCount.getType() == Count.getType());
-#endif
   MDBuilder MDB(getContext());
-  setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createFunctionEntryCount(Count.getCount(), Count.isSynthetic(), S));
+  setMetadata(LLVMContext::MD_prof, MDB.createFunctionEntryCount(Count, S));
 }
 
-void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
-                             const DenseSet<GlobalValue::GUID> *Imports) {
-  setEntryCount(ProfileCount(Count, Type), Imports);
-}
-
-ProfileCount Function::getEntryCount() const {
+Optional<uint64_t> Function::getEntryCount() const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
-    if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
+    if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
       if (MDS->getString().equals("function_entry_count")) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         // A value of -1 is used for SamplePGO when there were no samples.
         // Treat this the same as unknown.
         if (Count == (uint64_t)-1)
-          return ProfileCount::getInvalid();
-        return ProfileCount(Count, PCT_Real);
-      } else if (MDS->getString().equals("synthetic_function_entry_count")) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
-        uint64_t Count = CI->getValue().getZExtValue();
-        return ProfileCount(Count, PCT_Synthetic);
+          return None;
+        return Count;
       }
-    }
-  return ProfileCount::getInvalid();
+  return None;
 }
 
 DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
@@ -1401,11 +1362,11 @@ void Function::setSectionPrefix(StringRef Prefix) {
 
 Optional<StringRef> Function::getSectionPrefix() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
-    assert(cast<MDString>(MD->getOperand(0))
+    assert(dyn_cast<MDString>(MD->getOperand(0))
                ->getString()
                .equals("function_section_prefix") &&
            "Metadata not match");
-    return cast<MDString>(MD->getOperand(1))->getString();
+    return dyn_cast<MDString>(MD->getOperand(1))->getString();
   }
   return None;
 }

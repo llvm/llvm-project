@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Provides AMDGPU specific target descriptions.
+/// \brief Provides AMDGPU specific target descriptions.
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,7 +25,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectTargetWriter;
+class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -50,9 +50,9 @@ MCAsmBackend *createAMDGPUAsmBackend(const Target &T,
                                      const MCRegisterInfo &MRI,
                                      const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectTargetWriter>
+std::unique_ptr<MCObjectWriter>
 createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
-                            bool HasRelocationAddend);
+                            bool HasRelocationAddend, raw_pwrite_stream &OS);
 } // End llvm namespace
 
 #define GET_REGINFO_ENUM

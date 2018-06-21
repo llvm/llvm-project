@@ -22,7 +22,7 @@ define void @test_simplify1(i8* %dst) {
 ; CHECK-LABEL: @test_simplify1(
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
   call i32 (i8*, i8*, ...) @sprintf(i8* %dst, i8* %fmt)
-; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %dst, i8* align 1 getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 13, i32 1, i1 false)
   ret void
 ; CHECK-NEXT: ret void
 }
@@ -66,7 +66,7 @@ define void @test_simplify5(i8* %dst, i8* %str) {
   call i32 (i8*, i8*, ...) @sprintf(i8* %dst, i8* %fmt, i8* %str)
 ; CHECK-NEXT: [[STRLEN:%[a-z0-9]+]] = call i32 @strlen(i8* %str)
 ; CHECK-NEXT: [[LENINC:%[a-z0-9]+]] = add i32 [[STRLEN]], 1
-; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %dst, i8* align 1 %str, i32 [[LENINC]], i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dst, i8* %str, i32 [[LENINC]], i32 1, i1 false)
   ret void
 ; CHECK-NEXT: ret void
 }

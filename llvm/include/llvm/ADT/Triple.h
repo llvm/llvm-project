@@ -202,7 +202,9 @@ public:
     MSVC,
     Itanium,
     Cygnus,
+    AMDOpenCL,
     CoreCLR,
+    OpenCL,
     Simulator,  // Simulator variants of other systems, e.g., Apple's iOS
     LastEnvironmentType = Simulator
   };
@@ -658,14 +660,9 @@ public:
     return getArch() == Triple::aarch64 || getArch() == Triple::aarch64_be;
   }
 
-  /// Tests whether the target supports comdat
+  /// Tests wether the target supports comdat
   bool supportsCOMDAT() const {
-    return !isOSBinFormatMachO();
-  }
-
-  /// Tests whether the target uses emulated TLS as default.
-  bool hasDefaultEmulatedTLS() const {
-    return isAndroid() || isOSOpenBSD() || isWindowsCygwinEnvironment();
+    return !isOSBinFormatMachO() && !isOSBinFormatWasm();
   }
 
   /// @}

@@ -64,7 +64,7 @@ class GCNScheduleDAGMILive : public ScheduleDAGMILive {
 
   const SISubtarget &ST;
 
-  SIMachineFunctionInfo &MFI;
+  const SIMachineFunctionInfo &MFI;
 
   // Occupancy target at the beginning of function scheduling cycle.
   unsigned StartingOccupancy;

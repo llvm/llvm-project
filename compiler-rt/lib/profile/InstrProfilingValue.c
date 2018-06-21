@@ -132,14 +132,13 @@ static ValueProfNode *allocateOneNode(__llvm_profile_data *Data, uint32_t Index,
   return Node;
 }
 
-static COMPILER_RT_ALWAYS_INLINE void
-instrumentTargetValueImpl(uint64_t TargetValue, void *Data,
-                          uint32_t CounterIndex, uint64_t CountValue) {
+COMPILER_RT_VISIBILITY void
+__llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
+                                 uint32_t CounterIndex) {
   __llvm_profile_data *PData = (__llvm_profile_data *)Data;
   if (!PData)
     return;
-  if (!CountValue)
-    return;
+
   if (!PData->Values) {
     if (!allocateValueProfileCounters(PData))
       return;
@@ -154,7 +153,7 @@ instrumentTargetValueImpl(uint64_t TargetValue, void *Data,
   uint8_t VDataCount = 0;
   while (CurVNode) {
     if (TargetValue == CurVNode->Value) {
-      CurVNode->Count += CountValue;
+      CurVNode->Count++;
       return;
     }
     if (CurVNode->Count < MinCount) {
@@ -195,13 +194,11 @@ instrumentTargetValueImpl(uint64_t TargetValue, void *Data,
      * the runtime can wipe out more than one lowest count entries
      * to give space for hot targets.
      */
-    if (MinCountVNode->Count <= CountValue) {
+    if (!MinCountVNode->Count || !(--MinCountVNode->Count)) {
       CurVNode = MinCountVNode;
       CurVNode->Value = TargetValue;
-      CurVNode->Count = CountValue;
-    } else
-      MinCountVNode->Count -= CountValue;
-
+      CurVNode->Count++;
+    }
     return;
   }
 
@@ -209,7 +206,7 @@ instrumentTargetValueImpl(uint64_t TargetValue, void *Data,
   if (!CurVNode)
     return;
   CurVNode->Value = TargetValue;
-  CurVNode->Count += CountValue;
+  CurVNode->Count++;
 
   uint32_t Success = 0;
   if (!ValueCounters[CounterIndex])
@@ -222,18 +219,6 @@ instrumentTargetValueImpl(uint64_t TargetValue, void *Data,
     free(CurVNode);
     return;
   }
-}
-
-COMPILER_RT_VISIBILITY void
-__llvm_profile_instrument_target(uint64_t TargetValue, void *Data,
-                                 uint32_t CounterIndex) {
-  instrumentTargetValueImpl(TargetValue, Data, CounterIndex, 1);
-}
-COMPILER_RT_VISIBILITY void
-__llvm_profile_instrument_target_value(uint64_t TargetValue, void *Data,
-                                       uint32_t CounterIndex,
-                                       uint64_t CountValue) {
-  instrumentTargetValueImpl(TargetValue, Data, CounterIndex, CountValue);
 }
 
 /*

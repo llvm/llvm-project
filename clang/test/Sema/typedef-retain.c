@@ -16,8 +16,8 @@ void test2(float4 a, int4p result, int i) {
 typedef int a[5];
 void test3() {
   typedef const a b;
-  b r;       // expected-note {{variable 'r' declared const here}}
-  r[0] = 10; // expected-error {{cannot assign to variable 'r' with const-qualified type 'b' (aka 'int const[5]')}}
+  b r;
+  r[0]=10;  // expected-error {{read-only variable is not assignable}}
 }
 
 int test4(const a y) {

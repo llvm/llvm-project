@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file provides some common utility functions for processing
+/// \brief This file provides some common utility functions for processing
 /// Lambda related AST Constructs.
 ///
 //===----------------------------------------------------------------------===//

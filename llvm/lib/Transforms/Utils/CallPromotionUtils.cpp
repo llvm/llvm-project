@@ -389,14 +389,12 @@ Instruction *llvm::promoteCall(CallSite CS, Function *Callee,
   // Inspect the arguments of the call site. If an argument's type doesn't
   // match the corresponding formal argument's type in the callee, bitcast it
   // to the correct type.
-  auto CalleeType = Callee->getFunctionType();
-  auto CalleeParamNum = CalleeType->getNumParams();
-  for (unsigned ArgNo = 0; ArgNo < CalleeParamNum; ++ArgNo) {
-    auto *Arg = CS.getArgument(ArgNo); 
-    Type *FormalTy = CalleeType->getParamType(ArgNo);
-    Type *ActualTy = Arg->getType();
+  for (Use &U : CS.args()) {
+    unsigned ArgNo = CS.getArgumentNo(&U);
+    Type *FormalTy = Callee->getFunctionType()->getParamType(ArgNo);
+    Type *ActualTy = U.get()->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::Create(Instruction::BitCast, Arg, FormalTy, "",
+      auto *Cast = CastInst::Create(Instruction::BitCast, U.get(), FormalTy, "",
                                     CS.getInstruction());
       CS.setArgument(ArgNo, Cast);
     }

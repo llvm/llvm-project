@@ -3,8 +3,7 @@ add_library(LLVMCFIVerify
   FileAnalysis.cpp
   FileAnalysis.h
   GraphBuilder.cpp
-  GraphBuilder.h
-  )
+  GraphBuilder.h)
 
 llvm_update_compile_flags(LLVMCFIVerify)
 llvm_map_components_to_libnames(libs
@@ -13,7 +12,6 @@ llvm_map_components_to_libnames(libs
   MCParser
   Object
   Support
-  Symbolize
-  )
+  Symbolize)
 target_link_libraries(LLVMCFIVerify ${libs})
 set_target_properties(LLVMCFIVerify PROPERTIES FOLDER "Libraries")

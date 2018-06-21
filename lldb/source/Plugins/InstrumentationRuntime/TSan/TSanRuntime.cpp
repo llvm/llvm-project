@@ -89,6 +89,7 @@ extern "C"
     // TODO: dlsym won't work on Windows.
     void *dlsym(void* handle, const char* symbol);
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
+    int (*ptr__tsan_get_report_tag)(void *report, unsigned long *tag);
 }
 
 const int REPORT_TRACE_SIZE = 128;
@@ -98,6 +99,7 @@ struct data {
     void *report;
     const char *description;
     int report_count;
+    unsigned long tag;
     
     void *sleep_trace[REPORT_TRACE_SIZE];
     
@@ -164,9 +166,13 @@ const char *thread_sanitizer_retrieve_report_data_command = R"(
 data t = {0};
 
 ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_loc_object_type");
+ptr__tsan_get_report_tag = (typeof(ptr__tsan_get_report_tag))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_tag");
 
 t.report = __tsan_get_current_report();
 __tsan_get_report_data(t.report, &t.description, &t.report_count, &t.stack_count, &t.mop_count, &t.loc_count, &t.mutex_count, &t.thread_count, &t.unique_tid_count, t.sleep_trace, REPORT_TRACE_SIZE);
+
+if (ptr__tsan_get_report_tag)
+    ptr__tsan_get_report_tag(t.report, &t.tag);
 
 if (t.stack_count > REPORT_ARRAY_SIZE) t.stack_count = REPORT_ARRAY_SIZE;
 for (int i = 0; i < t.stack_count; i++) {
@@ -282,8 +288,9 @@ GetRenumberedThreadIds(ProcessSP process_sp, ValueObjectSP data,
         } else {
           // This isn't a live thread anymore.  Ask process to assign a new
           // Index ID (or return an old one if we've already seen this
-          // thread_os_id). It will also make sure that no new threads are
-          // assigned this Index ID.
+          // thread_os_id).
+          // It will also make sure that no new threads are assigned this Index
+          // ID.
           lldb_user_id = process_sp->AssignIndexIDToThread(thread_os_id);
         }
 
@@ -348,6 +355,9 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
                            ->GetValueAsUnsigned(0));
   dict->AddItem("sleep_trace", StructuredData::ObjectSP(CreateStackTrace(
                                    main_value, ".sleep_trace")));
+  dict->AddIntegerItem(
+      "tag",
+      main_value->GetValueForExpressionPath(".tag")->GetValueAsUnsigned(0));
 
   StructuredData::Array *stacks = ConvertToStructuredArray(
       main_value, ".stacks", ".stack_count",
@@ -486,8 +496,8 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   return StructuredData::ObjectSP(dict);
 }
 
-std::string
-ThreadSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report) {
+std::string ThreadSanitizerRuntime::FormatDescription(
+    StructuredData::ObjectSP report, bool &is_swift_access_race) {
   std::string description = report->GetAsDictionary()
                                 ->GetValueForKey("issue_type")
                                 ->GetAsString()
@@ -522,8 +532,18 @@ ThreadSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report) {
   } else if (description == "lock-order-inversion") {
     return "Lock order inversion (potential deadlock)";
   } else if (description == "external-race") {
+    auto tag = report->GetAsDictionary()
+                   ->GetValueForKey("tag")
+                   ->GetAsInteger()
+                   ->GetValue();
+    static const unsigned long kSwiftAccessRaceTag = 0x1;
+    if (tag == kSwiftAccessRaceTag) {
+      is_swift_access_race = true;
+      return "Swift access race";
+    }
     return "Race on a library object";
   } else if (description == "swift-access-race") {
+    is_swift_access_race = true;
     return "Swift access race";
   }
 
@@ -573,7 +593,7 @@ static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
     return;
 
   VariableList var_list;
-  module->FindGlobalVariables(sym_name, nullptr, 1U, var_list);
+  module->FindGlobalVariables(sym_name, nullptr, true, 1U, var_list);
   if (var_list.GetSize() < 1)
     return;
 
@@ -617,9 +637,14 @@ ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report) {
                             ->GetValueForKey("description")
                             ->GetAsString()
                             ->GetValue();
+  bool is_swift_access_race = report->GetAsDictionary()
+                                  ->GetValueForKey("is_swift_access_race")
+                                  ->GetAsBoolean()
+                                  ->GetValue();
+
   bool skip_one_frame =
-      report->GetObjectForDotSeparatedPath("issue_type")->GetStringValue() ==
-      "external-race";
+      (report->GetObjectForDotSeparatedPath("issue_type")->GetStringValue() ==
+      "external-race") && (!is_swift_access_race);
 
   addr_t pc = 0;
   if (report->GetAsDictionary()
@@ -811,8 +836,12 @@ bool ThreadSanitizerRuntime::NotifyBreakpointHit(
       instance->RetrieveReportData(context->exe_ctx_ref);
   std::string stop_reason_description;
   if (report) {
-    std::string issue_description = instance->FormatDescription(report);
+    bool is_swift_access_race = false;
+    std::string issue_description =
+        instance->FormatDescription(report, is_swift_access_race);
     report->GetAsDictionary()->AddStringItem("description", issue_description);
+    report->GetAsDictionary()->AddBooleanItem("is_swift_access_race",
+                                              is_swift_access_race);
     stop_reason_description = issue_description + " detected";
     report->GetAsDictionary()->AddStringItem("stop_description",
                                              stop_reason_description);

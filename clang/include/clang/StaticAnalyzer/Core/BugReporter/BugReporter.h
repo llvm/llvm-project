@@ -1,4 +1,4 @@
-//===- BugReporter.h - Generate PathDiagnostics -----------------*- C++ -*-===//
+//===---  BugReporter.h - Generate PathDiagnostics --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,51 +15,36 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTER_H
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTER_H
 
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
-#include "llvm/ADT/iterator_range.h"
-#include <cassert>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
 namespace clang {
 
-class AnalyzerOptions;
 class ASTContext;
-class Decl;
 class DiagnosticsEngine;
-class LocationContext;
-class SourceManager;
 class Stmt;
+class ParentMap;
 
 namespace ento {
 
-class BugType;
-class CheckerBase;
-class ExplodedGraph;
+class PathDiagnostic;
 class ExplodedNode;
+class ExplodedGraph;
+class BugReport;
+class BugReporter;
+class BugReporterContext;
 class ExprEngine;
-class MemRegion;
-class SValBuilder;
+class BugType;
 
 //===----------------------------------------------------------------------===//
 // Interface for individual bug reports.
@@ -71,39 +56,37 @@ class BugReport : public llvm::ilist_node<BugReport> {
 public:  
   class NodeResolver {
     virtual void anchor();
-
   public:
-    virtual ~NodeResolver() = default;
-
+    virtual ~NodeResolver() {}
     virtual const ExplodedNode*
             getOriginalNode(const ExplodedNode *N) = 0;
   };
 
-  using ranges_iterator = const SourceRange *;
-  using VisitorList = SmallVector<std::unique_ptr<BugReporterVisitor>, 8>;
-  using visitor_iterator = VisitorList::iterator;
-  using ExtraTextList = SmallVector<StringRef, 2>;
-  using NoteList = SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4>;
+  typedef const SourceRange *ranges_iterator;
+  typedef SmallVector<std::unique_ptr<BugReporterVisitor>, 8> VisitorList;
+  typedef VisitorList::iterator visitor_iterator;
+  typedef SmallVector<StringRef, 2> ExtraTextList;
+  typedef SmallVector<std::shared_ptr<PathDiagnosticNotePiece>, 4> NoteList;
 
 protected:
-  friend class BugReportEquivClass;
   friend class BugReporter;
+  friend class BugReportEquivClass;
 
   BugType& BT;
-  const Decl *DeclWithIssue = nullptr;
+  const Decl *DeclWithIssue;
   std::string ShortDescription;
   std::string Description;
   PathDiagnosticLocation Location;
   PathDiagnosticLocation UniqueingLocation;
   const Decl *UniqueingDecl;
   
-  const ExplodedNode *ErrorNode = nullptr;
+  const ExplodedNode *ErrorNode;
   SmallVector<SourceRange, 4> Ranges;
   ExtraTextList ExtraText;
   NoteList Notes;
 
-  using Symbols = llvm::DenseSet<SymbolRef>;
-  using Regions = llvm::DenseSet<const MemRegion *>;
+  typedef llvm::DenseSet<SymbolRef> Symbols;
+  typedef llvm::DenseSet<const MemRegion *> Regions;
 
   /// A (stack of) a set of symbols that are registered with this
   /// report as being "interesting", and thus used to help decide which
@@ -132,18 +115,18 @@ protected:
 
   /// Used for clients to tell if the report's configuration has changed
   /// since the last time they checked.
-  unsigned ConfigurationChangeToken = 0;
+  unsigned ConfigurationChangeToken;
   
   /// When set, this flag disables all callstack pruning from a diagnostic
   /// path.  This is useful for some reports that want maximum fidelty
   /// when reporting an issue.
-  bool DoNotPrunePath = false;
+  bool DoNotPrunePath;
 
   /// Used to track unique reasons why a bug report might be invalid.
   ///
   /// \sa markInvalid
   /// \sa removeInvalidation
-  using InvalidationRecord = std::pair<const void *, const void *>;
+  typedef std::pair<const void *, const void *> InvalidationRecord;
 
   /// If non-empty, this bug report is likely a false positive and should not be
   /// shown to the user.
@@ -163,17 +146,20 @@ private:
 
 public:
   BugReport(BugType& bt, StringRef desc, const ExplodedNode *errornode)
-      : BT(bt), Description(desc), ErrorNode(errornode) {}
+    : BT(bt), DeclWithIssue(nullptr), Description(desc), ErrorNode(errornode),
+      ConfigurationChangeToken(0), DoNotPrunePath(false) {}
 
   BugReport(BugType& bt, StringRef shortDesc, StringRef desc,
             const ExplodedNode *errornode)
-      : BT(bt), ShortDescription(shortDesc), Description(desc),
-        ErrorNode(errornode) {}
+    : BT(bt), DeclWithIssue(nullptr), ShortDescription(shortDesc),
+      Description(desc), ErrorNode(errornode), ConfigurationChangeToken(0),
+      DoNotPrunePath(false) {}
 
   BugReport(BugType &bt, StringRef desc, PathDiagnosticLocation l)
-      : BT(bt), Description(desc), Location(l) {}
+    : BT(bt), DeclWithIssue(nullptr), Description(desc), Location(l),
+      ErrorNode(nullptr), ConfigurationChangeToken(0), DoNotPrunePath(false) {}
 
-  /// Create a BugReport with a custom uniqueing location.
+  /// \brief Create a BugReport with a custom uniqueing location.
   ///
   /// The reports that have the same report location, description, bug type, and
   /// ranges are uniqued - only one of the equivalent reports will be presented
@@ -182,15 +168,18 @@ public:
   /// the allocation site, rather then the location where the bug is reported.
   BugReport(BugType& bt, StringRef desc, const ExplodedNode *errornode,
             PathDiagnosticLocation LocationToUnique, const Decl *DeclToUnique)
-      : BT(bt), Description(desc), UniqueingLocation(LocationToUnique),
-        UniqueingDecl(DeclToUnique), ErrorNode(errornode) {}
+    : BT(bt), DeclWithIssue(nullptr), Description(desc),
+      UniqueingLocation(LocationToUnique),
+      UniqueingDecl(DeclToUnique),
+      ErrorNode(errornode), ConfigurationChangeToken(0),
+      DoNotPrunePath(false) {}
 
   virtual ~BugReport();
 
   const BugType& getBugType() const { return BT; }
   BugType& getBugType() { return BT; }
 
-  /// True when the report has an execution path associated with it.
+  /// \brief True when the report has an execution path associated with it.
   ///
   /// A report is said to be path-sensitive if it was thrown against a
   /// particular exploded node in the path-sensitive analysis graph.
@@ -253,6 +242,13 @@ public:
   void markInvalid(const void *Tag, const void *Data) {
     Invalidations.insert(std::make_pair(Tag, Data));
   }
+
+  /// Reverses the effects of a previous invalidation.
+  ///
+  /// \sa markInvalid
+  void removeInvalidation(const void *Tag, const void *Data) {
+    Invalidations.erase(std::make_pair(Tag, Data));
+  }
   
   /// Return the canonical declaration, be it a method or class, where
   /// this issue semantically occurred.
@@ -290,7 +286,7 @@ public:
     return Notes;
   }
 
-  /// This allows for addition of meta data to the diagnostic.
+  /// \brief This allows for addition of meta data to the diagnostic.
   ///
   /// Currently, only the HTMLDiagnosticClient knows how to display it. 
   void addExtraText(StringRef S) {
@@ -301,26 +297,26 @@ public:
     return ExtraText;
   }
 
-  /// Return the "definitive" location of the reported bug.
+  /// \brief Return the "definitive" location of the reported bug.
   ///
   ///  While a bug can span an entire path, usually there is a specific
   ///  location that can be used to identify where the key issue occurred.
   ///  This location is used by clients rendering diagnostics.
   virtual PathDiagnosticLocation getLocation(const SourceManager &SM) const;
 
-  /// Get the location on which the report should be uniqued.
+  /// \brief Get the location on which the report should be uniqued.
   PathDiagnosticLocation getUniqueingLocation() const {
     return UniqueingLocation;
   }
   
-  /// Get the declaration containing the uniqueing location.
+  /// \brief Get the declaration containing the uniqueing location.
   const Decl *getUniqueingDecl() const {
     return UniqueingDecl;
   }
 
   const Stmt *getStmt() const;
 
-  /// Add a range to a bug report.
+  /// \brief Add a range to a bug report.
   ///
   /// Ranges are used to highlight regions of interest in the source code.
   /// They should be at the same source code line as the BugReport location.
@@ -333,10 +329,10 @@ public:
     Ranges.push_back(R);
   }
 
-  /// Get the SourceRanges associated with the report.
+  /// \brief Get the SourceRanges associated with the report.
   virtual llvm::iterator_range<ranges_iterator> getRanges();
 
-  /// Add custom or predefined bug report visitors to this report.
+  /// \brief Add custom or predefined bug report visitors to this report.
   ///
   /// The visitors should be used when the default trace is not sufficient.
   /// For example, they allow constructing a more elaborate trace.
@@ -360,11 +356,10 @@ public:
 //===----------------------------------------------------------------------===//
 
 class BugReportEquivClass : public llvm::FoldingSetNode {
-  friend class BugReporter;
-
   /// List of *owned* BugReport objects.
   llvm::ilist<BugReport> Reports;
 
+  friend class BugReporter;
   void AddReport(std::unique_ptr<BugReport> R) {
     Reports.push_back(R.release());
   }
@@ -378,8 +373,8 @@ public:
     Reports.front().Profile(ID);
   }
 
-  using iterator = llvm::ilist<BugReport>::iterator;
-  using const_iterator = llvm::ilist<BugReport>::const_iterator;
+  typedef llvm::ilist<BugReport>::iterator iterator;
+  typedef llvm::ilist<BugReport>::const_iterator const_iterator;
 
   iterator begin() { return Reports.begin(); }
   iterator end() { return Reports.end(); }
@@ -395,12 +390,11 @@ public:
 class BugReporterData {
 public:
   virtual ~BugReporterData();
-
   virtual DiagnosticsEngine& getDiagnostic() = 0;
   virtual ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() = 0;
   virtual ASTContext &getASTContext() = 0;
-  virtual SourceManager &getSourceManager() = 0;
-  virtual AnalyzerOptions &getAnalyzerOptions() = 0;
+  virtual SourceManager& getSourceManager() = 0;
+  virtual AnalyzerOptions& getAnalyzerOptions() = 0;
 };
 
 /// BugReporter is a utility class for generating PathDiagnostics for analysis.
@@ -411,8 +405,7 @@ public:
   enum Kind { BaseBRKind, GRBugReporterKind };
 
 private:
-  using BugTypesTy = llvm::ImmutableSet<BugType *>;
-
+  typedef llvm::ImmutableSet<BugType*> BugTypesTy;
   BugTypesTy::Factory F;
   BugTypesTy BugTypes;
 
@@ -430,20 +423,19 @@ private:
 
   /// The set of bug reports tracked by the BugReporter.
   llvm::FoldingSet<BugReportEquivClass> EQClasses;
-
   /// A vector of BugReports for tracking the allocated pointers and cleanup.
   std::vector<BugReportEquivClass *> EQClassesVector;
 
 protected:
-  BugReporter(BugReporterData& d, Kind k)
-      : BugTypes(F.getEmptySet()), kind(k), D(d) {}
+  BugReporter(BugReporterData& d, Kind k) : BugTypes(F.getEmptySet()), kind(k),
+                                            D(d) {}
 
 public:
-  BugReporter(BugReporterData& d)
-      : BugTypes(F.getEmptySet()), kind(BaseBRKind), D(d) {}
+  BugReporter(BugReporterData& d) : BugTypes(F.getEmptySet()), kind(BaseBRKind),
+                                    D(d) {}
   virtual ~BugReporter();
 
-  /// Generate and flush diagnostics for all bug reports.
+  /// \brief Generate and flush diagnostics for all bug reports.
   void FlushReports();
 
   Kind getKind() const { return kind; }
@@ -456,21 +448,21 @@ public:
     return D.getPathDiagnosticConsumers();
   }
 
-  /// Iterator over the set of BugTypes tracked by the BugReporter.
-  using iterator = BugTypesTy::iterator;
+  /// \brief Iterator over the set of BugTypes tracked by the BugReporter.
+  typedef BugTypesTy::iterator iterator;
   iterator begin() { return BugTypes.begin(); }
   iterator end() { return BugTypes.end(); }
 
-  /// Iterator over the set of BugReports tracked by the BugReporter.
-  using EQClasses_iterator = llvm::FoldingSet<BugReportEquivClass>::iterator;
+  /// \brief Iterator over the set of BugReports tracked by the BugReporter.
+  typedef llvm::FoldingSet<BugReportEquivClass>::iterator EQClasses_iterator;
   EQClasses_iterator EQClasses_begin() { return EQClasses.begin(); }
   EQClasses_iterator EQClasses_end() { return EQClasses.end(); }
 
   ASTContext &getContext() { return D.getASTContext(); }
 
-  SourceManager &getSourceManager() { return D.getSourceManager(); }
+  SourceManager& getSourceManager() { return D.getSourceManager(); }
 
-  AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
+  AnalyzerOptions& getAnalyzerOptions() { return D.getAnalyzerOptions(); }
 
   virtual bool generatePathDiagnostic(PathDiagnostic& pathDiagnostic,
                                       PathDiagnosticConsumer &PC,
@@ -480,7 +472,7 @@ public:
 
   void Register(BugType *BT);
 
-  /// Add the given report to the set of reports tracked by BugReporter.
+  /// \brief Add the given report to the set of reports tracked by BugReporter.
   ///
   /// The reports are usually generated by the checkers. Further, they are
   /// folded based on the profile value, which is done to coalesce similar
@@ -500,7 +492,7 @@ public:
 private:
   llvm::StringMap<BugType *> StrBugTypes;
 
-  /// Returns a BugType that is associated with the given name and
+  /// \brief Returns a BugType that is associated with the given name and
   /// category.
   BugType *getBugTypeForName(CheckName CheckName, StringRef name,
                              StringRef category);
@@ -509,10 +501,9 @@ private:
 // FIXME: Get rid of GRBugReporter.  It's the wrong abstraction.
 class GRBugReporter : public BugReporter {
   ExprEngine& Eng;
-
 public:
   GRBugReporter(BugReporterData& d, ExprEngine& eng)
-      : BugReporter(d, GRBugReporterKind), Eng(eng) {}
+    : BugReporter(d, GRBugReporterKind), Eng(eng) {}
 
   ~GRBugReporter() override;
 
@@ -546,14 +537,12 @@ public:
 };
 
 class BugReporterContext {
-  GRBugReporter &BR;
-
   virtual void anchor();
-
+  GRBugReporter &BR;
 public:
   BugReporterContext(GRBugReporter& br) : BR(br) {}
 
-  virtual ~BugReporterContext() = default;
+  virtual ~BugReporterContext() {}
 
   GRBugReporter& getBugReporter() { return BR; }
 
@@ -563,7 +552,7 @@ public:
     return BR.getStateManager();
   }
 
-  SValBuilder &getSValBuilder() {
+  SValBuilder& getSValBuilder() {
     return getStateManager().getSValBuilder();
   }
 
@@ -578,8 +567,8 @@ public:
   virtual BugReport::NodeResolver& getNodeResolver() = 0;
 };
 
-} // namespace ento
+} // end GR namespace
 
-} // namespace clang
+} // end clang namespace
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTER_H
+#endif

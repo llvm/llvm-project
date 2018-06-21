@@ -76,8 +76,8 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
   if (uuid && uuid->IsValid()) {
     // Try and locate the dSYM file using DebugSymbols first
-    llvm::ArrayRef<uint8_t> module_uuid = uuid->GetBytes();
-    if (module_uuid.size() == 16) {
+    const UInt8 *module_uuid = (const UInt8 *)uuid->GetBytes();
+    if (module_uuid != NULL) {
       CFCReleaser<CFUUIDRef> module_uuid_ref(::CFUUIDCreateWithBytes(
           NULL, module_uuid[0], module_uuid[1], module_uuid[2], module_uuid[3],
           module_uuid[4], module_uuid[5], module_uuid[6], module_uuid[7],
@@ -309,8 +309,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSymbolRichExecutable"));
     if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
       if (CFCString::FileSystemRepresentation(cf_str, str)) {
-        module_spec.GetFileSpec().SetFile(str.c_str(), true,
-                                          FileSpec::Style::native);
+        module_spec.GetFileSpec().SetFile(str.c_str(), true);
         if (log) {
           log->Printf(
               "From dsymForUUID plist: Symbol rich executable is at '%s'",
@@ -323,8 +322,7 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
                                                CFSTR("DBGDSYMPath"));
     if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
       if (CFCString::FileSystemRepresentation(cf_str, str)) {
-        module_spec.GetSymbolFileSpec().SetFile(str.c_str(), true,
-                                                FileSpec::Style::native);
+        module_spec.GetSymbolFileSpec().SetFile(str.c_str(), true);
         success = true;
         if (log) {
           log->Printf("From dsymForUUID plist: dSYM is at '%s'", str.c_str());
@@ -342,13 +340,9 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
     std::string DBGBuildSourcePath;
     std::string DBGSourcePath;
 
-    // If DBGVersion 1 or DBGVersion missing, ignore DBGSourcePathRemapping.
-    // If DBGVersion 2, strip last two components of path remappings from
-    //                  entries to fix an issue with a specific set of
-    //                  DBGSourcePathRemapping entries that lldb worked
-    //                  with.
-    // If DBGVersion 3, trust & use the source path remappings as-is.
-    //
+    // If DBGVersion value 2 or higher, look for
+    // DBGSourcePathRemapping dictionary and append the key-value pairs
+    // to our remappings.
     cf_dict = (CFDictionaryRef)CFDictionaryGetValue(
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSourcePathRemapping"));
     if (cf_dict && CFGetTypeID(cf_dict) == CFDictionaryGetTypeID()) {
@@ -395,9 +389,10 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
           }
           if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
             // In the "old style" DBGSourcePathRemapping dictionary, the
-            // DBGSourcePath values (the "values" half of key-value path pairs)
-            // were wrong.  Ignore them and use the universal DBGSourcePath
-            // string from earlier.
+            // DBGSourcePath values
+            // (the "values" half of key-value path pairs) were wrong.  Ignore
+            // them and use the
+            // universal DBGSourcePath string from earlier.
             if (new_style_source_remapping_dictionary == true &&
                 !original_DBGSourcePath_value.empty()) {
               DBGSourcePath = original_DBGSourcePath_value;
@@ -407,9 +402,9 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
               DBGSourcePath = resolved_source_path.GetPath();
             }
             // With version 2 of DBGSourcePathRemapping, we can chop off the
-            // last two filename parts from the source remapping and get a more
-            // general source remapping that still works. Add this as another
-            // option in addition to the full source path remap.
+            // last two filename parts from the source remapping and get a
+            // more general source remapping that still works. Add this as
+            // another option in addition to the full source path remap.
             module_spec.GetSourceMappingList().Append(
                 ConstString(DBGBuildSourcePath.c_str()),
                 ConstString(DBGSourcePath.c_str()), true);
@@ -434,8 +429,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
     }
 
 
-    // If we have a DBGBuildSourcePath + DBGSourcePath pair, append them to the
-    // source remappings list.
+    // If we have a DBGBuildSourcePath + DBGSourcePath pair,
+    // append them to the source remappings list.
 
     cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
                                                CFSTR("DBGBuildSourcePath"));
@@ -469,7 +464,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
   const FileSpec *file_spec_ptr = module_spec.GetFileSpecPtr();
 
   // It's expensive to check for the DBGShellCommands defaults setting, only do
-  // it once per lldb run and cache the result.
+  // it once per
+  // lldb run and cache the result.
   static bool g_have_checked_for_dbgshell_command = false;
   static const char *g_dbgshell_command = NULL;
   if (g_have_checked_for_dbgshell_command == false) {
@@ -491,7 +487,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
   }
 
   // When g_dbgshell_command is NULL, the user has not enabled the use of an
-  // external program to find the symbols, don't run it for them.
+  // external program
+  // to find the symbols, don't run it for them.
   if (force_lookup == false && g_dbgshell_command == NULL) {
     return false;
   }
@@ -506,14 +503,12 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
           getenv("LLDB_APPLE_DSYMFORUUID_EXECUTABLE");
       FileSpec dsym_for_uuid_exe_spec;
       if (dsym_for_uuid_exe_path_cstr) {
-        dsym_for_uuid_exe_spec.SetFile(dsym_for_uuid_exe_path_cstr, true,
-                                       FileSpec::Style::native);
+        dsym_for_uuid_exe_spec.SetFile(dsym_for_uuid_exe_path_cstr, true);
         g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
       }
 
       if (!g_dsym_for_uuid_exe_exists) {
-        dsym_for_uuid_exe_spec.SetFile("/usr/local/bin/dsymForUUID", false,
-                                       FileSpec::Style::native);
+        dsym_for_uuid_exe_spec.SetFile("/usr/local/bin/dsymForUUID", false);
         g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
         if (!g_dsym_for_uuid_exe_exists) {
           long bufsize;
@@ -527,16 +522,14 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                 tilde_rc && tilde_rc->pw_dir) {
               std::string dsymforuuid_path(tilde_rc->pw_dir);
               dsymforuuid_path += "/bin/dsymForUUID";
-              dsym_for_uuid_exe_spec.SetFile(dsymforuuid_path.c_str(), false,
-                                             FileSpec::Style::native);
+              dsym_for_uuid_exe_spec.SetFile(dsymforuuid_path.c_str(), false);
               g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
             }
           }
         }
       }
       if (!g_dsym_for_uuid_exe_exists && g_dbgshell_command != NULL) {
-        dsym_for_uuid_exe_spec.SetFile(g_dbgshell_command, true,
-                                       FileSpec::Style::native);
+        dsym_for_uuid_exe_spec.SetFile(g_dbgshell_command, true);
         g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
       }
 
@@ -557,10 +550,12 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
 
       StreamString command;
       if (!uuid_str.empty())
-        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
+        command.Printf("%s --ignoreNegativeCache --copyExecutable --databases "
+                       "bursar.apple.com,uuidsymmap.apple.com %s",
                        g_dsym_for_uuid_exe_path, uuid_str.c_str());
       else if (file_path[0] != '\0')
-        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
+        command.Printf("%s --ignoreNegativeCache --copyExecutable --databases "
+                       "bursar.apple.com,uuidsymmap.apple.com %s",
                        g_dsym_for_uuid_exe_path, file_path);
 
       if (!command.GetString().empty()) {
@@ -582,9 +577,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
             &exit_status,    // Exit status
             &signo,          // Signal int *
             &command_output, // Command output
-            std::chrono::seconds(
-                30), // Large timeout to allow for long dsym download times
-            false);  // Don't run in a shell (we don't need shell expansion)
+            30,     // Large timeout to allow for long dsym download times
+            false); // Don't run in a shell (we don't need shell expansion)
         if (error.Success() && exit_status == 0 && !command_output.empty()) {
           CFCData data(CFDataCreateWithBytesNoCopy(
               NULL, (const UInt8 *)command_output.data(), command_output.size(),

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains code to lower WebAssembly MachineInstrs to their
+/// \brief This file contains code to lower WebAssembly MachineInstrs to their
 /// corresponding MCInst records.
 ///
 //===----------------------------------------------------------------------===//
@@ -74,7 +74,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
     WasmSym->setReturns(std::move(Returns));
     WasmSym->setParams(std::move(Params));
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    WasmSym->setIsFunction(true);
   }
 
   return WasmSym;
@@ -91,17 +91,9 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   const WebAssemblySubtarget &Subtarget = Printer.getSubtarget();
 
   // __stack_pointer is a global variable; all other external symbols used by
-  // CodeGen are functions.  It's OK to hardcode knowledge of specific symbols
-  // here; this method is precisely there for fetching the signatures of known
-  // Clang-provided symbols.
-  if (strcmp(Name, "__stack_pointer") == 0) {
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-    WasmSym->setGlobalType(wasm::WasmGlobalType{
-        uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
-                                      : wasm::WASM_TYPE_I32),
-        true});
+  // CodeGen are functions.
+  if (strcmp(Name, "__stack_pointer") == 0)
     return WasmSym;
-  }
 
   SmallVector<wasm::ValType, 4> Returns;
   SmallVector<wasm::ValType, 4> Params;
@@ -109,7 +101,7 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
   WasmSym->setReturns(std::move(Returns));
   WasmSym->setParams(std::move(Params));
-  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+  WasmSym->setIsFunction(true);
 
   return WasmSym;
 }
@@ -197,7 +189,7 @@ void WebAssemblyMCInstLower::Lower(const MachineInstr *MI,
             MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
             WasmSym->setReturns(std::move(Returns));
             WasmSym->setParams(std::move(Params));
-            WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+            WasmSym->setIsFunction(true);
 
             const MCExpr *Expr =
                 MCSymbolRefExpr::create(WasmSym,

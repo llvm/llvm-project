@@ -31,10 +31,27 @@ using namespace CodeGen;
 CodeGenVTables::CodeGenVTables(CodeGenModule &CGM)
     : CGM(CGM), VTContext(CGM.getContext().getVTableContext()) {}
 
-llvm::Constant *CodeGenModule::GetAddrOfThunk(StringRef Name, llvm::Type *FnTy,
-                                              GlobalDecl GD) {
-  return GetOrCreateLLVMFunction(Name, FnTy, GD, /*ForVTable=*/true,
+llvm::Constant *CodeGenModule::GetAddrOfThunk(GlobalDecl GD,
+                                              const ThunkInfo &Thunk) {
+  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+
+  // Compute the mangled name.
+  SmallString<256> Name;
+  llvm::raw_svector_ostream Out(Name);
+  if (const CXXDestructorDecl* DD = dyn_cast<CXXDestructorDecl>(MD))
+    getCXXABI().getMangleContext().mangleCXXDtorThunk(DD, GD.getDtorType(),
+                                                      Thunk.This, Out);
+  else
+    getCXXABI().getMangleContext().mangleThunk(MD, Thunk, Out);
+
+  llvm::Type *Ty = getTypes().GetFunctionTypeForVTable(GD);
+  return GetOrCreateLLVMFunction(Name, Ty, GD, /*ForVTable=*/true,
                                  /*DontDefer=*/true, /*IsThunk=*/true);
+}
+
+static void setThunkVisibility(CodeGenModule &CGM, const CXXMethodDecl *MD,
+                               const ThunkInfo &Thunk, llvm::Function *Fn) {
+  CGM.setGlobalVisibility(Fn, MD, ForDefinition);
 }
 
 static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
@@ -45,12 +62,8 @@ static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
                                   !Thunk.Return.isEmpty());
 
   // Set the right visibility.
-  CGM.setGVProperties(ThunkFn, GD);
-
-  if (!CGM.getCXXABI().exportThunk()) {
-    ThunkFn->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
-    ThunkFn->setDSOLocal(true);
-  }
+  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+  setThunkVisibility(CGM, MD, Thunk, ThunkFn);
 
   if (CGM.supportsCOMDAT() && ThunkFn->isWeakForLinker())
     ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
@@ -223,8 +236,7 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
 }
 
 void CodeGenFunction::StartThunk(llvm::Function *Fn, GlobalDecl GD,
-                                 const CGFunctionInfo &FnInfo,
-                                 bool IsUnprototyped) {
+                                 const CGFunctionInfo &FnInfo) {
   assert(!CurGD.getDecl() && "CurGD was already set!");
   CurGD = GD;
   CurFuncIsThunk = true;
@@ -233,28 +245,21 @@ void CodeGenFunction::StartThunk(llvm::Function *Fn, GlobalDecl GD,
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
   QualType ThisType = MD->getThisType(getContext());
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
-  QualType ResultType;
-  if (IsUnprototyped)
-    ResultType = CGM.getContext().VoidTy;
-  else if (CGM.getCXXABI().HasThisReturn(GD))
-    ResultType = ThisType;
-  else if (CGM.getCXXABI().hasMostDerivedReturn(GD))
-    ResultType = CGM.getContext().VoidPtrTy;
-  else
-    ResultType = FPT->getReturnType();
+  QualType ResultType = CGM.getCXXABI().HasThisReturn(GD)
+                            ? ThisType
+                            : CGM.getCXXABI().hasMostDerivedReturn(GD)
+                                  ? CGM.getContext().VoidPtrTy
+                                  : FPT->getReturnType();
   FunctionArgList FunctionArgs;
 
   // Create the implicit 'this' parameter declaration.
   CGM.getCXXABI().buildThisParam(*this, FunctionArgs);
 
-  // Add the rest of the parameters, if we have a prototype to work with.
-  if (!IsUnprototyped) {
-    FunctionArgs.append(MD->param_begin(), MD->param_end());
+  // Add the rest of the parameters.
+  FunctionArgs.append(MD->param_begin(), MD->param_end());
 
-    if (isa<CXXDestructorDecl>(MD))
-      CGM.getCXXABI().addImplicitStructorParams(*this, ResultType,
-                                                FunctionArgs);
-  }
+  if (isa<CXXDestructorDecl>(MD))
+    CGM.getCXXABI().addImplicitStructorParams(*this, ResultType, FunctionArgs);
 
   // Start defining the function.
   auto NL = ApplyDebugLocation::CreateEmpty(*this);
@@ -280,8 +285,7 @@ void CodeGenFunction::FinishThunk() {
 }
 
 void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
-                                                const ThunkInfo *Thunk,
-                                                bool IsUnprototyped) {
+                                                const ThunkInfo *Thunk) {
   assert(isa<CXXMethodDecl>(CurGD.getDecl()) &&
          "Please use a new CGF for this thunk");
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(CurGD.getDecl());
@@ -292,17 +296,13 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Constant *CalleePtr,
                           *this, LoadCXXThisAddress(), Thunk->This)
           : LoadCXXThis();
 
-  if (CurFnInfo->usesInAlloca() || IsUnprototyped) {
+  if (CurFnInfo->usesInAlloca()) {
     // We don't handle return adjusting thunks, because they require us to call
     // the copy constructor.  For now, fall through and pretend the return
     // adjustment was empty so we don't crash.
     if (Thunk && !Thunk->Return.isEmpty()) {
-      if (IsUnprototyped)
-        CGM.ErrorUnsupported(
-            MD, "return-adjusting thunk with incomplete parameter type");
-      else
-        CGM.ErrorUnsupported(
-            MD, "non-trivial argument copy for return-adjusting thunk");
+      CGM.ErrorUnsupported(
+          MD, "non-trivial argument copy for return-adjusting thunk");
     }
     EmitMustTailThunk(MD, AdjustedThisPtr, CalleePtr);
     return;
@@ -429,98 +429,55 @@ void CodeGenFunction::EmitMustTailThunk(const CXXMethodDecl *MD,
 }
 
 void CodeGenFunction::generateThunk(llvm::Function *Fn,
-                                    const CGFunctionInfo &FnInfo, GlobalDecl GD,
-                                    const ThunkInfo &Thunk,
-                                    bool IsUnprototyped) {
-  StartThunk(Fn, GD, FnInfo, IsUnprototyped);
+                                    const CGFunctionInfo &FnInfo,
+                                    GlobalDecl GD, const ThunkInfo &Thunk) {
+  StartThunk(Fn, GD, FnInfo);
   // Create a scope with an artificial location for the body of this function.
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
-  // Get our callee. Use a placeholder type if this method is unprototyped so
-  // that CodeGenModule doesn't try to set attributes.
-  llvm::Type *Ty;
-  if (IsUnprototyped)
-    Ty = llvm::StructType::get(getLLVMContext());
-  else
-    Ty = CGM.getTypes().GetFunctionType(FnInfo);
-
+  // Get our callee.
+  llvm::Type *Ty =
+    CGM.getTypes().GetFunctionType(CGM.getTypes().arrangeGlobalDeclaration(GD));
   llvm::Constant *Callee = CGM.GetAddrOfFunction(GD, Ty, /*ForVTable=*/true);
 
-  // Fix up the function type for an unprototyped musttail call.
-  if (IsUnprototyped)
-    Callee = llvm::ConstantExpr::getBitCast(Callee, Fn->getType());
-
   // Make the call and return the result.
-  EmitCallAndReturnForThunk(Callee, &Thunk, IsUnprototyped);
+  EmitCallAndReturnForThunk(Callee, &Thunk);
 }
 
-static bool shouldEmitVTableThunk(CodeGenModule &CGM, const CXXMethodDecl *MD,
-                                  bool IsUnprototyped, bool ForVTable) {
-  // Always emit thunks in the MS C++ ABI. We cannot rely on other TUs to
-  // provide thunks for us.
-  if (CGM.getTarget().getCXXABI().isMicrosoft())
-    return true;
+void CodeGenVTables::emitThunk(GlobalDecl GD, const ThunkInfo &Thunk,
+                               bool ForVTable) {
+  const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeGlobalDeclaration(GD);
 
-  // In the Itanium C++ ABI, vtable thunks are provided by TUs that provide
-  // definitions of the main method. Therefore, emitting thunks with the vtable
-  // is purely an optimization. Emit the thunk if optimizations are enabled and
-  // all of the parameter types are complete.
-  if (ForVTable)
-    return CGM.getCodeGenOpts().OptimizationLevel && !IsUnprototyped;
+  // FIXME: re-use FnInfo in this computation.
+  llvm::Constant *C = CGM.GetAddrOfThunk(GD, Thunk);
+  llvm::GlobalValue *Entry;
 
-  // Always emit thunks along with the method definition.
-  return true;
-}
+  // Strip off a bitcast if we got one back.
+  if (llvm::ConstantExpr *CE = dyn_cast<llvm::ConstantExpr>(C)) {
+    assert(CE->getOpcode() == llvm::Instruction::BitCast);
+    Entry = cast<llvm::GlobalValue>(CE->getOperand(0));
+  } else {
+    Entry = cast<llvm::GlobalValue>(C);
+  }
 
-llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
-                                               const ThunkInfo &TI,
-                                               bool ForVTable) {
-  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+  // There's already a declaration with the same name, check if it has the same
+  // type or if we need to replace it.
+  if (Entry->getType()->getElementType() !=
+      CGM.getTypes().GetFunctionTypeForVTable(GD)) {
+    llvm::GlobalValue *OldThunkFn = Entry;
 
-  // First, get a declaration. Compute the mangled name. Don't worry about
-  // getting the function prototype right, since we may only need this
-  // declaration to fill in a vtable slot.
-  SmallString<256> Name;
-  MangleContext &MCtx = CGM.getCXXABI().getMangleContext();
-  llvm::raw_svector_ostream Out(Name);
-  if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD))
-    MCtx.mangleCXXDtorThunk(DD, GD.getDtorType(), TI.This, Out);
-  else
-    MCtx.mangleThunk(MD, TI, Out);
-  llvm::Type *ThunkVTableTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
-  llvm::Constant *Thunk = CGM.GetAddrOfThunk(Name, ThunkVTableTy, GD);
-
-  // If we don't need to emit a definition, return this declaration as is.
-  bool IsUnprototyped = !CGM.getTypes().isFuncTypeConvertible(
-      MD->getType()->castAs<FunctionType>());
-  if (!shouldEmitVTableThunk(CGM, MD, IsUnprototyped, ForVTable))
-    return Thunk;
-
-  // Arrange a function prototype appropriate for a function definition. In some
-  // cases in the MS ABI, we may need to build an unprototyped musttail thunk.
-  const CGFunctionInfo &FnInfo =
-      IsUnprototyped ? CGM.getTypes().arrangeUnprototypedMustTailThunk(MD)
-                     : CGM.getTypes().arrangeGlobalDeclaration(GD);
-  llvm::FunctionType *ThunkFnTy = CGM.getTypes().GetFunctionType(FnInfo);
-
-  // If the type of the underlying GlobalValue is wrong, we'll have to replace
-  // it. It should be a declaration.
-  llvm::Function *ThunkFn = cast<llvm::Function>(Thunk->stripPointerCasts());
-  if (ThunkFn->getFunctionType() != ThunkFnTy) {
-    llvm::GlobalValue *OldThunkFn = ThunkFn;
-
-    assert(OldThunkFn->isDeclaration() && "Shouldn't replace non-declaration");
+    // If the types mismatch then we have to rewrite the definition.
+    assert(OldThunkFn->isDeclaration() &&
+           "Shouldn't replace non-declaration");
 
     // Remove the name from the old thunk function and get a new thunk.
     OldThunkFn->setName(StringRef());
-    ThunkFn = llvm::Function::Create(ThunkFnTy, llvm::Function::ExternalLinkage,
-                                     Name.str(), &CGM.getModule());
-    CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn);
+    Entry = cast<llvm::GlobalValue>(CGM.GetAddrOfThunk(GD, Thunk));
 
     // If needed, replace the old thunk with a bitcast.
     if (!OldThunkFn->use_empty()) {
       llvm::Constant *NewPtrForOldDecl =
-          llvm::ConstantExpr::getBitCast(ThunkFn, OldThunkFn->getType());
+        llvm::ConstantExpr::getBitCast(Entry, OldThunkFn->getType());
       OldThunkFn->replaceAllUsesWith(NewPtrForOldDecl);
     }
 
@@ -528,48 +485,61 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
     OldThunkFn->eraseFromParent();
   }
 
+  llvm::Function *ThunkFn = cast<llvm::Function>(Entry);
   bool ABIHasKeyFunctions = CGM.getTarget().getCXXABI().hasKeyFunctions();
   bool UseAvailableExternallyLinkage = ForVTable && ABIHasKeyFunctions;
 
   if (!ThunkFn->isDeclaration()) {
     if (!ABIHasKeyFunctions || UseAvailableExternallyLinkage) {
       // There is already a thunk emitted for this function, do nothing.
-      return ThunkFn;
+      return;
     }
 
-    setThunkProperties(CGM, TI, ThunkFn, ForVTable, GD);
-    return ThunkFn;
+    setThunkProperties(CGM, Thunk, ThunkFn, ForVTable, GD);
+    return;
   }
-
-  // If this will be unprototyped, add the "thunk" attribute so that LLVM knows
-  // that the return type is meaningless. These thunks can be used to call
-  // functions with differing return types, and the caller is required to cast
-  // the prototype appropriately to extract the correct value.
-  if (IsUnprototyped)
-    ThunkFn->addFnAttr("thunk");
 
   CGM.SetLLVMFunctionAttributesForDefinition(GD.getDecl(), ThunkFn);
 
-  if (!IsUnprototyped && ThunkFn->isVarArg()) {
+  if (ThunkFn->isVarArg()) {
     // Varargs thunks are special; we can't just generate a call because
     // we can't copy the varargs.  Our implementation is rather
     // expensive/sucky at the moment, so don't generate the thunk unless
     // we have to.
     // FIXME: Do something better here; GenerateVarArgsThunk is extremely ugly.
     if (UseAvailableExternallyLinkage)
-      return ThunkFn;
-    ThunkFn = CodeGenFunction(CGM).GenerateVarArgsThunk(ThunkFn, FnInfo, GD,
-                                                        TI);
+      return;
+    ThunkFn =
+        CodeGenFunction(CGM).GenerateVarArgsThunk(ThunkFn, FnInfo, GD, Thunk);
   } else {
     // Normal thunk body generation.
-    CodeGenFunction(CGM).generateThunk(ThunkFn, FnInfo, GD, TI, IsUnprototyped);
+    CodeGenFunction(CGM).generateThunk(ThunkFn, FnInfo, GD, Thunk);
   }
 
-  setThunkProperties(CGM, TI, ThunkFn, ForVTable, GD);
-  return ThunkFn;
+  setThunkProperties(CGM, Thunk, ThunkFn, ForVTable, GD);
 }
 
-void CodeGenVTables::EmitThunks(GlobalDecl GD) {
+void CodeGenVTables::maybeEmitThunkForVTable(GlobalDecl GD,
+                                             const ThunkInfo &Thunk) {
+  // If the ABI has key functions, only the TU with the key function should emit
+  // the thunk. However, we can allow inlining of thunks if we emit them with
+  // available_externally linkage together with vtables when optimizations are
+  // enabled.
+  if (CGM.getTarget().getCXXABI().hasKeyFunctions() &&
+      !CGM.getCodeGenOpts().OptimizationLevel)
+    return;
+
+  // We can't emit thunks for member functions with incomplete types.
+  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+  if (!CGM.getTypes().isFuncTypeConvertible(
+           MD->getType()->castAs<FunctionType>()))
+    return;
+
+  emitThunk(GD, Thunk, /*ForVTable=*/true);
+}
+
+void CodeGenVTables::EmitThunks(GlobalDecl GD)
+{
   const CXXMethodDecl *MD =
     cast<CXXMethodDecl>(GD.getDecl())->getCanonicalDecl();
 
@@ -584,7 +554,7 @@ void CodeGenVTables::EmitThunks(GlobalDecl GD) {
     return;
 
   for (const ThunkInfo& Thunk : *ThunkInfoVector)
-    maybeEmitThunk(GD, Thunk, /*ForVTable=*/false);
+    emitThunk(GD, Thunk, /*ForVTable=*/false);
 }
 
 void CodeGenVTables::addVTableComponent(
@@ -677,8 +647,9 @@ void CodeGenVTables::addVTableComponent(
                layout.vtable_thunks()[nextVTableThunkIndex].first == idx) {
       auto &thunkInfo = layout.vtable_thunks()[nextVTableThunkIndex].second;
 
+      maybeEmitThunkForVTable(GD, thunkInfo);
       nextVTableThunkIndex++;
-      fnPtr = maybeEmitThunk(GD, thunkInfo, /*ForVTable=*/true);
+      fnPtr = CGM.GetAddrOfThunk(GD, thunkInfo);
 
     // Otherwise we can use the method definition directly.
     } else {
@@ -759,7 +730,7 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   // Create the variable that will hold the construction vtable.
   llvm::GlobalVariable *VTable =
     CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage);
-  CGM.setGVProperties(VTable, RD);
+  CGM.setGlobalVisibility(VTable, RD, ForDefinition);
 
   // V-tables are always unnamed_addr.
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
@@ -874,7 +845,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   llvm_unreachable("Invalid TemplateSpecializationKind!");
 }
 
-/// This is a callback from Sema to tell us that a particular vtable is
+/// This is a callback from Sema to tell us that that a particular vtable is
 /// required to be emitted in this translation unit.
 ///
 /// This is only called for vtables that _must_ be emitted (mainly due to key
@@ -1012,30 +983,31 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
   CharUnits PointerWidth =
       Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
 
-  typedef std::pair<const CXXRecordDecl *, unsigned> TypeMetadata;
-  std::vector<TypeMetadata> TypeMetadatas;
-  // Create type metadata for each address point.
+  typedef std::pair<const CXXRecordDecl *, unsigned> BSEntry;
+  std::vector<BSEntry> BitsetEntries;
+  // Create a bit set entry for each address point.
   for (auto &&AP : VTLayout.getAddressPoints())
-    TypeMetadatas.push_back(std::make_pair(
-        AP.first.getBase(), VTLayout.getVTableOffset(AP.second.VTableIndex) +
-                                AP.second.AddressPointIndex));
+    BitsetEntries.push_back(
+        std::make_pair(AP.first.getBase(),
+                       VTLayout.getVTableOffset(AP.second.VTableIndex) +
+                           AP.second.AddressPointIndex));
 
-  // Sort the type metadata for determinism.
-  llvm::sort(TypeMetadatas.begin(), TypeMetadatas.end(),
-             [this](const TypeMetadata &M1, const TypeMetadata &M2) {
-    if (&M1 == &M2)
+  // Sort the bit set entries for determinism.
+  std::sort(BitsetEntries.begin(), BitsetEntries.end(),
+            [this](const BSEntry &E1, const BSEntry &E2) {
+    if (&E1 == &E2)
       return false;
 
     std::string S1;
     llvm::raw_string_ostream O1(S1);
     getCXXABI().getMangleContext().mangleTypeName(
-        QualType(M1.first->getTypeForDecl(), 0), O1);
+        QualType(E1.first->getTypeForDecl(), 0), O1);
     O1.flush();
 
     std::string S2;
     llvm::raw_string_ostream O2(S2);
     getCXXABI().getMangleContext().mangleTypeName(
-        QualType(M2.first->getTypeForDecl(), 0), O2);
+        QualType(E2.first->getTypeForDecl(), 0), O2);
     O2.flush();
 
     if (S1 < S2)
@@ -1043,10 +1015,10 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
     if (S1 != S2)
       return false;
 
-    return M1.second < M2.second;
+    return E1.second < E2.second;
   });
 
-  for (auto TypeMetadata : TypeMetadatas)
-    AddVTableTypeMetadata(VTable, PointerWidth * TypeMetadata.second,
-                          TypeMetadata.first);
+  for (auto BitsetEntry : BitsetEntries)
+    AddVTableTypeMetadata(VTable, PointerWidth * BitsetEntry.second,
+                          BitsetEntry.first);
 }

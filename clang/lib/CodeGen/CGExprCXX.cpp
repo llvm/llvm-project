@@ -242,15 +242,11 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     }
   }
 
-  LValue This;
-  if (IsArrow) {
-    LValueBaseInfo BaseInfo;
-    TBAAAccessInfo TBAAInfo;
-    Address ThisValue = EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
-    This = MakeAddrLValue(ThisValue, Base->getType(), BaseInfo, TBAAInfo);
-  } else {
-    This = EmitLValue(Base);
-  }
+  Address This = Address::invalid();
+  if (IsArrow)
+    This = EmitPointerWithAlignment(Base);
+  else
+    This = EmitLValue(Base).getAddress();
 
 
   if (MD->isTrivial() || (MD->isDefaulted() && MD->getParent()->isUnion())) {
@@ -265,10 +261,10 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
         // when it isn't necessary; just produce the proper effect here.
         LValue RHS = isa<CXXOperatorCallExpr>(CE)
                          ? MakeNaturalAlignAddrLValue(
-                               (*RtlArgs)[0].getRValue(*this).getScalarVal(),
+                               (*RtlArgs)[0].RV.getScalarVal(),
                                (*(CE->arg_begin() + 1))->getType())
                          : EmitLValue(*CE->arg_begin());
-        EmitAggregateAssign(This, RHS, CE->getType());
+        EmitAggregateAssign(This, RHS.getAddress(), CE->getType());
         return RValue::get(This.getPointer());
       }
 
@@ -276,13 +272,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           cast<CXXConstructorDecl>(MD)->isCopyOrMoveConstructor()) {
         // Trivial move and copy ctor are the same.
         assert(CE->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
-        const Expr *Arg = *CE->arg_begin();
-        LValue RHS = EmitLValue(Arg);
-        LValue Dest = MakeAddrLValue(This.getAddress(), Arg->getType());
-        // This is the MSVC p->Ctor::Ctor(...) extension. We assume that's
-        // constructing a new complete object of type Ctor.
-        EmitAggregateCopy(Dest, RHS, Arg->getType(),
-                          AggValueSlot::DoesNotOverlap);
+        Address RHS = EmitLValue(*CE->arg_begin()).getAddress();
+        EmitAggregateCopy(This, RHS, (*CE->arg_begin())->getType());
         return RValue::get(This.getPointer());
       }
       llvm_unreachable("unknown trivial member function");
@@ -344,8 +335,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
       CGM.getCXXABI().EmitVirtualDestructorCall(
-          *this, Dtor, Dtor_Complete, This.getAddress(),
-          cast<CXXMemberCallExpr>(CE));
+          *this, Dtor, Dtor_Complete, This, cast<CXXMemberCallExpr>(CE));
     } else {
       CGCallee Callee;
       if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)
@@ -374,15 +364,15 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
                   CGM.GetAddrOfFunction(GlobalDecl(Ctor, Ctor_Complete), Ty),
                                  Ctor);
   } else if (UseVirtualCall) {
-    Callee = CGCallee::forVirtual(CE, MD, This.getAddress(), Ty);
+    Callee = CGM.getCXXABI().getVirtualFunctionPointer(*this, MD, This, Ty,
+                                                       CE->getLocStart());
   } else {
     if (SanOpts.has(SanitizerKind::CFINVCall) &&
         MD->getParent()->isDynamicClass()) {
       llvm::Value *VTable;
       const CXXRecordDecl *RD;
       std::tie(VTable, RD) =
-          CGM.getCXXABI().LoadVTablePtr(*this, This.getAddress(),
-                                        MD->getParent());
+          CGM.getCXXABI().LoadVTablePtr(*this, This, MD->getParent());
       EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getLocStart());
     }
 
@@ -398,10 +388,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   }
 
   if (MD->isVirtual()) {
-    Address NewThisAddr =
-        CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
-            *this, CalleeDecl, This.getAddress(), UseVirtualCall);
-    This.setAddress(NewThisAddr);
+    This = CGM.getCXXABI().adjustThisArgumentForVirtualFunctionCall(
+        *this, CalleeDecl, This, UseVirtualCall);
   }
 
   return EmitCXXMemberOrOperatorCall(
@@ -634,7 +622,7 @@ CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
     
     // Call the constructor.
     EmitCXXConstructorCall(CD, Type, ForVirtualBase, Delegating,
-                           Dest.getAddress(), E, Dest.mayOverlap());
+                           Dest.getAddress(), E);
   }
 }
 
@@ -936,8 +924,7 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
 }
 
 static void StoreAnyExprIntoOneUnit(CodeGenFunction &CGF, const Expr *Init,
-                                    QualType AllocType, Address NewPtr,
-                                    AggValueSlot::Overlap_t MayOverlap) {
+                                    QualType AllocType, Address NewPtr) {
   // FIXME: Refactor with EmitExprAsInit.
   switch (CGF.getEvaluationKind(AllocType)) {
   case TEK_Scalar:
@@ -953,8 +940,7 @@ static void StoreAnyExprIntoOneUnit(CodeGenFunction &CGF, const Expr *Init,
       = AggValueSlot::forAddr(NewPtr, AllocType.getQualifiers(),
                               AggValueSlot::IsDestructed,
                               AggValueSlot::DoesNotNeedGCBarriers,
-                              AggValueSlot::IsNotAliased,
-                              MayOverlap);
+                              AggValueSlot::IsNotAliased);
     CGF.EmitAggExpr(Init, Slot);
     return;
   }
@@ -1023,8 +1009,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
           AggValueSlot::forAddr(CurPtr, ElementType.getQualifiers(),
                                 AggValueSlot::IsDestructed,
                                 AggValueSlot::DoesNotNeedGCBarriers,
-                                AggValueSlot::IsNotAliased,
-                                AggValueSlot::DoesNotOverlap);
+                                AggValueSlot::IsNotAliased);
       EmitAggExpr(ILE->getInit(0), Slot);
 
       // Move past these elements.
@@ -1089,8 +1074,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
       StoreAnyExprIntoOneUnit(*this, ILE->getInit(i),
-                              ILE->getInit(i)->getType(), CurPtr,
-                              AggValueSlot::DoesNotOverlap);
+                              ILE->getInit(i)->getType(), CurPtr);
       CurPtr = Address(Builder.CreateInBoundsGEP(CurPtr.getPointer(),
                                                  Builder.getSize(1),
                                                  "array.exp.next"),
@@ -1243,8 +1227,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
   }
 
   // Emit the initializer into this element.
-  StoreAnyExprIntoOneUnit(*this, Init, Init->getType(), CurPtr,
-                          AggValueSlot::DoesNotOverlap);
+  StoreAnyExprIntoOneUnit(*this, Init, Init->getType(), CurPtr);
 
   // Leave the Cleanup if we entered one.
   if (CleanupDominator) {
@@ -1275,8 +1258,7 @@ static void EmitNewInitializer(CodeGenFunction &CGF, const CXXNewExpr *E,
     CGF.EmitNewArrayInitializer(E, ElementType, ElementTy, NewPtr, NumElements,
                                 AllocSizeWithoutCookie);
   else if (const Expr *Init = E->getInitializer())
-    StoreAnyExprIntoOneUnit(CGF, Init, E->getAllocatedType(), NewPtr,
-                            AggValueSlot::DoesNotOverlap);
+    StoreAnyExprIntoOneUnit(CGF, Init, E->getAllocatedType(), NewPtr);
 }
 
 /// Emit a call to an operator new or operator delete function, as implicitly
@@ -1316,19 +1298,19 @@ static RValue EmitNewDeleteCall(CodeGenFunction &CGF,
 }
 
 RValue CodeGenFunction::EmitBuiltinNewDeleteCall(const FunctionProtoType *Type,
-                                                 const CallExpr *TheCall,
+                                                 const Expr *Arg,
                                                  bool IsDelete) {
   CallArgList Args;
-  EmitCallArgs(Args, Type->getParamTypes(), TheCall->arguments());
+  const Stmt *ArgS = Arg;
+  EmitCallArgs(Args, *Type->param_type_begin(), llvm::makeArrayRef(ArgS));
   // Find the allocation or deallocation function that we're calling.
   ASTContext &Ctx = getContext();
   DeclarationName Name = Ctx.DeclarationNames
       .getCXXOperatorName(IsDelete ? OO_Delete : OO_New);
-
   for (auto *Decl : Ctx.getTranslationUnitDecl()->lookup(Name))
     if (auto *FD = dyn_cast<FunctionDecl>(Decl))
       if (Ctx.hasSameType(FD->getType(), QualType(Type, 0)))
-        return EmitNewDeleteCall(*this, FD, Type, Args);
+        return EmitNewDeleteCall(*this, cast<FunctionDecl>(Decl), Type, Args);
   llvm_unreachable("predeclared global operator new/delete is missing");
 }
 
@@ -1499,7 +1481,7 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
                                            AllocAlign);
     for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
       auto &Arg = NewArgs[I + NumNonPlacementArgs];
-      Cleanup->setPlacementArg(I, Arg.getRValue(CGF), Arg.Ty);
+      Cleanup->setPlacementArg(I, Arg.RV, Arg.Ty);
     }
 
     return;
@@ -1530,8 +1512,8 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF,
                                               AllocAlign);
   for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
     auto &Arg = NewArgs[I + NumNonPlacementArgs];
-    Cleanup->setPlacementArg(
-        I, DominatingValue<RValue>::save(CGF, Arg.getRValue(CGF)), Arg.Ty);
+    Cleanup->setPlacementArg(I, DominatingValue<RValue>::save(CGF, Arg.RV),
+                             Arg.Ty);
   }
 
   CGF.initFullExprCleanup();
@@ -1696,13 +1678,13 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Type *elementTy = ConvertTypeForMem(allocType);
   Address result = Builder.CreateElementBitCast(allocation, elementTy);
 
-  // Passing pointer through launder.invariant.group to avoid propagation of
+  // Passing pointer through invariant.group.barrier to avoid propagation of
   // vptrs information which may be included in previous type.
   // To not break LTO with different optimizations levels, we do it regardless
   // of optimization level.
   if (CGM.getCodeGenOpts().StrictVTablePointers &&
       allocator->isReservedGlobalPlacementOperator())
-    result = Address(Builder.CreateLaunderInvariantGroup(result.getPointer()),
+    result = Address(Builder.CreateInvariantGroupBarrier(result.getPointer()),
                      result.getAlignment());
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,

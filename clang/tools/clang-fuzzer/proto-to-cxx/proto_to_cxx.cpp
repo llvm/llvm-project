@@ -94,7 +94,7 @@ std::string FunctionToString(const Function &input) {
 }
 std::string ProtoToCxx(const uint8_t *data, size_t size) {
   Function message;
-  if (!message.ParsePartialFromArray(data, size))
+  if (!message.ParseFromArray(data, size))
     return "#error invalid proto\n";
   return FunctionToString(message);
 }

@@ -22,7 +22,7 @@ class MachineFunction;
 class MachineLoopInfo;
 class VirtRegMap;
 
-  /// Normalize the spill weight of a live interval
+  /// \brief Normalize the spill weight of a live interval
   ///
   /// The spill weight of a live interval is computed as:
   ///
@@ -42,7 +42,7 @@ class VirtRegMap;
     return UseDefFreq / (Size + 25*SlotIndex::InstrDist);
   }
 
-  /// Calculate auxiliary information for a virtual register such as its
+  /// \brief Calculate auxiliary information for a virtual register such as its
   /// spill weight and allocation hint.
   class VirtRegAuxInfo {
   public:
@@ -64,10 +64,10 @@ class VirtRegMap;
                    NormalizingFn norm = normalizeSpillWeight)
         : MF(mf), LIS(lis), VRM(vrm), Loops(loops), MBFI(mbfi), normalize(norm) {}
 
-    /// (re)compute li's spill weight and allocation hint.
+    /// \brief (re)compute li's spill weight and allocation hint.
     void calculateSpillWeightAndHint(LiveInterval &li);
 
-    /// Compute future expected spill weight of a split artifact of li
+    /// \brief Compute future expected spill weight of a split artifact of li
     /// that will span between start and end slot indexes.
     /// \param li     The live interval to be split.
     /// \param start  The expected begining of the split artifact. Instructions
@@ -78,7 +78,7 @@ class VirtRegMap;
     /// negative weight for unspillable li.
     float futureWeight(LiveInterval &li, SlotIndex start, SlotIndex end);
 
-    /// Helper function for weight calculations.
+    /// \brief Helper function for weight calculations.
     /// (Re)compute li's spill weight and allocation hint, or, for non null
     /// start and end - compute future expected spill weight of a split
     /// artifact of li that will span between start and end slot indexes.
@@ -94,7 +94,7 @@ class VirtRegMap;
                            SlotIndex *end = nullptr);
   };
 
-  /// Compute spill weights and allocation hints for all virtual register
+  /// \brief Compute spill weights and allocation hints for all virtual register
   /// live intervals.
   void calculateSpillWeightsAndHints(LiveIntervals &LIS, MachineFunction &MF,
                                      VirtRegMap *VRM,

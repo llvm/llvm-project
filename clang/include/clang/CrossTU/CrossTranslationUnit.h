@@ -62,7 +62,7 @@ private:
   int LineNo;
 };
 
-/// This function parses an index file that determines which
+/// \brief This function parses an index file that determines which
 ///        translation unit contains which definition.
 ///
 /// The index file format is the following:
@@ -75,7 +75,7 @@ parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir);
 
 std::string createCrossTUIndexString(const llvm::StringMap<std::string> &Index);
 
-/// This class is used for tools that requires cross translation
+/// \brief This class is used for tools that requires cross translation
 ///        unit capability.
 ///
 /// This class can load function definitions from external AST files.
@@ -90,7 +90,7 @@ public:
   CrossTranslationUnitContext(CompilerInstance &CI);
   ~CrossTranslationUnitContext();
 
-  /// This function loads a function definition from an external AST
+  /// \brief This function loads a function definition from an external AST
   ///        file and merge it into the original AST.
   ///
   /// This method should only be used on functions that have no definitions in
@@ -110,7 +110,7 @@ public:
   getCrossTUDefinition(const FunctionDecl *FD, StringRef CrossTUDir,
                        StringRef IndexName);
 
-  /// This function loads a function definition from an external AST
+  /// \brief This function loads a function definition from an external AST
   ///        file.
   ///
   /// A function definition with the same declaration will be looked up in the
@@ -126,17 +126,17 @@ public:
                                             StringRef CrossTUDir,
                                             StringRef IndexName);
 
-  /// This function merges a definition from a separate AST Unit into
+  /// \brief This function merges a definition from a separate AST Unit into
   ///        the current one which was created by the compiler instance that
   ///        was passed to the constructor.
   ///
   /// \return Returns the resulting definition or an error.
   llvm::Expected<const FunctionDecl *> importDefinition(const FunctionDecl *FD);
 
-  /// Get a name to identify a function.
+  /// \brief Get a name to identify a function.
   static std::string getLookupName(const NamedDecl *ND);
 
-  /// Emit diagnostics for the user for potential configuration errors.
+  /// \brief Emit diagnostics for the user for potential configuration errors.
   void emitCrossTUDiagnostics(const IndexError &IE);
 
 private:

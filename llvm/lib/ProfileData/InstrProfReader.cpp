@@ -200,13 +200,9 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
         std::pair<StringRef, StringRef> VD = Line->rsplit(':');
         uint64_t TakenCount, Value;
         if (ValueKind == IPVK_IndirectCallTarget) {
-          if (InstrProfSymtab::isExternalSymbol(VD.first)) {
-            Value = 0;
-          } else {
-            if (Error E = Symtab->addFuncName(VD.first))
-              return E;
-            Value = IndexedInstrProf::ComputeHash(VD.first);
-          }
+          if (Error E = Symtab->addFuncName(VD.first))
+            return E;
+          Value = IndexedInstrProf::ComputeHash(VD.first);
         } else {
           READ_NUM(VD.first, Value);
         }
@@ -231,13 +227,14 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     ++Line;
   // If we hit EOF while looking for a name, we're done.
   if (Line.is_at_end()) {
+    Symtab->finalizeSymtab();
     return error(instrprof_error::eof);
   }
 
   // Read the function name.
   Record.Name = *Line++;
   if (Error E = Symtab->addFuncName(Record.Name))
-    return error(std::move(E));
+    return E;
 
   // Read the function hash.
   if (Line.is_at_end())
@@ -268,8 +265,11 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
 
   // Check if value profile data exists and read it if so.
   if (Error E = readValueProfileData(Record))
-    return error(std::move(E));
+    return E;
 
+  // This is needed to avoid two pass parsing because llvm-profdata
+  // does dumping while reading.
+  Symtab->finalizeSymtab();
   return success();
 }
 
@@ -331,6 +331,7 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
       continue;
     Symtab.mapAddress(FPtr, I->NameRef);
   }
+  Symtab.finalizeSymtab();
   return success();
 }
 
@@ -438,7 +439,7 @@ Error RawInstrProfReader<IntPtrT>::readValueProfilingData(
   // Note that besides deserialization, this also performs the conversion for
   // indirect call targets.  The function pointers from the raw profile are
   // remapped into function name hashes.
-  VDataPtrOrErr.get()->deserializeTo(Record, Symtab.get());
+  VDataPtrOrErr.get()->deserializeTo(Record, &Symtab->getAddrHashMap());
   CurValueDataSize = VDataPtrOrErr.get()->getSize();
   return success();
 }
@@ -448,23 +449,23 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
   if (atEnd())
     // At this point, ValueDataStart field points to the next header.
     if (Error E = readNextHeader(getNextHeaderPos()))
-      return error(std::move(E));
+      return E;
 
   // Read name ad set it in Record.
   if (Error E = readName(Record))
-    return error(std::move(E));
+    return E;
 
   // Read FuncHash and set it in Record.
   if (Error E = readFuncHash(Record))
-    return error(std::move(E));
+    return E;
 
   // Read raw counts and set Record.
   if (Error E = readRawCounts(Record))
-    return error(std::move(E));
+    return E;
 
   // Read value data and set Record.
   if (Error E = readValueProfilingData(Record))
-    return error(std::move(E));
+    return E;
 
   // Iterate.
   advanceData();

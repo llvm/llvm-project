@@ -39,7 +39,7 @@ def ext_empty_translation_unit : Extension<
   InGroup<DiagGroup<"empty-translation-unit">>;
 def warn_cxx98_compat_top_level_semi : Warning<
   "extra ';' outside of a function is incompatible with C++98">,
-  InGroup<CXX98CompatExtraSemi>, DefaultIgnore;
+  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_extra_semi : Extension<
   "extra ';' %select{"
   "outside of a function|"
@@ -575,7 +575,7 @@ def err_cxx11_attribute_forbids_arguments : Error<
 def err_attribute_requires_arguments : Error<
   "parentheses must be omitted if %0 attribute's argument list is empty">;
 def err_cxx11_attribute_forbids_ellipsis : Error<
-  "attribute %0 cannot be used as an attribute pack">;
+  "attribute '%0' cannot be used as an attribute pack">;
 def err_cxx11_attribute_repeated : Error<
   "attribute %0 cannot appear multiple times in an attribute specifier">;
 def warn_cxx14_compat_using_attribute_ns : Warning<
@@ -633,8 +633,6 @@ def err_template_spec_syntax_non_template : Error<
   "<unused>|refers to a variable template|<unused>}1">;
 def err_id_after_template_in_nested_name_spec : Error<
   "expected template name after 'template' keyword in nested name specifier">;
-def err_unexpected_template_in_unqualified_id : Error<
-  "'template' keyword not permitted here">;
 def err_two_right_angle_brackets_need_space : Error<
   "a space is required between consecutive right angle brackets (use '> >')">;
 def err_right_angle_bracket_equal_needs_space : Error<
@@ -897,12 +895,6 @@ def warn_pragma_expected_rparen : Warning<
   "missing ')' after '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_identifier : Warning<
   "expected identifier in '#pragma %0' - ignored">, InGroup<IgnoredPragmas>;
-def warn_pragma_expected_string : Warning<
-  "expected string literal in '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
-def warn_pragma_missing_argument : Warning<
-  "missing argument to '#pragma %0'%select{|; expected %2}1">, InGroup<IgnoredPragmas>;
-def warn_pragma_invalid_argument : Warning<
-  "unexpected argument '%0' to '#pragma %1'%select{|; expected %3}2">, InGroup<IgnoredPragmas>;
 
 // '#pragma clang section' related errors
 def err_pragma_expected_clang_section_name : Error<
@@ -931,8 +923,6 @@ def warn_pragma_ms_struct : Warning<
 def warn_pragma_extra_tokens_at_eol : Warning<
   "extra tokens at end of '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
-def warn_pragma_expected_comma : Warning<
-  "expected ',' in '#pragma %0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_punc : Warning<
   "expected ')' or ',' in '#pragma %0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_expected_non_wide_string : Warning<
@@ -970,10 +960,6 @@ def warn_pragma_pack_malformed : Warning<
 def warn_pragma_intrinsic_builtin : Warning<
   "%0 is not a recognized builtin%select{|; consider including <intrin.h> to access non-builtin intrinsics}1">,
   InGroup<IgnoredPragmaIntrinsic>;
-// - #pragma optimize
-def warn_pragma_optimize : Warning<
-  "'#pragma optimize' is not supported">,
-  InGroup<IgnoredPragmaOptimize>;
 // - #pragma unused
 def warn_pragma_unused_expected_var : Warning<
   "expected '#pragma unused' argument to be a variable name">,
@@ -1075,12 +1061,6 @@ def err_opencl_taking_function_address_parser : Error<
 def err_opencl_logical_exclusive_or : Error<
   "^^ is a reserved operator in OpenCL">;
 
-// OpenCL C++.
-def err_openclcxx_virtual_function : Error<
-  "virtual functions are not supported in OpenCL C++">;
-def err_openclcxx_reserved : Error<
-  "'%0' is a reserved keyword in OpenCL C++">;
-
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
   "unexpected '#pragma omp ...' in program">, InGroup<SourceUsesOpenMP>, DefaultIgnore;
@@ -1092,7 +1072,7 @@ def warn_pragma_expected_colon_r_paren : Warning<
 def err_omp_unknown_directive : Error<
   "expected an OpenMP directive">;
 def err_omp_unexpected_directive : Error<
-  "unexpected OpenMP directive %select{|'#pragma omp %1'}0">;
+  "unexpected OpenMP directive '#pragma omp %0'">;
 def err_omp_expected_punc : Error<
   "expected ',' or ')' in '%0' %select{clause|directive}1">;
 def err_omp_unexpected_clause : Error<
@@ -1137,6 +1117,9 @@ def err_pragma_fp_scope : Error<
 
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
+
+// API notes.
+def err_type_unparsed : Error<"unparsed tokens following type">;
 
 // Pragma unroll support.
 def warn_pragma_unroll_cuda_value_in_parens : Warning<

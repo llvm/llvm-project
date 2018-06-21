@@ -82,41 +82,35 @@ define i32 @CSE() nounwind {
 define void @loop(i32* %p, i32 %n) nounwind {
 ; X86-LABEL: loop:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    je .LBB3_3
 ; X86-NEXT:  # %bb.1: # %while.body.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    .p2align 4, 0x90
 ; X86-NEXT:  .LBB3_2: # %while.body
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    rdrandl %esi
-; X86-NEXT:    movl %esi, (%ecx,%edx,4)
-; X86-NEXT:    addl $1, %edx
-; X86-NEXT:    cmpl %edx, %eax
+; X86-NEXT:    rdrandl %edx
+; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    leal 4(%ecx), %ecx
+; X86-NEXT:    addl $-1, %eax
 ; X86-NEXT:    jne .LBB3_2
 ; X86-NEXT:  .LBB3_3: # %while.end
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: loop:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    testl %esi, %esi
-; X64-NEXT:    je .LBB3_3
-; X64-NEXT:  # %bb.1: # %while.body.preheader
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    je .LBB3_2
 ; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  .LBB3_2: # %while.body
+; X64-NEXT:  .LBB3_1: # %while.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    rdrandl %edx
-; X64-NEXT:    movl %edx, (%rdi,%rcx,4)
-; X64-NEXT:    addq $1, %rcx
-; X64-NEXT:    cmpl %ecx, %eax
-; X64-NEXT:    jne .LBB3_2
-; X64-NEXT:  .LBB3_3: # %while.end
+; X64-NEXT:    rdrandl %eax
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    leaq 4(%rdi), %rdi
+; X64-NEXT:    addl $-1, %esi
+; X64-NEXT:    jne .LBB3_1
+; X64-NEXT:  .LBB3_2: # %while.end
 ; X64-NEXT:    retq
 entry:
   %tobool1 = icmp eq i32 %n, 0

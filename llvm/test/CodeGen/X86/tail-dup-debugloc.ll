@@ -1,10 +1,10 @@
-; RUN: llc -stop-after=early-tailduplication < %s | FileCheck %s
+; RUN: llc -stop-after=tailduplication < %s | FileCheck %s
 ;
 ; Check that DebugLoc attached to the branch instruction of
 ; 'while.cond1.preheader.lr.ph' survives after tailduplication pass.
 ;
 ; CHECK: [[DLOC:![0-9]+]] = !DILocation(line: 9, column: 5, scope: !{{[0-9]+}})
-; CHECK: [[VREG:%[^ ]+]]:gr64 = COPY $rdi
+; CHECK: [[VREG:%[^ ]+]]:gr64 = COPY %rdi
 ; CHECK: TEST64rr [[VREG]], [[VREG]]
 ; CHECK-NEXT: JE_1 {{.+}}, debug-location [[DLOC]]
 ; CHECK-NEXT: JMP_1 {{.+}}, debug-location [[DLOC]]
@@ -47,7 +47,7 @@ while.end4:                                       ; preds = %entry
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{}
-!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 5, type: !7, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
+!6 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 5, type: !7, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !2)
 !7 = !DISubroutineType(types: !2)
 !8 = !DILocation(line: 7, column: 15, scope: !9)
 !9 = !DILexicalBlockFile(scope: !6, file: !1, discriminator: 2)

@@ -64,7 +64,7 @@ namespace sys {
     /// if the library fails to load.
     ///
     /// It is safe to call this function multiple times for the same library.
-    /// Open a dynamic library permanently.
+    /// @brief Open a dynamic library permanently.
     static DynamicLibrary getPermanentLibrary(const char *filename,
                                               std::string *errMsg = nullptr);
 
@@ -110,10 +110,10 @@ namespace sys {
     /// search permanently loaded libraries (getPermanentLibrary()) as well
     /// as explicitly registered symbols (AddSymbol()).
     /// @throws std::string on error.
-    /// Search through libraries for address of a symbol
+    /// @brief Search through libraries for address of a symbol
     static void *SearchForAddressOfSymbol(const char *symbolName);
 
-    /// Convenience function for C++ophiles.
+    /// @brief Convenience function for C++ophiles.
     static void *SearchForAddressOfSymbol(const std::string &symbolName) {
       return SearchForAddressOfSymbol(symbolName.c_str());
     }
@@ -121,7 +121,7 @@ namespace sys {
     /// This functions permanently adds the symbol \p symbolName with the
     /// value \p symbolValue.  These symbols are searched before any
     /// libraries.
-    /// Add searchable symbol/value pair.
+    /// @brief Add searchable symbol/value pair.
     static void AddSymbol(StringRef symbolName, void *symbolValue);
 
     class HandleSet;

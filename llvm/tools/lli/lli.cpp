@@ -18,9 +18,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.def"
 #include "llvm/CodeGen/LinkAllCodegenComponents.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/Interpreter.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
@@ -41,18 +40,18 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include <cerrno>
@@ -296,7 +295,7 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
 CodeGenOpt::Level getOptLevel() {
   switch (OptLevel) {
   default:
-    WithColor::error(errs(), "lli") << "invalid optimization level.\n";
+    errs() << "lli: Invalid optimization level.\n";
     exit(1);
   case '0': return CodeGenOpt::None;
   case '1': return CodeGenOpt::Less;
@@ -317,7 +316,10 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
 // main Driver function
 //
 int main(int argc, char **argv, char * const *envp) {
-  InitLLVM X(argc, argv);
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
+  atexit(llvm_shutdown); // Call llvm_shutdown() on exit.
 
   if (argc > 1)
     ExitOnErr.setBanner(std::string(argv[0]) + ": ");
@@ -376,8 +378,8 @@ int main(int argc, char **argv, char * const *envp) {
   std::string ErrorMsg;
   EngineBuilder builder(std::move(Owner));
   builder.setMArch(MArch);
-  builder.setMCPU(getCPUStr());
-  builder.setMAttrs(getFeatureList());
+  builder.setMCPU(MCPU);
+  builder.setMAttrs(MAttrs);
   if (RelocModel.getNumOccurrences())
     builder.setRelocationModel(RelocModel);
   if (CMModel.getNumOccurrences())
@@ -405,8 +407,8 @@ int main(int argc, char **argv, char * const *envp) {
     builder.setMCJITMemoryManager(
       std::unique_ptr<RTDyldMemoryManager>(RTDyldMM));
   } else if (RemoteMCJIT) {
-    WithColor::error(errs(), argv[0])
-        << "remote process execution does not work with the interpreter.\n";
+    errs() << "error: Remote process execution does not work with the "
+              "interpreter.\n";
     exit(1);
   }
 
@@ -421,10 +423,9 @@ int main(int argc, char **argv, char * const *envp) {
   std::unique_ptr<ExecutionEngine> EE(builder.create());
   if (!EE) {
     if (!ErrorMsg.empty())
-      WithColor::error(errs(), argv[0])
-          << "error creating EE: " << ErrorMsg << "\n";
+      errs() << argv[0] << ": error creating EE: " << ErrorMsg << "\n";
     else
-      WithColor::error(errs(), argv[0]) << "unknown error creating EE!\n";
+      errs() << argv[0] << ": unknown error creating EE!\n";
     exit(1);
   }
 
@@ -497,8 +498,7 @@ int main(int argc, char **argv, char * const *envp) {
                 JITEventListener::createIntelJITEventListener());
 
   if (!NoLazyCompilation && RemoteMCJIT) {
-    WithColor::warning(errs(), argv[0])
-        << "remote mcjit does not support lazy compilation\n";
+    errs() << "warning: remote mcjit does not support lazy compilation\n";
     NoLazyCompilation = true;
   }
   EE->DisableLazyCompilation(NoLazyCompilation);
@@ -524,8 +524,7 @@ int main(int argc, char **argv, char * const *envp) {
   //
   Function *EntryFn = Mod->getFunction(EntryFunc);
   if (!EntryFn) {
-    WithColor::error(errs(), argv[0])
-        << '\'' << EntryFunc << "\' function not found in module.\n";
+    errs() << '\'' << EntryFunc << "\' function not found in module.\n";
     return -1;
   }
 
@@ -538,19 +537,16 @@ int main(int argc, char **argv, char * const *envp) {
   // remote JIT on Unix platforms.
   if (RemoteMCJIT) {
 #ifndef LLVM_ON_UNIX
-    WithColor::warning(errs(), argv[0])
-        << "host does not support external remote targets.\n";
-    WithColor::note() << "defaulting to local execution\n";
+    errs() << "Warning: host does not support external remote targets.\n"
+           << "  Defaulting to local execution\n";
     return -1;
 #else
     if (ChildExecPath.empty()) {
-      WithColor::error(errs(), argv[0])
-          << "-remote-mcjit requires -mcjit-remote-process.\n";
+      errs() << "-remote-mcjit requires -mcjit-remote-process.\n";
       exit(1);
     } else if (!sys::fs::can_execute(ChildExecPath)) {
-      WithColor::error(errs(), argv[0])
-          << "unable to find usable child executable: '" << ChildExecPath
-          << "'\n";
+      errs() << "Unable to find usable child executable: '" << ChildExecPath
+             << "'\n";
       return -1;
     }
 #endif
@@ -590,11 +586,10 @@ int main(int argc, char **argv, char * const *envp) {
       ResultGV.IntVal = APInt(32, Result);
       Args.push_back(ResultGV);
       EE->runFunction(ExitF, Args);
-      WithColor::error(errs(), argv[0]) << "exit(" << Result << ") returned!\n";
+      errs() << "ERROR: exit(" << Result << ") returned!\n";
       abort();
     } else {
-      WithColor::error(errs(), argv[0])
-          << "exit defined with wrong prototype!\n";
+      errs() << "ERROR: exit defined with wrong prototype!\n";
       abort();
     }
   } else {
@@ -607,15 +602,13 @@ int main(int argc, char **argv, char * const *envp) {
     // Lanch the remote process and get a channel to it.
     std::unique_ptr<FDRawChannel> C = launchRemote();
     if (!C) {
-      WithColor::error(errs(), argv[0]) << "failed to launch remote JIT.\n";
+      errs() << "Failed to launch remote JIT.\n";
       exit(1);
     }
 
     // Create a remote target client running over the channel.
-    llvm::orc::ExecutionSession ES;
-    ES.setErrorReporter([&](Error Err) { ExitOnErr(std::move(Err)); });
     typedef orc::remote::OrcRemoteTargetClient MyRemote;
-    auto R = ExitOnErr(MyRemote::Create(*C, ES));
+    auto R = ExitOnErr(MyRemote::Create(*C, ExitOnErr));
 
     // Create a remote memory manager.
     auto RemoteMM = ExitOnErr(R->createRemoteMemoryManager());
@@ -639,8 +632,8 @@ int main(int argc, char **argv, char * const *envp) {
     // FIXME: argv and envp handling.
     JITTargetAddress Entry = EE->getFunctionAddress(EntryFn->getName().str());
     EE->finalizeObject();
-    LLVM_DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
-                      << format("%llx", Entry) << "\n");
+    DEBUG(dbgs() << "Executing '" << EntryFn->getName() << "' at 0x"
+                 << format("%llx", Entry) << "\n");
     Result = ExitOnErr(R->callIntVoid(Entry));
 
     // Like static constructors, the remote target MCJIT support doesn't handle

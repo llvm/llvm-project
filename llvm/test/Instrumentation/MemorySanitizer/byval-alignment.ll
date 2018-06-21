@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.S = type { i64, i64, i64, [8 x i8] }
 
 ; CHECK: [[A:%.*]] = bitcast i64* {{.*}} add {{.*}} ptrtoint {{.*}} @__msan_param_tls {{.*}} i64 8)
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[A]], i8* align 8 {{.*}}, i64 32, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[A]], i8* {{.*}}, i64 32, i32 8, i1 false)
 
 define void @Caller() sanitize_memory {
 entry:

@@ -64,26 +64,23 @@ class Node;
 class Scanner;
 struct Token;
 
-/// Dump all the tokens in this stream to OS.
+/// \brief Dump all the tokens in this stream to OS.
 /// \returns true if there was an error, false otherwise.
 bool dumpTokens(StringRef Input, raw_ostream &);
 
-/// Scans all tokens in input without outputting anything. This is used
+/// \brief Scans all tokens in input without outputting anything. This is used
 ///        for benchmarking the tokenizer.
 /// \returns true if there was an error, false otherwise.
 bool scanTokens(StringRef Input);
 
-/// Escape \a Input for a double quoted scalar; if \p EscapePrintable
-/// is true, all UTF8 sequences will be escaped, if \p EscapePrintable is
-/// false, those UTF8 sequences encoding printable unicode scalars will not be
-/// escaped, but emitted verbatim.
-std::string escape(StringRef Input, bool EscapePrintable = true);
+/// \brief Escape \a Input for a double quoted scalar.
+std::string escape(StringRef Input);
 
-/// This class represents a YAML stream potentially containing multiple
+/// \brief This class represents a YAML stream potentially containing multiple
 ///        documents.
 class Stream {
 public:
-  /// This keeps a reference to the string referenced by \p Input.
+  /// \brief This keeps a reference to the string referenced by \p Input.
   Stream(StringRef Input, SourceMgr &, bool ShowColors = true,
          std::error_code *EC = nullptr);
 
@@ -110,7 +107,7 @@ private:
   std::unique_ptr<Document> CurrentDoc;
 };
 
-/// Abstract base class for all Nodes.
+/// \brief Abstract base class for all Nodes.
 class Node {
   virtual void anchor();
 
@@ -128,11 +125,6 @@ public:
   Node(unsigned int Type, std::unique_ptr<Document> &, StringRef Anchor,
        StringRef Tag);
 
-  // It's not safe to copy YAML nodes; the document is streamed and the position
-  // is part of the state.
-  Node(const Node &) = delete;
-  void operator=(const Node &) = delete;
-
   void *operator new(size_t Size, BumpPtrAllocator &Alloc,
                      size_t Alignment = 16) noexcept {
     return Alloc.Allocate(Size, Alignment);
@@ -145,15 +137,15 @@ public:
 
   void operator delete(void *) noexcept = delete;
 
-  /// Get the value of the anchor attached to this node. If it does not
+  /// \brief Get the value of the anchor attached to this node. If it does not
   ///        have one, getAnchor().size() will be 0.
   StringRef getAnchor() const { return Anchor; }
 
-  /// Get the tag as it was written in the document. This does not
+  /// \brief Get the tag as it was written in the document. This does not
   ///   perform tag resolution.
   StringRef getRawTag() const { return Tag; }
 
-  /// Get the verbatium tag for a given Node. This performs tag resoluton
+  /// \brief Get the verbatium tag for a given Node. This performs tag resoluton
   ///   and substitution.
   std::string getVerbatimTag() const;
 
@@ -181,11 +173,11 @@ protected:
 private:
   unsigned int TypeID;
   StringRef Anchor;
-  /// The tag as typed in the document.
+  /// \brief The tag as typed in the document.
   StringRef Tag;
 };
 
-/// A null value.
+/// \brief A null value.
 ///
 /// Example:
 ///   !!null null
@@ -199,7 +191,7 @@ public:
   static bool classof(const Node *N) { return N->getType() == NK_Null; }
 };
 
-/// A scalar node is an opaque datum that can be presented as a
+/// \brief A scalar node is an opaque datum that can be presented as a
 ///        series of zero or more Unicode scalar values.
 ///
 /// Example:
@@ -221,7 +213,7 @@ public:
   // utf8).
   StringRef getRawValue() const { return Value; }
 
-  /// Gets the value of this node as a StringRef.
+  /// \brief Gets the value of this node as a StringRef.
   ///
   /// \param Storage is used to store the content of the returned StringRef iff
   ///        it requires any modification from how it appeared in the source.
@@ -240,7 +232,7 @@ private:
                                  SmallVectorImpl<char> &Storage) const;
 };
 
-/// A block scalar node is an opaque datum that can be presented as a
+/// \brief A block scalar node is an opaque datum that can be presented as a
 ///        series of zero or more Unicode scalar values.
 ///
 /// Example:
@@ -259,7 +251,7 @@ public:
     SourceRange = SMRange(Start, End);
   }
 
-  /// Gets the value of this node as a StringRef.
+  /// \brief Gets the value of this node as a StringRef.
   StringRef getValue() const { return Value; }
 
   static bool classof(const Node *N) {
@@ -270,7 +262,7 @@ private:
   StringRef Value;
 };
 
-/// A key and value pair. While not technically a Node under the YAML
+/// \brief A key and value pair. While not technically a Node under the YAML
 ///        representation graph, it is easier to treat them this way.
 ///
 /// TODO: Consider making this not a child of Node.
@@ -284,14 +276,14 @@ public:
   KeyValueNode(std::unique_ptr<Document> &D)
       : Node(NK_KeyValue, D, StringRef(), StringRef()) {}
 
-  /// Parse and return the key.
+  /// \brief Parse and return the key.
   ///
   /// This may be called multiple times.
   ///
   /// \returns The key, or nullptr if failed() == true.
   Node *getKey();
 
-  /// Parse and return the value.
+  /// \brief Parse and return the value.
   ///
   /// This may be called multiple times.
   ///
@@ -315,7 +307,7 @@ private:
   Node *Value = nullptr;
 };
 
-/// This is an iterator abstraction over YAML collections shared by both
+/// \brief This is an iterator abstraction over YAML collections shared by both
 ///        sequences and maps.
 ///
 /// BaseT must have a ValueT* member named CurrentEntry and a member function
@@ -395,7 +387,7 @@ template <class CollectionType> void skip(CollectionType &C) {
       i->skip();
 }
 
-/// Represents a YAML map created from either a block map for a flow map.
+/// \brief Represents a YAML map created from either a block map for a flow map.
 ///
 /// This parses the YAML stream as increment() is called.
 ///
@@ -442,7 +434,7 @@ private:
   void increment();
 };
 
-/// Represents a YAML sequence created from either a block sequence for a
+/// \brief Represents a YAML sequence created from either a block sequence for a
 ///        flow sequence.
 ///
 /// This parses the YAML stream as increment() is called.
@@ -498,7 +490,7 @@ private:
   Node *CurrentEntry = nullptr;
 };
 
-/// Represents an alias to a Node with an anchor.
+/// \brief Represents an alias to a Node with an anchor.
 ///
 /// Example:
 ///   *AnchorName
@@ -518,20 +510,20 @@ private:
   StringRef Name;
 };
 
-/// A YAML Stream is a sequence of Documents. A document contains a root
+/// \brief A YAML Stream is a sequence of Documents. A document contains a root
 ///        node.
 class Document {
 public:
   Document(Stream &ParentStream);
 
-  /// Root for parsing a node. Returns a single node.
+  /// \brief Root for parsing a node. Returns a single node.
   Node *parseBlockNode();
 
-  /// Finish parsing the current document and return true if there are
+  /// \brief Finish parsing the current document and return true if there are
   ///        more. Return false otherwise.
   bool skip();
 
-  /// Parse and return the root level node.
+  /// \brief Parse and return the root level node.
   Node *getRoot() {
     if (Root)
       return Root;
@@ -544,18 +536,18 @@ private:
   friend class Node;
   friend class document_iterator;
 
-  /// Stream to read tokens from.
+  /// \brief Stream to read tokens from.
   Stream &stream;
 
-  /// Used to allocate nodes to. All are destroyed without calling their
+  /// \brief Used to allocate nodes to. All are destroyed without calling their
   ///        destructor when the document is destroyed.
   BumpPtrAllocator NodeAllocator;
 
-  /// The root node. Used to support skipping a partially parsed
+  /// \brief The root node. Used to support skipping a partially parsed
   ///        document.
   Node *Root;
 
-  /// Maps tag prefixes to their expansion.
+  /// \brief Maps tag prefixes to their expansion.
   std::map<StringRef, StringRef> TagMap;
 
   Token &peekNext();
@@ -563,20 +555,20 @@ private:
   void setError(const Twine &Message, Token &Location) const;
   bool failed() const;
 
-  /// Parse %BLAH directives and return true if any were encountered.
+  /// \brief Parse %BLAH directives and return true if any were encountered.
   bool parseDirectives();
 
-  /// Parse %YAML
+  /// \brief Parse %YAML
   void parseYAMLDirective();
 
-  /// Parse %TAG
+  /// \brief Parse %TAG
   void parseTAGDirective();
 
-  /// Consume the next token and error if it is not \a TK.
+  /// \brief Consume the next token and error if it is not \a TK.
   bool expectToken(int TK);
 };
 
-/// Iterator abstraction for Documents over a Stream.
+/// \brief Iterator abstraction for Documents over a Stream.
 class document_iterator {
 public:
   document_iterator() = default;

@@ -30,10 +30,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Target/TargetMachine.h"
@@ -76,19 +72,17 @@ Error Config::addSaveTemps(std::string OutputFileName,
       // user hasn't requested using the input module's path, emit to a file
       // named from the provided OutputFileName with the Task ID appended.
       if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
-        PathPrefix = OutputFileName;
-        if (Task != (unsigned)-1)
-          PathPrefix += utostr(Task) + ".";
+        PathPrefix = OutputFileName + utostr(Task);
       } else
-        PathPrefix = M.getModuleIdentifier() + ".";
-      std::string Path = PathPrefix + PathSuffix + ".bc";
+        PathPrefix = M.getModuleIdentifier();
+      std::string Path = PathPrefix + "." + PathSuffix + ".bc";
       std::error_code EC;
       raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::F_None);
       // Because -save-temps is a debugging feature, we report the error
       // directly and exit.
       if (EC)
         reportOpenError(Path, EC.message());
-      WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false);
+      WriteBitcodeToFile(&M, OS, /*ShouldPreserveUseListOrder=*/false);
       return true;
     };
   };
@@ -109,12 +103,6 @@ Error Config::addSaveTemps(std::string OutputFileName,
     if (EC)
       reportOpenError(Path, EC.message());
     WriteIndexToFile(Index, OS);
-
-    Path = OutputFileName + "index.dot";
-    raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::F_None);
-    if (EC)
-      reportOpenError(Path, EC.message());
-    Index.exportToDot(OSDot);
     return true;
   };
 
@@ -290,36 +278,11 @@ void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
-  std::unique_ptr<ToolOutputFile> DwoOut;
-  SmallString<1024> DwoFile(Conf.DwoPath);
-  if (!Conf.DwoDir.empty()) {
-    std::error_code EC;
-    if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error("Failed to create directory " + Conf.DwoDir + ": " +
-                         EC.message());
-
-    DwoFile = Conf.DwoDir;
-    sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
-  }
-
-  if (!DwoFile.empty()) {
-    std::error_code EC;
-    TM->Options.MCOptions.SplitDwarfFile = DwoFile.str().str();
-    DwoOut = llvm::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::F_None);
-    if (EC)
-      report_fatal_error("Failed to open " + DwoFile + ": " + EC.message());
-  }
-
   auto Stream = AddStream(Task);
   legacy::PassManager CodeGenPasses;
-  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                              DwoOut ? &DwoOut->os() : nullptr,
-                              Conf.CGFileType))
+  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS, Conf.CGFileType))
     report_fatal_error("Failed to setup codegen");
   CodeGenPasses.run(Mod);
-
-  if (DwoOut)
-    DwoOut->keep();
 }
 
 void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
@@ -340,7 +303,7 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
         // FIXME: Provide a more direct way to do this in LLVM.
         SmallString<0> BC;
         raw_svector_ostream BCOS(BC);
-        WriteBitcodeToFile(*MPart, BCOS);
+        WriteBitcodeToFile(MPart.get(), BCOS);
 
         // Enqueue the task
         CodegenThreadPool.async(
@@ -385,15 +348,14 @@ Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
 
 }
 
-static Error
+static void
 finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)
-    return Error::success();
+    return;
   DiagOutputFile->keep();
   DiagOutputFile->os().flush();
-  return Error::success();
 }
 
 Error lto::backend(Config &C, AddStreamFn AddStream,
@@ -415,8 +377,10 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
 
   if (!C.CodeGenOnly) {
     if (!opt(C, TM.get(), 0, *Mod, /*IsThinLTO=*/false,
-             /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr))
-      return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+             /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr)) {
+      finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+      return Error::success();
+    }
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {
@@ -425,28 +389,8 @@ Error lto::backend(Config &C, AddStreamFn AddStream,
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel,
                  std::move(Mod));
   }
-  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
-}
-
-static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
-                            const ModuleSummaryIndex &Index) {
-  std::vector<GlobalValue*> DeadGVs;
-  for (auto &GV : Mod.global_values())
-    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
-      if (!Index.isGlobalValueLive(GVS)) {
-        DeadGVs.push_back(&GV);
-        convertToDeclaration(GV);
-      }
-
-  // Now that all dead bodies have been dropped, delete the actual objects
-  // themselves when possible.
-  for (GlobalValue *GV : DeadGVs) {
-    GV->removeDeadConstantUsers();
-    // Might reference something defined in native object (i.e. dropped a
-    // non-prevailing IR def, but we need to keep the declaration).
-    if (GV->use_empty())
-      GV->eraseFromParent();
-  }
+  finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+  return Error::success();
 }
 
 Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
@@ -460,36 +404,27 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   std::unique_ptr<TargetMachine> TM = createTargetMachine(Conf, *TOrErr, Mod);
 
-  // Setup optimization remarks.
-  auto DiagFileOrErr = lto::setupOptimizationRemarks(
-      Mod.getContext(), Conf.RemarksFilename, Conf.RemarksWithHotness, Task);
-  if (!DiagFileOrErr)
-    return DiagFileOrErr.takeError();
-  auto DiagnosticOutputFile = std::move(*DiagFileOrErr);
-
   if (Conf.CodeGenOnly) {
     codegen(Conf, TM.get(), AddStream, Task, Mod);
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
   }
 
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
 
   renameModuleForThinLTO(Mod, CombinedIndex);
-
-  dropDeadSymbols(Mod, DefinedGlobals, CombinedIndex);
 
   thinLTOResolveWeakForLinkerModule(Mod, DefinedGlobals);
 
   if (Conf.PostPromoteModuleHook && !Conf.PostPromoteModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
 
   if (!DefinedGlobals.empty())
     thinLTOInternalizeModule(Mod, DefinedGlobals);
 
   if (Conf.PostInternalizeModuleHook &&
       !Conf.PostInternalizeModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
 
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
@@ -506,12 +441,12 @@ Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
     return Err;
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
 
   if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLTO=*/true,
            /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+    return Error::success();
 
   codegen(Conf, TM.get(), AddStream, Task, Mod);
-  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+  return Error::success();
 }

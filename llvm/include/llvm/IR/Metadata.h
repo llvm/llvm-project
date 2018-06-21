@@ -52,20 +52,20 @@ enum LLVMConstants : uint32_t {
   DEBUG_METADATA_VERSION = 3 // Current debug info version number.
 };
 
-/// Root of the metadata hierarchy.
+/// \brief Root of the metadata hierarchy.
 ///
 /// This is a root class for typeless data in the IR.
 class Metadata {
   friend class ReplaceableMetadataImpl;
 
-  /// RTTI.
+  /// \brief RTTI.
   const unsigned char SubclassID;
 
 protected:
-  /// Active type of storage.
+  /// \brief Active type of storage.
   enum StorageType { Uniqued, Distinct, Temporary };
 
-  /// Storage flag for non-uniqued, otherwise unowned, metadata.
+  /// \brief Storage flag for non-uniqued, otherwise unowned, metadata.
   unsigned char Storage;
   // TODO: expose remaining bits to subclasses.
 
@@ -86,7 +86,7 @@ protected:
 
   ~Metadata() = default;
 
-  /// Default handling of a changed operand, which asserts.
+  /// \brief Default handling of a changed operand, which asserts.
   ///
   /// If subclasses pass themselves in as owners to a tracking node reference,
   /// they must provide an implementation of this method.
@@ -97,7 +97,7 @@ protected:
 public:
   unsigned getMetadataID() const { return SubclassID; }
 
-  /// User-friendly dump.
+  /// \brief User-friendly dump.
   ///
   /// If \c M is provided, metadata nodes will be numbered canonically;
   /// otherwise, pointer addresses are substituted.
@@ -110,7 +110,7 @@ public:
   void dump(const Module *M) const;
   /// @}
 
-  /// Print.
+  /// \brief Print.
   ///
   /// Prints definition of \c this.
   ///
@@ -123,7 +123,7 @@ public:
              bool IsForDebug = false) const;
   /// @}
 
-  /// Print as operand.
+  /// \brief Print as operand.
   ///
   /// Prints reference of \c this.
   ///
@@ -162,7 +162,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Metadata &MD) {
   return OS;
 }
 
-/// Metadata wrapper in the Value hierarchy.
+/// \brief Metadata wrapper in the Value hierarchy.
 ///
 /// A member of the \a Value hierarchy to represent a reference to metadata.
 /// This allows, e.g., instrinsics to have metadata as operands.
@@ -177,7 +177,7 @@ class MetadataAsValue : public Value {
 
   MetadataAsValue(Type *Ty, Metadata *MD);
 
-  /// Drop use of metadata (during teardown).
+  /// \brief Drop use of metadata (during teardown).
   void dropUse() { MD = nullptr; }
 
 public:
@@ -198,7 +198,7 @@ private:
   void untrack();
 };
 
-/// API for tracking metadata references through RAUW and deletion.
+/// \brief API for tracking metadata references through RAUW and deletion.
 ///
 /// Shared API for updating \a Metadata pointers in subclasses that support
 /// RAUW.
@@ -207,7 +207,7 @@ private:
 /// user-friendly tracking reference.
 class MetadataTracking {
 public:
-  /// Track the reference to metadata.
+  /// \brief Track the reference to metadata.
   ///
   /// Register \c MD with \c *MD, if the subclass supports tracking.  If \c *MD
   /// gets RAUW'ed, \c MD will be updated to the new address.  If \c *MD gets
@@ -220,7 +220,7 @@ public:
     return track(&MD, *MD, static_cast<Metadata *>(nullptr));
   }
 
-  /// Track the reference to metadata for \a Metadata.
+  /// \brief Track the reference to metadata for \a Metadata.
   ///
   /// As \a track(Metadata*&), but with support for calling back to \c Owner to
   /// tell it that its operand changed.  This could trigger \c Owner being
@@ -229,7 +229,7 @@ public:
     return track(Ref, MD, &Owner);
   }
 
-  /// Track the reference to metadata for \a MetadataAsValue.
+  /// \brief Track the reference to metadata for \a MetadataAsValue.
   ///
   /// As \a track(Metadata*&), but with support for calling back to \c Owner to
   /// tell it that its operand changed.  This could trigger \c Owner being
@@ -238,13 +238,13 @@ public:
     return track(Ref, MD, &Owner);
   }
 
-  /// Stop tracking a reference to metadata.
+  /// \brief Stop tracking a reference to metadata.
   ///
   /// Stops \c *MD from tracking \c MD.
   static void untrack(Metadata *&MD) { untrack(&MD, *MD); }
   static void untrack(void *Ref, Metadata &MD);
 
-  /// Move tracking from one reference to another.
+  /// \brief Move tracking from one reference to another.
   ///
   /// Semantically equivalent to \c untrack(MD) followed by \c track(New),
   /// except that ownership callbacks are maintained.
@@ -257,19 +257,19 @@ public:
   }
   static bool retrack(void *Ref, Metadata &MD, void *New);
 
-  /// Check whether metadata is replaceable.
+  /// \brief Check whether metadata is replaceable.
   static bool isReplaceable(const Metadata &MD);
 
   using OwnerTy = PointerUnion<MetadataAsValue *, Metadata *>;
 
 private:
-  /// Track a reference to metadata for an owner.
+  /// \brief Track a reference to metadata for an owner.
   ///
   /// Generalized version of tracking.
   static bool track(void *Ref, Metadata &MD, OwnerTy Owner);
 };
 
-/// Shared implementation of use-lists for replaceable metadata.
+/// \brief Shared implementation of use-lists for replaceable metadata.
 ///
 /// Most metadata cannot be RAUW'ed.  This is a shared implementation of
 /// use-lists and associated API for the two that support it (\a ValueAsMetadata
@@ -294,12 +294,12 @@ public:
 
   LLVMContext &getContext() const { return Context; }
 
-  /// Replace all uses of this with MD.
+  /// \brief Replace all uses of this with MD.
   ///
   /// Replace all uses of this with \c MD, which is allowed to be null.
   void replaceAllUsesWith(Metadata *MD);
 
-  /// Resolve all uses of this.
+  /// \brief Resolve all uses of this.
   ///
   /// Resolve all uses of this, turning off RAUW permanently.  If \c
   /// ResolveUsers, call \a MDNode::resolve() on any users whose last operand
@@ -326,7 +326,7 @@ private:
   static bool isReplaceable(const Metadata &MD);
 };
 
-/// Value wrapper in the Metadata hierarchy.
+/// \brief Value wrapper in the Metadata hierarchy.
 ///
 /// This is a custom value handle that allows other metadata to refer to
 /// classes in the Value hierarchy.
@@ -340,7 +340,7 @@ class ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
 
   Value *V;
 
-  /// Drop users without RAUW (during teardown).
+  /// \brief Drop users without RAUW (during teardown).
   void dropUsers() {
     ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
   }
@@ -382,7 +382,7 @@ public:
   static void handleRAUW(Value *From, Value *To);
 
 protected:
-  /// Handle collisions after \a Value::replaceAllUsesWith().
+  /// \brief Handle collisions after \a Value::replaceAllUsesWith().
   ///
   /// RAUW isn't supported directly for \a ValueAsMetadata, but if the wrapped
   /// \a Value gets RAUW'ed and the target already exists, this is used to
@@ -444,7 +444,7 @@ public:
   }
 };
 
-/// Transitional API for extracting constants from Metadata.
+/// \brief Transitional API for extracting constants from Metadata.
 ///
 /// This namespace contains transitional functions for metadata that points to
 /// \a Constants.
@@ -520,7 +520,7 @@ template <class V, class M> struct IsValidReference {
 
 } // end namespace detail
 
-/// Check whether Metadata has a Value.
+/// \brief Check whether Metadata has a Value.
 ///
 /// As an analogue to \a isa(), check whether \c MD has an \a Value inside of
 /// type \c X.
@@ -539,7 +539,7 @@ inline
   return hasa(&MD);
 }
 
-/// Extract a Value from Metadata.
+/// \brief Extract a Value from Metadata.
 ///
 /// As an analogue to \a cast(), extract the \a Value subclass \c X from \c MD.
 template <class X, class Y>
@@ -554,7 +554,7 @@ inline
   return extract(&MD);
 }
 
-/// Extract a Value from Metadata, allowing null.
+/// \brief Extract a Value from Metadata, allowing null.
 ///
 /// As an analogue to \a cast_or_null(), extract the \a Value subclass \c X
 /// from \c MD, allowing \c MD to be null.
@@ -566,7 +566,7 @@ extract_or_null(Y &&MD) {
   return nullptr;
 }
 
-/// Extract a Value from Metadata, if any.
+/// \brief Extract a Value from Metadata, if any.
 ///
 /// As an analogue to \a dyn_cast_or_null(), extract the \a Value subclass \c X
 /// from \c MD, return null if \c MD doesn't contain a \a Value or if the \a
@@ -579,7 +579,7 @@ dyn_extract(Y &&MD) {
   return nullptr;
 }
 
-/// Extract a Value from Metadata, if any, allowing null.
+/// \brief Extract a Value from Metadata, if any, allowing null.
 ///
 /// As an analogue to \a dyn_cast_or_null(), extract the \a Value subclass \c X
 /// from \c MD, return null if \c MD doesn't contain a \a Value or if the \a
@@ -595,7 +595,7 @@ dyn_extract_or_null(Y &&MD) {
 } // end namespace mdconst
 
 //===----------------------------------------------------------------------===//
-/// A single uniqued string.
+/// \brief A single uniqued string.
 ///
 /// These are used to efficiently contain a byte sequence for metadata.
 /// MDString is always unnamed.
@@ -622,22 +622,22 @@ public:
 
   using iterator = StringRef::iterator;
 
-  /// Pointer to the first byte of the string.
+  /// \brief Pointer to the first byte of the string.
   iterator begin() const { return getString().begin(); }
 
-  /// Pointer to one byte past the end of the string.
+  /// \brief Pointer to one byte past the end of the string.
   iterator end() const { return getString().end(); }
 
   const unsigned char *bytes_begin() const { return getString().bytes_begin(); }
   const unsigned char *bytes_end() const { return getString().bytes_end(); }
 
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == MDStringKind;
   }
 };
 
-/// A collection of metadata nodes that might be associated with a
+/// \brief A collection of metadata nodes that might be associated with a
 /// memory access used by the alias-analysis infrastructure.
 struct AAMDNodes {
   explicit AAMDNodes(MDNode *T = nullptr, MDNode *S = nullptr,
@@ -652,16 +652,16 @@ struct AAMDNodes {
 
   explicit operator bool() const { return TBAA || Scope || NoAlias; }
 
-  /// The tag for type-based alias analysis.
+  /// \brief The tag for type-based alias analysis.
   MDNode *TBAA;
 
-  /// The tag for alias scope specification (used with noalias).
+  /// \brief The tag for alias scope specification (used with noalias).
   MDNode *Scope;
 
-  /// The tag specifying the noalias scope.
+  /// \brief The tag specifying the noalias scope.
   MDNode *NoAlias;
 
-  /// Given two sets of AAMDNodes that apply to the same pointer,
+  /// \brief Given two sets of AAMDNodes that apply to the same pointer,
   /// give the best AAMDNodes that are compatible with both (i.e. a set of
   /// nodes whose allowable aliasing conclusions are a subset of those
   /// allowable by both of the inputs). However, for efficiency
@@ -699,7 +699,7 @@ struct DenseMapInfo<AAMDNodes> {
   }
 };
 
-/// Tracking metadata reference owned by Metadata.
+/// \brief Tracking metadata reference owned by Metadata.
 ///
 /// Similar to \a TrackingMDRef, but it's expected to be owned by an instance
 /// of \a Metadata, which has the option of registering itself for callbacks to
@@ -761,7 +761,7 @@ template <> struct simplify_type<const MDOperand> {
   static SimpleType getSimplifiedValue(const MDOperand &MD) { return MD.get(); }
 };
 
-/// Pointer to the context, with optional RAUW support.
+/// \brief Pointer to the context, with optional RAUW support.
 ///
 /// Either a raw (non-null) pointer to the \a LLVMContext, or an owned pointer
 /// to \a ReplaceableMetadataImpl (which has a reference to \a LLVMContext).
@@ -785,7 +785,7 @@ public:
 
   operator LLVMContext &() { return getContext(); }
 
-  /// Whether this contains RAUW support.
+  /// \brief Whether this contains RAUW support.
   bool hasReplaceableUses() const {
     return Ptr.is<ReplaceableMetadataImpl *>();
   }
@@ -809,7 +809,7 @@ public:
     return getReplaceableUses();
   }
 
-  /// Assign RAUW support to this.
+  /// \brief Assign RAUW support to this.
   ///
   /// Make this replaceable, taking ownership of \c ReplaceableUses (which must
   /// not be null).
@@ -822,7 +822,7 @@ public:
     Ptr = ReplaceableUses.release();
   }
 
-  /// Drop RAUW support.
+  /// \brief Drop RAUW support.
   ///
   /// Cede ownership of RAUW support, returning it.
   std::unique_ptr<ReplaceableMetadataImpl> takeReplaceableUses() {
@@ -843,7 +843,7 @@ struct TempMDNodeDeleter {
 #define HANDLE_MDNODE_BRANCH(CLASS) HANDLE_MDNODE_LEAF(CLASS)
 #include "llvm/IR/Metadata.def"
 
-/// Metadata node.
+/// \brief Metadata node.
 ///
 /// Metadata nodes can be uniqued, like constants, or distinct.  Temporary
 /// metadata nodes (with full support for RAUW) can be used to delay uniquing
@@ -876,12 +876,12 @@ protected:
   void *operator new(size_t Size, unsigned NumOps);
   void operator delete(void *Mem);
 
-  /// Required by std, but never called.
+  /// \brief Required by std, but never called.
   void operator delete(void *, unsigned) {
     llvm_unreachable("Constructor throws?");
   }
 
-  /// Required by std, but never called.
+  /// \brief Required by std, but never called.
   void operator delete(void *, unsigned, bool) {
     llvm_unreachable("Constructor throws?");
   }
@@ -910,10 +910,10 @@ public:
   static inline TempMDTuple getTemporary(LLVMContext &Context,
                                          ArrayRef<Metadata *> MDs);
 
-  /// Create a (temporary) clone of this.
+  /// \brief Create a (temporary) clone of this.
   TempMDNode clone() const;
 
-  /// Deallocate a node created by getTemporary.
+  /// \brief Deallocate a node created by getTemporary.
   ///
   /// Calls \c replaceAllUsesWith(nullptr) before deleting, so any remaining
   /// references will be reset.
@@ -921,10 +921,10 @@ public:
 
   LLVMContext &getContext() const { return Context.getContext(); }
 
-  /// Replace a specific operand.
+  /// \brief Replace a specific operand.
   void replaceOperandWith(unsigned I, Metadata *New);
 
-  /// Check if node is fully resolved.
+  /// \brief Check if node is fully resolved.
   ///
   /// If \a isTemporary(), this always returns \c false; if \a isDistinct(),
   /// this always returns \c true.
@@ -941,7 +941,7 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  /// RAUW a temporary.
+  /// \brief RAUW a temporary.
   ///
   /// \pre \a isTemporary() must be \c true.
   void replaceAllUsesWith(Metadata *MD) {
@@ -950,7 +950,7 @@ public:
       Context.getReplaceableUses()->replaceAllUsesWith(MD);
   }
 
-  /// Resolve cycles.
+  /// \brief Resolve cycles.
   ///
   /// Once all forward declarations have been resolved, force cycles to be
   /// resolved.
@@ -961,7 +961,7 @@ public:
   /// Resolve a unique, unresolved node.
   void resolve();
 
-  /// Replace a temporary node with a permanent one.
+  /// \brief Replace a temporary node with a permanent one.
   ///
   /// Try to create a uniqued version of \c N -- in place, if possible -- and
   /// return it.  If \c N cannot be uniqued, return a distinct node instead.
@@ -971,7 +971,7 @@ public:
     return cast<T>(N.release()->replaceWithPermanentImpl());
   }
 
-  /// Replace a temporary node with a uniqued one.
+  /// \brief Replace a temporary node with a uniqued one.
   ///
   /// Create a uniqued version of \c N -- in place, if possible -- and return
   /// it.  Takes ownership of the temporary node.
@@ -983,7 +983,7 @@ public:
     return cast<T>(N.release()->replaceWithUniquedImpl());
   }
 
-  /// Replace a temporary node with a distinct one.
+  /// \brief Replace a temporary node with a distinct one.
   ///
   /// Create a distinct version of \c N -- in place, if possible -- and return
   /// it.  Takes ownership of the temporary node.
@@ -999,7 +999,7 @@ private:
   MDNode *replaceWithDistinctImpl();
 
 protected:
-  /// Set an operand.
+  /// \brief Set an operand.
   ///
   /// Sets the operand directly, without worrying about uniquing.
   void setOperand(unsigned I, Metadata *New);
@@ -1019,14 +1019,14 @@ private:
   void decrementUnresolvedOperandCount();
   void countUnresolvedOperands();
 
-  /// Mutate this to be "uniqued".
+  /// \brief Mutate this to be "uniqued".
   ///
   /// Mutate this so that \a isUniqued().
   /// \pre \a isTemporary().
   /// \pre already added to uniquing set.
   void makeUniqued();
 
-  /// Mutate this to be "distinct".
+  /// \brief Mutate this to be "distinct".
   ///
   /// Mutate this so that \a isDistinct().
   /// \pre \a isTemporary().
@@ -1069,10 +1069,10 @@ public:
     return op_begin()[I];
   }
 
-  /// Return number of MDNode operands.
+  /// \brief Return number of MDNode operands.
   unsigned getNumOperands() const { return NumOperands; }
 
-  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// \brief Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Metadata *MD) {
     switch (MD->getMetadataID()) {
     default:
@@ -1084,10 +1084,10 @@ public:
     }
   }
 
-  /// Check whether MDNode is a vtable access.
+  /// \brief Check whether MDNode is a vtable access.
   bool isTBAAVtableAccess() const;
 
-  /// Methods for metadata merging.
+  /// \brief Methods for metadata merging.
   static MDNode *concatenate(MDNode *A, MDNode *B);
   static MDNode *intersect(MDNode *A, MDNode *B);
   static MDNode *getMostGenericTBAA(MDNode *A, MDNode *B);
@@ -1097,7 +1097,7 @@ public:
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
 };
 
-/// Tuple of metadata.
+/// \brief Tuple of metadata.
 ///
 /// This is the simple \a MDNode arbitrary tuple.  Nodes are uniqued by
 /// default based on their operands.
@@ -1125,7 +1125,7 @@ class MDTuple : public MDNode {
   }
 
 public:
-  /// Get the hash, if any.
+  /// \brief Get the hash, if any.
   unsigned getHash() const { return SubclassData32; }
 
   static MDTuple *get(LLVMContext &Context, ArrayRef<Metadata *> MDs) {
@@ -1136,14 +1136,14 @@ public:
     return getImpl(Context, MDs, Uniqued, /* ShouldCreate */ false);
   }
 
-  /// Return a distinct node.
+  /// \brief Return a distinct node.
   ///
   /// Return a distinct node -- i.e., a node that is not uniqued.
   static MDTuple *getDistinct(LLVMContext &Context, ArrayRef<Metadata *> MDs) {
     return getImpl(Context, MDs, Distinct);
   }
 
-  /// Return a temporary node.
+  /// \brief Return a temporary node.
   ///
   /// For use in constructing cyclic MDNode structures. A temporary MDNode is
   /// not uniqued, may be RAUW'd, and must be manually deleted with
@@ -1153,7 +1153,7 @@ public:
     return TempMDTuple(getImpl(Context, MDs, Temporary));
   }
 
-  /// Return a (temporary) clone of this.
+  /// \brief Return a (temporary) clone of this.
   TempMDTuple clone() const { return cloneImpl(); }
 
   static bool classof(const Metadata *MD) {
@@ -1182,7 +1182,7 @@ void TempMDNodeDeleter::operator()(MDNode *Node) const {
   MDNode::deleteTemporary(Node);
 }
 
-/// Typed iterator through MDNode operands.
+/// \brief Typed iterator through MDNode operands.
 ///
 /// An iterator that transforms an \a MDNode::iterator into an iterator over a
 /// particular Metadata subclass.
@@ -1213,7 +1213,7 @@ public:
   bool operator!=(const TypedMDOperandIterator &X) const { return I != X.I; }
 };
 
-/// Typed, array-like tuple of metadata.
+/// \brief Typed, array-like tuple of metadata.
 ///
 /// This is a wrapper for \a MDTuple that makes it act like an array holding a
 /// particular type of metadata.
@@ -1314,7 +1314,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// A tuple of MDNodes.
+/// \brief A tuple of MDNodes.
 ///
 /// Despite its name, a NamedMDNode isn't itself an MDNode. NamedMDNodes belong
 /// to modules, have names, and contain lists of MDNodes.
@@ -1377,7 +1377,7 @@ public:
   NamedMDNode(const NamedMDNode &) = delete;
   ~NamedMDNode();
 
-  /// Drop all references and remove the node from parent module.
+  /// \brief Drop all references and remove the node from parent module.
   void eraseFromParent();
 
   /// Remove all uses and clear node vector.
@@ -1385,7 +1385,7 @@ public:
   /// Drop all references to this node's operands.
   void clearOperands();
 
-  /// Get the module that holds this named metadata collection.
+  /// \brief Get the module that holds this named metadata collection.
   inline Module *getParent() { return Parent; }
   inline const Module *getParent() const { return Parent; }
 

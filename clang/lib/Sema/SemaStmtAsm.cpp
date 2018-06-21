@@ -109,7 +109,7 @@ static bool CheckNakedParmReference(Expr *E, Sema &S) {
   return false;
 }
 
-/// Returns true if given expression is not compatible with inline
+/// \brief Returns true if given expression is not compatible with inline
 /// assembly's memory constraint; false otherwise.
 static bool checkExprMemoryConstraintCompat(Sema &S, Expr *E,
                                             TargetInfo::ConstraintInfo &Info,
@@ -793,7 +793,7 @@ StmtResult Sema::ActOnMSAsmStmt(SourceLocation AsmLoc, SourceLocation LBraceLoc,
                                 ArrayRef<Expr*> Exprs,
                                 SourceLocation EndLoc) {
   bool IsSimple = (NumOutputs != 0 || NumInputs != 0);
-  setFunctionHasBranchProtectedScope();
+  getCurFunction()->setHasBranchProtectedScope();
   MSAsmStmt *NS =
     new (Context) MSAsmStmt(Context, AsmLoc, LBraceLoc, IsSimple,
                             /*IsVolatile*/ true, AsmToks, NumOutputs, NumInputs,

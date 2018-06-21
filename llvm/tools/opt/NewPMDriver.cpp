@@ -19,7 +19,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Config/config.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
@@ -27,7 +27,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -41,10 +40,6 @@ using namespace opt_tool;
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
             cl::desc("Print pass management debugging information"));
-
-static cl::list<std::string>
-    PassPlugins("load-pass-plugin",
-                cl::desc("Load passes from plugin library"));
 
 // This flag specifies a textual description of the alias analysis pipeline to
 // use when querying for aliasing information. It only works in concert with
@@ -87,11 +82,6 @@ static cl::opt<std::string> VectorizerStartEPPipeline(
     "passes-ep-vectorizer-start",
     cl::desc("A textual description of the function pass pipeline inserted at "
              "the VectorizerStart extension point into default pipelines"),
-    cl::Hidden);
-static cl::opt<std::string> PipelineStartEPPipeline(
-    "passes-ep-pipeline-start",
-    cl::desc("A textual description of the function pass pipeline inserted at "
-             "the PipelineStart extension point into default pipelines"),
     cl::Hidden);
 enum PGOKind { NoPGO, InstrGen, InstrUse, SampleUse };
 static cl::opt<PGOKind> PGOKindFlag(
@@ -170,12 +160,6 @@ static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
       PB.parsePassPipeline(PM, VectorizerStartEPPipeline, VerifyEachPass,
                            DebugLogging);
     });
-  if (tryParsePipelineText<ModulePassManager>(PB, PipelineStartEPPipeline))
-    PB.registerPipelineStartEPCallback(
-        [&PB, VerifyEachPass, DebugLogging](ModulePassManager &PM) {
-          PB.parsePassPipeline(PM, PipelineStartEPPipeline, VerifyEachPass,
-                               DebugLogging);
-        });
 }
 
 #ifdef LINK_POLLY_INTO_TOOLS
@@ -214,18 +198,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   }
   PassBuilder PB(TM, P);
   registerEPCallbacks(PB, VerifyEachPass, DebugPM);
-
-  // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : PassPlugins) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
-      continue;
-    }
-
-    PassPlugin->registerPassBuilderCallbacks(PB);
-  }
 
   // Register a callback that creates the debugify passes as needed.
   PB.registerPipelineParsingCallback(

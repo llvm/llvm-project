@@ -1,0 +1,64 @@
+# RUN: llc -run-pass postrapseudos -mtriple=i386-apple-macosx -o - %s | FileCheck %s
+
+# Verify that we correctly save and restore eax when copying eflags,
+# even when only a smaller alias of eax is used. We used to check only
+# eax and not its aliases.
+# PR27624.
+
+--- |
+  target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+
+  define void @foo() {
+  entry:
+    br label %false
+  false:
+    ret void
+  }
+
+...
+
+---
+name:            foo
+tracksRegLiveness: true
+liveins:
+  - { reg: '%edi' }
+body:             |
+  bb.0.entry:
+    liveins: %edi
+    NOOP implicit-def %al
+
+    ; The bug was triggered only when LivePhysReg is used, which
+    ; happens only when the heuristic for the liveness computation
+    ; failed. The liveness computation heuristic looks at 10 instructions
+    ; before and after the copy. Make sure we do not reach the definition of
+    ; AL in 10 instructions, otherwise the heuristic will see that it is live.
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    NOOP
+    ; Save AL.
+    ; CHECK: PUSH32r killed %eax
+
+    ; Copy edi into EFLAGS
+    ; CHECK-NEXT: %eax = MOV32rr %edi
+    ; CHECK-NEXT: %al = ADD8ri %al, 127, implicit-def %eflags
+    ; CHECK-NEXT: SAHF implicit-def %eflags, implicit %ah
+    %eflags = COPY %edi
+
+    ; Restore AL.
+    ; CHECK-NEXT: %eax = POP32r
+  bb.1.false:
+    liveins: %al
+    NOOP implicit %al
+    RETQ
+
+...

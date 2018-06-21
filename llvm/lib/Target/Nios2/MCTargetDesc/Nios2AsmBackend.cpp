@@ -19,7 +19,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 
 using namespace llvm;
 
@@ -112,19 +111,21 @@ Nios2AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-std::unique_ptr<MCObjectTargetWriter>
-Nios2AsmBackend::createObjectTargetWriter() const {
-  return createNios2ELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
+std::unique_ptr<MCObjectWriter>
+Nios2AsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
+  return createNios2ELFObjectWriter(OS,
+                                    MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-bool Nios2AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
+bool Nios2AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   return true;
 }
 
 // MCAsmBackend
 MCAsmBackend *llvm::createNios2AsmBackend(const Target &T,
-                                          const MCSubtargetInfo &STI,
                                           const MCRegisterInfo &MRI,
+                                          const Triple &TT, StringRef CPU,
                                           const MCTargetOptions &Options) {
-  return new Nios2AsmBackend(T, STI.getTargetTriple().getOS());
+
+  return new Nios2AsmBackend(T, TT.getOS());
 }

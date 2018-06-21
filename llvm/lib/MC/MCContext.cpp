@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCContext.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -105,7 +104,6 @@ void MCContext::reset() {
   MachOUniquingMap.clear();
   ELFUniquingMap.clear();
   COFFUniquingMap.clear();
-  WasmUniquingMap.clear();
 
   NextID.clear();
   AllowTemporaryLabels = true;
@@ -492,10 +490,8 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
                                          const Twine &Group, unsigned UniqueID,
                                          const char *BeginSymName) {
   MCSymbolWasm *GroupSym = nullptr;
-  if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
+  if (!Group.isTriviallyEmpty() && !Group.str().empty())
     GroupSym = cast<MCSymbolWasm>(getOrCreateSymbol(Group));
-    GroupSym->setComdat(true);
-  }
 
   return getWasmSection(Section, K, GroupSym, UniqueID, BeginSymName);
 }
@@ -516,18 +512,13 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 
   StringRef CachedName = Entry.first.SectionName;
 
-  MCSymbol *Begin = createSymbol(CachedName, false, false);
-  cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
+  MCSymbol *Begin = nullptr;
+  if (BeginSymName)
+    Begin = createTempSymbol(BeginSymName, false);
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
       MCSectionWasm(CachedName, Kind, GroupSym, UniqueID, Begin);
   Entry.second = Result;
-
-  auto *F = new MCDataFragment();
-  Result->getFragmentList().insert(Result->begin(), F);
-  F->setParent(Result);
-  Begin->setFragment(F);
-
   return Result;
 }
 
@@ -539,18 +530,14 @@ MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
 // Dwarf Management
 //===----------------------------------------------------------------------===//
 
-/// getDwarfFile - takes a file name and number to place in the dwarf file and
+/// getDwarfFile - takes a file name an number to place in the dwarf file and
 /// directory tables.  If the file number has already been allocated it is an
 /// error and zero is returned and the client reports the error, else the
 /// allocated file number is returned.  The file numbers may be in any order.
-Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
-                                           StringRef FileName,
-                                           unsigned FileNumber,
-                                           MD5::MD5Result *Checksum,
-                                           Optional<StringRef> Source,
-                                           unsigned CUID) {
+unsigned MCContext::getDwarfFile(StringRef Directory, StringRef FileName,
+                                 unsigned FileNumber, unsigned CUID) {
   MCDwarfLineTable &Table = MCDwarfLineTablesCUMap[CUID];
-  return Table.tryGetFile(Directory, FileName, Checksum, Source, FileNumber);
+  return Table.getFile(Directory, FileName, FileNumber);
 }
 
 /// isValidDwarfFileNumber - takes a dwarf file number and returns true if it
@@ -574,11 +561,6 @@ CodeViewContext &MCContext::getCVContext() {
   if (!CVContext.get())
     CVContext.reset(new CodeViewContext);
   return *CVContext.get();
-}
-
-void MCContext::clearCVLocSeen() {
-  if (CVContext)
-    CVContext->clearCVLocSeen();
 }
 
 //===----------------------------------------------------------------------===//

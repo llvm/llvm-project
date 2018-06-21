@@ -41,11 +41,8 @@ INITIALIZE_PASS(FuncletLayout, DEBUG_TYPE,
                 "Contiguously Lay Out Funclets", false, false)
 
 bool FuncletLayout::runOnMachineFunction(MachineFunction &F) {
-  // Even though this gets information from getEHScopeMembership(), this pass is
-  // only necessary for funclet-based EH personalities, in which these EH scopes
-  // are outlined at the end.
   DenseMap<const MachineBasicBlock *, int> FuncletMembership =
-      getEHScopeMembership(F);
+      getFuncletMembership(F);
   if (FuncletMembership.empty())
     return false;
 

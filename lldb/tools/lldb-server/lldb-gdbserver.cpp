@@ -188,7 +188,10 @@ void handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server, int argc,
     exit(1);
   }
   info.SetWorkingDirectory(FileSpec(cwd, true));
-  info.GetEnvironment() = Host::GetEnvironment();
+
+  StringList env;
+  Host::GetEnvironment(env);
+  info.GetEnvironmentEntries() = Args(env);
 
   gdb_server.SetLaunchInfo(info);
 

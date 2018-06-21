@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -49,33 +48,33 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// determineCalleeSaves().
   bool HasStackFrame = false;
 
-  /// Amount of stack frame size, not including callee-saved registers.
+  /// \brief Amount of stack frame size, not including callee-saved registers.
   unsigned LocalStackSize;
 
-  /// Amount of stack frame size used for saving callee-saved registers.
+  /// \brief Amount of stack frame size used for saving callee-saved registers.
   unsigned CalleeSavedStackSize;
 
-  /// Number of TLS accesses using the special (combinable)
+  /// \brief Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
   unsigned NumLocalDynamicTLSAccesses = 0;
 
-  /// FrameIndex for start of varargs area for arguments passed on the
+  /// \brief FrameIndex for start of varargs area for arguments passed on the
   /// stack.
   int VarArgsStackIndex = 0;
 
-  /// FrameIndex for start of varargs area for arguments passed in
+  /// \brief FrameIndex for start of varargs area for arguments passed in
   /// general purpose registers.
   int VarArgsGPRIndex = 0;
 
-  /// Size of the varargs area for arguments passed in general purpose
+  /// \brief Size of the varargs area for arguments passed in general purpose
   /// registers.
   unsigned VarArgsGPRSize = 0;
 
-  /// FrameIndex for start of varargs area for arguments passed in
+  /// \brief FrameIndex for start of varargs area for arguments passed in
   /// floating-point registers.
   int VarArgsFPRIndex = 0;
 
-  /// Size of the varargs area for arguments passed in floating-point
+  /// \brief Size of the varargs area for arguments passed in floating-point
   /// registers.
   unsigned VarArgsFPRSize = 0;
 
@@ -91,22 +90,11 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// other stack allocations.
   bool CalleeSaveStackHasFreeSpace = false;
 
-  /// Has a value when it is known whether or not the function uses a
-  /// redzone, and no value otherwise.
-  /// Initialized during frame lowering, unless the function has the noredzone
-  /// attribute, in which case it is set to false at construction.
-  Optional<bool> HasRedZone;
-
 public:
   AArch64FunctionInfo() = default;
 
   explicit AArch64FunctionInfo(MachineFunction &MF) {
     (void)MF;
-
-    // If we already know that the function doesn't have a redzone, set
-    // HasRedZone here.
-    if (MF.getFunction().hasFnAttribute(Attribute::NoRedZone))
-      HasRedZone = false;
   }
 
   unsigned getBytesInStackArgArea() const { return BytesInStackArgArea; }
@@ -144,9 +132,6 @@ public:
     return NumLocalDynamicTLSAccesses;
   }
 
-  Optional<bool> hasRedZone() const { return HasRedZone; }
-  void setHasRedZone(bool s) { HasRedZone = s; }
-  
   int getVarArgsStackIndex() const { return VarArgsStackIndex; }
   void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
 

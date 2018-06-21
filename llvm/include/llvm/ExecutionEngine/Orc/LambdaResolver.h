@@ -23,7 +23,7 @@ namespace llvm {
 namespace orc {
 
 template <typename DylibLookupFtorT, typename ExternalLookupFtorT>
-class LambdaResolver : public LegacyJITSymbolResolver {
+class LambdaResolver : public JITSymbolResolver {
 public:
   LambdaResolver(DylibLookupFtorT DylibLookupFtor,
                  ExternalLookupFtorT ExternalLookupFtor)

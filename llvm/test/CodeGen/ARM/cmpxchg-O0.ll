@@ -17,11 +17,9 @@ define { i8, i1 } @test_cmpxchg_8(i8* %addr, i8 %desired, i8 %new) nounwind {
 ; CHECK:     cmp{{(\.w)?}} [[STATUS]], #0
 ; CHECK:     bne [[RETRY]]
 ; CHECK: [[DONE]]:
-; Materialisation of a boolean is done with sub/clz/lsr
-; CHECK:     uxtb [[CMP1:r[0-9]+]], [[DESIRED]]
-; CHECK:     sub{{(s)?}} [[CMP1]], [[OLD]], [[CMP1]]
-; CHECK:     clz [[CMP2:r[0-9]+]], [[CMP1]]
-; CHECK:     lsr{{(s)?}} {{r[0-9]+}}, [[CMP2]], #5
+; CHECK:     uxtb [[DESIRED_ZEXT:r[0-9]+]], [[DESIRED]]
+; CHECK:     cmp{{(\.w)?}} [[OLD]], [[DESIRED_ZEXT]]
+; CHECK:     {{moveq|movweq}} {{r[0-9]+}}, #1
 ; CHECK:     dmb ish
   %res = cmpxchg i8* %addr, i8 %desired, i8 %new seq_cst monotonic
   ret { i8, i1 } %res
@@ -39,11 +37,9 @@ define { i16, i1 } @test_cmpxchg_16(i16* %addr, i16 %desired, i16 %new) nounwind
 ; CHECK:     cmp{{(\.w)?}} [[STATUS]], #0
 ; CHECK:     bne [[RETRY]]
 ; CHECK: [[DONE]]:
-; Materialisation of a boolean is done with sub/clz/lsr
-; CHECK:     uxth [[CMP1:r[0-9]+]], [[DESIRED]]
-; CHECK:     sub{{(s)?}} [[CMP1]], [[OLD]], [[CMP1]]
-; CHECK:     clz [[CMP2:r[0-9]+]], [[CMP1]]
-; CHECK:     lsr{{(s)?}} {{r[0-9]+}}, [[CMP2]], #5
+; CHECK:     uxth [[DESIRED_ZEXT:r[0-9]+]], [[DESIRED]]
+; CHECK:     cmp{{(\.w)?}} [[OLD]], [[DESIRED_ZEXT]]
+; CHECK:     {{moveq|movweq}} {{r[0-9]+}}, #1
 ; CHECK:     dmb ish
   %res = cmpxchg i16* %addr, i16 %desired, i16 %new seq_cst monotonic
   ret { i16, i1 } %res
@@ -61,10 +57,8 @@ define { i32, i1 } @test_cmpxchg_32(i32* %addr, i32 %desired, i32 %new) nounwind
 ; CHECK:     cmp{{(\.w)?}} [[STATUS]], #0
 ; CHECK:     bne [[RETRY]]
 ; CHECK: [[DONE]]:
-; Materialisation of a boolean is done with sub/clz/lsr
-; CHECK:     sub{{(s)?}} [[CMP1:r[0-9]+]], [[OLD]], [[DESIRED]]
-; CHECK:     clz [[CMP2:r[0-9]+]], [[CMP1]]
-; CHECK:     lsr{{(s)?}} {{r[0-9]+}}, [[CMP2]], #5
+; CHECK:     cmp{{(\.w)?}} [[OLD]], [[DESIRED]]
+; CHECK:     {{moveq|movweq}} {{r[0-9]+}}, #1
 ; CHECK:     dmb ish
   %res = cmpxchg i32* %addr, i32 %desired, i32 %new seq_cst monotonic
   ret { i32, i1 } %res

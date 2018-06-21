@@ -35,7 +35,6 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool allowUnsafeFPMath() const;
-  bool useShortPointers() const;
 
 public:
   explicit NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
@@ -59,6 +58,7 @@ private:
   bool tryIntrinsicNoChain(SDNode *N);
   bool tryIntrinsicChain(SDNode *N);
   void SelectTexSurfHandle(SDNode *N);
+  void SelectMatchAll(SDNode *N);
   bool tryLoad(SDNode *N);
   bool tryLoadVector(SDNode *N);
   bool tryLDGLDU(SDNode *N);
@@ -90,13 +90,13 @@ private:
                     SDValue &Offset);
   bool SelectADDRri64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
+
   bool SelectADDRsi_imp(SDNode *OpNode, SDValue Addr, SDValue &Base,
                         SDValue &Offset, MVT mvt);
   bool SelectADDRsi(SDNode *OpNode, SDValue Addr, SDValue &Base,
                     SDValue &Offset);
   bool SelectADDRsi64(SDNode *OpNode, SDValue Addr, SDValue &Base,
                       SDValue &Offset);
-  bool SelectADDRvar(SDNode *OpNode, SDValue Addr, SDValue &Value);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

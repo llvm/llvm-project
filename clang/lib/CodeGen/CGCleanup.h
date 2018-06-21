@@ -627,20 +627,15 @@ struct EHPersonality {
   static const EHPersonality MSVC_except_handler;
   static const EHPersonality MSVC_C_specific_handler;
   static const EHPersonality MSVC_CxxFrameHandler3;
-  static const EHPersonality GNU_Wasm_CPlusPlus;
 
   /// Does this personality use landingpads or the family of pad instructions
   /// designed to form funclets?
-  bool usesFuncletPads() const {
-    return isMSVCPersonality() || isWasmPersonality();
-  }
+  bool usesFuncletPads() const { return isMSVCPersonality(); }
 
   bool isMSVCPersonality() const {
     return this == &MSVC_except_handler || this == &MSVC_C_specific_handler ||
            this == &MSVC_CxxFrameHandler3;
   }
-
-  bool isWasmPersonality() const { return this == &GNU_Wasm_CPlusPlus; }
 
   bool isMSVCXXPersonality() const { return this == &MSVC_CxxFrameHandler3; }
 };

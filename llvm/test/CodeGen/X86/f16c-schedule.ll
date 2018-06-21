@@ -10,14 +10,14 @@
 define <4 x float> @test_vcvtph2ps_128(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_vcvtph2ps_128:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [8:1.00]
+; GENERIC-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [7:1.00]
 ; GENERIC-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; IVY-LABEL: test_vcvtph2ps_128:
 ; IVY:       # %bb.0:
-; IVY-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [8:1.00]
+; IVY-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [7:1.00]
 ; IVY-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [3:1.00]
 ; IVY-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; IVY-NEXT:    retq # sched: [1:1.00]
@@ -52,8 +52,8 @@ define <4 x float> @test_vcvtph2ps_128(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; ZNVER1-LABEL: test_vcvtph2ps_128:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [100:0.25]
-; ZNVER1-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtph2ps (%rdi), %xmm1 # sched: [100:?]
+; ZNVER1-NEXT:    vcvtph2ps %xmm0, %xmm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <8 x i16>, <8 x i16> *%a1
@@ -67,14 +67,14 @@ declare <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16>)
 define <8 x float> @test_vcvtph2ps_256(<8 x i16> %a0, <8 x i16> *%a1) {
 ; GENERIC-LABEL: test_vcvtph2ps_256:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [8:1.00]
+; GENERIC-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [7:1.00]
 ; GENERIC-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; IVY-LABEL: test_vcvtph2ps_256:
 ; IVY:       # %bb.0:
-; IVY-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [8:1.00]
+; IVY-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [7:1.00]
 ; IVY-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [3:1.00]
 ; IVY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; IVY-NEXT:    retq # sched: [1:1.00]
@@ -109,8 +109,8 @@ define <8 x float> @test_vcvtph2ps_256(<8 x i16> %a0, <8 x i16> *%a1) {
 ;
 ; ZNVER1-LABEL: test_vcvtph2ps_256:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [100:0.25]
-; ZNVER1-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtph2ps (%rdi), %ymm1 # sched: [100:?]
+; ZNVER1-NEXT:    vcvtph2ps %xmm0, %ymm0 # sched: [100:?]
 ; ZNVER1-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load <8 x i16>, <8 x i16> *%a1
@@ -125,13 +125,13 @@ define <8 x i16> @test_vcvtps2ph_128(<4 x float> %a0, <4 x float> %a1, <4 x i16>
 ; GENERIC-LABEL: test_vcvtps2ph_128:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [4:1.00]
+; GENERIC-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [7:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; IVY-LABEL: test_vcvtps2ph_128:
 ; IVY:       # %bb.0:
 ; IVY-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [3:1.00]
-; IVY-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [4:1.00]
+; IVY-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [7:1.00]
 ; IVY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vcvtps2ph_128:
@@ -143,7 +143,7 @@ define <8 x i16> @test_vcvtps2ph_128(<4 x float> %a0, <4 x float> %a1, <4 x i16>
 ; BROADWELL-LABEL: test_vcvtps2ph_128:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [4:1.00]
-; BROADWELL-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [5:1.00]
+; BROADWELL-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vcvtps2ph_128:
@@ -155,13 +155,13 @@ define <8 x i16> @test_vcvtps2ph_128(<4 x float> %a0, <4 x float> %a1, <4 x i16>
 ; BTVER2-LABEL: test_vcvtps2ph_128:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [4:1.00]
+; BTVER2-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [3:1.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_vcvtps2ph_128:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [100:0.25]
-; ZNVER1-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtps2ph $0, %xmm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vcvtps2ph $0, %xmm1, (%rdi) # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a0, i32 0)
   %2 = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a1, i32 0)
@@ -175,15 +175,15 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; GENERIC-LABEL: test_vcvtps2ph_256:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [4:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
+; GENERIC-NEXT:    vzeroupper
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; IVY-LABEL: test_vcvtps2ph_256:
 ; IVY:       # %bb.0:
 ; IVY-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [3:1.00]
-; IVY-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [4:1.00]
-; IVY-NEXT:    vzeroupper # sched: [100:0.33]
+; IVY-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
+; IVY-NEXT:    vzeroupper
 ; IVY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vcvtps2ph_256:
@@ -196,7 +196,7 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; BROADWELL-LABEL: test_vcvtps2ph_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [6:1.00]
-; BROADWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
+; BROADWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [4:1.00]
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
@@ -210,14 +210,14 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; BTVER2-LABEL: test_vcvtps2ph_256:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [6:2.00]
-; BTVER2-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:2.00]
+; BTVER2-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [11:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_vcvtps2ph_256:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [100:0.25]
-; ZNVER1-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [100:0.25]
-; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
+; ZNVER1-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [100:?]
+; ZNVER1-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [100:?]
+; ZNVER1-NEXT:    vzeroupper # sched: [100:?]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a0, i32 0)
   %2 = call <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a1, i32 0)

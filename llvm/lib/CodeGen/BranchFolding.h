@@ -75,7 +75,7 @@ class TargetRegisterInfo;
 
     std::vector<MergePotentialsElt> MergePotentials;
     SmallPtrSet<const MachineBasicBlock*, 2> TriedMerging;
-    DenseMap<const MachineBasicBlock *, int> EHScopeMembership;
+    DenseMap<const MachineBasicBlock *, int> FuncletMembership;
 
     class SameTailElt {
       MPIterator MPIter;
@@ -132,7 +132,7 @@ class TargetRegisterInfo;
     LivePhysRegs LiveRegs;
 
   public:
-    /// This class keeps track of branch frequencies of newly created
+    /// \brief This class keeps track of branch frequencies of newly created
     /// blocks and tail-merged blocks.
     class MBFIWrapper {
     public:

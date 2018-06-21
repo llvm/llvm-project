@@ -23,11 +23,11 @@
 
 namespace __scudo {
 
-struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) ScudoTSD {
+struct ALIGNED(64) ScudoTSD {
   AllocatorCache Cache;
   uptr QuarantineCachePlaceHolder[4];
 
-  void init();
+  void init(bool Shared);
   void commitBack();
 
   INLINE bool tryLock() {
@@ -36,23 +36,29 @@ struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) ScudoTSD {
       return true;
     }
     if (atomic_load_relaxed(&Precedence) == 0)
-      atomic_store_relaxed(&Precedence, static_cast<uptr>(
-          MonotonicNanoTime() >> FIRST_32_SECOND_64(16, 0)));
+      atomic_store_relaxed(&Precedence, MonotonicNanoTime());
     return false;
   }
 
   INLINE void lock() {
-    atomic_store_relaxed(&Precedence, 0);
     Mutex.Lock();
+    atomic_store_relaxed(&Precedence, 0);
   }
 
-  INLINE void unlock() { Mutex.Unlock(); }
+  INLINE void unlock() {
+    if (!UnlockRequired)
+      return;
+    Mutex.Unlock();
+  }
 
-  INLINE uptr getPrecedence() { return atomic_load_relaxed(&Precedence); }
+  INLINE u64 getPrecedence() {
+    return atomic_load_relaxed(&Precedence);
+  }
 
  private:
+  bool UnlockRequired;
   StaticSpinMutex Mutex;
-  atomic_uintptr_t Precedence;
+  atomic_uint64_t Precedence;
 };
 
 void initThread(bool MinimalInit);

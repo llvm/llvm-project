@@ -61,8 +61,6 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  SystemRuntime *GetSystemRuntime() override { return nullptr; }
-
   Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;

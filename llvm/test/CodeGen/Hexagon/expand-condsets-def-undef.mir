@@ -21,16 +21,16 @@ registers:
   - { id: 2, class: doubleregs }
   - { id: 3, class: intregs }
 liveins:
-  - { reg: '$p0', virtual-reg: '%0' }
-  - { reg: '$r0', virtual-reg: '%1' }
-  - { reg: '$d0', virtual-reg: '%2' }
+  - { reg: '%p0', virtual-reg: '%0' }
+  - { reg: '%r0', virtual-reg: '%1' }
+  - { reg: '%d0', virtual-reg: '%2' }
 
 body: |
   bb.0:
-    liveins: $r0, $d0, $p0
-    %0 = COPY $p0
-    %1 = COPY $r0
-    %2 = COPY $d0
+    liveins: %r0, %d0, %p0
+    %0 = COPY %p0
+    %1 = COPY %r0
+    %2 = COPY %d0
     ; Check that this instruction is unchanged (remains unpredicated)
     ; CHECK: %3:intregs = A2_addi %2.isub_hi, 1
     %3 = A2_addi %2.isub_hi, 1

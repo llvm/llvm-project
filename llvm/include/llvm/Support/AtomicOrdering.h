@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Atomic ordering constants.
+/// \brief Atomic ordering constants.
 ///
 /// These values are used by LLVM to represent atomic ordering for C++11's
 /// memory model and more, as detailed in docs/Atomics.rst.

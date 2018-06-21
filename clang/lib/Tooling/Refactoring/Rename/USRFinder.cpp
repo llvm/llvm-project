@@ -32,7 +32,7 @@ namespace {
 class NamedDeclOccurrenceFindingVisitor
     : public RecursiveSymbolVisitor<NamedDeclOccurrenceFindingVisitor> {
 public:
-  // Finds the NamedDecl at a point in the source.
+  // \brief Finds the NamedDecl at a point in the source.
   // \param Point the location in the source to search for the NamedDecl.
   explicit NamedDeclOccurrenceFindingVisitor(const SourceLocation Point,
                                              const ASTContext &Context)
@@ -58,7 +58,7 @@ public:
   const NamedDecl *getNamedDecl() const { return Result; }
 
 private:
-  // Determines if the Point is within Start and End.
+  // \brief Determines if the Point is within Start and End.
   bool isPointWithin(const SourceLocation Start, const SourceLocation End) {
     // FIXME: Add tests for Point == End.
     return Point == Start || Point == End ||

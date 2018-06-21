@@ -17,5 +17,5 @@ body: |
   bb.1:
     %1 = IMPLICIT_DEF
     %1 = C2_muxir undef %0, %1, @G
-    $r0 = COPY %1
+    %r0 = COPY %1
 ...

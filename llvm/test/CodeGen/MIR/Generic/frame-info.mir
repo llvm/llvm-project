@@ -41,7 +41,6 @@ tracksRegLiveness: true
 # CHECK-NEXT: hasOpaqueSPAdjustment: false
 # CHECK-NEXT: hasVAStart: false
 # CHECK-NEXT: hasMustTailInVarArgFunc: false
-# CHECK-NEXT: localFrameSize: 0
 # CHECK-NEXT: savePoint:       ''
 # CHECK-NEXT: restorePoint:    ''
 # CHECK: body
@@ -86,7 +85,6 @@ frameInfo:
   hasOpaqueSPAdjustment: true
   hasVAStart:      true
   hasMustTailInVarArgFunc: true
-  localFrameSize: 256
 body: |
   bb.0.entry:
 ...

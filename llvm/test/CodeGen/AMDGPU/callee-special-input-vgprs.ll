@@ -220,8 +220,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_y() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workitem_id_z:
 ; GCN: enable_vgpr_workitem_id = 2
 
-; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: v_mov_b32_e32 v1, v2
+; GCN: v_mov_b32_e32 v0, 0x22b
+; GCN: v_mov_b32_e32 v1, v2
 ; GCN: s_swappc_b64
 ; GCN-NOT: v0
 define amdgpu_kernel void @kern_indirect_other_arg_use_workitem_id_z() #1 {
@@ -368,7 +368,7 @@ define void @too_many_args_use_workitem_id_x_byval(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
   i32 %arg8, i32 %arg9, i32 %arg10, i32 %arg11, i32 %arg12, i32 %arg13, i32 %arg14, i32 %arg15,
   i32 %arg16, i32 %arg17, i32 %arg18, i32 %arg19, i32 %arg20, i32 %arg21, i32 %arg22, i32 %arg23,
-  i32 %arg24, i32 %arg25, i32 %arg26, i32 %arg27, i32 %arg28, i32 %arg29, i32 %arg30, i32 %arg31, i32 addrspace(5)* byval %arg32) #1 {
+  i32 %arg24, i32 %arg25, i32 %arg26, i32 %arg27, i32 %arg28, i32 %arg29, i32 %arg30, i32 %arg31, i32* byval %arg32) #1 {
   %val = call i32 @llvm.amdgcn.workitem.id.x()
   store volatile i32 %val, i32 addrspace(1)* undef
 
@@ -407,7 +407,7 @@ define void @too_many_args_use_workitem_id_x_byval(
   store volatile i32 %arg29, i32 addrspace(1)* undef
   store volatile i32 %arg30, i32 addrspace(1)* undef
   store volatile i32 %arg31, i32 addrspace(1)* undef
-  %private = load volatile i32, i32 addrspace(5)* %arg32
+  %private = load volatile i32, i32* %arg32
   ret void
 }
 
@@ -423,7 +423,7 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN: enable_vgpr_workitem_id = 0
 
 ; GCN: s_mov_b32 s33, s7
-; GCN: s_add_u32 s32, s33, 0x400{{$}}
+; GCN: s_add_u32 s32, s33, 0x200{{$}}
 
 ; GCN-NOT: s32
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
@@ -435,8 +435,8 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 {
-  %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 999, i32 addrspace(5)* %alloca
+  %alloca = alloca i32, align 4
+  store volatile i32 999, i32* %alloca
   call void @too_many_args_use_workitem_id_x_byval(
     i32 10, i32 20, i32 30, i32 40,
     i32 50, i32 60, i32 70, i32 80,
@@ -446,7 +446,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
     i32 210, i32 220, i32 230, i32 240,
     i32 250, i32 260, i32 270, i32 280,
     i32 290, i32 300, i32 310, i32 320,
-    i32 addrspace(5)* %alloca)
+    i32* %alloca)
   ret void
 }
 
@@ -460,8 +460,8 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
 ; GCN: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
-  %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 999, i32 addrspace(5)* %alloca
+  %alloca = alloca i32, align 4
+  store volatile i32 999, i32* %alloca
   call void @too_many_args_use_workitem_id_x_byval(
     i32 10, i32 20, i32 30, i32 40,
     i32 50, i32 60, i32 70, i32 80,
@@ -471,7 +471,7 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
     i32 210, i32 220, i32 230, i32 240,
     i32 250, i32 260, i32 270, i32 280,
     i32 290, i32 300, i32 310, i32 320,
-    i32 addrspace(5)* %alloca)
+    i32* %alloca)
   ret void
 }
 

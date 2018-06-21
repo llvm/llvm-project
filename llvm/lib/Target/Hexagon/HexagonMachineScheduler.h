@@ -49,6 +49,9 @@ class VLIWResourceModel {
   unsigned TotalPackets = 0;
 
 public:
+  /// Save the last formed packet.
+  std::vector<SUnit *> OldPacket;
+
   VLIWResourceModel(const TargetSubtargetInfo &STI, const TargetSchedModel *SM)
       : SchedModel(SM) {
     ResourcesModel = STI.getInstrInfo()->CreateTargetScheduleState(STI);
@@ -59,6 +62,8 @@ public:
 
     Packet.resize(SchedModel->getIssueWidth());
     Packet.clear();
+    OldPacket.resize(SchedModel->getIssueWidth());
+    OldPacket.clear();
     ResourcesModel->clearResources();
   }
 
@@ -79,8 +84,9 @@ public:
     ResourcesModel->clearResources();
   }
 
-  bool isResourceAvailable(SUnit *SU, bool IsTop);
-  bool reserveResources(SUnit *SU, bool IsTop);
+  bool isResourceAvailable(SUnit *SU);
+  bool reserveResources(SUnit *SU);
+  void savePacket();
   unsigned getTotalPackets() const { return TotalPackets; }
   bool isInPacket(SUnit *SU) const { return is_contained(Packet, SU); }
 };
@@ -96,9 +102,6 @@ public:
   /// Schedule - This is called back from ScheduleDAGInstrs::Run() when it's
   /// time to do some work.
   void schedule() override;
-
-  RegisterClassInfo *getRegClassInfo() { return RegClassInfo; }
-  int getBBSize() { return BB->size(); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -126,7 +129,7 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
   /// Represent the type of SchedCandidate found within a single queue.
   enum CandResult {
     NoCand, NodeOrder, SingleExcess, SingleCritical, SingleMax, MultiPressure,
-    BestCost, Weak};
+    BestCost};
 
   /// Each Scheduling boundary is associated with ready queues. It tracks the
   /// current cycle in whichever direction at has moved, and maintains the state
@@ -144,7 +147,6 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
 
     unsigned CurrCycle = 0;
     unsigned IssueCount = 0;
-    unsigned CriticalPathLength = 0;
 
     /// MinReadyCycle - Cycle of the soonest available instruction.
     unsigned MinReadyCycle = std::numeric_limits<unsigned>::max();
@@ -166,27 +168,7 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
     void init(VLIWMachineScheduler *dag, const TargetSchedModel *smodel) {
       DAG = dag;
       SchedModel = smodel;
-      CurrCycle = 0;
       IssueCount = 0;
-      // Initialize the critical path length limit, which used by the scheduling
-      // cost model to determine the value for scheduling an instruction. We use
-      // a slightly different heuristic for small and large functions. For small
-      // functions, it's important to use the height/depth of the instruction.
-      // For large functions, prioritizing by height or depth increases spills.
-      CriticalPathLength = DAG->getBBSize() / SchedModel->getIssueWidth();
-      if (DAG->getBBSize() < 50)
-        // We divide by two as a cheap and simple heuristic to reduce the
-        // critcal path length, which increases the priority of using the graph
-        // height/depth in the scheduler's cost computation.
-        CriticalPathLength >>= 1;
-      else {
-        // For large basic blocks, we prefer a larger critical path length to
-        // decrease the priority of using the graph height/depth.
-        unsigned MaxPath = 0;
-        for (auto &SU : DAG->SUnits)
-          MaxPath = std::max(MaxPath, isTop() ? SU.getHeight() : SU.getDepth());
-        CriticalPathLength = std::max(CriticalPathLength, MaxPath) + 1;
-      }
     }
 
     bool isTop() const {
@@ -206,13 +188,6 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
     void removeReady(SUnit *SU);
 
     SUnit *pickOnlyChoice();
-
-    bool isLatencyBound(SUnit *SU) {
-      if (CurrCycle >= CriticalPathLength)
-        return true;
-      unsigned PathLength = isTop() ? SU->getHeight() : SU->getDepth();
-      return CriticalPathLength - CurrCycle <= PathLength;
-    }
   };
 
   VLIWMachineScheduler *DAG = nullptr;
@@ -221,9 +196,6 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
   // State of the top and bottom scheduled instruction boundaries.
   VLIWSchedBoundary Top;
   VLIWSchedBoundary Bot;
-
-  /// List of pressure sets that have a high pressure level in the region.
-  std::vector<bool> HighPressureSets;
 
 public:
   /// SUnit::NodeQueueId: 0 (none), 1 (top), 2 (bot), 3 (both)
@@ -245,7 +217,7 @@ public:
 
   void releaseBottomNode(SUnit *SU) override;
 
-  unsigned reportPackets() {
+  unsigned ReportPackets() {
     return Top.ResourceModel->getTotalPackets() +
            Bot.ResourceModel->getTotalPackets();
   }
@@ -253,13 +225,11 @@ public:
 protected:
   SUnit *pickNodeBidrectional(bool &IsTopNode);
 
-  int pressureChange(const SUnit *SU, bool isBotUp);
-
   int SchedulingCost(ReadyQueue &Q,
                      SUnit *SU, SchedCandidate &Candidate,
                      RegPressureDelta &Delta, bool verbose);
 
-  CandResult pickNodeFromQueue(VLIWSchedBoundary &Zone,
+  CandResult pickNodeFromQueue(ReadyQueue &Q,
                                const RegPressureTracker &RPTracker,
                                SchedCandidate &Candidate);
 #ifndef NDEBUG

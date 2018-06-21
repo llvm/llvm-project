@@ -21,8 +21,8 @@ class FormatTestJS : public ::testing::Test {
 protected:
   static std::string format(llvm::StringRef Code, unsigned Offset,
                             unsigned Length, const FormatStyle &Style) {
-    LLVM_DEBUG(llvm::errs() << "---\n");
-    LLVM_DEBUG(llvm::errs() << Code << "\n\n");
+    DEBUG(llvm::errs() << "---\n");
+    DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
     FormattingAttemptStatus Status;
     tooling::Replacements Replaces =
@@ -30,7 +30,7 @@ protected:
     EXPECT_TRUE(Status.FormatComplete);
     auto Result = applyAllReplacements(Code, Replaces);
     EXPECT_TRUE(static_cast<bool>(Result));
-    LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
     return *Result;
   }
 
@@ -49,8 +49,6 @@ protected:
   static void verifyFormat(
       llvm::StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
-    EXPECT_EQ(Code.str(), format(Code, Style))
-        << "Expected code is not stable";
     std::string Result = format(test::messUp(Code), Style);
     EXPECT_EQ(Code.str(), Result) << "Formatted:\n" << Result;
   }
@@ -59,8 +57,6 @@ protected:
       llvm::StringRef Expected,
       llvm::StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
-    EXPECT_EQ(Expected.str(), format(Expected, Style))
-        << "Expected code is not stable";
     std::string Result = format(Code, Style);
     EXPECT_EQ(Expected.str(), Result) << "Formatted:\n" << Result;
   }
@@ -298,7 +294,6 @@ TEST_F(FormatTestJS, ReservedWords) {
   verifyFormat("x.for = 1;");
   verifyFormat("x.of();");
   verifyFormat("of(null);");
-  verifyFormat("return of(null);");
   verifyFormat("import {of} from 'x';");
   verifyFormat("x.in();");
   verifyFormat("x.let();");
@@ -1162,17 +1157,6 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
                "foo() {}",
                getGoogleJSStyleWithColumns(10));
   verifyFormat("await theReckoning;", getGoogleJSStyleWithColumns(10));
-  verifyFormat("some['a']['b']", getGoogleJSStyleWithColumns(10));
-  verifyFormat("x = (a['a']\n"
-               "      ['b']);",
-               getGoogleJSStyleWithColumns(10));
-  verifyFormat("function f() {\n"
-               "  return foo.bar(\n"
-               "      (param): param is {\n"
-               "        a: SomeType\n"
-               "      }&ABC => 1)\n"
-               "}",
-               getGoogleJSStyleWithColumns(25));
 }
 
 TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {
@@ -1538,15 +1522,6 @@ TEST_F(FormatTestJS, ClassDeclarations) {
                "})\n"
                "class SessionListComponent implements OnDestroy, OnInit {\n"
                "}");
-}
-
-TEST_F(FormatTestJS, StrictPropInitWrap) {
-  const FormatStyle &Style = getGoogleJSStyleWithColumns(22);
-  verifyFormat("class X {\n"
-               "  strictPropInitField!:\n"
-               "      string;\n"
-               "}",
-               Style);
 }
 
 TEST_F(FormatTestJS, InterfaceDeclarations) {
@@ -2154,7 +2129,6 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
   verifyFormat("let x = foo!.bar();\n");
   verifyFormat("let x = foo ? bar! : baz;\n");
   verifyFormat("let x = !foo;\n");
-  verifyFormat("if (!+a) {\n}");
   verifyFormat("let x = foo[0]!;\n");
   verifyFormat("let x = (foo)!;\n");
   verifyFormat("let x = x(foo!);\n");

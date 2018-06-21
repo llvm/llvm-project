@@ -135,8 +135,31 @@ public:
     size_t
     GetStopDescription (char *dst, size_t dst_len);
 
+    %feature("autodoc", "
+    If the last stop on this thread was a thread plan that gathered a return value from the stop,
+    this function will fetch that stop result.  At present only the \"step-out\" thread plan gathers
+    stop return values.
+    ") GetStopReturnValue;
     SBValue
     GetStopReturnValue ();
+
+    %feature("autodoc", "
+    If the last stop on this thread was a thread plan that gathered an error value from the stop,
+    this function will fetch that stop result.  At present only the \"step-out\" thread plan gathers
+    stop error values, and that only for stepping out of Swift functions.
+    ") GetStopErrorValue;
+    SBValue
+    GetStopErrorValue ();
+
+//    FIXME: THis is a useful API, but our typemaps don't handle out bool types correctly.  We'll have to fix
+//    the typemaps before we can make this real.
+//    %feature("autodoc", "
+//    If the last stop on this thread was a thread plan that gathered a return or error value from the stop,
+//    this function will fetch that stop result.  Furthermore, the bool passed in will be set to whether it
+//    was an error or a return value.
+//    ") GetStopReturnOrErrorValue;
+//    SBValue
+//    GetStopReturnOrErrorValue (bool &is_swift_error_value);
 
     %feature("autodoc", "
     Returns a unique thread identifier (type lldb::tid_t, typically a 64-bit type)
@@ -211,11 +234,6 @@ public:
     void
     StepOver (lldb::RunMode stop_other_threads = lldb::eOnlyDuringStepping);
 
-    %feature("autodoc",
-    "Do a source level single step over in the currently selected thread.") StepOver;
-    void
-    StepOver (lldb::RunMode stop_other_threads, SBError &error);
-
     void
     StepInto (lldb::RunMode stop_other_threads = lldb::eOnlyDuringStepping);
 
@@ -223,7 +241,7 @@ public:
     StepInto (const char *target_name, lldb::RunMode stop_other_threads = lldb::eOnlyDuringStepping);
 
     %feature("autodoc", "
-    Step the current thread from the current source line to the line given by end_line, stopping if
+    Step  the current thread from the current source line to the line given by end_line, stopping if
     the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
     in any of the places we would normally stop.
     ") StepInto;
@@ -236,27 +254,11 @@ public:
     void
     StepOut ();
 
-    %feature("autodoc",
-    "Step out of the currently selected thread.") StepOut;
     void
-    StepOut (SBError &error);
-
-    void
-    StepOutOfFrame (SBFrame &frame);
-
-    %feature("autodoc",
-    "Step out of the specified frame.") StepOutOfFrame;
-    void
-    StepOutOfFrame (SBFrame &frame, SBError &error);
+    StepOutOfFrame (lldb::SBFrame &frame);
 
     void
     StepInstruction(bool step_over);
-
-    %feature("autodoc",
-    "Do an instruction level single step in the currently selected thread.
-    ") StepInstruction;
-    void
-    StepInstruction(bool step_over, SBError &error);
 
     SBError
     StepOverUntil (lldb::SBFrame &frame,
@@ -274,9 +276,6 @@ public:
 
     void
     RunToAddress (lldb::addr_t addr);
-
-    void
-    RunToAddress (lldb::addr_t addr, SBError &error);
 
     %feature("autodoc", "
     Force a return from the frame passed in (and any frames younger than it)
@@ -321,15 +320,9 @@ public:
     ") Suspend;
     bool
     Suspend();
-
-    bool
-    Suspend(SBError &error);
     
     bool
     Resume ();
-
-    bool
-    Resume (SBError &error);
     
     bool
     IsSuspended();

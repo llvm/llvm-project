@@ -24,4 +24,12 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   add_definitions( -DIMPORT_LIBLLDB )
 endif()
 
-add_dependencies(lldb lldb-suite)
+# Add lldb dependency on lldb-server if we can use it.
+if ( LLDB_CAN_USE_LLDB_SERVER )
+  add_dependencies(lldb lldb-server)
+endif()
+
+# Add lldb dependency on debugserver if we can use it.
+if ( LLDB_CAN_USE_DEBUGSERVER )
+  add_dependencies(lldb debugserver)
+endif()

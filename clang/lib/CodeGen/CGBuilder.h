@@ -20,7 +20,7 @@ namespace CodeGen {
 
 class CodeGenFunction;
 
-/// This is an IRBuilder insertion helper that forwards to
+/// \brief This is an IRBuilder insertion helper that forwards to
 /// CodeGenFunction::InsertHelper, which adds necessary metadata to
 /// instructions.
 class CGBuilderInserter : protected llvm::IRBuilderDefaultInserter {
@@ -29,7 +29,7 @@ public:
   explicit CGBuilderInserter(CodeGenFunction *CGF) : CGF(CGF) {}
 
 protected:
-  /// This forwards to CodeGenFunction::InsertHelper.
+  /// \brief This forwards to CodeGenFunction::InsertHelper.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const;
@@ -258,23 +258,23 @@ public:
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                        Src.getPointer(), Src.getAlignment().getQuantity(),
-                        Size,IsVolatile);
+    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
+    return CreateMemCpy(Dest.getPointer(), Src.getPointer(), Size,
+                        Align.getQuantity(), IsVolatile);
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                        Src.getPointer(), Src.getAlignment().getQuantity(),
-                        Size, IsVolatile);
+    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
+    return CreateMemCpy(Dest.getPointer(), Src.getPointer(), Size,
+                        Align.getQuantity(), IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
                                 bool IsVolatile = false) {
-    return CreateMemMove(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                         Src.getPointer(), Src.getAlignment().getQuantity(),
-                         Size, IsVolatile);
+    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
+    return CreateMemMove(Dest.getPointer(), Src.getPointer(), Size,
+                         Align.getQuantity(), IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemSet;

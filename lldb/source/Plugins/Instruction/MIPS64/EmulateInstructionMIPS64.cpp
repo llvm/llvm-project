@@ -983,10 +983,13 @@ bool EmulateInstructionMIPS64::EvaluateInstruction(uint32_t evaluate_options) {
    * mc_insn.getOpcode() returns decoded opcode. However to make use
    * of llvm::Mips::<insn> we would need "MipsGenInstrInfo.inc".
   */
-  const char *op_name = m_insn_info->getName(mc_insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(mc_insn.getOpcode());
 
-  if (op_name == NULL)
+  if (op_name_ref.empty())
     return false;
+
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   /*
    * Decoding has been done already. Just get the call-back function
@@ -1091,10 +1094,13 @@ bool EmulateInstructionMIPS64::Emulate_DADDiu(llvm::MCInst &insn) {
   dst = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   src = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  // If immediate is greater than 2^16 - 1 then clang generate LUI,
-  // (D)ADDIU,(D)SUBU instructions in prolog. Example lui    $1, 0x2 daddiu $1,
-  // $1, -0x5920 dsubu  $sp, $sp, $1 In this case, (D)ADDIU dst and src will be
-  // same and not equal to sp
+  // If immediate is greater than 2^16 - 1 then clang generate
+  // LUI, (D)ADDIU,(D)SUBU instructions in prolog.
+  // Example
+  // lui    $1, 0x2
+  // daddiu $1, $1, -0x5920
+  // dsubu  $sp, $sp, $1
+  // In this case, (D)ADDIU dst and src will be same and not equal to sp
   if (dst == src) {
     Context context;
 
@@ -1266,7 +1272,9 @@ bool EmulateInstructionMIPS64::Emulate_DSUBU_DADDU(llvm::MCInst &insn) {
   bool success = false;
   uint64_t result;
   uint8_t src, dst, rt;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   dst = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   src = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
@@ -1345,7 +1353,9 @@ bool EmulateInstructionMIPS64::Emulate_BXX_3ops(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs, rt;
   int64_t offset, pc, rs_val, rt_val, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   rt = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
@@ -1400,7 +1410,9 @@ bool EmulateInstructionMIPS64::Emulate_Bcond_Link(llvm::MCInst &insn) {
   uint32_t rs;
   int64_t offset, pc, target = 0;
   int64_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -1510,7 +1522,9 @@ bool EmulateInstructionMIPS64::Emulate_Bcond_Link_C(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs;
   int64_t offset, pc, rs_val, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -1578,7 +1592,9 @@ bool EmulateInstructionMIPS64::Emulate_BXX_2ops(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs;
   int64_t offset, pc, rs_val, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();
@@ -1669,7 +1685,9 @@ bool EmulateInstructionMIPS64::Emulate_BXX_3ops_C(llvm::MCInst &insn) {
   bool success = false;
   uint32_t rs, rt;
   int64_t offset, pc, rs_val, rt_val, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
@@ -1752,7 +1770,9 @@ bool EmulateInstructionMIPS64::Emulate_BXX_2ops_C(llvm::MCInst &insn) {
   uint32_t rs;
   int64_t offset, pc, target = 0;
   int64_t rs_val;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
   uint32_t current_inst_size = m_insn_info->get(insn.getOpcode()).getSize();
 
   rs = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
@@ -2003,7 +2023,9 @@ bool EmulateInstructionMIPS64::Emulate_FP_branch(llvm::MCInst &insn) {
   bool success = false;
   uint32_t cc, fcsr;
   int64_t pc, offset, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   /*
    * BC1F cc, offset
@@ -2137,7 +2159,9 @@ bool EmulateInstructionMIPS64::Emulate_3D_branch(llvm::MCInst &insn) {
   bool success = false;
   uint32_t cc, fcsr;
   int64_t pc, offset, target = 0;
-  const char *op_name = m_insn_info->getName(insn.getOpcode()).data();
+  llvm::StringRef op_name_ref = m_insn_info->getName(insn.getOpcode());
+  std::string op_name_str = op_name_ref;
+  const char *op_name = op_name_str.c_str();
 
   cc = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   offset = insn.getOperand(1).getImm();

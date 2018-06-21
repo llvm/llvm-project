@@ -7,7 +7,7 @@ define i32 @and_1(i8 zeroext %a, i8 zeroext %b, i32 %x) {
 ; CHECK-LABEL: and_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %dil, %sil
+; CHECK-NEXT:    andb %dil, %sil
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %1 = and i8 %b, %a
@@ -19,7 +19,7 @@ define i32 @and_1(i8 zeroext %a, i8 zeroext %b, i32 %x) {
 define zeroext i1 @and_2(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: and_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb %dil, %sil
+; CHECK-NEXT:    andb %dil, %sil
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %1 = and i8 %b, %a

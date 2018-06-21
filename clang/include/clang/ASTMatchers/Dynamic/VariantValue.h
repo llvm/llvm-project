@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Polymorphic value type.
+/// \brief Polymorphic value type.
 ///
 /// Supports all the types required for dynamic Matcher construction.
 ///  Used by the registry to construct matchers in a generic way.
@@ -28,7 +28,7 @@ namespace clang {
 namespace ast_matchers {
 namespace dynamic {
 
-/// Kind identifier.
+/// \brief Kind identifier.
 ///
 /// It supports all types that VariantValue can contain.
 class ArgKind {
@@ -40,10 +40,10 @@ class ArgKind {
     AK_Unsigned,
     AK_String
   };
-  /// Constructor for non-matcher types.
+  /// \brief Constructor for non-matcher types.
   ArgKind(Kind K) : K(K) { assert(K != AK_Matcher); }
 
-  /// Constructor for matcher types.
+  /// \brief Constructor for matcher types.
   ArgKind(ast_type_traits::ASTNodeKind MatcherKind)
       : K(AK_Matcher), MatcherKind(MatcherKind) {}
 
@@ -53,7 +53,7 @@ class ArgKind {
     return MatcherKind;
   }
 
-  /// Determines if this type can be converted to \p To.
+  /// \brief Determines if this type can be converted to \p To.
   ///
   /// \param To the requested destination type.
   ///
@@ -67,7 +67,7 @@ class ArgKind {
     return K < Other.K;
   }
 
-  /// String representation of the type.
+  /// \brief String representation of the type.
   std::string asString() const;
 
 private:
@@ -77,7 +77,7 @@ private:
 
 using ast_matchers::internal::DynTypedMatcher;
 
-/// A variant matcher object.
+/// \brief A variant matcher object.
 ///
 /// The purpose of this object is to abstract simple and polymorphic matchers
 /// into a single object type.
@@ -91,7 +91,7 @@ using ast_matchers::internal::DynTypedMatcher;
 ///  - hasTypedMatcher<T>()/getTypedMatcher<T>(): These calls will determine if
 ///    the underlying matcher(s) can unambiguously return a Matcher<T>.
 class VariantMatcher {
-  /// Methods that depend on T from hasTypedMatcher/getTypedMatcher.
+  /// \brief Methods that depend on T from hasTypedMatcher/getTypedMatcher.
   class MatcherOps {
   public:
     MatcherOps(ast_type_traits::ASTNodeKind NodeKind) : NodeKind(NodeKind) {}
@@ -99,12 +99,12 @@ class VariantMatcher {
     bool canConstructFrom(const DynTypedMatcher &Matcher,
                           bool &IsExactMatch) const;
 
-    /// Convert \p Matcher the destination type and return it as a new
+    /// \brief Convert \p Matcher the destination type and return it as a new
     /// DynTypedMatcher.
     virtual DynTypedMatcher
     convertMatcher(const DynTypedMatcher &Matcher) const = 0;
 
-    /// Constructs a variadic typed matcher from \p InnerMatchers.
+    /// \brief Constructs a variadic typed matcher from \p InnerMatchers.
     /// Will try to convert each inner matcher to the destination type and
     /// return llvm::None if it fails to do so.
     llvm::Optional<DynTypedMatcher>
@@ -118,7 +118,7 @@ class VariantMatcher {
     ast_type_traits::ASTNodeKind NodeKind;
   };
 
-  /// Payload interface to be specialized by each matcher type.
+  /// \brief Payload interface to be specialized by each matcher type.
   ///
   /// It follows a similar interface as VariantMatcher itself.
   class Payload {
@@ -133,39 +133,39 @@ class VariantMatcher {
   };
 
 public:
-  /// A null matcher.
+  /// \brief A null matcher.
   VariantMatcher();
 
-  /// Clones the provided matcher.
+  /// \brief Clones the provided matcher.
   static VariantMatcher SingleMatcher(const DynTypedMatcher &Matcher);
 
-  /// Clones the provided matchers.
+  /// \brief Clones the provided matchers.
   ///
   /// They should be the result of a polymorphic matcher.
   static VariantMatcher
   PolymorphicMatcher(std::vector<DynTypedMatcher> Matchers);
 
-  /// Creates a 'variadic' operator matcher.
+  /// \brief Creates a 'variadic' operator matcher.
   ///
   /// It will bind to the appropriate type on getTypedMatcher<T>().
   static VariantMatcher
   VariadicOperatorMatcher(DynTypedMatcher::VariadicOperator Op,
                           std::vector<VariantMatcher> Args);
 
-  /// Makes the matcher the "null" matcher.
+  /// \brief Makes the matcher the "null" matcher.
   void reset();
 
-  /// Whether the matcher is null.
+  /// \brief Whether the matcher is null.
   bool isNull() const { return !Value; }
 
-  /// Return a single matcher, if there is no ambiguity.
+  /// \brief Return a single matcher, if there is no ambiguity.
   ///
   /// \returns the matcher, if there is only one matcher. An empty Optional, if
   /// the underlying matcher is a polymorphic matcher with more than one
   /// representation.
   llvm::Optional<DynTypedMatcher> getSingleMatcher() const;
 
-  /// Determines if the contained matcher can be converted to
+  /// \brief Determines if the contained matcher can be converted to
   ///   \c Matcher<T>.
   ///
   /// For the Single case, it returns true if it can be converted to
@@ -179,7 +179,7 @@ public:
     return Value->getTypedMatcher(TypedMatcherOps<T>()).hasValue();
   }
 
-  /// Determines if the contained matcher can be converted to \p Kind.
+  /// \brief Determines if the contained matcher can be converted to \p Kind.
   ///
   /// \param Kind the requested destination type.
   ///
@@ -192,7 +192,7 @@ public:
     return false;
   }
 
-  /// Return this matcher as a \c Matcher<T>.
+  /// \brief Return this matcher as a \c Matcher<T>.
   ///
   /// Handles the different types (Single, Polymorphic) accordingly.
   /// Asserts that \c hasTypedMatcher<T>() is true.
@@ -203,7 +203,7 @@ public:
         ->template convertTo<T>();
   }
 
-  /// String representation of the type of the value.
+  /// \brief String representation of the type of the value.
   ///
   /// If the underlying matcher is a polymorphic one, the string will show all
   /// the types.
@@ -234,7 +234,7 @@ struct VariantMatcher::TypedMatcherOps final : VariantMatcher::MatcherOps {
   }
 };
 
-/// Variant value class.
+/// \brief Variant value class.
 ///
 /// Basically, a tagged union with value type semantics.
 /// It is used by the registry as the return value and argument type for the
@@ -256,46 +256,46 @@ public:
   ~VariantValue();
   VariantValue &operator=(const VariantValue &Other);
 
-  /// Specific constructors for each supported type.
+  /// \brief Specific constructors for each supported type.
   VariantValue(bool Boolean);
   VariantValue(double Double);
   VariantValue(unsigned Unsigned);
   VariantValue(StringRef String);
   VariantValue(const VariantMatcher &Matchers);
 
-  /// Constructs an \c unsigned value (disambiguation from bool).
+  /// \brief Constructs an \c unsigned value (disambiguation from bool).
   VariantValue(int Signed) : VariantValue(static_cast<unsigned>(Signed)) {}
 
-  /// Returns true iff this is not an empty value.
+  /// \brief Returns true iff this is not an empty value.
   explicit operator bool() const { return hasValue(); }
   bool hasValue() const { return Type != VT_Nothing; }
 
-  /// Boolean value functions.
+  /// \brief Boolean value functions.
   bool isBoolean() const;
   bool getBoolean() const;
   void setBoolean(bool Boolean);
 
-  /// Double value functions.
+  /// \brief Double value functions.
   bool isDouble() const;
   double getDouble() const;
   void setDouble(double Double);
 
-  /// Unsigned value functions.
+  /// \brief Unsigned value functions.
   bool isUnsigned() const;
   unsigned getUnsigned() const;
   void setUnsigned(unsigned Unsigned);
 
-  /// String value functions.
+  /// \brief String value functions.
   bool isString() const;
   const std::string &getString() const;
   void setString(StringRef String);
 
-  /// Matcher value functions.
+  /// \brief Matcher value functions.
   bool isMatcher() const;
   const VariantMatcher &getMatcher() const;
   void setMatcher(const VariantMatcher &Matcher);
 
-  /// Determines if the contained value can be converted to \p Kind.
+  /// \brief Determines if the contained value can be converted to \p Kind.
   ///
   /// \param Kind the requested destination type.
   ///
@@ -303,7 +303,7 @@ public:
   ///   conversion.
   bool isConvertibleTo(ArgKind Kind, unsigned* Specificity) const;
 
-  /// Determines if the contained value can be converted to any kind
+  /// \brief Determines if the contained value can be converted to any kind
   /// in \p Kinds.
   ///
   /// \param Kinds the requested destination types.
@@ -313,13 +313,13 @@ public:
   ///   conversions.
   bool isConvertibleTo(ArrayRef<ArgKind> Kinds, unsigned *Specificity) const;
 
-  /// String representation of the type of the value.
+  /// \brief String representation of the type of the value.
   std::string getTypeAsString() const;
 
 private:
   void reset();
 
-  /// All supported value types.
+  /// \brief All supported value types.
   enum ValueType {
     VT_Nothing,
     VT_Boolean,
@@ -329,7 +329,7 @@ private:
     VT_Matcher
   };
 
-  /// All supported value types.
+  /// \brief All supported value types.
   union AllValues {
     unsigned Unsigned;
     double Double;

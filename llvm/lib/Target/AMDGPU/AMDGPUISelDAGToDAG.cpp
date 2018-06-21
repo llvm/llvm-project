@@ -8,7 +8,7 @@
 //==-----------------------------------------------------------------------===//
 //
 /// \file
-/// Defines an instruction selector for the AMDGPU target.
+/// \brief Defines an instruction selector for the AMDGPU target.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,7 +16,6 @@
 #include "AMDGPUArgumentUsageInfo.h"
 #include "AMDGPUISelLowering.h" // For AMDGPUISD
 #include "AMDGPUInstrInfo.h"
-#include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPURegisterInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
@@ -25,16 +24,15 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -45,7 +43,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
@@ -86,8 +83,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AMDGPUArgumentUsageInfo>();
-    AU.addRequired<AMDGPUPerfHintAnalysis>();
-    AU.addRequired<DivergenceAnalysis>();
     SelectionDAGISel::getAnalysisUsage(AU);
   }
 
@@ -103,6 +98,10 @@ private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
   bool isNoNanSrc(SDValue N) const;
   bool isInlineImmediate(const SDNode *N) const;
+  bool FoldOperand(SDValue &Src, SDValue &Sel, SDValue &Neg, SDValue &Abs,
+                   const R600InstrInfo *TII);
+  bool FoldOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
+  bool FoldDotOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
 
   bool isConstantLoad(const MemSDNode *N, int cbID) const;
   bool isUniformBr(const SDNode *N) const;
@@ -163,7 +162,6 @@ private:
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
                         bool &Imm) const;
-  SDValue Expand32BitAddress(SDValue Addr) const;
   bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue &Offset,
                   bool &Imm) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
@@ -218,7 +216,7 @@ private:
   void SelectS_BFE(SDNode *N);
   bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
-  void SelectFMAD_FMA(SDNode *N);
+  void SelectFMAD(SDNode *N);
   void SelectATOMIC_CMP_SWAP(SDNode *N);
 
 protected:
@@ -244,19 +242,17 @@ public:
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
-INITIALIZE_PASS_DEPENDENCY(AMDGPUPerfHintAnalysis)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "isel",
                     "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 
-/// This pass converts a legalized DAG into a AMDGPU-specific
+/// \brief This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAMDGPUISelDag(TargetMachine *TM,
                                         CodeGenOpt::Level OptLevel) {
   return new AMDGPUDAGToDAGISel(TM, OptLevel);
 }
 
-/// This pass converts a legalized DAG into a R600-specific
+/// \brief This pass converts a legalized DAG into a R600-specific
 // DAG, ready for instruction scheduling.
 FunctionPass *llvm::createR600ISelDag(TargetMachine *TM,
                                       CodeGenOpt::Level OptLevel) {
@@ -292,7 +288,7 @@ bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
   return false;
 }
 
-/// Determine the register class for \p OpNo
+/// \brief Determine the register class for \p OpNo
 /// \returns The register class of the virtual register that will be used for
 /// the given operand number \OpNo or NULL if the register class cannot be
 /// determined.
@@ -398,6 +394,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   EVT VT = N->getValueType(0);
   unsigned NumVectorElts = VT.getVectorNumElements();
   EVT EltVT = VT.getVectorElementType();
+  const AMDGPURegisterInfo *TRI = Subtarget->getRegisterInfo();
   SDLoc DL(N);
   SDValue RegClass = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
 
@@ -423,9 +420,10 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
       IsRegSeq = false;
       break;
     }
-    unsigned Sub = AMDGPURegisterInfo::getSubRegFromChannel(i);
     RegSeqArgs[1 + (2 * i)] = N->getOperand(i);
-    RegSeqArgs[1 + (2 * i) + 1] = CurDAG->getTargetConstant(Sub, DL, MVT::i32);
+    RegSeqArgs[1 + (2 * i) + 1] =
+            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(i), DL,
+                                      MVT::i32);
   }
   if (NOps != NumVectorElts) {
     // Fill in the missing undef elements if this was a scalar_to_vector.
@@ -433,10 +431,9 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     MachineSDNode *ImpDef = CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF,
                                                    DL, EltVT);
     for (unsigned i = NOps; i < NumVectorElts; ++i) {
-      unsigned Sub = AMDGPURegisterInfo::getSubRegFromChannel(i);
       RegSeqArgs[1 + (2 * i)] = SDValue(ImpDef, 0);
       RegSeqArgs[1 + (2 * i) + 1] =
-          CurDAG->getTargetConstant(Sub, DL, MVT::i32);
+        CurDAG->getTargetConstant(TRI->getSubRegFromChannel(i), DL, MVT::i32);
     }
   }
 
@@ -453,10 +450,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
 
   if (isa<AtomicSDNode>(N) ||
-      (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC ||
-       Opc == AMDGPUISD::ATOMIC_LOAD_FADD ||
-       Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
-       Opc == AMDGPUISD::ATOMIC_LOAD_FMAX))
+      (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC))
     N = glueCopyToM0(N);
 
   switch (Opc) {
@@ -493,8 +487,9 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::BUILD_VECTOR: {
     EVT VT = N->getValueType(0);
     unsigned NumVectorElts = VT.getVectorNumElements();
-    if (VT.getScalarSizeInBits() == 16) {
-      if (Opc == ISD::BUILD_VECTOR && NumVectorElts == 2) {
+
+    if (VT == MVT::v2i16 || VT == MVT::v2f16) {
+      if (Opc == ISD::BUILD_VECTOR) {
         uint32_t LHSVal, RHSVal;
         if (getConstantValue(N->getOperand(0), LHSVal) &&
             getConstantValue(N->getOperand(1), RHSVal)) {
@@ -624,8 +619,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectBRCOND(N);
     return;
   case ISD::FMAD:
-  case ISD::FMA:
-    SelectFMAD_FMA(N);
+    SelectFMAD(N);
     return;
   case AMDGPUISD::ATOMIC_CMP_SWAP:
     SelectATOMIC_CMP_SWAP(N);
@@ -639,8 +633,7 @@ bool AMDGPUDAGToDAGISel::isConstantLoad(const MemSDNode *N, int CbId) const {
   if (!N->readMem())
     return false;
   if (CbId == -1)
-    return N->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
-           N->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT;
+    return N->getAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS;
 
   return N->getAddressSpace() == AMDGPUASI.CONSTANT_BUFFER_0 + CbId;
 }
@@ -766,11 +759,12 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
 
   if (ProduceCarry) {
     // Replace the carry-use
-    ReplaceUses(SDValue(N, 1), SDValue(AddHi, 1));
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 1), SDValue(AddHi, 1));
   }
 
   // Replace the remaining uses.
-  ReplaceNode(N, RegSequence);
+  CurDAG->ReplaceAllUsesWith(N, RegSequence);
+  CurDAG->RemoveDeadNode(N);
 }
 
 void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
@@ -1441,45 +1435,19 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
   return true;
 }
 
-SDValue AMDGPUDAGToDAGISel::Expand32BitAddress(SDValue Addr) const {
-  if (Addr.getValueType() != MVT::i32)
-    return Addr;
-
-  // Zero-extend a 32-bit address.
-  SDLoc SL(Addr);
-
-  const MachineFunction &MF = CurDAG->getMachineFunction();
-  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned AddrHiVal = Info->get32BitAddressHighBits();
-  SDValue AddrHi = CurDAG->getTargetConstant(AddrHiVal, SL, MVT::i32);
-
-  const SDValue Ops[] = {
-    CurDAG->getTargetConstant(AMDGPU::SReg_64_XEXECRegClassID, SL, MVT::i32),
-    Addr,
-    CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32),
-    SDValue(CurDAG->getMachineNode(AMDGPU::S_MOV_B32, SL, MVT::i32, AddrHi),
-            0),
-    CurDAG->getTargetConstant(AMDGPU::sub1, SL, MVT::i32),
-  };
-
-  return SDValue(CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, SL, MVT::i64,
-                                        Ops), 0);
-}
-
 bool AMDGPUDAGToDAGISel::SelectSMRD(SDValue Addr, SDValue &SBase,
                                      SDValue &Offset, bool &Imm) const {
   SDLoc SL(Addr);
-
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
 
     if (SelectSMRDOffset(N1, Offset, Imm)) {
-      SBase = Expand32BitAddress(N0);
+      SBase = N0;
       return true;
     }
   }
-  SBase = Expand32BitAddress(Addr);
+  SBase = Addr;
   Offset = CurDAG->getTargetConstant(0, SL, MVT::i32);
   Imm = true;
   return true;
@@ -1706,39 +1674,15 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   unsigned CondReg = UseSCCBr ? AMDGPU::SCC : AMDGPU::VCC;
   SDLoc SL(N);
 
-  if (!UseSCCBr) {
-    // This is the case that we are selecting to S_CBRANCH_VCCNZ.  We have not
-    // analyzed what generates the vcc value, so we do not know whether vcc
-    // bits for disabled lanes are 0.  Thus we need to mask out bits for
-    // disabled lanes.
-    //
-    // For the case that we select S_CBRANCH_SCC1 and it gets
-    // changed to S_CBRANCH_VCCNZ in SIFixSGPRCopies, SIFixSGPRCopies calls
-    // SIInstrInfo::moveToVALU which inserts the S_AND).
-    //
-    // We could add an analysis of what generates the vcc value here and omit
-    // the S_AND when is unnecessary. But it would be better to add a separate
-    // pass after SIFixSGPRCopies to do the unnecessary S_AND removal, so it
-    // catches both cases.
-    Cond = SDValue(CurDAG->getMachineNode(AMDGPU::S_AND_B64, SL, MVT::i1,
-                               CurDAG->getRegister(AMDGPU::EXEC, MVT::i1),
-                               Cond),
-                   0);
-  }
-
   SDValue VCC = CurDAG->getCopyToReg(N->getOperand(0), SL, CondReg, Cond);
   CurDAG->SelectNodeTo(N, BrOp, MVT::Other,
                        N->getOperand(2), // Basic Block
                        VCC.getValue(0));
 }
 
-void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
+void AMDGPUDAGToDAGISel::SelectFMAD(SDNode *N) {
   MVT VT = N->getSimpleValueType(0);
-  bool IsFMA = N->getOpcode() == ISD::FMA;
-  if (VT != MVT::f32 || (!Subtarget->hasMadMixInsts() &&
-                         !Subtarget->hasFmaMixInsts()) ||
-      ((IsFMA && Subtarget->hasMadMixInsts()) ||
-       (!IsFMA && Subtarget->hasFmaMixInsts()))) {
+  if (VT != MVT::f32 || !Subtarget->hasMadMixInsts()) {
     SelectCode(N);
     return;
   }
@@ -1748,13 +1692,13 @@ void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
   SDValue Src2 = N->getOperand(2);
   unsigned Src0Mods, Src1Mods, Src2Mods;
 
-  // Avoid using v_mad_mix_f32/v_fma_mix_f32 unless there is actually an operand
-  // using the conversion from f16.
+  // Avoid using v_mad_mix_f32 unless there is actually an operand using the
+  // conversion from f16.
   bool Sel0 = SelectVOP3PMadMixModsImpl(Src0, Src0, Src0Mods);
   bool Sel1 = SelectVOP3PMadMixModsImpl(Src1, Src1, Src1Mods);
   bool Sel2 = SelectVOP3PMadMixModsImpl(Src2, Src2, Src2Mods);
 
-  assert((IsFMA || !Subtarget->hasFP32Denormals()) &&
+  assert(!Subtarget->hasFP32Denormals() &&
          "fmad selected with denormals enabled");
   // TODO: We can select this with f32 denormals enabled if all the sources are
   // converted from f16 (in which case fmad isn't legal).
@@ -1770,9 +1714,7 @@ void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
       Zero, Zero
     };
 
-    CurDAG->SelectNodeTo(N,
-                         IsFMA ? AMDGPU::V_FMA_MIX_F32 : AMDGPU::V_MAD_MIX_F32,
-                         MVT::f32, Ops);
+    CurDAG->SelectNodeTo(N, AMDGPU::V_MAD_MIX_F32, MVT::f32, Ops);
   } else {
     SelectCode(N);
   }

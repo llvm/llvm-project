@@ -20,4 +20,4 @@ int main(int argc, char **argv)
   return 0;
 }
 
-// CHECK: ERROR: misaligned pointer when deallocating address
+// CHECK: ERROR: attempted to deallocate a chunk not properly aligned

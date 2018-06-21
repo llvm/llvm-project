@@ -56,6 +56,7 @@ public:
 private:
   const MemRegion *getVAListAsRegion(SVal SV, const Expr *VAExpr,
                                      bool &IsSymbolic, CheckerContext &C) const;
+  StringRef getVariableNameFromRegion(const MemRegion *Reg) const;
   const ExplodedNode *getStartCallSite(const ExplodedNode *N,
                                        const MemRegion *Reg) const;
 

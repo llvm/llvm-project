@@ -6,10 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
+#include <future>
+
 #include "GDBRemoteTestUtils.h"
+
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/StructuredData.h"
@@ -17,8 +19,6 @@
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Testing/Support/Error.h"
-#include "gmock/gmock.h"
-#include <future>
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
@@ -43,12 +43,10 @@ void Handle_QThreadSuffixSupported(MockServer &server, bool supported) {
     ASSERT_EQ(PacketResult::Success, server.SendUnimplementedResponse(nullptr));
 }
 
-void HandlePacket(MockServer &server,
-                  const testing::Matcher<const std::string &> &expected,
-                  StringRef response) {
+void HandlePacket(MockServer &server, StringRef expected, StringRef response) {
   StringExtractorGDBRemote request;
   ASSERT_EQ(PacketResult::Success, server.GetPacket(request));
-  ASSERT_THAT(request.GetStringRef(), expected);
+  ASSERT_EQ(expected, request.GetStringRef());
   ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
 }
 
@@ -169,14 +167,14 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
   llvm::Triple triple("i386-pc-linux");
 
   FileSpec file_specs[] = {
-      FileSpec("/foo/bar.so", false, FileSpec::Style::posix),
-      FileSpec("/foo/baz.so", false, FileSpec::Style::posix),
+      FileSpec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix),
+      FileSpec("/foo/baz.so", false, FileSpec::ePathSyntaxPosix),
 
       // This is a bit dodgy but we currently depend on GetModulesInfo not
       // performing denormalization. It can go away once the users
       // (DynamicLoaderPOSIXDYLD, at least) correctly set the path syntax for
       // the FileSpecs they create.
-      FileSpec("/foo/baw.so", false, FileSpec::Style::windows),
+      FileSpec("/foo/baw.so", false, FileSpec::ePathSyntaxWindows),
   };
   std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
@@ -202,7 +200,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
   llvm::Triple triple("i386-pc-linux");
 
-  FileSpec file_spec("/foo/bar.so", false, FileSpec::Style::posix);
+  FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
   std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
                  [&] { return client.GetModulesInfo(file_spec, triple); });
@@ -225,7 +223,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
   llvm::Triple triple("i386-pc-linux");
-  FileSpec file_spec("/foo/bar.so", false, FileSpec::Style::posix);
+  FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
 
   const char *invalid_responses[] = {
       // no UUID
@@ -325,22 +323,12 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
     return client.GetMemoryRegionInfo(addr, region_info);
   });
 
+  // name is: /foo/bar.so
   HandlePacket(server,
       "qMemoryRegionInfo:a000",
       "start:a000;size:2000;permissions:rx;name:2f666f6f2f6261722e736f;");
-  if (XMLDocument::XMLEnabled()) {
-    // In case we have XML support, this will also do a "qXfer:memory-map".
-    // Preceeded by a query for supported extensions. Pretend we don't support
-    // that.
-    HandlePacket(server, testing::StartsWith("qSupported:"), "");
-  }
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(addr, region_info.GetRange().GetRangeBase());
-  EXPECT_EQ(0x2000u, region_info.GetRange().GetByteSize());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetReadable());
-  EXPECT_EQ(MemoryRegionInfo::eNo, region_info.GetWritable());
-  EXPECT_EQ(MemoryRegionInfo::eYes, region_info.GetExecutable());
-  EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
+
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
@@ -351,12 +339,6 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
   });
 
   HandlePacket(server, "qMemoryRegionInfo:4000", "start:4000;size:0000;");
-  if (XMLDocument::XMLEnabled()) {
-    // In case we have XML support, this will also do a "qXfer:memory-map".
-    // Preceeded by a query for supported extensions. Pretend we don't support
-    // that.
-    HandlePacket(server, testing::StartsWith("qSupported:"), "");
-  }
   EXPECT_FALSE(result.get().Success());
 }
 

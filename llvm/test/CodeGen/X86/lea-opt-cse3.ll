@@ -5,8 +5,8 @@
 define i32 @foo(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    leal 4(%rdi,%rsi,2), %ecx
 ; X64-NEXT:    leal 4(%rdi,%rsi,4), %eax
 ; X64-NEXT:    imull %ecx, %eax
@@ -33,8 +33,8 @@ entry:
 define i32 @foo1(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    leal 4(%rdi,%rsi,4), %ecx
 ; X64-NEXT:    leal 4(%rdi,%rsi,8), %eax
 ; X64-NEXT:    imull %ecx, %eax
@@ -61,8 +61,8 @@ entry:
 define i32 @foo1_mult_basic_blocks(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo1_mult_basic_blocks:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    leal 4(%rdi,%rsi,4), %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $10, %ecx
@@ -91,7 +91,6 @@ define i32 @foo1_mult_basic_blocks(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB2_2: # %exit
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
   %mul = shl i32 %b, 2
@@ -114,8 +113,8 @@ exit:
 define i32 @foo1_mult_basic_blocks_illegal_scale(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; X64-LABEL: foo1_mult_basic_blocks_illegal_scale:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    # kill: def %esi killed %esi def %rsi
+; X64-NEXT:    # kill: def %edi killed %edi def %rdi
 ; X64-NEXT:    leal 4(%rdi,%rsi,2), %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $10, %ecx
@@ -144,7 +143,6 @@ define i32 @foo1_mult_basic_blocks_illegal_scale(i32 %a, i32 %b) local_unnamed_a
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB3_2: # %exit
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
   %mul = shl i32 %b, 1

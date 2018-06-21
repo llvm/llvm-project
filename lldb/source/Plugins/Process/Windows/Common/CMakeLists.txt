@@ -1,3 +1,6 @@
+include_directories(.)
+include_directories(../../Utility)
+
 set(PROC_WINDOWS_COMMON_SOURCES
   DebuggerThread.cpp
   LocalDebugDelegate.cpp

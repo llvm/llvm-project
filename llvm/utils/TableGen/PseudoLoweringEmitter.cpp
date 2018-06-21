@@ -120,13 +120,13 @@ addDagOperandMapping(Record *Rec, DagInit *Dag, CodeGenInstruction &Insn,
 }
 
 void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
-  LLVM_DEBUG(dbgs() << "Pseudo definition: " << Rec->getName() << "\n");
+  DEBUG(dbgs() << "Pseudo definition: " << Rec->getName() << "\n");
 
   // Validate that the result pattern has the corrent number and types
   // of arguments for the instruction it references.
   DagInit *Dag = Rec->getValueAsDag("ResultInst");
   assert(Dag && "Missing result instruction in pseudo expansion!");
-  LLVM_DEBUG(dbgs() << "  Result: " << *Dag << "\n");
+  DEBUG(dbgs() << "  Result: " << *Dag << "\n");
 
   DefInit *OpDef = dyn_cast<DefInit>(Dag->getOperator());
   if (!OpDef)
@@ -170,7 +170,7 @@ void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
   for (unsigned i = 0, e = SourceInsn.Operands.size(); i != e; ++i)
     SourceOperands[SourceInsn.Operands[i].Name] = i;
 
-  LLVM_DEBUG(dbgs() << "  Operand mapping:\n");
+  DEBUG(dbgs() << "  Operand mapping:\n");
   for (unsigned i = 0, e = Insn.Operands.size(); i != e; ++i) {
     // We've already handled constant values. Just map instruction operands
     // here.
@@ -188,8 +188,7 @@ void PseudoLoweringEmitter::evaluateExpansion(Record *Rec) {
       OperandMap[Insn.Operands[i].MIOperandNo + I].Data.Operand =
         SourceOp->getValue();
 
-    LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ==> " << i
-                      << "\n");
+    DEBUG(dbgs() << "    " << SourceOp->getValue() << " ==> " << i << "\n");
   }
 
   Expansions.push_back(PseudoExpansion(SourceInsn, Insn, OperandMap));

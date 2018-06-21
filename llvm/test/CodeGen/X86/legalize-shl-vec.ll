@@ -6,30 +6,14 @@ define <2 x i256> @test_shl(<2 x i256> %In) {
 ; X32-LABEL: test_shl:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    shldl $2, %edx, %ecx
-; X32-NEXT:    movl %ecx, 60(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shldl $2, %ecx, %edx
-; X32-NEXT:    movl %edx, 56(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    shldl $2, %edx, %ecx
-; X32-NEXT:    movl %ecx, 52(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shldl $2, %ecx, %edx
-; X32-NEXT:    movl %edx, 48(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    shldl $2, %edx, %ecx
-; X32-NEXT:    movl %ecx, 44(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shldl $2, %ecx, %edx
-; X32-NEXT:    movl %edx, 40(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    shldl $2, %edx, %ecx
-; X32-NEXT:    movl %ecx, 36(%eax)
-; X32-NEXT:    shll $2, %edx
-; X32-NEXT:    movl %edx, 32(%eax)
+; X32-NEXT:    movl $0, 60(%eax)
+; X32-NEXT:    movl $0, 56(%eax)
+; X32-NEXT:    movl $0, 52(%eax)
+; X32-NEXT:    movl $0, 48(%eax)
+; X32-NEXT:    movl $0, 44(%eax)
+; X32-NEXT:    movl $0, 40(%eax)
+; X32-NEXT:    movl $0, 36(%eax)
+; X32-NEXT:    movl $0, 32(%eax)
 ; X32-NEXT:    movl $0, 28(%eax)
 ; X32-NEXT:    movl $0, 24(%eax)
 ; X32-NEXT:    movl $0, 20(%eax)
@@ -42,23 +26,14 @@ define <2 x i256> @test_shl(<2 x i256> %In) {
 ;
 ; X64-LABEL: test_shl:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    shldq $2, %rax, %rcx
-; X64-NEXT:    shldq $2, %rdx, %rax
-; X64-NEXT:    shldq $2, %r9, %rdx
-; X64-NEXT:    shlq $2, %r9
-; X64-NEXT:    movq %rcx, 56(%rdi)
-; X64-NEXT:    movq %rax, 48(%rdi)
-; X64-NEXT:    movq %rdx, 40(%rdi)
-; X64-NEXT:    movq %r9, 32(%rdi)
 ; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    movaps %xmm0, 48(%rdi)
+; X64-NEXT:    movaps %xmm0, 32(%rdi)
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
-  %Amt = insertelement <2 x i256> <i256 1, i256 2>, i256 -1, i32 0
+  %Amt = insertelement <2 x i256> undef, i256 -1, i32 0
   %Out = shl <2 x i256> %In, %Amt
   ret <2 x i256> %Out
 }
@@ -66,50 +41,15 @@ define <2 x i256> @test_shl(<2 x i256> %In) {
 define <2 x i256> @test_srl(<2 x i256> %In) {
 ; X32-LABEL: test_srl:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    .cfi_def_cfa_offset 12
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 20
-; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 28
-; X32-NEXT:    .cfi_offset %esi, -20
-; X32-NEXT:    .cfi_offset %edi, -16
-; X32-NEXT:    .cfi_offset %ebx, -12
-; X32-NEXT:    .cfi_offset %ebp, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NEXT:    movl %edx, %ecx
-; X32-NEXT:    shldl $28, %eax, %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    shldl $28, %esi, %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    shldl $28, %edi, %esi
-; X32-NEXT:    shldl $28, %ebx, %edi
-; X32-NEXT:    shldl $28, %ebp, %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shldl $28, %eax, %ebp
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shrdl $4, %eax, %ecx
-; X32-NEXT:    shrl $4, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %edx, 60(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl %edx, 56(%eax)
-; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl %edx, 52(%eax)
-; X32-NEXT:    movl %esi, 48(%eax)
-; X32-NEXT:    movl %edi, 44(%eax)
-; X32-NEXT:    movl %ebx, 40(%eax)
-; X32-NEXT:    movl %ebp, 36(%eax)
-; X32-NEXT:    movl %ecx, 32(%eax)
+; X32-NEXT:    movl $0, 60(%eax)
+; X32-NEXT:    movl $0, 56(%eax)
+; X32-NEXT:    movl $0, 52(%eax)
+; X32-NEXT:    movl $0, 48(%eax)
+; X32-NEXT:    movl $0, 44(%eax)
+; X32-NEXT:    movl $0, 40(%eax)
+; X32-NEXT:    movl $0, 36(%eax)
+; X32-NEXT:    movl $0, 32(%eax)
 ; X32-NEXT:    movl $0, 28(%eax)
 ; X32-NEXT:    movl $0, 24(%eax)
 ; X32-NEXT:    movl $0, 20(%eax)
@@ -118,37 +58,18 @@ define <2 x i256> @test_srl(<2 x i256> %In) {
 ; X32-NEXT:    movl $0, 8(%eax)
 ; X32-NEXT:    movl $0, 4(%eax)
 ; X32-NEXT:    movl $0, (%eax)
-; X32-NEXT:    addl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 20
-; X32-NEXT:    popl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    popl %edi
-; X32-NEXT:    .cfi_def_cfa_offset 12
-; X32-NEXT:    popl %ebx
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    popl %ebp
-; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_srl:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    shrdq $4, %rdx, %r9
-; X64-NEXT:    shrdq $4, %rax, %rdx
-; X64-NEXT:    shrdq $4, %rcx, %rax
-; X64-NEXT:    shrq $4, %rcx
-; X64-NEXT:    movq %rcx, 56(%rdi)
-; X64-NEXT:    movq %rax, 48(%rdi)
-; X64-NEXT:    movq %rdx, 40(%rdi)
-; X64-NEXT:    movq %r9, 32(%rdi)
 ; X64-NEXT:    xorps %xmm0, %xmm0
+; X64-NEXT:    movaps %xmm0, 48(%rdi)
+; X64-NEXT:    movaps %xmm0, 32(%rdi)
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
-  %Amt = insertelement <2 x i256> <i256 3, i256 4>, i256 -1, i32 0
+  %Amt = insertelement <2 x i256> undef, i256 -1, i32 0
   %Out = lshr <2 x i256> %In, %Amt
   ret <2 x i256> %Out
 }
@@ -156,49 +77,22 @@ define <2 x i256> @test_srl(<2 x i256> %In) {
 define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X32-LABEL: test_sra:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %ebp
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    pushl %ebx
-; X32-NEXT:    .cfi_def_cfa_offset 12
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 20
-; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 28
-; X32-NEXT:    .cfi_offset %esi, -20
-; X32-NEXT:    .cfi_offset %edi, -16
-; X32-NEXT:    .cfi_offset %ebx, -12
-; X32-NEXT:    .cfi_offset %ebp, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NEXT:    movl %edx, %ecx
-; X32-NEXT:    shldl $26, %eax, %ecx
-; X32-NEXT:    movl %ecx, {{[0-9]+}}(%esp) # 4-byte Spill
-; X32-NEXT:    shldl $26, %esi, %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    shldl $26, %edi, %esi
-; X32-NEXT:    shldl $26, %ebx, %edi
-; X32-NEXT:    shldl $26, %ebp, %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shldl $26, %eax, %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shrdl $6, %eax, %ecx
-; X32-NEXT:    sarl $6, %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %edx, 60(%eax)
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl %edx, 56(%eax)
-; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl %edx, 52(%eax)
-; X32-NEXT:    movl %esi, 48(%eax)
-; X32-NEXT:    movl %edi, 44(%eax)
-; X32-NEXT:    movl %ebx, 40(%eax)
-; X32-NEXT:    movl %ebp, 36(%eax)
+; X32-NEXT:    movl %ecx, 60(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, 56(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, 52(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, 48(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, 44(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, 40(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl %ecx, 36(%eax)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl %ecx, 32(%eax)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    sarl $31, %ecx
@@ -210,16 +104,6 @@ define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X32-NEXT:    movl %ecx, 8(%eax)
 ; X32-NEXT:    movl %ecx, 4(%eax)
 ; X32-NEXT:    movl %ecx, (%eax)
-; X32-NEXT:    addl $8, %esp
-; X32-NEXT:    .cfi_def_cfa_offset 20
-; X32-NEXT:    popl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 16
-; X32-NEXT:    popl %edi
-; X32-NEXT:    .cfi_def_cfa_offset 12
-; X32-NEXT:    popl %ebx
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    popl %ebp
-; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl $4
 ;
 ; X64-LABEL: test_sra:
@@ -227,14 +111,10 @@ define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    shrdq $6, %rdx, %r9
-; X64-NEXT:    shrdq $6, %rax, %rdx
 ; X64-NEXT:    sarq $63, %r8
-; X64-NEXT:    shrdq $6, %rcx, %rax
-; X64-NEXT:    sarq $6, %rcx
-; X64-NEXT:    movq %rcx, 56(%rdi)
-; X64-NEXT:    movq %rax, 48(%rdi)
-; X64-NEXT:    movq %rdx, 40(%rdi)
+; X64-NEXT:    movq %rdx, 56(%rdi)
+; X64-NEXT:    movq %rcx, 48(%rdi)
+; X64-NEXT:    movq %rax, 40(%rdi)
 ; X64-NEXT:    movq %r9, 32(%rdi)
 ; X64-NEXT:    movq %r8, 24(%rdi)
 ; X64-NEXT:    movq %r8, 16(%rdi)
@@ -242,7 +122,7 @@ define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X64-NEXT:    movq %r8, (%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
-  %Amt = insertelement <2 x i256> <i256 5, i256 6>, i256 -1, i32 0
+  %Amt = insertelement <2 x i256> undef, i256 -1, i32 0
   %Out = ashr <2 x i256> %In, %Amt
   ret <2 x i256> %Out
 }

@@ -1,0 +1,3 @@
+struct CFoo {
+  int i;
+};

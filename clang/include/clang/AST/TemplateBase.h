@@ -47,12 +47,12 @@ struct PrintingPolicy;
 class TypeSourceInfo;
 class ValueDecl;
 
-/// Represents a template argument.
+/// \brief Represents a template argument.
 class TemplateArgument {
 public:
-  /// The kind of template argument we're storing.
+  /// \brief The kind of template argument we're storing.
   enum ArgKind {
-    /// Represents an empty template argument, e.g., one that has not
+    /// \brief Represents an empty template argument, e.g., one that has not
     /// been deduced.
     Null = 0,
 
@@ -92,7 +92,7 @@ public:
   };
 
 private:
-  /// The kind of template argument we're storing.
+  /// \brief The kind of template argument we're storing.
 
   struct DA {
     unsigned Kind;
@@ -138,16 +138,16 @@ private:
   };
 
 public:
-  /// Construct an empty, invalid template argument.
+  /// \brief Construct an empty, invalid template argument.
   constexpr TemplateArgument() : TypeOrValue({Null, 0}) {}
 
-  /// Construct a template type argument.
+  /// \brief Construct a template type argument.
   TemplateArgument(QualType T, bool isNullPtr = false) {
     TypeOrValue.Kind = isNullPtr ? NullPtr : Type;
     TypeOrValue.V = reinterpret_cast<uintptr_t>(T.getAsOpaquePtr());
   }
 
-  /// Construct a template argument that refers to a
+  /// \brief Construct a template argument that refers to a
   /// declaration, which is either an external declaration or a
   /// template declaration.
   TemplateArgument(ValueDecl *D, QualType QT) {
@@ -157,18 +157,18 @@ public:
     DeclArg.D = D;
   }
 
-  /// Construct an integral constant template argument. The memory to
+  /// \brief Construct an integral constant template argument. The memory to
   /// store the value is allocated with Ctx.
   TemplateArgument(ASTContext &Ctx, const llvm::APSInt &Value, QualType Type);
 
-  /// Construct an integral constant template argument with the same
+  /// \brief Construct an integral constant template argument with the same
   /// value as Other but a different type.
   TemplateArgument(const TemplateArgument &Other, QualType Type) {
     Integer = Other.Integer;
     Integer.Type = Type.getAsOpaquePtr();
   }
 
-  /// Construct a template argument that is a template.
+  /// \brief Construct a template argument that is a template.
   ///
   /// This form of template argument is generally used for template template
   /// parameters. However, the template name could be a dependent template
@@ -182,7 +182,7 @@ public:
     TemplateArg.NumExpansions = 0;
   }
 
-  /// Construct a template argument that is a template pack expansion.
+  /// \brief Construct a template argument that is a template pack expansion.
   ///
   /// This form of template argument is generally used for template template
   /// parameters. However, the template name could be a dependent template
@@ -202,7 +202,7 @@ public:
       TemplateArg.NumExpansions = 0;
   }
 
-  /// Construct a template argument that is an expression.
+  /// \brief Construct a template argument that is an expression.
   ///
   /// This form of template argument only occurs in template argument
   /// lists used for dependent types and for expression; it will not
@@ -212,7 +212,7 @@ public:
     TypeOrValue.V = reinterpret_cast<uintptr_t>(E);
   }
 
-  /// Construct a template argument that is a template argument pack.
+  /// \brief Construct a template argument that is a template argument pack.
   ///
   /// We assume that storage for the template arguments provided
   /// outlives the TemplateArgument itself.
@@ -226,40 +226,40 @@ public:
 
   static TemplateArgument getEmptyPack() { return TemplateArgument(None); }
 
-  /// Create a new template argument pack by copying the given set of
+  /// \brief Create a new template argument pack by copying the given set of
   /// template arguments.
   static TemplateArgument CreatePackCopy(ASTContext &Context,
                                          ArrayRef<TemplateArgument> Args);
 
-  /// Return the kind of stored template argument.
+  /// \brief Return the kind of stored template argument.
   ArgKind getKind() const { return (ArgKind)TypeOrValue.Kind; }
 
-  /// Determine whether this template argument has no value.
+  /// \brief Determine whether this template argument has no value.
   bool isNull() const { return getKind() == Null; }
 
-  /// Whether this template argument is dependent on a template
+  /// \brief Whether this template argument is dependent on a template
   /// parameter such that its result can change from one instantiation to
   /// another.
   bool isDependent() const;
 
-  /// Whether this template argument is dependent on a template
+  /// \brief Whether this template argument is dependent on a template
   /// parameter.
   bool isInstantiationDependent() const;
 
-  /// Whether this template argument contains an unexpanded
+  /// \brief Whether this template argument contains an unexpanded
   /// parameter pack.
   bool containsUnexpandedParameterPack() const;
 
-  /// Determine whether this template argument is a pack expansion.
+  /// \brief Determine whether this template argument is a pack expansion.
   bool isPackExpansion() const;
   
-  /// Retrieve the type for a type template argument.
+  /// \brief Retrieve the type for a type template argument.
   QualType getAsType() const {
     assert(getKind() == Type && "Unexpected kind");
     return QualType::getFromOpaquePtr(reinterpret_cast<void*>(TypeOrValue.V));
   }
 
-  /// Retrieve the declaration for a declaration non-type
+  /// \brief Retrieve the declaration for a declaration non-type
   /// template argument.
   ValueDecl *getAsDecl() const {
     assert(getKind() == Declaration && "Unexpected kind");
@@ -271,19 +271,19 @@ public:
     return QualType::getFromOpaquePtr(DeclArg.QT);
   }
 
-  /// Retrieve the type for null non-type template argument.
+  /// \brief Retrieve the type for null non-type template argument.
   QualType getNullPtrType() const {
     assert(getKind() == NullPtr && "Unexpected kind");
     return QualType::getFromOpaquePtr(reinterpret_cast<void*>(TypeOrValue.V));
   }
 
-  /// Retrieve the template name for a template name argument.
+  /// \brief Retrieve the template name for a template name argument.
   TemplateName getAsTemplate() const {
     assert(getKind() == Template && "Unexpected kind");
     return TemplateName::getFromVoidPointer(TemplateArg.Name);
   }
 
-  /// Retrieve the template argument as a template name; if the argument
+  /// \brief Retrieve the template argument as a template name; if the argument
   /// is a pack expansion, return the pattern as a template name.
   TemplateName getAsTemplateOrTemplatePattern() const {
     assert((getKind() == Template || getKind() == TemplateExpansion) &&
@@ -292,11 +292,11 @@ public:
     return TemplateName::getFromVoidPointer(TemplateArg.Name);
   }
 
-  /// Retrieve the number of expansions that a template template argument
+  /// \brief Retrieve the number of expansions that a template template argument
   /// expansion will produce, if known.
   Optional<unsigned> getNumTemplateExpansions() const;
   
-  /// Retrieve the template argument as an integral value.
+  /// \brief Retrieve the template argument as an integral value.
   // FIXME: Provide a way to read the integral data without copying the value.
   llvm::APSInt getAsIntegral() const {
     assert(getKind() == Integral && "Unexpected kind");
@@ -311,7 +311,7 @@ public:
                   Integer.IsUnsigned);
   }
 
-  /// Retrieve the type of the integral value.
+  /// \brief Retrieve the type of the integral value.
   QualType getIntegralType() const {
     assert(getKind() == Integral && "Unexpected kind");
     return QualType::getFromOpaquePtr(Integer.Type);
@@ -322,70 +322,70 @@ public:
     Integer.Type = T.getAsOpaquePtr();
   }
 
-  /// If this is a non-type template argument, get its type. Otherwise,
+  /// \brief If this is a non-type template argument, get its type. Otherwise,
   /// returns a null QualType.
   QualType getNonTypeTemplateArgumentType() const;
 
-  /// Retrieve the template argument as an expression.
+  /// \brief Retrieve the template argument as an expression.
   Expr *getAsExpr() const {
     assert(getKind() == Expression && "Unexpected kind");
     return reinterpret_cast<Expr *>(TypeOrValue.V);
   }
 
-  /// Iterator that traverses the elements of a template argument pack.
+  /// \brief Iterator that traverses the elements of a template argument pack.
   using pack_iterator = const TemplateArgument *;
 
-  /// Iterator referencing the first argument of a template argument
+  /// \brief Iterator referencing the first argument of a template argument
   /// pack.
   pack_iterator pack_begin() const {
     assert(getKind() == Pack);
     return Args.Args;
   }
 
-  /// Iterator referencing one past the last argument of a template
+  /// \brief Iterator referencing one past the last argument of a template
   /// argument pack.
   pack_iterator pack_end() const {
     assert(getKind() == Pack);
     return Args.Args + Args.NumArgs;
   }
 
-  /// Iterator range referencing all of the elements of a template
+  /// \brief Iterator range referencing all of the elements of a template
   /// argument pack.
   ArrayRef<TemplateArgument> pack_elements() const {
     return llvm::makeArrayRef(pack_begin(), pack_end());
   }
 
-  /// The number of template arguments in the given template argument
+  /// \brief The number of template arguments in the given template argument
   /// pack.
   unsigned pack_size() const {
     assert(getKind() == Pack);
     return Args.NumArgs;
   }
 
-  /// Return the array of arguments in this template argument pack.
+  /// \brief Return the array of arguments in this template argument pack.
   ArrayRef<TemplateArgument> getPackAsArray() const {
     assert(getKind() == Pack);
     return llvm::makeArrayRef(Args.Args, Args.NumArgs);
   }
 
-  /// Determines whether two template arguments are superficially the
+  /// \brief Determines whether two template arguments are superficially the
   /// same.
   bool structurallyEquals(const TemplateArgument &Other) const;
 
-  /// When the template argument is a pack expansion, returns
+  /// \brief When the template argument is a pack expansion, returns
   /// the pattern of the pack expansion.
   TemplateArgument getPackExpansionPattern() const;
 
-  /// Print this template argument to the given output stream.
+  /// \brief Print this template argument to the given output stream.
   void print(const PrintingPolicy &Policy, raw_ostream &Out) const;
              
-  /// Debugging aid that dumps the template argument.
+  /// \brief Debugging aid that dumps the template argument.
   void dump(raw_ostream &Out) const;
 
-  /// Debugging aid that dumps the template argument to standard error.
+  /// \brief Debugging aid that dumps the template argument to standard error.
   void dump() const;
              
-  /// Used to insert TemplateArguments into FoldingSets.
+  /// \brief Used to insert TemplateArguments into FoldingSets.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) const;
 };
 
@@ -478,7 +478,7 @@ public:
            Argument.getKind() == TemplateArgument::TemplateExpansion);
   }
   
-  /// - Fetches the primary location of the argument.
+  /// \brief - Fetches the primary location of the argument.
   SourceLocation getLocation() const {
     if (Argument.getKind() == TemplateArgument::Template ||
         Argument.getKind() == TemplateArgument::TemplateExpansion)
@@ -487,7 +487,7 @@ public:
     return getSourceRange().getBegin();
   }
 
-  /// - Fetches the full source range of the argument.
+  /// \brief - Fetches the full source range of the argument.
   SourceRange getSourceRange() const LLVM_READONLY;
 
   const TemplateArgument &getArgument() const {
@@ -588,7 +588,7 @@ public:
   }
 };
 
-/// Represents an explicit template argument list in C++, e.g.,
+/// \brief Represents an explicit template argument list in C++, e.g.,
 /// the "<int>" in "sort<int>".
 /// This is safe to be used inside an AST node, in contrast with
 /// TemplateArgumentListInfo.
@@ -602,16 +602,16 @@ private:
   ASTTemplateArgumentListInfo(const TemplateArgumentListInfo &List);
 
 public:
-  /// The source location of the left angle bracket ('<').
+  /// \brief The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
 
-  /// The source location of the right angle bracket ('>').
+  /// \brief The source location of the right angle bracket ('>').
   SourceLocation RAngleLoc;
 
-  /// The number of template arguments in TemplateArgs.
+  /// \brief The number of template arguments in TemplateArgs.
   unsigned NumTemplateArgs;
 
-  /// Retrieve the template arguments
+  /// \brief Retrieve the template arguments
   const TemplateArgumentLoc *getTemplateArgs() const {
     return getTrailingObjects<TemplateArgumentLoc>();
   }
@@ -628,7 +628,7 @@ public:
   Create(ASTContext &C, const TemplateArgumentListInfo &List);
 };
 
-/// Represents an explicit template argument list in C++, e.g.,
+/// \brief Represents an explicit template argument list in C++, e.g.,
 /// the "<int>" in "sort<int>".
 ///
 /// It is intended to be used as a trailing object on AST nodes, and
@@ -636,19 +636,19 @@ public:
 /// but expects the containing object to also provide storage for
 /// that.
 struct alignas(void *) ASTTemplateKWAndArgsInfo {
-  /// The source location of the left angle bracket ('<').
+  /// \brief The source location of the left angle bracket ('<').
   SourceLocation LAngleLoc;
 
-  /// The source location of the right angle bracket ('>').
+  /// \brief The source location of the right angle bracket ('>').
   SourceLocation RAngleLoc;
 
-  /// The source location of the template keyword; this is used
+  /// \brief The source location of the template keyword; this is used
   /// as part of the representation of qualified identifiers, such as
   /// S<T>::template apply<T>.  Will be empty if this expression does
   /// not have a template keyword.
   SourceLocation TemplateKWLoc;
 
-  /// The number of template arguments in TemplateArgs.
+  /// \brief The number of template arguments in TemplateArgs.
   unsigned NumTemplateArgs;
 
   void initializeFrom(SourceLocation TemplateKWLoc,

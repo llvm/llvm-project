@@ -26,8 +26,8 @@ Symbolizer *Symbolizer::GetOrInit() {
   return symbolizer_;
 }
 
-// See sanitizer_symbolizer_markup.cc.
-#if !SANITIZER_SYMBOLIZER_MARKUP
+// See sanitizer_symbolizer_fuchsia.cc.
+#if !SANITIZER_FUCHSIA
 
 const char *ExtractToken(const char *str, const char *delims, char **result) {
   uptr prefix_len = internal_strcspn(str, delims);
@@ -143,6 +143,11 @@ const char *Symbolizer::Demangle(const char *name) {
       return demangled;
   }
   return PlatformDemangle(name);
+}
+
+void Symbolizer::PrepareForSandboxing() {
+  BlockingMutexLock l(&mu_);
+  PlatformPrepareForSandboxing();
 }
 
 bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
@@ -489,6 +494,6 @@ bool SymbolizerProcess::WriteToSymbolizer(const char *buffer, uptr length) {
   return true;
 }
 
-#endif  // !SANITIZER_SYMBOLIZER_MARKUP
+#endif  // !SANITIZER_FUCHSIA
 
 }  // namespace __sanitizer

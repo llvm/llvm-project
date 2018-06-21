@@ -1,4 +1,4 @@
-//===- ThreadSafety.h -------------------------------------------*- C++ -*-===//
+//===- ThreadSafety.h ------------------------------------------*- C++ --*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,15 +19,11 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETY_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETY_H
 
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
-
-class AnalysisDeclContext;
-class FunctionDecl;
-class NamedDecl;
-
 namespace threadSafety {
 
 class BeforeSet;
@@ -35,44 +31,27 @@ class BeforeSet;
 /// This enum distinguishes between different kinds of operations that may
 /// need to be protected by locks. We use this enum in error handling.
 enum ProtectedOperationKind {
-  /// Dereferencing a variable (e.g. p in *p = 5;)
-  POK_VarDereference,
-
-  /// Reading or writing a variable (e.g. x in x = 5;)
-  POK_VarAccess,
-
-  /// Making a function call (e.g. fool())
-  POK_FunctionCall,
-
-  /// Passing a guarded variable by reference.
-  POK_PassByRef,
-
-  /// Passing a pt-guarded variable by reference.
-  POK_PtPassByRef
+  POK_VarDereference, ///< Dereferencing a variable (e.g. p in *p = 5;)
+  POK_VarAccess, ///< Reading or writing a variable (e.g. x in x = 5;)
+  POK_FunctionCall, ///< Making a function call (e.g. fool())
+  POK_PassByRef, ///< Passing a guarded variable by reference.
+  POK_PtPassByRef,  ///< Passing a pt-guarded variable by reference.
 };
 
 /// This enum distinguishes between different kinds of lock actions. For
 /// example, it is an error to write a variable protected by shared version of a
 /// mutex.
 enum LockKind {
-  /// Shared/reader lock of a mutex.
-  LK_Shared,
-
-  /// Exclusive/writer lock of a mutex.
-  LK_Exclusive,
-
-  /// Can be either Shared or Exclusive.
-  LK_Generic
+  LK_Shared,    ///< Shared/reader lock of a mutex.
+  LK_Exclusive, ///< Exclusive/writer lock of a mutex.
+  LK_Generic    ///< Can be either Shared or Exclusive
 };
 
 /// This enum distinguishes between different ways to access (read or write) a
 /// variable.
 enum AccessKind {
-  /// Reading a variable.
-  AK_Read,
-
-  /// Writing a variable.
-  AK_Written
+  AK_Read, ///< Reading a variable.
+  AK_Written ///< Writing a variable.
 };
 
 /// This enum distinguishes between different situations where we warn due to
@@ -93,9 +72,8 @@ enum LockErrorKind {
 /// Handler class for thread safety warnings.
 class ThreadSafetyHandler {
 public:
-  using Name = StringRef;
-
-  ThreadSafetyHandler() = default;
+  typedef StringRef Name;
+  ThreadSafetyHandler() : IssueBetaWarnings(false) { }
   virtual ~ThreadSafetyHandler();
 
   /// Warn about lock expressions which fail to resolve to lockable objects.
@@ -207,6 +185,7 @@ public:
   virtual void handleFunExcludesLock(StringRef Kind, Name FunName,
                                      Name LockName, SourceLocation Loc) {}
 
+
   /// Warn that L1 cannot be acquired before L2.
   virtual void handleLockAcquiredBefore(StringRef Kind, Name L1Name,
                                         Name L2Name, SourceLocation Loc) {}
@@ -225,10 +204,10 @@ public:
   void setIssueBetaWarnings(bool b) { IssueBetaWarnings = b; }
 
 private:
-  bool IssueBetaWarnings = false;
+  bool IssueBetaWarnings;
 };
 
-/// Check a function's CFG for thread-safety violations.
+/// \brief Check a function's CFG for thread-safety violations.
 ///
 /// We traverse the blocks in the CFG, compute the set of mutexes that are held
 /// at the end of each block, and issue warnings for thread safety violations.
@@ -239,11 +218,9 @@ void runThreadSafetyAnalysis(AnalysisDeclContext &AC,
 
 void threadSafetyCleanup(BeforeSet *Cache);
 
-/// Helper function that returns a LockKind required for the given level
+/// \brief Helper function that returns a LockKind required for the given level
 /// of access.
 LockKind getLockKindFromAccessKind(AccessKind AK);
 
-} // namespace threadSafety
-} // namespace clang
-
-#endif // LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETY_H
+}} // end namespace clang::threadSafety
+#endif

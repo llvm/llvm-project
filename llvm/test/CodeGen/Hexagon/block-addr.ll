@@ -60,4 +60,4 @@ label6:
   br label %while.body
 }
 
-attributes #0 = { noreturn nounwind }
+attributes #0 = { noreturn nounwind "target-cpu"="hexagonv4" }

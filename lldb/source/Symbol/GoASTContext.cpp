@@ -229,8 +229,8 @@ ConstString GoASTContext::GetPluginName() {
 uint32_t GoASTContext::GetPluginVersion() { return 1; }
 
 lldb::TypeSystemSP GoASTContext::CreateInstance(lldb::LanguageType language,
-                                                Module *module,
-                                                Target *target) {
+                                                Module *module, Target *target,
+                                                const char *compiler_options) {
   if (language == eLanguageTypeGo) {
     ArchSpec arch;
     std::shared_ptr<GoASTContext> go_ast_sp;
@@ -434,7 +434,7 @@ bool GoASTContext::IsPolymorphicClass(lldb::opaque_compiler_type_t type) {
 bool GoASTContext::IsPossibleDynamicType(
     lldb::opaque_compiler_type_t type,
     CompilerType *target_type, // Can pass NULL
-    bool check_cplusplus, bool check_objc) {
+    bool check_cplusplus, bool check_objc, bool check_swift) {
   if (target_type)
     target_type->Clear();
   if (type)
@@ -595,7 +595,7 @@ GoASTContext::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
   if (name) {
     typedef UniqueCStringMap<lldb::BasicType> TypeNameToBasicTypeMap;
     static TypeNameToBasicTypeMap g_type_map;
-    static llvm::once_flag g_once_flag;
+    static std::once_flag g_once_flag;
     llvm::call_once(g_once_flag, []() {
       // "void"
       g_type_map.Append(ConstString("void"), eBasicTypeVoid);
@@ -667,7 +667,8 @@ GoASTContext::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
 }
 
 // Returns -1 if this isn't a function of if the function doesn't have a
-// prototype Returns a value >= 0 if there is a prototype.
+// prototype
+// Returns a value >= 0 if there is a prototype.
 int GoASTContext::GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) {
   return GetNumberOfFunctionArguments(type);
 }
@@ -1007,8 +1008,8 @@ CompilerType GoASTContext::GetChildCompilerTypeAtIndex(
   return CompilerType();
 }
 
-// Lookup a child given a name. This function will match base class names and
-// member member names in "clang_type" only, not descendants.
+// Lookup a child given a name. This function will match base class names
+// and member member names in "clang_type" only, not descendants.
 uint32_t
 GoASTContext::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                       const char *name,
@@ -1047,8 +1048,8 @@ size_t GoASTContext::GetIndexOfChildMemberWithName(
   return 1;
 }
 
-// Converts "s" to a floating point value and place resulting floating point
-// bytes in the "dst" buffer.
+// Converts "s" to a floating point value and place resulting floating
+// point bytes in the "dst" buffer.
 size_t
 GoASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
                                         const char *s, uint8_t *dst,
@@ -1079,8 +1080,9 @@ void GoASTContext::DumpValue(lldb::opaque_compiler_type_t type,
       uint32_t field_idx = 0;
       for (auto *field = st->GetField(field_idx); field != nullptr;
            field_idx++) {
-        // Print the starting squiggly bracket (if this is the first member) or
-        // comma (for member 2 and beyond) for the struct/union/class member.
+        // Print the starting squiggly bracket (if this is the
+        // first member) or comma (for member 2 and beyond) for
+        // the struct/union/class member.
         if (field_idx == 0)
           s->PutChar('{');
         else
@@ -1135,8 +1137,9 @@ void GoASTContext::DumpValue(lldb::opaque_compiler_type_t type,
 
     uint64_t element_idx;
     for (element_idx = 0; element_idx < a->GetLength(); ++element_idx) {
-      // Print the starting squiggly bracket (if this is the first member) or
-      // comman (for member 2 and beyong) for the struct/union/class member.
+      // Print the starting squiggly bracket (if this is the
+      // first member) or comman (for member 2 and beyong) for
+      // the struct/union/class member.
       if (element_idx == 0)
         s->PutChar('{');
       else
@@ -1182,7 +1185,8 @@ bool GoASTContext::DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
                                  lldb::offset_t byte_offset, size_t byte_size,
                                  uint32_t bitfield_bit_size,
                                  uint32_t bitfield_bit_offset,
-                                 ExecutionContextScope *exe_scope) {
+                                 ExecutionContextScope *exe_scope,
+                                 bool is_base_class) {
   if (!type)
     return false;
   if (IsAggregateType(type)) {
@@ -1205,7 +1209,7 @@ bool GoASTContext::DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
                              // treat as a bitfield
           bitfield_bit_offset, // Offset in bits of a bitfield value if
                                // bitfield_bit_size != 0
-          exe_scope);
+          exe_scope, is_base_class);
     }
 
     uint32_t item_count = 1;

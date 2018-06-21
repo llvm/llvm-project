@@ -1,4 +1,4 @@
-//===- BugReporterVisitors.h - Generate PathDiagnostics ---------*- C++ -*-===//
+//===---  BugReporterVisitors.h - Generate PathDiagnostics -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,21 +15,11 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H
 
-#include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include <memory>
 
 namespace clang {
-
-class BinaryOperator;
 class CFGBlock;
-class DeclRefExpr;
-class Expr;
-class Stmt;
 
 namespace ento {
 
@@ -39,7 +29,7 @@ class ExplodedNode;
 class MemRegion;
 class PathDiagnosticPiece;
 
-/// BugReporterVisitors are used to add custom diagnostics along a path.
+/// \brief BugReporterVisitors are used to add custom diagnostics along a path.
 ///
 /// Custom visitors should subclass the BugReporterVisitorImpl class for a
 /// default implementation of the clone() method.
@@ -53,7 +43,7 @@ public:
   BugReporterVisitor(BugReporterVisitor &&) {}
   virtual ~BugReporterVisitor();
 
-  /// Returns a copy of this BugReporter.
+  /// \brief Returns a copy of this BugReporter.
   ///
   /// Custom BugReporterVisitors should not override this method directly.
   /// Instead, they should inherit from BugReporterVisitorImpl and provide
@@ -64,7 +54,7 @@ public:
   /// will have to provide your own implementation.)
   virtual std::unique_ptr<BugReporterVisitor> clone() const = 0;
 
-  /// Return a diagnostic piece which should be associated with the
+  /// \brief Return a diagnostic piece which should be associated with the
   /// given node.
   ///
   /// The last parameter can be used to register a new visitor with the given
@@ -73,23 +63,18 @@ public:
   VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
             BugReporterContext &BRC, BugReport &BR) = 0;
 
-  /// Last function called on the visitor, no further calls to VisitNode
-  /// would follow.
-  virtual void finalizeVisitor(BugReporterContext &BRC,
-                               const ExplodedNode *EndPathNode,
-                               BugReport &BR);
-
-  /// Provide custom definition for the final diagnostic piece on the
+  /// \brief Provide custom definition for the final diagnostic piece on the
   /// path - the piece, which is displayed before the path is expanded.
   ///
-  /// NOTE that this function can be implemented on at most one used visitor,
-  /// and otherwise it crahes at runtime.
+  /// If returns NULL the default implementation will be used.
+  /// Also note that at most one visitor of a BugReport should generate a
+  /// non-NULL end of path diagnostic piece.
   virtual std::unique_ptr<PathDiagnosticPiece>
   getEndPath(BugReporterContext &BRC, const ExplodedNode *N, BugReport &BR);
 
   virtual void Profile(llvm::FoldingSetNodeID &ID) const = 0;
 
-  /// Generates the default final diagnostic piece.
+  /// \brief Generates the default final diagnostic piece.
   static std::unique_ptr<PathDiagnosticPiece>
   getDefaultEndPath(BugReporterContext &BRC, const ExplodedNode *N,
                     BugReport &BR);
@@ -114,7 +99,7 @@ class FindLastStoreBRVisitor final
     : public BugReporterVisitorImpl<FindLastStoreBRVisitor> {
   const MemRegion *R;
   SVal V;
-  bool Satisfied = false;
+  bool Satisfied;
 
   /// If the visitor is tracking the value directly responsible for the
   /// bug, we are going to employ false positive suppression.
@@ -128,7 +113,10 @@ public:
 
   FindLastStoreBRVisitor(KnownSVal V, const MemRegion *R,
                          bool InEnableNullFPSuppression)
-      : R(R), V(V), EnableNullFPSuppression(InEnableNullFPSuppression) {}
+  : R(R),
+    V(V),
+    Satisfied(false),
+    EnableNullFPSuppression(InEnableNullFPSuppression) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -142,17 +130,18 @@ class TrackConstraintBRVisitor final
     : public BugReporterVisitorImpl<TrackConstraintBRVisitor> {
   DefinedSVal Constraint;
   bool Assumption;
-  bool IsSatisfied = false;
+  bool IsSatisfied;
   bool IsZeroCheck;
 
   /// We should start tracking from the last node along the path in which the
   /// value is constrained.
-  bool IsTrackingTurnedOn = false;
+  bool IsTrackingTurnedOn;
 
 public:
   TrackConstraintBRVisitor(DefinedSVal constraint, bool assumption)
-      : Constraint(constraint), Assumption(assumption),
-        IsZeroCheck(!Assumption && Constraint.getAs<Loc>()) {}
+  : Constraint(constraint), Assumption(assumption), IsSatisfied(false),
+    IsZeroCheck(!Assumption && Constraint.getAs<Loc>()),
+    IsTrackingTurnedOn(false) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -168,13 +157,15 @@ public:
 private:
   /// Checks if the constraint is valid in the current state.
   bool isUnderconstrained(const ExplodedNode *N) const;
+
 };
 
 /// \class NilReceiverBRVisitor
-/// Prints path notes when a message is sent to a nil receiver.
+/// \brief Prints path notes when a message is sent to a nil receiver.
 class NilReceiverBRVisitor final
     : public BugReporterVisitorImpl<NilReceiverBRVisitor> {
 public:
+
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
     ID.AddPointer(&x);
@@ -193,6 +184,7 @@ public:
 /// Visitor that tries to report interesting diagnostics from conditions.
 class ConditionBRVisitor final
     : public BugReporterVisitorImpl<ConditionBRVisitor> {
+
   // FIXME: constexpr initialization isn't supported by MSVC2013.
   static const char *const GenericTrueMessage;
   static const char *const GenericFalseMessage;
@@ -251,7 +243,7 @@ public:
   static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
 };
 
-/// Suppress reports that might lead to known false positives.
+/// \brief Suppress reports that might lead to known false positives.
 ///
 /// Currently this suppresses reports based on locations of bugs.
 class LikelyFalsePositiveSuppressionBRVisitor final
@@ -273,17 +265,19 @@ public:
     return nullptr;
   }
 
-  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *N,
-                       BugReport &BR) override;
+  std::unique_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
+                                                  const ExplodedNode *N,
+                                                  BugReport &BR) override;
 };
 
-/// When a region containing undefined value or '0' value is passed 
+/// \brief When a region containing undefined value or '0' value is passed 
 /// as an argument in a call, marks the call as interesting.
 ///
 /// As a result, BugReporter will not prune the path through the function even
 /// if the region's contents are not modified/accessed by the call.
 class UndefOrNullArgVisitor final
     : public BugReporterVisitorImpl<UndefOrNullArgVisitor> {
+
   /// The interesting memory region this visitor is tracking.
   const MemRegion *R;
 
@@ -309,14 +303,14 @@ class SuppressInlineDefensiveChecksVisitor final
   DefinedSVal V;
 
   /// Track if we found the node where the constraint was first added.
-  bool IsSatisfied = false;
+  bool IsSatisfied;
 
   /// Since the visitors can be registered on nodes previous to the last
   /// node in the BugReport, but the path traversal always starts with the last
   /// node, the visitor invariant (that we start with a node in which V is null)
   /// might not hold when node visitation starts. We are going to start tracking
   /// from the last node in which the value is null.
-  bool IsTrackingTurnedOn = false;
+  bool IsTrackingTurnedOn;
 
 public:
   SuppressInlineDefensiveChecksVisitor(DefinedSVal Val, const ExplodedNode *N);
@@ -334,53 +328,17 @@ public:
 };
 
 class CXXSelfAssignmentBRVisitor final
-    : public BugReporterVisitorImpl<CXXSelfAssignmentBRVisitor> {
-  bool Satisfied = false;
+  : public BugReporterVisitorImpl<CXXSelfAssignmentBRVisitor> {
+  
+  bool Satisfied;
 
 public:
-  CXXSelfAssignmentBRVisitor() = default;
+  CXXSelfAssignmentBRVisitor() : Satisfied(false) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {}
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
                                                  const ExplodedNode *Pred,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
-};
-
-/// The bug visitor prints a diagnostic message at the location where a given
-/// variable was tainted.
-class TaintBugVisitor final : public BugReporterVisitorImpl<TaintBugVisitor> {
-private:
-  const SVal V;
-
-public:
-  TaintBugVisitor(const SVal V) : V(V) {}
-  void Profile(llvm::FoldingSetNodeID &ID) const override { ID.Add(V); }
-
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
-};
-
-/// The bug visitor will walk all the nodes in a path and collect all the
-/// constraints. When it reaches the root node, will create a refutation
-/// manager and check if the constraints are satisfiable
-class FalsePositiveRefutationBRVisitor final
-    : public BugReporterVisitorImpl<FalsePositiveRefutationBRVisitor> {
-private:
-  /// Holds the constraints in a given path
-  // TODO: should we use a set?
-  llvm::SmallVector<ConstraintRangeTy, 32> Constraints;
-
-public:
-  FalsePositiveRefutationBRVisitor() = default;
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override;
-
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                 const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -412,10 +370,10 @@ const Stmt *GetDenomExpr(const ExplodedNode *N);
 const Stmt *GetRetValExpr(const ExplodedNode *N);
 bool isDeclRefExprToReference(const Expr *E);
 
-} // namespace bugreporter
 
-} // namespace ento
+} // end namespace clang
+} // end namespace ento
+} // end namespace bugreporter
 
-} // namespace clang
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H
+#endif

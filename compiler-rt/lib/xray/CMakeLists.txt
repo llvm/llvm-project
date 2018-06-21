@@ -1,29 +1,16 @@
-# Build for all components of the XRay runtime support library.
+# Build for the XRay runtime support library.
 
 # XRay runtime library implementation files.
 set(XRAY_SOURCES
-    xray_init.cc
-    xray_flags.cc
-    xray_interface.cc
-    xray_log_interface.cc
-    xray_utils.cc)
+  xray_inmemory_log.cc
+  xray_init.cc
+  xray_flags.cc
+  xray_interface.cc
+  xray_buffer_queue.cc
+  xray_log_interface.cc
+  xray_fdr_logging.cc
+  xray_utils.cc)
 
-# Implementation files for all XRay modes.
-set(XRAY_FDR_MODE_SOURCES
-    xray_fdr_flags.cc
-    xray_buffer_queue.cc
-    xray_fdr_logging.cc)
-
-set(XRAY_BASIC_MODE_SOURCES
-    xray_basic_flags.cc
-    xray_basic_logging.cc)
-
-set(XRAY_PROFILING_MODE_SOURCES
-    xray_profile_collector.cc
-    xray_profiling.cc
-    xray_profiling_flags.cc)
-
-# Implementation files for all XRay architectures.
 set(x86_64_SOURCES
     xray_x86_64.cc
     xray_trampoline_x86_64.S)
@@ -36,8 +23,8 @@ set(armhf_SOURCES
     ${arm_SOURCES})
 
 set(aarch64_SOURCES
-    xray_AArch64.cc
-    xray_trampoline_AArch64.S)
+  xray_AArch64.cc
+  xray_trampoline_AArch64.S)
 
 set(mips_SOURCES
     xray_mips.cc
@@ -60,16 +47,11 @@ set(powerpc64le_SOURCES
     xray_trampoline_powerpc64.cc
     xray_trampoline_powerpc64_asm.S)
 
-# Now put it all together...
 include_directories(..)
 include_directories(../../include)
 
 set(XRAY_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
-
-# We don't need RTTI in XRay, so turn that off.
-append_rtti_flag(OFF XRAY_CFLAGS)
-
 append_list_if(
   COMPILER_RT_HAS_XRAY_COMPILER_FLAG XRAY_SUPPORTED=1 XRAY_COMMON_DEFINITIONS)
 append_list_if(
@@ -78,12 +60,9 @@ append_list_if(
 add_compiler_rt_component(xray)
 
 set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
+    RTXray
     RTSanitizerCommon
     RTSanitizerCommonLibc)
-
-if (CLANG_DEFAULT_CXX_STDLIB STREQUAL "libc++" AND (TARGET cxx OR HAVE_LIBCXX))
-  set(XRAY_DEPS cxx)
-endif()
 
 if (APPLE)
   set(XRAY_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
@@ -97,29 +76,7 @@ if (APPLE)
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${x86_64_SOURCES}
     CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS}
-    DEPS ${XRAY_DEPS})
-  add_compiler_rt_object_libraries(RTXrayFDR
-    OS ${XRAY_SUPPORTED_OS}
-    ARCHS ${XRAY_SUPPORTED_ARCH}
-    SOURCES ${XRAY_FDR_MODE_SOURCES}
-    CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS}
-    DEPS ${XRAY_DEPS})
-  add_compiler_rt_object_libraries(RTXrayBASIC
-    OS ${XRAY_SUPPORTED_OS}
-    ARCHS ${XRAY_SUPPORTED_ARCH}
-    SOURCES ${XRAY_BASIC_MODE_SOURCES}
-    CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS}
-    DEPS ${XRAY_DEPS})
-  add_compiler_rt_object_libraries(RTXrayPROFILING
-    OS ${XRAY_SUPPORTED_OS}
-    ARCHS ${XRAY_SUPPORTED_ARCH}
-    SOURCES ${XRAY_PROFILING_MODE_SOURCES}
-    CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS}
-    DEPS ${XRAY_DEPS})
+    DEFS ${XRAY_COMMON_DEFINITIONS})
 
   # We only support running on osx for now.
   add_compiler_rt_runtime(clang_rt.xray
@@ -134,96 +91,24 @@ if (APPLE)
     LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
     LINK_LIBS ${XRAY_LINK_LIBS}
     PARENT_TARGET xray)
-  add_compiler_rt_runtime(clang_rt.xray-fdr
-    STATIC
-    OS ${XRAY_SUPPORTED_OS}
-    ARCHS ${XRAY_SUPPORTED_ARCH}
-    OBJECT_LIBS RTXrayFDR
-    CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS}
-    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
-    LINK_LIBS ${XRAY_LINK_LIBS}
-    PARENT_TARGET xray)
-  add_compiler_rt_runtime(clang_rt.xray-basic
-    STATIC
-    OS ${XRAY_SUPPORTED_OS}
-    ARCHS ${XRAY_SUPPORTED_ARCH}
-    OBJECT_LIBS RTXrayBASIC
-    CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS}
-    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
-    LINK_LIBS ${XRAY_LINK_LIBS}
-    PARENT_TARGET xray)
-  add_compiler_rt_runtime(clang_rt.xray-profiling
-    STATIC
-    OS ${XRAY_SUPPORTED_OS}
-    ARCHS ${XRAY_SUPPORTED_ARCH}
-    OBJECT_LIBS RTXrayPROFILING
-    CFLAGS ${XRAY_CFLAGS}
-    DEFS ${XRAY_COMMON_DEFINITIONS}
-    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
-    LINK_LIBS ${XRAY_LINK_LIBS}
-    PARENT_TARGET xray)
-else() # not Apple
-  foreach(arch ${XRAY_SUPPORTED_ARCH})
-    if(NOT CAN_TARGET_${arch})
-      continue()
-    endif()
+else()
+foreach(arch ${XRAY_SUPPORTED_ARCH})
+  if(CAN_TARGET_${arch})
     add_compiler_rt_object_libraries(RTXray
       ARCHS ${arch}
-      SOURCES ${XRAY_SOURCES} ${${arch}_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS}
-      DEPS ${XRAY_DEPS})
-    add_compiler_rt_object_libraries(RTXrayFDR
-      ARCHS ${arch}
-      SOURCES ${XRAY_FDR_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS}
-      DEPS ${XRAY_DEPS})
-    add_compiler_rt_object_libraries(RTXrayBASIC
-      ARCHS ${arch}
-      SOURCES ${XRAY_BASIC_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS}
-      DEPS ${XRAY_DEPS})
-    add_compiler_rt_object_libraries(RTXrayPROFILING
-      ARCHS ${arch}
-      SOURCES ${XRAY_PROFILING_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS}
-      DEPS ${XRAY_DEPS})
-
-    # Common XRay archive for instrumented binaries.
+      SOURCES ${XRAY_SOURCES} CFLAGS ${XRAY_CFLAGS}
+      DEFS ${XRAY_COMMON_DEFINITIONS})
     add_compiler_rt_runtime(clang_rt.xray
      STATIC
      ARCHS ${arch}
+     SOURCES ${${arch}_SOURCES}
      CFLAGS ${XRAY_CFLAGS}
      DEFS ${XRAY_COMMON_DEFINITIONS}
-     OBJECT_LIBS ${XRAY_COMMON_RUNTIME_OBJECT_LIBS} RTXray
+     OBJECT_LIBS ${XRAY_COMMON_RUNTIME_OBJECT_LIBS}
      PARENT_TARGET xray)
-    # FDR mode runtime archive (addon for clang_rt.xray)
-    add_compiler_rt_runtime(clang_rt.xray-fdr
-      STATIC
-      ARCHS ${arch}
-      CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS}
-      OBJECT_LIBS RTXrayFDR
-      PARENT_TARGET xray)
-    # Basic mode runtime archive (addon for clang_rt.xray)
-    add_compiler_rt_runtime(clang_rt.xray-basic
-      STATIC
-      ARCHS ${arch}
-      CFLAGS ${XRAY_CFLAGS}
-      DEFS ${XRAY_COMMON_DEFINITIONS}
-      OBJECT_LIBS RTXrayBASIC
-      PARENT_TARGET xray)
-   # Profiler Mode runtime
-   add_compiler_rt_runtime(clang_rt.xray-profiling
-     STATIC
-     ARCHS ${arch}
-     CFLAGS ${XRAY_CFLAGS}
-     DEFS ${XRAY_COMMON_DEFINITIONS}
-     OBJECT_LIBS RTXrayPROFILING
-     PARENT_TARGET xray)
-  endforeach()
-endif() # not Apple
+  endif()
+endforeach()
+endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)

@@ -20,5 +20,4 @@ add_clang_library(clangFormat
   clangBasic
   clangLex
   clangToolingCore
-  clangToolingInclusions
   )

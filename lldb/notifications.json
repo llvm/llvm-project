@@ -1,0 +1,10 @@
+{
+    "rules": [{
+        "notifications": [{
+            "address" : "lldb-ebuilds@group.apple.com",
+            "prefix" : "[lldb]",
+            "sendSeparate" : true,
+            "includeDiff" : true
+        }]
+    }]
+}

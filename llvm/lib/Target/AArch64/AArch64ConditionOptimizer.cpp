@@ -173,14 +173,13 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
     case AArch64::ADDSXri: {
       unsigned ShiftAmt = AArch64_AM::getShiftValue(I->getOperand(3).getImm());
       if (!I->getOperand(2).isImm()) {
-        LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << *I << '\n');
+        DEBUG(dbgs() << "Immediate of cmp is symbolic, " << *I << '\n');
         return nullptr;
       } else if (I->getOperand(2).getImm() << ShiftAmt >= 0xfff) {
-        LLVM_DEBUG(dbgs() << "Immediate of cmp may be out of range, " << *I
-                          << '\n');
+        DEBUG(dbgs() << "Immediate of cmp may be out of range, " << *I << '\n');
         return nullptr;
       } else if (!MRI->use_empty(I->getOperand(0).getReg())) {
-        LLVM_DEBUG(dbgs() << "Destination of cmp is not dead, " << *I << '\n');
+        DEBUG(dbgs() << "Destination of cmp is not dead, " << *I << '\n');
         return nullptr;
       }
       return &*I;
@@ -208,8 +207,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
       return nullptr;
     }
   }
-  LLVM_DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB)
-                    << '\n');
+  DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB) << '\n');
   return nullptr;
 }
 
@@ -327,8 +325,8 @@ bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
 }
 
 bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
-                    << "********** Function: " << MF.getName() << '\n');
+  DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
+               << "********** Function: " << MF.getName() << '\n');
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -386,15 +384,15 @@ bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
     const int HeadImm = (int)HeadCmpMI->getOperand(2).getImm();
     const int TrueImm = (int)TrueCmpMI->getOperand(2).getImm();
 
-    LLVM_DEBUG(dbgs() << "Head branch:\n");
-    LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(HeadCmp)
-                      << '\n');
-    LLVM_DEBUG(dbgs() << "\timmediate: " << HeadImm << '\n');
+    DEBUG(dbgs() << "Head branch:\n");
+    DEBUG(dbgs() << "\tcondition: "
+          << AArch64CC::getCondCodeName(HeadCmp) << '\n');
+    DEBUG(dbgs() << "\timmediate: " << HeadImm << '\n');
 
-    LLVM_DEBUG(dbgs() << "True branch:\n");
-    LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(TrueCmp)
-                      << '\n');
-    LLVM_DEBUG(dbgs() << "\timmediate: " << TrueImm << '\n');
+    DEBUG(dbgs() << "True branch:\n");
+    DEBUG(dbgs() << "\tcondition: "
+          << AArch64CC::getCondCodeName(TrueCmp) << '\n');
+    DEBUG(dbgs() << "\timmediate: " << TrueImm << '\n');
 
     if (((HeadCmp == AArch64CC::GT && TrueCmp == AArch64CC::LT) ||
          (HeadCmp == AArch64CC::LT && TrueCmp == AArch64CC::GT)) &&

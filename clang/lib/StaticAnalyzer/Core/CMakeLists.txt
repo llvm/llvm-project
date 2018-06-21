@@ -13,6 +13,7 @@ add_clang_library(clangStaticAnalyzerCore
   AnalyzerOptions.cpp
   BasicValueFactory.cpp
   BlockCounter.cpp
+  IssueHash.cpp
   BugReporter.cpp
   BugReporterVisitors.cpp
   CallEvent.cpp
@@ -34,7 +35,6 @@ add_clang_library(clangStaticAnalyzerCore
   ExprEngineObjC.cpp
   FunctionSummary.cpp
   HTMLDiagnostics.cpp
-  IssueHash.cpp
   LoopUnrolling.cpp
   LoopWidening.cpp
   MemRegion.cpp
@@ -51,7 +51,6 @@ add_clang_library(clangStaticAnalyzerCore
   Store.cpp
   SubEngine.cpp
   SymbolManager.cpp
-  WorkList.cpp
   Z3ConstraintManager.cpp
 
   LINK_LIBS

@@ -64,5 +64,5 @@ std::string sys::getDefaultTargetTriple() {
     TargetTripleString = EnvTriple;
 #endif
 
-  return TargetTripleString;
+  return Triple::normalize(TargetTripleString);
 }

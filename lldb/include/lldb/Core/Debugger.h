@@ -76,7 +76,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Debugger Debugger.h "lldb/Core/Debugger.h"
-/// A class to manage flag bits.
+/// @brief A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
 //----------------------------------------------------------------------
@@ -156,9 +156,11 @@ public:
   lldb::ListenerSP GetListener() { return m_listener_sp; }
 
   // This returns the Debugger's scratch source manager.  It won't be able to
-  // look up files in debug information, but it can look up files by absolute
-  // path and display them to you. To get the target's source manager, call
-  // GetSourceManager on the target instead.
+  // look up files in debug
+  // information, but it can look up files by absolute path and display them to
+  // you.
+  // To get the target's source manager, call GetSourceManager on the target
+  // instead.
   SourceManager &GetSourceManager();
 
   lldb::TargetSP GetSelectedTarget() {
@@ -169,9 +171,10 @@ public:
   //------------------------------------------------------------------
   /// Get accessor for the target list.
   ///
-  /// The target list is part of the global debugger object. This the single
-  /// debugger shared instance to control where targets get created and to
-  /// allow for tracking and searching for targets based on certain criteria.
+  /// The target list is part of the global debugger object. This
+  /// the single debugger shared instance to control where targets
+  /// get created and to allow for tracking and searching for targets
+  /// based on certain criteria.
   ///
   /// @return
   ///     A global shared target list.
@@ -185,8 +188,9 @@ public:
   void DispatchInputEndOfFile();
 
   //------------------------------------------------------------------
-  // If any of the streams are not set, set them to the in/out/err stream of
-  // the top most input reader to ensure they at least have something
+  // If any of the streams are not set, set them to the in/out/err
+  // stream of the top most input reader to ensure they at least have
+  // something
   //------------------------------------------------------------------
   void AdoptTopIOHandlerFilesIfInvalid(lldb::StreamFileSP &in,
                                        lldb::StreamFileSP &out,
@@ -195,6 +199,9 @@ public:
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp);
 
   bool PopIOHandler(const lldb::IOHandlerSP &reader_sp);
+
+  uint32_t PopIOHandlers(const lldb::IOHandlerSP &reader1_sp,
+                         const lldb::IOHandlerSP &reader2_sp);
 
   // Synchronously run an input reader until it is done
   void RunIOHandler(const lldb::IOHandlerSP &reader_sp);
@@ -318,9 +325,14 @@ public:
 
   Status RunREPL(lldb::LanguageType language, const char *repl_options);
 
+  bool REPLIsActive() { return m_input_reader_stack.REPLIsActive(); }
+
+  bool REPLIsEnabled() { return m_input_reader_stack.REPLIsEnabled(); }
+
   // This is for use in the command interpreter, when you either want the
-  // selected target, or if no target is present you want to prime the dummy
-  // target with entities that will be copied over to new targets.
+  // selected target, or if no target
+  // is present you want to prime the dummy target with entities that will be
+  // copied over to new targets.
   Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
   Target *GetDummyTarget();
 
@@ -330,6 +342,7 @@ public:
 
 protected:
   friend class CommandInterpreter;
+  friend class SwiftREPL;
   friend class REPL;
 
   bool StartEventHandlerThread();
@@ -373,8 +386,8 @@ protected:
   lldb::BroadcasterManagerSP m_broadcaster_manager_sp; // The debugger acts as a
                                                        // broadcaster manager of
                                                        // last resort.
-  // It needs to get constructed before the target_list or any other member
-  // that might want to broadcast through the debugger.
+  // It needs to get constructed before the target_list or any other
+  // member that might want to broadcast through the debugger.
 
   TerminalState m_terminal_state;
   TargetList m_target_list;
@@ -403,7 +416,7 @@ protected:
   HostThread m_io_handler_thread;
   Broadcaster m_sync_broadcaster;
   lldb::ListenerSP m_forward_listener_sp;
-  llvm::once_flag m_clear_once;
+  std::once_flag m_clear_once;
 
   //----------------------------------------------------------------------
   // Events for m_sync_broadcaster
@@ -413,8 +426,8 @@ protected:
   };
 
 private:
-  // Use Debugger::CreateInstance() to get a shared pointer to a new debugger
-  // object
+  // Use Debugger::CreateInstance() to get a shared pointer to a new
+  // debugger object
   Debugger(lldb::LogOutputCallback m_log_callback, void *baton);
 
   DISALLOW_COPY_AND_ASSIGN(Debugger);

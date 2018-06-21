@@ -21,7 +21,6 @@
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
@@ -417,7 +416,7 @@ void Loop::getUniqueExitBlocks(
       // If a terminator has more then two successors, for example SwitchInst,
       // then it is possible that there are multiple edges from current block
       // to one exit block.
-      if (succ_size(BB) <= 2) {
+      if (std::distance(succ_begin(BB), succ_end(BB)) <= 2) {
         ExitBlocks.push_back(Successor);
         continue;
       }

@@ -1,4 +1,4 @@
-//===- Module.cpp - Module description ------------------------------------===//
+//===--- Module.cpp - Module description ------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,12 +11,8 @@
 //  been loaded from an AST file.
 //
 //===----------------------------------------------------------------------===//
-
 #include "clang/Serialization/Module.h"
 #include "ASTReaderInternals.h"
-#include "clang/Serialization/ContinuousRangeMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -36,8 +32,7 @@ dumpLocalRemap(StringRef Name,
   if (Map.begin() == Map.end())
     return;
   
-  using MapType = ContinuousRangeMap<Key, Offset, InitialCapacity>;
-
+  typedef ContinuousRangeMap<Key, Offset, InitialCapacity> MapType;
   llvm::errs() << "  " << Name << ":\n";
   for (typename MapType::const_iterator I = Map.begin(), IEnd = Map.end(); 
        I != IEnd; ++I) {

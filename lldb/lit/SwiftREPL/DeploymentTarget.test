@@ -1,0 +1,11 @@
+// Test that the REPL can call a *really* new function.
+// REQUIRES: darwin
+
+// RUN: echo -n "@available(macOS " >%t.swift
+// RUN: python -c 'from __future__ import print_function; import platform; print(platform.mac_ver()[0],end="")' >>%t.swift
+// RUN: echo  ", *) func newAPI() -> Int { return 11+12 }" >>%t.swift
+// RUN: echo  "newAPI()" >>%t.swift
+
+// RUN: %lldb --repl < %t.swift | FileCheck %s
+
+// CHECK: 23

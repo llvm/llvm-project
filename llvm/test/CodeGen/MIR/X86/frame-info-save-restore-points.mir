@@ -27,8 +27,8 @@
 name:            foo
 tracksRegLiveness: true
 liveins:
-  - { reg: '$edi' }
-  - { reg: '$esi' }
+  - { reg: '%edi' }
+  - { reg: '%esi' }
 # CHECK: frameInfo:
 # CHECK:      savePoint: '%bb.2'
 # CHECK-NEXT: restorePoint: '%bb.2'
@@ -43,31 +43,31 @@ stack:
 body: |
   bb.0:
     successors: %bb.2, %bb.1
-    liveins: $edi, $esi
+    liveins: %edi, %esi
 
-    $eax = COPY $edi
-    CMP32rr $eax, killed $esi, implicit-def $eflags
-    JL_1 %bb.2, implicit killed $eflags
+    %eax = COPY %edi
+    CMP32rr %eax, killed %esi, implicit-def %eflags
+    JL_1 %bb.2, implicit killed %eflags
 
   bb.1:
     successors: %bb.3
-    liveins: $eax
+    liveins: %eax
 
     JMP_1 %bb.3
 
   bb.2.true:
     successors: %bb.3
-    liveins: $eax
+    liveins: %eax
 
-    MOV32mr %stack.0.tmp, 1, _, 0, _, killed $eax
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eflags, implicit $rsp, implicit $ssp
-    $rsi = LEA64r %stack.0.tmp, 1, _, 0, _
-    $edi = MOV32r0 implicit-def dead $eflags
-    CALL64pcrel32 @doSomething, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eflags, implicit $rsp, implicit $ssp
+    MOV32mr %stack.0.tmp, 1, _, 0, _, killed %eax
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def %rsp, implicit-def %ssp, implicit-def dead %eflags, implicit %rsp, implicit %ssp
+    %rsi = LEA64r %stack.0.tmp, 1, _, 0, _
+    %edi = MOV32r0 implicit-def dead %eflags
+    CALL64pcrel32 @doSomething, csr_64, implicit %rsp, implicit %ssp, implicit %edi, implicit %rsi, implicit-def %rsp, implicit-def %ssp, implicit-def %eax
+    ADJCALLSTACKUP64 0, 0, implicit-def %rsp, implicit-def %ssp, implicit-def dead %eflags, implicit %rsp, implicit %ssp
 
   bb.3.false:
-    liveins: $eax
+    liveins: %eax
 
-    RETQ $eax
+    RETQ %eax
 ...

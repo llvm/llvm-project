@@ -43,7 +43,7 @@ public:
     return true;
   }
 
-  /// Returns true if the given method has been defined explicitly by the
+  /// \brief Returns true if the given method has been defined explicitly by the
   /// user.
   static bool hasUserDefined(const ObjCMethodDecl *D,
                              const ObjCImplDecl *Container) {

@@ -50,8 +50,7 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M, ModuleAnalysisManager &) {
       for (CallSite CS : Calls)
         // FIXME: We really shouldn't be able to fail to inline at this point!
         // We should do something to log or check the inline failures here.
-        Changed |=
-            InlineFunction(CS, IFI, /*CalleeAAR=*/nullptr, InsertLifetime);
+        Changed |= InlineFunction(CS, IFI);
 
       // Remember to try and delete this function afterward. This both avoids
       // re-walking the rest of the module and avoids dealing with any iterator
@@ -130,7 +129,7 @@ Pass *llvm::createAlwaysInlinerLegacyPass(bool InsertLifetime) {
   return new AlwaysInlinerLegacyPass(InsertLifetime);
 }
 
-/// Get the inline cost for the always-inliner.
+/// \brief Get the inline cost for the always-inliner.
 ///
 /// The always inliner *only* handles functions which are marked with the
 /// attribute to force inlining. As such, it is dramatically simpler and avoids

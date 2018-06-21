@@ -24,23 +24,22 @@ using namespace ento;
 namespace {
 class DivZeroChecker : public Checker< check::PreStmt<BinaryOperator> > {
   mutable std::unique_ptr<BuiltinBug> BT;
-  void reportBug(const char *Msg, ProgramStateRef StateZero, CheckerContext &C,
-                 std::unique_ptr<BugReporterVisitor> Visitor = nullptr) const;
-
+  void reportBug(const char *Msg,
+                 ProgramStateRef StateZero,
+                 CheckerContext &C) const ;
 public:
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
 };
 } // end anonymous namespace
 
-void DivZeroChecker::reportBug(
-    const char *Msg, ProgramStateRef StateZero, CheckerContext &C,
-    std::unique_ptr<BugReporterVisitor> Visitor) const {
+void DivZeroChecker::reportBug(const char *Msg,
+                               ProgramStateRef StateZero,
+                               CheckerContext &C) const {
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
     if (!BT)
       BT.reset(new BuiltinBug(this, "Division by zero"));
 
     auto R = llvm::make_unique<BugReport>(*BT, Msg, N);
-    R->addVisitor(std::move(Visitor));
     bugreporter::trackNullOrUndefValue(N, bugreporter::GetDenomExpr(N), *R);
     C.emitReport(std::move(R));
   }
@@ -79,8 +78,7 @@ void DivZeroChecker::checkPreStmt(const BinaryOperator *B,
 
   bool TaintedD = C.getState()->isTainted(*DV);
   if ((stateNotZero && stateZero && TaintedD)) {
-    reportBug("Division by a tainted value, possibly zero", stateZero, C,
-              llvm::make_unique<TaintBugVisitor>(*DV));
+    reportBug("Division by a tainted value, possibly zero", stateZero, C);
     return;
   }
 

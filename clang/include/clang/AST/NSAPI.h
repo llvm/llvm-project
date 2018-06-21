@@ -20,7 +20,7 @@ namespace clang {
   class QualType;
   class Expr;
 
-// Provides info and caches identifiers/selectors for NSFoundation API.
+// \brief Provides info and caches identifiers/selectors for NSFoundation API.
 class NSAPI {
 public:
   explicit NSAPI(ASTContext &Ctx);
@@ -53,25 +53,25 @@ public:
 
   IdentifierInfo *getNSClassId(NSClassIdKindKind K) const;
 
-  /// The Objective-C NSString selectors.
+  /// \brief The Objective-C NSString selectors.
   Selector getNSStringSelector(NSStringMethodKind MK) const;
 
-  /// Return NSStringMethodKind if \param Sel is such a selector.
+  /// \brief Return NSStringMethodKind if \param Sel is such a selector.
   Optional<NSStringMethodKind> getNSStringMethodKind(Selector Sel) const;
 
-  /// Returns true if the expression \param E is a reference of
+  /// \brief Returns true if the expression \param E is a reference of
   /// "NSUTF8StringEncoding" enum constant.
   bool isNSUTF8StringEncodingConstant(const Expr *E) const {
     return isObjCEnumerator(E, "NSUTF8StringEncoding", NSUTF8StringEncodingId);
   }
 
-  /// Returns true if the expression \param E is a reference of
+  /// \brief Returns true if the expression \param E is a reference of
   /// "NSASCIIStringEncoding" enum constant.
   bool isNSASCIIStringEncodingConstant(const Expr *E) const {
     return isObjCEnumerator(E, "NSASCIIStringEncoding",NSASCIIStringEncodingId);
   }
 
-  /// Enumerates the NSArray/NSMutableArray methods used to generate
+  /// \brief Enumerates the NSArray/NSMutableArray methods used to generate
   /// literals and to apply some checks.
   enum NSArrayMethodKind {
     NSArr_array,
@@ -89,13 +89,13 @@ public:
   };
   static const unsigned NumNSArrayMethods = 12;
 
-  /// The Objective-C NSArray selectors.
+  /// \brief The Objective-C NSArray selectors.
   Selector getNSArraySelector(NSArrayMethodKind MK) const;
 
-  /// Return NSArrayMethodKind if \p Sel is such a selector.
+  /// \brief Return NSArrayMethodKind if \p Sel is such a selector.
   Optional<NSArrayMethodKind> getNSArrayMethodKind(Selector Sel);
 
-  /// Enumerates the NSDictionary/NSMutableDictionary methods used
+  /// \brief Enumerates the NSDictionary/NSMutableDictionary methods used
   /// to generate literals and to apply some checks.
   enum NSDictionaryMethodKind {
     NSDict_dictionary,
@@ -114,13 +114,13 @@ public:
   };
   static const unsigned NumNSDictionaryMethods = 13;
   
-  /// The Objective-C NSDictionary selectors.
+  /// \brief The Objective-C NSDictionary selectors.
   Selector getNSDictionarySelector(NSDictionaryMethodKind MK) const;
 
-  /// Return NSDictionaryMethodKind if \p Sel is such a selector.
+  /// \brief Return NSDictionaryMethodKind if \p Sel is such a selector.
   Optional<NSDictionaryMethodKind> getNSDictionaryMethodKind(Selector Sel);
 
-  /// Enumerates the NSMutableSet/NSOrderedSet methods used
+  /// \brief Enumerates the NSMutableSet/NSOrderedSet methods used
   /// to apply some checks.
   enum NSSetMethodKind {
     NSMutableSet_addObject,
@@ -131,42 +131,42 @@ public:
   };
   static const unsigned NumNSSetMethods = 5;
 
-  /// The Objective-C NSSet selectors.
+  /// \brief The Objective-C NSSet selectors.
   Selector getNSSetSelector(NSSetMethodKind MK) const;
 
-  /// Return NSSetMethodKind if \p Sel is such a selector.
+  /// \brief Return NSSetMethodKind if \p Sel is such a selector.
   Optional<NSSetMethodKind> getNSSetMethodKind(Selector Sel);
 
-  /// Returns selector for "objectForKeyedSubscript:".
+  /// \brief Returns selector for "objectForKeyedSubscript:".
   Selector getObjectForKeyedSubscriptSelector() const {
     return getOrInitSelector(StringRef("objectForKeyedSubscript"),
                              objectForKeyedSubscriptSel);
   }
 
-  /// Returns selector for "objectAtIndexedSubscript:".
+  /// \brief Returns selector for "objectAtIndexedSubscript:".
   Selector getObjectAtIndexedSubscriptSelector() const {
     return getOrInitSelector(StringRef("objectAtIndexedSubscript"),
                              objectAtIndexedSubscriptSel);
   }
 
-  /// Returns selector for "setObject:forKeyedSubscript".
+  /// \brief Returns selector for "setObject:forKeyedSubscript".
   Selector getSetObjectForKeyedSubscriptSelector() const {
     StringRef Ids[] = { "setObject", "forKeyedSubscript" };
     return getOrInitSelector(Ids, setObjectForKeyedSubscriptSel);
   }
 
-  /// Returns selector for "setObject:atIndexedSubscript".
+  /// \brief Returns selector for "setObject:atIndexedSubscript".
   Selector getSetObjectAtIndexedSubscriptSelector() const {
     StringRef Ids[] = { "setObject", "atIndexedSubscript" };
     return getOrInitSelector(Ids, setObjectAtIndexedSubscriptSel);
   }
 
-  /// Returns selector for "isEqual:".
+  /// \brief Returns selector for "isEqual:".
   Selector getIsEqualSelector() const {
     return getOrInitSelector(StringRef("isEqual"), isEqualSel);
   }
 
-  /// Enumerates the NSNumber methods used to generate literals.
+  /// \brief Enumerates the NSNumber methods used to generate literals.
   enum NSNumberLiteralMethodKind {
     NSNumberWithChar,
     NSNumberWithUnsignedChar,
@@ -186,7 +186,7 @@ public:
   };
   static const unsigned NumNSNumberLiteralMethods = 15;
 
-  /// The Objective-C NSNumber selectors used to create NSNumber literals.
+  /// \brief The Objective-C NSNumber selectors used to create NSNumber literals.
   /// \param Instance if true it will return the selector for the init* method
   /// otherwise it will return the selector for the number* method.
   Selector getNSNumberLiteralSelector(NSNumberLiteralMethodKind MK,
@@ -198,29 +198,29 @@ public:
            Sel == getNSNumberLiteralSelector(MK, true);
   }
 
-  /// Return NSNumberLiteralMethodKind if \p Sel is such a selector.
+  /// \brief Return NSNumberLiteralMethodKind if \p Sel is such a selector.
   Optional<NSNumberLiteralMethodKind>
       getNSNumberLiteralMethodKind(Selector Sel) const;
 
-  /// Determine the appropriate NSNumber factory method kind for a
+  /// \brief Determine the appropriate NSNumber factory method kind for a
   /// literal of the given type.
   Optional<NSNumberLiteralMethodKind>
       getNSNumberFactoryMethodKind(QualType T) const;
 
-  /// Returns true if \param T is a typedef of "BOOL" in objective-c.
+  /// \brief Returns true if \param T is a typedef of "BOOL" in objective-c.
   bool isObjCBOOLType(QualType T) const;
-  /// Returns true if \param T is a typedef of "NSInteger" in objective-c.
+  /// \brief Returns true if \param T is a typedef of "NSInteger" in objective-c.
   bool isObjCNSIntegerType(QualType T) const;
-  /// Returns true if \param T is a typedef of "NSUInteger" in objective-c.
+  /// \brief Returns true if \param T is a typedef of "NSUInteger" in objective-c.
   bool isObjCNSUIntegerType(QualType T) const;
-  /// Returns one of NSIntegral typedef names if \param T is a typedef
+  /// \brief Returns one of NSIntegral typedef names if \param T is a typedef
   /// of that name in objective-c.
   StringRef GetNSIntegralKind(QualType T) const;
 
-  /// Returns \c true if \p Id is currently defined as a macro.
+  /// \brief Returns \c true if \p Id is currently defined as a macro.
   bool isMacroDefined(StringRef Id) const;
 
-  /// Returns \c true if \p InterfaceDecl is subclass of \p NSClassKind
+  /// \brief Returns \c true if \p InterfaceDecl is subclass of \p NSClassKind
   bool isSubclassOfNSClass(ObjCInterfaceDecl *InterfaceDecl,
                            NSClassIdKindKind NSClassKind) const;
 
@@ -236,16 +236,16 @@ private:
 
   mutable Selector NSStringSelectors[NumNSStringMethods];
 
-  /// The selectors for Objective-C NSArray methods.
+  /// \brief The selectors for Objective-C NSArray methods.
   mutable Selector NSArraySelectors[NumNSArrayMethods];
 
-  /// The selectors for Objective-C NSDictionary methods.
+  /// \brief The selectors for Objective-C NSDictionary methods.
   mutable Selector NSDictionarySelectors[NumNSDictionaryMethods];
 
-  /// The selectors for Objective-C NSSet methods.
+  /// \brief The selectors for Objective-C NSSet methods.
   mutable Selector NSSetSelectors[NumNSSetMethods];
 
-  /// The Objective-C NSNumber selectors used to create NSNumber literals.
+  /// \brief The Objective-C NSNumber selectors used to create NSNumber literals.
   mutable Selector NSNumberClassSelectors[NumNSNumberLiteralMethods];
   mutable Selector NSNumberInstanceSelectors[NumNSNumberLiteralMethods];
 

@@ -2,11 +2,10 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs -O0 < %s
 
 ; GCN-LABEL: {{^}}test_loop:
-; GCN: s_and_b64 vcc, exec, -1
 ; GCN: [[LABEL:BB[0-9+]_[0-9]+]]: ; %for.body{{$}}
 ; GCN: ds_read_b32
 ; GCN: ds_write_b32
-; GCN: s_cbranch_vccnz [[LABEL]]
+; GCN: s_branch [[LABEL]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_loop(float addrspace(3)* %ptr, i32 %n) nounwind {
 entry:
@@ -96,7 +95,7 @@ for.body:
 
 ; GCN-LABEL: {{^}}loop_arg_0:
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}
-; GCN: v_cmp_eq_u32{{[^,]*}}, 1,
+; GCN: v_cmp_eq_u32_e32 vcc, 1,
 
 ; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]
 ; GCN: s_add_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80
@@ -105,9 +104,8 @@ for.body:
 ; GCN: s_cbranch_vccnz [[LOOPBB]]
 ; GCN-NEXT: ; %bb.2
 ; GCN-NEXT: s_endpgm
-define amdgpu_kernel void @loop_arg_0(float addrspace(3)* %ptr, i32 %n) nounwind {
+define amdgpu_kernel void @loop_arg_0(float addrspace(3)* %ptr, i32 %n, i1 %cond) nounwind {
 entry:
-  %cond = load volatile i1, i1 addrspace(3)* null
   br label %for.body
 
 for.exit:

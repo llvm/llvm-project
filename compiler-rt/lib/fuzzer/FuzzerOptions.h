@@ -18,7 +18,7 @@ namespace fuzzer {
 struct FuzzingOptions {
   int Verbosity = 1;
   size_t MaxLen = 0;
-  size_t LenControl = 1000;
+  size_t ExperimentalLenControl = 0;
   int UnitTimeoutSec = 300;
   int TimeoutExitCode = 77;
   int ErrorExitCode = 77;
@@ -45,8 +45,6 @@ struct FuzzingOptions {
   std::string ExactArtifactPath;
   std::string ExitOnSrcPos;
   std::string ExitOnItem;
-  std::string FocusFunction;
-  std::string DataFlowTrace;
   bool SaveArtifacts = true;
   bool PrintNEW = true; // Print a status line when new units are found;
   bool PrintNewCovPcs = false;
@@ -55,8 +53,10 @@ struct FuzzingOptions {
   bool PrintCorpusStats = false;
   bool PrintCoverage = false;
   bool DumpCoverage = false;
+  bool UseClangCoverage = false;
   bool DetectLeaks = true;
   int PurgeAllocatorIntervalSec = 1;
+  int UseFeatureFrequency = false;
   int  TraceMalloc = 0;
   bool HandleAbrt = false;
   bool HandleBus = false;

@@ -100,8 +100,9 @@ define <2 x i32> @test9(<2 x float> %f) {
   ret <2 x i32> %vcvt.i
 }
 
-; Combine all undefs.
+; Don't combine all undefs.
 ; CHECK-LABEL: test10
+; CHECK: fmul.2s v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CHECK: fcvtzu.2s v{{[0-9]+}}, v{{[0-9]+}}
 ; CHECK: ret
 define <2 x i32> @test10(<2 x float> %f) {

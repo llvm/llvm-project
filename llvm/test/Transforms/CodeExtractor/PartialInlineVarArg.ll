@@ -36,7 +36,7 @@ bb:
 }
 ; CHECK-LABEL: @caller1
 ; CHECK: codeRepl.i:
-; CHECK-NEXT:  call void (i32, i8**, i32, ...) @vararg.3_bb1(i32 %stat1.i, i8** %vargs.i, i32 %arg)
+; CHECK-NEXT:  call void (i32, i8**, i32, ...) @vararg.2_bb1(i32 %stat1.i, i8** %vargs.i, i32 %arg)
 
 define i32 @caller2(i32 %arg, float %arg2) {
 bb:
@@ -46,7 +46,7 @@ bb:
 
 ; CHECK-LABEL: @caller2
 ; CHECK: codeRepl.i:
-; CHECK-NEXT:  call void (i32, i8**, i32, ...) @vararg.3_bb1(i32 %stat1.i, i8** %vargs.i, i32 %arg, i32 10, float %arg2)
+; CHECK-NEXT:  call void (i32, i8**, i32, ...) @vararg.2_bb1(i32 %stat1.i, i8** %vargs.i, i32 %arg, i32 10, float %arg2)
 
 ; Test case to check that we do not extract a vararg function, if va_end is in
 ; a block that is not outlined.
@@ -81,27 +81,3 @@ bb:
   %res = tail call i32 (i32, ...) @vararg_not_legal(i32 %arg, i32 %arg)
   ret i32 %res
 }
-
-declare i32* @err(i32*)
-
-define signext i32 @vararg2(i32 * %l, ...) {
-entry:
-  br i1 undef, label %cleanup, label %cond.end
-
-cond.end:                                         ; preds = %entry
-  %call51 = call i32* @err(i32* nonnull %l)
-  unreachable
-
-cleanup:                                          ; preds = %entry
-  ret i32 0
-}
-
-define i32* @caller_with_signext(i32* %foo) {
-entry:
-  %call1 = tail call signext i32 (i32*, ...) @vararg2(i32* %foo, i32 signext 8)
-  unreachable
-}
-
-; CHECK-LABEL: @caller_with_signext
-; CHECK: codeRepl.i:
-; CHECK-NEXT:  call void (i32*, ...) @vararg2.1_cond.end(i32* %foo, i32 signext 8)

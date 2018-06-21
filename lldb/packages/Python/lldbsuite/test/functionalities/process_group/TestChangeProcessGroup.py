@@ -15,6 +15,8 @@ class ChangeProcessGroupTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    NO_DEBUG_INFO_TESTCASE = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -24,6 +26,7 @@ class ChangeProcessGroupTestCase(TestBase):
     @skipIfFreeBSD  # Times out on FreeBSD llvm.org/pr23731
     @skipIfWindows  # setpgid call does not exist on Windows
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054632")
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], bugnumber="<rdar://problem/34538611>") # old lldb-server has race condition, launching an inferior and then launching debugserver in quick succession sometimes fails
     def test_setpgid(self):
         self.build()

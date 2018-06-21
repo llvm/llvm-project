@@ -25,11 +25,10 @@ class SanitizerCommonDecorator {
   // stdout, which is not the case on Windows (see SetConsoleTextAttribute()).
  public:
   SanitizerCommonDecorator() : ansi_(ColorizeReports()) {}
-  const char *Bold() const { return ansi_ ? "\033[1m" : ""; }
+  const char *Bold()    const { return ansi_ ? "\033[1m" : ""; }
   const char *Default() const { return ansi_ ? "\033[1m\033[0m"  : ""; }
   const char *Warning() const { return Red(); }
-  const char *Error() const { return Red(); }
-  const char *MemoryByte() const { return Magenta(); }
+  const char *MemoryByte() { return Magenta(); }
 
  protected:
   const char *Black()   const { return ansi_ ? "\033[1m\033[30m" : ""; }

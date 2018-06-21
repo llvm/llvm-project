@@ -19,6 +19,7 @@ debug_info_categories = [
 ]
 
 all_categories = {
+    'swiftpr': 'Tests that may run as a part of Swift pull-request testing',
     'dataformatters': 'Tests related to the type command and the data formatters subsystem',
     'dwarf': 'Tests that can be run with DWARF debug information',
     'dwo': 'Tests that can be run with DWO debug information',
@@ -34,6 +35,7 @@ all_categories = {
     'stresstest': 'Tests related to stressing lldb limits',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
     'lldb-mi': 'lldb-mi tests',
+    'frame-diagnose': 'Frame diagnose tests',
     'darwin-log': 'Darwin log tests',
     'watchpoint': 'Watchpoint-related tests',
 }
@@ -58,7 +60,7 @@ def is_supported_on_platform(category, platform, compiler_path):
         return platform in ["darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]
     elif category == "gmodules":
         # First, check to see if the platform can even support gmodules.
-        if platform not in ["freebsd", "darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
+        if platform not in ["linux", "freebsd", "darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
             return False
         return gmodules.is_compiler_clang_with_gmodules(compiler_path)
     return True

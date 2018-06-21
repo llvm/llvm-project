@@ -95,6 +95,7 @@ class SparcAsmParser : public MCTargetAsmParser {
                          unsigned &RegKind);
 
   bool matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
+  bool parseDirectiveWord(unsigned Size, SMLoc L);
 
   bool is64Bit() const {
     return getSTI().getTargetTriple().getArch() == Triple::sparcv9;
@@ -108,14 +109,6 @@ public:
                 const MCInstrInfo &MII,
                 const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
-    Parser.addAliasForDirective(".half", ".2byte");
-    Parser.addAliasForDirective(".uahalf", ".2byte");
-    Parser.addAliasForDirective(".word", ".4byte");
-    Parser.addAliasForDirective(".uaword", ".4byte");
-    Parser.addAliasForDirective(".nword", is64Bit() ? ".8byte" : ".4byte");
-    if (is64Bit())
-      Parser.addAliasForDirective(".xword", ".8byte");
-
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
@@ -689,6 +682,21 @@ ParseDirective(AsmToken DirectiveID)
 {
   StringRef IDVal = DirectiveID.getString();
 
+  if (IDVal == ".byte")
+    return parseDirectiveWord(1, DirectiveID.getLoc());
+
+  if (IDVal == ".half")
+    return parseDirectiveWord(2, DirectiveID.getLoc());
+
+  if (IDVal == ".word")
+    return parseDirectiveWord(4, DirectiveID.getLoc());
+
+  if (IDVal == ".nword")
+    return parseDirectiveWord(is64Bit() ? 8 : 4, DirectiveID.getLoc());
+
+  if (is64Bit() && IDVal == ".xword")
+    return parseDirectiveWord(8, DirectiveID.getLoc());
+
   if (IDVal == ".register") {
     // For now, ignore .register directive.
     Parser.eatToEndOfStatement();
@@ -703,6 +711,28 @@ ParseDirective(AsmToken DirectiveID)
 
   // Let the MC layer to handle other directives.
   return true;
+}
+
+bool SparcAsmParser:: parseDirectiveWord(unsigned Size, SMLoc L) {
+  if (getLexer().isNot(AsmToken::EndOfStatement)) {
+    while (true) {
+      const MCExpr *Value;
+      if (getParser().parseExpression(Value))
+        return true;
+
+      getParser().getStreamer().EmitValue(Value, Size);
+
+      if (getLexer().is(AsmToken::EndOfStatement))
+        break;
+
+      // FIXME: Improve diagnostic.
+      if (getLexer().isNot(AsmToken::Comma))
+        return Error(L, "unexpected token in directive");
+      Parser.Lex();
+    }
+  }
+  Parser.Lex();
+  return false;
 }
 
 OperandMatchResultTy
@@ -885,17 +915,9 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op,
 
       const MCExpr *Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
                                                   getContext());
-      SparcMCExpr::VariantKind Kind = SparcMCExpr::VK_Sparc_13;
-
-      if (getContext().getObjectFileInfo()->isPositionIndependent()) {
-        if (isCall)
-          Kind = SparcMCExpr::VK_Sparc_WPLT30;
-        else
-          Kind = SparcMCExpr::VK_Sparc_GOT13;
-      }
-
-      Res = SparcMCExpr::create(Kind, Res, getContext());
-
+      if (isCall && getContext().getObjectFileInfo()->isPositionIndependent())
+        Res = SparcMCExpr::create(SparcMCExpr::VK_Sparc_WPLT30, Res,
+                                  getContext());
       Op = SparcOperand::CreateImm(Res, S, E);
     }
     break;

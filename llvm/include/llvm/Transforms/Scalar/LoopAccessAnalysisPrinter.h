@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-/// Printer pass for the \c LoopAccessInfo results.
+/// \brief Printer pass for the \c LoopAccessInfo results.
 class LoopAccessInfoPrinterPass
     : public PassInfoMixin<LoopAccessInfoPrinterPass> {
   raw_ostream &OS;

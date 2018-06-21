@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-/// Symbolize using user-provided, C API, callbacks.
+/// \brief Symbolize using user-provided, C API, callbacks.
 ///
 /// See llvm-c/Disassembler.h.
 class MCExternalSymbolizer : public MCSymbolizer {

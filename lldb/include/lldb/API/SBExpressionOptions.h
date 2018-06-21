@@ -51,8 +51,10 @@ public:
   uint32_t GetOneThreadTimeoutInMicroSeconds() const;
 
   // Set the timeout for running on one thread, 0 means use the default
-  // behavior. If you set this higher than the overall timeout, you'll get an
-  // error when you try to run the expression.
+  // behavior.
+  // If you set this higher than the overall timeout, you'll get an error when
+  // you
+  // try to run the expression.
   void SetOneThreadTimeoutInMicroSeconds(uint32_t timeout = 0);
 
   bool GetTryAllThreads() const;
@@ -70,6 +72,14 @@ public:
   void SetLanguage(lldb::LanguageType language);
 
   void SetCancelCallback(lldb::ExpressionCancelCallback callback, void *baton);
+
+  bool GetPlaygroundTransformEnabled() const;
+
+  void SetPlaygroundTransformEnabled(bool enable_playground_transform = true);
+
+  bool GetREPLMode() const;
+
+  void SetREPLMode(bool enable_repl_mode = true);
 
   bool GetGenerateDebugInfo();
 

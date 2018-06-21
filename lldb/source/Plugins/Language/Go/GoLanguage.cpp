@@ -63,7 +63,7 @@ Language *GoLanguage::CreateInstance(lldb::LanguageType language) {
 
 HardcodedFormatters::HardcodedSummaryFinder
 GoLanguage::GetHardcodedSummaries() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static HardcodedFormatters::HardcodedSummaryFinder g_formatters;
 
   llvm::call_once(g_initialize, []() -> void {
@@ -105,7 +105,7 @@ GoLanguage::GetHardcodedSummaries() {
 
 HardcodedFormatters::HardcodedSyntheticFinder
 GoLanguage::GetHardcodedSynthetics() {
-  static llvm::once_flag g_initialize;
+  static std::once_flag g_initialize;
   static HardcodedFormatters::HardcodedSyntheticFinder g_formatters;
 
   llvm::call_once(g_initialize, []() -> void {

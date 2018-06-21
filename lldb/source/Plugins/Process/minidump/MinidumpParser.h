@@ -17,7 +17,6 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/UUID.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -54,8 +53,6 @@ public:
   llvm::ArrayRef<uint8_t> GetStream(MinidumpStreamType stream_type);
 
   llvm::Optional<std::string> GetMinidumpString(uint32_t rva);
-
-  UUID GetModuleUUID(const MinidumpModule* module);
 
   llvm::ArrayRef<MinidumpThread> GetThreads();
 

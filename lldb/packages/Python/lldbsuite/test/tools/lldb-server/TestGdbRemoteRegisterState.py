@@ -113,6 +113,7 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
 
     @llgs_test
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054737")
     def test_grp_register_save_restore_works_with_suffix_llgs(self):
         USE_THREAD_SUFFIX = True
         self.init_llgs_test()
@@ -129,6 +130,7 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
 
     @llgs_test
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054737")
     def test_grp_register_save_restore_works_no_suffix_llgs(self):
         USE_THREAD_SUFFIX = False
         self.init_llgs_test()

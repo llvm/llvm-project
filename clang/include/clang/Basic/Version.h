@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines version macros and version-related utility functions
+/// \brief Defines version macros and version-related utility functions
 /// for Clang.
 ///
 //===----------------------------------------------------------------------===//
@@ -20,40 +20,40 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
-  /// Retrieves the repository path (e.g., Subversion path) that
+  /// \brief Retrieves the repository path (e.g., Subversion path) that
   /// identifies the particular Clang branch, tag, or trunk from which this
   /// Clang was built.
   std::string getClangRepositoryPath();
 
-  /// Retrieves the repository path from which LLVM was built.
+  /// \brief Retrieves the repository path from which LLVM was built.
   ///
   /// This supports LLVM residing in a separate repository from clang.
   std::string getLLVMRepositoryPath();
 
-  /// Retrieves the repository revision number (or identifier) from which
+  /// \brief Retrieves the repository revision number (or identifer) from which
   /// this Clang was built.
   std::string getClangRevision();
 
-  /// Retrieves the repository revision number (or identifier) from which
+  /// \brief Retrieves the repository revision number (or identifer) from which
   /// LLVM was built.
   ///
   /// If Clang and LLVM are in the same repository, this returns the same
   /// string as getClangRevision.
   std::string getLLVMRevision();
 
-  /// Retrieves the full repository version that is an amalgamation of
+  /// \brief Retrieves the full repository version that is an amalgamation of
   /// the information in getClangRepositoryPath() and getClangRevision().
   std::string getClangFullRepositoryVersion();
 
-  /// Retrieves a string representing the complete clang version,
+  /// \brief Retrieves a string representing the complete clang version,
   /// which includes the clang version number, the repository version,
   /// and the vendor tag.
   std::string getClangFullVersion();
 
-  /// Like getClangFullVersion(), but with a custom tool name.
+  /// \brief Like getClangFullVersion(), but with a custom tool name.
   std::string getClangToolFullVersion(llvm::StringRef ToolName);
 
-  /// Retrieves a string representing the complete clang version suitable
+  /// \brief Retrieves a string representing the complete clang version suitable
   /// for use in the CPP __VERSION__ macro, which includes the clang version
   /// number, the repository version, and the vendor tag.
   std::string getClangFullCPPVersion();

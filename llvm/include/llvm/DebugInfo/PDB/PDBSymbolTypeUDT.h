@@ -10,7 +10,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEUDT_H
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLTYPEUDT_H
 
-#include "IPDBLineNumber.h"
 #include "IPDBSession.h"
 #include "PDBSymbol.h"
 #include "PDBSymbolTypeBaseClass.h"
@@ -46,7 +45,6 @@ public:
   FORWARD_SYMBOL_METHOD(getLength)
   FORWARD_SYMBOL_ID_METHOD(getLexicalParent)
   FORWARD_SYMBOL_METHOD(getName)
-  FORWARD_SYMBOL_METHOD(getSrcLineOnTypeDefn)
   FORWARD_SYMBOL_METHOD(isNested)
   FORWARD_SYMBOL_METHOD(hasOverloadedOperator)
   FORWARD_SYMBOL_METHOD(isPacked)
@@ -55,7 +53,6 @@ public:
   FORWARD_SYMBOL_METHOD(isUnalignedType)
   FORWARD_SYMBOL_ID_METHOD(getVirtualTableShape)
   FORWARD_SYMBOL_METHOD(isVolatileType)
-  FORWARD_SYMBOL_METHOD(getAccess)
 };
 }
 } // namespace llvm

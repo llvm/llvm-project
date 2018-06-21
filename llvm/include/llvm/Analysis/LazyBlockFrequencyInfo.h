@@ -75,7 +75,7 @@ private:
   const LoopInfoT *LI;
 };
 
-/// This is an alternative analysis pass to
+/// \brief This is an alternative analysis pass to
 /// BlockFrequencyInfoWrapperPass.  The difference is that with this pass the
 /// block frequencies are not computed when the analysis pass is executed but
 /// rather when the BFI result is explicitly requested by the analysis client.
@@ -109,10 +109,10 @@ public:
 
   LazyBlockFrequencyInfoPass();
 
-  /// Compute and return the block frequencies.
+  /// \brief Compute and return the block frequencies.
   BlockFrequencyInfo &getBFI() { return LBFI.getCalculated(); }
 
-  /// Compute and return the block frequencies.
+  /// \brief Compute and return the block frequencies.
   const BlockFrequencyInfo &getBFI() const { return LBFI.getCalculated(); }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -126,7 +126,7 @@ public:
   void print(raw_ostream &OS, const Module *M) const override;
 };
 
-/// Helper for client passes to initialize dependent passes for LBFI.
+/// \brief Helper for client passes to initialize dependent passes for LBFI.
 void initializeLazyBFIPassPass(PassRegistry &Registry);
 }
 #endif

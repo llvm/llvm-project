@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// WhitespaceManager class manages whitespace around tokens and their
+/// \brief WhitespaceManager class manages whitespace around tokens and their
 /// replacements.
 ///
 //===----------------------------------------------------------------------===//
@@ -24,7 +24,7 @@
 namespace clang {
 namespace format {
 
-/// Manages the whitespaces around tokens and their replacements.
+/// \brief Manages the whitespaces around tokens and their replacements.
 ///
 /// This includes special handling for certain constructs, e.g. the alignment of
 /// trailing line comments.
@@ -41,7 +41,7 @@ public:
                     bool UseCRLF)
       : SourceMgr(SourceMgr), Style(Style), UseCRLF(UseCRLF) {}
 
-  /// Replaces the whitespace in front of \p Tok. Only call once for
+  /// \brief Replaces the whitespace in front of \p Tok. Only call once for
   /// each \c AnnotatedToken.
   ///
   /// \p StartOfTokenColumn is the column at which the token will start after
@@ -51,7 +51,7 @@ public:
                          unsigned StartOfTokenColumn,
                          bool InPPDirective = false);
 
-  /// Adds information about an unchangeable token's whitespace.
+  /// \brief Adds information about an unchangeable token's whitespace.
   ///
   /// Needs to be called for every token for which \c replaceWhitespace
   /// was not called.
@@ -59,7 +59,7 @@ public:
 
   llvm::Error addReplacement(const tooling::Replacement &Replacement);
 
-  /// Inserts or replaces whitespace in the middle of a token.
+  /// \brief Inserts or replaces whitespace in the middle of a token.
   ///
   /// Inserts \p PreviousPostfix, \p Newlines, \p Spaces and \p CurrentPrefix
   /// (in this order) at \p Offset inside \p Tok, replacing \p ReplaceChars
@@ -79,13 +79,13 @@ public:
                                 StringRef CurrentPrefix, bool InPPDirective,
                                 unsigned Newlines, int Spaces);
 
-  /// Returns all the \c Replacements created during formatting.
+  /// \brief Returns all the \c Replacements created during formatting.
   const tooling::Replacements &generateReplacements();
 
-  /// Represents a change before a token, a break inside a token,
+  /// \brief Represents a change before a token, a break inside a token,
   /// or the layout of an unchanged token (or whitespace within).
   struct Change {
-    /// Functor to sort changes in original source order.
+    /// \brief Functor to sort changes in original source order.
     class IsBeforeInFile {
     public:
       IsBeforeInFile(const SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
@@ -95,7 +95,7 @@ public:
       const SourceManager &SourceMgr;
     };
 
-    /// Creates a \c Change.
+    /// \brief Creates a \c Change.
     ///
     /// The generated \c Change will replace the characters at
     /// \p OriginalWhitespaceRange with a concatenation of
@@ -165,35 +165,35 @@ public:
   };
 
 private:
-  /// Calculate \c IsTrailingComment, \c TokenLength for the last tokens
+  /// \brief Calculate \c IsTrailingComment, \c TokenLength for the last tokens
   /// or token parts in a line and \c PreviousEndOfTokenColumn and
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
   void calculateLineBreakInformation();
 
-  /// Align consecutive assignments over all \c Changes.
+  /// \brief Align consecutive assignments over all \c Changes.
   void alignConsecutiveAssignments();
 
-  /// Align consecutive declarations over all \c Changes.
+  /// \brief Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
 
-  /// Align trailing comments over all \c Changes.
+  /// \brief Align trailing comments over all \c Changes.
   void alignTrailingComments();
 
-  /// Align trailing comments from change \p Start to change \p End at
+  /// \brief Align trailing comments from change \p Start to change \p End at
   /// the specified \p Column.
   void alignTrailingComments(unsigned Start, unsigned End, unsigned Column);
 
-  /// Align escaped newlines over all \c Changes.
+  /// \brief Align escaped newlines over all \c Changes.
   void alignEscapedNewlines();
 
-  /// Align escaped newlines from change \p Start to change \p End at
+  /// \brief Align escaped newlines from change \p Start to change \p End at
   /// the specified \p Column.
   void alignEscapedNewlines(unsigned Start, unsigned End, unsigned Column);
 
-  /// Fill \c Replaces with the replacements for all effective changes.
+  /// \brief Fill \c Replaces with the replacements for all effective changes.
   void generateChanges();
 
-  /// Stores \p Text as the replacement for the whitespace in \p Range.
+  /// \brief Stores \p Text as the replacement for the whitespace in \p Range.
   void storeReplacement(SourceRange Range, StringRef Text);
   void appendNewlineText(std::string &Text, unsigned Newlines);
   void appendEscapedNewlineText(std::string &Text, unsigned Newlines,

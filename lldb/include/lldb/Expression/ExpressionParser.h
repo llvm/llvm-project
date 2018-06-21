@@ -20,8 +20,8 @@ class IRExecutionUnit;
 
 //----------------------------------------------------------------------
 /// @class ExpressionParser ExpressionParser.h
-/// "lldb/Expression/ExpressionParser.h" Encapsulates an instance of a
-/// compiler that can parse expressions.
+/// "lldb/Expression/ExpressionParser.h"
+/// @brief Encapsulates an instance of a compiler that can parse expressions.
 ///
 /// ExpressionParser is the base class for llvm based Expression parsers.
 //----------------------------------------------------------------------
@@ -50,8 +50,8 @@ public:
   virtual ~ExpressionParser(){};
 
   //------------------------------------------------------------------
-  /// Parse a single expression and convert it to IR using Clang.  Don't wrap
-  /// the expression in anything at all.
+  /// Parse a single expression and convert it to IR using Clang.  Don't
+  /// wrap the expression in anything at all.
   ///
   /// @param[in] diagnostic_manager
   ///     The diagnostic manager in which to store the errors and warnings.
@@ -60,12 +60,15 @@ public:
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
   //------------------------------------------------------------------
-  virtual unsigned Parse(DiagnosticManager &diagnostic_manager) = 0;
+  virtual unsigned Parse(DiagnosticManager &diagnostic_manager,
+                         uint32_t first_line = 0,
+                         uint32_t last_line = UINT32_MAX,
+                         uint32_t line_offset = 0) = 0;
 
   //------------------------------------------------------------------
   /// Try to use the FixIts in the diagnostic_manager to rewrite the
-  /// expression.  If successful, the rewritten expression is stored in the
-  /// diagnostic_manager, get it out with GetFixedExpression.
+  /// expression.  If successful, the rewritten expression is stored
+  /// in the diagnostic_manager, get it out with GetFixedExpression.
   ///
   /// @param[in] diagnostic_manager
   ///     The diagnostic manager containing fixit's to apply.
@@ -78,8 +81,8 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Ready an already-parsed expression for execution, possibly evaluating it
-  /// statically.
+  /// Ready an already-parsed expression for execution, possibly
+  /// evaluating it statically.
   ///
   /// @param[out] func_addr
   ///     The address to which the function has been written.

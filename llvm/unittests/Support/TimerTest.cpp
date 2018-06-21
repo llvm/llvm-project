@@ -10,7 +10,7 @@
 #include "llvm/Support/Timer.h"
 #include "gtest/gtest.h"
 
-#if _WIN32
+#if LLVM_ON_WIN32
 #include <windows.h>
 #else
 #include <time.h>
@@ -22,7 +22,7 @@ namespace {
 
 // FIXME: Put this somewhere in Support, it's also used in LockFileManager.
 void SleepMS() {
-#if _WIN32
+#if LLVM_ON_WIN32
   Sleep(1);
 #else
   struct timespec Interval;

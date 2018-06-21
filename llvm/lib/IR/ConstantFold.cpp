@@ -71,7 +71,7 @@ static Constant *BitCastConstantVector(Constant *CV, VectorType *DstTy) {
 /// This function determines which opcode to use to fold two constant cast
 /// expressions together. It uses CastInst::isEliminableCastPair to determine
 /// the opcode. Consequently its just a wrapper around that function.
-/// Determine if it is valid to fold a cast of a cast
+/// @brief Determine if it is valid to fold a cast of a cast
 static unsigned
 foldConstantCastPair(
   unsigned opc,          ///< opcode of the second cast constant expression
@@ -321,7 +321,7 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     if (ByteStart == 0 && ByteSize*8 == SrcBitSize)
       return CE->getOperand(0);
 
-    // If extracting something completely in the input, if the input is a
+    // If extracting something completely in the input, if if the input is a
     // multiple of 8 bits, recurse.
     if ((SrcBitSize&7) == 0 && (ByteStart+ByteSize)*8 <= SrcBitSize)
       return ExtractConstantBytes(CE->getOperand(0), ByteStart, ByteSize);
@@ -545,11 +545,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
                opc != Instruction::AddrSpaceCast &&
                // Do not fold bitcast (gep) with inrange index, as this loses
                // information.
-               !cast<GEPOperator>(CE)->getInRangeIndex().hasValue() &&
-               // Do not fold if the gep type is a vector, as bitcasting
-               // operand 0 of a vector gep will result in a bitcast between
-               // different sizes.
-               !CE->getType()->isVectorTy()) {
+               !cast<GEPOperator>(CE)->getInRangeIndex().hasValue()) {
       // If all of the indexes in the GEP are null values, there is no pointer
       // adjustment going on.  We might as well cast the source pointer.
       bool isAllNull = true;
@@ -682,8 +678,13 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       const APInt &api = CI->getValue();
       APFloat apf(DestTy->getFltSemantics(),
                   APInt::getNullValue(DestTy->getPrimitiveSizeInBits()));
-      apf.convertFromAPInt(api, opc==Instruction::SIToFP,
-                           APFloat::rmNearestTiesToEven);
+      if (APFloat::opOverflow &
+          apf.convertFromAPInt(api, opc==Instruction::SIToFP,
+                              APFloat::rmNearestTiesToEven)) {
+        // Undefined behavior invoked - the destination type can't represent
+        // the input constant.
+        return UndefValue::get(DestTy);
+      }
       return ConstantFP::get(V->getContext(), apf);
     }
     return nullptr;
@@ -1008,17 +1009,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
     case Instruction::FMul:
     case Instruction::FDiv:
     case Instruction::FRem:
-      // [any flop] undef, undef -> undef
-      if (isa<UndefValue>(C1) && isa<UndefValue>(C2))
-        return C1;
-      // [any flop] C, undef -> NaN
-      // [any flop] undef, C -> NaN
-      // We could potentially specialize NaN/Inf constants vs. 'normal'
-      // constants (possibly differently depending on opcode and operand). This
-      // would allow returning undef sometimes. But it is always safe to fold to
-      // NaN because we can choose the undef operand as NaN, and any FP opcode
-      // with a NaN operand will propagate NaN.
-      return ConstantFP::getNaN(C1->getType());
+      // TODO: UNDEF handling for binary float instructions.
+      return nullptr;
     case Instruction::BinaryOpsEnd:
       llvm_unreachable("Invalid BinaryOp");
     }
@@ -1227,7 +1219,9 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
 
       // If any element of a divisor vector is zero, the whole op is undef.
-      if (Instruction::isIntDivRem(Opcode) && RHS->isNullValue())
+      if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+           Opcode == Instruction::SRem || Opcode == Instruction::URem) &&
+          RHS->isNullValue())
         return UndefValue::get(VTy);
 
       Result.push_back(ConstantExpr::get(Opcode, LHS, RHS));
@@ -2024,16 +2018,8 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
 
   // If the first index is one and all the rest are zero, it's in bounds,
   // by the one-past-the-end rule.
-  if (auto *CI = dyn_cast<ConstantInt>(Idxs[0])) {
-    if (!CI->isOne())
-      return false;
-  } else {
-    auto *CV = cast<ConstantDataVector>(Idxs[0]);
-    CI = dyn_cast_or_null<ConstantInt>(CV->getSplatValue());
-    if (!CI || !CI->isOne())
-      return false;
-  }
-
+  if (!cast<ConstantInt>(Idxs[0])->isOne())
+    return false;
   for (unsigned i = 1, e = Idxs.size(); i != e; ++i)
     if (!cast<Constant>(Idxs[i])->isNullValue())
       return false;
@@ -2063,18 +2049,15 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
 
-  Type *GEPTy = GetElementPtrInst::getGEPReturnType(
-      C, makeArrayRef((Value *const *)Idxs.data(), Idxs.size()));
-
-  if (isa<UndefValue>(C))
+  if (isa<UndefValue>(C)) {
+    Type *GEPTy = GetElementPtrInst::getGEPReturnType(
+        C, makeArrayRef((Value * const *)Idxs.data(), Idxs.size()));
     return UndefValue::get(GEPTy);
+  }
 
   Constant *Idx0 = cast<Constant>(Idxs[0]);
   if (Idxs.size() == 1 && (Idx0->isNullValue() || isa<UndefValue>(Idx0)))
-    return GEPTy->isVectorTy() && !C->getType()->isVectorTy()
-               ? ConstantVector::getSplat(
-                     cast<VectorType>(GEPTy)->getNumElements(), C)
-               : C;
+    return C;
 
   if (C->isNullValue()) {
     bool isNull = true;

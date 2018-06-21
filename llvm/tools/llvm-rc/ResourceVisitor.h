@@ -22,7 +22,6 @@ namespace rc {
 class RCResource;
 
 class CaptionStmt;
-class ClassStmt;
 class CharacteristicsStmt;
 class FontStmt;
 class LanguageResource;
@@ -33,7 +32,6 @@ class Visitor {
 public:
   virtual Error visitNullResource(const RCResource *) = 0;
   virtual Error visitAcceleratorsResource(const RCResource *) = 0;
-  virtual Error visitBitmapResource(const RCResource *) = 0;
   virtual Error visitCursorResource(const RCResource *) = 0;
   virtual Error visitDialogResource(const RCResource *) = 0;
   virtual Error visitHTMLResource(const RCResource *) = 0;
@@ -44,7 +42,6 @@ public:
   virtual Error visitVersionInfoResource(const RCResource *) = 0;
 
   virtual Error visitCaptionStmt(const CaptionStmt *) = 0;
-  virtual Error visitClassStmt(const ClassStmt *) = 0;
   virtual Error visitCharacteristicsStmt(const CharacteristicsStmt *) = 0;
   virtual Error visitFontStmt(const FontStmt *) = 0;
   virtual Error visitLanguageStmt(const LanguageResource *) = 0;

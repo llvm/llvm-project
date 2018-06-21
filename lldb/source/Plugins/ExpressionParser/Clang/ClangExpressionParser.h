@@ -26,14 +26,14 @@ class IRExecutionUnit;
 
 //----------------------------------------------------------------------
 /// @class ClangExpressionParser ClangExpressionParser.h
-/// "lldb/Expression/ClangExpressionParser.h" Encapsulates an instance of
-/// Clang that can parse expressions.
+/// "lldb/Expression/ClangExpressionParser.h"
+/// @brief Encapsulates an instance of Clang that can parse expressions.
 ///
 /// ClangExpressionParser is responsible for preparing an instance of
 /// ClangExpression for execution.  ClangExpressionParser uses ClangExpression
 /// as a glorified parameter list, performing the required parsing and
-/// conversion to formats (DWARF bytecode, or JIT compiled machine code) that
-/// can be executed.
+/// conversion to formats (DWARF bytecode, or JIT compiled machine code)
+/// that can be executed.
 //----------------------------------------------------------------------
 class ClangExpressionParser : public ExpressionParser {
 public:
@@ -55,12 +55,11 @@ public:
 
   //------------------------------------------------------------------
   /// Destructor
-  //------------------------------------------------------------------
   ~ClangExpressionParser() override;
 
   //------------------------------------------------------------------
-  /// Parse a single expression and convert it to IR using Clang.  Don't wrap
-  /// the expression in anything at all.
+  /// Parse a single expression and convert it to IR using Clang.  Don't
+  /// wrap the expression in anything at all.
   ///
   /// @param[in] diagnostic_manager
   ///     The diagnostic manager to report errors to.
@@ -69,13 +68,15 @@ public:
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
   //------------------------------------------------------------------
-  unsigned Parse(DiagnosticManager &diagnostic_manager) override;
+  unsigned Parse(DiagnosticManager &diagnostic_manager, uint32_t first_line = 0,
+                 uint32_t last_line = UINT32_MAX,
+                 uint32_t line_offset = 0) override;
 
   bool RewriteExpression(DiagnosticManager &diagnostic_manager) override;
 
   //------------------------------------------------------------------
-  /// Ready an already-parsed expression for execution, possibly evaluating it
-  /// statically.
+  /// Ready an already-parsed expression for execution, possibly
+  /// evaluating it statically.
   ///
   /// @param[out] func_addr
   ///     The address to which the function has been written.

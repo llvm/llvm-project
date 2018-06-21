@@ -6,7 +6,7 @@
 define i32 @test_x86_tbm_bextri_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bextrl $3076, %edi, %eax # imm = 0xC04
+; CHECK-NEXT:    bextr $3076, %edi, %eax # imm = 0xC04
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %a, 4
   %t1 = and i32 %t0, 4095
@@ -18,7 +18,7 @@ define i32 @test_x86_tbm_bextri_u32_subreg(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_subreg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %a, 8
   %t1 = and i32 %t0, 255
@@ -28,7 +28,7 @@ define i32 @test_x86_tbm_bextri_u32_subreg(i32 %a) nounwind {
 define i32 @test_x86_tbm_bextri_u32_m(i32* nocapture %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_m:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bextrl $3076, (%rdi), %eax # imm = 0xC04
+; CHECK-NEXT:    bextr $3076, (%rdi), %eax # imm = 0xC04
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* %a
   %t1 = lshr i32 %t0, 4
@@ -39,7 +39,7 @@ define i32 @test_x86_tbm_bextri_u32_m(i32* nocapture %a) nounwind {
 define i32 @test_x86_tbm_bextri_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bextrl $3076, %edi, %eax # imm = 0xC04
+; CHECK-NEXT:    bextr $3076, %edi, %eax # imm = 0xC04
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %a, 4
@@ -67,7 +67,7 @@ define i32 @test_x86_tbm_bextri_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_bextri_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bextrl $3076, %edi, %eax # imm = 0xC04
+; CHECK-NEXT:    bextr $3076, %edi, %eax # imm = 0xC04
 ; CHECK-NEXT:    retq
   %t0 = lshr i64 %a, 4
   %t1 = and i64 %t0, 4095
@@ -79,7 +79,7 @@ define i64 @test_x86_tbm_bextri_u64_subreg(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_subreg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    movzbl %ah, %eax # NOREX
 ; CHECK-NEXT:    retq
   %t0 = lshr i64 %a, 8
   %t1 = and i64 %t0, 255
@@ -89,7 +89,7 @@ define i64 @test_x86_tbm_bextri_u64_subreg(i64 %a) nounwind {
 define i64 @test_x86_tbm_bextri_u64_m(i64* nocapture %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_m:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bextrl $3076, (%rdi), %eax # imm = 0xC04
+; CHECK-NEXT:    bextr $3076, (%rdi), %eax # imm = 0xC04
 ; CHECK-NEXT:    retq
   %t0 = load i64, i64* %a
   %t1 = lshr i64 %t0, 4
@@ -100,7 +100,7 @@ define i64 @test_x86_tbm_bextri_u64_m(i64* nocapture %a) nounwind {
 define i64 @test_x86_tbm_bextri_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bextrl $3076, %edi, %eax # imm = 0xC04
+; CHECK-NEXT:    bextr $3076, %edi, %eax # imm = 0xC04
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = lshr i64 %a, 4
@@ -128,7 +128,7 @@ define i64 @test_x86_tbm_bextri_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_blcfill_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcfill_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcfilll %edi, %eax
+; CHECK-NEXT:    blcfill %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, 1
   %t1 = and i32 %t0, %a
@@ -138,7 +138,7 @@ define i32 @test_x86_tbm_blcfill_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_blcfill_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcfill_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcfilll %edi, %eax
+; CHECK-NEXT:    blcfill %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, 1
@@ -151,7 +151,7 @@ define i32 @test_x86_tbm_blcfill_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blcfill_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcfill_u32_z2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    testl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi
@@ -167,7 +167,7 @@ define i32 @test_x86_tbm_blcfill_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_blcfill_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcfill_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcfillq %rdi, %rax
+; CHECK-NEXT:    blcfill %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, 1
   %t1 = and i64 %t0, %a
@@ -177,7 +177,7 @@ define i64 @test_x86_tbm_blcfill_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_blcfill_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcfill_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcfillq %rdi, %rax
+; CHECK-NEXT:    blcfill %rdi, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, 1
@@ -205,7 +205,7 @@ define i64 @test_x86_tbm_blcfill_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_blci_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcil %edi, %eax
+; CHECK-NEXT:    blci %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 1, %a
   %t1 = xor i32 %t0, -1
@@ -216,7 +216,7 @@ define i32 @test_x86_tbm_blci_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_blci_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcil %edi, %eax
+; CHECK-NEXT:    blci %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 1, %a
@@ -230,7 +230,7 @@ define i32 @test_x86_tbm_blci_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blci_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u32_z2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    orl %edi, %eax
@@ -248,7 +248,7 @@ define i32 @test_x86_tbm_blci_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_blci_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blciq %rdi, %rax
+; CHECK-NEXT:    blci %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 1, %a
   %t1 = xor i64 %t0, -1
@@ -259,7 +259,7 @@ define i64 @test_x86_tbm_blci_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_blci_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blciq %rdi, %rax
+; CHECK-NEXT:    blci %rdi, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 1, %a
@@ -290,7 +290,7 @@ define i64 @test_x86_tbm_blci_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_blci_u32_b(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u32_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcil %edi, %eax
+; CHECK-NEXT:    blci %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i32 -2, %a
   %t1 = or i32 %t0, %a
@@ -300,7 +300,7 @@ define i32 @test_x86_tbm_blci_u32_b(i32 %a) nounwind {
 define i64 @test_x86_tbm_blci_u64_b(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blci_u64_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blciq %rdi, %rax
+; CHECK-NEXT:    blci %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = sub i64 -2, %a
   %t1 = or i64 %t0, %a
@@ -310,7 +310,7 @@ define i64 @test_x86_tbm_blci_u64_b(i64 %a) nounwind {
 define i32 @test_x86_tbm_blcic_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcic_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcicl %edi, %eax
+; CHECK-NEXT:    blcic %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = xor i32 %a, -1
   %t1 = add i32 %a, 1
@@ -321,7 +321,7 @@ define i32 @test_x86_tbm_blcic_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_blcic_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcic_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcicl %edi, %eax
+; CHECK-NEXT:    blcic %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = xor i32 %a, -1
@@ -353,7 +353,7 @@ define i32 @test_x86_tbm_blcic_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_blcic_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcic_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcicq %rdi, %rax
+; CHECK-NEXT:    blcic %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = xor i64 %a, -1
   %t1 = add i64 %a, 1
@@ -364,7 +364,7 @@ define i64 @test_x86_tbm_blcic_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_blcic_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcic_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcicq %rdi, %rax
+; CHECK-NEXT:    blcic %rdi, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = xor i64 %a, -1
@@ -396,7 +396,7 @@ define i64 @test_x86_tbm_blcic_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_blcmsk_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcmsk_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcmskl %edi, %eax
+; CHECK-NEXT:    blcmsk %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, 1
   %t1 = xor i32 %t0, %a
@@ -406,7 +406,7 @@ define i32 @test_x86_tbm_blcmsk_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_blcmsk_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcmsk_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcmskl %edi, %eax
+; CHECK-NEXT:    blcmsk %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, 1
@@ -419,7 +419,7 @@ define i32 @test_x86_tbm_blcmsk_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blcmsk_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcmsk_u32_z2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    xorl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi
@@ -435,7 +435,7 @@ define i32 @test_x86_tbm_blcmsk_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_blcmsk_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcmsk_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcmskq %rdi, %rax
+; CHECK-NEXT:    blcmsk %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, 1
   %t1 = xor i64 %t0, %a
@@ -445,7 +445,7 @@ define i64 @test_x86_tbm_blcmsk_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_blcmsk_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcmsk_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcmskq %rdi, %rax
+; CHECK-NEXT:    blcmsk %rdi, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, 1
@@ -473,7 +473,7 @@ define i64 @test_x86_tbm_blcmsk_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_blcs_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcs_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcsl %edi, %eax
+; CHECK-NEXT:    blcs %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, 1
   %t1 = or i32 %t0, %a
@@ -483,7 +483,7 @@ define i32 @test_x86_tbm_blcs_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_blcs_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcs_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcsl %edi, %eax
+; CHECK-NEXT:    blcs %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, 1
@@ -496,7 +496,7 @@ define i32 @test_x86_tbm_blcs_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blcs_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcs_u32_z2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    leal 1(%rdi), %eax
 ; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi
@@ -512,7 +512,7 @@ define i32 @test_x86_tbm_blcs_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_blcs_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcs_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcsq %rdi, %rax
+; CHECK-NEXT:    blcs %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, 1
   %t1 = or i64 %t0, %a
@@ -522,7 +522,7 @@ define i64 @test_x86_tbm_blcs_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_blcs_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blcs_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blcsq %rdi, %rax
+; CHECK-NEXT:    blcs %rdi, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, 1
@@ -550,7 +550,7 @@ define i64 @test_x86_tbm_blcs_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_blsfill_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsfill_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsfilll %edi, %eax
+; CHECK-NEXT:    blsfill %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, -1
   %t1 = or i32 %t0, %a
@@ -560,7 +560,7 @@ define i32 @test_x86_tbm_blsfill_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_blsfill_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsfill_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsfilll %edi, %eax
+; CHECK-NEXT:    blsfill %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = add i32 %a, -1
@@ -573,7 +573,7 @@ define i32 @test_x86_tbm_blsfill_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_blsfill_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsfill_u32_z2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    # kill: def %edi killed %edi def %rdi
 ; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    cmovnel %edx, %esi
@@ -589,7 +589,7 @@ define i32 @test_x86_tbm_blsfill_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_blsfill_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsfill_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsfillq %rdi, %rax
+; CHECK-NEXT:    blsfill %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, -1
   %t1 = or i64 %t0, %a
@@ -599,7 +599,7 @@ define i64 @test_x86_tbm_blsfill_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_blsfill_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsfill_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsfillq %rdi, %rax
+; CHECK-NEXT:    blsfill %rdi, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %a, -1
@@ -627,7 +627,7 @@ define i64 @test_x86_tbm_blsfill_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_blsic_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsic_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicl %edi, %eax
+; CHECK-NEXT:    blsic %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = xor i32 %a, -1
   %t1 = add i32 %a, -1
@@ -638,7 +638,7 @@ define i32 @test_x86_tbm_blsic_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_blsic_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsic_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicl %edi, %eax
+; CHECK-NEXT:    blsic %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
   %t0 = xor i32 %a, -1
@@ -670,7 +670,7 @@ define i32 @test_x86_tbm_blsic_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_blsic_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsic_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicq %rdi, %rax
+; CHECK-NEXT:    blsic %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = xor i64 %a, -1
   %t1 = add i64 %a, -1
@@ -681,7 +681,7 @@ define i64 @test_x86_tbm_blsic_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_blsic_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_blsic_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    blsicq %rdi, %rax
+; CHECK-NEXT:    blsic %rdi, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
   %t0 = xor i64 %a, -1
@@ -713,7 +713,7 @@ define i64 @test_x86_tbm_blsic_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_t1mskc_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_t1mskc_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    t1mskcl %edi, %eax
+; CHECK-NEXT:    t1mskc %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = xor i32 %a, -1
   %t1 = add i32 %a, 1
@@ -724,7 +724,7 @@ define i32 @test_x86_tbm_t1mskc_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_t1mskc_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_t1mskc_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    t1mskcl %edi, %eax
+; CHECK-NEXT:    t1mskc %edi, %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
@@ -757,7 +757,7 @@ define i32 @test_x86_tbm_t1mskc_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_t1mskc_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_t1mskc_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    t1mskcq %rdi, %rax
+; CHECK-NEXT:    t1mskc %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = xor i64 %a, -1
   %t1 = add i64 %a, 1
@@ -768,7 +768,7 @@ define i64 @test_x86_tbm_t1mskc_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_t1mskc_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_t1mskc_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    t1mskcq %rdi, %rax
+; CHECK-NEXT:    t1mskc %rdi, %rax
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
@@ -801,7 +801,7 @@ define i64 @test_x86_tbm_t1mskc_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i32 @test_x86_tbm_tzmsk_u32(i32 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_tzmsk_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tzmskl %edi, %eax
+; CHECK-NEXT:    tzmsk %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = xor i32 %a, -1
   %t1 = add i32 %a, -1
@@ -812,7 +812,7 @@ define i32 @test_x86_tbm_tzmsk_u32(i32 %a) nounwind {
 define i32 @test_x86_tbm_tzmsk_u32_z(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_tzmsk_u32_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tzmskl %edi, %eax
+; CHECK-NEXT:    tzmsk %edi, %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    retq
@@ -845,7 +845,7 @@ define i32 @test_x86_tbm_tzmsk_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 define i64 @test_x86_tbm_tzmsk_u64(i64 %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_tzmsk_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tzmskq %rdi, %rax
+; CHECK-NEXT:    tzmsk %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = xor i64 %a, -1
   %t1 = add i64 %a, -1
@@ -856,7 +856,7 @@ define i64 @test_x86_tbm_tzmsk_u64(i64 %a) nounwind {
 define i64 @test_x86_tbm_tzmsk_u64_z(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: test_x86_tbm_tzmsk_u64_z:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    tzmskq %rdi, %rax
+; CHECK-NEXT:    tzmsk %rdi, %rax
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    retq
@@ -889,7 +889,7 @@ define i64 @test_x86_tbm_tzmsk_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 define i64 @test_and_large_constant_mask(i64 %x) {
 ; CHECK-LABEL: test_and_large_constant_mask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextrq $15872, %rdi, %rax # imm = 0x3E00
+; CHECK-NEXT:    bextr $15872, %rdi, %rax # imm = 0x3E00
 ; CHECK-NEXT:    retq
 entry:
   %and = and i64 %x, 4611686018427387903
@@ -899,24 +899,10 @@ entry:
 define i64 @test_and_large_constant_mask_load(i64* %x) {
 ; CHECK-LABEL: test_and_large_constant_mask_load:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bextrq $15872, (%rdi), %rax # imm = 0x3E00
+; CHECK-NEXT:    bextr $15872, (%rdi), %rax # imm = 0x3E00
 ; CHECK-NEXT:    retq
 entry:
   %x1 = load i64, i64* %x
   %and = and i64 %x1, 4611686018427387903
   ret i64 %and
-}
-
-; Make sure the mask doesn't break our matching of blcic
-define  i64 @masked_blcic(i64) {
-; CHECK-LABEL: masked_blcic:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    blcicl %eax, %eax
-; CHECK-NEXT:    retq
-  %2 = and i64 %0, 65535
-  %3 = xor i64 %2, -1
-  %4 = add nuw nsw i64 %2, 1
-  %5 = and i64 %4, %3
-  ret i64 %5
 }

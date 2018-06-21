@@ -11,6 +11,14 @@ include(LLDBStandalone)
 include(LLDBConfig)
 include(AddLLDB)
 
+# BEGIN - Swift Mods
+if(NOT LLDB_BUILT_STANDALONE AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
+   list(APPEND CMAKE_MODULE_PATH
+        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
+        "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
+endif()
+# END - Swift Mods
+
 # Define the LLDB_CONFIGURATION_xxx matching the build type
 if( uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
   add_definitions( -DLLDB_CONFIGURATION_DEBUG )
@@ -29,37 +37,13 @@ endif ()
 set(LLDB_DISABLE_LIBEDIT ${LLDB_DEFAULT_DISABLE_LIBEDIT} CACHE BOOL "Disables the use of editline.")
 if (LLDB_DISABLE_LIBEDIT)
   add_definitions( -DLLDB_DISABLE_LIBEDIT )
-else()
-  find_package(LibEdit REQUIRED)
 endif()
 
 if(APPLE)
   add_definitions(-DLLDB_USE_OS_LOG)
 endif()
 
-# lldb-suite is a dummy target that encompasses all the necessary tools and
-# libraries for building a fully-functioning liblldb.
-add_custom_target(lldb-suite)
-
-option(LLDB_BUILD_FRAMEWORK "Build the Darwin LLDB.framework" Off)
-if(LLDB_BUILD_FRAMEWORK)
-  if (CMAKE_VERSION VERSION_LESS 3.7)
-    message(FATAL_ERROR "LLDB_BUILD_FRAMEWORK is not supported on CMake < 3.7")
-  endif()
-  if (NOT APPLE)
-    message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
-  endif()
-
-  # These are used to fill out LLDB-Info.plist. These are relevant when building
-  # the framework, and must be defined before building liblldb.
-  set(PRODUCT_NAME "LLDB")
-  set(EXECUTABLE_NAME "LLDB")
-  set(CURRENT_PROJECT_VERSION "360.99.0")
-
-  set(LLDB_FRAMEWORK_DIR
-    ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
-endif()
-
+# add_subdirectory(include)
 add_subdirectory(docs)
 if (NOT LLDB_DISABLE_PYTHON)
   if(LLDB_USE_SYSTEM_SIX)
@@ -69,7 +53,8 @@ if (NOT LLDB_DISABLE_PYTHON)
   set(LLDB_PYTHON_TARGET_DIR ${LLDB_BINARY_DIR}/scripts)
   set(LLDB_WRAP_PYTHON ${LLDB_BINARY_DIR}/scripts/LLDBWrapPython.cpp)
   if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_PYTHON_TARGET_DIR ${LLDB_FRAMEWORK_DIR})
+    set(LLDB_PYTHON_TARGET_DIR
+      ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
     set(LLDB_WRAP_PYTHON ${LLDB_PYTHON_TARGET_DIR}/LLDBWrapPython.cpp)
   else()
     # Don't set -m when building the framework.
@@ -85,20 +70,11 @@ add_subdirectory(tools)
 
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests."
   ${LLVM_INCLUDE_TESTS})
-option(LLDB_TEST_USE_CUSTOM_C_COMPILER "Use the C compiler provided via LLDB_TEST_C_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
-option(LLDB_TEST_USE_CUSTOM_CXX_COMPILER "Use the C++ compiler provided via LLDB_TEST_CXX_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 if(LLDB_INCLUDE_TESTS)
-  if (NOT LLDB_TEST_USE_CUSTOM_C_COMPILER AND TARGET clang)
-    set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLDB_DEFAULT_TEST_C_COMPILER "")
-  endif()
-
-  if (NOT LLDB_TEST_USE_CUSTOM_CXX_COMPILER AND TARGET clang)
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "")
-  endif()
+  # BEGIN - Swift Mods
+  set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+  set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+  # END - Swift Mods
 
   set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
   set(LLDB_TEST_CXX_COMPILER "${LLDB_DEFAULT_TEST_CXX_COMPILER}" CACHE PATH "C++ Compiler to use for building LLDB test inferiors")
@@ -108,61 +84,36 @@ if(LLDB_INCLUDE_TESTS)
     message(FATAL_ERROR "LLDB test compilers not specified.  Tests will not run")
   endif()
 
-  set(LLDB_TEST_DEPS lldb)
-
-  # darwin-debug is an hard dependency for the testsuite.
-  if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    list(APPEND LLDB_TEST_DEPS darwin-debug)
-  endif()
-
-  if(TARGET lldb-server)
-    list(APPEND LLDB_TEST_DEPS lldb-server)
-  endif()
-
-  if(TARGET debugserver)
-    if(NOT CMAKE_HOST_APPLE OR LLDB_CODESIGN_IDENTITY)
-      list(APPEND LLDB_TEST_DEPS debugserver)
-    endif()
-  endif()
-
-  if(TARGET lldb-mi)
-    list(APPEND LLDB_TEST_DEPS lldb-mi)
-  endif()
-
-  if(NOT LLDB_BUILT_STANDALONE)
-    list(APPEND LLDB_TEST_DEPS yaml2obj dsymutil)
-  endif()
-
-  if(TARGET liblldb)
-    list(APPEND LLDB_TEST_DEPS liblldb)
-  endif()
-
-  if(TARGET clang)
-    list(APPEND LLDB_TEST_DEPS clang)
-  endif()
-
   add_subdirectory(test)
   add_subdirectory(unittests)
   add_subdirectory(lit)
-  add_subdirectory(utils/lldb-dotest)
 endif()
-
-if (LLDB_BUILD_FRAMEWORK)
-  add_custom_target(lldb-framework)
-  include(LLDBFramework)
-  add_dependencies(lldb-suite lldb-framework)
-endif()
-add_dependencies(lldb-suite liblldb)
 
 if (NOT LLDB_DISABLE_PYTHON)
     # Add a Post-Build Event to copy over Python files and create the symlink
     # to liblldb.so for the Python API(hardlink on Windows)
+    if (APPLE)
+        # FIXME. This replicates the xcode project. We should probably
+        # get rid of this special path and use the same script that
+        # every other platform is using.
+        add_custom_target(finish_swig ALL
+        COMMAND
+           ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finish-swig-wrapper-classes.sh
+               ${LLDB_SOURCE_DIR}
+               ${LLDB_PYTHON_TARGET_DIR}
+               ${LLDB_PYTHON_TARGET_DIR}
+               ""
+        VERBATIM
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/scripts/lldb.py
+        COMMENT "Python script sym-linking LLDB Python API")
+    else()
     add_custom_target(finish_swig ALL
         COMMAND
            ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
                --srcRoot=${LLDB_SOURCE_DIR}
                --targetDir=${LLDB_PYTHON_TARGET_DIR}
-               --cfgBldDir=${LLDB_PYTHON_TARGET_DIR}
+               --cfgBldDir=${CMAKE_CURRENT_BINARY_DIR}/scripts
                --prefix=${CMAKE_BINARY_DIR}
                --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
                --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
@@ -170,11 +121,11 @@ if (NOT LLDB_DISABLE_PYTHON)
                ${FINISH_EXTRA_ARGS}
         VERBATIM
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-        DEPENDS ${LLDB_PYTHON_TARGET_DIR}/lldb.py
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/scripts/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
-
-    # We depend on liblldb and lldb-argdumper being built before we can do this step.
-    add_dependencies(finish_swig lldb-suite)
+    endif()
+    # We depend on liblldb being built before we can do this step.
+    add_dependencies(finish_swig liblldb lldb-argdumper)
 
     # If we build the readline module, we depend on that happening
     # first.
@@ -185,8 +136,8 @@ if (NOT LLDB_DISABLE_PYTHON)
     # Ensure we do the python post-build step when building lldb.
     add_dependencies(lldb finish_swig)
 
-    if (LLDB_BUILD_FRAMEWORK)
-      # The target to install libLLDB needs to depend on finish_swig so that the
+    if(LLDB_BUILD_FRAMEWORK)
+      # The target to install libLLDB needs to depend on finish swig so that the
       # framework build properly copies over the Python files.
       add_dependencies(install-liblldb finish_swig)
     endif()

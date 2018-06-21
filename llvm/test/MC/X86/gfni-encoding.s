@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown -mattr=+gfni --show-encoding < %s | FileCheck %s
 
 // CHECK: gf2p8affineinvqb $7, %xmm2, %xmm1
 // CHECK: encoding: [0x66,0x0f,0x3a,0xcf,0xca,0x07]

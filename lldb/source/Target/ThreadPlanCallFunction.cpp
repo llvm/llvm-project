@@ -22,6 +22,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
@@ -56,7 +57,8 @@ bool ThreadPlanCallFunction::ConstructorSetup(
 
   m_function_sp = thread.GetRegisterContext()->GetSP() - abi->GetRedZoneSize();
   // If we can't read memory at the point of the process where we are planning
-  // to put our function, we're not going to get any further...
+  // to put our function, we're
+  // not going to get any further...
   Status error;
   process_sp->ReadUnsignedIntegerFromMemory(m_function_sp, 4, 0, error);
   if (!error.Success()) {
@@ -136,7 +138,9 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_function_sp(0), m_takedown_done(false),
       m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
-      m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(return_type) {
+      m_stop_address(LLDB_INVALID_ADDRESS),
+      m_expression_language(options.GetLanguage()), m_hit_error_backstop(false),
+      m_return_type(return_type) {
   lldb::addr_t start_load_addr = LLDB_INVALID_ADDRESS;
   lldb::addr_t function_load_addr = LLDB_INVALID_ADDRESS;
   ABI *abi = nullptr;
@@ -277,8 +281,9 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
                                                   LIBLLDB_LOG_PROCESS));
   m_real_stop_info_sp = GetPrivateStopInfo();
 
-  // If our subplan knows why we stopped, even if it's done (which would
-  // forward the question to us) we answer yes.
+  // If our subplan knows why we stopped, even if it's done (which would forward
+  // the question to us)
+  // we answer yes.
   if (m_subplan_sp && m_subplan_sp->PlanExplainsStop(event_ptr)) {
     SetPlanComplete();
     return true;
@@ -300,8 +305,8 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     return true;
 
   // One more quirk here.  If this event was from Halt interrupting the target,
-  // then we should not consider ourselves complete.  Return true to
-  // acknowledge the stop.
+  // then we should not consider
+  // ourselves complete.  Return true to acknowledge the stop.
   if (Process::ProcessEventData::GetInterruptedFromEvent(event_ptr)) {
     if (log)
       log->Printf("ThreadPlanCallFunction::PlanExplainsStop: The event is an "
@@ -310,8 +315,8 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
   }
   // We control breakpoints separately from other "stop reasons."  So first,
   // check the case where we stopped for an internal breakpoint, in that case,
-  // continue on. If it is not an internal breakpoint, consult
-  // m_ignore_breakpoints.
+  // continue on.
+  // If it is not an internal breakpoint, consult m_ignore_breakpoints.
 
   if (stop_reason == eStopReasonBreakpoint) {
     ProcessSP process_sp(m_thread.CalculateProcess());
@@ -362,13 +367,15 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     // should be propagated up the stack.
     return false;
   } else {
-    // If the subplan is running, any crashes are attributable to us. If we
-    // want to discard the plan, then we say we explain the stop but if we are
-    // going to be discarded, let whoever is above us explain the stop. But
-    // don't discard the plan if the stop would restart itself (for instance if
-    // it is a signal that is set not to stop.  Check that here first.  We just
-    // say we explain the stop but aren't done and everything will continue on
-    // from there.
+    // If the subplan is running, any crashes are attributable to us.
+    // If we want to discard the plan, then we say we explain the stop
+    // but if we are going to be discarded, let whoever is above us
+    // explain the stop.
+    // But don't discard the plan if the stop would restart itself (for instance
+    // if it is a
+    // signal that is set not to stop.  Check that here first.  We just say we
+    // explain the stop
+    // but aren't done and everything will continue on from there.
 
     if (m_real_stop_info_sp &&
         m_real_stop_info_sp->ShouldStopSynchronous(event_ptr)) {
@@ -381,9 +388,10 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
 
 bool ThreadPlanCallFunction::ShouldStop(Event *event_ptr) {
   // We do some computation in DoPlanExplainsStop that may or may not set the
-  // plan as complete. We need to do that here to make sure our state is
-  // correct.
-  DoPlanExplainsStop(event_ptr);
+  // plan as complete.
+  // We need to do that here to make sure our state is correct.
+  if (GetCachedPlanExplainsStop() == eLazyBoolCalculate)
+    DoPlanExplainsStop(event_ptr);
 
   if (IsPlanComplete()) {
     ReportRegisterState("Function completed.  Register state was:");
@@ -401,8 +409,9 @@ void ThreadPlanCallFunction::DidPush() {
   //#define SINGLE_STEP_EXPRESSIONS
 
   // Now set the thread state to "no reason" so we don't run with whatever
-  // signal was outstanding... Wait till the plan is pushed so we aren't
-  // changing the stop info till we're about to run.
+  // signal was outstanding...
+  // Wait till the plan is pushed so we aren't changing the stop info till we're
+  // about to run.
 
   GetThread().SetStopInfoToNothing();
 
@@ -434,20 +443,42 @@ bool ThreadPlanCallFunction::MischiefManaged() {
 
 void ThreadPlanCallFunction::SetBreakpoints() {
   ProcessSP process_sp(m_thread.CalculateProcess());
-  if (m_trap_exceptions && process_sp) {
-    m_cxx_language_runtime =
-        process_sp->GetLanguageRuntime(eLanguageTypeC_plus_plus);
-    m_objc_language_runtime = process_sp->GetLanguageRuntime(eLanguageTypeObjC);
+  if (process_sp) {
+    if (m_trap_exceptions) {
+      m_cxx_language_runtime =
+          process_sp->GetLanguageRuntime(eLanguageTypeC_plus_plus);
+      m_objc_language_runtime =
+          process_sp->GetLanguageRuntime(eLanguageTypeObjC);
 
-    if (m_cxx_language_runtime) {
-      m_should_clear_cxx_exception_bp =
-          !m_cxx_language_runtime->ExceptionBreakpointsAreSet();
-      m_cxx_language_runtime->SetExceptionBreakpoints();
+      if (m_cxx_language_runtime) {
+        m_should_clear_cxx_exception_bp =
+            !m_cxx_language_runtime->ExceptionBreakpointsAreSet();
+        m_cxx_language_runtime->SetExceptionBreakpoints();
+      }
+      if (m_objc_language_runtime) {
+        m_should_clear_objc_exception_bp =
+            !m_objc_language_runtime->ExceptionBreakpointsAreSet();
+        m_objc_language_runtime->SetExceptionBreakpoints();
+      }
     }
-    if (m_objc_language_runtime) {
-      m_should_clear_objc_exception_bp =
-          !m_objc_language_runtime->ExceptionBreakpointsAreSet();
-      m_objc_language_runtime->SetExceptionBreakpoints();
+    if (GetExpressionLanguage() == eLanguageTypeSwift) {
+      SwiftLanguageRuntime *swift_runtime =
+          process_sp->GetSwiftLanguageRuntime();
+      if (swift_runtime) {
+        ConstString backstop_name = swift_runtime->GetErrorBackstopName();
+        if (!backstop_name.IsEmpty()) {
+          FileSpecList stdlib_module_list;
+          stdlib_module_list.Append(FileSpec(
+              swift_runtime->GetStandardLibraryName().AsCString(), false));
+          const LazyBool skip_prologue = eLazyBoolNo;
+          const bool is_internal = true;
+          const bool is_hardware = false;
+          m_error_backstop_bp_sp = process_sp->GetTarget().CreateBreakpoint(
+              &stdlib_module_list, NULL, backstop_name.AsCString(),
+              eFunctionNameTypeFull, eLanguageTypeUnknown, 0, skip_prologue,
+              is_internal, is_hardware);
+        }
+      }
     }
   }
 }
@@ -459,10 +490,16 @@ void ThreadPlanCallFunction::ClearBreakpoints() {
     if (m_objc_language_runtime && m_should_clear_objc_exception_bp)
       m_objc_language_runtime->ClearExceptionBreakpoints();
   }
+  if (m_error_backstop_bp_sp) {
+    GetTarget().RemoveBreakpointByID(m_error_backstop_bp_sp->GetID());
+  }
 }
 
 bool ThreadPlanCallFunction::BreakpointsExplainStop() {
   StopInfoSP stop_info_sp = GetPrivateStopInfo();
+
+  if (stop_info_sp->GetStopReason() != eStopReasonBreakpoint)
+    return false;
 
   if (m_trap_exceptions) {
     if ((m_cxx_language_runtime &&
@@ -478,11 +515,55 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
 
       SetPlanComplete(false);
 
-      // If the user has set the ObjC language breakpoint, it would normally
-      // get priority over our internal catcher breakpoint, but in this case we
-      // can't let that happen, so force the ShouldStop here.
+      // If the user has set the ObjC language breakpoint, it would normally get
+      // priority over our internal
+      // catcher breakpoint, but in this case we can't let that happen, so force
+      // the ShouldStop here.
       stop_info_sp->OverrideShouldStop(true);
       return true;
+    }
+  }
+  if (m_error_backstop_bp_sp) {
+    ProcessSP process_sp(m_thread.CalculateProcess());
+    if (process_sp) {
+      uint64_t break_site_id = stop_info_sp->GetValue();
+      if (process_sp->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
+              break_site_id, m_error_backstop_bp_sp->GetID())) {
+        // Our expression threw an uncaught exception.  That will happen in REPL
+        // & Playground, though not in
+        // the regular expression parser.  In that case, we should fetch the
+        // actual return value from the
+        // argument passed to this function, and set that as the return value.
+        SetPlanComplete(true);
+        StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+        PersistentExpressionState *persistent_state =
+            GetTarget().GetPersistentExpressionStateForLanguage(
+                eLanguageTypeSwift);
+        const bool is_error = true;
+        auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
+        ConstString persistent_variable_name(
+            persistent_state->GetNextPersistentVariableName(GetTarget(),
+                                                            prefix));
+        m_return_valobj_sp =
+            SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(
+                frame_sp, persistent_variable_name);
+
+        DataExtractor data;
+        Status data_error;
+        size_t data_size =
+            m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
+
+        if (data_size == data.GetAddressByteSize()) {
+          lldb::offset_t offset = 0;
+          lldb::addr_t addr = data.GetAddress(&offset);
+
+          SwiftLanguageRuntime::RegisterGlobalError(
+              GetTarget(), persistent_variable_name, addr);
+        }
+
+        m_hit_error_backstop = true;
+        return true;
+      }
     }
   }
 

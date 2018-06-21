@@ -14,7 +14,6 @@
 #include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -23,6 +22,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
+#include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
@@ -188,8 +188,8 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
                                    IdentLoc, Ident, T.getOpenLocation(), 
                                    attrs.getList(), ImplicitUsingDirectiveDecl);
 
-  PrettyDeclStackTraceEntry CrashInfo(Actions.Context, NamespcDecl,
-                                      NamespaceLoc, "parsing namespace");
+  PrettyDeclStackTraceEntry CrashInfo(Actions, NamespcDecl, NamespaceLoc,
+                                      "parsing namespace");
 
   // Parse the contents of the namespace.  This includes parsing recovery on 
   // any improperly nested namespaces.
@@ -602,7 +602,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
             /*AllowConstructorName=*/!(Tok.is(tok::identifier) &&
                                        NextToken().is(tok::equal)),
             /*AllowDeductionGuide=*/false,
-            nullptr, nullptr, D.Name))
+            nullptr, D.TemplateKWLoc, D.Name))
       return true;
   }
 
@@ -2109,7 +2109,7 @@ AccessSpecifier Parser::getAccessSpecifierIfPresent() const {
   }
 }
 
-/// If the given declarator has any parts for which parsing has to be
+/// \brief If the given declarator has any parts for which parsing has to be
 /// delayed, e.g., default arguments or an exception-specification, create a
 /// late-parsed method declaration record to handle the parsing at the end of
 /// the class definition.
@@ -2249,7 +2249,7 @@ bool Parser::isCXX11FinalKeyword() const {
          Specifier == VirtSpecifiers::VS_Sealed;
 }
 
-/// Parse a C++ member-declarator up to, but not including, the optional
+/// \brief Parse a C++ member-declarator up to, but not including, the optional
 /// brace-or-equal-initializer or pure-specifier.
 bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
@@ -2320,7 +2320,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   return false;
 }
 
-/// Look for declaration specifiers possibly occurring after C++11
+/// \brief Look for declaration specifiers possibly occurring after C++11
 /// virt-specifier-seq and diagnose them.
 void Parser::MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(
     Declarator &D,
@@ -2476,7 +2476,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       SourceLocation TemplateKWLoc;
       UnqualifiedId Name;
       if (ParseUnqualifiedId(SS, false, true, true, false, nullptr,
-                             &TemplateKWLoc, Name)) {
+                             TemplateKWLoc, Name)) {
         SkipUntil(tok::semi);
         return nullptr;
       }
@@ -2488,7 +2488,6 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         return nullptr;
       }
 
-      // FIXME: We should do something with the 'template' keyword here.
       return DeclGroupPtrTy::make(DeclGroupRef(Actions.ActOnUsingDeclaration(
           getCurScope(), AS, /*UsingLoc*/ SourceLocation(),
           /*TypenameLoc*/ SourceLocation(), SS, Name,
@@ -2777,8 +2776,10 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         // initialize it.
         ThisDecl = VT->getTemplatedDecl();
 
-      if (ThisDecl && AccessAttrs)
+      if (ThisDecl) {
         Actions.ProcessDeclAttributeList(getCurScope(), ThisDecl, AccessAttrs);
+        Actions.ProcessAPINotes(ThisDecl);
+      }
     }
 
     // Error recovery might have converted a non-static member into a static
@@ -3111,7 +3112,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
          TagType == DeclSpec::TST_union  ||
          TagType == DeclSpec::TST_class) && "Invalid TagType!");
 
-  PrettyDeclStackTraceEntry CrashInfo(Actions.Context, TagDecl, RecordLoc,
+  PrettyDeclStackTraceEntry CrashInfo(Actions, TagDecl, RecordLoc,
                                       "parsing struct/union/class body");
 
   // Determine whether this is a non-nested class. Note that local
@@ -3505,7 +3506,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     return Diag(Tok, diag::err_expected) << tok::l_paren;
 }
 
-/// Parse a C++ exception-specification if present (C++0x [except.spec]).
+/// \brief Parse a C++ exception-specification if present (C++0x [except.spec]).
 ///
 ///       exception-specification:
 ///         dynamic-exception-specification
@@ -3586,11 +3587,15 @@ Parser::tryParseExceptionSpecification(bool Delayed,
     // There is an argument.
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
+    NoexceptType = EST_ComputedNoexcept;
     NoexceptExpr = ParseConstantExpression();
     T.consumeClose();
+    // The argument must be contextually convertible to bool. We use
+    // CheckBooleanCondition for this purpose.
+    // FIXME: Add a proper Sema entry point for this.
     if (!NoexceptExpr.isInvalid()) {
-      NoexceptExpr = Actions.ActOnNoexceptSpec(KeywordLoc, NoexceptExpr.get(),
-                                               NoexceptType);
+      NoexceptExpr =
+          Actions.CheckBooleanCondition(KeywordLoc, NoexceptExpr.get());
       NoexceptRange = SourceRange(KeywordLoc, T.getCloseLocation());
     } else {
       NoexceptType = EST_BasicNoexcept;
@@ -3703,18 +3708,15 @@ ExceptionSpecificationType Parser::ParseDynamicExceptionSpecification(
 
 /// ParseTrailingReturnType - Parse a trailing return type on a new-style
 /// function declaration.
-TypeResult Parser::ParseTrailingReturnType(SourceRange &Range,
-                                           bool MayBeFollowedByDirectInit) {
+TypeResult Parser::ParseTrailingReturnType(SourceRange &Range) {
   assert(Tok.is(tok::arrow) && "expected arrow");
 
   ConsumeToken();
 
-  return ParseTypeName(&Range, MayBeFollowedByDirectInit
-                                   ? DeclaratorContext::TrailingReturnVarContext
-                                   : DeclaratorContext::TrailingReturnContext);
+  return ParseTypeName(&Range, DeclaratorContext::TrailingReturnContext);
 }
 
-/// We have just started parsing the definition of a new class,
+/// \brief We have just started parsing the definition of a new class,
 /// so push that class onto our stack of classes that is currently
 /// being parsed.
 Sema::ParsingClassState
@@ -3726,7 +3728,7 @@ Parser::PushParsingClass(Decl *ClassDecl, bool NonNestedClass,
   return Actions.PushParsingClass();
 }
 
-/// Deallocate the given parsed class and all of its nested
+/// \brief Deallocate the given parsed class and all of its nested
 /// classes.
 void Parser::DeallocateParsedClasses(Parser::ParsingClass *Class) {
   for (unsigned I = 0, N = Class->LateParsedDeclarations.size(); I != N; ++I)
@@ -3734,7 +3736,7 @@ void Parser::DeallocateParsedClasses(Parser::ParsingClass *Class) {
   delete Class;
 }
 
-/// Pop the top class of the stack of classes that are
+/// \brief Pop the top class of the stack of classes that are
 /// currently being parsed.
 ///
 /// This routine should be called when we have finished parsing the
@@ -3772,7 +3774,7 @@ void Parser::PopParsingClass(Sema::ParsingClassState state) {
   Victim->TemplateScope = getCurScope()->getParent()->isTemplateParamScope();
 }
 
-/// Try to parse an 'identifier' which appears within an attribute-token.
+/// \brief Try to parse an 'identifier' which appears within an attribute-token.
 ///
 /// \return the parsed identifier on success, and 0 if the next token is not an
 /// attribute-token.
@@ -4033,7 +4035,7 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
 
     if (TryConsumeToken(tok::ellipsis))
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis)
-        << AttrName;
+        << AttrName->getName();
   }
 
   if (ExpectAndConsume(tok::r_square))

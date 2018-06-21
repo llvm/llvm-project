@@ -66,7 +66,7 @@
 /// If we have a match we look at that same entry in the offsets table and grab
 /// the offset in the data for our final match.
 ///
-/// The DWARF v5 accelerator table consists of zero or more name indices that
+/// The DWARFv5 accelerator table consists of zero or more name indices that
 /// are output into an on-disk format that looks like this:
 ///
 /// .------------------.
@@ -108,8 +108,6 @@
 namespace llvm {
 
 class AsmPrinter;
-class DwarfCompileUnit;
-class DwarfDebug;
 
 /// Interface which the different types of accelerator table data have to
 /// conform. It serves as a base class for different values of the template
@@ -246,28 +244,6 @@ public:
   static uint32_t hash(StringRef Buffer) { return djbHash(Buffer); }
 };
 
-/// The Data class implementation for DWARF v5 accelerator table. Unlike the
-/// Apple Data classes, this class is just a DIE wrapper, and does not know to
-/// serialize itself. The complete serialization logic is in the
-/// emitDWARF5AccelTable function.
-class DWARF5AccelTableData : public AccelTableData {
-public:
-  static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
-
-  DWARF5AccelTableData(const DIE &Die) : Die(Die) {}
-
-#ifndef NDEBUG
-  void print(raw_ostream &OS) const override;
-#endif
-
-  const DIE &getDie() const { return Die; }
-
-protected:
-  const DIE &Die;
-
-  uint64_t order() const override { return Die.getOffset(); }
-};
-
 void emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
                              StringRef Prefix, const MCSymbol *SecBegin,
                              ArrayRef<AppleAccelTableData::Atom> Atoms);
@@ -281,11 +257,6 @@ void emitAppleAccelTable(AsmPrinter *Asm, AccelTable<DataT> &Contents,
   static_assert(std::is_convertible<DataT *, AppleAccelTableData *>::value, "");
   emitAppleAccelTableImpl(Asm, Contents, Prefix, SecBegin, DataT::Atoms);
 }
-
-void emitDWARF5AccelTable(AsmPrinter *Asm,
-                          AccelTable<DWARF5AccelTableData> &Contents,
-                          const DwarfDebug &DD,
-                          ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
 
 /// Accelerator table data implementation for simple Apple accelerator tables
 /// with just a DIE reference.

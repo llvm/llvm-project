@@ -12,13 +12,7 @@
 
 #cmakedefine LLDB_CONFIG_TERMIOS_SUPPORTED
 
-#cmakedefine01 LLDB_EDITLINE_USE_WCHAR
-
-#cmakedefine01 LLDB_HAVE_EL_RFUNC_T
-
 #cmakedefine LLDB_DISABLE_POSIX
-
-#define LLDB_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}"
 
 #cmakedefine01 HAVE_SYS_EVENT_H
 

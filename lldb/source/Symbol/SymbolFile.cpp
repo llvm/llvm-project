@@ -12,6 +12,8 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
@@ -30,7 +32,8 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
   if (obj_file != nullptr) {
 
     // We need to test the abilities of this section list. So create what it
-    // would be with this new obj_file.
+    // would
+    // be with this new obj_file.
     lldb::ModuleSP module_sp(obj_file->GetModule());
     if (module_sp) {
       // Default to the main module section list.
@@ -59,16 +62,16 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
         if (sym_file_abilities > best_symfile_abilities) {
           best_symfile_abilities = sym_file_abilities;
           best_symfile_ap.reset(curr_symfile_ap.release());
-          // If any symbol file parser has all of the abilities, then we should
-          // just stop looking.
+          // If any symbol file parser has all of the abilities, then
+          // we should just stop looking.
           if ((kAllAbilities & sym_file_abilities) == kAllAbilities)
             break;
         }
       }
     }
     if (best_symfile_ap.get()) {
-      // Let the winning symbol file parser initialize itself more completely
-      // now that it has been chosen
+      // Let the winning symbol file parser initialize itself more
+      // completely now that it has been chosen
       best_symfile_ap->InitializeObject();
     }
   }
@@ -89,6 +92,53 @@ TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
   return type_system;
 }
 
+bool SymbolFile::ForceInlineSourceFileCheck() {
+  // Force checking for inline breakpoint locations for any JIT object files.
+  // If we have a symbol file for something that has been JIT'ed, chances
+  // are we used "#line" directives to point to the expression code and this
+  // means we will have DWARF line tables that have source implementation
+  // entries that do not match the compile unit source (usually a memory buffer)
+  // file. Returning true for JIT files means all breakpoints set by file and
+  // line
+  // will be found correctly.
+  return m_obj_file->GetType() == ObjectFile::eTypeJIT;
+}
+
+bool SymbolFile::SetLimitSourceFileRange(const FileSpec &file,
+                                         uint32_t first_line,
+                                         uint32_t last_line) {
+  if (file && first_line <= last_line) {
+    m_limit_source_ranges.push_back(SourceRange(file, first_line, last_line));
+    return true;
+  }
+  return false;
+}
+
+bool SymbolFile::SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                               uint32_t actual_line) {
+  if (!m_limit_source_ranges.empty()) {
+    bool file_match = false;
+    bool line_match = false;
+    for (const auto &range : m_limit_source_ranges) {
+      const auto &line_entry = sc.line_entry;
+      if (range.file == line_entry.file) {
+        file_match = true;
+        if (range.first_line <= actual_line && actual_line <= range.last_line)
+          line_match = true;
+      }
+    }
+    if (file_match && !line_match)
+      return true;
+  }
+  return false;
+}
+
+std::vector<lldb::DataBufferSP>
+SymbolFile::GetASTData(lldb::LanguageType language) {
+  // SymbolFile subclasses must add this functionality
+  return std::vector<lldb::DataBufferSP>();
+}
+
 uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
                                           uint32_t line, bool check_inlines,
                                           uint32_t resolve_scope,
@@ -96,16 +146,19 @@ uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
   return 0;
 }
 
-uint32_t
-SymbolFile::FindGlobalVariables(const ConstString &name,
-                                const CompilerDeclContext *parent_decl_ctx,
-                                uint32_t max_matches, VariableList &variables) {
+uint32_t SymbolFile::FindGlobalVariables(
+    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    bool append, uint32_t max_matches, VariableList &variables) {
+  if (!append)
+    variables.Clear();
   return 0;
 }
 
 uint32_t SymbolFile::FindGlobalVariables(const RegularExpression &regex,
-                                         uint32_t max_matches,
+                                         bool append, uint32_t max_matches,
                                          VariableList &variables) {
+  if (!append)
+    variables.Clear();
   return 0;
 }
 

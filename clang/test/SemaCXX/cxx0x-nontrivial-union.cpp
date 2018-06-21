@@ -110,7 +110,7 @@ namespace optional {
     }
 
     explicit operator bool() const { return has; }
-    T &operator*() { return value; }
+    T &operator*() const { return value; }
   };
 
   optional<non_trivial> o1;

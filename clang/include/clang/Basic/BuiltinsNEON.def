@@ -16,7 +16,6 @@
 
 #define GET_NEON_BUILTINS
 #include "clang/Basic/arm_neon.inc"
-#include "clang/Basic/arm_fp16.inc"
 #undef GET_NEON_BUILTINS
 
 #undef BUILTIN

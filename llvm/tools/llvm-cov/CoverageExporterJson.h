@@ -20,28 +20,28 @@
 namespace llvm {
 
 class CoverageExporterJson : public CoverageExporter {
-  /// States that the JSON rendering machine can be in.
+  /// \brief States that the JSON rendering machine can be in.
   enum JsonState { None, NonEmptyElement, EmptyElement };
 
-  /// Tracks state of the JSON output.
+  /// \brief Tracks state of the JSON output.
   std::stack<JsonState> State;
 
-  /// Emit a serialized scalar.
+  /// \brief Emit a serialized scalar.
   void emitSerialized(const int64_t Value);
 
-  /// Emit a serialized string.
+  /// \brief Emit a serialized string.
   void emitSerialized(const std::string &Value);
 
-  /// Emit a comma if there is a previous element to delimit.
+  /// \brief Emit a comma if there is a previous element to delimit.
   void emitComma();
 
-  /// Emit a starting dictionary/object character.
+  /// \brief Emit a starting dictionary/object character.
   void emitDictStart();
 
-  /// Emit a dictionary/object key but no value.
+  /// \brief Emit a dictionary/object key but no value.
   void emitDictKey(const std::string &Key);
 
-  /// Emit a dictionary/object key/value pair.
+  /// \brief Emit a dictionary/object key/value pair.
   template <typename V>
   void emitDictElement(const std::string &Key, const V &Value) {
     emitComma();
@@ -50,60 +50,60 @@ class CoverageExporterJson : public CoverageExporter {
     emitSerialized(Value);
   }
 
-  /// Emit a closing dictionary/object character.
+  /// \brief Emit a closing dictionary/object character.
   void emitDictEnd();
 
-  /// Emit a starting array character.
+  /// \brief Emit a starting array character.
   void emitArrayStart();
 
-  /// Emit an array element.
+  /// \brief Emit an array element.
   template <typename V> void emitArrayElement(const V &Value) {
     emitComma();
     emitSerialized(Value);
   }
 
-  /// emit a closing array character.
+  /// \brief emit a closing array character.
   void emitArrayEnd();
 
-  /// Render an array of all the given functions.
+  /// \brief Render an array of all the given functions.
   void renderFunctions(
       const iterator_range<coverage::FunctionRecordIterator> &Functions);
 
-  /// Render an array of all the source files, also pass back a Summary.
+  /// \brief Render an array of all the source files, also pass back a Summary.
   void renderFiles(ArrayRef<std::string> SourceFiles,
                    ArrayRef<FileCoverageSummary> FileReports);
 
-  /// Render a single file.
+  /// \brief Render a single file.
   void renderFile(const std::string &Filename,
                   const FileCoverageSummary &FileReport);
 
-  /// Render summary for a single file.
+  /// \brief Render summary for a single file.
   void renderFileCoverage(const coverage::CoverageData &FileCoverage,
                           const FileCoverageSummary &FileReport);
 
-  /// Render a CoverageSegment.
+  /// \brief Render a CoverageSegment.
   void renderSegment(const coverage::CoverageSegment &Segment);
 
-  /// Render an ExpansionRecord.
+  /// \brief Render an ExpansionRecord.
   void renderExpansion(const coverage::ExpansionRecord &Expansion);
 
-  /// Render a list of CountedRegions.
+  /// \brief Render a list of CountedRegions.
   void renderRegions(ArrayRef<coverage::CountedRegion> Regions);
 
-  /// Render a single CountedRegion.
+  /// \brief Render a single CountedRegion.
   void renderRegion(const coverage::CountedRegion &Region);
 
-  /// Render a FileCoverageSummary.
+  /// \brief Render a FileCoverageSummary.
   void renderSummary(const FileCoverageSummary &Summary);
 
 public:
   CoverageExporterJson(const coverage::CoverageMapping &CoverageMapping,
                        const CoverageViewOptions &Options, raw_ostream &OS);
 
-  /// Render the CoverageMapping object.
-  void renderRoot(const CoverageFilters &IgnoreFilenameFilters) override;
+  /// \brief Render the CoverageMapping object.
+  void renderRoot() override;
 
-  /// Render the CoverageMapping object for specified source files.
+  /// \brief Render the CoverageMapping object for specified source files.
   void renderRoot(const std::vector<std::string> &SourceFiles) override;
 };
 

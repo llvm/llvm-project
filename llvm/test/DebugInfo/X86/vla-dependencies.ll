@@ -7,21 +7,21 @@
 ; CHECK-NEXT:     DW_AT_type	{{.*}}"int"
 ; CHECK-NOT: DW_TAG
 ; CHECK:        DW_TAG_subrange_type
-; CHECK-NEXT:     DW_AT_type {{.*}}"__ARRAY_SIZE_TYPE__"
-; CHECK-NEXT:     DW_AT_count	(0x00000[[VLAEXPR]]
+; CHECK-NEXT:     DW_AT_type {{.*}}"sizetype"
+; CHECK-NEXT:     DW_AT_count	(cu + 0x0[[VLAEXPR]])
 ;
 ;
 ; Generated from (and then modified):
 ;
 ; #define DECLARE_ARRAY(type, var_name, size) type var_name[size]
-;
+;  
 ; void h(void);
 ; void k(void *);
-;
+;  
 ; void g() {
 ;   h();
 ; }
-;
+;  
 ; void h() {
 ;   int count = 2;
 ;   DECLARE_ARRAY(int, array, count);
@@ -80,11 +80,11 @@ attributes #3 = { nounwind }
 !7 = !{i32 1, !"wchar_size", i32 4}
 !8 = !{i32 7, !"PIC Level", i32 2}
 !9 = !{!"clang version 7.0.0 (trunk 324259) (llvm/trunk 324261)"}
-!10 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 6, type: !11, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: true, unit: !0, retainedNodes: !2)
+!10 = distinct !DISubprogram(name: "g", scope: !1, file: !1, line: 6, type: !11, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: true, unit: !0, variables: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{null}
 !13 = !DILocation(line: 12, column: 3, scope: !14, inlinedAt: !24)
-!14 = distinct !DISubprogram(name: "h", scope: !1, file: !1, line: 10, type: !11, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !15)
+!14 = distinct !DISubprogram(name: "h", scope: !1, file: !1, line: 10, type: !11, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !15)
 !15 = !{!16, !18, !20}
 !16 = !DILocalVariable(name: "count", scope: !14, file: !1, line: 11, type: !17)
 !17 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

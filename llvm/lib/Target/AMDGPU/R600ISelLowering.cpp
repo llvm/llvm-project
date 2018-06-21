@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Custom DAG lowering for R600
+/// \brief Custom DAG lowering for R600
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +20,6 @@
 #include "R600FrameLowering.h"
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -36,13 +35,13 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -287,6 +286,13 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
     }
     break;
+  case AMDGPU::CLAMP_R600: {
+    MachineInstr *NewMI = TII->buildDefaultInstruction(
+        *BB, I, AMDGPU::MOV, MI.getOperand(0).getReg(),
+        MI.getOperand(1).getReg());
+    TII->addFlag(*NewMI, 0, MO_FLAG_CLAMP);
+    break;
+  }
 
   case AMDGPU::FABS_R600: {
     MachineInstr *NewMI = TII->buildDefaultInstruction(
@@ -472,7 +478,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     unsigned IntrinsicID =
                          cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
     switch (IntrinsicID) {
-    case Intrinsic::r600_store_swizzle: {
+    case AMDGPUIntrinsic::r600_store_swizzle: {
       SDLoc DL(Op);
       const SDValue Args[8] = {
         Chain,
@@ -499,14 +505,14 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     EVT VT = Op.getValueType();
     SDLoc DL(Op);
     switch (IntrinsicID) {
-    case Intrinsic::r600_tex:
-    case Intrinsic::r600_texc: {
+    case AMDGPUIntrinsic::r600_tex:
+    case AMDGPUIntrinsic::r600_texc: {
       unsigned TextureOp;
       switch (IntrinsicID) {
-      case Intrinsic::r600_tex:
+      case AMDGPUIntrinsic::r600_tex:
         TextureOp = 0;
         break;
-      case Intrinsic::r600_texc:
+      case AMDGPUIntrinsic::r600_texc:
         TextureOp = 1;
         break;
       default:
@@ -536,7 +542,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       };
       return DAG.getNode(AMDGPUISD::TEXTURE_FETCH, DL, MVT::v4f32, TexArgs);
     }
-    case Intrinsic::r600_dot4: {
+    case AMDGPUIntrinsic::r600_dot4: {
       SDValue Args[8] = {
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Op.getOperand(1),
           DAG.getConstant(0, DL, MVT::i32)),
@@ -1596,8 +1602,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
 
     unsigned ValBase = ArgLocs[In.getOrigArgIndex()].getLocMemOffset();
     unsigned PartOffset = VA.getLocMemOffset();
-    unsigned Offset = Subtarget->getExplicitKernelArgOffset(MF.getFunction()) +
-                      VA.getLocMemOffset();
+    unsigned Offset = Subtarget->getExplicitKernelArgOffset(MF) + VA.getLocMemOffset();
 
     MachinePointerInfo PtrInfo(UndefValue::get(PtrTy), PartOffset - ValBase);
     SDValue Arg = DAG.getLoad(
@@ -2111,7 +2116,7 @@ bool R600TargetLowering::FoldOperand(SDNode *ParentNode, unsigned SrcIdx,
   }
 }
 
-/// Fold the instructions after selecting them
+/// \brief Fold the instructions after selecting them
 SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
                                             SelectionDAG &DAG) const {
   const R600InstrInfo *TII = getSubtarget()->getInstrInfo();
@@ -2174,6 +2179,20 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
       if (FoldOperand(Node, i, Src, FakeOp, FakeOp, FakeOp, FakeOp, DAG))
         return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
     }
+  } else if (Opcode == AMDGPU::CLAMP_R600) {
+    SDValue Src = Node->getOperand(0);
+    if (!Src.isMachineOpcode() ||
+        !TII->hasInstrModifiers(Src.getMachineOpcode()))
+      return Node;
+    int ClampIdx = TII->getOperandIdx(Src.getMachineOpcode(),
+        AMDGPU::OpName::clamp);
+    if (ClampIdx < 0)
+      return Node;
+    SDLoc DL(Node);
+    std::vector<SDValue> Ops(Src->op_begin(), Src->op_end());
+    Ops[ClampIdx - 1] = DAG.getTargetConstant(1, DL, MVT::i32);
+    return DAG.getMachineNode(Src.getMachineOpcode(), DL,
+                              Node->getVTList(), Ops);
   } else {
     if (!TII->hasInstrModifiers(Opcode))
       return Node;

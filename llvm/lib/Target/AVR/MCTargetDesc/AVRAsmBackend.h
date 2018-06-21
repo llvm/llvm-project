@@ -31,19 +31,18 @@ struct MCFixupKindInfo;
 /// Utilities for manipulating generated AVR machine code.
 class AVRAsmBackend : public MCAsmBackend {
 public:
+
   AVRAsmBackend(Triple::OSType OSType)
-      : MCAsmBackend(support::little), OSType(OSType) {}
+      : MCAsmBackend(), OSType(OSType) {}
 
   void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
                         uint64_t &Value, MCContext *Ctx = nullptr) const;
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override;
+  std::unique_ptr<MCObjectWriter> createObjectWriter(raw_pwrite_stream &OS) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+                  uint64_t Value, bool IsPCRel) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
@@ -51,10 +50,7 @@ public:
     return AVR::NumTargetFixupKinds;
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
-    return false;
-  }
+  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -66,7 +62,7 @@ public:
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override {}
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;

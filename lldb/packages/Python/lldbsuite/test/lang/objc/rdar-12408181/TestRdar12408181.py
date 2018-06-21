@@ -13,12 +13,8 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-# TODO: The Jenkins testers on OS X fail running this test because they don't
-# have access to WindowServer so NSWindow doesn't work.  We should disable this
-# test if WindowServer isn't available.
-# Note: Simply applying the @skipIf decorator here confuses the test harness
-# and gives a spurious failure.
 @skipUnlessDarwin
+@skipIfDarwin  # <rdar://problem/23298079> Modify TestRdar12408181.py to self.skipTest() if WindowServer isn't available
 class Rdar12408181TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -34,9 +30,6 @@ class Rdar12408181TestCase(TestBase):
 
     def test_nswindow_count(self):
         """Test that we are able to find out how many children NSWindow has."""
-
-        self.skipTest("Skipping this test due to timeout flakiness")
-
         d = {'EXE': self.exe_name}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)

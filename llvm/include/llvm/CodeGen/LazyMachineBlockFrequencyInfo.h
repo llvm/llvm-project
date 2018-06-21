@@ -23,7 +23,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
 namespace llvm {
-/// This is an alternative analysis pass to MachineBlockFrequencyInfo.
+/// \brief This is an alternative analysis pass to MachineBlockFrequencyInfo.
 /// The difference is that with this pass, the block frequencies are not
 /// computed when the analysis pass is executed but rather when the BFI result
 /// is explicitly requested by the analysis client.
@@ -49,7 +49,7 @@ private:
   /// The function.
   MachineFunction *MF = nullptr;
 
-  /// Calculate MBFI and all other analyses that's not available and
+  /// \brief Calculate MBFI and all other analyses that's not available and
   /// required by BFI.
   MachineBlockFrequencyInfo &calculateIfNotAvailable() const;
 
@@ -58,10 +58,10 @@ public:
 
   LazyMachineBlockFrequencyInfoPass();
 
-  /// Compute and return the block frequencies.
+  /// \brief Compute and return the block frequencies.
   MachineBlockFrequencyInfo &getBFI() { return calculateIfNotAvailable(); }
 
-  /// Compute and return the block frequencies.
+  /// \brief Compute and return the block frequencies.
   const MachineBlockFrequencyInfo &getBFI() const {
     return calculateIfNotAvailable();
   }

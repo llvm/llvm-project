@@ -33,7 +33,7 @@ class PBQPRAGraph;
 
 using PBQPRAGraph = PBQP::RegAlloc::PBQPRAGraph;
 
-/// Abstract base for classes implementing PBQP register allocation
+/// @brief Abstract base for classes implementing PBQP register allocation
 ///        constraints (e.g. Spill-costs, interference, coalescing).
 class PBQPRAConstraint {
 public:
@@ -44,7 +44,7 @@ private:
   virtual void anchor();
 };
 
-/// PBQP register allocation constraint composer.
+/// @brief PBQP register allocation constraint composer.
 ///
 ///   Constraints added to this list will be applied, in the order that they are
 /// added, to the PBQP graph.

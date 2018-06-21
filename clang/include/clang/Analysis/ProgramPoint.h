@@ -135,7 +135,7 @@ public:
                         getLocationContext(), tag);
   }
 
-  /// Convert to the specified ProgramPoint type, asserting that this
+  /// \brief Convert to the specified ProgramPoint type, asserting that this
   /// ProgramPoint is of the desired type.
   template<typename T>
   T castAs() const {
@@ -146,7 +146,7 @@ public:
     return t;
   }
 
-  /// Convert to the specified ProgramPoint type, returning None if this
+  /// \brief Convert to the specified ProgramPoint type, returning None if this
   /// ProgramPoint is not of the desired type.
   template<typename T>
   Optional<T> getAs() const {
@@ -167,7 +167,7 @@ public:
     return (Kind) x;
   }
 
-  /// Is this a program point corresponding to purge/removal of dead
+  /// \brief Is this a program point corresponding to purge/removal of dead
   /// symbols and bindings.
   bool isPurgeKind() {
     Kind K = getKind();
@@ -397,7 +397,7 @@ private:
   }
 };
 
-/// Represents a program point after a store evaluation.
+/// \brief Represents a program point after a store evaluation.
 class PostStore : public PostStmt {
 public:
   /// Construct the post store point.
@@ -410,7 +410,7 @@ public:
     setData2(Loc);
   }
 
-  /// Returns the information about the location used in the store,
+  /// \brief Returns the information about the location used in the store,
   /// how it was uttered in the code.
   const void *getLocationValue() const {
     return getData2();
@@ -496,7 +496,7 @@ private:
 
 class PostInitializer : public ProgramPoint {
 public:
-  /// Construct a PostInitializer point that represents a location after
+  /// \brief Construct a PostInitializer point that represents a location after
   ///   CXXCtorInitializer expression evaluation.
   ///
   /// \param I The initializer.
@@ -510,7 +510,7 @@ public:
     return static_cast<const CXXCtorInitializer *>(getData1());
   }
 
-  /// Returns the location of the field.
+  /// \brief Returns the location of the field.
   const void *getLocationValue() const {
     return getData2();
   }

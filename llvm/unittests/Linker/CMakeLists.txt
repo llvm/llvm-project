@@ -4,6 +4,10 @@ set(LLVM_LINK_COMPONENTS
   linker
   )
 
-add_llvm_unittest(LinkerTests
+set(LinkerSources
   LinkModulesTest.cpp
+  )
+
+add_llvm_unittest(LinkerTests
+  ${LinkerSources}
   )

@@ -32,7 +32,7 @@ using namespace clang;
 // Sema Initialization Checking
 //===----------------------------------------------------------------------===//
 
-/// Check whether T is compatible with a wide character type (wchar_t,
+/// \brief Check whether T is compatible with a wide character type (wchar_t,
 /// char16_t or char32_t).
 static bool IsWideCharCompatible(QualType T, ASTContext &Context) {
   if (Context.typesAreCompatible(Context.getWideCharType(), T))
@@ -49,12 +49,10 @@ enum StringInitFailureKind {
   SIF_NarrowStringIntoWideChar,
   SIF_WideStringIntoChar,
   SIF_IncompatWideStringIntoWideChar,
-  SIF_UTF8StringIntoPlainChar,
-  SIF_PlainStringIntoUTF8Char,
   SIF_Other
 };
 
-/// Check whether the array of type AT can be initialized by the Init
+/// \brief Check whether the array of type AT can be initialized by the Init
 /// expression by means of string initialization. Returns SIF_None if so,
 /// otherwise returns a StringInitFailureKind that describes why the
 /// initialization would not work.
@@ -79,21 +77,12 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
       Context.getCanonicalType(AT->getElementType()).getUnqualifiedType();
 
   switch (SL->getKind()) {
-  case StringLiteral::UTF8:
-    // char8_t array can be initialized with a UTF-8 string.
-    if (ElemTy->isChar8Type())
-      return SIF_None;
-    LLVM_FALLTHROUGH;
   case StringLiteral::Ascii:
+  case StringLiteral::UTF8:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
-      return (SL->getKind() == StringLiteral::UTF8 &&
-              Context.getLangOpts().Char8)
-                 ? SIF_UTF8StringIntoPlainChar
-                 : SIF_None;
-    if (ElemTy->isChar8Type())
-      return SIF_PlainStringIntoUTF8Char;
+      return SIF_None;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_NarrowStringIntoWideChar;
     return SIF_Other;
@@ -105,7 +94,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   case StringLiteral::UTF16:
     if (Context.typesAreCompatible(Context.Char16Ty, ElemTy))
       return SIF_None;
-    if (ElemTy->isCharType() || ElemTy->isChar8Type())
+    if (ElemTy->isCharType())
       return SIF_WideStringIntoChar;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
@@ -113,7 +102,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   case StringLiteral::UTF32:
     if (Context.typesAreCompatible(Context.Char32Ty, ElemTy))
       return SIF_None;
-    if (ElemTy->isCharType() || ElemTy->isChar8Type())
+    if (ElemTy->isCharType())
       return SIF_WideStringIntoChar;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
@@ -121,7 +110,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   case StringLiteral::Wide:
     if (Context.typesAreCompatible(Context.getWideCharType(), ElemTy))
       return SIF_None;
-    if (ElemTy->isCharType() || ElemTy->isChar8Type())
+    if (ElemTy->isCharType())
       return SIF_WideStringIntoChar;
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
@@ -217,7 +206,7 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
 
 namespace {
 
-/// Semantic checking for initializer lists.
+/// @brief Semantic checking for initializer lists.
 ///
 /// The InitListChecker class contains a set of routines that each
 /// handle the initialization of a certain kind of entity, e.g.,
@@ -377,7 +366,7 @@ public:
                   bool TreatUnavailableAsInvalid);
   bool HadError() { return hadError; }
 
-  // Retrieves the fully-structured initializer list used for
+  // @brief Retrieves the fully-structured initializer list used for
   // semantic analysis and code generation.
   InitListExpr *getFullyStructuredList() const { return FullyStructuredList; }
 };
@@ -750,9 +739,6 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
     if (ElementEntity.getKind() == InitializedEntity::EK_ArrayElement ||
         ElementEntity.getKind() == InitializedEntity::EK_VectorElement)
       ElementEntity.setElementIndex(Init);
-
-    if (Init >= NumInits && ILE->hasArrayFiller())
-      return;
 
     Expr *InitExpr = (Init < NumInits ? ILE->getInit(Init) : nullptr);
     if (!InitExpr && Init < NumInits && ILE->hasArrayFiller())
@@ -2028,7 +2014,7 @@ void InitListChecker::CheckStructUnionTypes(
                           StructuredList, StructuredIndex);
 }
 
-/// Expand a field designator that refers to a member of an
+/// \brief Expand a field designator that refers to a member of an
 /// anonymous struct or union into a series of field designators that
 /// refers to the field within the appropriate subobject.
 ///
@@ -2092,7 +2078,7 @@ class FieldInitializerValidatorCCC : public CorrectionCandidateCallback {
 
 } // end anonymous namespace
 
-/// Check the well-formedness of a C99 designated initializer.
+/// @brief Check the well-formedness of a C99 designated initializer.
 ///
 /// Determines whether the designated initializer @p DIE, which
 /// resides at the given @p Index within the initializer list @p
@@ -3199,8 +3185,6 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_NarrowStringIntoWideCharArray:
   case FK_WideStringIntoCharArray:
   case FK_IncompatWideStringIntoWideChar:
-  case FK_PlainStringIntoUTF8Char:
-  case FK_UTF8StringIntoPlainChar:
   case FK_AddressOfOverloadFailed: // FIXME: Could do better
   case FK_NonConstLValueReferenceBindingToTemporary:
   case FK_NonConstLValueReferenceBindingToBitfield:
@@ -3548,7 +3532,7 @@ static void TryListInitialization(Sema &S,
                                   InitializationSequence &Sequence,
                                   bool TreatUnavailableAsInvalid);
 
-/// When initializing from init list via constructor, handle
+/// \brief When initializing from init list via constructor, handle
 /// initialization of an object of type std::initializer_list<T>.
 ///
 /// \return true if we have handled initialization of an object of type
@@ -3709,7 +3693,7 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
   return CandidateSet.BestViableFunction(S, DeclLoc, Best);
 }
 
-/// Attempt initialization by constructor (C++ [dcl.init]), which
+/// \brief Attempt initialization by constructor (C++ [dcl.init]), which
 /// enumerates the constructors of the initialized entity and performs overload
 /// resolution to select the best.
 /// \param DestType       The destination class type.
@@ -3926,7 +3910,7 @@ static void TryValueInitialization(Sema &S,
                                    InitializationSequence &Sequence,
                                    InitListExpr *InitList = nullptr);
 
-/// Attempt list initialization of a reference.
+/// \brief Attempt list initialization of a reference.
 static void TryReferenceListInitialization(Sema &S,
                                            const InitializedEntity &Entity,
                                            const InitializationKind &Kind,
@@ -4000,7 +3984,7 @@ static void TryReferenceListInitialization(Sema &S,
   }
 }
 
-/// Attempt list initialization (C++0x [dcl.init.list])
+/// \brief Attempt list initialization (C++0x [dcl.init.list])
 static void TryListInitialization(Sema &S,
                                   const InitializedEntity &Entity,
                                   const InitializationKind &Kind,
@@ -4195,7 +4179,7 @@ static void TryListInitialization(Sema &S,
   Sequence.AddListInitializationStep(DestType);
 }
 
-/// Try a reference initialization that involves calling a conversion
+/// \brief Try a reference initialization that involves calling a conversion
 /// function.
 static OverloadingResult TryRefInitWithConversionFunction(
     Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
@@ -4385,7 +4369,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
                                            const InitializedEntity &Entity,
                                            Expr *CurInitExpr);
 
-/// Attempt reference initialization (C++0x [dcl.init.ref])
+/// \brief Attempt reference initialization (C++0x [dcl.init.ref])
 static void TryReferenceInitialization(Sema &S,
                                        const InitializedEntity &Entity,
                                        const InitializationKind &Kind,
@@ -4412,13 +4396,13 @@ static void TryReferenceInitialization(Sema &S,
 }
 
 /// Determine whether an expression is a non-referenceable glvalue (one to
-/// which a reference can never bind). Attempting to bind a reference to
+/// which a reference can never bind). Attemting to bind a reference to
 /// such a glvalue will always create a temporary.
 static bool isNonReferenceableGLValue(Expr *E) {
   return E->refersToBitField() || E->refersToVectorElement();
 }
 
-/// Reference initialization without resolving overloaded functions.
+/// \brief Reference initialization without resolving overloaded functions.
 static void TryReferenceInitializationCore(Sema &S,
                                            const InitializedEntity &Entity,
                                            const InitializationKind &Kind,
@@ -4678,7 +4662,7 @@ static void TryReferenceInitializationCore(Sema &S,
   Sequence.AddReferenceBindingStep(cv1T1, /*bindingTemporary=*/true);
 }
 
-/// Attempt character array initialization from a string literal
+/// \brief Attempt character array initialization from a string literal
 /// (C++ [dcl.init.string], C99 6.7.8).
 static void TryStringLiteralInitialization(Sema &S,
                                            const InitializedEntity &Entity,
@@ -4688,7 +4672,7 @@ static void TryStringLiteralInitialization(Sema &S,
   Sequence.AddStringInitStep(Entity.getType());
 }
 
-/// Attempt value initialization (C++ [dcl.init]p7).
+/// \brief Attempt value initialization (C++ [dcl.init]p7).
 static void TryValueInitialization(Sema &S,
                                    const InitializedEntity &Entity,
                                    const InitializationKind &Kind,
@@ -4766,7 +4750,7 @@ static void TryValueInitialization(Sema &S,
   Sequence.AddZeroInitializationStep(Entity.getType());
 }
 
-/// Attempt default initialization (C++ [dcl.init]p6).
+/// \brief Attempt default initialization (C++ [dcl.init]p6).
 static void TryDefaultInitialization(Sema &S,
                                      const InitializedEntity &Entity,
                                      const InitializationKind &Kind,
@@ -4805,7 +4789,7 @@ static void TryDefaultInitialization(Sema &S,
   }
 }
 
-/// Attempt a user-defined conversion between two types (C++ [dcl.init]),
+/// \brief Attempt a user-defined conversion between two types (C++ [dcl.init]),
 /// which enumerates all conversion functions and performs overload resolution
 /// to select the best.
 static void TryUserDefinedConversion(Sema &S,
@@ -5084,7 +5068,7 @@ static void checkIndirectCopyRestoreSource(Sema &S, Expr *src) {
     << src->getSourceRange();
 }
 
-/// Determine whether we have compatible array types for the
+/// \brief Determine whether we have compatible array types for the
 /// purposes of GNU by-copy array initialization.
 static bool hasCompatibleArrayTypes(ASTContext &Context, const ArrayType *Dest,
                                     const ArrayType *Source) {
@@ -5378,12 +5362,6 @@ void InitializationSequence::InitializeFrom(Sema &S,
       case SIF_IncompatWideStringIntoWideChar:
         SetFailed(FK_IncompatWideStringIntoWideChar);
         return;
-      case SIF_PlainStringIntoUTF8Char:
-        SetFailed(FK_PlainStringIntoUTF8Char);
-        return;
-      case SIF_UTF8StringIntoPlainChar:
-        SetFailed(FK_UTF8StringIntoPlainChar);
-        return;
       case SIF_Other:
         break;
       }
@@ -5651,7 +5629,7 @@ getAssignmentAction(const InitializedEntity &Entity, bool Diagnose = false) {
   llvm_unreachable("Invalid EntityKind!");
 }
 
-/// Whether we should bind a created object as a temporary when
+/// \brief Whether we should bind a created object as a temporary when
 /// initializing the given entity.
 static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
   switch (Entity.getKind()) {
@@ -5682,7 +5660,7 @@ static bool shouldBindAsTemporary(const InitializedEntity &Entity) {
   llvm_unreachable("missed an InitializedEntity kind?");
 }
 
-/// Whether the given entity, when initialized with an object
+/// \brief Whether the given entity, when initialized with an object
 /// created for that initialization, requires destruction.
 static bool shouldDestroyEntity(const InitializedEntity &Entity) {
   switch (Entity.getKind()) {
@@ -5713,7 +5691,7 @@ static bool shouldDestroyEntity(const InitializedEntity &Entity) {
   llvm_unreachable("missed an InitializedEntity kind?");
 }
 
-/// Get the location at which initialization diagnostics should appear.
+/// \brief Get the location at which initialization diagnostics should appear.
 static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
                                            Expr *Initializer) {
   switch (Entity.getKind()) {
@@ -5749,7 +5727,7 @@ static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
   llvm_unreachable("missed an InitializedEntity kind?");
 }
 
-/// Make a (potentially elidable) temporary copy of the object
+/// \brief Make a (potentially elidable) temporary copy of the object
 /// provided by the given initializer by calling the appropriate copy
 /// constructor.
 ///
@@ -5914,7 +5892,7 @@ static ExprResult CopyObject(Sema &S,
   return CurInit;
 }
 
-/// Check whether elidable copy construction for binding a reference to
+/// \brief Check whether elidable copy construction for binding a reference to
 /// a temporary would have succeeded if we were building in C++98 mode, for
 /// -Wc++98-compat.
 static void CheckCXX98CompatAccessibleCopy(Sema &S,
@@ -6446,7 +6424,13 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
 
   // Find the std::move call and get the argument.
   const CallExpr *CE = dyn_cast<CallExpr>(InitExpr->IgnoreParens());
-  if (!CE || !CE->isCallToStdMove())
+  if (!CE || CE->getNumArgs() != 1)
+    return;
+
+  const FunctionDecl *MoveFunction = CE->getDirectCallee();
+  if (!MoveFunction || !MoveFunction->isInStdNamespace() ||
+      !MoveFunction->getIdentifier() ||
+      !MoveFunction->getIdentifier()->isStr("move"))
     return;
 
   const Expr *Arg = CE->getArg(0)->IgnoreImplicit();
@@ -6503,7 +6487,7 @@ static void CheckMoveOnConstruction(Sema &S, const Expr *InitExpr,
   // macro only if it is at the beginning of the macro.
   while (ArgLoc.isMacroID() &&
          S.getSourceManager().isAtStartOfImmediateMacroExpansion(ArgLoc)) {
-    ArgLoc = S.getSourceManager().getImmediateExpansionRange(ArgLoc).getBegin();
+    ArgLoc = S.getSourceManager().getImmediateExpansionRange(ArgLoc).first;
   }
 
   if (LParen.isMacroID())
@@ -7607,17 +7591,6 @@ bool InitializationSequence::Diagnose(Sema &S,
     S.Diag(Kind.getLocation(),
            diag::err_array_init_incompat_wide_string_into_wchar);
     break;
-  case FK_PlainStringIntoUTF8Char:
-    S.Diag(Kind.getLocation(),
-           diag::err_array_init_plain_string_into_char8_t);
-    S.Diag(Args.front()->getLocStart(),
-           diag::note_array_init_plain_string_into_char8_t)
-      << FixItHint::CreateInsertion(Args.front()->getLocStart(), "u8");
-    break;
-  case FK_UTF8StringIntoPlainChar:
-    S.Diag(Kind.getLocation(),
-           diag::err_array_init_utf8_string_into_char);
-    break;
   case FK_ArrayTypeMismatch:
   case FK_NonConstantArrayInit:
     S.Diag(Kind.getLocation(),
@@ -8027,14 +8000,6 @@ void InitializationSequence::dump(raw_ostream &OS) const {
       OS << "incompatible wide string into wide char array";
       break;
 
-    case FK_PlainStringIntoUTF8Char:
-      OS << "plain string literal into char8_t array";
-      break;
-
-    case FK_UTF8StringIntoPlainChar:
-      OS << "u8 string literal into char array";
-      break;
-
     case FK_ArrayTypeMismatch:
       OS << "array type mismatch";
       break;
@@ -8325,11 +8290,6 @@ void InitializationSequence::dump() const {
   dump(llvm::errs());
 }
 
-static bool NarrowingErrs(const LangOptions &L) {
-  return L.CPlusPlus11 &&
-         (!L.MicrosoftExt || L.isCompatibleWithMSVC(LangOptions::MSVC2015));
-}
-
 static void DiagnoseNarrowingInInitList(Sema &S,
                                         const ImplicitConversionSequence &ICS,
                                         QualType PreNarrowingType,
@@ -8363,34 +8323,35 @@ static void DiagnoseNarrowingInInitList(Sema &S,
     // This was a floating-to-integer conversion, which is always considered a
     // narrowing conversion even if the value is a constant and can be
     // represented exactly as an integer.
-    S.Diag(PostInit->getLocStart(), NarrowingErrs(S.getLangOpts())
-                                        ? diag::ext_init_list_type_narrowing
-                                        : diag::warn_init_list_type_narrowing)
-        << PostInit->getSourceRange()
-        << PreNarrowingType.getLocalUnqualifiedType()
-        << EntityType.getLocalUnqualifiedType();
+    S.Diag(PostInit->getLocStart(),
+           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
+               ? diag::warn_init_list_type_narrowing
+               : diag::ext_init_list_type_narrowing)
+      << PostInit->getSourceRange()
+      << PreNarrowingType.getLocalUnqualifiedType()
+      << EntityType.getLocalUnqualifiedType();
     break;
 
   case NK_Constant_Narrowing:
     // A constant value was narrowed.
     S.Diag(PostInit->getLocStart(),
-           NarrowingErrs(S.getLangOpts())
-               ? diag::ext_init_list_constant_narrowing
-               : diag::warn_init_list_constant_narrowing)
-        << PostInit->getSourceRange()
-        << ConstantValue.getAsString(S.getASTContext(), ConstantType)
-        << EntityType.getLocalUnqualifiedType();
+           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
+               ? diag::warn_init_list_constant_narrowing
+               : diag::ext_init_list_constant_narrowing)
+      << PostInit->getSourceRange()
+      << ConstantValue.getAsString(S.getASTContext(), ConstantType)
+      << EntityType.getLocalUnqualifiedType();
     break;
 
   case NK_Variable_Narrowing:
     // A variable's value may have been narrowed.
     S.Diag(PostInit->getLocStart(),
-           NarrowingErrs(S.getLangOpts())
-               ? diag::ext_init_list_variable_narrowing
-               : diag::warn_init_list_variable_narrowing)
-        << PostInit->getSourceRange()
-        << PreNarrowingType.getLocalUnqualifiedType()
-        << EntityType.getLocalUnqualifiedType();
+           (S.getLangOpts().MicrosoftExt || !S.getLangOpts().CPlusPlus11)
+               ? diag::warn_init_list_variable_narrowing
+               : diag::ext_init_list_variable_narrowing)
+      << PostInit->getSourceRange()
+      << PreNarrowingType.getLocalUnqualifiedType()
+      << EntityType.getLocalUnqualifiedType();
     break;
   }
 

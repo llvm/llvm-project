@@ -230,6 +230,11 @@ Optional<SVal> RegionBindingsRef::getDirectBinding(const MemRegion *R) const {
 }
 
 Optional<SVal> RegionBindingsRef::getDefaultBinding(const MemRegion *R) const {
+  if (R->isBoundable())
+    if (const TypedValueRegion *TR = dyn_cast<TypedValueRegion>(R))
+      if (TR->getValueType()->isUnionType())
+        return UnknownVal();
+
   return Optional<SVal>::create(lookup(R, BindingKey::Default));
 }
 
@@ -333,7 +338,7 @@ private:
   /// To disable all small-struct-dependent behavior, set the option to "0".
   unsigned SmallStructLimit;
 
-  /// A helper used to populate the work list with the given set of
+  /// \brief A helper used to populate the work list with the given set of
   /// regions.
   void populateWorkList(invalidateRegionsWorker &W,
                         ArrayRef<SVal> Values,
@@ -404,22 +409,8 @@ public: // Part of public interface to class.
 
   RegionBindingsRef bind(RegionBindingsConstRef B, Loc LV, SVal V);
 
-  // BindDefaultInitial is only used to initialize a region with
-  // a default value.
-  StoreRef BindDefaultInitial(Store store, const MemRegion *R,
-                              SVal V) override {
-    RegionBindingsRef B = getRegionBindings(store);
-    // Use other APIs when you have to wipe the region that was initialized
-    // earlier.
-    assert(!(B.getDefaultBinding(R) || B.getDirectBinding(R)) &&
-           "Double initialization!");
-    B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
-    return StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this);
-  }
-
-  // BindDefaultZero is used for zeroing constructors that may accidentally
-  // overwrite existing bindings.
-  StoreRef BindDefaultZero(Store store, const MemRegion *R) override {
+  // BindDefault is only used to initialize a region with a default value.
+  StoreRef BindDefault(Store store, const MemRegion *R, SVal V) override {
     // FIXME: The offsets of empty bases can be tricky because of
     // of the so called "empty base class optimization".
     // If a base class has been optimized out
@@ -429,14 +420,24 @@ public: // Part of public interface to class.
     // and trying to infer them from offsets/alignments
     // seems to be error-prone and non-trivial because of the trailing padding.
     // As a temporary mitigation we don't create bindings for empty bases.
-    if (const auto *BR = dyn_cast<CXXBaseObjectRegion>(R))
-      if (BR->getDecl()->isEmpty())
-        return StoreRef(store, *this);
+    if (R->getKind() == MemRegion::CXXBaseObjectRegionKind &&
+        cast<CXXBaseObjectRegion>(R)->getDecl()->isEmpty())
+      return StoreRef(store, *this);
 
     RegionBindingsRef B = getRegionBindings(store);
-    SVal V = svalBuilder.makeZeroVal(Ctx.CharTy);
-    B = removeSubRegionBindings(B, cast<SubRegion>(R));
-    B = B.addBinding(BindingKey::Make(R, BindingKey::Default), V);
+    assert(!B.lookup(R, BindingKey::Direct));
+
+    BindingKey Key = BindingKey::Make(R, BindingKey::Default);
+    if (B.lookup(Key)) {
+      const SubRegion *SR = cast<SubRegion>(R);
+      assert(SR->getAsOffset().getOffset() ==
+             SR->getSuperRegion()->getAsOffset().getOffset() &&
+             "A default value must come from a super-region");
+      B = removeSubRegionBindings(B, SR);
+    } else {
+      B = B.addBinding(Key, V);
+    }
+
     return StoreRef(B.asImmutableMap().getRootWithoutRetain(), *this);
   }
 
@@ -473,7 +474,7 @@ public: // Part of public interface to class.
                                   const TypedRegion *R,
                                   SVal DefaultVal);
 
-  /// Create a new store with the specified binding removed.
+  /// \brief Create a new store with the specified binding removed.
   /// \param ST the original store, that is the basis for the new store.
   /// \param L the location whose binding should be removed.
   StoreRef killBinding(Store ST, Loc L) override;
@@ -491,7 +492,7 @@ public: // Part of public interface to class.
 
   bool includedInBindings(Store store, const MemRegion *region) const override;
 
-  /// Return the value bound to specified location in a given state.
+  /// \brief Return the value bound to specified location in a given state.
   ///
   /// The high level logic for this method is this:
   /// getBinding (L)
@@ -824,7 +825,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
   FieldVector FieldsInSymbolicSubregions;
   if (TopKey.hasSymbolicOffset()) {
     getSymbolicOffsetFields(TopKey, FieldsInSymbolicSubregions);
-    Top = TopKey.getConcreteOffsetRegion();
+    Top = cast<SubRegion>(TopKey.getConcreteOffsetRegion());
     TopKey = BindingKey::Make(Top, BindingKey::Default);
   }
 
@@ -1094,7 +1095,7 @@ void invalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     return;
   }
 
-  if (T->isRecordType()) {
+  if (T->isStructureOrClassType()) {
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(baseR, Ex, LCtx,
@@ -1404,8 +1405,6 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     assert(!T.isNull() && "Unable to auto-detect binding type!");
     assert(!T->isVoidType() && "Attempting to dereference a void pointer!");
     MR = GetElementZeroRegion(cast<SubRegion>(MR), T);
-  } else {
-    T = cast<TypedValueRegion>(MR)->getValueType();
   }
 
   // FIXME: Perhaps this method should just take a 'const MemRegion*' argument
@@ -1445,7 +1444,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     return UnknownVal();
 
   if (const FieldRegion* FR = dyn_cast<FieldRegion>(R))
-    return CastRetrievedVal(getBindingForField(B, FR), FR, T);
+    return CastRetrievedVal(getBindingForField(B, FR), FR, T, false);
 
   if (const ElementRegion* ER = dyn_cast<ElementRegion>(R)) {
     // FIXME: Here we actually perform an implicit conversion from the loaded
@@ -1453,7 +1452,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // more intelligently.  For example, an 'element' can encompass multiple
     // bound regions (e.g., several bound bytes), or could be a subset of
     // a larger value.
-    return CastRetrievedVal(getBindingForElement(B, ER), ER, T);
+    return CastRetrievedVal(getBindingForElement(B, ER), ER, T, false);
   }
 
   if (const ObjCIvarRegion *IVR = dyn_cast<ObjCIvarRegion>(R)) {
@@ -1463,7 +1462,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // reinterpretted, it is possible we stored a different value that could
     // fit within the ivar.  Either we need to cast these when storing them
     // or reinterpret them lazily (as we do here).
-    return CastRetrievedVal(getBindingForObjCIvar(B, IVR), IVR, T);
+    return CastRetrievedVal(getBindingForObjCIvar(B, IVR), IVR, T, false);
   }
 
   if (const VarRegion *VR = dyn_cast<VarRegion>(R)) {
@@ -1473,7 +1472,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // variable is reinterpretted, it is possible we stored a different value
     // that could fit within the variable.  Either we need to cast these when
     // storing them or reinterpret them lazily (as we do here).
-    return CastRetrievedVal(getBindingForVar(B, VR), VR, T);
+    return CastRetrievedVal(getBindingForVar(B, VR), VR, T, false);
   }
 
   const SVal *V = B.lookup(R, BindingKey::Direct);
@@ -1605,7 +1604,7 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
   const MemRegion* superR = R->getSuperRegion();
 
   // Check if the region is an element region of a string literal.
-  if (const StringRegion *StrR = dyn_cast<StringRegion>(superR)) {
+  if (const StringRegion *StrR=dyn_cast<StringRegion>(superR)) {
     // FIXME: Handle loads from strings where the literal is treated as
     // an integer, e.g., *((unsigned int*)"hello")
     QualType T = Ctx.getAsArrayType(StrR->getValueType())->getElementType();
@@ -1627,36 +1626,6 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
       // used to initialize a larger array.
       char c = (i >= length) ? '\0' : Str->getCodeUnit(i);
       return svalBuilder.makeIntVal(c, T);
-    }
-  } else if (const VarRegion *VR = dyn_cast<VarRegion>(superR)) {
-    // Check if the containing array is const and has an initialized value.
-    const VarDecl *VD = VR->getDecl();
-    // Either the array or the array element has to be const.
-    if (VD->getType().isConstQualified() || R->getElementType().isConstQualified()) {
-      if (const Expr *Init = VD->getInit()) {
-        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
-          // The array index has to be known.
-          if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
-            int64_t i = CI->getValue().getSExtValue();
-            // If it is known that the index is out of bounds, we can return
-            // an undefined value.
-            if (i < 0)
-              return UndefinedVal();
-
-            if (auto CAT = Ctx.getAsConstantArrayType(VD->getType()))
-              if (CAT->getSize().sle(i))
-                return UndefinedVal();
-
-            // If there is a list, but no init, it must be zero.
-            if (i >= InitList->getNumInits())
-              return svalBuilder.makeZeroVal(R->getElementType());
-
-            if (const Expr *ElemInit = InitList->getInit(i))
-              if (Optional<SVal> V = svalBuilder.getConstantVal(ElemInit))
-                return *V;
-          }
-        }
-      }
     }
   }
 
@@ -1707,34 +1676,7 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const Optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
-  // Is the field declared constant and has an in-class initializer?
-  const FieldDecl *FD = R->getDecl();
-  QualType Ty = FD->getType();
-  if (Ty.isConstQualified())
-    if (const Expr *Init = FD->getInClassInitializer())
-      if (Optional<SVal> V = svalBuilder.getConstantVal(Init))
-        return *V;
-
-  // If the containing record was initialized, try to get its constant value.
-  const MemRegion* superR = R->getSuperRegion();
-  if (const auto *VR = dyn_cast<VarRegion>(superR)) {
-    const VarDecl *VD = VR->getDecl();
-    QualType RecordVarTy = VD->getType();
-    unsigned Index = FD->getFieldIndex();
-    // Either the record variable or the field has to be const qualified.
-    if (RecordVarTy.isConstQualified() || Ty.isConstQualified())
-      if (const Expr *Init = VD->getInit())
-        if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
-          if (Index < InitList->getNumInits()) {
-            if (const Expr *FieldInit = InitList->getInit(Index))
-              if (Optional<SVal> V = svalBuilder.getConstantVal(FieldInit))
-                return *V;
-          } else {
-            return svalBuilder.makeZeroVal(Ty);
-          }
-        }
-  }
-
+  QualType Ty = R->getValueType();
   return getBindingForFieldOrElementCommon(B, R, Ty);
 }
 
@@ -1832,7 +1774,7 @@ RegionStoreManager::getBindingForFieldOrElementCommon(RegionBindingsConstRef B,
   // quickly result in a warning.
   bool hasPartialLazyBinding = false;
 
-  const SubRegion *SR = R;
+  const SubRegion *SR = dyn_cast<SubRegion>(R);
   while (SR) {
     const MemRegion *Base = SR->getSuperRegion();
     if (Optional<SVal> D = getBindingForDerivedDefaultValue(B, Base, R, Ty)) {
@@ -2105,9 +2047,6 @@ RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
 
     R = GetElementZeroRegion(SR, T);
   }
-
-  assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&
-         "'this' pointer is not an l-value and is not assignable");
 
   // Clear out bindings that may overlap with this binding.
   RegionBindingsRef NewB = removeSubRegionBindings(B, cast<SubRegion>(R));

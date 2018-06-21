@@ -44,9 +44,6 @@ def SwiftModel : SchedMachineModel {
   let LoadLatency = 3;
   let MispredictPenalty = 14; // A branch direction mispredict.
   let CompleteModel = 0;      // FIXME: Remove if all instructions are covered.
-
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
 }
 
 // Swift predicates.
@@ -164,12 +161,12 @@ let SchedModel = SwiftModel in {
                           "t2UXTB16")>;
   // Pseudo instructions.
   def : InstRW<[SwiftWriteP01OneCycle2x],
-        (instregex "MOVCCi32imm", "MOVi32imm", "t2MOVCCi32imm",
-                   "t2MOVi32imm")>;
+        (instregex "MOVCCi32imm", "MOVi32imm", "MOV_ga_dyn", "t2MOVCCi32imm",
+                   "t2MOVi32imm", "t2MOV_ga_dyn")>;
   def : InstRW<[SwiftWriteP01OneCycle3x],
         (instregex "MOV_ga_pcrel", "t2MOV_ga_pcrel", "t2MOVi16_ga_pcrel")>;
   def : InstRW<[SwiftWriteP01OneCycle2x_load],
-        (instregex "MOV_ga_pcrel_ldr")>;
+        (instregex "MOV_ga_pcrel_ldr", "t2MOV_ga_pcrel_ldr")>;
 
   def SwiftWriteP0TwoCycleTwoUops : WriteSequence<[SwiftWriteP0OneCycle], 2>;
 
@@ -221,8 +218,8 @@ let SchedModel = SwiftModel in {
   // 4.2.12 Integer Multiply (32-bit result)
   // Two sources.
   def : InstRW< [SwiftWriteP0FourCycle],
-        (instregex "MUL", "SMMUL", "SMMULR", "SMULBB", "SMULBT",
-        "SMULTB", "SMULTT", "SMULWB", "SMULWT", "SMUSD", "SMUSDX", "t2MUL",
+        (instregex "MULS", "MUL", "SMMUL", "SMMULR", "SMULBB", "SMULBT",
+        "SMULTB", "SMULTT", "SMULWB", "SMULWT", "SMUSD", "SMUSDXi", "t2MUL",
         "t2SMMUL", "t2SMMULR", "t2SMULBB", "t2SMULBT", "t2SMULTB", "t2SMULTT",
         "t2SMULWB", "t2SMULWT", "t2SMUSD")>;
 
@@ -244,8 +241,8 @@ let SchedModel = SwiftModel in {
   // Multiply accumulate, three sources
   def : InstRW< [SwiftPredP0P01FourFiveCycle, ReadALU, ReadALU,
                  SwiftReadAdvanceFourCyclesPred],
-        (instregex "MLA", "MLS", "SMMLA", "SMMLAR", "SMMLS", "SMMLSR",
-        "t2MLA", "t2MLS", "t2SMMLA", "t2SMMLAR", "t2SMMLS",
+        (instregex "MLAS", "MLA", "MLS", "SMMLA", "SMMLAR", "SMMLS", "SMMLSR",
+        "t2MLA", "t2MLS", "t2MLAS", "t2SMMLA", "t2SMMLAR", "t2SMMLS",
         "t2SMMLSR")>;
 
   // 4.2.13 Integer Multiply (32-bit result, Q flag)
@@ -305,9 +302,9 @@ let SchedModel = SwiftModel in {
   // We are being a bit inaccurate here.
   def : InstRW< [SwiftWrite5Cycle, Swift2P03P01FiveCycle, ReadALU, ReadALU,
                  SchedReadAdvance<4>, SchedReadAdvance<3>],
-        (instregex "SMLAL", "UMLAL", "SMLALBT",
+        (instregex "SMLALS", "UMLALS", "SMLAL", "UMLAL", "MLALBB", "SMLALBT",
         "SMLALTB", "SMLALTT", "SMLALD", "SMLALDX", "SMLSLD", "SMLSLDX",
-        "UMAAL", "t2SMLAL", "t2UMLAL", "t2SMLALBB", "t2SMLALBT",
+        "UMAAL", "t2SMLALS", "t2UMLALS", "t2SMLAL", "t2UMLAL", "t2MLALBB", "t2SMLALBT",
         "t2SMLALTB", "t2SMLALTT", "t2SMLALD", "t2SMLALDX", "t2SMLSLD", "t2SMLSLDX",
         "t2UMAAL")>;
 
@@ -369,7 +366,7 @@ let SchedModel = SwiftModel in {
         "t2LD(R|RB|RH)_(PRE|POST)", "t2LD(R|RB|RH)T")>;
   def : InstRW<[SwiftWriteP2P01P01FourCycle, SwiftWrBackOne],
         (instregex "LDR(SH|SB)(_POST|_PRE)", "t2LDR(SH|SB)(_POST|_PRE)",
-        "LDRS(B|H)T(i|r)", "t2LDRS(B|H)T(i|r)?")>;
+        "LDRS(B|H)T(i|r)", "t2LDRS(B|H)T(i|r)", "t2LDRS(B|H)T")>;
 
   // 4.2.21 Integer Dual Load
   // Not accurate.
@@ -486,7 +483,7 @@ let SchedModel = SwiftModel in {
         (instregex /*"t2LDMIA_RET", "tLDMIA_RET", "LDMIA_RET",*/
         "LDM(IA|DA|DB|IB)_UPD", "(t2|sys|t)LDM(IA|DA|DB|IB)_UPD")>;
   def : InstRW<[SwiftWriteLDMAddrWB, SwiftWriteLM, SwiftWriteP1TwoCycle],
-        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET", "tPOP")>;
+        (instregex "LDMIA_RET", "(t|t2)LDMIA_RET", "POP", "tPOP")>;
   // 4.2.23 Integer Store, Single Element
   def : InstRW<[SwiftWriteP2],
         (instregex "PICSTR", "STR(i12|rs)", "STRB(i12|rs)", "STRH$", "STREX",
@@ -536,7 +533,7 @@ let SchedModel = SwiftModel in {
         (instregex "STM(IB|IA|DB|DA)$", "(t2|sys|t)STM(IB|IA|DB|DA)$")>;
   def : InstRW<[SwiftWriteP01OneCycle, SwiftWriteSTM],
         (instregex "STM(IB|IA|DB|DA)_UPD", "(t2|sys|t)STM(IB|IA|DB|DA)_UPD",
-        "tPUSH")>;
+        "PUSH", "tPUSH")>;
 
   // LDRLIT pseudo instructions, they expand to LDR + PICADD
   def : InstRW<[SwiftWriteP2ThreeCycle, WriteALU],
@@ -552,14 +549,14 @@ let SchedModel = SwiftModel in {
 
   // 4.2.27 Not issued
   def : WriteRes<WriteNoop, []> { let Latency = 0; let NumMicroOps = 0; }
-  def : InstRW<[WriteNoop], (instregex "t2IT", "IT")>;
+  def : InstRW<[WriteNoop], (instregex "t2IT", "IT", "NOP")>;
 
   // 4.2.28 Advanced SIMD, Integer, 2 cycle
   def : InstRW<[SwiftWriteP0TwoCycle],
         (instregex "VADDv", "VSUBv", "VNEG(s|f|v)", "VADDL", "VSUBL",
                    "VADDW", "VSUBW", "VHADD", "VHSUB", "VRHADD", "VPADDi",
                    "VPADDL", "VAND", "VBIC", "VEOR", "VORN", "VORR", "VTST",
-                   "VSHL", "VSHR(s|u)", "VSHLL", "VQSHL(s|u)", "VBIF",
+                   "VSHL", "VSHR(s|u)", "VSHLL", "VQSHL", "VQSHLU", "VBIF",
                    "VBIT", "VBSL", "VSLI", "VSRI", "VCLS", "VCLZ", "VCNT")>;
 
   def : InstRW<[SwiftWriteP1TwoCycle],
@@ -569,7 +566,7 @@ let SchedModel = SwiftModel in {
   // 4.2.30 Advanced SIMD, Integer with Accumulate
   def : InstRW<[SwiftWriteP0FourCycle],
         (instregex "VABA", "VABAL", "VPADAL", "VRSRA", "VSRA", "VACGE", "VACGT",
-        "VCEQ", "VCGE", "VCGT", "VCLE", "VCLT", "VRSHL",
+        "VACLE", "VACLT", "VCEQ", "VCGE", "VCGT", "VCLE", "VCLT", "VRSHL",
         "VQRSHL", "VRSHR(u|s)", "VABS(f|v)", "VQABS", "VQNEG", "VQADD",
         "VQSUB")>;
   def : InstRW<[SwiftWriteP1FourCycle],
@@ -626,12 +623,12 @@ let SchedModel = SwiftModel in {
   // 4.2.37 Advanced SIMD and VFP, Move
   def : InstRW<[SwiftWriteP0TwoCycle],
         (instregex "VMOVv", "VMOV(S|D)$", "VMOV(S|D)cc",
-                   "VMVNv", "VMVN(d|q)",
+                   "VMVNv", "VMVN(d|q)", "VMVN(S|D)cc",
                    "FCONST(D|S)")>;
   def : InstRW<[SwiftWriteP1TwoCycle], (instregex "VMOVN", "VMOVL")>;
   def : InstRW<[WriteSequence<[SwiftWriteP0FourCycle, SwiftWriteP1TwoCycle]>],
         (instregex "VQMOVN")>;
-  def : InstRW<[SwiftWriteP1TwoCycle], (instregex "VDUPLN")>;
+  def : InstRW<[SwiftWriteP1TwoCycle], (instregex "VDUPLN", "VDUPf")>;
   def : InstRW<[WriteSequence<[SwiftWriteP2FourCycle, SwiftWriteP1TwoCycle]>],
         (instregex "VDUP(8|16|32)")>;
   def : InstRW<[SwiftWriteP2ThreeCycle], (instregex "VMOVRS$")>;

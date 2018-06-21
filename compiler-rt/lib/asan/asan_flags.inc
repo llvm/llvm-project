@@ -88,8 +88,7 @@ ASAN_FLAG(bool, check_malloc_usable_size, true,
           "295.*.")
 ASAN_FLAG(bool, unmap_shadow_on_exit, false,
           "If set, explicitly unmaps the (huge) shadow at exit.")
-ASAN_FLAG(bool, protect_shadow_gap, !SANITIZER_RTEMS,
-          "If set, mprotect the shadow gap")
+ASAN_FLAG(bool, protect_shadow_gap, true, "If set, mprotect the shadow gap")
 ASAN_FLAG(bool, print_stats, false,
           "Print various statistics after printing an error message or if "
           "atexit=1.")
@@ -137,9 +136,9 @@ ASAN_FLAG(
     "Android. ")
 ASAN_FLAG(
     int, detect_invalid_pointer_pairs, 0,
-    "If >= 2, detect operations like <, <=, >, >= and - on invalid pointer "
-    "pairs (e.g. when pointers belong to different objects); "
-    "If == 1, detect invalid operations only when both pointers are non-null.")
+    "If non-zero, try to detect operations like <, <=, >, >= and - on "
+    "invalid pointer pairs (e.g. when pointers belong to different objects). "
+    "The bigger the value the harder we try.")
 ASAN_FLAG(
     bool, detect_container_overflow, true,
     "If true, honor the container overflow annotations. See "

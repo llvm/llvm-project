@@ -87,7 +87,7 @@ public:
 
   uint8_t *getAddress() const { return Address; }
 
-  /// Return the address of this section with an offset.
+  /// \brief Return the address of this section with an offset.
   uint8_t *getAddressWithOffset(unsigned OffsetBytes) const {
     assert(OffsetBytes <= AllocationSize && "Offset out of bounds!");
     return Address + OffsetBytes;
@@ -98,7 +98,7 @@ public:
   uint64_t getLoadAddress() const { return LoadAddress; }
   void setLoadAddress(uint64_t LA) { LoadAddress = LA; }
 
-  /// Return the load address of this section with an offset.
+  /// \brief Return the load address of this section with an offset.
   uint64_t getLoadAddressWithOffset(unsigned OffsetBytes) const {
     assert(OffsetBytes <= AllocationSize && "Offset out of bounds!");
     return LoadAddress + OffsetBytes;
@@ -217,7 +217,7 @@ public:
   }
 };
 
-/// Symbol info for RuntimeDyld.
+/// @brief Symbol info for RuntimeDyld.
 class SymbolTableEntry {
 public:
   SymbolTableEntry() = default;
@@ -381,14 +381,13 @@ protected:
     return Addr;
   }
 
-  /// Given the common symbols discovered in the object file, emit a
+  /// \brief Given the common symbols discovered in the object file, emit a
   /// new section for them and update the symbol mappings in the object and
   /// symbol table.
   Error emitCommonSymbols(const ObjectFile &Obj,
-                          CommonSymbolList &CommonSymbols, uint64_t CommonSize,
-                          uint32_t CommonAlign);
+                          CommonSymbolList &CommonSymbols);
 
-  /// Emits section data from the object file to the MemoryManager.
+  /// \brief Emits section data from the object file to the MemoryManager.
   /// \param IsCode if it's true then allocateCodeSection() will be
   ///        used for emits, else allocateDataSection() will be used.
   /// \return SectionID.
@@ -396,7 +395,7 @@ protected:
                                  const SectionRef &Section,
                                  bool IsCode);
 
-  /// Find Section in LocalSections. If the secton is not found - emit
+  /// \brief Find Section in LocalSections. If the secton is not found - emit
   ///        it and store in LocalSections.
   /// \param IsCode if it's true then allocateCodeSection() will be
   ///        used for emmits, else allocateDataSection() will be used.
@@ -405,26 +404,26 @@ protected:
                                        const SectionRef &Section, bool IsCode,
                                        ObjSectionToIDMap &LocalSections);
 
-  // Add a relocation entry that uses the given section.
+  // \brief Add a relocation entry that uses the given section.
   void addRelocationForSection(const RelocationEntry &RE, unsigned SectionID);
 
-  // Add a relocation entry that uses the given symbol.  This symbol may
+  // \brief Add a relocation entry that uses the given symbol.  This symbol may
   // be found in the global symbol table, or it may be external.
   void addRelocationForSymbol(const RelocationEntry &RE, StringRef SymbolName);
 
-  /// Emits long jump instruction to Addr.
+  /// \brief Emits long jump instruction to Addr.
   /// \return Pointer to the memory area for emitting target address.
   uint8_t *createStubFunction(uint8_t *Addr, unsigned AbiVariant = 0);
 
-  /// Resolves relocations from Relocs list with address from Value.
+  /// \brief Resolves relocations from Relocs list with address from Value.
   void resolveRelocationList(const RelocationList &Relocs, uint64_t Value);
 
-  /// A object file specific relocation resolver
+  /// \brief A object file specific relocation resolver
   /// \param RE The relocation to be resolved
   /// \param Value Target symbol address to apply the relocation action
   virtual void resolveRelocation(const RelocationEntry &RE, uint64_t Value) = 0;
 
-  /// Parses one or more object file relocations (some object files use
+  /// \brief Parses one or more object file relocations (some object files use
   ///        relocation pairs) and stores it to Relocations or SymbolRelocations
   ///        (this depends on the object file type).
   /// \return Iterator to the next relocation that needs to be parsed.
@@ -433,35 +432,35 @@ protected:
                        const ObjectFile &Obj, ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) = 0;
 
-  /// Resolve relocations to external symbols.
+  /// \brief Resolve relocations to external symbols.
   Error resolveExternalSymbols();
 
-  // Compute an upper bound of the memory that is required to load all
+  // \brief Compute an upper bound of the memory that is required to load all
   // sections
   Error computeTotalAllocSize(const ObjectFile &Obj,
                               uint64_t &CodeSize, uint32_t &CodeAlign,
                               uint64_t &RODataSize, uint32_t &RODataAlign,
                               uint64_t &RWDataSize, uint32_t &RWDataAlign);
 
-  // Compute GOT size
+  // \brief Compute GOT size
   unsigned computeGOTSize(const ObjectFile &Obj);
 
-  // Compute the stub buffer size required for a section
+  // \brief Compute the stub buffer size required for a section
   unsigned computeSectionStubBufSize(const ObjectFile &Obj,
                                      const SectionRef &Section);
 
-  // Implementation of the generic part of the loadObject algorithm.
+  // \brief Implementation of the generic part of the loadObject algorithm.
   Expected<ObjSectionToIDMap> loadObjectImpl(const object::ObjectFile &Obj);
 
-  // Return size of Global Offset Table (GOT) entry
+  // \brief Return size of Global Offset Table (GOT) entry
   virtual size_t getGOTEntrySize() { return 0; }
 
-  // Return true if the relocation R may require allocating a GOT entry.
+  // \brief Return true if the relocation R may require allocating a GOT entry.
   virtual bool relocationNeedsGot(const RelocationRef &R) const {
     return false;
   }
 
-  // Return true if the relocation R may require allocating a stub.
+  // \brief Return true if the relocation R may require allocating a stub.
   virtual bool relocationNeedsStub(const RelocationRef &R) const {
     return true;    // Conservative answer
   }
@@ -517,21 +516,6 @@ public:
     //        infrastructure for.
     TargetAddr = modifyAddressBasedOnFlags(TargetAddr, SymEntry.getFlags());
     return JITEvaluatedSymbol(TargetAddr, SymEntry.getFlags());
-  }
-
-  std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const {
-    std::map<StringRef, JITEvaluatedSymbol> Result;
-
-    for (auto &KV : GlobalSymbolTable) {
-      auto SectionID = KV.second.getSectionID();
-      uint64_t SectionAddr = 0;
-      if (SectionID != AbsoluteSymbolSection)
-        SectionAddr = getSectionLoadAddress(SectionID);
-      Result[KV.first()] =
-        JITEvaluatedSymbol(SectionAddr + KV.second.getOffset(), KV.second.getFlags());
-    }
-
-    return Result;
   }
 
   void resolveRelocations();

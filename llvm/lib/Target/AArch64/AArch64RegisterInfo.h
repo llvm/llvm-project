@@ -61,9 +61,6 @@ public:
   const uint32_t *getThisReturnPreservedMask(const MachineFunction &MF,
                                              CallingConv::ID) const;
 
-  /// Stack probing calls preserve different CSRs to the normal CC.
-  const uint32_t *getWindowsStackProbePreservedMask() const;
-
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isConstantPhysReg(unsigned PhysReg) const override;
   const TargetRegisterClass *
@@ -71,8 +68,6 @@ public:
                      unsigned Kind = 0) const override;
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
-
-  bool enableMultipleCopyHints() const override { return true; }
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;

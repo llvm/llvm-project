@@ -16,43 +16,23 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALBUILDER_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/Type.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "llvm/ADT/ImmutableList.h"
-#include "llvm/ADT/Optional.h"
-#include <cstdint>
 
 namespace clang {
 
-class BlockDecl;
 class CXXBoolLiteralExpr;
-class CXXMethodDecl;
-class CXXRecordDecl;
-class DeclaratorDecl;
-class FunctionDecl;
-class LocationContext;
-class StackFrameContext;
-class Stmt;
 
 namespace ento {
 
 class ConditionTruthVal;
-class ProgramStateManager;
-class StoreRef;
 
 class SValBuilder {
   virtual void anchor();
-
 protected:
   ASTContext &Context;
   
@@ -84,12 +64,14 @@ public:
 public:
   SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
               ProgramStateManager &stateMgr)
-      : Context(context), BasicVals(context, alloc),
-        SymMgr(context, BasicVals, alloc), MemMgr(context, alloc),
-        StateMgr(stateMgr), ArrayIndexTy(context.LongLongTy),
-        ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
+    : Context(context), BasicVals(context, alloc),
+      SymMgr(context, BasicVals, alloc),
+      MemMgr(context, alloc),
+      StateMgr(stateMgr),
+      ArrayIndexTy(context.LongLongTy),
+      ArrayIndexWidth(context.getTypeSize(ArrayIndexTy)) {}
 
-  virtual ~SValBuilder() = default;
+  virtual ~SValBuilder() {}
 
   bool haveSameType(const SymExpr *Sym1, const SymExpr *Sym2) {
     return haveSameType(Sym1->getType(), Sym2->getType());
@@ -198,7 +180,7 @@ public:
   /// Make a unique symbol for value of region.
   DefinedOrUnknownSVal getRegionValueSymbolVal(const TypedValueRegion *region);
 
-  /// Create a new symbol with a unique 'name'.
+  /// \brief Create a new symbol with a unique 'name'.
   ///
   /// We resort to conjured symbols when we cannot construct a derived symbol.
   /// The advantage of symbols derived/built from other symbols is that we
@@ -213,12 +195,12 @@ public:
                                         const LocationContext *LCtx,
                                         QualType type,
                                         unsigned count);
+  
   DefinedOrUnknownSVal conjureSymbolVal(const Stmt *stmt,
                                         const LocationContext *LCtx,
                                         QualType type,
                                         unsigned visitCount);
-
-  /// Conjure a symbol representing heap allocated memory region.
+  /// \brief Conjure a symbol representing heap allocated memory region.
   ///
   /// Note, the expression should represent a location.
   DefinedOrUnknownSVal getConjuredHeapSymbolVal(const Expr *E,
@@ -329,7 +311,7 @@ public:
   NonLoc makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
                     const SymExpr *rhs, QualType type);
 
-  /// Create a NonLoc value for cast.
+  /// \brief Create a NonLoc value for cast.
   NonLoc makeNonLoc(const SymExpr *operand, QualType fromTy, QualType toTy);
 
   nonloc::ConcreteInt makeTruthVal(bool b, QualType type) {
@@ -367,15 +349,6 @@ public:
     return loc::ConcreteInt(BasicVals.getValue(integer));
   }
 
-  /// Make an SVal that represents the given symbol. This follows the convention
-  /// of representing Loc-type symbols (symbolic pointers and references)
-  /// as Loc values wrapping the symbol rather than as plain symbol values.
-  SVal makeSymbolVal(SymbolRef Sym) {
-    if (Loc::isLocType(Sym->getType()))
-      return makeLoc(Sym);
-    return nonloc::SymbolVal(Sym);
-  }
-
   /// Return a memory region for the 'this' object reference.
   loc::MemRegionVal getCXXThis(const CXXMethodDecl *D,
                                const StackFrameContext *SFC);
@@ -389,8 +362,8 @@ SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
                                      ASTContext &context,
                                      ProgramStateManager &stateMgr);
 
-} // namespace ento
+} // end GR namespace
 
-} // namespace clang
+} // end clang namespace
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALBUILDER_H
+#endif

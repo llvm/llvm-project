@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines the clang::OpenCLOptions class.
+/// \brief Defines the clang::OpenCLOptions class.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +19,7 @@
 
 namespace clang {
 
-/// OpenCL supported extensions and optional core features
+/// \brief OpenCL supported extensions and optional core features
 class OpenCLOptions {
   struct Info {
     bool Supported; // Is this option supported
@@ -67,7 +67,7 @@ public:
     OptMap[Ext].Enabled = V;
   }
 
-  /// Enable or disable support for OpenCL extensions
+  /// \brief Enable or disable support for OpenCL extensions
   /// \param Ext name of the extension optionally prefixed with
   ///        '+' or '-'
   /// \param V used when \p Ext is not prefixed by '+' or '-'

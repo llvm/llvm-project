@@ -9,10 +9,8 @@ entry:
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %a, <4 x i32> %sub.i)
   ret <4 x i32> %0
 ; CHECK-LABEL: simple_absv_32
-; CHECK-DAG: vxor {{[0-9]+}}, [[REG:[0-9]+]], [[REG]]
-; CHECK-DAG: xvnegsp 34, 34
-; CHECK-DAG: xvnegsp 35, {{[0-9]+}}
-; CHECK-NEXT: vabsduw 2, 2, {{[0-9]+}}
+; CHECK: vxor [[ZERO:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-NEXT: vabsduw 2, 2, [[ZERO]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_32
 ; CHECK-PWR8: xxlxor
@@ -28,10 +26,8 @@ entry:
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %sub.i, <4 x i32> %a)
   ret <4 x i32> %0
 ; CHECK-LABEL: simple_absv_32_swap
-; CHECK-DAG: vxor {{[0-9]+}}, [[REG:[0-9]+]], [[REG]]
-; CHECK-DAG: xvnegsp 34, 34
-; CHECK-DAG: xvnegsp 35, {{[0-9]+}}
-; CHECK-NEXT: vabsduw 2, 2, {{[0-9]+}}
+; CHECK: vxor [[ZERO:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-NEXT: vabsduw 2, 2, [[ZERO]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_32_swap
 ; CHECK-PWR8: xxlxor
@@ -46,9 +42,8 @@ entry:
   %0 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %a, <8 x i16> %sub.i)
   ret <8 x i16> %0
 ; CHECK-LABEL: simple_absv_16
-; CHECK: mtvsrws {{[0-9]+}}, {{[0-9]+}}
-; CHECK-NEXT: vadduhm 2, 2, [[IMM:[0-9]+]]
-; CHECK-NEXT: vabsduh 2, 2, [[IMM]]
+; CHECK: vxor [[ZERO:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-NEXT: vabsduh 2, 2, [[ZERO]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_16
 ; CHECK-PWR8: xxlxor
@@ -64,9 +59,8 @@ entry:
   %0 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %a, <16 x i8> %sub.i)
   ret <16 x i8> %0
 ; CHECK-LABEL: simple_absv_8
-; CHECK: xxspltib {{[0-9]+}}, 128
-; CHECK-NEXT: vaddubm 2, 2, [[IMM:[0-9]+]]
-; CHECK-NEXT: vabsdub 2, 2, [[IMM]]
+; CHECK: vxor [[ZERO:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-NEXT: vabsdub 2, 2, [[ZERO]]
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: simple_absv_8
 ; CHECK-PWR8: xxlxor
@@ -85,9 +79,7 @@ entry:
   %3 = select <4 x i1> %1, <4 x i32> %0, <4 x i32> %2
   ret <4 x i32> %3
 ; CHECK-LABEL: sub_absv_32
-; CHECK-DAG: xvnegsp 34, 34
-; CHECK-DAG: xvnegsp 35, 35
-; CHECK-NEXT: vabsduw 2, 2, 3
+; CHECK: vabsduw 2, 2, 3
 ; CHECK-NEXT: blr
 ; CHECK-PWR8-LABEL: sub_absv_32
 ; CHECK-PWR8: vsubuwm

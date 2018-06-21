@@ -15,7 +15,7 @@
 
 using namespace clang;
 
-/// Parse a simple identifier.
+/// \brief Parse a simple identifier.
 static std::string parseName(StringRef S) {
   if (S.empty() || !isIdentifierHead(S[0]))
     return "";

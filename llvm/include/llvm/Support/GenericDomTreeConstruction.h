@@ -82,8 +82,8 @@ struct SemiNCAInfo {
     // Note that these children are from the future relative to what the
     // DominatorTree knows about -- using them to gets us some snapshot of the
     // CFG from the past (relative to the state of the CFG).
-    DenseMap<NodePtr, SmallVector<NodePtrAndKind, 4>> FutureSuccessors;
-    DenseMap<NodePtr, SmallVector<NodePtrAndKind, 4>> FuturePredecessors;
+    DenseMap<NodePtr, SmallDenseSet<NodePtrAndKind, 4>> FutureSuccessors;
+    DenseMap<NodePtr, SmallDenseSet<NodePtrAndKind, 4>> FuturePredecessors;
     // Remembers if the whole tree was recalculated at some point during the
     // current batch update.
     bool IsRecalculated = false;
@@ -146,15 +146,15 @@ struct SemiNCAInfo {
           assert(llvm::find(Res, Child) != Res.end()
                  && "Expected child not found in the CFG");
           Res.erase(std::remove(Res.begin(), Res.end(), Child), Res.end());
-          LLVM_DEBUG(dbgs() << "\tHiding edge " << BlockNamePrinter(N) << " -> "
-                            << BlockNamePrinter(Child) << "\n");
+          DEBUG(dbgs() << "\tHiding edge " << BlockNamePrinter(N) << " -> "
+                       << BlockNamePrinter(Child) << "\n");
         } else {
           // If there's an deletion in the future, it means that the edge cannot
           // exist in the current CFG, but existed in it before.
           assert(llvm::find(Res, Child) == Res.end() &&
                  "Unexpected child found in the CFG");
-          LLVM_DEBUG(dbgs() << "\tShowing virtual edge " << BlockNamePrinter(N)
-                            << " -> " << BlockNamePrinter(Child) << "\n");
+          DEBUG(dbgs() << "\tShowing virtual edge " << BlockNamePrinter(N)
+                       << " -> " << BlockNamePrinter(Child) << "\n");
           Res.push_back(Child);
         }
       }
@@ -387,7 +387,7 @@ struct SemiNCAInfo {
     SNCA.addVirtualRoot();
     unsigned Num = 1;
 
-    LLVM_DEBUG(dbgs() << "\t\tLooking for trivial roots\n");
+    DEBUG(dbgs() << "\t\tLooking for trivial roots\n");
 
     // Step #1: Find all the trivial roots that are going to will definitely
     // remain tree roots.
@@ -404,14 +404,14 @@ struct SemiNCAInfo {
         Roots.push_back(N);
         // Run DFS not to walk this part of CFG later.
         Num = SNCA.runDFS(N, Num, AlwaysDescend, 1);
-        LLVM_DEBUG(dbgs() << "Found a new trivial root: " << BlockNamePrinter(N)
-                          << "\n");
-        LLVM_DEBUG(dbgs() << "Last visited node: "
-                          << BlockNamePrinter(SNCA.NumToNode[Num]) << "\n");
+        DEBUG(dbgs() << "Found a new trivial root: " << BlockNamePrinter(N)
+                     << "\n");
+        DEBUG(dbgs() << "Last visited node: "
+                     << BlockNamePrinter(SNCA.NumToNode[Num]) << "\n");
       }
     }
 
-    LLVM_DEBUG(dbgs() << "\t\tLooking for non-trivial roots\n");
+    DEBUG(dbgs() << "\t\tLooking for non-trivial roots\n");
 
     // Step #2: Find all non-trivial root candidates. Those are CFG nodes that
     // are reverse-unreachable were not visited by previous DFS walks (i.e. CFG
@@ -431,8 +431,8 @@ struct SemiNCAInfo {
       SmallPtrSet<NodePtr, 4> ConnectToExitBlock;
       for (const NodePtr I : nodes(DT.Parent)) {
         if (SNCA.NodeToInfo.count(I) == 0) {
-          LLVM_DEBUG(dbgs()
-                     << "\t\t\tVisiting node " << BlockNamePrinter(I) << "\n");
+          DEBUG(dbgs() << "\t\t\tVisiting node " << BlockNamePrinter(I)
+                       << "\n");
           // Find the furthest away we can get by following successors, then
           // follow them in reverse.  This gives us some reasonable answer about
           // the post-dom tree inside any infinite loop. In particular, it
@@ -443,49 +443,47 @@ struct SemiNCAInfo {
           // the lowest and highest points in the infinite loop.  In theory, it
           // would be nice to give the canonical backedge for the loop, but it's
           // expensive and does not always lead to a minimal set of roots.
-          LLVM_DEBUG(dbgs() << "\t\t\tRunning forward DFS\n");
+          DEBUG(dbgs() << "\t\t\tRunning forward DFS\n");
 
           const unsigned NewNum = SNCA.runDFS<true>(I, Num, AlwaysDescend, Num);
           const NodePtr FurthestAway = SNCA.NumToNode[NewNum];
-          LLVM_DEBUG(dbgs() << "\t\t\tFound a new furthest away node "
-                            << "(non-trivial root): "
-                            << BlockNamePrinter(FurthestAway) << "\n");
+          DEBUG(dbgs() << "\t\t\tFound a new furthest away node "
+                       << "(non-trivial root): "
+                       << BlockNamePrinter(FurthestAway) << "\n");
           ConnectToExitBlock.insert(FurthestAway);
           Roots.push_back(FurthestAway);
-          LLVM_DEBUG(dbgs() << "\t\t\tPrev DFSNum: " << Num << ", new DFSNum: "
-                            << NewNum << "\n\t\t\tRemoving DFS info\n");
+          DEBUG(dbgs() << "\t\t\tPrev DFSNum: " << Num << ", new DFSNum: "
+                       << NewNum << "\n\t\t\tRemoving DFS info\n");
           for (unsigned i = NewNum; i > Num; --i) {
             const NodePtr N = SNCA.NumToNode[i];
-            LLVM_DEBUG(dbgs() << "\t\t\t\tRemoving DFS info for "
-                              << BlockNamePrinter(N) << "\n");
+            DEBUG(dbgs() << "\t\t\t\tRemoving DFS info for "
+                         << BlockNamePrinter(N) << "\n");
             SNCA.NodeToInfo.erase(N);
             SNCA.NumToNode.pop_back();
           }
           const unsigned PrevNum = Num;
-          LLVM_DEBUG(dbgs() << "\t\t\tRunning reverse DFS\n");
+          DEBUG(dbgs() << "\t\t\tRunning reverse DFS\n");
           Num = SNCA.runDFS(FurthestAway, Num, AlwaysDescend, 1);
           for (unsigned i = PrevNum + 1; i <= Num; ++i)
-            LLVM_DEBUG(dbgs() << "\t\t\t\tfound node "
-                              << BlockNamePrinter(SNCA.NumToNode[i]) << "\n");
+            DEBUG(dbgs() << "\t\t\t\tfound node "
+                         << BlockNamePrinter(SNCA.NumToNode[i]) << "\n");
         }
       }
     }
 
-    LLVM_DEBUG(dbgs() << "Total: " << Total << ", Num: " << Num << "\n");
-    LLVM_DEBUG(dbgs() << "Discovered CFG nodes:\n");
-    LLVM_DEBUG(for (size_t i = 0; i <= Num; ++i) dbgs()
-               << i << ": " << BlockNamePrinter(SNCA.NumToNode[i]) << "\n");
+    DEBUG(dbgs() << "Total: " << Total << ", Num: " << Num << "\n");
+    DEBUG(dbgs() << "Discovered CFG nodes:\n");
+    DEBUG(for (size_t i = 0; i <= Num; ++i) dbgs()
+          << i << ": " << BlockNamePrinter(SNCA.NumToNode[i]) << "\n");
 
     assert((Total + 1 == Num) && "Everything should have been visited");
 
     // Step #3: If we found some non-trivial roots, make them non-redundant.
     if (HasNonTrivialRoots) RemoveRedundantRoots(DT, BUI, Roots);
 
-    LLVM_DEBUG(dbgs() << "Found roots: ");
-    LLVM_DEBUG(for (auto *Root
-                    : Roots) dbgs()
-               << BlockNamePrinter(Root) << " ");
-    LLVM_DEBUG(dbgs() << "\n");
+    DEBUG(dbgs() << "Found roots: ");
+    DEBUG(for (auto *Root : Roots) dbgs() << BlockNamePrinter(Root) << " ");
+    DEBUG(dbgs() << "\n");
 
     return Roots;
   }
@@ -501,7 +499,7 @@ struct SemiNCAInfo {
   static void RemoveRedundantRoots(const DomTreeT &DT, BatchUpdatePtr BUI,
                                    RootsT &Roots) {
     assert(IsPostDom && "This function is for postdominators only");
-    LLVM_DEBUG(dbgs() << "Removing redundant roots\n");
+    DEBUG(dbgs() << "Removing redundant roots\n");
 
     SemiNCAInfo SNCA(BUI);
 
@@ -509,8 +507,8 @@ struct SemiNCAInfo {
       auto &Root = Roots[i];
       // Trivial roots are always non-redundant.
       if (!HasForwardSuccessors(Root, BUI)) continue;
-      LLVM_DEBUG(dbgs() << "\tChecking if " << BlockNamePrinter(Root)
-                        << " remains a root\n");
+      DEBUG(dbgs() << "\tChecking if " << BlockNamePrinter(Root)
+                   << " remains a root\n");
       SNCA.clear();
       // Do a forward walk looking for the other roots.
       const unsigned Num = SNCA.runDFS<true>(Root, 0, AlwaysDescend, 0);
@@ -522,9 +520,9 @@ struct SemiNCAInfo {
         // root from the set of roots, as it is reverse-reachable from the other
         // one.
         if (llvm::find(Roots, N) != Roots.end()) {
-          LLVM_DEBUG(dbgs() << "\tForward DFS walk found another root "
-                            << BlockNamePrinter(N) << "\n\tRemoving root "
-                            << BlockNamePrinter(Root) << "\n");
+          DEBUG(dbgs() << "\tForward DFS walk found another root "
+                       << BlockNamePrinter(N) << "\n\tRemoving root "
+                       << BlockNamePrinter(Root) << "\n");
           std::swap(Root, Roots.back());
           Roots.pop_back();
 
@@ -565,8 +563,7 @@ struct SemiNCAInfo {
     SNCA.runSemiNCA(DT);
     if (BUI) {
       BUI->IsRecalculated = true;
-      LLVM_DEBUG(
-          dbgs() << "DomTree recalculated, skipping future batch updates\n");
+      DEBUG(dbgs() << "DomTree recalculated, skipping future batch updates\n");
     }
 
     if (DT.Roots.empty()) return;
@@ -588,8 +585,8 @@ struct SemiNCAInfo {
     // Loop over all of the discovered blocks in the function...
     for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
       NodePtr W = NumToNode[i];
-      LLVM_DEBUG(dbgs() << "\tdiscovered a new reachable node "
-                        << BlockNamePrinter(W) << "\n");
+      DEBUG(dbgs() << "\tdiscovered a new reachable node "
+                   << BlockNamePrinter(W) << "\n");
 
       // Don't replace this with 'count', the insertion side effect is important
       if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
@@ -641,8 +638,8 @@ struct SemiNCAInfo {
     assert((From || IsPostDom) &&
            "From has to be a valid CFG node or a virtual root");
     assert(To && "Cannot be a nullptr");
-    LLVM_DEBUG(dbgs() << "Inserting edge " << BlockNamePrinter(From) << " -> "
-                      << BlockNamePrinter(To) << "\n");
+    DEBUG(dbgs() << "Inserting edge " << BlockNamePrinter(From) << " -> "
+                 << BlockNamePrinter(To) << "\n");
     TreeNodePtr FromTN = DT.getNode(From);
 
     if (!FromTN) {
@@ -681,8 +678,8 @@ struct SemiNCAInfo {
     if (RIt == DT.Roots.end())
       return false;  // To is not a root, nothing to update.
 
-    LLVM_DEBUG(dbgs() << "\t\tAfter the insertion, " << BlockNamePrinter(To)
-                      << " is no longer a root\n\t\tRebuilding the tree!!!\n");
+    DEBUG(dbgs() << "\t\tAfter the insertion, " << BlockNamePrinter(To)
+                 << " is no longer a root\n\t\tRebuilding the tree!!!\n");
 
     CalculateFromScratch(DT, BUI);
     return true;
@@ -709,8 +706,8 @@ struct SemiNCAInfo {
       // can make a different (implicit) decision about which node within an
       // infinite loop becomes a root.
 
-      LLVM_DEBUG(dbgs() << "Roots are different in updated trees\n"
-                        << "The entire tree needs to be rebuilt\n");
+      DEBUG(dbgs() << "Roots are different in updated trees\n"
+                   << "The entire tree needs to be rebuilt\n");
       // It may be possible to update the tree without recalculating it, but
       // we do not know yet how to do it, and it happens rarely in practise.
       CalculateFromScratch(DT, BUI);
@@ -721,8 +718,8 @@ struct SemiNCAInfo {
   // Handles insertion to a node already in the dominator tree.
   static void InsertReachable(DomTreeT &DT, const BatchUpdatePtr BUI,
                               const TreeNodePtr From, const TreeNodePtr To) {
-    LLVM_DEBUG(dbgs() << "\tReachable " << BlockNamePrinter(From->getBlock())
-                      << " -> " << BlockNamePrinter(To->getBlock()) << "\n");
+    DEBUG(dbgs() << "\tReachable " << BlockNamePrinter(From->getBlock())
+                 << " -> " << BlockNamePrinter(To->getBlock()) << "\n");
     if (IsPostDom && UpdateRootsBeforeInsertion(DT, BUI, From, To)) return;
     // DT.findNCD expects both pointers to be valid. When From is a virtual
     // root, then its CFG block pointer is a nullptr, so we have to 'compute'
@@ -735,7 +732,7 @@ struct SemiNCAInfo {
     const TreeNodePtr NCD = DT.getNode(NCDBlock);
     assert(NCD);
 
-    LLVM_DEBUG(dbgs() << "\t\tNCA == " << BlockNamePrinter(NCD) << "\n");
+    DEBUG(dbgs() << "\t\tNCA == " << BlockNamePrinter(NCD) << "\n");
     const TreeNodePtr ToIDom = To->getIDom();
 
     // Nothing affected -- NCA property holds.
@@ -744,20 +741,18 @@ struct SemiNCAInfo {
 
     // Identify and collect affected nodes.
     InsertionInfo II;
-    LLVM_DEBUG(dbgs() << "Marking " << BlockNamePrinter(To)
-                      << " as affected\n");
+    DEBUG(dbgs() << "Marking " << BlockNamePrinter(To) << " as affected\n");
     II.Affected.insert(To);
     const unsigned ToLevel = To->getLevel();
-    LLVM_DEBUG(dbgs() << "Putting " << BlockNamePrinter(To)
-                      << " into a Bucket\n");
+    DEBUG(dbgs() << "Putting " << BlockNamePrinter(To) << " into a Bucket\n");
     II.Bucket.push({ToLevel, To});
 
     while (!II.Bucket.empty()) {
       const TreeNodePtr CurrentNode = II.Bucket.top().second;
       const unsigned  CurrentLevel = CurrentNode->getLevel();
       II.Bucket.pop();
-      LLVM_DEBUG(dbgs() << "\tAdding to Visited and AffectedQueue: "
-                        << BlockNamePrinter(CurrentNode) << "\n");
+      DEBUG(dbgs() << "\tAdding to Visited and AffectedQueue: "
+                   << BlockNamePrinter(CurrentNode) << "\n");
 
       II.Visited.insert({CurrentNode, CurrentLevel});
       II.AffectedQueue.push_back(CurrentNode);
@@ -775,8 +770,8 @@ struct SemiNCAInfo {
                              const TreeNodePtr TN, const unsigned RootLevel,
                              const TreeNodePtr NCD, InsertionInfo &II) {
     const unsigned NCDLevel = NCD->getLevel();
-    LLVM_DEBUG(dbgs() << "Visiting " << BlockNamePrinter(TN) << ",  RootLevel "
-                      << RootLevel << "\n");
+    DEBUG(dbgs() << "Visiting " << BlockNamePrinter(TN) << ",  RootLevel "
+                 << RootLevel << "\n");
 
     SmallVector<TreeNodePtr, 8> Stack = {TN};
     assert(TN->getBlock() && II.Visited.count(TN) && "Preconditions!");
@@ -785,7 +780,7 @@ struct SemiNCAInfo {
 
     do {
       TreeNodePtr Next = Stack.pop_back_val();
-      LLVM_DEBUG(dbgs() << " Next: " << BlockNamePrinter(Next) << "\n");
+      DEBUG(dbgs() << " Next: " << BlockNamePrinter(Next) << "\n");
 
       for (const NodePtr Succ :
            ChildrenGetter<IsPostDom>::Get(Next->getBlock(), BUI)) {
@@ -793,8 +788,8 @@ struct SemiNCAInfo {
         assert(SuccTN && "Unreachable successor found at reachable insertion");
         const unsigned SuccLevel = SuccTN->getLevel();
 
-        LLVM_DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ)
-                          << ", level = " << SuccLevel << "\n");
+        DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ) << ", level = "
+                     << SuccLevel << "\n");
 
         // Do not process the same node multiple times.
         if (Processed.count(Next) > 0)
@@ -803,11 +798,11 @@ struct SemiNCAInfo {
         // Succ dominated by subtree From -- not affected.
         // (Based on the lemma 2.5 from the second paper.)
         if (SuccLevel > RootLevel) {
-          LLVM_DEBUG(dbgs() << "\t\tDominated by subtree From\n");
+          DEBUG(dbgs() << "\t\tDominated by subtree From\n");
           if (II.Visited.count(SuccTN) != 0) {
-            LLVM_DEBUG(dbgs() << "\t\t\talready visited at level "
-                              << II.Visited[SuccTN] << "\n\t\t\tcurrent level "
-                              << RootLevel << ")\n");
+            DEBUG(dbgs() << "\t\t\talready visited at level "
+                         << II.Visited[SuccTN] << "\n\t\t\tcurrent level "
+                         << RootLevel << ")\n");
 
             // A node can be necessary to visit again if we see it again at
             // a lower level than before.
@@ -815,15 +810,15 @@ struct SemiNCAInfo {
               continue;
           }
 
-          LLVM_DEBUG(dbgs() << "\t\tMarking visited not affected "
-                            << BlockNamePrinter(Succ) << "\n");
+          DEBUG(dbgs() << "\t\tMarking visited not affected "
+                       << BlockNamePrinter(Succ) << "\n");
           II.Visited.insert({SuccTN, RootLevel});
           II.VisitedNotAffectedQueue.push_back(SuccTN);
           Stack.push_back(SuccTN);
         } else if ((SuccLevel > NCDLevel + 1) &&
             II.Affected.count(SuccTN) == 0) {
-          LLVM_DEBUG(dbgs() << "\t\tMarking affected and adding "
-                            << BlockNamePrinter(Succ) << " to a Bucket\n");
+          DEBUG(dbgs() << "\t\tMarking affected and adding "
+                       << BlockNamePrinter(Succ) << " to a Bucket\n");
           II.Affected.insert(SuccTN);
           II.Bucket.push({SuccLevel, SuccTN});
         }
@@ -836,11 +831,11 @@ struct SemiNCAInfo {
   // Updates immediate dominators and levels after insertion.
   static void UpdateInsertion(DomTreeT &DT, const BatchUpdatePtr BUI,
                               const TreeNodePtr NCD, InsertionInfo &II) {
-    LLVM_DEBUG(dbgs() << "Updating NCD = " << BlockNamePrinter(NCD) << "\n");
+    DEBUG(dbgs() << "Updating NCD = " << BlockNamePrinter(NCD) << "\n");
 
     for (const TreeNodePtr TN : II.AffectedQueue) {
-      LLVM_DEBUG(dbgs() << "\tIDom(" << BlockNamePrinter(TN)
-                        << ") = " << BlockNamePrinter(NCD) << "\n");
+      DEBUG(dbgs() << "\tIDom(" << BlockNamePrinter(TN)
+                   << ") = " << BlockNamePrinter(NCD) << "\n");
       TN->setIDom(NCD);
     }
 
@@ -849,13 +844,12 @@ struct SemiNCAInfo {
   }
 
   static void UpdateLevelsAfterInsertion(InsertionInfo &II) {
-    LLVM_DEBUG(
-        dbgs() << "Updating levels for visited but not affected nodes\n");
+    DEBUG(dbgs() << "Updating levels for visited but not affected nodes\n");
 
     for (const TreeNodePtr TN : II.VisitedNotAffectedQueue) {
-      LLVM_DEBUG(dbgs() << "\tlevel(" << BlockNamePrinter(TN) << ") = ("
-                        << BlockNamePrinter(TN->getIDom()) << ") "
-                        << TN->getIDom()->getLevel() << " + 1\n");
+      DEBUG(dbgs() << "\tlevel(" << BlockNamePrinter(TN) << ") = ("
+                   << BlockNamePrinter(TN->getIDom()) << ") "
+                   << TN->getIDom()->getLevel() << " + 1\n");
       TN->UpdateLevel();
     }
   }
@@ -863,24 +857,23 @@ struct SemiNCAInfo {
   // Handles insertion to previously unreachable nodes.
   static void InsertUnreachable(DomTreeT &DT, const BatchUpdatePtr BUI,
                                 const TreeNodePtr From, const NodePtr To) {
-    LLVM_DEBUG(dbgs() << "Inserting " << BlockNamePrinter(From)
-                      << " -> (unreachable) " << BlockNamePrinter(To) << "\n");
+    DEBUG(dbgs() << "Inserting " << BlockNamePrinter(From)
+                 << " -> (unreachable) " << BlockNamePrinter(To) << "\n");
 
     // Collect discovered edges to already reachable nodes.
     SmallVector<std::pair<NodePtr, TreeNodePtr>, 8> DiscoveredEdgesToReachable;
     // Discover and connect nodes that became reachable with the insertion.
     ComputeUnreachableDominators(DT, BUI, To, From, DiscoveredEdgesToReachable);
 
-    LLVM_DEBUG(dbgs() << "Inserted " << BlockNamePrinter(From)
-                      << " -> (prev unreachable) " << BlockNamePrinter(To)
-                      << "\n");
+    DEBUG(dbgs() << "Inserted " << BlockNamePrinter(From)
+                 << " -> (prev unreachable) " << BlockNamePrinter(To) << "\n");
 
     // Used the discovered edges and inset discovered connecting (incoming)
     // edges.
     for (const auto &Edge : DiscoveredEdgesToReachable) {
-      LLVM_DEBUG(dbgs() << "\tInserting discovered connecting edge "
-                        << BlockNamePrinter(Edge.first) << " -> "
-                        << BlockNamePrinter(Edge.second) << "\n");
+      DEBUG(dbgs() << "\tInserting discovered connecting edge "
+                   << BlockNamePrinter(Edge.first) << " -> "
+                   << BlockNamePrinter(Edge.second) << "\n");
       InsertReachable(DT, BUI, DT.getNode(Edge.first), Edge.second);
     }
   }
@@ -908,14 +901,14 @@ struct SemiNCAInfo {
     SNCA.runSemiNCA(DT);
     SNCA.attachNewSubtree(DT, Incoming);
 
-    LLVM_DEBUG(dbgs() << "After adding unreachable nodes\n");
+    DEBUG(dbgs() << "After adding unreachable nodes\n");
   }
 
   static void DeleteEdge(DomTreeT &DT, const BatchUpdatePtr BUI,
                          const NodePtr From, const NodePtr To) {
     assert(From && To && "Cannot disconnect nullptrs");
-    LLVM_DEBUG(dbgs() << "Deleting edge " << BlockNamePrinter(From) << " -> "
-                      << BlockNamePrinter(To) << "\n");
+    DEBUG(dbgs() << "Deleting edge " << BlockNamePrinter(From) << " -> "
+                 << BlockNamePrinter(To) << "\n");
 
 #ifndef NDEBUG
     // Ensure that the edge was in fact deleted from the CFG before informing
@@ -935,9 +928,8 @@ struct SemiNCAInfo {
 
     const TreeNodePtr ToTN = DT.getNode(To);
     if (!ToTN) {
-      LLVM_DEBUG(
-          dbgs() << "\tTo (" << BlockNamePrinter(To)
-                 << ") already unreachable -- there is no edge to delete\n");
+      DEBUG(dbgs() << "\tTo (" << BlockNamePrinter(To)
+                   << ") already unreachable -- there is no edge to delete\n");
       return;
     }
 
@@ -949,8 +941,8 @@ struct SemiNCAInfo {
       DT.DFSInfoValid = false;
 
       const TreeNodePtr ToIDom = ToTN->getIDom();
-      LLVM_DEBUG(dbgs() << "\tNCD " << BlockNamePrinter(NCD) << ", ToIDom "
-                        << BlockNamePrinter(ToIDom) << "\n");
+      DEBUG(dbgs() << "\tNCD " << BlockNamePrinter(NCD) << ", ToIDom "
+                   << BlockNamePrinter(ToIDom) << "\n");
 
       // To remains reachable after deletion.
       // (Based on the caption under Figure 4. from the second paper.)
@@ -967,9 +959,9 @@ struct SemiNCAInfo {
   static void DeleteReachable(DomTreeT &DT, const BatchUpdatePtr BUI,
                               const TreeNodePtr FromTN,
                               const TreeNodePtr ToTN) {
-    LLVM_DEBUG(dbgs() << "Deleting reachable " << BlockNamePrinter(FromTN)
-                      << " -> " << BlockNamePrinter(ToTN) << "\n");
-    LLVM_DEBUG(dbgs() << "\tRebuilding subtree\n");
+    DEBUG(dbgs() << "Deleting reachable " << BlockNamePrinter(FromTN) << " -> "
+                 << BlockNamePrinter(ToTN) << "\n");
+    DEBUG(dbgs() << "\tRebuilding subtree\n");
 
     // Find the top of the subtree that needs to be rebuilt.
     // (Based on the lemma 2.6 from the second paper.)
@@ -982,7 +974,7 @@ struct SemiNCAInfo {
     // Top of the subtree to rebuild is the root node. Rebuild the tree from
     // scratch.
     if (!PrevIDomSubTree) {
-      LLVM_DEBUG(dbgs() << "The entire tree needs to be rebuilt\n");
+      DEBUG(dbgs() << "The entire tree needs to be rebuilt\n");
       CalculateFromScratch(DT, BUI);
       return;
     }
@@ -993,12 +985,11 @@ struct SemiNCAInfo {
       return DT.getNode(To)->getLevel() > Level;
     };
 
-    LLVM_DEBUG(dbgs() << "\tTop of subtree: " << BlockNamePrinter(ToIDomTN)
-                      << "\n");
+    DEBUG(dbgs() << "\tTop of subtree: " << BlockNamePrinter(ToIDomTN) << "\n");
 
     SemiNCAInfo SNCA(BUI);
     SNCA.runDFS(ToIDom, 0, DescendBelow, 0);
-    LLVM_DEBUG(dbgs() << "\tRunning Semi-NCA\n");
+    DEBUG(dbgs() << "\tRunning Semi-NCA\n");
     SNCA.runSemiNCA(DT, Level);
     SNCA.reattachExistingSubtree(DT, PrevIDomSubTree);
   }
@@ -1007,20 +998,19 @@ struct SemiNCAInfo {
   // explained on the page 7 of the second paper.
   static bool HasProperSupport(DomTreeT &DT, const BatchUpdatePtr BUI,
                                const TreeNodePtr TN) {
-    LLVM_DEBUG(dbgs() << "IsReachableFromIDom " << BlockNamePrinter(TN)
-                      << "\n");
+    DEBUG(dbgs() << "IsReachableFromIDom " << BlockNamePrinter(TN) << "\n");
     for (const NodePtr Pred :
          ChildrenGetter<!IsPostDom>::Get(TN->getBlock(), BUI)) {
-      LLVM_DEBUG(dbgs() << "\tPred " << BlockNamePrinter(Pred) << "\n");
+      DEBUG(dbgs() << "\tPred " << BlockNamePrinter(Pred) << "\n");
       if (!DT.getNode(Pred)) continue;
 
       const NodePtr Support =
           DT.findNearestCommonDominator(TN->getBlock(), Pred);
-      LLVM_DEBUG(dbgs() << "\tSupport " << BlockNamePrinter(Support) << "\n");
+      DEBUG(dbgs() << "\tSupport " << BlockNamePrinter(Support) << "\n");
       if (Support != TN->getBlock()) {
-        LLVM_DEBUG(dbgs() << "\t" << BlockNamePrinter(TN)
-                          << " is reachable from support "
-                          << BlockNamePrinter(Support) << "\n");
+        DEBUG(dbgs() << "\t" << BlockNamePrinter(TN)
+                     << " is reachable from support "
+                     << BlockNamePrinter(Support) << "\n");
         return true;
       }
     }
@@ -1032,8 +1022,8 @@ struct SemiNCAInfo {
   // (Based on the lemma 2.7 from the second paper.)
   static void DeleteUnreachable(DomTreeT &DT, const BatchUpdatePtr BUI,
                                 const TreeNodePtr ToTN) {
-    LLVM_DEBUG(dbgs() << "Deleting unreachable subtree "
-                      << BlockNamePrinter(ToTN) << "\n");
+    DEBUG(dbgs() << "Deleting unreachable subtree " << BlockNamePrinter(ToTN)
+                 << "\n");
     assert(ToTN);
     assert(ToTN->getBlock());
 
@@ -1041,9 +1031,8 @@ struct SemiNCAInfo {
       // Deletion makes a region reverse-unreachable and creates a new root.
       // Simulate that by inserting an edge from the virtual root to ToTN and
       // adding it as a new root.
-      LLVM_DEBUG(dbgs() << "\tDeletion made a region reverse-unreachable\n");
-      LLVM_DEBUG(dbgs() << "\tAdding new root " << BlockNamePrinter(ToTN)
-                        << "\n");
+      DEBUG(dbgs() << "\tDeletion made a region reverse-unreachable\n");
+      DEBUG(dbgs() << "\tAdding new root " << BlockNamePrinter(ToTN) << "\n");
       DT.Roots.push_back(ToTN->getBlock());
       InsertReachable(DT, BUI, DT.getNode(nullptr), ToTN);
       return;
@@ -1080,15 +1069,15 @@ struct SemiNCAInfo {
       const TreeNodePtr NCD = DT.getNode(NCDBlock);
       assert(NCD);
 
-      LLVM_DEBUG(dbgs() << "Processing affected node " << BlockNamePrinter(TN)
-                        << " with NCD = " << BlockNamePrinter(NCD)
-                        << ", MinNode =" << BlockNamePrinter(MinNode) << "\n");
+      DEBUG(dbgs() << "Processing affected node " << BlockNamePrinter(TN)
+                   << " with NCD = " << BlockNamePrinter(NCD)
+                   << ", MinNode =" << BlockNamePrinter(MinNode) << "\n");
       if (NCD != TN && NCD->getLevel() < MinNode->getLevel()) MinNode = NCD;
     }
 
     // Root reached, rebuild the whole tree from scratch.
     if (!MinNode->getIDom()) {
-      LLVM_DEBUG(dbgs() << "The entire tree needs to be rebuilt\n");
+      DEBUG(dbgs() << "The entire tree needs to be rebuilt\n");
       CalculateFromScratch(DT, BUI);
       return;
     }
@@ -1098,7 +1087,7 @@ struct SemiNCAInfo {
     for (unsigned i = LastDFSNum; i > 0; --i) {
       const NodePtr N = SNCA.NumToNode[i];
       const TreeNodePtr TN = DT.getNode(N);
-      LLVM_DEBUG(dbgs() << "Erasing node " << BlockNamePrinter(TN) << "\n");
+      DEBUG(dbgs() << "Erasing node " << BlockNamePrinter(TN) << "\n");
 
       EraseNode(DT, TN);
     }
@@ -1106,8 +1095,8 @@ struct SemiNCAInfo {
     // The affected subtree start at the To node -- there's no extra work to do.
     if (MinNode == ToTN) return;
 
-    LLVM_DEBUG(dbgs() << "DeleteUnreachable: running DFS with MinNode = "
-                      << BlockNamePrinter(MinNode) << "\n");
+    DEBUG(dbgs() << "DeleteUnreachable: running DFS with MinNode = "
+                 << BlockNamePrinter(MinNode) << "\n");
     const unsigned MinLevel = MinNode->getLevel();
     const TreeNodePtr PrevIDom = MinNode->getIDom();
     assert(PrevIDom);
@@ -1120,8 +1109,8 @@ struct SemiNCAInfo {
     };
     SNCA.runDFS(MinNode->getBlock(), 0, DescendBelow, 0);
 
-    LLVM_DEBUG(dbgs() << "Previous IDom(MinNode) = "
-                      << BlockNamePrinter(PrevIDom) << "\nRunning Semi-NCA\n");
+    DEBUG(dbgs() << "Previous IDom(MinNode) = " << BlockNamePrinter(PrevIDom)
+                 << "\nRunning Semi-NCA\n");
 
     // Rebuild the remaining part of affected subtree.
     SNCA.runSemiNCA(DT, MinLevel);
@@ -1176,15 +1165,15 @@ struct SemiNCAInfo {
     // predecessors. Note that these sets will only decrease size over time, as
     // the next CFG snapshots slowly approach the actual (current) CFG.
     for (UpdateT &U : BUI.Updates) {
-      BUI.FutureSuccessors[U.getFrom()].push_back({U.getTo(), U.getKind()});
-      BUI.FuturePredecessors[U.getTo()].push_back({U.getFrom(), U.getKind()});
+      BUI.FutureSuccessors[U.getFrom()].insert({U.getTo(), U.getKind()});
+      BUI.FuturePredecessors[U.getTo()].insert({U.getFrom(), U.getKind()});
     }
 
-    LLVM_DEBUG(dbgs() << "About to apply " << NumLegalized << " updates\n");
-    LLVM_DEBUG(if (NumLegalized < 32) for (const auto &U
-                                           : reverse(BUI.Updates)) dbgs()
-               << '\t' << U << "\n");
-    LLVM_DEBUG(dbgs() << "\n");
+    DEBUG(dbgs() << "About to apply " << NumLegalized << " updates\n");
+    DEBUG(if (NumLegalized < 32) for (const auto &U
+                                      : reverse(BUI.Updates)) dbgs()
+          << '\t' << U << "\n");
+    DEBUG(dbgs() << "\n");
 
     // If the DominatorTree was recalculated at some point, stop the batch
     // updates. Full recalculations ignore batch updates and look at the actual
@@ -1212,7 +1201,7 @@ struct SemiNCAInfo {
   // minimizes the amount of work needed done during incremental updates.
   static void LegalizeUpdates(ArrayRef<UpdateT> AllUpdates,
                               SmallVectorImpl<UpdateT> &Result) {
-    LLVM_DEBUG(dbgs() << "Legalizing " << AllUpdates.size() << " updates\n");
+    DEBUG(dbgs() << "Legalizing " << AllUpdates.size() << " updates\n");
     // Count the total number of inserions of each edge.
     // Each insertion adds 1 and deletion subtracts 1. The end number should be
     // one of {-1 (deletion), 0 (NOP), +1 (insertion)}. Otherwise, the sequence
@@ -1252,31 +1241,26 @@ struct SemiNCAInfo {
         Operations[{U.getTo(), U.getFrom()}] = int(i);
     }
 
-    llvm::sort(Result.begin(), Result.end(),
-               [&Operations](const UpdateT &A, const UpdateT &B) {
-                 return Operations[{A.getFrom(), A.getTo()}] >
-                        Operations[{B.getFrom(), B.getTo()}];
-               });
+    std::sort(Result.begin(), Result.end(),
+              [&Operations](const UpdateT &A, const UpdateT &B) {
+                return Operations[{A.getFrom(), A.getTo()}] >
+                       Operations[{B.getFrom(), B.getTo()}];
+              });
   }
 
   static void ApplyNextUpdate(DomTreeT &DT, BatchUpdateInfo &BUI) {
     assert(!BUI.Updates.empty() && "No updates to apply!");
     UpdateT CurrentUpdate = BUI.Updates.pop_back_val();
-    LLVM_DEBUG(dbgs() << "Applying update: " << CurrentUpdate << "\n");
+    DEBUG(dbgs() << "Applying update: " << CurrentUpdate << "\n");
 
     // Move to the next snapshot of the CFG by removing the reverse-applied
-    // current update. Since updates are performed in the same order they are
-    // legalized it's sufficient to pop the last item here.
+    // current update.
     auto &FS = BUI.FutureSuccessors[CurrentUpdate.getFrom()];
-    assert(FS.back().getPointer() == CurrentUpdate.getTo() &&
-           FS.back().getInt() == CurrentUpdate.getKind());
-    FS.pop_back();
+    FS.erase({CurrentUpdate.getTo(), CurrentUpdate.getKind()});
     if (FS.empty()) BUI.FutureSuccessors.erase(CurrentUpdate.getFrom());
 
     auto &FP = BUI.FuturePredecessors[CurrentUpdate.getTo()];
-    assert(FP.back().getPointer() == CurrentUpdate.getFrom() &&
-           FP.back().getInt() == CurrentUpdate.getKind());
-    FP.pop_back();
+    FP.erase({CurrentUpdate.getFrom(), CurrentUpdate.getKind()});
     if (FP.empty()) BUI.FuturePredecessors.erase(CurrentUpdate.getTo());
 
     if (CurrentUpdate.getKind() == UpdateKind::Insert)
@@ -1293,7 +1277,6 @@ struct SemiNCAInfo {
   // root which is the function's entry node. A PostDominatorTree can have
   // multiple roots - one for each node with no successors and for infinite
   // loops.
-  // Running time: O(N).
   bool verifyRoots(const DomTreeT &DT) {
     if (!DT.Parent && !DT.Roots.empty()) {
       errs() << "Tree has no parent but has roots!\n";
@@ -1334,7 +1317,6 @@ struct SemiNCAInfo {
   }
 
   // Checks if the tree contains all reachable nodes in the input graph.
-  // Running time: O(N).
   bool verifyReachability(const DomTreeT &DT) {
     clear();
     doFullDFSWalk(DT, AlwaysDescend);
@@ -1370,7 +1352,6 @@ struct SemiNCAInfo {
 
   // Check if for every parent with a level L in the tree all of its children
   // have level L + 1.
-  // Running time: O(N).
   static bool VerifyLevels(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
@@ -1402,7 +1383,6 @@ struct SemiNCAInfo {
 
   // Check if the computed DFS numbers are correct. Note that DFS info may not
   // be valid, and when that is the case, we don't verify the numbers.
-  // Running time: O(N log(N)).
   static bool VerifyDFSNumbers(const DomTreeT &DT) {
     if (!DT.DFSInfoValid || !DT.Parent)
       return true;
@@ -1446,10 +1426,10 @@ struct SemiNCAInfo {
       // Make a copy and sort it such that it is possible to check if there are
       // no gaps between DFS numbers of adjacent children.
       SmallVector<TreeNodePtr, 8> Children(Node->begin(), Node->end());
-      llvm::sort(Children.begin(), Children.end(),
-                 [](const TreeNodePtr Ch1, const TreeNodePtr Ch2) {
-                   return Ch1->getDFSNumIn() < Ch2->getDFSNumIn();
-                 });
+      std::sort(Children.begin(), Children.end(),
+                [](const TreeNodePtr Ch1, const TreeNodePtr Ch2) {
+                  return Ch1->getDFSNumIn() < Ch2->getDFSNumIn();
+                });
 
       auto PrintChildrenError = [Node, &Children, PrintNodeAndDFSNums](
           const TreeNodePtr FirstCh, const TreeNodePtr SecondCh) {
@@ -1533,10 +1513,10 @@ struct SemiNCAInfo {
   // linear time, but the algorithms are complex. Instead, we do it in a
   // straightforward N^2 and N^3 way below, using direct path reachability.
 
+
   // Checks if the tree has the parent property: if for all edges from V to W in
   // the input graph, such that V is reachable, the parent of W in the tree is
   // an ancestor of V in the tree.
-  // Running time: O(N^2).
   //
   // This means that if a node gets disconnected from the graph, then all of
   // the nodes it dominated previously will now become unreachable.
@@ -1546,8 +1526,8 @@ struct SemiNCAInfo {
       const NodePtr BB = TN->getBlock();
       if (!BB || TN->getChildren().empty()) continue;
 
-      LLVM_DEBUG(dbgs() << "Verifying parent property of node "
-                        << BlockNamePrinter(TN) << "\n");
+      DEBUG(dbgs() << "Verifying parent property of node "
+                   << BlockNamePrinter(TN) << "\n");
       clear();
       doFullDFSWalk(DT, [BB](NodePtr From, NodePtr To) {
         return From != BB && To != BB;
@@ -1569,7 +1549,6 @@ struct SemiNCAInfo {
 
   // Check if the tree has sibling property: if a node V does not dominate a
   // node W for all siblings V and W in the tree.
-  // Running time: O(N^3).
   //
   // This means that if a node gets disconnected from the graph, then all of its
   // siblings will now still be reachable.
@@ -1604,31 +1583,6 @@ struct SemiNCAInfo {
 
     return true;
   }
-
-  // Check if the given tree is the same as a freshly computed one for the same
-  // Parent.
-  // Running time: O(N^2), but faster in practise (same as tree construction).
-  //
-  // Note that this does not check if that the tree construction algorithm is
-  // correct and should be only used for fast (but possibly unsound)
-  // verification.
-  static bool IsSameAsFreshTree(const DomTreeT &DT) {
-    DomTreeT FreshTree;
-    FreshTree.recalculate(*DT.Parent);
-    const bool Different = DT.compare(FreshTree);
-
-    if (Different) {
-      errs() << (DT.isPostDominator() ? "Post" : "")
-             << "DominatorTree is different than a freshly computed one!\n"
-             << "\tCurrent:\n";
-      DT.print(errs());
-      errs() << "\n\tFreshly computed tree:\n";
-      FreshTree.print(errs());
-      errs().flush();
-    }
-
-    return !Different;
-  }
 };
 
 template <class DomTreeT>
@@ -1657,29 +1611,11 @@ void ApplyUpdates(DomTreeT &DT,
 }
 
 template <class DomTreeT>
-bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL) {
+bool Verify(const DomTreeT &DT) {
   SemiNCAInfo<DomTreeT> SNCA(nullptr);
-
-  // Simplist check is to compare against a new tree. This will also
-  // usefully print the old and new trees, if they are different.
-  if (!SNCA.IsSameAsFreshTree(DT))
-    return false;
-
-  // Common checks to verify the properties of the tree. O(N log N) at worst
-  if (!SNCA.verifyRoots(DT) || !SNCA.verifyReachability(DT) ||
-      !SNCA.VerifyLevels(DT) || !SNCA.VerifyDFSNumbers(DT))
-    return false;
-
-  // Extra checks depending on VerificationLevel. Up to O(N^3)
-  if (VL == DomTreeT::VerificationLevel::Basic ||
-      VL == DomTreeT::VerificationLevel::Full)
-    if (!SNCA.verifyParentProperty(DT))
-      return false;
-  if (VL == DomTreeT::VerificationLevel::Full)
-    if (!SNCA.verifySiblingProperty(DT))
-      return false;
-
-  return true;
+  return SNCA.verifyRoots(DT) && SNCA.verifyReachability(DT) &&
+         SNCA.VerifyLevels(DT) && SNCA.verifyParentProperty(DT) &&
+         SNCA.verifySiblingProperty(DT) && SNCA.VerifyDFSNumbers(DT);
 }
 
 }  // namespace DomTreeBuilder

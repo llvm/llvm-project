@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the entry points for global functions defined in
+/// \brief This file contains the entry points for global functions defined in
 /// the LLVM WebAssembly back-end.
 ///
 //===----------------------------------------------------------------------===//
@@ -27,6 +27,7 @@ class FunctionPass;
 
 // LLVM IR passes.
 ModulePass *createWebAssemblyLowerEmscriptenEHSjLj(bool DoEH, bool DoSjLj);
+void initializeWebAssemblyLowerEmscriptenEHSjLjPass(PassRegistry &);
 ModulePass *createWebAssemblyLowerGlobalDtors();
 ModulePass *createWebAssemblyFixFunctionBitcasts();
 FunctionPass *createWebAssemblyOptimizeReturned();
@@ -46,36 +47,12 @@ FunctionPass *createWebAssemblyRegStackify();
 FunctionPass *createWebAssemblyRegColoring();
 FunctionPass *createWebAssemblyExplicitLocals();
 FunctionPass *createWebAssemblyFixIrreducibleControlFlow();
-FunctionPass *createWebAssemblyExceptionPrepare();
 FunctionPass *createWebAssemblyCFGSort();
 FunctionPass *createWebAssemblyCFGStackify();
 FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
 FunctionPass *createWebAssemblyPeephole();
 FunctionPass *createWebAssemblyCallIndirectFixup();
-
-// PassRegistry initialization declarations.
-void initializeWebAssemblyLowerEmscriptenEHSjLjPass(PassRegistry &);
-void initializeLowerGlobalDtorsPass(PassRegistry &);
-void initializeFixFunctionBitcastsPass(PassRegistry &);
-void initializeOptimizeReturnedPass(PassRegistry &);
-void initializeWebAssemblyArgumentMovePass(PassRegistry &);
-void initializeWebAssemblySetP2AlignOperandsPass(PassRegistry &);
-void initializeWebAssemblyReplacePhysRegsPass(PassRegistry &);
-void initializeWebAssemblyPrepareForLiveIntervalsPass(PassRegistry &);
-void initializeWebAssemblyOptimizeLiveIntervalsPass(PassRegistry &);
-void initializeWebAssemblyStoreResultsPass(PassRegistry &);
-void initializeWebAssemblyRegStackifyPass(PassRegistry &);
-void initializeWebAssemblyRegColoringPass(PassRegistry &);
-void initializeWebAssemblyExplicitLocalsPass(PassRegistry &);
-void initializeWebAssemblyFixIrreducibleControlFlowPass(PassRegistry &);
-void initializeWebAssemblyExceptionPreparePass(PassRegistry &);
-void initializeWebAssemblyCFGSortPass(PassRegistry &);
-void initializeWebAssemblyCFGStackifyPass(PassRegistry &);
-void initializeWebAssemblyLowerBrUnlessPass(PassRegistry &);
-void initializeWebAssemblyRegNumberingPass(PassRegistry &);
-void initializeWebAssemblyPeepholePass(PassRegistry &);
-void initializeWebAssemblyCallIndirectFixupPass(PassRegistry &);
 
 } // end namespace llvm
 

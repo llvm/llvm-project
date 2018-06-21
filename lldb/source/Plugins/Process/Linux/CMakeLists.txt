@@ -1,3 +1,7 @@
+include_directories(.)
+include_directories(../POSIX)
+include_directories(../Utility)
+
 add_lldb_library(lldbPluginProcessLinux PLUGIN
   NativeProcessLinux.cpp
   NativeRegisterContextLinux.cpp

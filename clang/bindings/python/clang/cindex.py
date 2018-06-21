@@ -881,7 +881,7 @@ CursorKind.INVALID_CODE = CursorKind(73)
 CursorKind.UNEXPOSED_EXPR = CursorKind(100)
 
 # An expression that refers to some value declaration, such as a function,
-# variable, or enumerator.
+# varible, or enumerator.
 CursorKind.DECL_REF_EXPR = CursorKind(101)
 
 # An expression that refers to a member of a struct, union, class, Objective-C
@@ -1501,7 +1501,7 @@ class Cursor(Structure):
         return conf.lib.clang_getCursorDefinition(self)
 
     def get_usr(self):
-        """Return the Unified Symbol Resolution (USR) for the entity referenced
+        """Return the Unified Symbol Resultion (USR) for the entity referenced
         by the given cursor (or None).
 
         A Unified Symbol Resolution (USR) is a string that identifies a
@@ -1510,12 +1510,6 @@ class Cursor(Structure):
         e.g., when references in one translation refer to an entity defined in
         another translation unit."""
         return conf.lib.clang_getCursorUSR(self)
-
-    def get_included_file(self):
-        """Returns the File that is included by the current inclusion cursor."""
-        assert self.kind == CursorKind.INCLUSION_DIRECTIVE
-
-        return conf.lib.clang_getIncludedFile(self)
 
     @property
     def kind(self):
@@ -1650,7 +1644,7 @@ class Cursor(Structure):
     def result_type(self):
         """Retrieve the Type of the result for this Cursor."""
         if not hasattr(self, '_result_type'):
-            self._result_type = conf.lib.clang_getCursorResultType(self)
+            self._result_type = conf.lib.clang_getResultType(self.type)
 
         return self._result_type
 
@@ -3091,9 +3085,8 @@ class File(ClangObject):
         return "<File: %s>" % (self.name)
 
     @staticmethod
-    def from_result(res, fn, args):
-        assert isinstance(res, c_object_p)
-        res = File(res)
+    def from_cursor_result(res, fn, args):
+        assert isinstance(res, File)
 
         # Copy a reference to the TranslationUnit to prevent premature GC.
         res._tu = args[0]._tu
@@ -3575,11 +3568,6 @@ functionList = [
    [Cursor, c_uint, c_uint],
    SourceRange),
 
-  ("clang_getCursorResultType",
-   [Cursor],
-   Type,
-   Type.from_result),
-
   ("clang_getCursorSemanticParent",
    [Cursor],
    Cursor,
@@ -3708,8 +3696,8 @@ functionList = [
 
   ("clang_getIncludedFile",
    [Cursor],
-   c_object_p,
-   File.from_result),
+   File,
+   File.from_cursor_result),
 
   ("clang_getInclusions",
    [TranslationUnit, callbacks['translation_unit_includes'], py_object]),

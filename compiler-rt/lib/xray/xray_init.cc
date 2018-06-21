@@ -38,29 +38,32 @@ using namespace __xray;
 //
 // FIXME: Support DSO instrumentation maps too. The current solution only works
 // for statically linked executables.
-atomic_uint8_t XRayInitialized{0};
+__sanitizer::atomic_uint8_t XRayInitialized{0};
 
 // This should always be updated before XRayInitialized is updated.
-SpinMutex XRayInstrMapMutex;
+__sanitizer::SpinMutex XRayInstrMapMutex;
 XRaySledMap XRayInstrMap;
 
 // Global flag to determine whether the flags have been initialized.
-atomic_uint8_t XRayFlagsInitialized{0};
+__sanitizer::atomic_uint8_t XRayFlagsInitialized{0};
 
 // A mutex to allow only one thread to initialize the XRay data structures.
-SpinMutex XRayInitMutex;
+__sanitizer::SpinMutex XRayInitMutex;
 
 // __xray_init() will do the actual loading of the current process' memory map
 // and then proceed to look for the .xray_instr_map section/segment.
 void __xray_init() XRAY_NEVER_INSTRUMENT {
-  SpinMutexLock Guard(&XRayInitMutex);
+  __sanitizer::SpinMutexLock Guard(&XRayInitMutex);
   // Short-circuit if we've already initialized XRay before.
-  if (atomic_load(&XRayInitialized, memory_order_acquire))
+  if (__sanitizer::atomic_load(&XRayInitialized,
+                               __sanitizer::memory_order_acquire))
     return;
 
-  if (!atomic_load(&XRayFlagsInitialized, memory_order_acquire)) {
+  if (!__sanitizer::atomic_load(&XRayFlagsInitialized,
+                                __sanitizer::memory_order_acquire)) {
     initializeFlags();
-    atomic_store(&XRayFlagsInitialized, true, memory_order_release);
+    __sanitizer::atomic_store(&XRayFlagsInitialized, true,
+                              __sanitizer::memory_order_release);
   }
 
   if (__start_xray_instr_map == nullptr) {
@@ -70,13 +73,14 @@ void __xray_init() XRAY_NEVER_INSTRUMENT {
   }
 
   {
-    SpinMutexLock Guard(&XRayInstrMapMutex);
+    __sanitizer::SpinMutexLock Guard(&XRayInstrMapMutex);
     XRayInstrMap.Sleds = __start_xray_instr_map;
     XRayInstrMap.Entries = __stop_xray_instr_map - __start_xray_instr_map;
     XRayInstrMap.SledsIndex = __start_xray_fn_idx;
     XRayInstrMap.Functions = __stop_xray_fn_idx - __start_xray_fn_idx;
   }
-  atomic_store(&XRayInitialized, true, memory_order_release);
+  __sanitizer::atomic_store(&XRayInitialized, true,
+                            __sanitizer::memory_order_release);
 
 #ifndef XRAY_NO_PREINIT
   if (flags()->patch_premain)

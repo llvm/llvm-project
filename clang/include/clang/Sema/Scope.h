@@ -1,4 +1,4 @@
-//===- Scope.h - Scope interface --------------------------------*- C++ -*-===//
+//===--- Scope.h - Scope interface ------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,102 +14,101 @@
 #ifndef LLVM_CLANG_SEMA_SCOPE_H
 #define LLVM_CLANG_SEMA_SCOPE_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
-#include <cassert>
 
 namespace llvm {
 
 class raw_ostream;
 
-} // namespace llvm
+}
 
 namespace clang {
 
 class Decl;
-class DeclContext;
 class UsingDirectiveDecl;
 class VarDecl;
 
 /// Scope - A scope is a transient data structure that is used while parsing the
 /// program.  It assists with resolving identifiers to the appropriate
 /// declaration.
+///
 class Scope {
 public:
   /// ScopeFlags - These are bitfields that are or'd together when creating a
   /// scope, which defines the sorts of things the scope contains.
   enum ScopeFlags {
-    /// This indicates that the scope corresponds to a function, which
+    /// \brief This indicates that the scope corresponds to a function, which
     /// means that labels are set here.
     FnScope       = 0x01,
 
-    /// This is a while, do, switch, for, etc that can have break
+    /// \brief This is a while, do, switch, for, etc that can have break
     /// statements embedded into it.
     BreakScope    = 0x02,
 
-    /// This is a while, do, for, which can have continue statements
+    /// \brief This is a while, do, for, which can have continue statements
     /// embedded into it.
     ContinueScope = 0x04,
 
-    /// This is a scope that can contain a declaration.  Some scopes
+    /// \brief This is a scope that can contain a declaration.  Some scopes
     /// just contain loop constructs but don't contain decls.
     DeclScope = 0x08,
 
-    /// The controlling scope in a if/switch/while/for statement.
+    /// \brief The controlling scope in a if/switch/while/for statement.
     ControlScope = 0x10,
 
-    /// The scope of a struct/union/class definition.
+    /// \brief The scope of a struct/union/class definition.
     ClassScope = 0x20,
 
-    /// This is a scope that corresponds to a block/closure object.
+    /// \brief This is a scope that corresponds to a block/closure object.
     /// Blocks serve as top-level scopes for some objects like labels, they
     /// also prevent things like break and continue.  BlockScopes always have
     /// the FnScope and DeclScope flags set as well.
     BlockScope = 0x40,
 
-    /// This is a scope that corresponds to the
+    /// \brief This is a scope that corresponds to the
     /// template parameters of a C++ template. Template parameter
     /// scope starts at the 'template' keyword and ends when the
     /// template declaration ends.
     TemplateParamScope = 0x80,
 
-    /// This is a scope that corresponds to the
+    /// \brief This is a scope that corresponds to the
     /// parameters within a function prototype.
     FunctionPrototypeScope = 0x100,
 
-    /// This is a scope that corresponds to the parameters within
+    /// \brief This is a scope that corresponds to the parameters within
     /// a function prototype for a function declaration (as opposed to any
     /// other kind of function declarator). Always has FunctionPrototypeScope
     /// set as well.
     FunctionDeclarationScope = 0x200,
 
-    /// This is a scope that corresponds to the Objective-C
+    /// \brief This is a scope that corresponds to the Objective-C
     /// \@catch statement.
     AtCatchScope = 0x400,
     
-    /// This scope corresponds to an Objective-C method body.
+    /// \brief This scope corresponds to an Objective-C method body.
     /// It always has FnScope and DeclScope set as well.
     ObjCMethodScope = 0x800,
 
-    /// This is a scope that corresponds to a switch statement.
+    /// \brief This is a scope that corresponds to a switch statement.
     SwitchScope = 0x1000,
 
-    /// This is the scope of a C++ try statement.
+    /// \brief This is the scope of a C++ try statement.
     TryScope = 0x2000,
 
-    /// This is the scope for a function-level C++ try or catch scope.
+    /// \brief This is the scope for a function-level C++ try or catch scope.
     FnTryCatchScope = 0x4000,
 
-    /// This is the scope of OpenMP executable directive.
+    /// \brief This is the scope of OpenMP executable directive.
     OpenMPDirectiveScope = 0x8000,
 
-    /// This is the scope of some OpenMP loop directive.
+    /// \brief This is the scope of some OpenMP loop directive.
     OpenMPLoopDirectiveScope = 0x10000,
 
-    /// This is the scope of some OpenMP simd directive.
+    /// \brief This is the scope of some OpenMP simd directive.
     /// For example, it is used for 'omp simd', 'omp for simd'.
     /// This flag is propagated to children scopes.
     OpenMPSimdDirectiveScope = 0x20000,
@@ -132,7 +131,6 @@ public:
     /// We are between inheritance colon and the real class/struct definition scope.
     ClassInheritanceScope = 0x800000,
   };
-
 private:
   /// The parent scope for this scope.  This is null for the translation-unit
   /// scope.
@@ -146,7 +144,7 @@ private:
   /// depth 0.
   unsigned short Depth;
 
-  /// Declarations with static linkage are mangled with the number of
+  /// \brief Declarations with static linkage are mangled with the number of
   /// scopes seen as a component.
   unsigned short MSLastManglingNumber;
 
@@ -187,7 +185,7 @@ private:
   /// popped, these declarations are removed from the IdentifierTable's notion
   /// of current declaration.  It is up to the current Action implementation to
   /// implement these semantics.
-  using DeclSetTy = llvm::SmallPtrSet<Decl *, 32>;
+  typedef llvm::SmallPtrSet<Decl *, 32> DeclSetTy;
   DeclSetTy DeclsInScope;
 
   /// The DeclContext with which this scope is associated. For
@@ -195,10 +193,10 @@ private:
   /// entity of a function scope is a function, etc.
   DeclContext *Entity;
 
-  using UsingDirectivesTy = SmallVector<UsingDirectiveDecl *, 2>;
+  typedef SmallVector<UsingDirectiveDecl *, 2> UsingDirectivesTy;
   UsingDirectivesTy UsingDirectives;
 
-  /// Used to determine if errors occurred in this scope.
+  /// \brief Used to determine if errors occurred in this scope.
   DiagnosticErrorTrap ErrorTrap;
 
   /// A lattice consisting of undefined, a single NRVO candidate variable in
@@ -209,23 +207,25 @@ private:
 
 public:
   Scope(Scope *Parent, unsigned ScopeFlags, DiagnosticsEngine &Diag)
-      : ErrorTrap(Diag) {
+    : ErrorTrap(Diag) {
     Init(Parent, ScopeFlags);
   }
 
   /// getFlags - Return the flags for this scope.
+  ///
   unsigned getFlags() const { return Flags; }
-
   void setFlags(unsigned F) { setFlags(getParent(), F); }
 
   /// isBlockScope - Return true if this scope correspond to a closure.
   bool isBlockScope() const { return Flags & BlockScope; }
 
   /// getParent - Return the scope that this is nested in.
+  ///
   const Scope *getParent() const { return AnyParent; }
   Scope *getParent() { return AnyParent; }
 
   /// getFnParent - Return the closest scope that is a function body.
+  ///
   const Scope *getFnParent() const { return FnParent; }
   Scope *getFnParent() { return FnParent; }
 
@@ -259,9 +259,6 @@ public:
   Scope *getTemplateParamParent() { return TemplateParamParent; }
   const Scope *getTemplateParamParent() const { return TemplateParamParent; }
 
-  /// Returns the depth of this scope. The translation-unit has scope depth 0.
-  unsigned getDepth() const { return Depth; }
-
   /// Returns the number of function prototype scopes in this scope
   /// chain.
   unsigned getFunctionPrototypeDepth() const {
@@ -275,12 +272,10 @@ public:
     return PrototypeIndex++;
   }
 
-  using decl_range = llvm::iterator_range<DeclSetTy::iterator>;
-
+  typedef llvm::iterator_range<DeclSetTy::iterator> decl_range;
   decl_range decls() const {
     return decl_range(DeclsInScope.begin(), DeclsInScope.end());
   }
-
   bool decl_empty() const { return DeclsInScope.empty(); }
 
   void AddDecl(Decl *D) {
@@ -370,6 +365,7 @@ public:
     return false;
   }
 
+  
   /// isTemplateParamScope - Return true if this scope is a C++
   /// template parameter scope.
   bool isTemplateParamScope() const {
@@ -401,12 +397,12 @@ public:
     return false;
   }
 
-  /// Determines whether this scope is the OpenMP directive scope
+  /// \brief Determines whether this scope is the OpenMP directive scope
   bool isOpenMPDirectiveScope() const {
     return (getFlags() & Scope::OpenMPDirectiveScope);
   }
 
-  /// Determine whether this scope is some OpenMP loop directive scope
+  /// \brief Determine whether this scope is some OpenMP loop directive scope
   /// (for example, 'omp for', 'omp simd').
   bool isOpenMPLoopDirectiveScope() const {
     if (getFlags() & Scope::OpenMPLoopDirectiveScope) {
@@ -417,34 +413,34 @@ public:
     return false;
   }
 
-  /// Determine whether this scope is (or is nested into) some OpenMP
+  /// \brief Determine whether this scope is (or is nested into) some OpenMP
   /// loop simd directive scope (for example, 'omp simd', 'omp for simd').
   bool isOpenMPSimdDirectiveScope() const {
     return getFlags() & Scope::OpenMPSimdDirectiveScope;
   }
 
-  /// Determine whether this scope is a loop having OpenMP loop
+  /// \brief Determine whether this scope is a loop having OpenMP loop
   /// directive attached.
   bool isOpenMPLoopScope() const {
     const Scope *P = getParent();
     return P && P->isOpenMPLoopDirectiveScope();
   }
 
-  /// Determine whether this scope is a C++ 'try' block.
+  /// \brief Determine whether this scope is a C++ 'try' block.
   bool isTryScope() const { return getFlags() & Scope::TryScope; }
 
-  /// Determine whether this scope is a SEH '__try' block.
+  /// \brief Determine whether this scope is a SEH '__try' block.
   bool isSEHTryScope() const { return getFlags() & Scope::SEHTryScope; }
 
-  /// Determine whether this scope is a SEH '__except' block.
+  /// \brief Determine whether this scope is a SEH '__except' block.
   bool isSEHExceptScope() const { return getFlags() & Scope::SEHExceptScope; }
 
-  /// Determine whether this scope is a compound statement scope.
+  /// \brief Determine whether this scope is a compound statement scope.
   bool isCompoundStmtScope() const {
     return getFlags() & Scope::CompoundStmtScope;
   }
 
-  /// Returns if rhs has a higher scope depth than this.
+  /// \brief Returns if rhs has a higher scope depth than this.
   ///
   /// The caller is responsible for calling this only if one of the two scopes
   /// is an ancestor of the other.
@@ -458,8 +454,8 @@ public:
     UsingDirectives.push_back(UDir);
   }
 
-  using using_directives_range =
-      llvm::iterator_range<UsingDirectivesTy::iterator>;
+  typedef llvm::iterator_range<UsingDirectivesTy::iterator>
+    using_directives_range;
 
   using_directives_range using_directives() {
     return using_directives_range(UsingDirectives.begin(),
@@ -478,23 +474,25 @@ public:
   }
 
   void setNoNRVO() {
-    NRVO.setInt(true);
+    NRVO.setInt(1);
     NRVO.setPointer(nullptr);
   }
 
   void mergeNRVOIntoParent();
 
   /// Init - This is used by the parser to implement scope caching.
+  ///
   void Init(Scope *parent, unsigned flags);
 
-  /// Sets up the specified scope flags and adjusts the scope state
+  /// \brief Sets up the specified scope flags and adjusts the scope state
   /// variables accordingly.
+  ///
   void AddFlags(unsigned Flags);
 
   void dumpImpl(raw_ostream &OS) const;
   void dump() const;
 };
 
-} // namespace clang
+}  // end namespace clang
 
-#endif // LLVM_CLANG_SEMA_SCOPE_H
+#endif

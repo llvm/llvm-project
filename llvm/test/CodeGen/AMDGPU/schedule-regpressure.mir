@@ -4,7 +4,7 @@
 # Check there is no SReg_32 pressure created by DS_* instructions because of M0 use
 
 # CHECK: ScheduleDAGMILive::schedule starting
-# CHECK: SU({{.*}} = DS_READ_B32 {{.*}} implicit $m0, implicit $exec
+# CHECK: SU({{.*}} = DS_READ_B32 {{.*}} implicit %m0, implicit %exec
 # CHECK: Pressure Diff : {{$}}
 # CHECK: SU({{.*}} DS_WRITE_B32
 
@@ -27,7 +27,7 @@ registers:
   - { id: 7, class: vgpr_32 }
   - { id: 8, class: vgpr_32 }
 liveins:
-  - { reg: '$sgpr4_sgpr5', virtual-reg: '%1' }
+  - { reg: '%sgpr4_sgpr5', virtual-reg: '%1' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -44,14 +44,14 @@ frameInfo:
   hasMustTailInVarArgFunc: false
 body:             |
   bb.0:
-    liveins: $sgpr4_sgpr5
+    liveins: %sgpr4_sgpr5
 
-    %1 = COPY $sgpr4_sgpr5
+    %1 = COPY %sgpr4_sgpr5
     %5 = S_LOAD_DWORD_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
-    $m0 = S_MOV_B32 -1
+    %m0 = S_MOV_B32 -1
     %7 = COPY %5
-    %6 = DS_READ_B32 %7, 0, 0, implicit $m0, implicit $exec
-    DS_WRITE_B32 %7, %6, 4, 0, implicit killed $m0, implicit $exec
+    %6 = DS_READ_B32 %7, 0, 0, implicit %m0, implicit %exec
+    DS_WRITE_B32 %7, %6, 4, 0, implicit killed %m0, implicit %exec
     S_ENDPGM
 
 ...

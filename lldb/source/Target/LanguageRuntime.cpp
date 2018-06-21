@@ -12,11 +12,14 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Target/LanguageRuntime.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -230,7 +233,13 @@ LanguageRuntime::~LanguageRuntime() = default;
 Breakpoint::BreakpointPreconditionSP
 LanguageRuntime::CreateExceptionPrecondition(lldb::LanguageType language,
                                              bool catch_bp, bool throw_bp) {
+  // Currently only Swift has one of these gadgets:
   switch (language) {
+  case eLanguageTypeSwift:
+    if (throw_bp)
+      return Breakpoint::BreakpointPreconditionSP(
+          new SwiftLanguageRuntime::SwiftExceptionPrecondition());
+    break;
   case eLanguageTypeObjC:
     if (throw_bp)
       return Breakpoint::BreakpointPreconditionSP(
@@ -299,3 +308,60 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
 lldb::SearchFilterSP LanguageRuntime::CreateExceptionSearchFilter() {
   return m_process->GetTarget().GetSearchFilterForModule(nullptr);
 }
+
+lldb::LanguageType
+LanguageRuntime::GuessLanguageForSymbolByName(Target &target,
+                                              const char *symbol_name) {
+  // We "guess" the language because we can't determine a symbol's language from
+  // it's name.
+  // For example, a Pascal symbol can be mangled using the C++ Itanium scheme,
+  // and defined
+  // in a compilation unit within the same module as other C++ units.
+  //
+  // In addition, different targets could have different ways of mangling names
+  // from a given
+  // language, likewise compilation units within those targets.  It would help
+  // to be able to
+  // ask the various LanguageRuntime plugin instances for this target to
+  // recognize the name,
+  // but right now the plugin instances depend on the process, not the target.
+  // That is
+  // unfortunate, because to use this for filtering breakpoints by language, we
+  // need to know
+  // the "language for symbol-name" prior to running.  So we'd have to make a
+  // "LanguageRuntimeTarget" and "LanguageRuntimeProcess", and direct the
+  // questions that don't
+  // need a running process to the former, and that do to the latter.
+  //
+  // That's more work than I want to do for this feature.
+  if (CPlusPlusLanguage::IsCPPMangledName(symbol_name))
+    return eLanguageTypeC_plus_plus;
+  else if (ObjCLanguage::IsPossibleObjCMethodName(symbol_name))
+    return eLanguageTypeObjC;
+  else if (SwiftLanguageRuntime::IsSwiftMangledName(symbol_name))
+    return eLanguageTypeSwift;
+  else
+    return eLanguageTypeUnknown;
+}
+
+bool
+LanguageRuntime::IsSymbolAnyRuntimeThunk(ProcessSP process_sp, Symbol &symbol)
+{
+  if (!process_sp)
+    return false;
+    
+  enum LanguageType languages_to_try[] = {
+      eLanguageTypeSwift, eLanguageTypeObjC, eLanguageTypeC_plus_plus};
+
+  LanguageRuntime *language_runtime;
+  for (enum LanguageType language : languages_to_try) {
+    language_runtime = process_sp->GetLanguageRuntime(language);
+    if (language_runtime) {
+        if (language_runtime->IsSymbolARuntimeThunk(symbol))
+          return true;
+    }
+  }
+  return false;
+}
+
+

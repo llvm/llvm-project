@@ -75,14 +75,15 @@ void DWARFMappedHash::ExtractClassOrStructDIEArray(
         die_tag == DW_TAG_structure_type) {
       if (die_info_array[i].type_flags & eTypeFlagClassIsImplementation) {
         if (return_implementation_only_if_available) {
-          // We found the one true definition for this class, so only return
-          // that
+          // We found the one true definition for this class, so
+          // only return that
           die_offsets.clear();
           die_offsets.emplace_back(die_info_array[i].cu_offset,
                                    die_info_array[i].offset);
           return;
         } else {
-          // Put the one true definition as the first entry so it matches first
+          // Put the one true definition as the first entry so it
+          // matches first
           die_offsets.emplace(die_offsets.begin(), die_info_array[i].cu_offset,
                               die_info_array[i].offset);
         }
@@ -121,23 +122,27 @@ const char *DWARFMappedHash::GetAtomTypeName(uint16_t atom) {
     return "type-flags";
   case eAtomTypeQualNameHash:
     return "qualified-name-hash";
+  case eAtomTypeString:
+    return "strp";
   }
   return "<invalid>";
 }
 
 DWARFMappedHash::DIEInfo::DIEInfo()
     : cu_offset(DW_INVALID_OFFSET), offset(DW_INVALID_OFFSET), tag(0),
-      type_flags(0), qualified_name_hash(0) {}
+      type_flags(0), qualified_name_hash(0), strp(UINT64_MAX) {}
 
 DWARFMappedHash::DIEInfo::DIEInfo(dw_offset_t c, dw_offset_t o, dw_tag_t t,
-                                  uint32_t f, uint32_t h)
-    : cu_offset(c), offset(o), tag(t), type_flags(f), qualified_name_hash(h) {}
+                                  uint32_t f, uint32_t h, uint64_t s)
+    : cu_offset(c), offset(o), tag(t), type_flags(f), qualified_name_hash(h),
+      strp(s) {}
 
 DWARFMappedHash::Prologue::Prologue(dw_offset_t _die_base_offset)
     : die_base_offset(_die_base_offset), atoms(), atom_mask(0),
       min_hash_data_byte_size(0), hash_data_has_fixed_byte_size(true) {
-  // Define an array of DIE offsets by first defining an array, and then define
-  // the atom type for the array, in this case we have an array of DIE offsets
+  // Define an array of DIE offsets by first defining an array,
+  // and then define the atom type for the array, in this case
+  // we have an array of DIE offsets
   AppendAtom(eAtomTypeDIEOffset, DW_FORM_data4);
 }
 
@@ -237,7 +242,8 @@ DWARFMappedHash::Prologue::Read(const lldb_private::DataExtractor &data,
 
 size_t DWARFMappedHash::Prologue::GetByteSize() const {
   // Add an extra count to the atoms size for the zero termination Atom that
-  // gets written to disk
+  // gets
+  // written to disk
   return sizeof(die_base_offset) + sizeof(uint32_t) +
          atoms.size() * sizeof(Atom);
 }
@@ -376,18 +382,17 @@ bool DWARFMappedHash::MemoryTable::ReadHashData(uint32_t hash_data_offset,
 
 DWARFMappedHash::MemoryTable::Result
 DWARFMappedHash::MemoryTable::GetHashDataForName(
-    llvm::StringRef name, lldb::offset_t *hash_data_offset_ptr,
-    Pair &pair) const {
+    const char *name, lldb::offset_t *hash_data_offset_ptr, Pair &pair) const {
   pair.key = m_data.GetU32(hash_data_offset_ptr);
   pair.value.clear();
 
-  // If the key is zero, this terminates our chain of HashData objects for this
-  // hash value.
+  // If the key is zero, this terminates our chain of HashData objects
+  // for this hash value.
   if (pair.key == 0)
     return eResultEndOfHashData;
 
-  // There definitely should be a string for this string offset, if there
-  // isn't, there is something wrong, return and error
+  // There definitely should be a string for this string offset, if
+  // there isn't, there is something wrong, return and error
   const char *strp_cstr = m_string_table.PeekCStr(pair.key);
   if (strp_cstr == NULL) {
     *hash_data_offset_ptr = UINT32_MAX;
@@ -400,21 +405,22 @@ DWARFMappedHash::MemoryTable::GetHashDataForName(
   if (count > 0 &&
       m_data.ValidOffsetForDataOfSize(*hash_data_offset_ptr,
                                       min_total_hash_data_size)) {
-    // We have at least one HashData entry, and we have enough data to parse at
-    // least "count" HashData entries.
+    // We have at least one HashData entry, and we have enough
+    // data to parse at least "count" HashData entries.
 
     // First make sure the entire C string matches...
-    const bool match = name == strp_cstr;
+    const bool match = strcmp(name, strp_cstr) == 0;
 
     if (!match && m_header.header_data.HashDataHasFixedByteSize()) {
-      // If the string doesn't match and we have fixed size data, we can just
-      // add the total byte size of all HashData objects to the hash data
-      // offset and be done...
+      // If the string doesn't match and we have fixed size data,
+      // we can just add the total byte size of all HashData objects
+      // to the hash data offset and be done...
       *hash_data_offset_ptr += min_total_hash_data_size;
     } else {
-      // If the string does match, or we don't have fixed size data then we
-      // need to read the hash data as a stream. If the string matches we also
-      // append all HashData objects to the value array.
+      // If the string does match, or we don't have fixed size data
+      // then we need to read the hash data as a stream. If the
+      // string matches we also append all HashData objects to the
+      // value array.
       for (uint32_t i = 0; i < count; ++i) {
         DIEInfo die_info;
         if (m_header.Read(m_data, hash_data_offset_ptr, die_info)) {
@@ -428,15 +434,16 @@ DWARFMappedHash::MemoryTable::GetHashDataForName(
         }
       }
     }
-    // Return the correct response depending on if the string matched or not...
+    // Return the correct response depending on if the string matched
+    // or not...
     if (match)
       return eResultKeyMatch; // The key (cstring) matches and we have lookup
                               // results!
     else
       return eResultKeyMismatch; // The key doesn't match, this function will
                                  // get called
-    // again for the next key/value or the key terminator which in our case is
-    // a zero .debug_str offset.
+    // again for the next key/value or the key terminator
+    // which in our case is a zero .debug_str offset.
   } else {
     *hash_data_offset_ptr = UINT32_MAX;
     return eResultError;
@@ -448,13 +455,13 @@ DWARFMappedHash::MemoryTable::AppendHashDataForRegularExpression(
     const lldb_private::RegularExpression &regex,
     lldb::offset_t *hash_data_offset_ptr, Pair &pair) const {
   pair.key = m_data.GetU32(hash_data_offset_ptr);
-  // If the key is zero, this terminates our chain of HashData objects for this
-  // hash value.
+  // If the key is zero, this terminates our chain of HashData objects
+  // for this hash value.
   if (pair.key == 0)
     return eResultEndOfHashData;
 
-  // There definitely should be a string for this string offset, if there
-  // isn't, there is something wrong, return and error
+  // There definitely should be a string for this string offset, if
+  // there isn't, there is something wrong, return and error
   const char *strp_cstr = m_string_table.PeekCStr(pair.key);
   if (strp_cstr == NULL)
     return eResultError;
@@ -468,14 +475,15 @@ DWARFMappedHash::MemoryTable::AppendHashDataForRegularExpression(
     const bool match = regex.Execute(llvm::StringRef(strp_cstr));
 
     if (!match && m_header.header_data.HashDataHasFixedByteSize()) {
-      // If the regex doesn't match and we have fixed size data, we can just
-      // add the total byte size of all HashData objects to the hash data
-      // offset and be done...
+      // If the regex doesn't match and we have fixed size data,
+      // we can just add the total byte size of all HashData objects
+      // to the hash data offset and be done...
       *hash_data_offset_ptr += min_total_hash_data_size;
     } else {
-      // If the string does match, or we don't have fixed size data then we
-      // need to read the hash data as a stream. If the string matches we also
-      // append all HashData objects to the value array.
+      // If the string does match, or we don't have fixed size data
+      // then we need to read the hash data as a stream. If the
+      // string matches we also append all HashData objects to the
+      // value array.
       for (uint32_t i = 0; i < count; ++i) {
         DIEInfo die_info;
         if (m_header.Read(m_data, hash_data_offset_ptr, die_info)) {
@@ -489,15 +497,16 @@ DWARFMappedHash::MemoryTable::AppendHashDataForRegularExpression(
         }
       }
     }
-    // Return the correct response depending on if the string matched or not...
+    // Return the correct response depending on if the string matched
+    // or not...
     if (match)
       return eResultKeyMatch; // The key (cstring) matches and we have lookup
                               // results!
     else
       return eResultKeyMismatch; // The key doesn't match, this function will
                                  // get called
-    // again for the next key/value or the key terminator which in our case is
-    // a zero .debug_str offset.
+    // again for the next key/value or the key terminator
+    // which in our case is a zero .debug_str offset.
   } else {
     *hash_data_offset_ptr = UINT32_MAX;
     return eResultError;
@@ -522,7 +531,8 @@ size_t DWARFMappedHash::MemoryTable::AppendAllDIEsThatMatchingRegex(
       switch (hash_result) {
       case eResultKeyMatch:
       case eResultKeyMismatch:
-        // Whether we matches or not, it doesn't matter, we keep looking.
+        // Whether we matches or not, it doesn't matter, we
+        // keep looking.
         break;
 
       case eResultEndOfHashData:
@@ -545,8 +555,8 @@ size_t DWARFMappedHash::MemoryTable::AppendAllDIEsInRange(
     lldb::offset_t hash_data_offset = GetHashDataOffset(offset_idx);
     while (!done && hash_data_offset != UINT32_MAX) {
       KeyType key = m_data.GetU32(&hash_data_offset);
-      // If the key is zero, this terminates our chain of HashData objects for
-      // this hash value.
+      // If the key is zero, this terminates our chain of HashData objects
+      // for this hash value.
       if (key == 0)
         break;
 
@@ -566,9 +576,9 @@ size_t DWARFMappedHash::MemoryTable::AppendAllDIEsInRange(
   return die_info_array.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
+size_t DWARFMappedHash::MemoryTable::FindByName(const char *name,
                                                 DIEArray &die_offsets) {
-  if (name.empty())
+  if (!name || !name[0])
     return 0;
 
   DIEInfoArray die_info_array;
@@ -577,7 +587,7 @@ size_t DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
   return die_info_array.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByNameAndTag(llvm::StringRef name,
+size_t DWARFMappedHash::MemoryTable::FindByNameAndTag(const char *name,
                                                       const dw_tag_t tag,
                                                       DIEArray &die_offsets) {
   DIEInfoArray die_info_array;
@@ -587,8 +597,8 @@ size_t DWARFMappedHash::MemoryTable::FindByNameAndTag(llvm::StringRef name,
 }
 
 size_t DWARFMappedHash::MemoryTable::FindByNameAndTagAndQualifiedNameHash(
-    llvm::StringRef name, const dw_tag_t tag,
-    const uint32_t qualified_name_hash, DIEArray &die_offsets) {
+    const char *name, const dw_tag_t tag, const uint32_t qualified_name_hash,
+    DIEArray &die_offsets) {
   DIEInfoArray die_info_array;
   if (FindByName(name, die_info_array))
     DWARFMappedHash::ExtractDIEArray(die_info_array, tag, qualified_name_hash,
@@ -597,21 +607,22 @@ size_t DWARFMappedHash::MemoryTable::FindByNameAndTagAndQualifiedNameHash(
 }
 
 size_t DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName(
-    llvm::StringRef name, DIEArray &die_offsets, bool must_be_implementation) {
+    const char *name, DIEArray &die_offsets, bool must_be_implementation) {
   DIEInfoArray die_info_array;
   if (FindByName(name, die_info_array)) {
     if (must_be_implementation &&
         GetHeader().header_data.ContainsAtom(eAtomTypeTypeFlags)) {
-      // If we have two atoms, then we have the DIE offset and the type flags
-      // so we can find the objective C class efficiently.
+      // If we have two atoms, then we have the DIE offset and
+      // the type flags so we can find the objective C class
+      // efficiently.
       DWARFMappedHash::ExtractTypesFromDIEArray(die_info_array, UINT32_MAX,
                                                 eTypeFlagClassIsImplementation,
                                                 die_offsets);
     } else {
-      // We don't only want the one true definition, so try and see what we can
-      // find, and only return class or struct DIEs. If we do have the full
-      // implementation, then return it alone, else return all possible
-      // matches.
+      // We don't only want the one true definition, so try and see
+      // what we can find, and only return class or struct DIEs.
+      // If we do have the full implementation, then return it alone,
+      // else return all possible matches.
       const bool return_implementation_only_if_available = true;
       DWARFMappedHash::ExtractClassOrStructDIEArray(
           die_info_array, return_implementation_only_if_available, die_offsets);
@@ -620,9 +631,9 @@ size_t DWARFMappedHash::MemoryTable::FindCompleteObjCClassByName(
   return die_offsets.size();
 }
 
-size_t DWARFMappedHash::MemoryTable::FindByName(llvm::StringRef name,
+size_t DWARFMappedHash::MemoryTable::FindByName(const char *name,
                                                 DIEInfoArray &die_info_array) {
-  if (name.empty())
+  if (!name || !name[0])
     return 0;
 
   Pair kv_pair;

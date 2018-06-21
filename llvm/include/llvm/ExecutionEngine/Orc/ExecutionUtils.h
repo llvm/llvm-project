@@ -17,14 +17,13 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include <algorithm>
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
+#include <utility>
 
 namespace llvm {
 
@@ -36,14 +35,14 @@ class Value;
 
 namespace orc {
 
-/// This iterator provides a convenient way to iterate over the elements
+/// @brief This iterator provides a convenient way to iterate over the elements
 ///        of an llvm.global_ctors/llvm.global_dtors instance.
 ///
 ///   The easiest way to get hold of instances of this class is to use the
 /// getConstructors/getDestructors functions.
 class CtorDtorIterator {
 public:
-  /// Accessor for an element of the global_ctors/global_dtors array.
+  /// @brief Accessor for an element of the global_ctors/global_dtors array.
   ///
   ///   This class provides a read-only view of the element with any casts on
   /// the function stripped away.
@@ -56,23 +55,23 @@ public:
     Value *Data;
   };
 
-  /// Construct an iterator instance. If End is true then this iterator
+  /// @brief Construct an iterator instance. If End is true then this iterator
   ///        acts as the end of the range, otherwise it is the beginning.
   CtorDtorIterator(const GlobalVariable *GV, bool End);
 
-  /// Test iterators for equality.
+  /// @brief Test iterators for equality.
   bool operator==(const CtorDtorIterator &Other) const;
 
-  /// Test iterators for inequality.
+  /// @brief Test iterators for inequality.
   bool operator!=(const CtorDtorIterator &Other) const;
 
-  /// Pre-increment iterator.
+  /// @brief Pre-increment iterator.
   CtorDtorIterator& operator++();
 
-  /// Post-increment iterator.
+  /// @brief Post-increment iterator.
   CtorDtorIterator operator++(int);
 
-  /// Dereference iterator. The resulting value provides a read-only view
+  /// @brief Dereference iterator. The resulting value provides a read-only view
   ///        of this element of the global_ctors/global_dtors list.
   Element operator*() const;
 
@@ -81,31 +80,32 @@ private:
   unsigned I;
 };
 
-/// Create an iterator range over the entries of the llvm.global_ctors
+/// @brief Create an iterator range over the entries of the llvm.global_ctors
 ///        array.
 iterator_range<CtorDtorIterator> getConstructors(const Module &M);
 
-/// Create an iterator range over the entries of the llvm.global_ctors
+/// @brief Create an iterator range over the entries of the llvm.global_ctors
 ///        array.
 iterator_range<CtorDtorIterator> getDestructors(const Module &M);
 
-/// Convenience class for recording constructor/destructor names for
+/// @brief Convenience class for recording constructor/destructor names for
 ///        later execution.
 template <typename JITLayerT>
 class CtorDtorRunner {
 public:
-  /// Construct a CtorDtorRunner for the given range using the given
+  /// @brief Construct a CtorDtorRunner for the given range using the given
   ///        name mangling function.
-  CtorDtorRunner(std::vector<std::string> CtorDtorNames, VModuleKey K)
-      : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
+  CtorDtorRunner(std::vector<std::string> CtorDtorNames,
+                 typename JITLayerT::ModuleHandleT H)
+      : CtorDtorNames(std::move(CtorDtorNames)), H(H) {}
 
-  /// Run the recorded constructors/destructors through the given JIT
+  /// @brief Run the recorded constructors/destructors through the given JIT
   ///        layer.
   Error runViaLayer(JITLayerT &JITLayer) const {
     using CtorDtorTy = void (*)();
 
-    for (const auto &CtorDtorName : CtorDtorNames) {
-      if (auto CtorDtorSym = JITLayer.findSymbolIn(K, CtorDtorName, false)) {
+    for (const auto &CtorDtorName : CtorDtorNames)
+      if (auto CtorDtorSym = JITLayer.findSymbolIn(H, CtorDtorName, false)) {
         if (auto AddrOrErr = CtorDtorSym.getAddress()) {
           CtorDtorTy CtorDtor =
             reinterpret_cast<CtorDtorTy>(static_cast<uintptr_t>(*AddrOrErr));
@@ -118,16 +118,15 @@ public:
         else
           return make_error<JITSymbolNotFound>(CtorDtorName);
       }
-    }
     return Error::success();
   }
 
 private:
   std::vector<std::string> CtorDtorNames;
-  orc::VModuleKey K;
+  typename JITLayerT::ModuleHandleT H;
 };
 
-/// Support class for static dtor execution. For hosted (in-process) JITs
+/// @brief Support class for static dtor execution. For hosted (in-process) JITs
 ///        only!
 ///
 ///   If a __cxa_atexit function isn't found C++ programs that use static

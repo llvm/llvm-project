@@ -83,6 +83,7 @@ public:
   // guess the language type from the mangled name.
   lldb::LanguageType GuessLanguage() const;
 
+  bool IsSwiftThunk() const;
   /// Return true if this frame represents an inlined function.
   ///
   /// See also GetFunctionName().
@@ -153,10 +154,10 @@ public:
                              lldb::DynamicValueType use_dynamic);
 
   // Find a value for a variable expression path like "rect.origin.x" or
-  // "pt_ptr->x", "*self", "*this->obj_ptr". The returned value is _not_ and
-  // expression result and is not a constant object like
-  // SBFrame::EvaluateExpression(...) returns, but a child object of the
-  // variable value.
+  // "pt_ptr->x", "*self", "*this->obj_ptr". The returned value is _not_
+  // and expression result and is not a constant object like
+  // SBFrame::EvaluateExpression(...) returns, but a child object of
+  // the variable value.
   lldb::SBValue GetValueForVariablePath(const char *var_expr_cstr,
                                         DynamicValueType use_dynamic);
 

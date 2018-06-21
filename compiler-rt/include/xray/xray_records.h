@@ -54,7 +54,7 @@ struct alignas(32) XRayFileHeader {
 
   union {
     char FreeForm[16];
-    // The current civiltime timestamp, as retrieved from 'clock_gettime'. This
+    // The current civiltime timestamp, as retrived from 'clock_gettime'. This
     // allows readers of the file to determine when the file was created or
     // written down.
     struct timespec TS;
@@ -96,7 +96,7 @@ struct alignas(32) XRayRecord {
   uint32_t TId = 0;
 
   // Use some bytes in the end of the record for buffers.
-  char Buffer[12] = {};
+  char Buffer[4] = {};
 } __attribute__((packed));
 
 static_assert(sizeof(XRayRecord) == 32, "XRayRecord != 32 bytes");

@@ -31,10 +31,9 @@ endfunction()
 #                                  ARCHS <architectures>
 #                                  SOURCES <source files>
 #                                  CFLAGS <compile flags>
-#                                  DEFS <compile definitions>
-#                                  DEPS <dependencies>)
+#                                  DEFS <compile definitions>)
 function(add_compiler_rt_object_libraries name)
-  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS" ${ARGN})
+  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS" ${ARGN})
   set(libnames)
   if(APPLE)
     foreach(os ${LIB_OS})
@@ -57,9 +56,6 @@ function(add_compiler_rt_object_libraries name)
 
   foreach(libname ${libnames})
     add_library(${libname} OBJECT ${LIB_SOURCES})
-    if(LIB_DEPS)
-      add_dependencies(${libname} ${LIB_DEPS})
-    endif()
 
     # Strip out -msse3 if this isn't macOS.
     set(target_flags ${LIB_CFLAGS})
@@ -251,9 +247,6 @@ function(add_compiler_rt_runtime name type)
       target_link_libraries(${libname} ${LIB_LINK_LIBS})
     endif()
     if(${type} STREQUAL "SHARED")
-      if(COMMAND llvm_setup_rpath)
-        llvm_setup_rpath(${libname})
-      endif()
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
@@ -438,7 +431,7 @@ endfunction()
 
 macro(add_compiler_rt_resource_file target_name file_name component)
   set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
-  set(dst_file "${COMPILER_RT_OUTPUT_DIR}/share/${file_name}")
+  set(dst_file "${COMPILER_RT_OUTPUT_DIR}/${file_name}")
   add_custom_command(OUTPUT ${dst_file}
     DEPENDS ${src_file}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
@@ -446,7 +439,7 @@ macro(add_compiler_rt_resource_file target_name file_name component)
   add_custom_target(${target_name} DEPENDS ${dst_file})
   # Install in Clang resource directory.
   install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_PATH}/share
+    DESTINATION ${COMPILER_RT_INSTALL_PATH}
     COMPONENT ${component})
   add_dependencies(${component} ${target_name})
 
@@ -470,121 +463,53 @@ endmacro(add_compiler_rt_script src name)
 # Can be used to build sanitized versions of libc++ for running unit tests.
 # add_custom_libcxx(<name> <prefix>
 #                   DEPS <list of build deps>
-#                   CFLAGS <list of compile flags>
-#                   USE_TOOLCHAIN)
+#                   CFLAGS <list of compile flags>)
 macro(add_custom_libcxx name prefix)
   if(NOT COMPILER_RT_LIBCXX_PATH)
     message(FATAL_ERROR "libcxx not found!")
   endif()
 
-  cmake_parse_arguments(LIBCXX "USE_TOOLCHAIN" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
-
-  if(LIBCXX_USE_TOOLCHAIN)
-    set(compiler_args -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
-                      -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_CXX_COMPILER})
-    if(NOT COMPILER_RT_STANDALONE_BUILD)
-      set(toolchain_deps $<TARGET_FILE:clang>)
-      set(force_deps DEPENDS $<TARGET_FILE:clang>)
-    endif()
-  else()
-    set(compiler_args -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER})
-  endif()
-
-  set(STAMP_DIR ${prefix}-stamps/)
-  set(BINARY_DIR ${prefix}-bins/)
-
-  add_custom_target(${name}-clear
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${STAMP_DIR}
-    COMMENT "Clobbering ${name} build and stamp directories"
-    USES_TERMINAL
-    )
-
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
-    DEPENDS ${LIBCXX_DEPS} ${toolchain_deps}
-    COMMAND ${CMAKE_COMMAND} -E touch ${BINARY_DIR}/CMakeCache.txt
-    COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_DIR}/${name}-mkdir
-    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
-    COMMENT "Clobbering bootstrap build and stamp directories"
-    )
-
-  add_custom_target(${name}-clobber
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
-
-  set(PASSTHROUGH_VARIABLES
-    CMAKE_C_COMPILER_TARGET
-    CMAKE_CXX_COMPILER_TARGET
-    CMAKE_INSTALL_PREFIX
-    CMAKE_MAKE_PROGRAM
-    CMAKE_LINKER
-    CMAKE_AR
-    CMAKE_RANLIB
-    CMAKE_NM
-    CMAKE_OBJCOPY
-    CMAKE_OBJDUMP
-    CMAKE_STRIP
-    CMAKE_SYSROOT
-    CMAKE_SYSTEM_NAME)
-  foreach(variable ${PASSTHROUGH_VARIABLES})
-    if(${variable})
-      list(APPEND CMAKE_PASSTHROUGH_VARIABLES -D${variable}=${${variable}})
-    endif()
+  cmake_parse_arguments(LIBCXX "" "" "DEPS;CFLAGS;CMAKE_ARGS" ${ARGN})
+  foreach(flag ${LIBCXX_CFLAGS})
+    set(flagstr "${flagstr} ${flag}")
   endforeach()
+  set(LIBCXX_CFLAGS ${flagstr})
 
-  string(REPLACE ";" " " FLAGS_STRING "${LIBCXX_CFLAGS}")
-  set(LIBCXX_C_FLAGS "${FLAGS_STRING}")
-  set(LIBCXX_CXX_FLAGS "${FLAGS_STRING}")
+  if(NOT COMPILER_RT_STANDALONE_BUILD)
+    list(APPEND LIBCXX_DEPS clang)
+  endif()
 
   ExternalProject_Add(${name}
-    DEPENDS ${name}-clobber ${LIBCXX_DEPS}
     PREFIX ${prefix}
     SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
-    STAMP_DIR ${STAMP_DIR}
-    BINARY_DIR ${BINARY_DIR}
-    CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
-               ${compiler_args}
-               -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
-               -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
+    CMAKE_ARGS -DCMAKE_MAKE_PROGRAM:STRING=${CMAKE_MAKE_PROGRAM}
+               -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
+               -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_CXX_COMPILER}
+               -DCMAKE_C_FLAGS=${LIBCXX_CFLAGS}
+               -DCMAKE_CXX_FLAGS=${LIBCXX_CFLAGS}
                -DCMAKE_BUILD_TYPE=Release
+               -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
-               -DLLVM_BINARY_DIR=${prefix}
-               -DLLVM_LIBRARY_OUTPUT_INTDIR=${prefix}/lib
-               -DLIBCXX_STANDALONE_BUILD=ON
+               -DLIBCXX_STANDALONE_BUILD=On
                ${LIBCXX_CMAKE_ARGS}
-    INSTALL_COMMAND ""
-    STEP_TARGETS configure build
-    BUILD_ALWAYS 1
-    USES_TERMINAL_CONFIGURE 1
-    USES_TERMINAL_BUILD 1
-    USES_TERMINAL_INSTALL 1
-    EXCLUDE_FROM_ALL TRUE
+    LOG_BUILD 1
+    LOG_CONFIGURE 1
+    LOG_INSTALL 1
+    )
+  set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+  ExternalProject_Add_Step(${name} force-reconfigure
+    DEPENDERS configure
+    ALWAYS 1
     )
 
-  if (CMAKE_GENERATOR MATCHES "Make")
-    set(run_clean "$(MAKE)" "-C" "${BINARY_DIR}" "clean")
-  else()
-    set(run_clean ${CMAKE_COMMAND} --build ${BINARY_DIR} --target clean
-                                   --config "$<CONFIGURATION>")
-  endif()
-
-  ExternalProject_Add_Step(${name} clean
-    COMMAND ${run_clean}
-    COMMENT "Cleaning ${name}..."
-    DEPENDEES configure
-    ${force_deps}
-    WORKING_DIRECTORY ${BINARY_DIR}
-    EXCLUDE_FROM_MAIN 1
-    USES_TERMINAL 1
+  ExternalProject_Add_Step(${name} clobber
+    COMMAND ${CMAKE_COMMAND} -E remove_directory <BINARY_DIR>
+    COMMAND ${CMAKE_COMMAND} -E make_directory <BINARY_DIR>
+    COMMENT "Clobberring ${name} build directory..."
+    DEPENDERS configure
+    DEPENDS ${LIBCXX_DEPS}
     )
-  ExternalProject_Add_StepTargets(${name} clean)
-
-  if(LIBCXX_USE_TOOLCHAIN)
-    add_dependencies(${name}-clean ${name}-clobber)
-    set_target_properties(${name}-clean PROPERTIES
-      SOURCES ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
-  endif()
 endmacro()
 
 function(rt_externalize_debuginfo name)

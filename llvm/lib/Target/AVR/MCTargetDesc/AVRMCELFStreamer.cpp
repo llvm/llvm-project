@@ -17,7 +17,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCObjectWriter.h"
 
 using namespace llvm;
 
@@ -44,10 +43,9 @@ void AVRMCELFStreamer::EmitValueForModiferKind(
 namespace llvm {
 MCStreamer *createAVRELFStreamer(Triple const &TT, MCContext &Context,
                                  std::unique_ptr<MCAsmBackend> MAB,
-                                 std::unique_ptr<MCObjectWriter> OW,
+                                 raw_pwrite_stream &OS,
                                  std::unique_ptr<MCCodeEmitter> CE) {
-  return new AVRMCELFStreamer(Context, std::move(MAB), std::move(OW),
-                              std::move(CE));
+  return new AVRMCELFStreamer(Context, std::move(MAB), OS, std::move(CE));
 }
 
 } // end namespace llvm

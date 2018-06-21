@@ -31,7 +31,7 @@ namespace cxindex {
 class Logger;
 typedef IntrusiveRefCntPtr<Logger> LogRef;
 
-/// Collects logging output and writes it to stderr when it's destructed.
+/// \brief Collects logging output and writes it to stderr when it's destructed.
 /// Common use case:
 /// \code
 ///   if (LogRef Log = Logger::make(__func__)) {
@@ -90,7 +90,7 @@ public:
 }
 }
 
-/// Macros to automate common uses of Logger. Like this:
+/// \brief Macros to automate common uses of Logger. Like this:
 /// \code
 ///   LOG_FUNC_SECTION {
 ///     *Log << "blah";

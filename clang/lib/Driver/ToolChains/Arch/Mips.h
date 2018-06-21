@@ -53,7 +53,6 @@ bool isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
 bool shouldUseFPXX(const llvm::opt::ArgList &Args, const llvm::Triple &Triple,
                    StringRef CPUName, StringRef ABIName,
                    mips::FloatABI FloatABI);
-bool supportsIndirectJumpHazardBarrier(StringRef &CPU);
 
 } // end namespace mips
 } // end namespace target

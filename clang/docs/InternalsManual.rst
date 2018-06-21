@@ -54,7 +54,7 @@ number of source ranges that related to the diagnostic.
 
 In this section, we'll be giving examples produced by the Clang command line
 driver, but diagnostics can be :ref:`rendered in many different ways
-<DiagnosticConsumer>` depending on how the ``DiagnosticConsumer`` interface is
+<DiagnosticClient>` depending on how the ``DiagnosticClient`` interface is
 implemented.  A representative example of a diagnostic is:
 
 .. code-block:: text
@@ -188,7 +188,7 @@ Formatting a Diagnostic Argument
 Arguments to diagnostics are fully typed internally, and come from a couple
 different classes: integers, types, names, and random strings.  Depending on
 the class of the argument, it can be optionally formatted in different ways.
-This gives the ``DiagnosticConsumer`` information about what the argument means
+This gives the ``DiagnosticClient`` information about what the argument means
 without requiring it to use a specific presentation (consider this MVC for
 Clang :).
 
@@ -319,32 +319,6 @@ they should be discussed before they are added.  If you are creating a lot of
 repetitive diagnostics and/or have an idea for a useful formatter, please bring
 it up on the cfe-dev mailing list.
 
-**"sub" format**
-
-Example:
-  Given the following record definition of type ``TextSubstitution``:
-
-  .. code-block:: text
-
-    def select_ovl_candidate : TextSubstitution<
-      "%select{function|constructor}0%select{| template| %2}1">;
-
-  which can be used as
-
-  .. code-block:: text
-
-    def note_ovl_candidate : Note<
-      "candidate %sub{select_ovl_candidate}3,2,1 not viable">;
-
-  and will act as if it was written
-  ``"candidate %select{function|constructor}3%select{| template| %1}2 not viable"``.
-Description:
-  This format specifier is used to avoid repeating strings verbatim in multiple
-  diagnostics. The argument to ``%sub`` must name a ``TextSubstitution`` tblgen
-  record. The substitution must specify all arguments used by the substitution,
-  and the modifier indexes in the substitution are re-numbered accordingly. The
-  substituted text must itself be a valid format string before substitution.
-
 .. _internals-producing-diag:
 
 Producing the Diagnostic
@@ -413,7 +387,7 @@ exactly where those parentheses would be inserted into the source code.  The
 fix-it hints themselves describe what changes to make to the source code in an
 abstract manner, which the text diagnostic printer renders as a line of
 "insertions" below the caret line.  :ref:`Other diagnostic clients
-<DiagnosticConsumer>` might choose to render the code differently (e.g., as
+<DiagnosticClient>` might choose to render the code differently (e.g., as
 markup inline) or even give the user the ability to automatically fix the
 problem.
 
@@ -446,26 +420,26 @@ Fix-it hints can be created with one of three constructors:
     Specifies that the code in the given source ``Range`` should be removed,
     and replaced with the given ``Code`` string.
 
-.. _DiagnosticConsumer:
+.. _DiagnosticClient:
 
-The ``DiagnosticConsumer`` Interface
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``DiagnosticClient`` Interface
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Once code generates a diagnostic with all of the arguments and the rest of the
 relevant information, Clang needs to know what to do with it.  As previously
 mentioned, the diagnostic machinery goes through some filtering to map a
 severity onto a diagnostic level, then (assuming the diagnostic is not mapped
-to "``Ignore``") it invokes an object that implements the ``DiagnosticConsumer``
+to "``Ignore``") it invokes an object that implements the ``DiagnosticClient``
 interface with the information.
 
 It is possible to implement this interface in many different ways.  For
-example, the normal Clang ``DiagnosticConsumer`` (named
+example, the normal Clang ``DiagnosticClient`` (named
 ``TextDiagnosticPrinter``) turns the arguments into strings (according to the
 various formatting rules), prints out the file/line/column information and the
 string, then prints out the line of code, the source ranges, and the caret.
 However, this behavior isn't required.
 
-Another implementation of the ``DiagnosticConsumer`` interface is the
+Another implementation of the ``DiagnosticClient`` interface is the
 ``TextDiagnosticBuffer`` class, which is used when Clang is in ``-verify``
 mode.  Instead of formatting and printing out the diagnostics, this
 implementation just captures and remembers the diagnostics as they fly by.

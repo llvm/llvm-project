@@ -17,7 +17,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; GENERIC-NEXT:    popcntw (%rsi), %cx # sched: [9:1.00]
 ; GENERIC-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
+; GENERIC-NEXT:    # kill: def %ax killed %ax killed %eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SLM-LABEL: test_ctpop_i16:
@@ -25,7 +25,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; SLM-NEXT:    popcntw (%rsi), %cx # sched: [6:1.00]
 ; SLM-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; SLM-NEXT:    orl %ecx, %eax # sched: [1:0.50]
-; SLM-NEXT:    # kill: def $ax killed $ax killed $eax
+; SLM-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SLM-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: test_ctpop_i16:
@@ -33,7 +33,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; SANDY-NEXT:    popcntw (%rsi), %cx # sched: [9:1.00]
 ; SANDY-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; SANDY-NEXT:    orl %ecx, %eax # sched: [1:0.33]
-; SANDY-NEXT:    # kill: def $ax killed $ax killed $eax
+; SANDY-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_ctpop_i16:
@@ -41,7 +41,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; HASWELL-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
 ; HASWELL-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; HASWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; HASWELL-NEXT:    # kill: def $ax killed $ax killed $eax
+; HASWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_ctpop_i16:
@@ -49,7 +49,7 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; BROADWELL-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
 ; BROADWELL-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; BROADWELL-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; BROADWELL-NEXT:    # kill: def $ax killed $ax killed $eax
+; BROADWELL-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_ctpop_i16:
@@ -57,23 +57,23 @@ define i16 @test_ctpop_i16(i16 zeroext %a0, i16 *%a1) {
 ; SKYLAKE-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
 ; SKYLAKE-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; SKYLAKE-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; SKYLAKE-NEXT:    # kill: def $ax killed $ax killed $eax
+; SKYLAKE-NEXT:    # kill: def %ax killed %ax killed %eax
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BTVER2-LABEL: test_ctpop_i16:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    popcntw (%rsi), %cx # sched: [4:1.00]
-; BTVER2-NEXT:    popcntw %di, %ax # sched: [1:0.50]
+; BTVER2-NEXT:    popcntw (%rsi), %cx # sched: [8:1.00]
+; BTVER2-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
-; BTVER2-NEXT:    # kill: def $ax killed $ax killed $eax
+; BTVER2-NEXT:    # kill: def %ax killed %ax killed %eax
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ctpop_i16:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    popcntw (%rsi), %cx # sched: [5:0.50]
-; ZNVER1-NEXT:    popcntw %di, %ax # sched: [1:0.25]
+; ZNVER1-NEXT:    popcntw (%rsi), %cx # sched: [10:1.00]
+; ZNVER1-NEXT:    popcntw %di, %ax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
-; ZNVER1-NEXT:    # kill: def $ax killed $ax killed $eax
+; ZNVER1-NEXT:    # kill: def %ax killed %ax killed %eax
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i16, i16 *%a1
   %2 = tail call i16 @llvm.ctpop.i16( i16 %1 )
@@ -128,15 +128,15 @@ define i32 @test_ctpop_i32(i32 %a0, i32 *%a1) {
 ;
 ; BTVER2-LABEL: test_ctpop_i32:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    popcntl (%rsi), %ecx # sched: [4:1.00]
-; BTVER2-NEXT:    popcntl %edi, %eax # sched: [1:0.50]
+; BTVER2-NEXT:    popcntl (%rsi), %ecx # sched: [8:1.00]
+; BTVER2-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; BTVER2-NEXT:    orl %ecx, %eax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ctpop_i32:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    popcntl (%rsi), %ecx # sched: [5:0.50]
-; ZNVER1-NEXT:    popcntl %edi, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    popcntl (%rsi), %ecx # sched: [10:1.00]
+; ZNVER1-NEXT:    popcntl %edi, %eax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i32, i32 *%a1
@@ -192,15 +192,15 @@ define i64 @test_ctpop_i64(i64 %a0, i64 *%a1) {
 ;
 ; BTVER2-LABEL: test_ctpop_i64:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    popcntq (%rsi), %rcx # sched: [4:1.00]
-; BTVER2-NEXT:    popcntq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    popcntq (%rsi), %rcx # sched: [8:1.00]
+; BTVER2-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; BTVER2-NEXT:    orq %rcx, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_ctpop_i64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    popcntq (%rsi), %rcx # sched: [5:0.50]
-; ZNVER1-NEXT:    popcntq %rdi, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    popcntq (%rsi), %rcx # sched: [10:1.00]
+; ZNVER1-NEXT:    popcntq %rdi, %rax # sched: [3:1.00]
 ; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
   %1 = load i64, i64 *%a1

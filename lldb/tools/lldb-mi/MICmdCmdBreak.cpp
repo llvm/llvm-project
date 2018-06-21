@@ -148,11 +148,6 @@ bool CMICmdCmdBreakInsert::Execute() {
   CMICMDBASE_GETOPTION(pArgRestrictBrkPtToThreadId, OptionShort,
                        m_constStrArgNamedRestrictBrkPtToThreadId);
 
-  // Ask LLDB for the target to check if we have valid or dummy one.
-  CMICmnLLDBDebugSessionInfo &rSessionInfo(
-      CMICmnLLDBDebugSessionInfo::Instance());
-  lldb::SBTarget sbTarget = rSessionInfo.GetTarget();
-
   m_bBrkPtEnabled = !pArgDisableBrkPt->GetFound();
   m_bBrkPtIsTemp = pArgTempBrkPt->GetFound();
   m_bHaveArgOptionThreadGrp = pArgThreadGroup->GetFound();
@@ -162,12 +157,7 @@ bool CMICmdCmdBreakInsert::Execute() {
         nThreadGrp);
     m_strArgOptionThreadGrp = CMIUtilString::Format("i%d", nThreadGrp);
   }
-
-  if (sbTarget == rSessionInfo.GetDebugger().GetDummyTarget())
-    m_bBrkPtIsPending = true;
-  else
-    m_bBrkPtIsPending = pArgPendingBrkPt->GetFound();
-
+  m_bBrkPtIsPending = pArgPendingBrkPt->GetFound();
   if (pArgLocation->GetFound())
     m_brkName = pArgLocation->GetValue();
   else if (m_bBrkPtIsPending) {
@@ -235,6 +225,9 @@ bool CMICmdCmdBreakInsert::Execute() {
 
   // Ask LLDB to create a breakpoint
   bool bOk = MIstatus::success;
+  CMICmnLLDBDebugSessionInfo &rSessionInfo(
+      CMICmnLLDBDebugSessionInfo::Instance());
+  lldb::SBTarget sbTarget = rSessionInfo.GetTarget();
   switch (eBrkPtType) {
   case eBreakPoint_ByAddress:
     m_brkPt = sbTarget.BreakpointCreateByAddress(nAddress);

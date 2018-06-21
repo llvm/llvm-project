@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=arm-apple-ios -run-pass=if-converter %s -o - | FileCheck %s
+--- |
+  declare void @__stack_chk_fail()
+  declare void @bar()
+
+  define void @foo() {
+    ret void
+  }
+...
+---
+name:            foo
+body:             |
+
+  bb.0:
+    Bcc %bb.1, 1, %cpsr
+    B %bb.2
+
+  bb.1:
+    Bcc %bb.3, 0, %cpsr
+
+  bb.2:
+  successors:
+    tBL 14, %cpsr, @__stack_chk_fail
+
+  bb.3:
+  successors:
+    %sp = tADDspi %sp, 2, 14, _
+    %sp = tADDspi %sp, 2, 14, _
+    tTAILJMPdND @bar, 14, %cpsr
+...
+
+# bb.2 has no successors, presumably because __stack_chk_fail doesn't return,
+# so there should be no edge from bb.2 to bb.3.
+# Nevertheless, IfConversion treats bb.1, bb.2, bb.3 as a triangle and
+# inserts a predicated copy of bb.2 in bb.1.
+
+# This caused r302876 to die with a failed assertion.
+
+# CHECK:     bb.0:
+# CHECK:       successors: %bb.2(0x40000000), %bb.1(0x40000000)
+# CHECK:       Bcc %bb.2, 1, %cpsr
+
+# CHECK:     bb.1:
+# CHECK-NOT:   successors: %bb
+# CHECK:       tBL 14, %cpsr, @__stack_chk_fail
+
+# CHECK:     bb.2:
+# CHECK-NOT:   successors: %bb
+# CHECK:       tBL 1, %cpsr, @__stack_chk_fail
+# CHECK:       %sp = tADDspi %sp, 2, 14, %noreg
+# CHECK:       %sp = tADDspi %sp, 2, 14, %noreg
+# CHECK:       tTAILJMPdND @bar, 14, %cpsr

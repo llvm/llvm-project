@@ -33,6 +33,7 @@ class LaunchInTerminalTestCase(TestBase):
         'TERM_PROGRAM' in os.environ,
         "test must be run on local system")
     @no_debug_info_test
+    @expectedFailureDarwin("rdar://23590073")
     def test_launch_in_terminal(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

@@ -1,0 +1,65 @@
+# RUN: llc -mtriple=arm-apple-ios -o - %s -run-pass if-converter | FileCheck %s
+---
+name:            f1
+body:             |
+  bb.0:
+    successors: %bb.1
+
+    B %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.4
+
+    Bcc %bb.4, 1, %cpsr
+
+  bb.2:
+    successors: %bb.3, %bb.5
+
+    Bcc %bb.5, 1, %cpsr
+
+  bb.3:
+    successors: %bb.5
+
+    B %bb.5
+
+  bb.4:
+    successors:
+
+  bb.5:
+    successors: %bb.1, %bb.6
+
+    Bcc %bb.1, 1, %cpsr
+
+  bb.6:
+    BX_RET 14, _
+
+...
+
+# IfConversion.cpp/canFallThroughTo thought there was a fallthrough from
+# bb.4 to bb5 even if the successor list was empty.
+# bb.4 is empty, so it surely looks like it can fallthrough, but this is what
+# happens for a bb just containing an "unreachable".
+
+#CHECK: body:             |
+#CHECK:   bb.0:
+#CHECK:     successors: %bb.1
+
+#CHECK:   bb.1:
+#CHECK:     successors: %bb.3({{.*}}), %bb.2
+
+# The original brr_cond from bb.1, jumping to the empty bb
+#CHECK:     Bcc %bb.2
+#CHECK:     B %bb.3
+
+# Empty bb.2, originally containing "unreachable" and thus has no successors
+# and we cannot guess them: we should print an empty list of successors.
+#CHECK:   bb.2:
+#CHECK: successors:{{ *$}}
+
+#CHECK:   bb.3:
+#CHECK:     successors: %bb.1
+
+# Conditional BX_RET and then loop back to bb.1
+#CHECK:     BX_RET 0
+#CHECK:     B %bb.1
+

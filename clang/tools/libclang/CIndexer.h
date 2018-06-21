@@ -52,7 +52,7 @@ public:
         Options(CXGlobalOpt_None), PCHContainerOps(std::move(PCHContainerOps)) {
   }
 
-  /// Whether we only want to see "local" declarations (that did not
+  /// \brief Whether we only want to see "local" declarations (that did not
   /// come from a previous precompiled header). If false, we want to see all
   /// declarations.
   bool getOnlyLocalDecls() const { return OnlyLocalDecls; }
@@ -74,7 +74,7 @@ public:
     return Options & opt;
   }
 
-  /// Get the path of the clang resource files.
+  /// \brief Get the path of the clang resource files.
   const std::string &getClangResourcesPath();
 
   StringRef getClangToolchainPath();
@@ -103,47 +103,47 @@ private:
   std::string File;
 };
 
-  /// Return the current size to request for "safety".
+  /// \brief Return the current size to request for "safety".
   unsigned GetSafetyThreadStackSize();
 
-  /// Set the current size to request for "safety" (or 0, if safety
+  /// \brief Set the current size to request for "safety" (or 0, if safety
   /// threads should not be used).
   void SetSafetyThreadStackSize(unsigned Value);
 
-  /// Execution the given code "safely", using crash recovery or safety
+  /// \brief Execution the given code "safely", using crash recovery or safety
   /// threads when possible.
   ///
   /// \return False if a crash was detected.
   bool RunSafely(llvm::CrashRecoveryContext &CRC, llvm::function_ref<void()> Fn,
                  unsigned Size = 0);
 
-  /// Set the thread priority to background.
+  /// \brief Set the thread priority to background.
   /// FIXME: Move to llvm/Support.
   void setThreadBackgroundPriority();
 
-  /// Print libclang's resource usage to standard error.
+  /// \brief Print libclang's resource usage to standard error.
   void PrintLibclangResourceUsage(CXTranslationUnit TU);
 
   namespace cxindex {
     void printDiagsToStderr(ASTUnit *Unit);
 
-    /// If \c MacroDefLoc points at a macro definition with \c II as
+    /// \brief If \c MacroDefLoc points at a macro definition with \c II as
     /// its name, this retrieves its MacroInfo.
     MacroInfo *getMacroInfo(const IdentifierInfo &II,
                             SourceLocation MacroDefLoc, CXTranslationUnit TU);
 
-    /// Retrieves the corresponding MacroInfo of a MacroDefinitionRecord.
+    /// \brief Retrieves the corresponding MacroInfo of a MacroDefinitionRecord.
     const MacroInfo *getMacroInfo(const MacroDefinitionRecord *MacroDef,
                                   CXTranslationUnit TU);
 
-    /// If \c Loc resides inside the definition of \c MI and it points at
+    /// \brief If \c Loc resides inside the definition of \c MI and it points at
     /// an identifier that has ever been a macro name, this returns the latest
     /// MacroDefinitionRecord for that name, otherwise it returns NULL.
     MacroDefinitionRecord *checkForMacroInMacroDefinition(const MacroInfo *MI,
                                                           SourceLocation Loc,
                                                           CXTranslationUnit TU);
 
-    /// If \c Tok resides inside the definition of \c MI and it points at
+    /// \brief If \c Tok resides inside the definition of \c MI and it points at
     /// an identifier that has ever been a macro name, this returns the latest
     /// MacroDefinitionRecord for that name, otherwise it returns NULL.
     MacroDefinitionRecord *checkForMacroInMacroDefinition(const MacroInfo *MI,

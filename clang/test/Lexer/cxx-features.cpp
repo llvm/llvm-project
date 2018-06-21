@@ -1,26 +1,23 @@
 // RUN: %clang_cc1 -std=c++98 -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -fcxx-exceptions -verify %s
+// RUN: %clang_cc1 -std=c++1y -fcxx-exceptions -fsized-deallocation -verify %s
 // RUN: %clang_cc1 -std=c++14 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -verify %s
-// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fsized-deallocation -verify %s
-//
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -frelaxed-template-template-args -DRELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -verify %s
+// RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
 // RUN: %clang_cc1 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS -fsized-deallocation
 // RUN: %clang_cc1 -fcoroutines-ts -DNO_EXCEPTIONS -DCOROUTINES -verify -fsized-deallocation %s
-// RUN: %clang_cc1 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify -fsized-deallocation %s
 
 // expected-no-diagnostics
 
 // FIXME using `defined` in a macro has undefined behavior.
 #if __cplusplus < 201103L
-#define check(macro, cxx98, cxx11, cxx14, cxx17) cxx98 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx98
+#define check(macro, cxx98, cxx11, cxx14, cxx1z) cxx98 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx98
 #elif __cplusplus < 201402L
-#define check(macro, cxx98, cxx11, cxx14, cxx17) cxx11 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx11
+#define check(macro, cxx98, cxx11, cxx14, cxx1z) cxx11 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx11
 #elif __cplusplus < 201406L
-#define check(macro, cxx98, cxx11, cxx14, cxx17) cxx14 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx14
+#define check(macro, cxx98, cxx11, cxx14, cxx1z) cxx14 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx14
 #else
-#define check(macro, cxx98, cxx11, cxx14, cxx17) cxx17 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx17
+#define check(macro, cxx98, cxx11, cxx14, cxx1z) cxx1z == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx1z
 #endif
 
 // --- C++17 features ---
@@ -35,10 +32,6 @@
 
 #if check(aligned_new, 0, 0, 0, 201606)
 #error "wrong value for __cpp_aligned_new"
-#endif
-
-#if check(guaranteed_copy_elision, 0, 0, 0, 201606)
-#error "wrong value for __cpp_guaranteed_copy_elision"
 #endif
 
 #if check(noexcept_function_type, 0, 0, 0, 201510)
@@ -63,16 +56,10 @@
 
 // static_assert checked below
 
-#if check(deduction_guides, 0, 0, 0, 201703)
+#if check(deduction_guides, 0, 0, 0, 201611)
 #error "wrong value for __cpp_deduction_guides"
 #endif
 
-#if check(nontype_template_parameter_auto, 0, 0, 0, 201606)
-#error "wrong value for __cpp_nontype_template_parameter_auto"
-#endif
-
-// This is the old name (from P0096R4) for
-// __cpp_nontype_template_parameter_auto
 #if check(template_auto, 0, 0, 0, 201606)
 #error "wrong value for __cpp_template_auto"
 #endif
@@ -87,7 +74,6 @@
 #error "wrong value for __cpp_enumerator_attributes"
 #endif
 
-// This is an old name (from P0096R4), now removed from SD-6.
 #if check(nested_namespace_definitions, 0, 0, 0, 201411)
 #error "wrong value for __cpp_nested_namespace_definitions"
 #endif
@@ -110,9 +96,7 @@
 #error "wrong value for __cpp_nontype_template_args"
 #endif
 
-#if defined(RELAXED_TEMPLATE_TEMPLATE_ARGS) \
-    ? check(template_template_args, 0, 0, 0, 201611) \
-    : check(template_template_args, 0, 0, 0, 0)
+#if check(template_template_args, 0, 0, 0, 0) // FIXME: should be 201611 when feature is enabled
 #error "wrong value for __cpp_template_template_args"
 #endif
 
@@ -257,10 +241,4 @@
 
 #if defined(COROUTINES) ? check(coroutines, 201703L, 201703L, 201703L, 201703L) : check(coroutines, 0, 0, 0, 0)
 #error "wrong value for __cpp_coroutines"
-#endif
-
-// --- not-yet-standard features --
-
-#if defined(CHAR8_T) ? check(char8_t, 201803, 201803, 201803, 201803) : check(char8_t, 0, 0, 0, 0)
-#error "wrong value for __cpp_char8_t"
 #endif

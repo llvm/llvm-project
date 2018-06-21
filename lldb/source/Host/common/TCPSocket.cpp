@@ -26,11 +26,11 @@
 #include <sys/socket.h>
 #endif
 
-#if defined(_WIN32)
+#if defined(LLVM_ON_WIN32)
 #include <winsock2.h>
 #endif
 
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
 #define CLOSE_SOCKET closesocket
 typedef const char *set_socket_option_arg_type;
 #else

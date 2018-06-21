@@ -51,10 +51,9 @@ try.cont:
 ; CHECK-LABEL: .Lexception0:
 ; CHECK:   .byte 255                     @ @LPStart Encoding = omit
 ; CHECK:   .byte 0                       @ @TType Encoding = absptr
-; CHECK:   .uleb128 .Lttbase
-; CHECK:   .byte 1                       @ Call site Encoding = uleb128
-; CHECK:   .uleb128 .Lcst_end
-; CHECK:   .uleb128
-; CHECK:   .uleb128
-; CHECK:   .uleb128
+; CHECK:   .asciz
+; CHECK:   .byte 3                       @ Call site Encoding = udata4
+; CHECK:   .long
+; CHECK:   .long
+; CHECK:   .long
 ; CHECK:   .fnend

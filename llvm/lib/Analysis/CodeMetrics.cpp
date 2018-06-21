@@ -61,7 +61,7 @@ static void completeEphemeralValues(SmallPtrSetImpl<const Value *> &Visited,
       continue;
 
     EphValues.insert(V);
-    LLVM_DEBUG(dbgs() << "Ephemeral Value: " << *V << "\n");
+    DEBUG(dbgs() << "Ephemeral Value: " << *V << "\n");
 
     // Append any more operands to consider.
     appendSpeculatableOperands(V, Visited, Worklist);

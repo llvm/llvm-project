@@ -502,8 +502,6 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     }
 
     FunctionInfo &FI = FunctionInfos[F];
-    Handles.emplace_front(*this, F);
-    Handles.front().I = Handles.begin();
     bool KnowNothing = false;
 
     // Collect the mod/ref properties due to called functions.  We only compute
@@ -584,10 +582,6 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
           } else if (Function *Callee = CS.getCalledFunction()) {
             // The callgraph doesn't include intrinsic calls.
             if (Callee->isIntrinsic()) {
-              if (isa<DbgInfoIntrinsic>(I))
-                // Don't let dbg intrinsics affect alias info.
-                continue;
-
               FunctionModRefBehavior Behaviour =
                   AAResultBase::getModRefBehavior(Callee);
               FI.addModRefInfo(createModRefInfo(Behaviour));

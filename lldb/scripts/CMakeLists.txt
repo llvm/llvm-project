@@ -32,10 +32,21 @@ endif()
 
 get_filename_component(CFGBLDDIR ${LLDB_WRAP_PYTHON} DIRECTORY)
 
-find_package(SWIG REQUIRED)
+find_package(SWIG)
+if( ${SWIG_FOUND} )
+  set(PREPARE_BINDINGS_ARGS
+    "--swig-executable=${SWIG_EXECUTABLE}")
+elseif( ${LLDB_ALLOW_STATIC_BINDINGS} )
+  set(PREPARE_BINDINGS_ARGS
+    --find-swig
+    --allow-static-binding)
+else()
+    message( FATAL_ERROR "swig not found and static bindings not permitted - install swig or specify -DLLDB_ALLOW_STATIC_BINDINGS=1")
+endif()
+
 add_custom_command(
   OUTPUT ${LLDB_WRAP_PYTHON}
-  OUTPUT ${LLDB_PYTHON_TARGET_DIR}/lldb.py
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lldb.py
   DEPENDS ${SWIG_SOURCES}
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
@@ -47,7 +58,7 @@ add_custom_command(
       --targetDir=${LLDB_PYTHON_TARGET_DIR}
       --cfgBldDir=${CFGBLDDIR}
       --prefix=${CMAKE_BINARY_DIR}
-      --swigExecutable=${SWIG_EXECUTABLE}
+      ${PREPARE_BINDINGS_ARGS}
   VERBATIM
   COMMENT "Python script building LLDB Python wrapper")
 add_custom_target(swig_wrapper ALL DEPENDS ${LLDB_WRAP_PYTHON})

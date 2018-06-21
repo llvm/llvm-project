@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file describes the various WebAssembly ISD node types.
+/// \brief This file describes the various WebAssembly ISD node types.
 ///
 //===----------------------------------------------------------------------===//
 

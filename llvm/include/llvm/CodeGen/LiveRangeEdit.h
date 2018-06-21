@@ -117,12 +117,9 @@ private:
   /// registers are created.
   void MRI_NoteNewVirtualRegister(unsigned VReg) override;
 
-  /// Check if MachineOperand \p MO is a last use/kill either in the
+  /// \brief Check if MachineOperand \p MO is a last use/kill either in the
   /// main live range of \p LI or in one of the matching subregister ranges.
   bool useIsKill(const LiveInterval &LI, const MachineOperand &MO) const;
-
-  /// Create a new empty interval based on OldReg.
-  LiveInterval &createEmptyIntervalFrom(unsigned OldReg, bool createSubRanges);
 
 public:
   /// Create a LiveRangeEdit for breaking down parent into smaller pieces.
@@ -177,13 +174,16 @@ public:
     return makeArrayRef(NewRegs).slice(FirstNew);
   }
 
+  /// createEmptyIntervalFrom - Create a new empty interval based on OldReg.
+  LiveInterval &createEmptyIntervalFrom(unsigned OldReg);
+
   /// createFrom - Create a new virtual register based on OldReg.
   unsigned createFrom(unsigned OldReg);
 
   /// create - Create a new register with the same class and original slot as
   /// parent.
   LiveInterval &createEmptyInterval() {
-    return createEmptyIntervalFrom(getReg(), true);
+    return createEmptyIntervalFrom(getReg());
   }
 
   unsigned create() { return createFrom(getReg()); }
@@ -231,6 +231,12 @@ public:
   /// didRematerialize - Return true if ParentVNI was rematerialized anywhere.
   bool didRematerialize(const VNInfo *ParentVNI) const {
     return Rematted.count(ParentVNI);
+  }
+
+  void markDeadRemat(MachineInstr *inst) {
+    // DeadRemats is an optional field.
+    if (DeadRemats)
+      DeadRemats->insert(inst);
   }
 
   /// eraseVirtReg - Notify the delegate that Reg is no longer in use, and try

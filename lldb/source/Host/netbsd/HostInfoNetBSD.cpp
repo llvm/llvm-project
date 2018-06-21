@@ -21,26 +21,30 @@
 
 using namespace lldb_private;
 
-llvm::VersionTuple HostInfoNetBSD::GetOSVersion() {
+bool HostInfoNetBSD::GetOSVersion(uint32_t &major, uint32_t &minor,
+                                  uint32_t &update) {
   struct utsname un;
 
   ::memset(&un, 0, sizeof(un));
   if (::uname(&un) < 0)
-    return llvm::VersionTuple();
+    return false;
 
   /* Accept versions like 7.99.21 and 6.1_STABLE */
-  uint32_t major, minor, update;
   int status = ::sscanf(un.release, "%" PRIu32 ".%" PRIu32 ".%" PRIu32, &major,
                         &minor, &update);
   switch (status) {
+  case 0:
+    return false;
   case 1:
-    return llvm::VersionTuple(major);
+    minor = 0;
+  /* FALLTHROUGH */
   case 2:
-    return llvm::VersionTuple(major, minor);
+    update = 0;
+  /* FALLTHROUGH */
   case 3:
-    return llvm::VersionTuple(major, minor, update);
+  default:
+    return true;
   }
-  return llvm::VersionTuple();
 }
 
 bool HostInfoNetBSD::GetOSBuildString(std::string &s) {
@@ -85,7 +89,7 @@ FileSpec HostInfoNetBSD::GetProgramFileSpec() {
 
     len = sizeof(path);
     if (sysctl(name, __arraycount(name), path, &len, NULL, 0) != -1) {
-      g_program_filespec.SetFile(path, false, FileSpec::Style::native);
+        g_program_filespec.SetFile(path, false);
     }
   }
   return g_program_filespec;

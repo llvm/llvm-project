@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
+#include "llvm/Transforms/InstrProfiling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -271,8 +271,8 @@ public:
         break;
     }
 
-    LLVM_DEBUG(dbgs() << Promoted << " counters promoted for loop (depth="
-                      << L.getLoopDepth() << ")\n");
+    DEBUG(dbgs() << Promoted << " counters promoted for loop (depth="
+                 << L.getLoopDepth() << ")\n");
     return Promoted != 0;
   }
 

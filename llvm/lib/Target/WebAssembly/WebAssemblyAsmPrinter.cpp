@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains a printer that converts from our internal
+/// \brief This file contains a printer that converts from our internal
 /// representation of machine-dependent LLVM code to the WebAssembly assembly
 /// language.
 ///
@@ -31,11 +31,10 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
@@ -54,7 +53,7 @@ MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
                 MVT::v4i32, MVT::v4f32})
     if (TRI->isTypeLegalForClass(*TRC, T))
       return T;
-  LLVM_DEBUG(errs() << "Unknown type for register number: " << RegNo);
+  DEBUG(errs() << "Unknown type for register number: " << RegNo);
   llvm_unreachable("Unknown register type");
   return MVT::Other;
 }
@@ -85,16 +84,8 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
       SmallVector<MVT, 4> Results;
       SmallVector<MVT, 4> Params;
       ComputeSignatureVTs(F, TM, Params, Results);
-      MCSymbol *Sym = getSymbol(&F);
-      getTargetStreamer()->emitIndirectFunctionType(Sym, Params, Results);
-
-      if (TM.getTargetTriple().isOSBinFormatWasm() &&
-          F.hasFnAttribute("wasm-import-module")) {
-        MCSymbolWasm *WasmSym = cast<MCSymbolWasm>(Sym);
-        StringRef Name = F.getFnAttribute("wasm-import-module")
-                             .getValueAsString();
-        getTargetStreamer()->emitImportModule(WasmSym, Name);
-      }
+      getTargetStreamer()->emitIndirectFunctionType(getSymbol(&F), Params,
+                                                    Results);
     }
   }
   for (const auto &G : M.globals()) {
@@ -106,26 +97,6 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
         OutStreamer->emitELFSize(getSymbol(&G),
                                  MCConstantExpr::create(Size, OutContext));
       }
-    }
-  }
-
-  if (const NamedMDNode *Named = M.getNamedMetadata("wasm.custom_sections")) {
-    for (const Metadata *MD : Named->operands()) {
-      const MDTuple *Tuple = dyn_cast<MDTuple>(MD);
-      if (!Tuple || Tuple->getNumOperands() != 2)
-        continue;
-      const MDString *Name = dyn_cast<MDString>(Tuple->getOperand(0));
-      const MDString *Contents = dyn_cast<MDString>(Tuple->getOperand(1));
-      if (!Name || !Contents)
-        continue;
-
-      OutStreamer->PushSection();
-      std::string SectionName = (".custom_section." + Name->getString()).str();
-      MCSectionWasm *mySection =
-          OutContext.getWasmSection(SectionName, SectionKind::getMetadata());
-      OutStreamer->SwitchSection(mySection);
-      OutStreamer->EmitBytes(Contents->getString());
-      OutStreamer->PopSection();
     }
   }
 }
@@ -191,7 +162,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyEnd() {
 }
 
 void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
-  LLVM_DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
+  DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
 
   switch (MI->getOpcode()) {
   case WebAssembly::ARGUMENT_I32:

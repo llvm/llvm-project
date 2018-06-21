@@ -1,4 +1,4 @@
-//===- ConstraintManager.cpp - Constraints on symbolic values. ------------===//
+//== ConstraintManager.cpp - Constraints on symbolic values -----*- C++ -*--==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,17 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
-#include "clang/AST/Type.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 
 using namespace clang;
 using namespace ento;
 
-ConstraintManager::~ConstraintManager() = default;
+ConstraintManager::~ConstraintManager() {}
 
 static DefinedSVal getLocFromSymbol(const ProgramStateRef &State,
                                     SymbolRef Sym) {
@@ -40,5 +35,5 @@ ConditionTruthVal ConstraintManager::checkNull(ProgramStateRef State,
     return ConditionTruthVal(false);
   if (!P.first && P.second)
     return ConditionTruthVal(true);
-  return {};
+  return ConditionTruthVal();
 }

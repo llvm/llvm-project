@@ -11,8 +11,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import subprocess
+import unittest2
 
 
+@unittest2.skip("skipping due to frequent timeouts: rdar://28183131")
 class SBBreakpointCallbackCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
@@ -101,8 +103,6 @@ class SBBreakpointCallbackCase(TestBase):
         exe = [test_exe, self.getBuildArtifact(self.inferior)]
 
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
-        if 'LLDB_DEBUGSERVER_PATH' in os.environ:
-            env['LLDB_DEBUGSERVER_PATH'] = os.environ['LLDB_DEBUGSERVER_PATH']
         if self.TraceOn():
             print("Running test %s" % " ".join(exe))
             check_call(exe, env=env)

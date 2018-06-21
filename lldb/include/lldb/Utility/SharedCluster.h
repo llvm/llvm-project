@@ -15,8 +15,6 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 
-#include <mutex>
-
 namespace lldb_private {
 
 namespace imp {
@@ -50,9 +48,9 @@ public:
       delete object;
     }
 
-    // Decrement refcount should have been called on this ClusterManager, and
-    // it should have locked the mutex, now we will unlock it before we destroy
-    // it...
+    // Decrement refcount should have been called on this ClusterManager,
+    // and it should have locked the mutex, now we will unlock it before
+    // we destroy it...
     m_mutex.unlock();
   }
 

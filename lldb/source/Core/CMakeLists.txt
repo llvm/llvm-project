@@ -57,6 +57,9 @@ add_lldb_library(lldbCore
   ValueObjectVariable.cpp
 
   LINK_LIBS
+    swiftBasic
+    swiftFrontend
+    swiftSerialization
     clangAST
     lldbBreakpoint
     lldbDataFormatters
@@ -69,6 +72,7 @@ add_lldb_library(lldbCore
     lldbPluginProcessUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
+    lldbPluginObjectFileJIT
     ${LLDB_CURSES_LIBS}
 
   LINK_COMPONENTS

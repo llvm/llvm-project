@@ -16,9 +16,9 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -207,7 +207,7 @@ public:
   ///
   /// \returns a address range vector that might be empty if no address range
   /// information is available.
-  Expected<DWARFAddressRangesVector> getAddressRanges() const;
+  DWARFAddressRangesVector getAddressRanges() const;
 
   /// Get all address ranges for any DW_TAG_subprogram DIEs in this DIE or any
   /// of its children.

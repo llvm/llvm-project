@@ -4,7 +4,5 @@
 # $32 used to trigger an assertion instead of the usual error message due to
 # an off-by-one bug.
 
-# CHECK: :[[@LINE+1]]:17: error: invalid register number
+# CHECK: :[[@LINE+1]]:17: error: invalid operand for instruction
         add     $32, $0, $0
-# CHECK: :[[@LINE+1]]:26: error: invalid register number
-        lw      $8, 0x10($32)

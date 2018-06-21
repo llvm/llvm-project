@@ -38,11 +38,13 @@ protected:
     return MB.takeModule();
   }
 
-  std::unique_ptr<MemoryBuffer> createTestObject() {
+  std::shared_ptr<object::OwningBinary<object::ObjectFile>>
+  createTestObject() {
     orc::SimpleCompiler IRCompiler(*TM);
     auto M = createTestModule(TM->getTargetTriple());
     M->setDataLayout(TM->createDataLayout());
-    return IRCompiler(*M);
+    return std::make_shared<object::OwningBinary<object::ObjectFile>>(
+      IRCompiler(*M));
   }
 
   typedef int (*MainFnTy)();
@@ -73,8 +75,9 @@ protected:
     CompileContext *CCtx = static_cast<CompileContext*>(Ctx);
     auto *ET = CCtx->APIExecTest;
     CCtx->M = ET->createTestModule(ET->TM->getTargetTriple());
-    LLVMOrcAddEagerlyCompiledIR(JITStack, &CCtx->H, wrap(CCtx->M.release()),
-                                myResolver, nullptr);
+    LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(CCtx->M.release()));
+    LLVMOrcAddEagerlyCompiledIR(JITStack, &CCtx->H, SM, myResolver, nullptr);
+    LLVMOrcDisposeSharedModuleRef(SM);
     CCtx->Compiled = true;
     LLVMOrcTargetAddress MainAddr;
     LLVMOrcGetSymbolAddress(JITStack, &MainAddr, "main");
@@ -86,7 +89,7 @@ protected:
 char *OrcCAPIExecutionTest::testFuncName = nullptr;
 
 TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
-  if (!SupportsJIT)
+  if (!TM)
     return;
 
   LLVMOrcJITStackRef JIT =
@@ -96,28 +99,16 @@ TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
 
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
+  LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
   LLVMOrcModuleHandle H;
-  LLVMOrcAddEagerlyCompiledIR(JIT, &H, wrap(M.release()), myResolver, nullptr);
-
-  // get symbol address searching the entire stack
-  {
-    LLVMOrcTargetAddress MainAddr;
-    LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
-    MainFnTy MainFn = (MainFnTy)MainAddr;
-    int Result = MainFn();
-    EXPECT_EQ(Result, 42)
-      << "Eagerly JIT'd code did not return expected result";
-  }
-
-  // and then just searching a single handle
-  {
-    LLVMOrcTargetAddress MainAddr;
-    LLVMOrcGetSymbolAddressIn(JIT, &MainAddr, H, "main");
-    MainFnTy MainFn = (MainFnTy)MainAddr;
-    int Result = MainFn();
-    EXPECT_EQ(Result, 42)
-      << "Eagerly JIT'd code did not return expected result";
-  }
+  LLVMOrcAddEagerlyCompiledIR(JIT, &H, SM, myResolver, nullptr);
+  LLVMOrcDisposeSharedModuleRef(SM);
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
+  MainFnTy MainFn = (MainFnTy)MainAddr;
+  int Result = MainFn();
+  EXPECT_EQ(Result, 42)
+    << "Eagerly JIT'd code did not return expected result";
 
   LLVMOrcRemoveModule(JIT, H);
 
@@ -126,7 +117,7 @@ TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
 }
 
 TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
-  if (!SupportsIndirection)
+  if (!TM)
     return;
 
   LLVMOrcJITStackRef JIT =
@@ -136,8 +127,10 @@ TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
 
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
+  LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
   LLVMOrcModuleHandle H;
-  LLVMOrcAddLazilyCompiledIR(JIT, &H, wrap(M.release()), myResolver, nullptr);
+  LLVMOrcAddLazilyCompiledIR(JIT, &H, SM, myResolver, nullptr);
+  LLVMOrcDisposeSharedModuleRef(SM);
   LLVMOrcTargetAddress MainAddr;
   LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
   MainFnTy MainFn = (MainFnTy)MainAddr;
@@ -152,10 +145,15 @@ TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
 }
 
 TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
-  if (!SupportsJIT)
+  if (!TM)
     return;
 
-  auto ObjBuffer = createTestObject();
+  std::unique_ptr<MemoryBuffer> ObjBuffer;
+  {
+    auto OwningObj = createTestObject();
+    auto ObjAndBuffer = OwningObj->takeBinary();
+    ObjBuffer = std::move(ObjAndBuffer.second);
+  }
 
   LLVMOrcJITStackRef JIT =
     LLVMOrcCreateInstance(wrap(TM.get()));
@@ -177,7 +175,7 @@ TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
 }
 
 TEST_F(OrcCAPIExecutionTest, TestDirectCallbacksAPI) {
-  if (!SupportsIndirection)
+  if (!TM)
     return;
 
   LLVMOrcJITStackRef JIT =

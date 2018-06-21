@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Provides an action to rename every symbol at a point.
+/// \brief Provides an action to rename every symbol at a point.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -82,7 +82,7 @@ private:
   Expected<AtomicChanges>
   createSourceReplacements(RefactoringRuleContext &Context) override;
 
-  // A NamedDecl which identifies the symbol being renamed.
+  // A NamedDecl which indentifies the symbol being renamed.
   const NamedDecl *ND;
   // The new qualified name to change the symbol to.
   std::string NewQualifiedName;

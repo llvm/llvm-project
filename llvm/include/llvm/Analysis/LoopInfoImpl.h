@@ -572,8 +572,8 @@ void LoopInfoBase<BlockT, LoopT>::print(raw_ostream &OS) const {
 
 template <typename T>
 bool compareVectors(std::vector<T> &BB1, std::vector<T> &BB2) {
-  llvm::sort(BB1.begin(), BB1.end());
-  llvm::sort(BB2.begin(), BB2.end());
+  std::sort(BB1.begin(), BB1.end());
+  std::sort(BB2.begin(), BB2.end());
   return BB1 == BB2;
 }
 
@@ -617,15 +617,6 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
   std::vector<BlockT *> OtherBBs = OtherL->getBlocks();
   assert(compareVectors(BBs, OtherBBs) &&
          "Mismatched basic blocks in the loops!");
-
-  const SmallPtrSetImpl<const BlockT *> &BlocksSet = L->getBlocksSet();
-  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet = L->getBlocksSet();
-  assert(BlocksSet.size() == OtherBlocksSet.size() &&
-         std::all_of(BlocksSet.begin(), BlocksSet.end(),
-                     [&OtherBlocksSet](const BlockT *BB) {
-                       return OtherBlocksSet.count(BB);
-                     }) &&
-         "Mismatched basic blocks in BlocksSets!");
 }
 #endif
 
@@ -645,9 +636,6 @@ void LoopInfoBase<BlockT, LoopT>::verify(
     LoopT *L = Entry.second;
     assert(Loops.count(L) && "orphaned loop");
     assert(L->contains(BB) && "orphaned block");
-    for (LoopT *ChildLoop : *L)
-      assert(!ChildLoop->contains(BB) &&
-             "BBMap should point to the innermost loop containing BB");
   }
 
   // Recompute LoopInfo to verify loops structure.

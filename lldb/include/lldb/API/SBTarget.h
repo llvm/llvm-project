@@ -165,7 +165,6 @@ public:
                          bool stop_at_entry, lldb::SBError &error);
 
   SBProcess LoadCore(const char *core_file);
-  SBProcess LoadCore(const char *core_file, lldb::SBError &error);
 
   //------------------------------------------------------------------
   /// Launch a new process with sensible defaults.
@@ -564,12 +563,14 @@ public:
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
-  // This version uses name_type_mask = eFunctionNameTypeAuto
+  // This version uses name_type_mask = eFunctionNameTypeAuto, symbol_language =
+  // eLanguageTypeUnknown
   lldb::SBBreakpoint
   BreakpointCreateByName(const char *symbol_name,
                          const SBFileSpecList &module_list,
                          const SBFileSpecList &comp_unit_list);
 
+  // symbol_language = eLanguageTypeUnknown.
   lldb::SBBreakpoint BreakpointCreateByName(
       const char *symbol_name,
       uint32_t
@@ -634,6 +635,15 @@ public:
 
   lldb::SBBreakpoint BreakpointCreateForException(lldb::LanguageType language,
                                                   bool catch_bp, bool throw_bp);
+
+  // The extra_args parameter will hold any number of pairs, the first element
+  // is the extra
+  // argument type, and the second the value.
+  // The argument types all follow the option long name from "breakpoint set -E
+  // <Language>".
+  lldb::SBBreakpoint BreakpointCreateForException(lldb::LanguageType language,
+                                                  bool catch_bp, bool throw_bp,
+                                                  SBStringList &extra_args);
 
   lldb::SBBreakpoint BreakpointCreateByAddress(addr_t address);
 
@@ -719,9 +729,9 @@ public:
   // Finds all breakpoints by name, returning the list in bkpt_list.  Returns
   // false if the name is not a valid breakpoint name, true otherwise.
   bool FindBreakpointsByName(const char *name, SBBreakpointList &bkpt_list);
-
+  
   void GetBreakpointNames(SBStringList &names);
-
+  
   void DeleteBreakpointName(const char *name);
 
   bool EnableAllBreakpoints();
@@ -776,7 +786,8 @@ public:
                                           const void *buf, size_t size);
 
   // The "WithFlavor" is necessary to keep SWIG from getting confused about
-  // overloaded arguments when using the buf + size -> Python Object magic.
+  // overloaded arguments when
+  // using the buf + size -> Python Object magic.
 
   lldb::SBInstructionList GetInstructionsWithFlavor(lldb::SBAddress base_addr,
                                                     const char *flavor_string,
@@ -829,8 +840,8 @@ protected:
   friend class SBValue;
 
   //------------------------------------------------------------------
-  // Constructors are private, use static Target::Create function to create an
-  // instance of this class.
+  // Constructors are private, use static Target::Create function to
+  // create an instance of this class.
   //------------------------------------------------------------------
 
   lldb::TargetSP GetSP() const;

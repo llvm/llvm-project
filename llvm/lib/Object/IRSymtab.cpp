@@ -15,7 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Analysis/ObjectUtils.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -232,7 +232,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     Sym.Flags |= 1 << storage::Symbol::FB_tls;
   if (GV->hasGlobalUnnamedAddr())
     Sym.Flags |= 1 << storage::Symbol::FB_unnamed_addr;
-  if (GV->canBeOmittedFromSymbolTable())
+  if (canBeOmittedFromSymbolTable(GV))
     Sym.Flags |= 1 << storage::Symbol::FB_may_omit;
   Sym.Flags |= unsigned(GV->getVisibility()) << storage::Symbol::FB_visibility;
 

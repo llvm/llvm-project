@@ -9,7 +9,6 @@ import os
 import time
 import re
 import lldb
-from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -26,7 +25,6 @@ class SignedTypesTestCase(TestBase):
         self.line = line_number(
             self.source, '// Set break point at this line.')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test(self):
         """Test that variables with signed types display correctly."""
         self.build()

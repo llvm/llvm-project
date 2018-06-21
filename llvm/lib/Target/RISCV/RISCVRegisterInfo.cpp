@@ -50,10 +50,6 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool RISCVRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
-  return PhysReg == RISCV::X0;
-}
-
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
 }
@@ -65,8 +61,6 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const RISCVInstrInfo *TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -75,36 +69,21 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg) +
       MI.getOperand(FIOperandNum + 1).getImm();
 
-  if (!isInt<32>(Offset)) {
-    report_fatal_error(
-        "Frame offsets outside of the signed 32-bit range not supported");
-  }
+  assert(MF.getSubtarget().getFrameLowering()->hasFP(MF) &&
+         "eliminateFrameIndex currently requires hasFP");
 
-  MachineBasicBlock &MBB = *MI.getParent();
-  bool FrameRegIsKill = false;
-
+  // Offsets must be directly encoded in a 12-bit immediate field
   if (!isInt<12>(Offset)) {
-    assert(isInt<32>(Offset) && "Int32 expected");
-    // The offset won't fit in an immediate, so use a scratch register instead
-    // Modify Offset and FrameReg appropriately
-    unsigned ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    TII->movImm32(MBB, II, DL, ScratchReg, Offset);
-    BuildMI(MBB, II, DL, TII->get(RISCV::ADD), ScratchReg)
-        .addReg(FrameReg)
-        .addReg(ScratchReg, RegState::Kill);
-    Offset = 0;
-    FrameReg = ScratchReg;
-    FrameRegIsKill = true;
+    report_fatal_error(
+        "Frame offsets outside of the signed 12-bit range not supported");
   }
 
-  MI.getOperand(FIOperandNum)
-      .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
 }
 
 unsigned RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  const TargetFrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
+  return RISCV::X8;
 }
 
 const uint32_t *

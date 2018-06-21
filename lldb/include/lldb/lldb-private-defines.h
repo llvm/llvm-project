@@ -23,7 +23,7 @@
 #endif
 
 /// \macro LLVM_FALLTHROUGH
-/// Marks an empty statement preceding a deliberate switch fallthrough.
+/// \brief Marks an empty statement preceding a deliberate switch fallthrough.
 #if __has_cpp_attribute(clang::fallthrough)
 #define LLVM_FALLTHROUGH [[clang::fallthrough]]
 #else

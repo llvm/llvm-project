@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
+// expected-no-diagnostics
 // PR7386
 
 @class NSObject;
 
-class A; // expected-note {{forward declaration of 'A'}}
-template<class T> class V { T x; }; // expected-error {{field has incomplete type 'A'}}
+class A;
+template<class T> class V {};
 
 @protocol Protocol
 - (V<A*>)protocolMethod;
-- (V<A>)method2;
 @end
 
 
@@ -23,7 +23,5 @@ template<class T> class V { T x; }; // expected-error {{field has incomplete typ
 
 - (V<A*>)protocolMethod {
   V<A*> va; return va;
-}
-- (V<A>)method2 { // expected-note {{in instantiation of}}
 }
 @end

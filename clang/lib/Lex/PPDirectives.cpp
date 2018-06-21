@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implements # directive processing for the Preprocessor.
+/// \brief Implements # directive processing for the Preprocessor.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -78,7 +78,7 @@ Preprocessor::AllocateVisibilityMacroDirective(SourceLocation Loc,
   return new (BP) VisibilityMacroDirective(Loc, isPublic);
 }
 
-/// Read and discard all tokens remaining on the current line until
+/// \brief Read and discard all tokens remaining on the current line until
 /// the tok::eod token is found.
 void Preprocessor::DiscardUntilEndOfDirective() {
   Token Tmp;
@@ -88,14 +88,14 @@ void Preprocessor::DiscardUntilEndOfDirective() {
   } while (Tmp.isNot(tok::eod));
 }
 
-/// Enumerates possible cases of #define/#undef a reserved identifier.
+/// \brief Enumerates possible cases of #define/#undef a reserved identifier.
 enum MacroDiag {
   MD_NoWarn,        //> Not a reserved identifier
   MD_KeywordDef,    //> Macro hides keyword, enabled by default
   MD_ReservedMacro  //> #define of #undef reserved id, disabled by default
 };
 
-/// Checks if the specified identifier is reserved in the specified
+/// \brief Checks if the specified identifier is reserved in the specified
 /// language.
 /// This function does not check if the identifier is a keyword.
 static bool isReservedId(StringRef Text, const LangOptions &Lang) {
@@ -115,19 +115,18 @@ static bool isReservedId(StringRef Text, const LangOptions &Lang) {
   return false;
 }
 
-// The -fmodule-name option tells the compiler to textually include headers in
-// the specified module, meaning clang won't build the specified module. This is
-// useful in a number of situations, for instance, when building a library that
-// vends a module map, one might want to avoid hitting intermediate build
-// products containig the the module map or avoid finding the system installed
-// modulemap for that library.
-static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
-                                StringRef ModuleName) {
+// The -fmodule-name option (represented here by \p CurrentModule) tells the
+// compiler to textually include headers in the specified module, meaning clang
+// won't build the specified module. This is useful in a number of situations,
+// for instance, when building a library that vends a module map, one might want
+// to avoid hitting intermediate build products containig the the module map or
+// avoid finding the system installed modulemap for that library.
+static bool isForModuleBuilding(Module *M, StringRef CurrentModule) {
   StringRef TopLevelName = M->getTopLevelModuleName();
 
   // When building framework Foo, we wanna make sure that Foo *and* Foo_Private
   // are textually included and no modules are built for both.
-  if (M->getTopLevelModule()->IsFramework && CurrentModule == ModuleName &&
+  if (M->getTopLevelModule()->IsFramework &&
       !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
     TopLevelName = TopLevelName.drop_back(8);
 
@@ -296,7 +295,7 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   return false;
 }
 
-/// Lex and validate a macro name, which occurs after a
+/// \brief Lex and validate a macro name, which occurs after a
 /// \#define or \#undef.
 ///
 /// This sets the token kind to eod and discards the rest of the macro line if
@@ -328,7 +327,7 @@ void Preprocessor::ReadMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   }
 }
 
-/// Ensure that the next token is a tok::eod token.
+/// \brief Ensure that the next token is a tok::eod token.
 ///
 /// If not, emit a diagnostic and consume up until the eod.  If EnableMacros is
 /// true, then we consider macros that expand to zero tokens as being ok.
@@ -577,9 +576,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // the #if block.
   CurPPLexer->LexingRawMode = false;
 
-  // The last skipped range isn't actually skipped yet if it's truncated
-  // by the end of the preamble; we'll resume parsing after the preamble.
-  if (Callbacks && (Tok.isNot(tok::eof) || !isRecordingPreamble()))
+  if (Callbacks)
     Callbacks->SourceRangeSkipped(
         SourceRange(HashTokenLoc, CurPPLexer->getSourceLocation()),
         Tok.getLocation());
@@ -1128,7 +1125,7 @@ static bool GetLineValue(Token &DigitTok, unsigned &Val,
   return false;
 }
 
-/// Handle a \#line directive: C99 6.10.4.
+/// \brief Handle a \#line directive: C99 6.10.4.
 ///
 /// The two acceptable forms are:
 /// \verbatim
@@ -1364,7 +1361,7 @@ void Preprocessor::HandleUserDiagnosticDirective(Token &Tok,
   // Read the rest of the line raw.  We do this because we don't want macros
   // to be expanded and we don't require that the tokens be valid preprocessing
   // tokens.  For example, this is allowed: "#warning `   'foo".  GCC does
-  // collapse multiple consecutive white space between tokens, but this isn't
+  // collapse multiple consequtive white space between tokens, but this isn't
   // specified by the standard.
   SmallString<128> Message;
   CurLexer->ReadToEndOfLine(&Message);
@@ -1414,7 +1411,7 @@ void Preprocessor::HandleIdentSCCSDirective(Token &Tok) {
   }
 }
 
-/// Handle a #public directive.
+/// \brief Handle a #public directive.
 void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
   Token MacroNameTok;
   ReadMacroName(MacroNameTok, MU_Undef);
@@ -1441,7 +1438,7 @@ void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
                                 MacroNameTok.getLocation(), /*IsPublic=*/true));
 }
 
-/// Handle a #private directive.
+/// \brief Handle a #private directive.
 void Preprocessor::HandleMacroPrivateDirective() {
   Token MacroNameTok;
   ReadMacroName(MacroNameTok, MU_Undef);
@@ -1517,7 +1514,7 @@ bool Preprocessor::GetIncludeFilenameSpelling(SourceLocation Loc,
   return isAngled;
 }
 
-// Handle cases where the \#include name is expanded from a macro
+// \brief Handle cases where the \#include name is expanded from a macro
 // as multiple tokens, which need to be glued together.
 //
 // This occurs for code like:
@@ -1578,7 +1575,7 @@ bool Preprocessor::ConcatenateIncludeName(SmallString<128> &FilenameBuffer,
   return true;
 }
 
-/// Push a token onto the token stream containing an annotation.
+/// \brief Push a token onto the token stream containing an annotation.
 void Preprocessor::EnterAnnotationToken(SourceRange Range,
                                         tok::TokenKind Kind,
                                         void *AnnotationVal) {
@@ -1593,7 +1590,7 @@ void Preprocessor::EnterAnnotationToken(SourceRange Range,
   EnterTokenStream(std::move(Tok), 1, true);
 }
 
-/// Produce a diagnostic informing the user that a #include or similar
+/// \brief Produce a diagnostic informing the user that a #include or similar
 /// was implicitly treated as a module import.
 static void diagnoseAutoModuleImport(
     Preprocessor &PP, SourceLocation HashLoc, Token &IncludeTok,
@@ -1806,7 +1803,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   SmallString<128> NormalizedPath;
   if (LangOpts.MSVCCompat) {
     NormalizedPath = Filename.str();
-#ifndef _WIN32
+#ifndef LLVM_ON_WIN32
     llvm::sys::path::native(NormalizedPath);
 #endif
   }
@@ -1876,8 +1873,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // are processing this module textually (because we're building the module).
   if (ShouldEnter && File && SuggestedModule && getLangOpts().Modules &&
       !isForModuleBuilding(SuggestedModule.getModule(),
-                           getLangOpts().CurrentModule,
-                           getLangOpts().ModuleName)) {
+                           getLangOpts().CurrentModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -1968,7 +1964,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         HashLoc, IncludeTok,
         LangOpts.MSVCCompat ? NormalizedPath.c_str() : Filename, isAngled,
         FilenameRange, File, SearchPath, RelativePath,
-        ShouldEnter ? nullptr : SuggestedModule.getModule(), FileCharacter);
+        ShouldEnter ? nullptr : SuggestedModule.getModule());
     if (SkipHeader && !SuggestedModule.getModule())
       Callbacks->FileSkipped(*File, FilenameTok, FileCharacter);
   }
@@ -2024,8 +2020,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       // ShouldEnter is false because we are skipping the header. In that
       // case, We are not importing the specified module.
       if (SkipHeader && getLangOpts().CompilingPCH &&
-          isForModuleBuilding(M, getLangOpts().CurrentModule,
-                              getLangOpts().ModuleName))
+          isForModuleBuilding(M, getLangOpts().CurrentModule))
         return;
 
       makeModuleVisible(M, HashLoc);
@@ -2043,7 +2038,7 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // If the filename string was the result of macro expansions, set the include
   // position on the file where it will be included and after the expansions.
   if (IncludePos.isMacroID())
-    IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
+    IncludePos = SourceMgr.getExpansionRange(IncludePos).second;
   FileID FID = SourceMgr.createFileID(File, IncludePos, FileCharacter);
   assert(FID.isValid() && "Expected valid file ID");
 
@@ -2053,21 +2048,11 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
 
   // Determine if we're switching to building a new submodule, and which one.
   if (auto *M = SuggestedModule.getModule()) {
-    if (M->getTopLevelModule()->ShadowingModule) {
-      // We are building a submodule that belongs to a shadowed module. This
-      // means we find header files in the shadowed module.
-      Diag(M->DefinitionLoc, diag::err_module_build_shadowed_submodule)
-        << M->getFullModuleName();
-      Diag(M->getTopLevelModule()->ShadowingModule->DefinitionLoc,
-           diag::note_previous_definition);
-      return;
-    }
     // When building a pch, -fmodule-name tells the compiler to textually
     // include headers in the specified module. We are not building the
     // specified module.
     if (getLangOpts().CompilingPCH &&
-        isForModuleBuilding(M, getLangOpts().CurrentModule,
-                            getLangOpts().ModuleName))
+        isForModuleBuilding(M, getLangOpts().CurrentModule))
       return;
 
     assert(!CurLexerSubmodule && "should not have marked this as a module yet");

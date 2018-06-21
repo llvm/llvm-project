@@ -219,8 +219,8 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, unsigned PhysReg,
       Intfs.push_back(Intf);
     }
   }
-  LLVM_DEBUG(dbgs() << "spilling " << printReg(PhysReg, TRI)
-                    << " interferences with " << VirtReg << "\n");
+  DEBUG(dbgs() << "spilling " << printReg(PhysReg, TRI)
+               << " interferences with " << VirtReg << "\n");
   assert(!Intfs.empty() && "expected interference");
 
   // Spill each interfering vreg allocated to PhysReg or an alias.
@@ -292,7 +292,7 @@ unsigned RABasic::selectOrSplit(LiveInterval &VirtReg,
   }
 
   // No other spill candidates were found, so spill the current VirtReg.
-  LLVM_DEBUG(dbgs() << "spilling: " << VirtReg << '\n');
+  DEBUG(dbgs() << "spilling: " << VirtReg << '\n');
   if (!VirtReg.isSpillable())
     return ~0u;
   LiveRangeEdit LRE(&VirtReg, SplitVRegs, *MF, *LIS, VRM, this, &DeadRemats);
@@ -304,8 +304,9 @@ unsigned RABasic::selectOrSplit(LiveInterval &VirtReg,
 }
 
 bool RABasic::runOnMachineFunction(MachineFunction &mf) {
-  LLVM_DEBUG(dbgs() << "********** BASIC REGISTER ALLOCATION **********\n"
-                    << "********** Function: " << mf.getName() << '\n');
+  DEBUG(dbgs() << "********** BASIC REGISTER ALLOCATION **********\n"
+               << "********** Function: "
+               << mf.getName() << '\n');
 
   MF = &mf;
   RegAllocBase::init(getAnalysis<VirtRegMap>(),
@@ -322,7 +323,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   postOptimization();
 
   // Diagnostic output before rewriting
-  LLVM_DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
+  DEBUG(dbgs() << "Post alloc VirtRegMap:\n" << *VRM << "\n");
 
   releaseMemory();
   return true;

@@ -29,7 +29,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
-#include <deque>
 
 namespace llvm {
 
@@ -55,7 +54,7 @@ inline bool operator<(const ValueEntry &LHS, const ValueEntry &RHS) {
   return LHS.Rank > RHS.Rank; // Sort so that highest rank goes to start.
 }
 
-/// Utility class representing a base and exponent pair which form one
+/// \brief Utility class representing a base and exponent pair which form one
 /// factor of some product.
 struct Factor {
   Value *Base;
@@ -70,14 +69,9 @@ class XorOpnd;
 
 /// Reassociate commutative expressions.
 class ReassociatePass : public PassInfoMixin<ReassociatePass> {
-public:
-  using OrderedSet =
-      SetVector<AssertingVH<Instruction>, std::deque<AssertingVH<Instruction>>>;
-
-protected:
   DenseMap<BasicBlock *, unsigned> RankMap;
   DenseMap<AssertingVH<Value>, unsigned> ValueRankMap;
-  OrderedSet RedoInsts;
+  SetVector<AssertingVH<Instruction>> RedoInsts;
 
   // Arbitrary, but prevents quadratic behavior.
   static const unsigned GlobalReassociateLimit = 10;
@@ -114,7 +108,8 @@ private:
                      SmallVectorImpl<reassociate::ValueEntry> &Ops);
   Value *RemoveFactorFromExpression(Value *V, Value *Factor);
   void EraseInst(Instruction *I);
-  void RecursivelyEraseDeadInsts(Instruction *I, OrderedSet &Insts);
+  void RecursivelyEraseDeadInsts(Instruction *I,
+                                 SetVector<AssertingVH<Instruction>> &Insts);
   void OptimizeInst(Instruction *I);
   Instruction *canonicalizeNegConstExpr(Instruction *I);
   void BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT);

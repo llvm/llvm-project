@@ -9,10 +9,6 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 (S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
 (D) fields.
 
-N: Simon Atanasyan
-E: simon@atanasyan.com
-D: MIPS Backend (lib/Target/Mips/*)
-
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
@@ -65,13 +61,12 @@ E: peter@pcc.me.uk
 D: llgo, libLTO (lib/LTO/* tools/lto/*), LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
 
 N: Quentin Colombet
-E: quentin.colombet@gmail.com
+E: qcolombet@apple.com
 D: Loop Strength Reduction, Register allocators
 
-N: Andrea Di Biagio
-E: andrea.dibiagio@sony.com
-E: andrea.dibiagio@gmail.com
-D: llvm-mca
+N: Simon Dardis
+E: simon.dardis@mips.com
+D: MIPS Backend (lib/Target/Mips/*)
 
 N: Duncan P. N. Exon Smith
 E: dexonsmith@apple.com
@@ -217,4 +212,4 @@ D: Release management (x.y.0 releases)
 
 N: whitequark
 E: whitequark@whitequark.org
-D: C API, OCaml bindings
+D: OCaml bindings

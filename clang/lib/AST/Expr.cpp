@@ -230,7 +230,7 @@ SourceLocation Expr::getExprLoc() const {
 // Primary Expressions.
 //===----------------------------------------------------------------------===//
 
-/// Compute the type-, value-, and instantiation-dependence of a 
+/// \brief Compute the type-, value-, and instantiation-dependence of a 
 /// declaration reference
 /// based on the declaration being referenced.
 static void computeDeclRefDependence(const ASTContext &Ctx, NamedDecl *D,
@@ -755,36 +755,6 @@ IntegerLiteral::Create(const ASTContext &C, EmptyShell Empty) {
   return new (C) IntegerLiteral(Empty);
 }
 
-FixedPointLiteral::FixedPointLiteral(const ASTContext &C, const llvm::APInt &V,
-                                     QualType type, SourceLocation l,
-                                     unsigned Scale)
-    : Expr(FixedPointLiteralClass, type, VK_RValue, OK_Ordinary, false, false,
-           false, false),
-      Loc(l), Scale(Scale) {
-  assert(type->isFixedPointType() && "Illegal type in FixedPointLiteral");
-  assert(V.getBitWidth() == C.getTypeInfo(type).Width &&
-         "Fixed point type is not the correct size for constant.");
-  setValue(C, V);
-}
-
-FixedPointLiteral *FixedPointLiteral::CreateFromRawInt(const ASTContext &C,
-                                                       const llvm::APInt &V,
-                                                       QualType type,
-                                                       SourceLocation l,
-                                                       unsigned Scale) {
-  return new (C) FixedPointLiteral(C, V, type, l, Scale);
-}
-
-std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
-  // Currently the longest decimal number that can be printed is the max for an
-  // unsigned long _Accum: 4294967295.99999999976716935634613037109375
-  // which is 43 characters.
-  SmallString<64> S;
-  FixedPointValueToString(
-      S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale, Radix);
-  return S.str();
-}
-
 FloatingLiteral::FloatingLiteral(const ASTContext &C, const llvm::APFloat &V,
                                  bool isexact, QualType Type, SourceLocation L)
   : Expr(FloatingLiteralClass, Type, VK_RValue, OK_Ordinary, false, false,
@@ -911,8 +881,7 @@ StringLiteral *StringLiteral::CreateEmpty(const ASTContext &C,
   void *Mem =
       C.Allocate(sizeof(StringLiteral) + sizeof(SourceLocation) * (NumStrs - 1),
                  alignof(StringLiteral));
-  StringLiteral *SL =
-      new (Mem) StringLiteral(C.adjustStringLiteralBaseType(QualType()));
+  StringLiteral *SL = new (Mem) StringLiteral(QualType());
   SL->CharByteWidth = 0;
   SL->Length = 0;
   SL->NumConcatenated = NumStrs;
@@ -1664,8 +1633,8 @@ bool CastExpr::CastConsistency() const {
   return true;
 }
 
-const char *CastExpr::getCastKindName(CastKind CK) {
-  switch (CK) {
+const char *CastExpr::getCastKindName() const {
+  switch (getCastKind()) {
 #define CAST_OPERATION(Name) case CK_##Name: return #Name;
 #include "clang/AST/OperationKinds.def"
   }
@@ -2079,10 +2048,6 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
       isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   case GenericSelectionExprClass:
     return cast<GenericSelectionExpr>(this)->getResultExpr()->
-      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
-  case CoawaitExprClass:
-  case CoyieldExprClass:
-    return cast<CoroutineSuspendExpr>(this)->getResumeExpr()->
       isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   case ChooseExprClass:
     return cast<ChooseExpr>(this)->getChosenSubExpr()->
@@ -2663,7 +2628,7 @@ bool Expr::isDefaultArgument() const {
   return isa<CXXDefaultArgExpr>(E);
 }
 
-/// Skip over any no-op casts and any temporary-binding
+/// \brief Skip over any no-op casts and any temporary-binding
 /// expressions.
 static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
   if (const MaterializeTemporaryExpr *M = dyn_cast<MaterializeTemporaryExpr>(E))
@@ -2952,20 +2917,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
   return false;
 }
 
-bool CallExpr::isBuiltinAssumeFalse(const ASTContext &Ctx) const {
-  const FunctionDecl* FD = getDirectCallee();
-  if (!FD || (FD->getBuiltinID() != Builtin::BI__assume &&
-              FD->getBuiltinID() != Builtin::BI__builtin_assume))
-    return false;
-  
-  const Expr* Arg = getArg(0);
-  bool ArgVal;
-  return !Arg->isValueDependent() &&
-         Arg->EvaluateAsBooleanCondition(ArgVal, Ctx) && !ArgVal;
-}
-
 namespace {
-  /// Look for any side effects within a Stmt.
+  /// \brief Look for any side effects within a Stmt.
   class SideEffectFinder : public ConstEvaluatedExprVisitor<SideEffectFinder> {
     typedef ConstEvaluatedExprVisitor<SideEffectFinder> Inherited;
     const bool IncludePossibleEffects;
@@ -3021,7 +2974,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ObjCIvarRefExprClass:
   case PredefinedExprClass:
   case IntegerLiteralClass:
-  case FixedPointLiteralClass:
   case FloatingLiteralClass:
   case ImaginaryLiteralClass:
   case StringLiteralClass:
@@ -3262,7 +3214,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 }
 
 namespace {
-  /// Look for a call to a non-trivial function within an expression.
+  /// \brief Look for a call to a non-trivial function within an expression.
   class NonTrivialCallFinder : public ConstEvaluatedExprVisitor<NonTrivialCallFinder>
   {
     typedef ConstEvaluatedExprVisitor<NonTrivialCallFinder> Inherited;
@@ -3438,7 +3390,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
   return NPCK_ZeroExpression;
 }
 
-/// If this expression is an l-value for an Objective C
+/// \brief If this expression is an l-value for an Objective C
 /// property, find the underlying property reference expression.
 const ObjCPropertyRefExpr *Expr::getObjCProperty() const {
   const Expr *E = this;
@@ -3494,11 +3446,10 @@ FieldDecl *Expr::getSourceBitField() {
       if (Field->isBitField())
         return Field;
 
-  if (ObjCIvarRefExpr *IvarRef = dyn_cast<ObjCIvarRefExpr>(E)) {
-    FieldDecl *Ivar = IvarRef->getDecl();
-    if (Ivar->isBitField())
-      return Ivar;
-  }
+  if (ObjCIvarRefExpr *IvarRef = dyn_cast<ObjCIvarRefExpr>(E))
+    if (FieldDecl *Ivar = dyn_cast<FieldDecl>(IvarRef->getDecl()))
+      if (Ivar->isBitField())
+        return Ivar;
 
   if (DeclRefExpr *DeclRef = dyn_cast<DeclRefExpr>(E)) {
     if (FieldDecl *Field = dyn_cast<FieldDecl>(DeclRef->getDecl()))
@@ -3862,7 +3813,7 @@ Expr *DesignatedInitExpr::getArrayRangeEnd(const Designator &D) const {
   return getSubExpr(D.ArrayOrRange.Index + 2);
 }
 
-/// Replaces the designator at index @p Idx with the series
+/// \brief Replaces the designator at index @p Idx with the series
 /// of designators in [First, Last).
 void DesignatedInitExpr::ExpandDesignator(const ASTContext &C, unsigned Idx,
                                           const Designator *First,
@@ -4083,8 +4034,6 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_or_fetch:
   case AO__atomic_xor_fetch:
   case AO__atomic_nand_fetch:
-  case AO__atomic_fetch_min:
-  case AO__atomic_fetch_max:
     return 3;
 
   case AO__opencl_atomic_store:

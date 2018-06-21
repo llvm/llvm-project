@@ -12,6 +12,7 @@
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -24,7 +25,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "llvm/Support/Errno.h"
 
@@ -192,8 +192,8 @@ protected:
           num_register_sets = reg_ctx->GetRegisterSetCount();
 
         for (set_idx = 0; set_idx < num_register_sets; ++set_idx) {
-          // When dump_all_sets option is set, dump primitive as well as
-          // derived registers.
+          // When dump_all_sets option is set, dump primitive as well as derived
+          // registers.
           DumpRegisterSet(m_exe_ctx, strm, reg_ctx, set_idx,
                           !m_command_options.dump_all_sets.GetCurrentValue());
         }
@@ -209,8 +209,8 @@ protected:
         result.SetStatus(eReturnStatusFailed);
       } else {
         for (auto &entry : command) {
-          // in most LLDB commands we accept $rbx as the name for register RBX
-          // - and here we would reject it and non-existant. we should be more
+          // in most LLDB commands we accept $rbx as the name for register RBX -
+          // and here we would reject it and non-existant. we should be more
           // consistent towards the user and allow them to say reg read $rbx -
           // internally, however, we should be strict and not allow ourselves
           // to call our registers $rbx in our own API
@@ -350,11 +350,11 @@ protected:
       auto reg_name = command[0].ref;
       auto value_str = command[1].ref;
 
-      // in most LLDB commands we accept $rbx as the name for register RBX -
-      // and here we would reject it and non-existant. we should be more
-      // consistent towards the user and allow them to say reg write $rbx -
-      // internally, however, we should be strict and not allow ourselves to
-      // call our registers $rbx in our own API
+      // in most LLDB commands we accept $rbx as the name for register RBX - and
+      // here we would reject it and non-existant. we should be more consistent
+      // towards the user and allow them to say reg write $rbx - internally,
+      // however, we should be strict and not allow ourselves to call our
+      // registers $rbx in our own API
       reg_name.consume_front("$");
 
       const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name);
@@ -365,8 +365,8 @@ protected:
         Status error(reg_value.SetValueFromString(reg_info, value_str));
         if (error.Success()) {
           if (reg_ctx->WriteRegister(reg_info, reg_value)) {
-            // Toss all frames and anything else in the thread after a register
-            // has been written.
+            // Toss all frames and anything else in the thread
+            // after a register has been written.
             m_exe_ctx.GetThreadRef().Flush();
             result.SetStatus(eReturnStatusSuccessFinishNoResult);
             return true;

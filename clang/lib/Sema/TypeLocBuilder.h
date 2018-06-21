@@ -83,7 +83,7 @@ class TypeLocBuilder {
     NumBytesAtAlign4 = NumBytesAtAlign8 = 0;
   }  
 
-  /// Tell the TypeLocBuilder that the type it is storing has been
+  /// \brief Tell the TypeLocBuilder that the type it is storing has been
   /// modified in some safe way that doesn't affect type-location information.
   void TypeWasModifiedSafely(QualType T) {
 #ifndef NDEBUG
@@ -112,7 +112,7 @@ class TypeLocBuilder {
     return DI;
   }
 
-  /// Copies the type-location information to the given AST context and 
+  /// \brief Copies the type-location information to the given AST context and 
   /// returns a \c TypeLoc referring into the AST context.
   TypeLoc getTypeLocInContext(ASTContext &Context, QualType T) {
 #ifndef NDEBUG
@@ -132,7 +132,7 @@ private:
   /// Grow to the given capacity.
   void grow(size_t NewCapacity);
 
-  /// Retrieve a temporary TypeLoc that refers into this \c TypeLocBuilder
+  /// \brief Retrieve a temporary TypeLoc that refers into this \c TypeLocBuilder
   /// object.
   ///
   /// The resulting \c TypeLoc should only be used so long as the 

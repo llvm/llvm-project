@@ -10,6 +10,12 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H
 
+#ifdef LLDB_DISABLE_PYTHON
+
+// Python is disabled in this build
+
+#else
+
 // C Includes
 // C++ Includes
 #include <memory>
@@ -439,8 +445,6 @@ public:
 
   static const char *GetPluginDescriptionStatic();
 
-  static FileSpec GetPythonDir();
-
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------
@@ -505,10 +509,6 @@ protected:
 
   static void AddToSysPath(AddLocation location, std::string path);
 
-  static void ComputePythonDirForApple(llvm::SmallVectorImpl<char> &path);
-  static void ComputePythonDirForPosix(llvm::SmallVectorImpl<char> &path);
-  static void ComputePythonDirForWindows(llvm::SmallVectorImpl<char> &path);
-
   bool EnterSession(uint16_t on_entry_flags, FILE *in, FILE *out, FILE *err);
 
   void LeaveSession();
@@ -564,5 +564,7 @@ protected:
 };
 
 } // namespace lldb_private
+
+#endif // LLDB_DISABLE_PYTHON
 
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H

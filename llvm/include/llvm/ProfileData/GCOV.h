@@ -41,7 +41,7 @@ namespace GCOV {
 
 enum GCOVVersion { V402, V404, V704 };
 
-/// A struct for passing gcov options between functions.
+/// \brief A struct for passing gcov options between functions.
 struct Options {
   Options(bool A, bool B, bool C, bool F, bool P, bool U, bool L, bool N)
       : AllBlocks(A), BranchInfo(B), BranchCount(C), FuncCoverage(F),

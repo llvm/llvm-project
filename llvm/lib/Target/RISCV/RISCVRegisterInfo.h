@@ -32,8 +32,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-  bool isConstantPhysReg(unsigned PhysReg) const override;
-
   const uint32_t *getNoPreservedMask() const override;
 
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
@@ -41,18 +39,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                            RegScavenger *RS = nullptr) const override;
 
   unsigned getFrameRegister(const MachineFunction &MF) const override;
-
-  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
-    return true;
-  }
-
-  bool requiresFrameIndexScavenging(const MachineFunction &MF) const override {
-    return true;
-  }
-
-  bool trackLivenessAfterRegAlloc(const MachineFunction &) const override {
-    return true;
-  }
 };
 }
 

@@ -30,7 +30,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "AllocationState.h"
 #include <climits>
 #include <utility>
 
@@ -46,8 +45,7 @@ enum AllocationFamily {
   AF_CXXNew,
   AF_CXXNewArray,
   AF_IfNameIndex,
-  AF_Alloca,
-  AF_InternalBuffer
+  AF_Alloca
 };
 
 class RefState {
@@ -136,10 +134,10 @@ enum ReallocPairKind {
 };
 
 /// \class ReallocPair
-/// Stores information about the symbol being reallocated by a call to
+/// \brief Stores information about the symbol being reallocated by a call to
 /// 'realloc' to allow modeling failed reallocation later in the path.
 struct ReallocPair {
-  // The symbol which realloc reallocated.
+  // \brief The symbol which realloc reallocated.
   SymbolRef ReallocatedSym;
   ReallocPairKind Kind;
 
@@ -258,20 +256,20 @@ private:
 
   void initIdentifierInfo(ASTContext &C) const;
 
-  /// Determine family of a deallocation expression.
+  /// \brief Determine family of a deallocation expression.
   AllocationFamily getAllocationFamily(CheckerContext &C, const Stmt *S) const;
 
-  /// Print names of allocators and deallocators.
+  /// \brief Print names of allocators and deallocators.
   ///
   /// \returns true on success.
   bool printAllocDeallocName(raw_ostream &os, CheckerContext &C,
                              const Expr *E) const;
 
-  /// Print expected name of an allocator based on the deallocator's
+  /// \brief Print expected name of an allocator based on the deallocator's
   /// family derived from the DeallocExpr.
   void printExpectedAllocName(raw_ostream &os, CheckerContext &C,
                               const Expr *DeallocExpr) const;
-  /// Print expected name of a deallocator based on the allocator's
+  /// \brief Print expected name of a deallocator based on the allocator's
   /// family.
   void printExpectedDeallocName(raw_ostream &os, AllocationFamily Family) const;
 
@@ -286,12 +284,12 @@ private:
   bool isStandardNewDelete(const FunctionDecl *FD, ASTContext &C) const;
   ///@}
 
-  /// Process C++ operator new()'s allocation, which is the part of C++
+  /// \brief Process C++ operator new()'s allocation, which is the part of C++
   /// new-expression that goes before the constructor.
   void processNewAllocation(const CXXNewExpr *NE, CheckerContext &C,
                             SVal Target) const;
 
-  /// Perform a zero-allocation check.
+  /// \brief Perform a zero-allocation check.
   /// The optional \p RetVal parameter specifies the newly allocated pointer
   /// value; if unspecified, the value of expression \p E is used.
   ProgramStateRef ProcessZeroAllocation(CheckerContext &C, const Expr *E,
@@ -353,7 +351,7 @@ private:
   static ProgramStateRef CallocMem(CheckerContext &C, const CallExpr *CE,
                                    ProgramStateRef State);
 
-  ///Check if the memory associated with this symbol was released.
+  ///\brief Check if the memory associated with this symbol was released.
   bool isReleased(SymbolRef Sym, CheckerContext &C) const;
 
   bool checkUseAfterFree(SymbolRef Sym, CheckerContext &C, const Stmt *S) const;
@@ -1235,8 +1233,7 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallExpr *CE,
 
   OwnershipAttr::args_iterator I = Att->args_begin(), E = Att->args_end();
   if (I != E) {
-    return MallocMemAux(C, CE, CE->getArg(I->getASTIndex()), UndefinedVal(),
-                        State);
+    return MallocMemAux(C, CE, CE->getArg(*I), UndefinedVal(), State);
   }
   return MallocMemAux(C, CE, UnknownVal(), UndefinedVal(), State);
 }
@@ -1275,7 +1272,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
 
   // Fill the region with the initialization value.
-  State = State->bindDefaultInitial(RetVal, Init, LCtx);
+  State = State->bindDefault(RetVal, Init, LCtx);
 
   // Set the region's extent equal to the Size parameter.
   const SymbolicRegion *R =
@@ -1334,9 +1331,9 @@ ProgramStateRef MallocChecker::FreeMemAttr(CheckerContext &C,
   bool ReleasedAllocated = false;
 
   for (const auto &Arg : Att->args()) {
-    ProgramStateRef StateI = FreeMemAux(
-        C, CE, State, Arg.getASTIndex(),
-        Att->getOwnKind() == OwnershipAttr::Holds, ReleasedAllocated);
+    ProgramStateRef StateI = FreeMemAux(C, CE, State, Arg,
+                               Att->getOwnKind() == OwnershipAttr::Holds,
+                               ReleasedAllocated);
     if (StateI)
       State = StateI;
   }
@@ -1469,7 +1466,6 @@ void MallocChecker::printExpectedAllocName(raw_ostream &os, CheckerContext &C,
     case AF_CXXNew: os << "'new'"; return;
     case AF_CXXNewArray: os << "'new[]'"; return;
     case AF_IfNameIndex: os << "'if_nameindex()'"; return;
-    case AF_InternalBuffer: os << "container-specific allocator"; return;
     case AF_Alloca:
     case AF_None: llvm_unreachable("not a deallocation expression");
   }
@@ -1482,7 +1478,6 @@ void MallocChecker::printExpectedDeallocName(raw_ostream &os,
     case AF_CXXNew: os << "'delete'"; return;
     case AF_CXXNewArray: os << "'delete[]'"; return;
     case AF_IfNameIndex: os << "'if_freenameindex()'"; return;
-    case AF_InternalBuffer: os << "container-specific deallocator"; return;
     case AF_Alloca:
     case AF_None: llvm_unreachable("suspicious argument");
   }
@@ -1657,9 +1652,7 @@ MallocChecker::getCheckIfTracked(AllocationFamily Family,
     return Optional<MallocChecker::CheckKind>();
   }
   case AF_CXXNew:
-  case AF_CXXNewArray:
-  // FIXME: Add new CheckKind for AF_InternalBuffer.
-  case AF_InternalBuffer: {
+  case AF_CXXNewArray: {
     if (IsALeakCheck) {
       if (ChecksEnabled[CK_NewDeleteLeaksChecker])
         return CK_NewDeleteLeaksChecker;
@@ -2835,19 +2828,6 @@ static SymbolRef findFailedReallocSymbol(ProgramStateRef currState,
   return nullptr;
 }
 
-static bool isReferenceCountingPointerDestructor(const CXXDestructorDecl *DD) {
-  if (const IdentifierInfo *II = DD->getParent()->getIdentifier()) {
-    StringRef N = II->getName();
-    if (N.contains_lower("ptr") || N.contains_lower("pointer")) {
-      if (N.contains_lower("ref") || N.contains_lower("cnt") ||
-          N.contains_lower("intrusive") || N.contains_lower("shared")) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
     const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
     BugReport &BR) {
@@ -2901,33 +2881,21 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
       StackHint = new StackHintGeneratorForSymbol(Sym,
                                              "Returning; memory was released");
 
-      // See if we're releasing memory while inlining a destructor
-      // (or one of its callees). This turns on various common
-      // false positive suppressions.
-      bool FoundAnyDestructor = false;
+      // See if we're releasing memory while inlining a destructor (or one of
+      // its callees). If so, enable the atomic-related suppression within that
+      // destructor (and all of its callees), which would kick in while visiting
+      // other nodes (the visit order is from the bug to the graph root).
       for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
-        if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
-          if (isReferenceCountingPointerDestructor(DD)) {
-            // This immediately looks like a reference-counting destructor.
-            // We're bad at guessing the original reference count of the object,
-            // so suppress the report for now.
-            BR.markInvalid(getTag(), DD);
-          } else if (!FoundAnyDestructor) {
-            assert(!ReleaseDestructorLC &&
-                   "There can be only one release point!");
-            // Suspect that it's a reference counting pointer destructor.
-            // On one of the next nodes might find out that it has atomic
-            // reference counting operations within it (see the code above),
-            // and if so, we'd conclude that it likely is a reference counting
-            // pointer destructor.
-            ReleaseDestructorLC = LC->getCurrentStackFrame();
-            // It is unlikely that releasing memory is delegated to a destructor
-            // inside a destructor of a shared pointer, because it's fairly hard
-            // to pass the information that the pointer indeed needs to be
-            // released into it. So we're only interested in the innermost
-            // destructor.
-            FoundAnyDestructor = true;
-          }
+        if (isa<CXXDestructorDecl>(LC->getDecl())) {
+          assert(!ReleaseDestructorLC &&
+                 "There can be only one release point!");
+          ReleaseDestructorLC = LC->getCurrentStackFrame();
+          // It is unlikely that releasing memory is delegated to a destructor
+          // inside a destructor of a shared pointer, because it's fairly hard
+          // to pass the information that the pointer indeed needs to be
+          // released into it. So we're only interested in the innermost
+          // destructor.
+          break;
         }
       }
     } else if (isRelinquished(RS, RSPrev, S)) {
@@ -2996,20 +2964,6 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
     }
   }
 }
-
-namespace clang {
-namespace ento {
-namespace allocation_state {
-
-ProgramStateRef
-markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
-  AllocationFamily Family = AF_InternalBuffer;
-  return State->set<RegionState>(Sym, RefState::getReleased(Family, Origin));
-}
-
-} // end namespace allocation_state
-} // end namespace ento
-} // end namespace clang
 
 void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
   registerCStringCheckerBasic(mgr);

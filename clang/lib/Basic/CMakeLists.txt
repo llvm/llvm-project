@@ -66,6 +66,7 @@ add_clang_library(clangBasic
   Sanitizers.cpp
   SourceLocation.cpp
   SourceManager.cpp
+  SourceMgrAdapter.cpp
   TargetInfo.cpp
   Targets.cpp
   Targets/AArch64.cpp
@@ -83,7 +84,6 @@ add_clang_library(clangBasic
   Targets/OSTargets.cpp
   Targets/PNaCl.cpp
   Targets/PPC.cpp
-  Targets/RISCV.cpp
   Targets/SPIR.cpp
   Targets/Sparc.cpp
   Targets/SystemZ.cpp
@@ -93,9 +93,9 @@ add_clang_library(clangBasic
   Targets/XCore.cpp
   TokenKinds.cpp
   Version.cpp
+  VersionTuple.cpp
   VirtualFileSystem.cpp
   Warnings.cpp
-  XRayInstr.cpp
   XRayLists.cpp
   ${version_inc}
   )

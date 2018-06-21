@@ -974,11 +974,11 @@ void Interpreter::visitAllocaInst(AllocaInst &I) {
   unsigned MemToAlloc = std::max(1U, NumElements * TypeSize);
 
   // Allocate enough memory to hold the type...
-  void *Memory = safe_malloc(MemToAlloc);
+  void *Memory = malloc(MemToAlloc);
 
-  LLVM_DEBUG(dbgs() << "Allocated Type: " << *Ty << " (" << TypeSize
-                    << " bytes) x " << NumElements << " (Total: " << MemToAlloc
-                    << ") at " << uintptr_t(Memory) << '\n');
+  DEBUG(dbgs() << "Allocated Type: " << *Ty << " (" << TypeSize << " bytes) x " 
+               << NumElements << " (Total: " << MemToAlloc << ") at "
+               << uintptr_t(Memory) << '\n');
 
   GenericValue Result = PTOGV(Memory);
   assert(Result.PointerVal && "Null pointer returned by malloc!");
@@ -1025,7 +1025,7 @@ GenericValue Interpreter::executeGEPOperation(Value *Ptr, gep_type_iterator I,
 
   GenericValue Result;
   Result.PointerVal = ((char*)getOperandValue(Ptr, SF).PointerVal) + Total;
-  LLVM_DEBUG(dbgs() << "GEP Index " << Total << " bytes.\n");
+  DEBUG(dbgs() << "GEP Index " << Total << " bytes.\n");
   return Result;
 }
 
@@ -2118,7 +2118,7 @@ void Interpreter::run() {
     // Track the number of dynamic instructions executed.
     ++NumDynamicInsts;
 
-    LLVM_DEBUG(dbgs() << "About to interpret: " << I);
+    DEBUG(dbgs() << "About to interpret: " << I);
     visit(I);   // Dispatch to one of the visit* methods...
   }
 }

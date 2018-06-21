@@ -9,8 +9,6 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUPerfHintAnalysis.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 
 using namespace llvm;
 
@@ -22,19 +20,9 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   LDSSize(0),
   ABIArgOffset(0),
   IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
-  NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath),
-  MemoryBound(false),
-  WaveLimiter(false) {
+  NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
   // except reserved size is not correctly aligned.
-
-  if (auto *Resolver = MF.getMMI().getResolver()) {
-    if (AMDGPUPerfHintAnalysis *PHA = static_cast<AMDGPUPerfHintAnalysis*>(
-          Resolver->getAnalysisIfAvailable(&AMDGPUPerfHintAnalysisID, true))) {
-      MemoryBound = PHA->isMemoryBound(&MF.getFunction());
-      WaveLimiter = PHA->needsWaveLimiter(&MF.getFunction());
-    }
-  }
 }
 
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,

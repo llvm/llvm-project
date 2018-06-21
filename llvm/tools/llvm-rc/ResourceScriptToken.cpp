@@ -281,14 +281,13 @@ bool Tokenizer::canStartIdentifier() const {
   assert(!streamEof());
 
   const char CurChar = Data[Pos];
-  return std::isalpha(CurChar) || CurChar == '_' || CurChar == '.';
+  return std::isalpha(CurChar) || CurChar == '_';
 }
 
 bool Tokenizer::canContinueIdentifier() const {
   assert(!streamEof());
   const char CurChar = Data[Pos];
-  return std::isalnum(CurChar) || CurChar == '_' || CurChar == '.' ||
-         CurChar == '/' || CurChar == '\\';
+  return std::isalnum(CurChar) || CurChar == '_';
 }
 
 bool Tokenizer::canStartInt() const {

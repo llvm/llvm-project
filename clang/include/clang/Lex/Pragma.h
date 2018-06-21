@@ -26,22 +26,22 @@ class Preprocessor;
 class Token;
 
   /**
-   * Describes how the pragma was introduced, e.g., with \#pragma,
+   * \brief Describes how the pragma was introduced, e.g., with \#pragma,
    * _Pragma, or __pragma.
    */
   enum PragmaIntroducerKind {
     /**
-     * The pragma was introduced via \#pragma.
+     * \brief The pragma was introduced via \#pragma.
      */
     PIK_HashPragma,
     
     /**
-     * The pragma was introduced via the C99 _Pragma(string-literal).
+     * \brief The pragma was introduced via the C99 _Pragma(string-literal).
      */
     PIK__Pragma,
     
     /**
-     * The pragma was introduced via the Microsoft 
+     * \brief The pragma was introduced via the Microsoft 
      * __pragma(token-string).
      */
     PIK___pragma

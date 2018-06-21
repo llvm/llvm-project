@@ -14,7 +14,7 @@ void foo() __attribute__((const));
 void bar() __attribute__((__const));
 
 // FIXME: Print this with correct format and order.
-// CHECK: void foo1() __attribute__((noinline)) __attribute__((pure));
+// CHECK: void foo1() __attribute__((pure)) __attribute__((noinline));
 void foo1() __attribute__((noinline, pure));
 
 // CHECK: typedef int Small1 __attribute__((mode(byte)));
@@ -34,12 +34,3 @@ class __attribute__((consumable(unknown))) AttrTester1 {
   // CHECK: void callableWhen() __attribute__((callable_when("unconsumed", "consumed")));
   void callableWhen()  __attribute__((callable_when("unconsumed", "consumed")));
 };
-
-// CHECK: class __single_inheritance SingleInheritance;
-class __single_inheritance SingleInheritance;
-
-// CHECK: class __multiple_inheritance MultipleInheritance;
-class __multiple_inheritance MultipleInheritance;
-
-// CHECK: class __virtual_inheritance VirtualInheritance;
-class __virtual_inheritance VirtualInheritance;

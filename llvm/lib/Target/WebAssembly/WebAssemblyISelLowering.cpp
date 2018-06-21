@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements the WebAssemblyTargetLowering class.
+/// \brief This file implements the WebAssemblyTargetLowering class.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -117,7 +117,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
-  if (!Subtarget->hasSignExt()) {
+  if (!Subtarget->hasAtomics()) {
+    // The Atomics feature includes signext intructions.
     for (auto T : {MVT::i8, MVT::i16, MVT::i32})
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
   }
@@ -150,9 +151,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
-
-  // Exception handling intrinsics
-  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
   setMaxAtomicSizeInBitsSupported(64);
 }
@@ -740,8 +738,6 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
       return LowerFRAMEADDR(Op, DAG);
     case ISD::CopyToReg:
       return LowerCopyToReg(Op, DAG);
-    case ISD::INTRINSIC_WO_CHAIN:
-      return LowerINTRINSIC_WO_CHAIN(Op, DAG);
   }
 }
 
@@ -872,21 +868,6 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
                                     MFI->getVarargBufferVreg(), PtrVT);
   return DAG.getStore(Op.getOperand(0), DL, ArgN, Op.getOperand(1),
                       MachinePointerInfo(SV), 0);
-}
-
-SDValue
-WebAssemblyTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
-                                                   SelectionDAG &DAG) const {
-  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  SDLoc DL(Op);
-  switch (IntNo) {
-  default:
-    return {}; // Don't custom lower most intrinsics.
-
-  case Intrinsic::wasm_lsda:
-    // TODO For now, just return 0 not to crash
-    return DAG.getConstant(0, DL, Op.getValueType());
-  }
 }
 
 //===----------------------------------------------------------------------===//

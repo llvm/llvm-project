@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file is part of the ARC Disassembler.
+/// \brief This file is part of the ARC Disassembler.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,7 +31,7 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 
 namespace {
 
-/// A disassembler class for ARC.
+/// \brief A disassembler class for ARC.
 class ARCDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<MCInstrInfo const> const MCII;
@@ -122,7 +122,7 @@ static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const void *Decoder) {
   if (RegNo >= 32) {
-    LLVM_DEBUG(dbgs() << "Not a GPR32 register.");
+    DEBUG(dbgs() << "Not a GPR32 register.");
     return MCDisassembler::Fail;
   }
 
@@ -222,7 +222,7 @@ static DecodeStatus DecodeStLImmInstruction(MCInst &Inst, uint64_t Insn,
   unsigned SrcC, DstB, LImm;
   DstB = decodeBField(Insn);
   if (DstB != 62) {
-    LLVM_DEBUG(dbgs() << "Decoding StLImm found non-limm register.");
+    DEBUG(dbgs() << "Decoding StLImm found non-limm register.");
     return MCDisassembler::Fail;
   }
   SrcC = decodeCField(Insn);
@@ -237,10 +237,10 @@ static DecodeStatus DecodeLdLImmInstruction(MCInst &Inst, uint64_t Insn,
                                             uint64_t Address,
                                             const void *Decoder) {
   unsigned DstA, SrcB, LImm;
-  LLVM_DEBUG(dbgs() << "Decoding LdLImm:\n");
+  DEBUG(dbgs() << "Decoding LdLImm:\n");
   SrcB = decodeBField(Insn);
   if (SrcB != 62) {
-    LLVM_DEBUG(dbgs() << "Decoding LdLImm found non-limm register.");
+    DEBUG(dbgs() << "Decoding LdLImm found non-limm register.");
     return MCDisassembler::Fail;
   }
   DstA = decodeAField(Insn);
@@ -255,13 +255,13 @@ static DecodeStatus DecodeLdRLImmInstruction(MCInst &Inst, uint64_t Insn,
                                              uint64_t Address,
                                              const void *Decoder) {
   unsigned DstA, SrcB;
-  LLVM_DEBUG(dbgs() << "Decoding LdRLimm\n");
+  DEBUG(dbgs() << "Decoding LdRLimm\n");
   DstA = decodeAField(Insn);
   DecodeGPR32RegisterClass(Inst, DstA, Address, Decoder);
   SrcB = decodeBField(Insn);
   DecodeGPR32RegisterClass(Inst, SrcB, Address, Decoder);
   if (decodeCField(Insn) != 62) {
-    LLVM_DEBUG(dbgs() << "Decoding LdRLimm found non-limm register.");
+    DEBUG(dbgs() << "Decoding LdRLimm found non-limm register.");
     return MCDisassembler::Fail;
   }
   Inst.addOperand(MCOperand::createImm((uint32_t)(Insn >> 32)));
@@ -271,7 +271,7 @@ static DecodeStatus DecodeLdRLImmInstruction(MCInst &Inst, uint64_t Insn,
 static DecodeStatus DecodeMoveHRegInstruction(MCInst &Inst, uint64_t Insn,
                                               uint64_t Address,
                                               const void *Decoder) {
-  LLVM_DEBUG(dbgs() << "Decoding MOV_S h-register\n");
+  DEBUG(dbgs() << "Decoding MOV_S h-register\n");
   using Field = decltype(Insn);
   Field h = fieldFromInstruction(Insn, 5, 3) |
             (fieldFromInstruction(Insn, 0, 2) << 3);
@@ -322,10 +322,10 @@ DecodeStatus ARCDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       Result =
           decodeInstruction(DecoderTable64, Instr, Insn64, Address, this, STI);
       if (Success == Result) {
-        LLVM_DEBUG(dbgs() << "Successfully decoded 64-bit instruction.");
+        DEBUG(dbgs() << "Successfully decoded 64-bit instruction.");
         return Result;
       }
-      LLVM_DEBUG(dbgs() << "Not a 64-bit instruction, falling back to 32-bit.");
+      DEBUG(dbgs() << "Not a 64-bit instruction, falling back to 32-bit.");
     }
     uint32_t Insn32;
     if (!readInstruction32(Bytes, Address, Size, Insn32)) {
@@ -342,12 +342,10 @@ DecodeStatus ARCDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       Result =
           decodeInstruction(DecoderTable48, Instr, Insn48, Address, this, STI);
       if (Success == Result) {
-        LLVM_DEBUG(
-            dbgs() << "Successfully decoded 16-bit instruction with limm.");
+        DEBUG(dbgs() << "Successfully decoded 16-bit instruction with limm.");
         return Result;
       }
-      LLVM_DEBUG(
-          dbgs() << "Not a 16-bit instruction with limm, try without it.");
+      DEBUG(dbgs() << "Not a 16-bit instruction with limm, try without it.");
     }
 
     uint32_t Insn16;

@@ -144,15 +144,14 @@ bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
           unsigned Reg = 0;
           if (getInstrVecReg(*MII, Reg)) {
             VecPrintList.push_back((&*MII));
-            LLVM_DEBUG(dbgs() << "Found vector reg inside bundle \n";
-                       MII->dump());
+            DEBUG(dbgs() << "Found vector reg inside bundle \n"; MII->dump());
           }
         }
       } else {
         unsigned Reg = 0;
         if (getInstrVecReg(MI, Reg)) {
           VecPrintList.push_back(&MI);
-          LLVM_DEBUG(dbgs() << "Found vector reg \n"; MI.dump());
+          DEBUG(dbgs() << "Found vector reg \n"; MI.dump());
         }
       }
     }
@@ -164,33 +163,33 @@ bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
   for (auto *I : VecPrintList) {
     DebugLoc DL = I->getDebugLoc();
     MachineBasicBlock *MBB = I->getParent();
-    LLVM_DEBUG(dbgs() << "Evaluating V MI\n"; I->dump());
+    DEBUG(dbgs() << "Evaluating V MI\n"; I->dump());
     unsigned Reg = 0;
     if (!getInstrVecReg(*I, Reg))
       llvm_unreachable("Need a vector reg");
     MachineBasicBlock::instr_iterator MII = I->getIterator();
     if (I->isInsideBundle()) {
-      LLVM_DEBUG(dbgs() << "add to end of bundle\n"; I->dump());
+      DEBUG(dbgs() << "add to end of bundle\n"; I->dump());
       while (MBB->instr_end() != MII && MII->isInsideBundle())
         MII++;
     } else {
-      LLVM_DEBUG(dbgs() << "add after instruction\n"; I->dump());
+      DEBUG(dbgs() << "add after instruction\n"; I->dump());
       MII++;
     }
     if (MBB->instr_end() == MII)
       continue;
 
     if (Reg >= Hexagon::V0 && Reg <= Hexagon::V31) {
-      LLVM_DEBUG(dbgs() << "adding dump for V" << Reg - Hexagon::V0 << '\n');
+      DEBUG(dbgs() << "adding dump for V" << Reg-Hexagon::V0 << '\n');
       addAsmInstr(MBB, Reg, MII, DL, QII, Fn);
     } else if (Reg >= Hexagon::W0 && Reg <= Hexagon::W15) {
-      LLVM_DEBUG(dbgs() << "adding dump for W" << Reg - Hexagon::W0 << '\n');
+      DEBUG(dbgs() << "adding dump for W" << Reg-Hexagon::W0 << '\n');
       addAsmInstr(MBB, Hexagon::V0 + (Reg - Hexagon::W0) * 2 + 1,
                   MII, DL, QII, Fn);
       addAsmInstr(MBB, Hexagon::V0 + (Reg - Hexagon::W0) * 2,
                    MII, DL, QII, Fn);
     } else if (Reg >= Hexagon::Q0 && Reg <= Hexagon::Q3) {
-      LLVM_DEBUG(dbgs() << "adding dump for Q" << Reg - Hexagon::Q0 << '\n');
+      DEBUG(dbgs() << "adding dump for Q" << Reg-Hexagon::Q0 << '\n');
       addAsmInstr(MBB, Reg, MII, DL, QII, Fn);
     } else
       llvm_unreachable("Bad Vector reg");

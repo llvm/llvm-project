@@ -74,10 +74,7 @@ private:
   Error dumpStreamSummary();
   Error dumpSymbolStats();
   Error dumpUdtStats();
-  Error dumpNamedStreams();
   Error dumpStringTable();
-  Error dumpStringTableFromPdb();
-  Error dumpStringTableFromObj();
   Error dumpLines();
   Error dumpInlineeLines();
   Error dumpXmi();

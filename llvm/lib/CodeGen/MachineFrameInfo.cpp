@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -41,9 +40,9 @@ static inline unsigned clampStackAlignment(bool ShouldClamp, unsigned Align,
                                            unsigned StackAlign) {
   if (!ShouldClamp || Align <= StackAlign)
     return Align;
-  LLVM_DEBUG(dbgs() << "Warning: requested alignment " << Align
-                    << " exceeds the stack alignment " << StackAlign
-                    << " when stack realignment is off" << '\n');
+  DEBUG(dbgs() << "Warning: requested alignment " << Align
+               << " exceeds the stack alignment " << StackAlign
+               << " when stack realignment is off" << '\n');
   return StackAlign;
 }
 
@@ -218,7 +217,7 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     OS << "  fi#" << (int)(i-NumFixedObjects) << ": ";
 
     if (SO.StackID != 0)
-      OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';
+      OS << "id=" << SO.StackID << ' ';
 
     if (SO.Size == ~0ULL) {
       OS << "dead\n";

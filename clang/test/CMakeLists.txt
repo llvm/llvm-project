@@ -50,12 +50,13 @@ list(APPEND CLANG_TEST_DEPS
   c-index-test diagtool
   clang-tblgen
   clang-offload-bundler
+  clang-refactor-test
   clang-import-test
   clang-rename
   clang-refactor
   clang-diff
   )
-  
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
@@ -96,7 +97,6 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-bcanalyzer
     llvm-cat
     llvm-dis
-    llvm-lto2
     llvm-modextract
     llvm-nm
     llvm-objdump

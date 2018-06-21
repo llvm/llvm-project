@@ -24,7 +24,8 @@ public:
 
   using ObjHandleT = uint64_t;
 
-  using ObjectPtr = std::unique_ptr<MemoryBuffer>;
+  using ObjectPtr =
+    std::shared_ptr<object::OwningBinary<object::ObjectFile>>;
 
   using LookupFn = std::function<JITSymbol(StringRef, bool)>;
   using SymbolLookupTable = std::map<ObjHandleT, LookupFn>;
@@ -42,7 +43,7 @@ public:
 
   Expected<ObjHandleT> addObject(ObjectPtr Obj,
             std::shared_ptr<JITSymbolResolver> Resolver) {
-    return AddObject(std::move(Obj), SymTab);
+    return AddObject(Obj, SymTab);
   }
 
   Error removeObject(ObjHandleT H) {
@@ -101,7 +102,8 @@ MockObjectLayer::ObjectPtr createTestObject() {
   B.CreateRet(ConstantInt::getSigned(Type::getInt32Ty(Ctx), 42));
 
   SimpleCompiler IRCompiler(*TM);
-  return IRCompiler(*MB.getModule());
+  return std::make_shared<object::OwningBinary<object::ObjectFile>>(
+           IRCompiler(*MB.getModule()));
 }
 
 TEST(RemoteObjectLayer, AddObject) {
@@ -119,7 +121,7 @@ TEST(RemoteObjectLayer, AddObject) {
 
   // Copy the bytes out of the test object: the copy will be used to verify
   // that the original is correctly transmitted over RPC to the mock layer.
-  StringRef ObjBytes = TestObject->getBuffer();
+  StringRef ObjBytes = TestObject->getBinary()->getData();
   std::vector<char> ObjContents(ObjBytes.size());
   std::copy(ObjBytes.begin(), ObjBytes.end(), ObjContents.begin());
 
@@ -132,7 +134,7 @@ TEST(RemoteObjectLayer, AddObject) {
                    MockObjectLayer::SymbolLookupTable &SymTab) {
 
       // Check that the received object file content matches the original.
-      StringRef RPCObjContents = Obj->getBuffer();
+      StringRef RPCObjContents = Obj->getBinary()->getData();
       EXPECT_EQ(RPCObjContents.size(), ObjContents.size())
         << "RPC'd object file has incorrect size";
       EXPECT_TRUE(std::equal(RPCObjContents.begin(), RPCObjContents.end(),
@@ -157,7 +159,7 @@ TEST(RemoteObjectLayer, AddObject) {
     });
 
   cantFail(Client.addObject(std::move(TestObject),
-                            std::make_shared<NullLegacyResolver>()));
+                            std::make_shared<NullResolver>()));
   cantFail(ClientEP.callB<remote::utils::TerminateSession>());
   ServerThread.join();
 }
@@ -203,8 +205,8 @@ TEST(RemoteObjectLayer, AddObjectFailure) {
         cantFail(ServerEP.handleOne());
     });
 
-  auto HandleOrErr = Client.addObject(std::move(TestObject),
-                                      std::make_shared<NullLegacyResolver>());
+  auto HandleOrErr =
+    Client.addObject(std::move(TestObject), std::make_shared<NullResolver>());
 
   EXPECT_FALSE(HandleOrErr) << "Expected error from addObject";
 
@@ -256,8 +258,8 @@ TEST(RemoteObjectLayer, RemoveObject) {
         cantFail(ServerEP.handleOne());
     });
 
-  auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullLegacyResolver>()));
+  auto H  = cantFail(Client.addObject(std::move(TestObject),
+                                      std::make_shared<NullResolver>()));
 
   cantFail(Client.removeObject(H));
 
@@ -307,8 +309,8 @@ TEST(RemoteObjectLayer, RemoveObjectFailure) {
         cantFail(ServerEP.handleOne());
     });
 
-  auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullLegacyResolver>()));
+  auto H  = cantFail(Client.addObject(std::move(TestObject),
+                                      std::make_shared<NullResolver>()));
 
   auto Err = Client.removeObject(H);
   EXPECT_TRUE(!!Err) << "Expected error from removeObject";
@@ -372,7 +374,7 @@ TEST(RemoteObjectLayer, FindSymbol) {
     });
 
   cantFail(Client.addObject(std::move(TestObject),
-                            std::make_shared<NullLegacyResolver>()));
+                            std::make_shared<NullResolver>()));
 
   // Check that we can find and materialize a valid symbol.
   auto Sym1 = Client.findSymbol("foobar", true);
@@ -461,7 +463,7 @@ TEST(RemoteObjectLayer, FindSymbolIn) {
     });
 
   auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullLegacyResolver>()));
+                                     std::make_shared<NullResolver>()));
 
   auto Sym1 = Client.findSymbolIn(H, "foobar", true);
 
@@ -521,7 +523,7 @@ TEST(RemoteObjectLayer, EmitAndFinalize) {
     });
 
   auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullLegacyResolver>()));
+                                     std::make_shared<NullResolver>()));
 
   auto Err = Client.emitAndFinalize(H);
   EXPECT_FALSE(!!Err) << "emitAndFinalize should work";
@@ -571,7 +573,7 @@ TEST(RemoteObjectLayer, EmitAndFinalizeFailure) {
     });
 
   auto H = cantFail(Client.addObject(std::move(TestObject),
-                                     std::make_shared<NullLegacyResolver>()));
+                                     std::make_shared<NullResolver>()));
 
   auto Err = Client.emitAndFinalize(H);
   EXPECT_TRUE(!!Err) << "emitAndFinalize should work";

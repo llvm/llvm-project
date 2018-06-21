@@ -128,9 +128,11 @@ void AppleGetThreadItemInfoHandler::Detach() {
 }
 
 // Compile our __lldb_backtrace_recording_get_thread_item_info() function (from
-// the source above in g_get_thread_item_info_function_code) if we don't find
-// that function in the inferior already with USE_BUILTIN_FUNCTION defined.
-// (e.g. this would be the case for testing.)
+// the
+// source above in g_get_thread_item_info_function_code) if we don't find that
+// function in the inferior
+// already with USE_BUILTIN_FUNCTION defined.  (e.g. this would be the case for
+// testing.)
 //
 // Insert the __lldb_backtrace_recording_get_thread_item_info into the inferior
 // process if needed.
@@ -139,12 +141,13 @@ void AppleGetThreadItemInfoHandler::Detach() {
 // prepare for the call.
 //
 // Returns the address of the arguments written down in the inferior process,
-// which can be used to make the function call.
+// which can be used to
+// make the function call.
 
 lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
     Thread &thread, ValueList &get_thread_item_info_arglist) {
   ThreadSP thread_sp(thread.shared_from_this());
-  ExecutionContext exe_ctx(thread_sp);
+  ExecutionContext exe_ctx(thread.shared_from_this());
   Address impl_code_address;
   DiagnosticManager diagnostics;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
@@ -218,9 +221,10 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
   diagnostics.Clear();
 
   // Now write down the argument values for this particular call.  This looks
-  // like it might be a race condition if other threads were calling into here,
-  // but actually it isn't because we allocate a new args structure for this
-  // call by passing args_addr = LLDB_INVALID_ADDRESS...
+  // like it might be a race condition
+  // if other threads were calling into here, but actually it isn't because we
+  // allocate a new args structure for
+  // this call by passing args_addr = LLDB_INVALID_ADDRESS...
 
   if (!get_thread_item_info_caller->WriteFunctionArguments(
           exe_ctx, args_addr, get_thread_item_info_arglist, diagnostics)) {
@@ -262,7 +266,8 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
 
   // Set up the arguments for a call to
 
-  // struct get_thread_item_info_return_values {
+  // struct get_thread_item_info_return_values
+  // {
   //     uint64_t item_info_buffer_ptr;    /* the address of the items buffer
   //     from libBacktraceRecording */
   //     uint64_t item_info_buffer_size;   /* the size of the items buffer from
@@ -278,7 +283,8 @@ AppleGetThreadItemInfoHandler::GetThreadItemInfo(Thread &thread,
   //                                             uint64_t page_to_free_size)
 
   // Where the return_buffer argument points to a 24 byte region of memory
-  // already allocated by lldb in the inferior process.
+  // already allocated by lldb in
+  // the inferior process.
 
   CompilerType clang_void_ptr_type =
       clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();

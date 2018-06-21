@@ -19,16 +19,9 @@
 
 extern pthread_key_t PThreadKey;
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
-__attribute__((tls_model("initial-exec")))
-extern THREADLOCAL ScudoTSD *CurrentTSD;
-#endif
-
 ALWAYS_INLINE ScudoTSD* getCurrentTSD() {
 #if SANITIZER_ANDROID
   return reinterpret_cast<ScudoTSD *>(*get_android_tls_ptr());
-#elif SANITIZER_LINUX
-  return CurrentTSD;
 #else
   return reinterpret_cast<ScudoTSD *>(pthread_getspecific(PThreadKey));
 #endif  // SANITIZER_ANDROID
@@ -40,17 +33,16 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   initThread(MinimalInit);
 }
 
-ScudoTSD *getTSDAndLockSlow(ScudoTSD *TSD);
+ScudoTSD *getTSDAndLockSlow();
 
-ALWAYS_INLINE ScudoTSD *getTSDAndLock(bool *UnlockRequired) {
+ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
   ScudoTSD *TSD = getCurrentTSD();
-  DCHECK(TSD && "No TSD associated with the current thread!");
-  *UnlockRequired = true;
+  CHECK(TSD && "No TSD associated with the current thread!");
   // Try to lock the currently associated context.
   if (TSD->tryLock())
     return TSD;
   // If it failed, go the slow path.
-  return getTSDAndLockSlow(TSD);
+  return getTSDAndLockSlow();
 }
 
 #endif  // !SCUDO_TSD_EXCLUSIVE

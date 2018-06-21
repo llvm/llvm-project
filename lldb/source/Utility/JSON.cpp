@@ -449,7 +449,8 @@ int JSONParser::GetEscapedChar(bool &was_escaped) {
 
 JSONValue::SP JSONParser::ParseJSONObject() {
   // The "JSONParser::Token::ObjectStart" token should have already been
-  // consumed by the time this function is called
+  // consumed
+  // by the time this function is called
   std::unique_ptr<JSONObject> dict_up(new JSONObject());
 
   std::string value;
@@ -480,7 +481,8 @@ JSONValue::SP JSONParser::ParseJSONObject() {
 
 JSONValue::SP JSONParser::ParseJSONArray() {
   // The "JSONParser::Token::ObjectStart" token should have already been
-  // consumed by the time this function is called
+  // consumed
+  // by the time this function is called
   std::unique_ptr<JSONArray> array_up(new JSONArray());
 
   std::string value;

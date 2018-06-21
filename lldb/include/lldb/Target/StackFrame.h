@@ -32,7 +32,7 @@ namespace lldb_private {
 
 /// @class StackFrame StackFrame.h "lldb/Target/StackFrame.h"
 ///
-/// This base class provides an interface to stack frames.
+/// @brief This base class provides an interface to stack frames.
 ///
 /// StackFrames may have a Canonical Frame Address (CFA) or not.
 /// A frame may have a plain pc value or it may have a pc value + stop_id
@@ -59,10 +59,10 @@ public:
   ///
   /// This is the one constructor that doesn't take a RegisterContext
   /// parameter.  This ctor may be called when creating a history StackFrame;
-  /// these are used if we've collected a stack trace of pc addresses at some
-  /// point in the past.  We may only have pc values.  We may have pc values
-  /// and the stop_id when the stack trace was recorded.  We may have a CFA,
-  /// or more likely, we won't.
+  /// these are used if we've collected a stack trace of pc addresses at
+  /// some point in the past.  We may only have pc values.  We may have pc
+  /// values and the stop_id when the stack trace was recorded.  We may have a
+  /// CFA, or more likely, we won't.
   ///
   /// @param [in] thread_sp
   ///   The Thread that this frame belongs to.
@@ -165,9 +165,9 @@ public:
   /// Provide a SymbolContext for this StackFrame's current pc value.
   ///
   /// The StackFrame maintains this SymbolContext and adds additional
-  /// information to it on an as-needed basis.  This helps to avoid different
-  /// functions looking up symbolic information for a given pc value multiple
-  /// times.
+  /// information
+  /// to it on an as-needed basis.  This helps to avoid different functions
+  /// looking up symbolic information for a given pc value multiple times.
   ///
   /// @params [in] resolve_scope
   ///   Flags from the SymbolContextItem enumerated type which specify what
@@ -182,9 +182,9 @@ public:
   //------------------------------------------------------------------
   /// Return the Canonical Frame Address (DWARF term) for this frame.
   ///
-  /// The CFA is typically the value of the stack pointer register before the
-  /// call invocation is made.  It will not change during the lifetime of a
-  /// stack frame.  It is often not the same thing as the frame pointer
+  /// The CFA is typically the value of the stack pointer register before
+  /// the call invocation is made.  It will not change during the lifetime
+  /// of a stack frame.  It is often not the same thing as the frame pointer
   /// register value.
   ///
   /// Live StackFrames will always have a CFA but other types of frames may
@@ -220,8 +220,9 @@ public:
   //------------------------------------------------------------------
   /// Get the current lexical scope block for this StackFrame, if possible.
   ///
-  /// If debug information is available for this stack frame, return a pointer
-  /// to the innermost lexical Block that the frame is currently executing.
+  /// If debug information is available for this stack frame, return a
+  /// pointer to the innermost lexical Block that the frame is currently
+  /// executing.
   ///
   /// @return
   ///   A pointer to the current Block.  nullptr is returned if this can
@@ -250,12 +251,11 @@ public:
   }
 
   //------------------------------------------------------------------
-  /// Retrieve the list of variables that are in scope at this StackFrame's
-  /// pc.
+  /// Retrieve the list of variables that are in scope at this StackFrame's pc.
   ///
   /// A frame that is not live may return an empty VariableList for a given
-  /// pc value even though variables would be available at this point if it
-  /// were a live stack frame.
+  /// pc value even though variables would be available at this point if
+  /// it were a live stack frame.
   ///
   /// @param[in] get_file_globals
   ///     Whether to also retrieve compilation-unit scoped variables
@@ -268,12 +268,11 @@ public:
   VariableList *GetVariableList(bool get_file_globals);
 
   //------------------------------------------------------------------
-  /// Retrieve the list of variables that are in scope at this StackFrame's
-  /// pc.
+  /// Retrieve the list of variables that are in scope at this StackFrame's pc.
   ///
   /// A frame that is not live may return an empty VariableListSP for a
-  /// given pc value even though variables would be available at this point if
-  /// it were a live stack frame.
+  /// given pc value even though variables would be available at this point
+  /// if it were a live stack frame.
   ///
   /// @param[in] get_file_globals
   ///     Whether to also retrieve compilation-unit scoped variables
@@ -288,8 +287,8 @@ public:
                          bool must_have_valid_location = false);
 
   //------------------------------------------------------------------
-  /// Create a ValueObject for a variable name / pathname, possibly including
-  /// simple dereference/child selection syntax.
+  /// Create a ValueObject for a variable name / pathname, possibly
+  /// including simple dereference/child selection syntax.
   ///
   /// @param[in] var_expr
   ///     The string specifying a variable to base the VariableObject off
@@ -328,8 +327,8 @@ public:
   bool HasDebugInformation();
 
   //------------------------------------------------------------------
-  /// Return the disassembly for the instructions of this StackFrame's
-  /// function as a single C string.
+  /// Return the disassembly for the instructions of this StackFrame's function
+  /// as a single C string.
   ///
   /// @return
   //    C string with the assembly instructions for this function.
@@ -367,8 +366,8 @@ public:
   void Dump(Stream *strm, bool show_frame_index, bool show_fullpaths);
 
   //------------------------------------------------------------------
-  /// Print a description of this stack frame and/or the source
-  /// context/assembly for this stack frame.
+  /// Print a description of this stack frame and/or the source context/assembly
+  /// for this stack frame.
   ///
   /// @param[in] strm
   ///   The Stream to send the output to.
@@ -393,9 +392,9 @@ public:
                  bool show_unique = false, const char *frame_marker = nullptr);
 
   //------------------------------------------------------------------
-  /// Query whether this frame is a concrete frame on the call stack, or if it
-  /// is an inlined frame derived from the debug information and presented by
-  /// the debugger.
+  /// Query whether this frame is a concrete frame on the call stack,
+  /// or if it is an inlined frame derived from the debug information
+  /// and presented by the debugger.
   ///
   /// @return
   ///   true if this is an inlined frame.
@@ -403,8 +402,7 @@ public:
   bool IsInlined();
 
   //------------------------------------------------------------------
-  /// Query this frame to find what frame it is in this Thread's
-  /// StackFrameList.
+  /// Query this frame to find what frame it is in this Thread's StackFrameList.
   ///
   /// @return
   ///   StackFrame index 0 indicates the currently-executing function.  Inline
@@ -413,8 +411,8 @@ public:
   uint32_t GetFrameIndex() const;
 
   //------------------------------------------------------------------
-  /// Query this frame to find what frame it is in this Thread's
-  /// StackFrameList, not counting inlined frames.
+  /// Query this frame to find what frame it is in this Thread's StackFrameList,
+  /// not counting inlined frames.
   ///
   /// @return
   ///   StackFrame index 0 indicates the currently-executing function.  Inline
@@ -444,7 +442,8 @@ public:
 
   //------------------------------------------------------------------
   /// Add an arbitrary Variable object (e.g. one that specifics a global or
-  /// static) to a StackFrame's list of ValueObjects.
+  /// static)
+  /// to a StackFrame's list of ValueObjects.
   ///
   /// @params [in] variable_sp
   ///   The Variable to base this ValueObject on
@@ -461,8 +460,8 @@ public:
                                           lldb::DynamicValueType use_dynamic);
 
   //------------------------------------------------------------------
-  /// Query this frame to determine what the default language should be when
-  /// parsing expressions given the execution context.
+  /// Query this frame to determine what the default language should be
+  /// when parsing expressions given the execution context.
   ///
   /// @return
   ///   The language of the frame if known, else lldb::eLanguageTypeUnknown.
@@ -470,7 +469,8 @@ public:
   lldb::LanguageType GetLanguage();
 
   // similar to GetLanguage(), but is allowed to take a potentially incorrect
-  // guess if exact information is not available
+  // guess
+  // if exact information is not available
   lldb::LanguageType GuessLanguage();
 
   //------------------------------------------------------------------
@@ -488,8 +488,8 @@ public:
 
   //------------------------------------------------------------------
   /// Attempt to reconstruct the ValueObject for the address contained in a
-  /// given register plus an offset.  The ExpressionPath should indicate how
-  /// to get to this value using "frame variable."
+  /// given register plus an offset.  The ExpressionPath should indicate how to
+  /// get to this value using "frame variable."
   ///
   /// @params [in] reg
   ///   The name of the register.

@@ -42,7 +42,7 @@
 #endif
 
 /// \macro LLVM_GNUC_PREREQ
-/// Extend the default __GNUC_PREREQ even if glibc's features.h isn't
+/// \brief Extend the default __GNUC_PREREQ even if glibc's features.h isn't
 /// available.
 #ifndef LLVM_GNUC_PREREQ
 # if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
@@ -58,7 +58,7 @@
 #endif
 
 /// \macro LLVM_MSC_PREREQ
-/// Is the compiler MSVC of at least the specified version?
+/// \brief Is the compiler MSVC of at least the specified version?
 /// The common \param version values to check for are:
 ///  * 1900: Microsoft Visual Studio 2015 / 14.0
 #ifdef _MSC_VER
@@ -73,7 +73,7 @@
 #define LLVM_MSC_PREREQ(version) 0
 #endif
 
-/// Does the compiler support ref-qualifiers for *this?
+/// \brief Does the compiler support ref-qualifiers for *this?
 ///
 /// Sadly, this is separate from just rvalue reference support because GCC
 /// and MSVC implemented this later than everything else.
@@ -99,7 +99,7 @@
 /// functions, making them private to any shared library they are linked into.
 /// On PE/COFF targets, library visibility is the default, so this isn't needed.
 #if (__has_attribute(visibility) || LLVM_GNUC_PREREQ(4, 0, 0)) &&              \
-    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
+    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(LLVM_ON_WIN32)
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
 #else
 #define LLVM_LIBRARY_VISIBILITY
@@ -146,7 +146,7 @@
 
 // FIXME: Provide this for PE/COFF targets.
 #if (__has_attribute(weak) || LLVM_GNUC_PREREQ(4, 0, 0)) &&                    \
-    (!defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32))
+    (!defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(LLVM_ON_WIN32))
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK
@@ -303,7 +303,7 @@
 #endif
 
 /// \macro LLVM_ASSUME_ALIGNED
-/// Returns a pointer with an assumed alignment.
+/// \brief Returns a pointer with an assumed alignment.
 #if __has_builtin(__builtin_assume_aligned) || LLVM_GNUC_PREREQ(4, 7, 0)
 # define LLVM_ASSUME_ALIGNED(p, a) __builtin_assume_aligned(p, a)
 #elif defined(LLVM_BUILTIN_UNREACHABLE)
@@ -315,7 +315,7 @@
 #endif
 
 /// \macro LLVM_ALIGNAS
-/// Used to specify a minimum alignment for a structure or variable.
+/// \brief Used to specify a minimum alignment for a structure or variable.
 #if __GNUC__ && !__has_feature(cxx_alignas) && !LLVM_GNUC_PREREQ(4, 8, 1)
 # define LLVM_ALIGNAS(x) __attribute__((aligned(x)))
 #else
@@ -323,7 +323,7 @@
 #endif
 
 /// \macro LLVM_PACKED
-/// Used to specify a packed structure.
+/// \brief Used to specify a packed structure.
 /// LLVM_PACKED(
 ///    struct A {
 ///      int i;
@@ -351,7 +351,7 @@
 #endif
 
 /// \macro LLVM_PTR_SIZE
-/// A constant integer equivalent to the value of sizeof(void*).
+/// \brief A constant integer equivalent to the value of sizeof(void*).
 /// Generally used in combination with LLVM_ALIGNAS or when doing computation in
 /// the preprocessor.
 #ifdef __SIZEOF_POINTER__
@@ -367,7 +367,7 @@
 #endif
 
 /// \macro LLVM_MEMORY_SANITIZER_BUILD
-/// Whether LLVM itself is built with MemorySanitizer instrumentation.
+/// \brief Whether LLVM itself is built with MemorySanitizer instrumentation.
 #if __has_feature(memory_sanitizer)
 # define LLVM_MEMORY_SANITIZER_BUILD 1
 # include <sanitizer/msan_interface.h>
@@ -378,7 +378,7 @@
 #endif
 
 /// \macro LLVM_ADDRESS_SANITIZER_BUILD
-/// Whether LLVM itself is built with AddressSanitizer instrumentation.
+/// \brief Whether LLVM itself is built with AddressSanitizer instrumentation.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
 # define LLVM_ADDRESS_SANITIZER_BUILD 1
 # include <sanitizer/asan_interface.h>
@@ -389,7 +389,7 @@
 #endif
 
 /// \macro LLVM_THREAD_SANITIZER_BUILD
-/// Whether LLVM itself is built with ThreadSanitizer instrumentation.
+/// \brief Whether LLVM itself is built with ThreadSanitizer instrumentation.
 #if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
 # define LLVM_THREAD_SANITIZER_BUILD 1
 #else
@@ -432,14 +432,14 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #endif
 
 /// \macro LLVM_NO_SANITIZE
-/// Disable a particular sanitizer for a function.
+/// \brief Disable a particular sanitizer for a function.
 #if __has_attribute(no_sanitize)
 #define LLVM_NO_SANITIZE(KIND) __attribute__((no_sanitize(KIND)))
 #else
 #define LLVM_NO_SANITIZE(KIND)
 #endif
 
-/// Mark debug helper function definitions like dump() that should not be
+/// \brief Mark debug helper function definitions like dump() that should not be
 /// stripped from debug builds.
 /// Note that you should also surround dump() functions with
 /// `#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)` so they do always
@@ -452,7 +452,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #endif
 
 /// \macro LLVM_PRETTY_FUNCTION
-/// Gets a user-friendly looking function signature for the current scope
+/// \brief Gets a user-friendly looking function signature for the current scope
 /// using the best available method on each platform.  The exact format of the
 /// resulting string is implementation specific and non-portable, so this should
 /// only be used, for example, for logging or diagnostics.
@@ -465,7 +465,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #endif
 
 /// \macro LLVM_THREAD_LOCAL
-/// A thread-local storage specifier which can be used with globals,
+/// \brief A thread-local storage specifier which can be used with globals,
 /// extern globals, and static globals.
 ///
 /// This is essentially an extremely restricted analog to C++11's thread_local
@@ -494,7 +494,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #endif
 
 /// \macro LLVM_ENABLE_EXCEPTIONS
-/// Whether LLVM is built with exception support.
+/// \brief Whether LLVM is built with exception support.
 #if __has_feature(cxx_exceptions)
 #define LLVM_ENABLE_EXCEPTIONS 1
 #elif defined(__GNUC__) && defined(__EXCEPTIONS)

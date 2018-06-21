@@ -127,8 +127,7 @@ void tools::CrossWindows::Linker::ConstructJob(
     }
 
     CmdArgs.push_back("-shared");
-    CmdArgs.push_back(Args.hasArg(options::OPT_static) ? "-Bstatic"
-                                                       : "-Bdynamic");
+    CmdArgs.push_back("-Bdynamic");
 
     CmdArgs.push_back("--enable-auto-image-base");
 

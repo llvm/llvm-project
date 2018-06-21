@@ -1,6 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
-
-target triple = "wasm32-unknown-unknown"
+; RUN: llc -mtriple wasm32-unknown-unknown-wasm -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 %struct.bd = type { i32, i8 }
 
@@ -9,8 +7,43 @@ target triple = "wasm32-unknown-unknown"
 @global2 = global i64 7, align 8, section ".sec1"
 @global3 = global i32 8, align 8, section ".sec2"
 
-
-; CHECK:        - Type:            DATA
+; CHECK:        - Type:            GLOBAL
+; CHECK-NEXT:     Globals:         
+; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           0
+; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           8
+; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           16
+; CHECK-NEXT:       - Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:        
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           24
+; CHECK-NEXT:   - Type:            EXPORT
+; CHECK-NEXT:     Exports:         
+; CHECK-NEXT:       - Name:            global0
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           0
+; CHECK-NEXT:       - Name:            global1
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           1
+; CHECK-NEXT:       - Name:            global2
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           2
+; CHECK-NEXT:       - Name:            global3
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         Index:           3
+; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - SectionOffset:   6
 ; CHECK-NEXT:         MemoryIndex:     0
@@ -31,32 +64,9 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:           Value:           24
 ; CHECK-NEXT:         Content:         '08000000'
 
-; CHECK:          SymbolTable:
-; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Kind:            DATA
-; CHECK-NEXT:         Name:            global0
-; CHECK-NEXT:         Flags:           [  ]
-; CHECK-NEXT:         Segment:         0
-; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Kind:            DATA
-; CHECK-NEXT:         Name:            global1
-; CHECK-NEXT:         Flags:           [  ]
-; CHECK-NEXT:         Segment:         1
-; CHECK-NEXT:         Size:            8
-; CHECK-NEXT:       - Index:           2
-; CHECK-NEXT:         Kind:            DATA
-; CHECK-NEXT:         Name:            global2
-; CHECK-NEXT:         Flags:           [  ]
-; CHECK-NEXT:         Segment:         1
-; CHECK-NEXT:         Offset:          8
-; CHECK-NEXT:         Size:            8
-; CHECK-NEXT:       - Index:           3
-; CHECK-NEXT:         Kind:            DATA
-; CHECK-NEXT:         Name:            global3
-; CHECK-NEXT:         Flags:           [  ]
-; CHECK-NEXT:         Segment:         2
-; CHECK-NEXT:         Size:            4
+; CHECK:        - Type:            CUSTOM
+; CHECK-NEXT:     Name:            linking
+; CHECK-NEXT:     DataSize:        28
 ; CHECK-NEXT:     SegmentInfo:    
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.global0

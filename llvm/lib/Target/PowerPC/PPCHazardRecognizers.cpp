@@ -180,9 +180,9 @@ void PPCDispatchGroupSBHazardRecognizer::EmitInstruction(SUnit *SU) {
       CurGroup.clear();
       CurSlots = CurBranches = 0;
     } else {
-      LLVM_DEBUG(dbgs() << "**** Adding to dispatch group: SU(" << SU->NodeNum
-                        << "): ");
-      LLVM_DEBUG(DAG->dumpNode(SU));
+      DEBUG(dbgs() << "**** Adding to dispatch group: SU(" <<
+                      SU->NodeNum << "): ");
+      DEBUG(DAG->dumpNode(SU));
 
       unsigned NSlots;
       bool MustBeFirst = mustComeFirst(MCID, NSlots);
@@ -268,7 +268,7 @@ PPCHazardRecognizer970::PPCHazardRecognizer970(const ScheduleDAG &DAG)
 }
 
 void PPCHazardRecognizer970::EndDispatchGroup() {
-  LLVM_DEBUG(errs() << "=== Start of dispatch group\n");
+  DEBUG(errs() << "=== Start of dispatch group\n");
   NumIssued = 0;
 
   // Structural hazard info.
@@ -330,7 +330,7 @@ getHazardType(SUnit *SU, int Stalls) {
 
   MachineInstr *MI = SU->getInstr();
 
-  if (MI->isDebugInstr())
+  if (MI->isDebugValue())
     return NoHazard;
 
   unsigned Opcode = MI->getOpcode();
@@ -388,7 +388,7 @@ getHazardType(SUnit *SU, int Stalls) {
 void PPCHazardRecognizer970::EmitInstruction(SUnit *SU) {
   MachineInstr *MI = SU->getInstr();
 
-  if (MI->isDebugInstr())
+  if (MI->isDebugValue())
     return;
 
   unsigned Opcode = MI->getOpcode();

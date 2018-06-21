@@ -246,10 +246,6 @@ OPTIONS
 
  Show code coverage only for functions that match the given regular expression.
 
-.. option:: -ignore-filename-regex=<PATTERN>
-
- Skip source code files with file paths that match the given regular expression.
-
 .. option:: -format=<FORMAT>
 
  Use the specified output format. The supported formats are: "text", "html".
@@ -355,10 +351,6 @@ OPTIONS
 
  Show statistics for all function instantiations. Defaults to false.
 
-.. option:: -ignore-filename-regex=<PATTERN>
-
- Skip source code files with file paths that match the given regular expression.
-
 .. program:: llvm-cov export
 
 .. _llvm-cov-export:
@@ -398,7 +390,3 @@ OPTIONS
  will not export coverage information for smaller units such as individual
  functions or regions. The result will be the same as produced by :program:
  `llvm-cov report` command, but presented in JSON format rather than text.
-
-.. option:: -ignore-filename-regex=<PATTERN>
-
- Skip source code files with file paths that match the given regular expression.

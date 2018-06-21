@@ -1,0 +1,96 @@
+{
+  "files": [
+    "/json-with-pch.c.tmp.h.pch",
+    "/Inputs/head.h",
+    "/json-with-pch.c.tmp.o",
+    "/json-with-pch.c"
+  ],
+  "symbols": [
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@test1_func",
+      "name": "test1_func",
+      "roles": "Decl,Ref,Call,RelCall,RelCont"
+    },
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@test2_func",
+      "name": "test2_func",
+      "roles": "Decl"
+    },
+    {
+      "kind": "function",
+      "lang": "C",
+      "usr": "c:@F@main",
+      "name": "main",
+      "roles": "Def",
+      "rel-roles": "RelCall,RelCont"
+    }
+  ],
+  "records": [
+    {
+      "occurrences": [
+        {
+          "symbol": 0,
+          "line": 2,
+          "col": 13,
+          "roles": "Decl"
+        },
+        {
+          "symbol": 1,
+          "line": 3,
+          "col": 13,
+          "roles": "Decl"
+        }
+      ]
+    },
+    {
+      "occurrences": [
+        {
+          "symbol": 2,
+          "line": 8,
+          "col": 5,
+          "roles": "Def"
+        },
+        {
+          "symbol": 0,
+          "line": 9,
+          "col": 3,
+          "roles": "Ref,Call,RelCall,RelCont",
+          "relations": [
+            {
+              "symbol": 2,
+              "rel-roles": "RelCall,RelCont"
+            }
+          ]
+
+        }
+      ]
+    }
+  ],
+  "units": [
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 0,
+      "sources": [
+        {
+          "file": 1,
+          "records": [0]
+        }
+      ]
+    },
+    {
+      "triple": "x86_64-apple-macosx10.7.0",
+      "out-file": 2,
+      "unit-dependencies": [0],
+      "sources": [
+        {
+          "file": 3,
+          "records": [1]
+        }
+      ]
+    }
+  ]
+}

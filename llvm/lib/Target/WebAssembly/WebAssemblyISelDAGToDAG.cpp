@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines an instruction selector for the WebAssembly target.
+/// \brief This file defines an instruction selector for the WebAssembly target.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -68,9 +68,14 @@ private:
 } // end anonymous namespace
 
 void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
+  // Dump information about the Node being selected.
+  DEBUG(errs() << "Selecting: ");
+  DEBUG(Node->dump(CurDAG));
+  DEBUG(errs() << "\n");
+
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
-    LLVM_DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
+    DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
     Node->setNodeId(-1);
     return;
   }

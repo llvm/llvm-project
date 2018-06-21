@@ -106,9 +106,8 @@ This CFI scheme can be enabled on its own using ``-fsanitize=cfi-vcall``.
 
 For this scheme to work, all translation units containing the definition
 of a virtual member function (whether inline or not), other than members
-of :ref:`blacklisted <cfi-blacklist>` types or types with public :doc:`LTO
-visibility <LTOVisibility>`, must be compiled with ``-flto`` or ``-flto=thin``
-enabled and be statically linked into the program.
+of :ref:`blacklisted <cfi-blacklist>` types, must be compiled with
+``-fsanitize=cfi-vcall`` enabled and be statically linked into the program.
 
 Performance
 -----------
@@ -153,9 +152,9 @@ functions may be :ref:`blacklisted <cfi-blacklist>`.
 
 For this scheme to work, all translation units containing the definition
 of a virtual member function (whether inline or not), other than members
-of :ref:`blacklisted <cfi-blacklist>` types or types with public :doc:`LTO
-visibility <LTOVisibility>`, must be compiled with ``-flto`` or ``-flto=thin``
-enabled and be statically linked into the program.
+of :ref:`blacklisted <cfi-blacklist>` types, must be compiled with
+``-fsanitize=cfi-derived-cast`` or ``-fsanitize=cfi-unrelated-cast`` enabled
+and be statically linked into the program.
 
 Non-Virtual Member Function Call Checking
 =========================================
@@ -169,9 +168,8 @@ polymorphic class type.  This CFI scheme can be enabled on its own using
 
 For this scheme to work, all translation units containing the definition
 of a virtual member function (whether inline or not), other than members
-of :ref:`blacklisted <cfi-blacklist>` types or types with public :doc:`LTO
-visibility <LTOVisibility>`, must be compiled with ``-flto`` or ``-flto=thin``
-enabled and be statically linked into the program.
+of :ref:`blacklisted <cfi-blacklist>` types, must be compiled with
+``-fsanitize=cfi-nvcall`` enabled and be statically linked into the program.
 
 .. _cfi-strictness:
 
@@ -226,8 +224,8 @@ flag relax pointer type checking for call sites in that translation unit,
 applied across all functions compiled with ``-fsanitize=cfi-icall``.
 
 Specifically, pointers in return and argument types are treated as equivalent as
-long as the qualifiers for the type they point to match. For example, ``char*``,
-``char**``, and ``int*`` are considered equivalent types. However, ``char*`` and
+long as the qualifiers for the type they point to match. For example, ``char*``
+``char**`, and ``int*`` are considered equivalent types. However, ``char*`` and
 ``const char*`` are considered separate types.
 
 ``-fsanitize-cfi-icall-generalize-pointers`` is not compatible with

@@ -43,7 +43,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
@@ -78,6 +77,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include <cassert>
@@ -210,8 +210,8 @@ bool IndVarSimplify::isValidRewrite(Value *FromVal, Value *ToVal) {
     if (FromBase == ToBase)
       return true;
 
-    LLVM_DEBUG(dbgs() << "INDVARS: GEP rewrite bail out " << *FromBase
-                      << " != " << *ToBase << "\n");
+    DEBUG(dbgs() << "INDVARS: GEP rewrite bail out "
+          << *FromBase << " != " << *ToBase << "\n");
 
     return false;
   }
@@ -653,9 +653,8 @@ void IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
         Value *ExitVal =
             expandSCEVIfNeeded(Rewriter, ExitValue, L, Inst, PN->getType());
 
-        LLVM_DEBUG(dbgs() << "INDVARS: RLEV: AfterLoopVal = " << *ExitVal
-                          << '\n'
-                          << "  LoopVal = " << *Inst << "\n");
+        DEBUG(dbgs() << "INDVARS: RLEV: AfterLoopVal = " << *ExitVal << '\n'
+                     << "  LoopVal = " << *Inst << "\n");
 
         if (!isValidRewrite(Inst, ExitVal)) {
           DeadInsts.push_back(ExitVal);
@@ -1085,7 +1084,7 @@ Instruction *WidenIV::cloneBitwiseIVUser(NarrowIVDefUse DU) {
   Instruction *NarrowDef = DU.NarrowDef;
   Instruction *WideDef = DU.WideDef;
 
-  LLVM_DEBUG(dbgs() << "Cloning bitwise IVUser: " << *NarrowUse << "\n");
+  DEBUG(dbgs() << "Cloning bitwise IVUser: " << *NarrowUse << "\n");
 
   // Replace NarrowDef operands with WideDef. Otherwise, we don't know anything
   // about the narrow operand yet so must insert a [sz]ext. It is probably loop
@@ -1116,7 +1115,7 @@ Instruction *WidenIV::cloneArithmeticIVUser(NarrowIVDefUse DU,
   Instruction *NarrowDef = DU.NarrowDef;
   Instruction *WideDef = DU.WideDef;
 
-  LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
+  DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
   unsigned IVOpIdx = (NarrowUse->getOperand(0) == NarrowDef) ? 0 : 1;
 
@@ -1316,8 +1315,8 @@ WidenIV::WidenedRecTy WidenIV::getWideRecurrence(NarrowIVDefUse DU) {
 /// This IV user cannot be widen. Replace this use of the original narrow IV
 /// with a truncation of the new wide IV to isolate and eliminate the narrow IV.
 static void truncateIVUse(NarrowIVDefUse DU, DominatorTree *DT, LoopInfo *LI) {
-  LLVM_DEBUG(dbgs() << "INDVARS: Truncate IV " << *DU.WideDef << " for user "
-                    << *DU.NarrowUse << "\n");
+  DEBUG(dbgs() << "INDVARS: Truncate IV " << *DU.WideDef
+        << " for user " << *DU.NarrowUse << "\n");
   IRBuilder<> Builder(
       getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI));
   Value *Trunc = Builder.CreateTrunc(DU.WideDef, DU.NarrowDef->getType());
@@ -1397,8 +1396,8 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
         Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType());
         UsePhi->replaceAllUsesWith(Trunc);
         DeadInsts.emplace_back(UsePhi);
-        LLVM_DEBUG(dbgs() << "INDVARS: Widen lcssa phi " << *UsePhi << " to "
-                          << *WidePhi << "\n");
+        DEBUG(dbgs() << "INDVARS: Widen lcssa phi " << *UsePhi
+              << " to " << *WidePhi << "\n");
       }
       return nullptr;
     }
@@ -1429,16 +1428,15 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
         // A wider extend was hidden behind a narrower one. This may induce
         // another round of IV widening in which the intermediate IV becomes
         // dead. It should be very rare.
-        LLVM_DEBUG(dbgs() << "INDVARS: New IV " << *WidePhi
-                          << " not wide enough to subsume " << *DU.NarrowUse
-                          << "\n");
+        DEBUG(dbgs() << "INDVARS: New IV " << *WidePhi
+              << " not wide enough to subsume " << *DU.NarrowUse << "\n");
         DU.NarrowUse->replaceUsesOfWith(DU.NarrowDef, DU.WideDef);
         NewDef = DU.NarrowUse;
       }
     }
     if (NewDef != DU.NarrowUse) {
-      LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *DU.NarrowUse
-                        << " replaced by " << *DU.WideDef << "\n");
+      DEBUG(dbgs() << "INDVARS: eliminating " << *DU.NarrowUse
+            << " replaced by " << *DU.WideDef << "\n");
       ++NumElimExt;
       DU.NarrowUse->replaceAllUsesWith(NewDef);
       DeadInsts.emplace_back(DU.NarrowUse);
@@ -1493,9 +1491,8 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
   // absolutely guarantee it. Hence the following failsafe check. In rare cases
   // where it fails, we simply throw away the newly created wide use.
   if (WideAddRec.first != SE->getSCEV(WideUse)) {
-    LLVM_DEBUG(dbgs() << "Wide use expression mismatch: " << *WideUse << ": "
-                      << *SE->getSCEV(WideUse) << " != " << *WideAddRec.first
-                      << "\n");
+    DEBUG(dbgs() << "Wide use expression mismatch: " << *WideUse
+          << ": " << *SE->getSCEV(WideUse) << " != " << *WideAddRec.first << "\n");
     DeadInsts.emplace_back(WideUse);
     return nullptr;
   }
@@ -1600,7 +1597,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
     WideInc->setDebugLoc(OrigInc->getDebugLoc());
   }
 
-  LLVM_DEBUG(dbgs() << "Wide IV: " << *WidePhi << "\n");
+  DEBUG(dbgs() << "Wide IV: " << *WidePhi << "\n");
   ++NumWidened;
 
   // Traverse the def-use chain using a worklist starting at the original IV.
@@ -2234,12 +2231,12 @@ linearFunctionTestReplace(Loop *L,
   else
     P = ICmpInst::ICMP_EQ;
 
-  LLVM_DEBUG(dbgs() << "INDVARS: Rewriting loop exit condition to:\n"
-                    << "      LHS:" << *CmpIndVar << '\n'
-                    << "       op:\t" << (P == ICmpInst::ICMP_NE ? "!=" : "==")
-                    << "\n"
-                    << "      RHS:\t" << *ExitCnt << "\n"
-                    << "  IVCount:\t" << *IVCount << "\n");
+  DEBUG(dbgs() << "INDVARS: Rewriting loop exit condition to:\n"
+               << "      LHS:" << *CmpIndVar << '\n'
+               << "       op:\t"
+               << (P == ICmpInst::ICMP_NE ? "!=" : "==") << "\n"
+               << "      RHS:\t" << *ExitCnt << "\n"
+               << "  IVCount:\t" << *IVCount << "\n");
 
   IRBuilder<> Builder(BI);
 
@@ -2275,7 +2272,7 @@ linearFunctionTestReplace(Loop *L,
         NewLimit = Start + Count;
       ExitCnt = ConstantInt::get(CmpIndVar->getType(), NewLimit);
 
-      LLVM_DEBUG(dbgs() << "  Widen RHS:\t" << *ExitCnt << "\n");
+      DEBUG(dbgs() << "  Widen RHS:\t" << *ExitCnt << "\n");
     } else {
       // We try to extend trip count first. If that doesn't work we truncate IV.
       // Zext(trunc(IV)) == IV implies equivalence of the following two:

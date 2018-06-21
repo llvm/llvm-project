@@ -25,7 +25,7 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class Stream Stream.h "lldb/Utility/Stream.h"
-/// A stream class that can stream formatted output to a file.
+/// @brief A stream class that can stream formatted output to a file.
 //----------------------------------------------------------------------
 class Stream {
 public:
@@ -33,21 +33,30 @@ public:
   /// \a m_flags bit values.
   //------------------------------------------------------------------
   enum {
-    eBinary = (1 << 0) ///< Get and put data as binary instead of as the default
+    eBinary = (1 << 0), ///< Get and put data as binary instead of as the default
                        /// string mode.
+// START SWIFT PATCH
+    eVerbose = (1 << 1),   ///< If set, verbose logging is enabled
+    eDebug = (eVerbose << 1),     ///< If set, debug logging is enabled
+    eAddPrefix = (eVerbose << 2), ///< Add number prefixes for binary, octal and hex
+                           ///when eBinary is clear
+    eANSIColor = (eVerbose << 3), ///< If set, then it is ok to colorize the output
+                           ///with ANSI escape sequences
+// END SWIFT PATCH
   };
 
   //------------------------------------------------------------------
   /// Construct with flags and address size and byte order.
   ///
-  /// Construct with dump flags \a flags and the default address size. \a
-  /// flags can be any of the above enumeration logical OR'ed together.
+  /// Construct with dump flags \a flags and the default address
+  /// size. \a flags can be any of the above enumeration logical OR'ed
+  /// together.
   //------------------------------------------------------------------
   Stream(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
 
   //------------------------------------------------------------------
-  /// Construct a default Stream, not binary, host byte order and host addr
-  /// size.
+  /// Construct a default Stream, not binary, host byte order and
+  /// host addr size.
   ///
   //------------------------------------------------------------------
   Stream();
@@ -64,15 +73,16 @@ public:
   //------------------------------------------------------------------
   /// Flush the stream.
   ///
-  /// Subclasses should flush the stream to make any output appear if the
-  /// stream has any buffering.
+  /// Subclasses should flush the stream to make any output appear
+  /// if the stream has any buffering.
   //------------------------------------------------------------------
   virtual void Flush() = 0;
 
   //------------------------------------------------------------------
   /// Output character bytes to the stream.
   ///
-  /// Appends \a src_len characters from the buffer \a src to the stream.
+  /// Appends \a src_len characters from the buffer \a src to the
+  /// stream.
   ///
   /// @param[in] src
   ///     A buffer containing at least \a src_len bytes of data.
@@ -93,8 +103,8 @@ public:
   //------------------------------------------------------------------
   /// Set the byte_order value.
   ///
-  /// Sets the byte order of the data to extract. Extracted values will be
-  /// swapped if necessary when decoding.
+  /// Sets the byte order of the data to extract. Extracted values
+  /// will be swapped if necessary when decoding.
   ///
   /// @param[in] byte_order
   ///     The byte order value to use when extracting data.
@@ -105,8 +115,9 @@ public:
   lldb::ByteOrder SetByteOrder(lldb::ByteOrder byte_order);
 
   //------------------------------------------------------------------
-  /// Format a C string from a printf style format and variable arguments and
-  /// encode and append the resulting C string as hex bytes.
+  /// Format a C string from a printf style format and variable
+  /// arguments and encode and append the resulting C string as hex
+  /// bytes.
   ///
   /// @param[in] format
   ///     A printf style format string.
@@ -121,8 +132,9 @@ public:
       __attribute__((__format__(__printf__, 2, 3)));
 
   //------------------------------------------------------------------
-  /// Format a C string from a printf style format and variable arguments and
-  /// encode and append the resulting C string as hex bytes.
+  /// Format a C string from a printf style format and variable
+  /// arguments and encode and append the resulting C string as hex
+  /// bytes.
   ///
   /// @param[in] format
   ///     A printf style format string.
@@ -159,8 +171,8 @@ public:
 
   size_t PutPointer(void *ptr);
 
-  // Append \a src_len bytes from \a src to the stream as hex characters (two
-  // ascii characters per byte of input data)
+  // Append \a src_len bytes from \a src to the stream as hex characters
+  // (two ascii characters per byte of input data)
   size_t
   PutBytesAsRawHex8(const void *src, size_t src_len,
                     lldb::ByteOrder src_byte_order = lldb::eByteOrderInvalid,
@@ -310,8 +322,8 @@ public:
   //------------------------------------------------------------------
   /// Output an address value to this stream.
   ///
-  /// Put an address \a addr out to the stream with optional \a prefix and \a
-  /// suffix strings.
+  /// Put an address \a addr out to the stream with optional \a prefix
+  /// and \a suffix strings.
   ///
   /// @param[in] addr
   ///     An address value.
@@ -331,8 +343,8 @@ public:
   //------------------------------------------------------------------
   /// Output an address range to this stream.
   ///
-  /// Put an address range \a lo_addr - \a hi_addr out to the stream with
-  /// optional \a prefix and \a suffix strings.
+  /// Put an address range \a lo_addr - \a hi_addr out to the stream
+  /// with optional \a prefix and \a suffix strings.
   ///
   /// @param[in] lo_addr
   ///     The start address of the address range.
@@ -411,8 +423,8 @@ public:
   //------------------------------------------------------------------
   /// Indent the current line in the stream.
   ///
-  /// Indent the current line using the current indentation level and print an
-  /// optional string following the indentation spaces.
+  /// Indent the current line using the current indentation level and
+  /// print an optional string following the indentation spaces.
   ///
   /// @param[in] s
   ///     A C string to print following the indentation. If nullptr, just
@@ -434,8 +446,8 @@ public:
   //------------------------------------------------------------------
   /// Output an offset value.
   ///
-  /// Put an offset \a uval out to the stream using the printf format in \a
-  /// format.
+  /// Put an offset \a uval out to the stream using the printf format
+  /// in \a format.
   ///
   /// @param[in] offset
   ///     The offset value.
@@ -468,8 +480,8 @@ public:
   //------------------------------------------------------------------
   /// Output a quoted C string value to the stream.
   ///
-  /// Print a double quoted NULL terminated C string to the stream using the
-  /// printf format in \a format.
+  /// Print a double quoted NULL terminated C string to the stream
+  /// using the printf format in \a format.
   ///
   /// @param[in] cstr
   ///     A NULL terminated C string value.
@@ -499,8 +511,8 @@ public:
   //------------------------------------------------------------------
   /// Output a SLEB128 number to the stream.
   ///
-  /// Put an SLEB128 \a uval out to the stream using the printf format in \a
-  /// format.
+  /// Put an SLEB128 \a uval out to the stream using the printf format
+  /// in \a format.
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a SLEB128 value.
@@ -513,8 +525,8 @@ public:
   //------------------------------------------------------------------
   /// Output a ULEB128 number to the stream.
   ///
-  /// Put an ULEB128 \a uval out to the stream using the printf format in \a
-  /// format.
+  /// Put an ULEB128 \a uval out to the stream using the printf format
+  /// in \a format.
   ///
   /// @param[in] uval
   ///     A uint64_t value that was extracted as a ULEB128 value.

@@ -10,7 +10,6 @@
 #ifndef LLVM_SUPPORT_TIMER_H
 #define LLVM_SUPPORT_TIMER_H
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
@@ -195,10 +194,6 @@ class TimerGroup {
 
 public:
   explicit TimerGroup(StringRef Name, StringRef Description);
-
-  explicit TimerGroup(StringRef Name, StringRef Description,
-                      const StringMap<TimeRecord> &Records);
-
   ~TimerGroup();
 
   void setName(StringRef NewName, StringRef NewDescription) {
@@ -211,8 +206,6 @@ public:
 
   /// This static method prints all timers and clears them all out.
   static void printAll(raw_ostream &OS);
-
-  const char *printJSONValues(raw_ostream &OS, const char *delim);
 
   /// Prints all timers as JSON key/value pairs, and clears them all out.
   static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
@@ -230,6 +223,7 @@ private:
   void PrintQueuedTimers(raw_ostream &OS);
   void printJSONValue(raw_ostream &OS, const PrintRecord &R,
                       const char *suffix, double Value);
+  const char *printJSONValues(raw_ostream &OS, const char *delim);
 };
 
 } // end namespace llvm

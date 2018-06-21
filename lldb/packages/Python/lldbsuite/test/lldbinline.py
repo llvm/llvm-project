@@ -1,6 +1,10 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+import lldb
+from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
+import lldbsuite.test.test_categories as test_categories
 # System modules
 import os
 
@@ -22,7 +26,8 @@ def source_type(filename):
         '.cxx': 'CXX_SOURCES',
         '.cc': 'CXX_SOURCES',
         '.m': 'OBJC_SOURCES',
-        '.mm': 'OBJCXX_SOURCES'
+        '.mm': 'OBJCXX_SOURCES',
+        '.swift': 'SWIFT_SOURCES'
     }.get(extension, None)
 
 
@@ -84,7 +89,20 @@ class CommandParser:
 class InlineTest(TestBase):
     # Internal implementation
 
+    def getRerunArgs(self):
+        # The -N option says to NOT run a if it matches the option argument, so
+        # if we are using dSYM we say to NOT run dwarf (-N dwarf) and vice
+        # versa.
+        if self.using_dsym is None:
+            # The test was skipped altogether.
+            return ""
+        elif self.using_dsym:
+            return "-N dwarf " + self.mydir
+        else:
+            return "-N dsym " + self.mydir
+
     def BuildMakefile(self):
+        self.makeBuildDir()
         makefilePath = self.getBuildArtifact("Makefile")
         if os.path.exists(makefilePath):
             return
@@ -123,10 +141,37 @@ class InlineTest(TestBase):
         makefile.flush()
         makefile.close()
 
-    def _test(self):
+    @add_test_categories(["dsym"])
+    def __test_with_dsym(self):
+        self.using_dsym = True
         self.BuildMakefile()
         self.build()
         self.do_test()
+    __test_with_dsym.debug_info = "dsym"
+
+    @add_test_categories(["dwarf"])
+    def __test_with_dwarf(self):
+        self.using_dsym = False
+        self.BuildMakefile()
+        self.build()
+        self.do_test()
+    __test_with_dwarf.debug_info = "dwarf"
+
+    @add_test_categories(["dwo"])
+    def __test_with_dwo(self):
+        self.using_dsym = False
+        self.BuildMakefile()
+        self.build()
+        self.do_test()
+    __test_with_dwo.debug_info = "dwo"
+
+    @add_test_categories(["gmodules"])
+    def __test_with_gmodules(self):
+        self.using_dsym = False
+        self.BuildMakefile()
+        self.build()
+        self.do_test()
+    __test_with_gmodules.debug_info = "gmodules"
 
     def execute_user_command(self, __command):
         exec(__command, globals(), locals())
@@ -141,23 +186,14 @@ class InlineTest(TestBase):
         parser.parse_source_files(source_files)
         parser.set_breakpoints(target)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        hit_breakpoints = 0
+        process = target.LaunchSimple(None, None, self.getBuildDir())
 
         while lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint):
-            hit_breakpoints += 1
             thread = lldbutil.get_stopped_thread(
                 process, lldb.eStopReasonBreakpoint)
             breakpoint_id = thread.GetStopReasonDataAtIndex(0)
             parser.handle_breakpoint(self, breakpoint_id)
             process.Continue()
-
-        self.assertTrue(hit_breakpoints > 0,
-                        "inline test did not hit a single breakpoint")
-        # Either the process exited or the stepping plan is complete.
-        self.assertTrue(process.GetState() in [lldb.eStateStopped,
-                                               lldb.eStateExited],
-                        PROCESS_EXITED)
 
     # Utilities for testcases
 
@@ -185,6 +221,16 @@ def ApplyDecoratorsToFunction(func, decorators):
         tmp = decorators(tmp)
     return tmp
 
+def isEnabled(debug_flavor, target_platform, configuration, decorators):
+    # If the platform is unsupported, skip the test.
+    if not test_categories.is_supported_on_platform(debug_flavor,
+            target_platform, configuration.compiler):
+        return False
+
+    # If the debug flavor is skipped, skip the test.
+    if debug_flavor in configuration.skipCategories:
+        return False
+    return True
 
 def MakeInlineTest(__file, __globals, decorators=None):
     # Adjust the filename if it ends in .pyc.  We want filenames to
@@ -198,15 +244,28 @@ def MakeInlineTest(__file, __globals, decorators=None):
     InlineTest.mydir = TestBase.compute_mydir(__file)
 
     test_name, _ = os.path.splitext(file_basename)
-
-    test_func = ApplyDecoratorsToFunction(InlineTest._test, decorators)
     # Build the test case
-    test_class = type(test_name, (InlineTest,), dict(test=test_func, name=test_name))
+    test = type(test_name, (InlineTest,), {'using_dsym': None})
+    test.name = test_name
+
+    target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
+    if isEnabled("dsym", target_platform, configuration, decorators):
+        test.test_with_dsym = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_dsym, decorators)
+    if isEnabled("dwarf", target_platform, configuration, decorators):
+        test.test_with_dwarf = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_dwarf, decorators)
+    if isEnabled("dwo", target_platform, configuration, decorators):
+        test.test_with_dwo = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_dwo, decorators)
+    if isEnabled("gmodules", target_platform, configuration, decorators):
+        test.test_with_gmodules = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_gmodules, decorators)
 
     # Add the test case to the globals, and hide InlineTest
-    __globals.update({test_name: test_class})
+    __globals.update({test_name: test})
 
     # Keep track of the original test filename so we report it
     # correctly in test results.
-    test_class.test_filename = __file
-    return test_class
+    test.test_filename = __file
+    return test

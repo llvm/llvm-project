@@ -1,12 +1,27 @@
 RUN: cat %p/../Inputs/basic.macho.x86_64 > %t1
-RUN: dsymutil -f -oso-prepend-path=%p/.. %t1
+RUN: llvm-dsymutil -f -oso-prepend-path=%p/.. %t1
 RUN: llvm-dwarfdump -a %t1.dwarf | FileCheck %s
-RUN: dsymutil -f -o %t2 -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64
+RUN: llvm-dsymutil -f -o %t2 -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64
 RUN: llvm-dwarfdump -a %t2 | FileCheck %s
-RUN: dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
-RUN: dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
-RUN: dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | dsymutil -f -y -o - - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
-RUN: dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | dsymutil -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
+RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
+RUN: llvm-dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
+RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 | llvm-dsymutil -f -y -o - - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=BASIC
+RUN: llvm-dsymutil -dump-debug-map -oso-prepend-path=%p/.. %p/../Inputs/basic-archive.macho.x86_64 | llvm-dsymutil -f -o - -y - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=CHECK --check-prefix=ARCHIVE
+
+# Update tests
+RUN: rm -rf %t.dir
+RUN: mkdir -p %t.dir
+RUN: cat %p/../Inputs/basic.macho.x86_64 > %t.dir/basic
+RUN: llvm-dsymutil -oso-prepend-path=%p/.. %t.dir/basic
+RUN: llvm-dwarfdump -a %t.dir/basic.dSYM/Contents/Resources/DWARF/basic | FileCheck %s
+RUN: llvm-dsymutil --update %t.dir/basic.dSYM
+RUN: llvm-dwarfdump -a %t.dir/basic.dSYM/Contents/Resources/DWARF/basic | FileCheck %s
+RUN: llvm-dsymutil -u %t.dir/basic.dSYM
+RUN: llvm-dwarfdump -a %t.dir/basic.dSYM/Contents/Resources/DWARF/basic | FileCheck %s
+RUN: llvm-dsymutil --update %t.dir/basic.dSYM -o %t.dir/updated.dSYM
+RUN: llvm-dwarfdump -a %t.dir/updated.dSYM/Contents/Resources/DWARF/basic | FileCheck %s
+RUN: llvm-dsymutil -f -u %t2 -o %t3
+RUN: llvm-dwarfdump -a %t3 | FileCheck %s
 
 CHECK: file format Mach-O 64-bit x86-64
 
@@ -26,7 +41,7 @@ CHECK:    DW_AT_name ("main")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
 CHECK:      DW_AT_decl_line (23)
 CHECK:      DW_AT_prototyped (0x01)
-CHECK:      DW_AT_type (0x00000063
+CHECK:      DW_AT_type (cu + 0x0063
 CHECK:      DW_AT_external (0x01)
 CHECK:      DW_AT_accessibility (DW_ACCESS_public)
 CHECK:      DW_AT_low_pc (0x0000000100000ea0)
@@ -36,13 +51,13 @@ CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("argc")
 CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
 CHECK:        DW_AT_decl_line (23)
-CHECK:        DW_AT_type (0x00000063
+CHECK:        DW_AT_type (cu + 0x0063
 CHECK:        DW_AT_location (DW_OP_fbreg -8)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("argv")
 CHECK:        DW_AT_decl_file ("/Inputs{{[/\\]}}basic1.c")
 CHECK:        DW_AT_decl_line (23)
-CHECK:        DW_AT_type (0x0000006a
+CHECK:        DW_AT_type (cu + 0x006a
 CHECK:        DW_AT_location (DW_OP_fbreg -16)
 CHECK:      NULL
 CHECK:    DW_TAG_base_type
@@ -50,11 +65,11 @@ CHECK:      DW_AT_name ("int")
 CHECK:      DW_AT_encoding (DW_ATE_signed)
 CHECK:      DW_AT_byte_size (0x04)
 CHECK:    DW_TAG_pointer_type
-CHECK:      DW_AT_type (0x0000006f
+CHECK:      DW_AT_type (cu + 0x006f
 CHECK:    DW_TAG_pointer_type
-CHECK:      DW_AT_type (0x00000074
+CHECK:      DW_AT_type (cu + 0x0074
 CHECK:    DW_TAG_const_type
-CHECK:      DW_AT_type (0x00000079
+CHECK:      DW_AT_type (cu + 0x0079
 CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("char")
 CHECK:      DW_AT_encoding (DW_ATE_signed_char)
@@ -73,30 +88,30 @@ CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("int")
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("private_int")
-CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_type (cu + 0x0026
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
 BASIC:      DW_AT_location (DW_OP_addr 0x100001008)
 ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001004)
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("baz")
-CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_type (cu + 0x0026
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
 CHECK:      DW_AT_location (DW_OP_addr 0x100001000)
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("foo")
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic2.c")
-CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_type (cu + 0x0026
 CHECK:      DW_AT_low_pc (0x0000000100000ed0)
 CHECK:      DW_AT_high_pc (0x0000000100000f19)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
-CHECK:        DW_AT_type (0x000000a7
+CHECK:        DW_AT_type (cu + 0x0026
 CHECK:        DW_AT_location (DW_OP_fbreg -4)
 CHECK:      NULL
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("inc")
-CHECK:      DW_AT_type (0x000000a7
+CHECK:      DW_AT_type (cu + 0x0026
 CHECK:      DW_AT_low_pc (0x0000000100000f20)
 CHECK:      DW_AT_high_pc (0x0000000100000f37)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
@@ -112,28 +127,28 @@ CHECK:    DW_AT_comp_dir ("/Inputs")
 CHECK:    DW_AT_low_pc (0x0000000100000f40)
 CHECK:    DW_TAG_variable
 CHECK:      DW_AT_name ("val")
-CHECK:      DW_AT_type (0x00000162
+CHECK:      DW_AT_type (cu + 0x003c
 CHECK:      DW_AT_decl_file ("/Inputs{{[/\\]}}basic3.c")
 BASIC:      DW_AT_location (DW_OP_addr 0x100001004)
 ARCHIVE:    DW_AT_location (DW_OP_addr 0x100001008)
 CHECK:    DW_TAG_volatile_type
-CHECK:      DW_AT_type (0x00000167
+CHECK:      DW_AT_type (cu + 0x0041
 CHECK:    DW_TAG_base_type
 CHECK:      DW_AT_name ("int")
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("bar")
-CHECK:      DW_AT_type (0x00000167
+CHECK:      DW_AT_type (cu + 0x0041
 CHECK:      DW_AT_low_pc (0x0000000100000f40)
 CHECK:      DW_AT_high_pc (0x0000000100000f84)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
 CHECK:      DW_TAG_formal_parameter
 CHECK:        DW_AT_name ("arg")
-CHECK:        DW_AT_type (0x00000167
+CHECK:        DW_AT_type (cu + 0x0041
 CHECK:        DW_AT_location (DW_OP_fbreg -8)
 CHECK:      NULL
 CHECK:    DW_TAG_subprogram
 CHECK:      DW_AT_name ("inc")
-CHECK:      DW_AT_type (0x00000167
+CHECK:      DW_AT_type (cu + 0x0041
 CHECK:      DW_AT_low_pc (0x0000000100000f90)
 CHECK:      DW_AT_high_pc (0x0000000100000fa9)
 CHECK:      DW_AT_frame_base (DW_OP_reg6 RBP)
@@ -153,18 +168,18 @@ CHECK-NEXT:[0x0000000100000f40, 0x0000000100000f84)
 CHECK-NEXT:[0x0000000100000f90, 0x0000000100000fa9)
 
 CHECK: .debug_line contents:
-CHECK: file_names[  1]:
-CHECK-NEXT: name: "basic1.c"
-CHECK-NEXT: dir_index: 0
+CHECK:                Dir  Mod Time   File Len   File Name
+CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
+CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 basic1.c
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000ea0     23      0      1   0             0  is_stmt
 CHECK-NEXT: 0x0000000100000eb6     24      0      1   0             0  is_stmt prologue_end
 CHECK-NEXT: 0x0000000100000ec4     24      0      1   0             0  is_stmt end_sequence
 
-CHECK: file_names[  1]:
-CHECK-NEXT: name: "basic2.c"
-CHECK-NEXT: dir_index: 0
+CHECK:                 Dir  Mod Time   File Len   File Name
+CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
+CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 basic2.c
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000ed0     19      0      1   0             0  is_stmt
@@ -174,9 +189,9 @@ CHECK-NEXT: 0x0000000100000f20     14      0      1   0             0  is_stmt
 CHECK-NEXT: 0x0000000100000f24     15      0      1   0             0  is_stmt prologue_end
 CHECK-NEXT: 0x0000000100000f37     15      0      1   0             0  is_stmt end_sequence
 
-CHECK: file_names[  1]:
-CHECK-NEXT: name: "basic3.c"
-CHECK-NEXT: dir_index: 0
+CHECK:                 Dir  Mod Time   File Len   File Name
+CHECK-NEXT:                 ---- ---------- ---------- ---------------------------
+CHECK-NEXT: file_names[  1]    0 0x00000000 0x00000000 basic3.c
 CHECK: Address            Line   Column File   ISA Discriminator Flags
 CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
 CHECK-NEXT: 0x0000000100000f40     16      0      1   0             0  is_stmt

@@ -1,5 +1,4 @@
 ; RUN: llc -I %p/Inputs -filetype asm -o - %s | FileCheck %s
-; REQUIRES: default_triple
 
 module asm ".include \22module.x\22"
 
@@ -9,5 +8,6 @@ entry:
   ret void
 }
 
-; CHECK: .set MODULE, 1
-; CHECK: .set FUNCTION, 1
+; CHECK: MODULE = 1
+; CHECK: FUNCTION = 1
+

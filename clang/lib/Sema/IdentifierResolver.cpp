@@ -1,4 +1,4 @@
-//===- IdentifierResolver.cpp - Lexical Scope Name lookup -----------------===//
+//===- IdentifierResolver.cpp - Lexical Scope Name lookup -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,16 +14,10 @@
 
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/DeclarationName.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Scope.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <cassert>
-#include <cstdint>
 
 using namespace clang;
 
@@ -41,17 +35,17 @@ class IdentifierResolver::IdDeclInfoMap {
   /// impossible to add something to a pre-C++0x STL container without
   /// a completely unnecessary copy.
   struct IdDeclInfoPool {
+    IdDeclInfoPool(IdDeclInfoPool *Next) : Next(Next) {}
+    
     IdDeclInfoPool *Next;
     IdDeclInfo Pool[POOL_SIZE];
-
-    IdDeclInfoPool(IdDeclInfoPool *Next) : Next(Next) {}
   };
   
-  IdDeclInfoPool *CurPool = nullptr;
-  unsigned int CurIndex = POOL_SIZE;
+  IdDeclInfoPool *CurPool;
+  unsigned int CurIndex;
 
 public:
-  IdDeclInfoMap() = default;
+  IdDeclInfoMap() : CurPool(nullptr), CurIndex(POOL_SIZE) {}
 
   ~IdDeclInfoMap() {
     IdDeclInfoPool *Cur = CurPool;
@@ -65,6 +59,7 @@ public:
   /// It creates a new IdDeclInfo if one was not created before for this id.
   IdDeclInfo &operator[](DeclarationName Name);
 };
+
 
 //===----------------------------------------------------------------------===//
 // IdDeclInfo Implementation
@@ -88,7 +83,9 @@ void IdentifierResolver::IdDeclInfo::RemoveDecl(NamedDecl *D) {
 //===----------------------------------------------------------------------===//
 
 IdentifierResolver::IdentifierResolver(Preprocessor &PP)
-    : LangOpt(PP.getLangOpts()), PP(PP), IdDeclInfos(new IdDeclInfoMap) {}
+  : LangOpt(PP.getLangOpts()), PP(PP),
+    IdDeclInfos(new IdDeclInfoMap) {
+}
 
 IdentifierResolver::~IdentifierResolver() {
   delete IdDeclInfos;
@@ -248,16 +245,14 @@ IdentifierResolver::begin(DeclarationName Name) {
 }
 
 namespace {
+  enum DeclMatchKind {
+    DMK_Different,
+    DMK_Replace,
+    DMK_Ignore
+  };
+}
 
-enum DeclMatchKind {
-  DMK_Different,
-  DMK_Replace,
-  DMK_Ignore
-};
-
-} // namespace
-
-/// Compare two declarations to see whether they are different or,
+/// \brief Compare two declarations to see whether they are different or,
 /// if they are the same, whether the new declaration should replace the 
 /// existing declaration.
 static DeclMatchKind compareDeclarations(NamedDecl *Existing, NamedDecl *New) {

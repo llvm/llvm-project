@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Registry of all known matchers.
+/// \brief Registry of all known matchers.
 ///
 /// The registry provides a generic interface to construct any matcher by name.
 //
@@ -49,13 +49,13 @@ struct MatcherCompletion {
     return TypedText == Other.TypedText && MatcherDecl == Other.MatcherDecl;
   }
 
-  /// The text to type to select this matcher.
+  /// \brief The text to type to select this matcher.
   std::string TypedText;
 
-  /// The "declaration" of the matcher, with type information.
+  /// \brief The "declaration" of the matcher, with type information.
   std::string MatcherDecl;
 
-  /// Value corresponding to the "specificity" of the converted matcher.
+  /// \brief Value corresponding to the "specificity" of the converted matcher.
   ///
   /// Zero specificity indicates that this conversion would produce a trivial
   /// matcher that will either always or never match.
@@ -67,13 +67,13 @@ class Registry {
 public:
   Registry() = delete;
 
-  /// Look up a matcher in the registry by name,
+  /// \brief Look up a matcher in the registry by name,
   ///
   /// \return An opaque value which may be used to refer to the matcher
   /// constructor, or Optional<MatcherCtor>() if not found.
   static llvm::Optional<MatcherCtor> lookupMatcherCtor(StringRef MatcherName);
 
-  /// Compute the list of completion types for \p Context.
+  /// \brief Compute the list of completion types for \p Context.
   ///
   /// Each element of \p Context represents a matcher invocation, going from
   /// outermost to innermost. Elements are pairs consisting of a reference to
@@ -84,7 +84,7 @@ public:
   static std::vector<ArgKind> getAcceptedCompletionTypes(
       llvm::ArrayRef<std::pair<MatcherCtor, unsigned>> Context);
 
-  /// Compute the list of completions that match any of
+  /// \brief Compute the list of completions that match any of
   /// \p AcceptedTypes.
   ///
   /// \param AcceptedTypes All types accepted for this completion.
@@ -96,7 +96,7 @@ public:
   static std::vector<MatcherCompletion>
   getMatcherCompletions(ArrayRef<ArgKind> AcceptedTypes);
 
-  /// Construct a matcher from the registry.
+  /// \brief Construct a matcher from the registry.
   ///
   /// \param Ctor The matcher constructor to instantiate.
   ///
@@ -116,7 +116,7 @@ public:
                                          ArrayRef<ParserValue> Args,
                                          Diagnostics *Error);
 
-  /// Construct a matcher from the registry and bind it.
+  /// \brief Construct a matcher from the registry and bind it.
   ///
   /// Similar the \c constructMatcher() above, but it then tries to bind the
   /// matcher to the specified \c BindID.

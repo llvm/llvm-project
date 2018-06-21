@@ -21,12 +21,12 @@ class ARMAsmBackendELF : public ARMAsmBackend {
 public:
   uint8_t OSABI;
   ARMAsmBackendELF(const Target &T, const MCSubtargetInfo &STI, uint8_t OSABI,
-                   support::endianness Endian)
-      : ARMAsmBackend(T, STI, Endian), OSABI(OSABI) {}
+                   bool IsLittle)
+      : ARMAsmBackend(T, STI, IsLittle), OSABI(OSABI) {}
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createARMELFObjectWriter(OSABI);
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createARMELFObjectWriter(OS, OSABI, isLittle());
   }
 };
 }

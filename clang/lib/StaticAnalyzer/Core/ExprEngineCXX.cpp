@@ -110,30 +110,31 @@ SVal ExprEngine::makeZeroElementRegion(ProgramStateRef State, SVal LValue,
   return LValue;
 }
 
-std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
-    const Expr *E, ProgramStateRef State, const LocationContext *LCtx,
-    const ConstructionContext *CC, EvalCallOptions &CallOpts) {
+
+const MemRegion *
+ExprEngine::getRegionForConstructedObject(const CXXConstructExpr *CE,
+                                          ExplodedNode *Pred,
+                                          const ConstructionContext *CC,
+                                          EvalCallOptions &CallOpts) {
+  const LocationContext *LCtx = Pred->getLocationContext();
+  ProgramStateRef State = Pred->getState();
   MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
 
   // See if we're constructing an existing region by looking at the
   // current construction context.
   if (CC) {
     switch (CC->getKind()) {
-    case ConstructionContext::CXX17ElidedCopyVariableKind:
     case ConstructionContext::SimpleVariableKind: {
-      const auto *DSCC = cast<VariableConstructionContext>(CC);
+      const auto *DSCC = cast<SimpleVariableConstructionContext>(CC);
       const auto *DS = DSCC->getDeclStmt();
       const auto *Var = cast<VarDecl>(DS->getSingleDecl());
       SVal LValue = State->getLValue(Var, LCtx);
       QualType Ty = Var->getType();
       LValue =
           makeZeroElementRegion(State, LValue, Ty, CallOpts.IsArrayCtorOrDtor);
-      State =
-          addObjectUnderConstruction(State, DSCC->getDeclStmt(), LCtx, LValue);
-      return std::make_pair(State, LValue);
+      return LValue.getAsRegion();
     }
-    case ConstructionContext::CXX17ElidedCopyConstructorInitializerKind:
-    case ConstructionContext::SimpleConstructorInitializerKind: {
+    case ConstructionContext::ConstructorInitializerKind: {
       const auto *ICC = cast<ConstructorInitializerConstructionContext>(CC);
       const auto *Init = ICC->getCXXCtorInitializer();
       assert(Init->isAnyMemberInitializer());
@@ -155,112 +156,93 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
       QualType Ty = Field->getType();
       FieldVal = makeZeroElementRegion(State, FieldVal, Ty,
                                        CallOpts.IsArrayCtorOrDtor);
-      State = addObjectUnderConstruction(State, Init, LCtx, FieldVal);
-      return std::make_pair(State, FieldVal);
+      return FieldVal.getAsRegion();
     }
     case ConstructionContext::NewAllocatedObjectKind: {
       if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
         const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
         const auto *NE = NECC->getCXXNewExpr();
-        SVal V = *getObjectUnderConstruction(State, NE, LCtx);
-        if (const SubRegion *MR =
-                dyn_cast_or_null<SubRegion>(V.getAsRegion())) {
+        // TODO: Detect when the allocator returns a null pointer.
+        // Constructor shall not be called in this case.
+        if (const SubRegion *MR = dyn_cast_or_null<SubRegion>(
+                getCXXNewAllocatorValue(State, NE, LCtx).getAsRegion())) {
           if (NE->isArray()) {
             // TODO: In fact, we need to call the constructor for every
             // allocated element, not just the first one!
             CallOpts.IsArrayCtorOrDtor = true;
-            return std::make_pair(
-                State, loc::MemRegionVal(getStoreManager().GetElementZeroRegion(
-                           MR, NE->getType()->getPointeeType())));
+            return getStoreManager().GetElementZeroRegion(
+                MR, NE->getType()->getPointeeType());
           }
-          return std::make_pair(State, V);
+          return MR;
         }
-        // TODO: Detect when the allocator returns a null pointer.
-        // Constructor shall not be called in this case.
       }
       break;
     }
-    case ConstructionContext::SimpleReturnedValueKind:
-    case ConstructionContext::CXX17ElidedCopyReturnedValueKind: {
-      // The temporary is to be managed by the parent stack frame.
-      // So build it in the parent stack frame if we're not in the
-      // top frame of the analysis.
-      const StackFrameContext *SFC = LCtx->getCurrentStackFrame();
-      if (const LocationContext *CallerLCtx = SFC->getParent()) {
-        auto RTC = (*SFC->getCallSiteBlock())[SFC->getIndex()]
-                       .getAs<CFGCXXRecordTypedCall>();
-        if (!RTC) {
-          // We were unable to find the correct construction context for the
-          // call in the parent stack frame. This is equivalent to not being
-          // able to find construction context at all.
-          break;
-        }
-        return prepareForObjectConstruction(
-            cast<Expr>(SFC->getCallSite()), State, CallerLCtx,
-            RTC->getConstructionContext(), CallOpts);
-      } else {
-        // We are on the top frame of the analysis.
-        // TODO: What exactly happens when we are? Does the temporary object
-        // live long enough in the region store in this case? Would checkers
-        // think that this object immediately goes out of scope?
-        CallOpts.IsTemporaryCtorOrDtor = true;
-        SVal V = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
-        return std::make_pair(State, V);
-      }
-      llvm_unreachable("Unhandled return value construction context!");
-    }
     case ConstructionContext::TemporaryObjectKind: {
-      const auto *TCC = cast<TemporaryObjectConstructionContext>(CC);
-      const CXXBindTemporaryExpr *BTE = TCC->getCXXBindTemporaryExpr();
-      const MaterializeTemporaryExpr *MTE = TCC->getMaterializedTemporaryExpr();
-
-      if (!BTE) {
-        // FIXME: Lifetime extension for temporaries without destructors
-        // is not implemented yet.
-        MTE = nullptr;
-      }
-
-      if (MTE) {
+      const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
+      // See if we're lifetime-extended via our field. If so, take a note.
+      // Because automatic destructors aren't quite working in this case.
+      if (const auto *MTE = TOCC->getMaterializedTemporaryExpr()) {
         if (const ValueDecl *VD = MTE->getExtendingDecl()) {
-          assert(MTE->getStorageDuration() != SD_FullExpression);
-          if (!VD->getType()->isReferenceType()) {
-            // We're lifetime-extended by a surrounding aggregate.
-            // Automatic destructors aren't quite working in this case
-            // on the CFG side. We should warn the caller about that.
-            // FIXME: Is there a better way to retrieve this information from
-            // the MaterializeTemporaryExpr?
-            CallOpts.IsTemporaryLifetimeExtendedViaAggregate = true;
+          assert(VD->getType()->isReferenceType());
+          if (VD->getType()->getPointeeType().getCanonicalType() !=
+              MTE->GetTemporaryExpr()->getType().getCanonicalType()) {
+            CallOpts.IsTemporaryLifetimeExtendedViaSubobject = true;
           }
         }
       }
-
-      if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
-        // If the temporary is lifetime-extended, don't save the BTE,
-        // because we don't need a temporary destructor, but an automatic
-        // destructor.
-        BTE = nullptr;
-      }
-
-      // FIXME: Support temporaries lifetime-extended via static references.
+      // TODO: Support temporaries lifetime-extended via static references.
       // They'd need a getCXXStaticTempObjectRegion().
-      SVal V = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
-
-      if (BTE)
-        State = addObjectUnderConstruction(State, BTE, LCtx, V);
-
-      if (MTE)
-        State = addObjectUnderConstruction(State, MTE, LCtx, V);
-
       CallOpts.IsTemporaryCtorOrDtor = true;
-      return std::make_pair(State, V);
+      return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+    }
+    case ConstructionContext::ReturnedValueKind: {
+      // TODO: We should construct into a CXXBindTemporaryExpr or a
+      // MaterializeTemporaryExpr around the call-expression on the previous
+      // stack frame. Currently we re-bind the temporary to the correct region
+      // later, but that's not semantically correct. This of course does not
+      // apply when we're in the top frame. But if we are in an inlined
+      // function, we should be able to take the call-site CFG element,
+      // and it should contain (but right now it wouldn't) some sort of
+      // construction context that'd give us the right temporary expression.
+      CallOpts.IsTemporaryCtorOrDtor = true;
+      return MRMgr.getCXXTempObjectRegion(CE, LCtx);
     }
     }
   }
   // If we couldn't find an existing region to construct into, assume we're
   // constructing a temporary. Notify the caller of our failure.
   CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
-  return std::make_pair(
-      State, loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx)));
+  return MRMgr.getCXXTempObjectRegion(CE, LCtx);
+}
+
+const CXXConstructExpr *
+ExprEngine::findDirectConstructorForCurrentCFGElement() {
+  // Go backward in the CFG to see if the previous element (ignoring
+  // destructors) was a CXXConstructExpr. If so, that constructor
+  // was constructed directly into an existing region.
+  // This process is essentially the inverse of that performed in
+  // findElementDirectlyInitializedByCurrentConstructor().
+  if (currStmtIdx == 0)
+    return nullptr;
+
+  const CFGBlock *B = getBuilderContext().getBlock();
+
+  unsigned int PreviousStmtIdx = currStmtIdx - 1;
+  CFGElement Previous = (*B)[PreviousStmtIdx];
+
+  while (Previous.getAs<CFGImplicitDtor>() && PreviousStmtIdx > 0) {
+    --PreviousStmtIdx;
+    Previous = (*B)[PreviousStmtIdx];
+  }
+
+  if (Optional<CFGStmt> PrevStmtElem = Previous.getAs<CFGStmt>()) {
+    if (auto *CtorExpr = dyn_cast<CXXConstructExpr>(PrevStmtElem->getStmt())) {
+      return CtorExpr;
+    }
+  }
+
+  return nullptr;
 }
 
 void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
@@ -269,7 +251,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   const LocationContext *LCtx = Pred->getLocationContext();
   ProgramStateRef State = Pred->getState();
 
-  SVal Target = UnknownVal();
+  const MemRegion *Target = nullptr;
 
   // FIXME: Handle arrays, which run the same constructor for every element.
   // For now, we just run the first constructor (which should still invalidate
@@ -280,10 +262,35 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
   assert(C || getCurrentCFGElement().getAs<CFGStmt>());
   const ConstructionContext *CC = C ? C->getConstructionContext() : nullptr;
 
+  const CXXBindTemporaryExpr *BTE = nullptr;
+  const MaterializeTemporaryExpr *MTE = nullptr;
+
   switch (CE->getConstructionKind()) {
   case CXXConstructExpr::CK_Complete: {
-    std::tie(State, Target) =
-        prepareForObjectConstruction(CE, State, LCtx, CC, CallOpts);
+    Target = getRegionForConstructedObject(CE, Pred, CC, CallOpts);
+
+    // In case of temporary object construction, extract data necessary for
+    // destruction and lifetime extension.
+    if (const auto *TCC =
+            dyn_cast_or_null<TemporaryObjectConstructionContext>(CC)) {
+      assert(CallOpts.IsTemporaryCtorOrDtor);
+      assert(!CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion);
+      if (AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG()) {
+        BTE = TCC->getCXXBindTemporaryExpr();
+        MTE = TCC->getMaterializedTemporaryExpr();
+        if (!BTE) {
+          // FIXME: lifetime extension for temporaries without destructors
+          // is not implemented yet.
+          MTE = nullptr;
+        }
+        if (MTE && MTE->getStorageDuration() != SD_FullExpression) {
+          // If the temporary is lifetime-extended, don't save the BTE,
+          // because we don't need a temporary destructor, but an automatic
+          // destructor.
+          BTE = nullptr;
+        }
+      }
+    }
     break;
   }
   case CXXConstructExpr::CK_VirtualBase:
@@ -319,7 +326,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     // otherwise always available during construction.
     if (dyn_cast_or_null<InitListExpr>(LCtx->getParentMap().getParent(CE))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
-      Target = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(CE, LCtx));
+      Target = MRMgr.getCXXTempObjectRegion(CE, LCtx);
       CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
       break;
     }
@@ -331,34 +338,22 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (CE->getConstructionKind() == CXXConstructExpr::CK_Delegating) {
-      Target = ThisVal;
+      Target = ThisVal.getAsRegion();
     } else {
       // Cast to the base type.
       bool IsVirtual =
         (CE->getConstructionKind() == CXXConstructExpr::CK_VirtualBase);
       SVal BaseVal = getStoreManager().evalDerivedToBase(ThisVal, CE->getType(),
                                                          IsVirtual);
-      Target = BaseVal;
+      Target = BaseVal.getAsRegion();
     }
     break;
   }
   }
 
-  if (State != Pred->getState()) {
-    static SimpleProgramPointTag T("ExprEngine",
-                                   "Prepare for object construction");
-    ExplodedNodeSet DstPrepare;
-    StmtNodeBuilder BldrPrepare(Pred, DstPrepare, *currBldrCtx);
-    BldrPrepare.generateNode(CE, Pred, State, &T, ProgramPoint::PreStmtKind);
-    assert(DstPrepare.size() <= 1);
-    if (DstPrepare.size() == 0)
-      return;
-    Pred = *BldrPrepare.begin();
-  }
-
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<CXXConstructorCall> Call =
-    CEMgr.getCXXConstructorCall(CE, Target.getAsRegion(), State, LCtx);
+    CEMgr.getCXXConstructorCall(CE, Target, State, LCtx);
 
   ExplodedNodeSet DstPreVisit;
   getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, CE, *this);
@@ -372,6 +367,9 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
          I != E; ++I) {
       ProgramStateRef State = (*I)->getState();
       if (CE->requiresZeroInitialization()) {
+        // Type of the zero doesn't matter.
+        SVal ZeroVal = svalBuilder.makeZeroVal(getContext().CharTy);
+
         // FIXME: Once we properly handle constructors in new-expressions, we'll
         // need to invalidate the region before setting a default value, to make
         // sure there aren't any lingering bindings around. This probably needs
@@ -384,7 +382,17 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
         // actually make things worse. Placement new makes this tricky as well,
         // since it's then possible to be initializing one part of a multi-
         // dimensional array.
-        State = State->bindDefaultZero(Target, LCtx);
+        State = State->bindDefault(loc::MemRegionVal(Target), ZeroVal, LCtx);
+      }
+
+      if (BTE) {
+        State = addInitializedTemporary(State, BTE, LCtx,
+                                        cast<CXXTempObjectRegion>(Target));
+      }
+
+      if (MTE) {
+        State = addTemporaryMaterialization(State, MTE, LCtx,
+                                            cast<CXXTempObjectRegion>(Target));
       }
 
       Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
@@ -413,7 +421,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
       defaultEvalCall(Bldr, *I, *Call, CallOpts);
   }
 
-  // If the CFG was constructed without elements for temporary destructors
+  // If the CFG was contructed without elements for temporary destructors
   // and the just-called constructor created a temporary object then
   // stop exploration if the temporary object has a noreturn constructor.
   // This can lose coverage because the destructor, if it were present
@@ -541,12 +549,12 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
     if (const FunctionDecl *FD = CNE->getOperatorNew()) {
       QualType Ty = FD->getType();
       if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
-        if (!ProtoType->isNothrow())
+        if (!ProtoType->isNothrow(getContext()))
           State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
     }
 
-    ValueBldr.generateNode(
-        CNE, I, addObjectUnderConstruction(State, CNE, LCtx, RetVal));
+    ValueBldr.generateNode(CNE, I,
+                           setCXXNewAllocatorValue(State, CNE, LCtx, RetVal));
   }
 
   ExplodedNodeSet DstPostPostCallCallback;
@@ -554,8 +562,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                              DstPostValue, *Call, *this);
   for (auto I : DstPostPostCallCallback) {
     getCheckerManager().runCheckersForNewAllocator(
-        CNE, *getObjectUnderConstruction(I->getState(), CNE, LCtx), Dst, I,
-        *this);
+        CNE, getCXXNewAllocatorValue(I->getState(), CNE, LCtx), Dst, I, *this);
   }
 }
 
@@ -578,8 +585,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
 
   // Retrieve the stored operator new() return value.
   if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
-    symVal = *getObjectUnderConstruction(State, CNE, LCtx);
-    State = finishObjectConstruction(State, CNE, LCtx);
+    symVal = getCXXNewAllocatorValue(State, CNE, LCtx);
+    State = clearCXXNewAllocatorValue(State, CNE, LCtx);
   }
 
   // We assume all standard global 'operator new' functions allocate memory in
@@ -615,7 +622,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
     if (FD) {
       QualType Ty = FD->getType();
       if (const auto *ProtoType = Ty->getAs<FunctionProtoType>())
-        if (!ProtoType->isNothrow())
+        if (!ProtoType->isNothrow(getContext()))
           if (auto dSymVal = symVal.getAs<DefinedOrUnknownSVal>())
             State = State->assume(*dSymVal, true);
     }

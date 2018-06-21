@@ -1502,7 +1502,7 @@ Stmt *RewriteObjC::RewriteObjCForCollectionStmt(ObjCForCollectionStmt *S,
   else {
     DeclRefExpr *DR = cast<DeclRefExpr>(S->getElement());
     elementName = DR->getDecl()->getName();
-    ValueDecl *VD = DR->getDecl();
+    ValueDecl *VD = cast<ValueDecl>(DR->getDecl());
     if (VD->getType()->isObjCQualifiedIdType() ||
         VD->getType()->isObjCQualifiedInterfaceType())
       // Simply use 'id' for all qualified types.
@@ -2511,7 +2511,7 @@ Stmt *RewriteObjC::RewriteObjCStringLiteral(ObjCStringLiteral *Exp) {
   Expr *Unop = new (Context) UnaryOperator(DRE, UO_AddrOf,
                                  Context->getPointerType(DRE->getType()),
                                            VK_RValue, OK_Ordinary,
-                                           SourceLocation(), false);
+                                           SourceLocation());
   // cast to NSConstantString *
   CastExpr *cast = NoTypeInfoCStyleCastExpr(Context, Exp->getType(),
                                             CK_CPointerToObjCPointerCast, Unop);
@@ -2712,7 +2712,7 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       SuperRep = new (Context) UnaryOperator(SuperRep, UO_AddrOf,
                                Context->getPointerType(SuperRep->getType()),
                                              VK_RValue, OK_Ordinary,
-                                             SourceLocation(), false);
+                                             SourceLocation());
       SuperRep = NoTypeInfoCStyleCastExpr(Context,
                                           Context->getPointerType(superType),
                                           CK_BitCast, SuperRep);
@@ -2730,7 +2730,7 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       SuperRep = new (Context) UnaryOperator(SuperRep, UO_AddrOf,
                                Context->getPointerType(SuperRep->getType()),
                                              VK_RValue, OK_Ordinary,
-                                             SourceLocation(), false);
+                                             SourceLocation());
     }
     MsgExprs.push_back(SuperRep);
     break;
@@ -2806,7 +2806,7 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
       SuperRep = new (Context) UnaryOperator(SuperRep, UO_AddrOf,
                                Context->getPointerType(SuperRep->getType()),
                                VK_RValue, OK_Ordinary,
-                               SourceLocation(), false);
+                               SourceLocation());
       SuperRep = NoTypeInfoCStyleCastExpr(Context,
                                Context->getPointerType(superType),
                                CK_BitCast, SuperRep);
@@ -3045,7 +3045,7 @@ Stmt *RewriteObjC::RewriteObjCProtocolExpr(ObjCProtocolExpr *Exp) {
                                                VK_LValue, SourceLocation());
   Expr *DerefExpr = new (Context) UnaryOperator(DRE, UO_AddrOf,
                              Context->getPointerType(DRE->getType()),
-                             VK_RValue, OK_Ordinary, SourceLocation(), false);
+                             VK_RValue, OK_Ordinary, SourceLocation());
   CastExpr *castExpr = NoTypeInfoCStyleCastExpr(Context, DerefExpr->getType(),
                                                 CK_BitCast,
                                                 DerefExpr);
@@ -3875,7 +3875,7 @@ Stmt *RewriteObjC::RewriteLocalVariableExternalStorage(DeclRefExpr *DRE) {
       return DRE;
   Expr *Exp = new (Context) UnaryOperator(DRE, UO_Deref, DRE->getType(),
                                           VK_LValue, OK_Ordinary,
-                                          DRE->getLocation(), false);
+                                          DRE->getLocation());
   // Need parens to enforce precedence.
   ParenExpr *PE = new (Context) ParenExpr(SourceLocation(), SourceLocation(), 
                                           Exp);
@@ -4438,7 +4438,7 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
                                 UO_AddrOf,
                                 Context->getPointerType(Context->VoidPtrTy), 
                                 VK_RValue, OK_Ordinary,
-                                SourceLocation(), false);
+                                SourceLocation());
   InitExprs.push_back(DescRefExpr); 
   
   // Add initializers for any closure decl refs.
@@ -4456,8 +4456,7 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
           QualType QT = (*I)->getType();
           QT = Context->getPointerType(QT);
           Exp = new (Context) UnaryOperator(Exp, UO_AddrOf, QT, VK_RValue,
-                                            OK_Ordinary, SourceLocation(),
-                                            false);
+                                            OK_Ordinary, SourceLocation());
         }
       } else if (isTopLevelBlockPointerType((*I)->getType())) {
         FD = SynthBlockInitFunctionDecl((*I)->getName());
@@ -4473,8 +4472,7 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
           QualType QT = (*I)->getType();
           QT = Context->getPointerType(QT);
           Exp = new (Context) UnaryOperator(Exp, UO_AddrOf, QT, VK_RValue,
-                                            OK_Ordinary, SourceLocation(),
-                                            false);
+                                            OK_Ordinary, SourceLocation());
         }
       }
       InitExprs.push_back(Exp);
@@ -4511,9 +4509,9 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
       // captured nested byref variable has its address passed. Do not take
       // its address again.
       if (!isNestedCapturedVar)
-        Exp = new (Context) UnaryOperator(
-            Exp, UO_AddrOf, Context->getPointerType(Exp->getType()), VK_RValue,
-            OK_Ordinary, SourceLocation(), false);
+          Exp = new (Context) UnaryOperator(Exp, UO_AddrOf,
+                                     Context->getPointerType(Exp->getType()),
+                                     VK_RValue, OK_Ordinary, SourceLocation());
       Exp = NoTypeInfoCStyleCastExpr(Context, castT, CK_BitCast, Exp);
       InitExprs.push_back(Exp);
     }
@@ -4531,7 +4529,7 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
                                   FType, VK_LValue, SourceLocation());
   NewRep = new (Context) UnaryOperator(NewRep, UO_AddrOf,
                              Context->getPointerType(NewRep->getType()),
-                             VK_RValue, OK_Ordinary, SourceLocation(), false);
+                             VK_RValue, OK_Ordinary, SourceLocation());
   NewRep = NoTypeInfoCStyleCastExpr(Context, FType, CK_BitCast,
                                     NewRep);
   BlockDeclRefs.clear();

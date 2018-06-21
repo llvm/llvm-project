@@ -226,6 +226,8 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
     if (ast_type.IsValid())
       byte_size = ast_type.GetByteSize(
           exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
+    if (byte_size == 0 && SwiftASTContext::IsPossibleZeroSizeType(ast_type))
+      return 0;
   } break;
   }
 
@@ -365,10 +367,11 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
       if (process == NULL || !process->IsAlive()) {
         Target *target = exe_ctx->GetTargetPtr();
         if (target) {
-          // Allow expressions to run and evaluate things when the target has
-          // memory sections loaded. This allows you to use "target modules
-          // load" to load your executable and any shared libraries, then
-          // execute commands where you can look at types in data sections.
+          // Allow expressions to run and evaluate things when the target
+          // has memory sections loaded. This allows you to use "target modules
+          // load"
+          // to load your executable and any shared libraries, then execute
+          // commands where you can look at types in data sections.
           const SectionLoadList &target_sections = target->GetSectionLoadList();
           if (!target_sections.IsEmpty()) {
             address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
@@ -405,8 +408,8 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         error.SetErrorString("invalid file address");
       } else {
         if (module == NULL) {
-          // The only thing we can currently lock down to a module so that we
-          // can resolve a file address, is a variable.
+          // The only thing we can currently lock down to a module so that
+          // we can resolve a file address, is a variable.
           Variable *variable = GetVariable();
           if (variable) {
             SymbolContext var_sc;
@@ -518,6 +521,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   // Bail if we encountered any errors getting the byte size
   if (error.Fail())
     return error;
+  else if (byte_size == 0 &&
+           SwiftASTContext::IsPossibleZeroSizeType(GetCompilerType()))
+    return error;
 
   // Make sure we have enough room within "data", and if we don't make
   // something large enough that does
@@ -540,11 +546,12 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     } else if ((address_type == eAddressTypeLoad) ||
                (address_type == eAddressTypeFile)) {
       if (file_so_addr.IsValid()) {
-        // We have a file address that we were able to translate into a section
-        // offset address so we might be able to read this from the object
-        // files if we don't have a live process. Lets always try and read from
-        // the process if we have one though since we want to read the actual
-        // value by setting "prefer_file_cache" to false.
+        // We have a file address that we were able to translate into a
+        // section offset address so we might be able to read this from
+        // the object files if we don't have a live process. Lets always
+        // try and read from the process if we have one though since we
+        // want to read the actual value by setting "prefer_file_cache"
+        // to false.
         const bool prefer_file_cache = false;
         if (exe_ctx->GetTargetRef().ReadMemory(file_so_addr, prefer_file_cache,
                                                dst, byte_size,
@@ -553,10 +560,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
               "read memory from 0x%" PRIx64 " failed", (uint64_t)address);
         }
       } else {
-        // The execution context might have a NULL process, but it might have a
-        // valid process in the exe_ctx->target, so use the
-        // ExecutionContext::GetProcess accessor to ensure we get the process
-        // if there is one.
+        // The execution context might have a NULL process, but it
+        // might have a valid process in the exe_ctx->target, so use
+        // the ExecutionContext::GetProcess accessor to ensure we
+        // get the process if there is one.
         Process *process = exe_ctx->GetProcessPtr();
 
         if (process) {

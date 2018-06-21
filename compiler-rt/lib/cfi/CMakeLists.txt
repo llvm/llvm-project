@@ -30,8 +30,6 @@ if(OS_NAME MATCHES "Linux")
       OBJECT_LIBS RTInterception
                   RTSanitizerCommon
                   RTSanitizerCommonLibc
-                  RTSanitizerCommonCoverage
-                  RTSanitizerCommonSymbolizer
                   RTUbsan
       CFLAGS ${CFI_CFLAGS} ${CFI_DIAG_CFLAGS}
       PARENT_TARGET cfi)

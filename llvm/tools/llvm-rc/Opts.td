@@ -35,9 +35,6 @@ def H : Flag<[ "/", "-" ], "H">,
 def DRY_RUN : Flag<[ "/", "-" ], "dry-run">,
               HelpText<"Don't compile the input; only try to parse it.">;
 
-def CODEPAGE : JoinedOrSeparate<[ "/", "-" ], "C">,
-               HelpText<"Set the codepage used for input strings.">;
-
 // Unused switches (at least for now). These will stay unimplemented
 // in an early stage of development and can be ignored. However, we need to
 // parse them in order to preserve the compatibility with the original tool.
@@ -47,6 +44,7 @@ def R : Flag<[ "/", "-" ], "R">;
 def SL : Flag<[ "/", "-" ], "SL">;
 
 // (Codepages support.)
+def C : Flag<[ "/", "-" ], "C">;
 def W : Flag<[ "/", "-" ], "W">;
 
 // (Support of MUI and similar.)

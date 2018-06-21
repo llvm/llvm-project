@@ -115,7 +115,6 @@ define <16 x double> @select04(<16 x double> %a, <16 x double> %b) {
 ; X86-NEXT:    vmovaps 8(%ebp), %zmm1
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select04:
@@ -156,7 +155,7 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    korw %k1, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    # kill: def %al killed %al killed %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select05_mem:
@@ -167,7 +166,7 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X64-NEXT:    kmovw %eax, %k1
 ; X64-NEXT:    korw %k1, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -206,7 +205,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    kandw %k1, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    # kill: def %al killed %al killed %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select06_mem:
@@ -217,7 +216,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; X64-NEXT:    kmovw %eax, %k1
 ; X64-NEXT:    kandw %k1, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -238,7 +237,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X86-NEXT:    kandw %k0, %k1, %k0
 ; X86-NEXT:    korw %k2, %k0, %k0
 ; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    # kill: def %al killed %al killed %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select07:
@@ -250,7 +249,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X64-NEXT:    kandw %k0, %k1, %k0
 ; X64-NEXT:    korw %k2, %k0, %k0
 ; X64-NEXT:    kmovw %k0, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    # kill: def %al killed %al killed %eax
 ; X64-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>

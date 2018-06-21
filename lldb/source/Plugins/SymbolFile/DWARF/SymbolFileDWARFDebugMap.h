@@ -23,6 +23,7 @@
 class SymbolFileDWARF;
 class DWARFDebugAranges;
 class DWARFDeclContext;
+class DebugMapModule;
 
 class SymbolFileDWARFDebugMap : public lldb_private::SymbolFile {
 public:
@@ -95,10 +96,10 @@ public:
   uint32_t
   FindGlobalVariables(const lldb_private::ConstString &name,
                       const lldb_private::CompilerDeclContext *parent_decl_ctx,
-                      uint32_t max_matches,
+                      bool append, uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
   uint32_t FindGlobalVariables(const lldb_private::RegularExpression &regex,
-                               uint32_t max_matches,
+                               bool append, uint32_t max_matches,
                                lldb_private::VariableList &variables) override;
   uint32_t
   FindFunctions(const lldb_private::ConstString &name,
@@ -123,6 +124,9 @@ public:
                   uint32_t type_mask,
                   lldb_private::TypeList &type_list) override;
 
+  std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language) override;
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------
@@ -136,7 +140,8 @@ protected:
   friend class DebugMapModule;
   friend struct DIERef;
   friend class DWARFASTParserClang;
-  friend class DWARFUnit;
+  friend class DWARFASTParserSwift;
+  friend class DWARFCompileUnit;
   friend class SymbolFileDWARF;
   struct OSOInfo {
     lldb::ModuleSP module_sp;
@@ -300,11 +305,10 @@ protected:
   std::vector<CompileUnitInfo> m_compile_unit_infos;
   std::vector<uint32_t> m_func_indexes; // Sorted by address
   std::vector<uint32_t> m_glob_indexes;
-  std::map<std::pair<lldb_private::ConstString, llvm::sys::TimePoint<>>,
-           OSOInfoSP>
-      m_oso_map;
+  std::map<lldb_private::ConstString, OSOInfoSP> m_oso_map;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   lldb_private::LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
+  bool m_initialized_swift_modules;
   DebugMap m_debug_map;
 
   //------------------------------------------------------------------

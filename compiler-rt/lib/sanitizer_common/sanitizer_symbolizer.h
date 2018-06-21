@@ -107,6 +107,7 @@ class Symbolizer final {
   void Flush();
   // Attempts to demangle the provided C++ mangled name.
   const char *Demangle(const char *name);
+  void PrepareForSandboxing();
 
   // Allow user to install hooks that would be called before/after Symbolizer
   // does the actual file/line info fetching. Specific sanitizers may need this
@@ -132,9 +133,8 @@ class Symbolizer final {
   class ModuleNameOwner {
    public:
     explicit ModuleNameOwner(BlockingMutex *synchronized_by)
-        : last_match_(nullptr), mu_(synchronized_by) {
-      storage_.reserve(kInitialCapacity);
-    }
+        : storage_(kInitialCapacity), last_match_(nullptr),
+          mu_(synchronized_by) {}
     const char *GetOwnedCopy(const char *str);
 
    private:
@@ -158,6 +158,7 @@ class Symbolizer final {
 
   // Platform-specific default demangler, must not return nullptr.
   const char *PlatformDemangle(const char *name);
+  void PlatformPrepareForSandboxing();
 
   static Symbolizer *symbolizer_;
   static StaticSpinMutex init_mu_;

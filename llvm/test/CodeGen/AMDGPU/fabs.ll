@@ -7,35 +7,37 @@
 ; (fabs (f32 bitcast (i32 a))) => (f32 bitcast (and (i32 a), 0x7FFFFFFF))
 ; unless isFabsFree returns true
 
-; FUNC-LABEL: {{^}}s_fabs_fn_free:
+; FUNC-LABEL: {{^}}fabs_fn_free:
 ; R600-NOT: AND
 ; R600: |PV.{{[XYZW]}}|
 
-; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
-define amdgpu_kernel void @s_fabs_fn_free(float addrspace(1)* %out, i32 %in) {
+; GCN: v_and_b32
+
+define amdgpu_kernel void @fabs_fn_free(float addrspace(1)* %out, i32 %in) {
   %bc= bitcast i32 %in to float
   %fabs = call float @fabs(float %bc)
   store float %fabs, float addrspace(1)* %out
   ret void
 }
 
-; FUNC-LABEL: {{^}}s_fabs_free:
+; FUNC-LABEL: {{^}}fabs_free:
 ; R600-NOT: AND
 ; R600: |PV.{{[XYZW]}}|
 
-; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
-define amdgpu_kernel void @s_fabs_free(float addrspace(1)* %out, i32 %in) {
+; GCN: v_and_b32
+
+define amdgpu_kernel void @fabs_free(float addrspace(1)* %out, i32 %in) {
   %bc= bitcast i32 %in to float
   %fabs = call float @llvm.fabs.f32(float %bc)
   store float %fabs, float addrspace(1)* %out
   ret void
 }
 
-; FUNC-LABEL: {{^}}s_fabs_f32:
+; FUNC-LABEL: {{^}}fabs_f32:
 ; R600: |{{(PV|T[0-9])\.[XYZW]}}|
 
-; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
-define amdgpu_kernel void @s_fabs_f32(float addrspace(1)* %out, float %in) {
+; GCN: v_and_b32
+define amdgpu_kernel void @fabs_f32(float addrspace(1)* %out, float %in) {
   %fabs = call float @llvm.fabs.f32(float %in)
   store float %fabs, float addrspace(1)* %out
   ret void

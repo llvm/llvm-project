@@ -1,4 +1,4 @@
-//===- FileMatchTrie.h ------------------------------------------*- C++ -*-===//
+//===--- FileMatchTrie.h - --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,21 +16,22 @@
 #define LLVM_CLANG_TOOLING_FILEMATCHTRIE_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/StringRef.h"
 #include <memory>
+
+namespace llvm {
+class StringRef;
+}
 
 namespace clang {
 namespace tooling {
 
-class FileMatchTrieNode;
-
 struct PathComparator {
-  virtual ~PathComparator() = default;
-
+  virtual ~PathComparator() {}
   virtual bool equivalent(StringRef FileA, StringRef FileB) const = 0;
 };
+class FileMatchTrieNode;
 
-/// A trie to efficiently match against the entries of the compilation
+/// \brief A trie to efficiently match against the entries of the compilation
 /// database in order of matching suffix length.
 ///
 /// When a clang tool is supposed to operate on a specific file, we have to
@@ -58,32 +59,32 @@ class FileMatchTrie {
 public:
   FileMatchTrie();
 
-  /// Construct a new \c FileMatchTrie with the given \c PathComparator.
+  /// \brief Construct a new \c FileMatchTrie with the given \c PathComparator.
   ///
   /// The \c FileMatchTrie takes ownership of 'Comparator'. Used for testing.
   FileMatchTrie(PathComparator* Comparator);
 
   ~FileMatchTrie();
 
-  /// Insert a new absolute path. Relative paths are ignored.
+  /// \brief Insert a new absolute path. Relative paths are ignored.
   void insert(StringRef NewPath);
 
-  /// Finds the corresponding file in this trie.
+  /// \brief Finds the corresponding file in this trie.
   ///
   /// Returns file name stored in this trie that is equivalent to 'FileName'
   /// according to 'Comparator', if it can be uniquely identified. If there
-  /// are no matches an empty \c StringRef is returned. If there are ambiguous
+  /// are no matches an empty \c StringRef is returned. If there are ambigious
   /// matches, an empty \c StringRef is returned and a corresponding message
   /// written to 'Error'.
   StringRef findEquivalent(StringRef FileName,
                            raw_ostream &Error) const;
-
 private:
   FileMatchTrieNode *Root;
   std::unique_ptr<PathComparator> Comparator;
 };
 
-} // namespace tooling
-} // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_FILEMATCHTRIE_H
+} // end namespace tooling
+} // end namespace clang
+
+#endif

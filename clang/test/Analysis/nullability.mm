@@ -418,7 +418,7 @@ Dummy *_Nonnull testDefensiveInlineChecks(Dummy * p) {
 @end
 
 @implementation SubClassWithInitializers
-// Note: Because this is overriding
+// Note: Because this is overridding
 // -[ClassWithInitializers initWithNonnullReturnAndSelfCheckingIdiom],
 // the return type of this method becomes implicitly id _Nonnull.
 - (id)initWithNonnullReturnAndSelfCheckingIdiom {

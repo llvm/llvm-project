@@ -28,7 +28,6 @@
 #include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -40,7 +39,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -145,8 +144,7 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
     if (PN)
       PN->addIncoming(BB->getTerminator()->getOperand(0), BB);
 
-    // Remove and delete the return inst.
-    BB->getTerminator()->eraseFromParent();
+    BB->getInstList().pop_back();  // Remove the return insn
     BranchInst::Create(NewRetBlock, BB);
   }
 
@@ -170,9 +168,6 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   SmallVector<BasicBlock *, 4> ReturningBlocks;
   SmallVector<BasicBlock *, 4> UnreachableBlocks;
 
-  // Dummy return block for infinite loop.
-  BasicBlock *DummyReturnBB = nullptr;
-
   for (BasicBlock *BB : PDT.getRoots()) {
     if (isa<ReturnInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
@@ -180,35 +175,6 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
     } else if (isa<UnreachableInst>(BB->getTerminator())) {
       if (!isUniformlyReached(DA, *BB))
         UnreachableBlocks.push_back(BB);
-    } else if (BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator())) {
-
-      ConstantInt *BoolTrue = ConstantInt::getTrue(F.getContext());
-      if (DummyReturnBB == nullptr) {
-        DummyReturnBB = BasicBlock::Create(F.getContext(),
-                                           "DummyReturnBlock", &F);
-        Type *RetTy = F.getReturnType();
-        Value *RetVal = RetTy->isVoidTy() ? nullptr : UndefValue::get(RetTy);
-        ReturnInst::Create(F.getContext(), RetVal, DummyReturnBB);
-        ReturningBlocks.push_back(DummyReturnBB);
-      }
-
-      if (BI->isUnconditional()) {
-        BasicBlock *LoopHeaderBB = BI->getSuccessor(0);
-        BI->eraseFromParent(); // Delete the unconditional branch.
-        // Add a new conditional branch with a dummy edge to the return block.
-        BranchInst::Create(LoopHeaderBB, DummyReturnBB, BoolTrue, BB);
-      } else { // Conditional branch.
-        // Create a new transition block to hold the conditional branch.
-        BasicBlock *TransitionBB = BasicBlock::Create(F.getContext(),
-                                                      "TransitionBlock", &F);
-
-        // Move BI from BB to the new transition block.
-        BI->removeFromParent();
-        TransitionBB->getInstList().push_back(BI);
-
-        // Create a branch that will always branch to the transition block.
-        BranchInst::Create(TransitionBB, DummyReturnBB, BoolTrue, BB);
-      }
     }
   }
 
@@ -223,8 +189,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
       new UnreachableInst(F.getContext(), UnreachableBlock);
 
       for (BasicBlock *BB : UnreachableBlocks) {
-        // Remove and delete the unreachable inst.
-        BB->getTerminator()->eraseFromParent();
+        BB->getInstList().pop_back();  // Remove the unreachable inst.
         BranchInst::Create(UnreachableBlock, BB);
       }
     }
@@ -235,8 +200,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
 
       Type *RetTy = F.getReturnType();
       Value *RetVal = RetTy->isVoidTy() ? nullptr : UndefValue::get(RetTy);
-      // Remove and delete the unreachable inst.
-      UnreachableBlock->getTerminator()->eraseFromParent();
+      UnreachableBlock->getInstList().pop_back();  // Remove the unreachable inst.
 
       Function *UnreachableIntrin =
         Intrinsic::getDeclaration(F.getParent(), Intrinsic::amdgcn_unreachable);

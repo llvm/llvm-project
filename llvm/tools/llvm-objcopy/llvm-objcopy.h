@@ -19,9 +19,6 @@
 namespace llvm {
 
 LLVM_ATTRIBUTE_NORETURN extern void error(Twine Message);
-LLVM_ATTRIBUTE_NORETURN extern void reportError(StringRef File, Error E);
-LLVM_ATTRIBUTE_NORETURN extern void reportError(StringRef File,
-                                                std::error_code EC);
 
 // This is taken from llvm-readobj.
 // [see here](llvm/tools/llvm-readobj/llvm-readobj.h:38)

@@ -17,7 +17,6 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -74,7 +73,7 @@ using LoopData = BlockFrequencyInfoImplBase::LoopData;
 using Weight = BlockFrequencyInfoImplBase::Weight;
 using FrequencyData = BlockFrequencyInfoImplBase::FrequencyData;
 
-/// Dithering mass distributer.
+/// \brief Dithering mass distributer.
 ///
 /// This class splits up a single mass into portions by weight, dithering to
 /// spread out error.  No mass is lost.  The dithering precision depends on the
@@ -156,9 +155,9 @@ static void combineWeight(Weight &W, const Weight &OtherW) {
 
 static void combineWeightsBySorting(WeightList &Weights) {
   // Sort so edges to the same node are adjacent.
-  llvm::sort(Weights.begin(), Weights.end(),
-             [](const Weight &L,
-                const Weight &R) { return L.TargetNode < R.TargetNode; });
+  std::sort(Weights.begin(), Weights.end(),
+            [](const Weight &L,
+               const Weight &R) { return L.TargetNode < R.TargetNode; });
 
   // Combine adjacent edges.
   WeightList::iterator O = Weights.begin();
@@ -277,7 +276,7 @@ void BlockFrequencyInfoImplBase::clear() {
   Loops.clear();
 }
 
-/// Clear all memory not needed downstream.
+/// \brief Clear all memory not needed downstream.
 ///
 /// Releases all memory not used downstream.  In particular, saves Freqs.
 static void cleanup(BlockFrequencyInfoImplBase &BFI) {
@@ -316,13 +315,13 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
 #endif
 
   if (isLoopHeader(Resolved)) {
-    LLVM_DEBUG(debugSuccessor("backedge"));
+    DEBUG(debugSuccessor("backedge"));
     Dist.addBackedge(Resolved, Weight);
     return true;
   }
 
   if (Working[Resolved.Index].getContainingLoop() != OuterLoop) {
-    LLVM_DEBUG(debugSuccessor("  exit  "));
+    DEBUG(debugSuccessor("  exit  "));
     Dist.addExit(Resolved, Weight);
     return true;
   }
@@ -334,7 +333,7 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
              "unhandled irreducible control flow");
 
       // Irreducible backedge.  Abort.
-      LLVM_DEBUG(debugSuccessor("abort!!!"));
+      DEBUG(debugSuccessor("abort!!!"));
       return false;
     }
 
@@ -345,7 +344,7 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
            "unhandled irreducible control flow");
   }
 
-  LLVM_DEBUG(debugSuccessor(" local  "));
+  DEBUG(debugSuccessor(" local  "));
   Dist.addLocal(Resolved, Weight);
   return true;
 }
@@ -362,10 +361,10 @@ bool BlockFrequencyInfoImplBase::addLoopSuccessorsToDist(
   return true;
 }
 
-/// Compute the loop scale for a loop.
+/// \brief Compute the loop scale for a loop.
 void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
   // Compute loop scale.
-  LLVM_DEBUG(dbgs() << "compute-loop-scale: " << getLoopName(Loop) << "\n");
+  DEBUG(dbgs() << "compute-loop-scale: " << getLoopName(Loop) << "\n");
 
   // Infinite loops need special handling. If we give the back edge an infinite
   // mass, they may saturate all the other scales in the function down to 1,
@@ -391,21 +390,20 @@ void BlockFrequencyInfoImplBase::computeLoopScale(LoopData &Loop) {
   Loop.Scale =
       ExitMass.isEmpty() ? InfiniteLoopScale : ExitMass.toScaled().inverse();
 
-  LLVM_DEBUG(dbgs() << " - exit-mass = " << ExitMass << " ("
-                    << BlockMass::getFull() << " - " << TotalBackedgeMass
-                    << ")\n"
-                    << " - scale = " << Loop.Scale << "\n");
+  DEBUG(dbgs() << " - exit-mass = " << ExitMass << " (" << BlockMass::getFull()
+               << " - " << TotalBackedgeMass << ")\n"
+               << " - scale = " << Loop.Scale << "\n");
 }
 
-/// Package up a loop.
+/// \brief Package up a loop.
 void BlockFrequencyInfoImplBase::packageLoop(LoopData &Loop) {
-  LLVM_DEBUG(dbgs() << "packaging-loop: " << getLoopName(Loop) << "\n");
+  DEBUG(dbgs() << "packaging-loop: " << getLoopName(Loop) << "\n");
 
   // Clear the subloop exits to prevent quadratic memory usage.
   for (const BlockNode &M : Loop.Nodes) {
     if (auto *Loop = Working[M.Index].getPackagedLoop())
       Loop->Exits.clear();
-    LLVM_DEBUG(dbgs() << " - node: " << getBlockName(M.Index) << "\n");
+    DEBUG(dbgs() << " - node: " << getBlockName(M.Index) << "\n");
   }
   Loop.IsPackaged = true;
 }
@@ -427,7 +425,7 @@ void BlockFrequencyInfoImplBase::distributeMass(const BlockNode &Source,
                                                 LoopData *OuterLoop,
                                                 Distribution &Dist) {
   BlockMass Mass = Working[Source.Index].getMass();
-  LLVM_DEBUG(dbgs() << "  => mass:  " << Mass << "\n");
+  DEBUG(dbgs() << "  => mass:  " << Mass << "\n");
 
   // Distribute mass to successors as laid out in Dist.
   DitheringDistributer D(Dist, Mass);
@@ -437,7 +435,7 @@ void BlockFrequencyInfoImplBase::distributeMass(const BlockNode &Source,
     BlockMass Taken = D.takeMass(W.Amount);
     if (W.Type == Weight::Local) {
       Working[W.TargetNode.Index].getMass() += Taken;
-      LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
+      DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
       continue;
     }
 
@@ -447,14 +445,14 @@ void BlockFrequencyInfoImplBase::distributeMass(const BlockNode &Source,
     // Check for a backedge.
     if (W.Type == Weight::Backedge) {
       OuterLoop->BackedgeMass[OuterLoop->getHeaderIndex(W.TargetNode)] += Taken;
-      LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, "back"));
+      DEBUG(debugAssign(*this, D, W.TargetNode, Taken, "back"));
       continue;
     }
 
     // This must be an exit.
     assert(W.Type == Weight::Exit);
     OuterLoop->Exits.push_back(std::make_pair(W.TargetNode, Taken));
-    LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, "exit"));
+    DEBUG(debugAssign(*this, D, W.TargetNode, Taken, "exit"));
   }
 }
 
@@ -482,28 +480,28 @@ static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI,
   }
 
   // Translate the floats to integers.
-  LLVM_DEBUG(dbgs() << "float-to-int: min = " << Min << ", max = " << Max
-                    << ", factor = " << ScalingFactor << "\n");
+  DEBUG(dbgs() << "float-to-int: min = " << Min << ", max = " << Max
+               << ", factor = " << ScalingFactor << "\n");
   for (size_t Index = 0; Index < BFI.Freqs.size(); ++Index) {
     Scaled64 Scaled = BFI.Freqs[Index].Scaled * ScalingFactor;
     BFI.Freqs[Index].Integer = std::max(UINT64_C(1), Scaled.toInt<uint64_t>());
-    LLVM_DEBUG(dbgs() << " - " << BFI.getBlockName(Index) << ": float = "
-                      << BFI.Freqs[Index].Scaled << ", scaled = " << Scaled
-                      << ", int = " << BFI.Freqs[Index].Integer << "\n");
+    DEBUG(dbgs() << " - " << BFI.getBlockName(Index) << ": float = "
+                 << BFI.Freqs[Index].Scaled << ", scaled = " << Scaled
+                 << ", int = " << BFI.Freqs[Index].Integer << "\n");
   }
 }
 
-/// Unwrap a loop package.
+/// \brief Unwrap a loop package.
 ///
 /// Visits all the members of a loop, adjusting their BlockData according to
 /// the loop's pseudo-node.
 static void unwrapLoop(BlockFrequencyInfoImplBase &BFI, LoopData &Loop) {
-  LLVM_DEBUG(dbgs() << "unwrap-loop-package: " << BFI.getLoopName(Loop)
-                    << ": mass = " << Loop.Mass << ", scale = " << Loop.Scale
-                    << "\n");
+  DEBUG(dbgs() << "unwrap-loop-package: " << BFI.getLoopName(Loop)
+               << ": mass = " << Loop.Mass << ", scale = " << Loop.Scale
+               << "\n");
   Loop.Scale *= Loop.Mass.toScaled();
   Loop.IsPackaged = false;
-  LLVM_DEBUG(dbgs() << "  => combined-scale = " << Loop.Scale << "\n");
+  DEBUG(dbgs() << "  => combined-scale = " << Loop.Scale << "\n");
 
   // Propagate the head scale through the loop.  Since members are visited in
   // RPO, the head scale will be updated by the loop scale first, and then the
@@ -513,8 +511,8 @@ static void unwrapLoop(BlockFrequencyInfoImplBase &BFI, LoopData &Loop) {
     Scaled64 &F = Working.isAPackage() ? Working.getPackagedLoop()->Scale
                                        : BFI.Freqs[N.Index].Scaled;
     Scaled64 New = Loop.Scale * F;
-    LLVM_DEBUG(dbgs() << " - " << BFI.getBlockName(N) << ": " << F << " => "
-                      << New << "\n");
+    DEBUG(dbgs() << " - " << BFI.getBlockName(N) << ": " << F << " => " << New
+                 << "\n");
     F = New;
   }
 }
@@ -546,7 +544,7 @@ void BlockFrequencyInfoImplBase::finalizeMetrics() {
   cleanup(*this);
 
   // Print out the final stats.
-  LLVM_DEBUG(dump());
+  DEBUG(dump());
 }
 
 BlockFrequency
@@ -569,7 +567,7 @@ BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
   if (!EntryCount)
     return None;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.
-  APInt BlockCount(128, EntryCount.getCount());
+  APInt BlockCount(128, EntryCount.getValue());
   APInt BlockFreq(128, Freq);
   APInt EntryFreq(128, getEntryFreq());
   BlockCount *= BlockFreq;
@@ -671,7 +669,7 @@ template <> struct GraphTraits<IrreducibleGraph> {
 
 } // end namespace llvm
 
-/// Find extra irreducible headers.
+/// \brief Find extra irreducible headers.
 ///
 /// Find entry blocks and other blocks with backedges, which exist when \c G
 /// contains irreducible sub-SCCs.
@@ -696,8 +694,7 @@ static void findIrreducibleHeaders(
       // This is an entry block.
       I->second = true;
       Headers.push_back(Irr.Node);
-      LLVM_DEBUG(dbgs() << "  => entry = " << BFI.getBlockName(Irr.Node)
-                        << "\n");
+      DEBUG(dbgs() << "  => entry = " << BFI.getBlockName(Irr.Node) << "\n");
       break;
     }
   }
@@ -705,7 +702,7 @@ static void findIrreducibleHeaders(
          "Expected irreducible CFG; -loop-info is likely invalid");
   if (Headers.size() == InSCC.size()) {
     // Every block is a header.
-    llvm::sort(Headers.begin(), Headers.end());
+    std::sort(Headers.begin(), Headers.end());
     return;
   }
 
@@ -728,8 +725,7 @@ static void findIrreducibleHeaders(
 
       // Store the extra header.
       Headers.push_back(Irr.Node);
-      LLVM_DEBUG(dbgs() << "  => extra = " << BFI.getBlockName(Irr.Node)
-                        << "\n");
+      DEBUG(dbgs() << "  => extra = " << BFI.getBlockName(Irr.Node) << "\n");
       break;
     }
     if (Headers.back() == Irr.Node)
@@ -738,10 +734,10 @@ static void findIrreducibleHeaders(
 
     // This is not a header.
     Others.push_back(Irr.Node);
-    LLVM_DEBUG(dbgs() << "  => other = " << BFI.getBlockName(Irr.Node) << "\n");
+    DEBUG(dbgs() << "  => other = " << BFI.getBlockName(Irr.Node) << "\n");
   }
-  llvm::sort(Headers.begin(), Headers.end());
-  llvm::sort(Others.begin(), Others.end());
+  std::sort(Headers.begin(), Headers.end());
+  std::sort(Others.begin(), Others.end());
 }
 
 static void createIrreducibleLoop(
@@ -749,7 +745,7 @@ static void createIrreducibleLoop(
     LoopData *OuterLoop, std::list<LoopData>::iterator Insert,
     const std::vector<const IrreducibleGraph::IrrNode *> &SCC) {
   // Translate the SCC into RPO.
-  LLVM_DEBUG(dbgs() << " - found-scc\n");
+  DEBUG(dbgs() << " - found-scc\n");
 
   LoopData::NodeList Headers;
   LoopData::NodeList Others;
@@ -810,28 +806,27 @@ void BlockFrequencyInfoImplBase::adjustLoopHeaderMass(LoopData &Loop) {
   BlockMass LoopMass = BlockMass::getFull();
   Distribution Dist;
 
-  LLVM_DEBUG(dbgs() << "adjust-loop-header-mass:\n");
+  DEBUG(dbgs() << "adjust-loop-header-mass:\n");
   for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
     auto &HeaderNode = Loop.Nodes[H];
     auto &BackedgeMass = Loop.BackedgeMass[Loop.getHeaderIndex(HeaderNode)];
-    LLVM_DEBUG(dbgs() << " - Add back edge mass for node "
-                      << getBlockName(HeaderNode) << ": " << BackedgeMass
-                      << "\n");
+    DEBUG(dbgs() << " - Add back edge mass for node "
+                 << getBlockName(HeaderNode) << ": " << BackedgeMass << "\n");
     if (BackedgeMass.getMass() > 0)
       Dist.addLocal(HeaderNode, BackedgeMass.getMass());
     else
-      LLVM_DEBUG(dbgs() << "   Nothing added. Back edge mass is zero\n");
+      DEBUG(dbgs() << "   Nothing added. Back edge mass is zero\n");
   }
 
   DitheringDistributer D(Dist, LoopMass);
 
-  LLVM_DEBUG(dbgs() << " Distribute loop mass " << LoopMass
-                    << " to headers using above weights\n");
+  DEBUG(dbgs() << " Distribute loop mass " << LoopMass
+               << " to headers using above weights\n");
   for (const Weight &W : Dist.Weights) {
     BlockMass Taken = D.takeMass(W.Amount);
     assert(W.Type == Weight::Local && "all weights should be local");
     Working[W.TargetNode.Index].getMass() = Taken;
-    LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
+    DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
   }
 }
 
@@ -842,6 +837,6 @@ void BlockFrequencyInfoImplBase::distributeIrrLoopHeaderMass(Distribution &Dist)
     BlockMass Taken = D.takeMass(W.Amount);
     assert(W.Type == Weight::Local && "all weights should be local");
     Working[W.TargetNode.Index].getMass() = Taken;
-    LLVM_DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
+    DEBUG(debugAssign(*this, D, W.TargetNode, Taken, nullptr));
   }
 }

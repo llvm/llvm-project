@@ -19,6 +19,7 @@ class TestStepOverWatchpoint(TestBase):
             'aarch64',
             'arm'],
         bugnumber="llvm.org/pr26031")
+    @expectedFailureAll(oslist=["linux"], bugnumber="bugs.swift.org/SR-796")
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
@@ -81,7 +82,7 @@ class TestStepOverWatchpoint(TestBase):
         # Most of the MIPS boards provide only one H/W watchpoints, and S/W
         # watchpoints are not supported yet
         arch = self.getArchitecture()
-        if re.match("^mips", arch) or re.match("powerpc64le", arch):
+        if re.match("^mips", arch):
             self.runCmd("watchpoint delete 1")
 
         # resolve_location=True, read=False, write=True

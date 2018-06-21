@@ -43,8 +43,7 @@ def suppress(remark):
     return False
 
 class SourceFileRenderer:
-    def __init__(self, source_dir, output_dir, filename, no_highlight):
-        self.filename = filename
+    def __init__(self, source_dir, output_dir, filename):
         existing_filename = None
         if os.path.exists(filename):
             existing_filename = filename
@@ -53,7 +52,6 @@ class SourceFileRenderer:
             if os.path.exists(fn):
                 existing_filename = fn
 
-        self.no_highlight = no_highlight
         self.stream = codecs.open(os.path.join(output_dir, optrecord.html_file_name(filename)), 'w', encoding='utf-8')
         if existing_filename:
             self.source_stream = open(existing_filename)
@@ -71,7 +69,7 @@ class SourceFileRenderer:
     def render_source_lines(self, stream, line_remarks):
         file_text = stream.read()
 
-        if self.no_highlight:
+        if args.no_highlight:
             html_highlighted = file_text.decode('utf-8')
         else:
             html_highlighted = highlight(
@@ -132,7 +130,6 @@ class SourceFileRenderer:
 
         print('''
 <html>
-<title>{}</title>
 <meta charset="utf-8" />
 <head>
 <link rel='stylesheet' type='text/css' href='style.css'>
@@ -149,7 +146,7 @@ class SourceFileRenderer:
 <th style="width: 15%">Inline Context</td>
 </tr>
 </thead>
-<tbody>'''.format(os.path.basename(self.filename)), file=self.stream)
+<tbody>''', file=self.stream)
         self.render_source_lines(self.source_stream, line_remarks)
 
         print('''
@@ -160,10 +157,9 @@ class SourceFileRenderer:
 
 
 class IndexRenderer:
-    def __init__(self, output_dir, should_display_hotness, max_hottest_remarks_on_index):
+    def __init__(self, output_dir, should_display_hotness):
         self.stream = codecs.open(os.path.join(output_dir, 'index.html'), 'w', encoding='utf-8')
         self.should_display_hotness = should_display_hotness
-        self.max_hottest_remarks_on_index = max_hottest_remarks_on_index
 
     def render_entry(self, r, odd):
         escaped_name = cgi.escape(r.DemangledFunctionName)
@@ -193,8 +189,8 @@ class IndexRenderer:
 </tr>''', file=self.stream)
 
         max_entries = None
-        if self.should_display_hotness:
-            max_entries = self.max_hottest_remarks_on_index
+        if should_display_hotness:
+            max_entries = args.max_hottest_remarks_on_index
 
         for i, remark in enumerate(all_remarks[:max_entries]):
             if not suppress(remark):
@@ -205,11 +201,11 @@ class IndexRenderer:
 </html>''', file=self.stream)
 
 
-def _render_file(source_dir, output_dir, ctx, no_highlight, entry):
+def _render_file(source_dir, output_dir, ctx, entry):
     global context
     context = ctx
     filename, remarks = entry
-    SourceFileRenderer(source_dir, output_dir, filename, no_highlight).render(remarks)
+    SourceFileRenderer(source_dir, output_dir, filename).render(remarks)
 
 
 def map_remarks(all_remarks):
@@ -231,9 +227,7 @@ def generate_report(all_remarks,
                     file_remarks,
                     source_dir,
                     output_dir,
-                    no_highlight,
                     should_display_hotness,
-                    max_hottest_remarks_on_index,
                     num_jobs,
                     should_print_progress):
     try:
@@ -244,18 +238,7 @@ def generate_report(all_remarks,
         else:
             raise
 
-    if should_print_progress:
-        print('Rendering index page...')
-    if should_display_hotness:
-        sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.Hotness, r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function), reverse=True)
-    else:
-        sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function))
-    IndexRenderer(output_dir, should_display_hotness, max_hottest_remarks_on_index).render(sorted_remarks)
-
-    shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-            "style.css"), output_dir)
-
-    _render_file_bound = functools.partial(_render_file, source_dir, output_dir, context, no_highlight)
+    _render_file_bound = functools.partial(_render_file, source_dir, output_dir, context)
     if should_print_progress:
         print('Rendering HTML files...')
     optpmap.pmap(_render_file_bound,
@@ -263,8 +246,17 @@ def generate_report(all_remarks,
                  num_jobs,
                  should_print_progress)
 
+    if should_display_hotness:
+        sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.Hotness, r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function), reverse=True)
+    else:
+        sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function))
+    IndexRenderer(args.output_dir, should_display_hotness).render(sorted_remarks)
 
-def main():
+    shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+            "style.css"), output_dir)
+
+
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument(
         'yaml_dirs_or_files',
@@ -281,7 +273,7 @@ def main():
     parser.add_argument(
         '--jobs',
         '-j',
-        default=None,
+        default=cpu_count(),
         type=int,
         help='Max job count (defaults to %(default)s, the current CPU count)')
     parser.add_argument(
@@ -309,10 +301,6 @@ def main():
     parser.add_argument(
         '--demangler',
         help='Set the demangler to be used (defaults to %s)' % optrecord.Remark.default_demangler)
-
-    # Do not make this a global variable.  Values needed to be propagated through
-    # to individual classes and functions to be portable with multiprocessing across
-    # Windows and non-Windows.
     args = parser.parse_args()
 
     print_progress = not args.no_progress_indicator
@@ -333,11 +321,6 @@ def main():
                     file_remarks,
                     args.source_dir,
                     args.output_dir,
-                    args.no_highlight,
                     should_display_hotness,
-                    args.max_hottest_remarks_on_index,
                     args.jobs,
                     print_progress)
-
-if __name__ == '__main__':
-    main()

@@ -1,5 +1,4 @@
 ; RUN: opt -S -prune-eh < %s | FileCheck %s
-; RUN: opt -S -passes='function-attrs,function(simplify-cfg)' < %s | FileCheck %s
 
 ; Don't remove invokes of nounwind functions if the personality handles async
 ; exceptions. The @div function in this test can fault, even though it can't

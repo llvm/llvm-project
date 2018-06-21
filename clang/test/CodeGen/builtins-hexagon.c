@@ -3322,30 +3322,28 @@ void test() {
   __builtin_HEXAGON_Y4_l2fetch(0, 0);
   // CHECK: @llvm.hexagon.Y5.l2fetch
   __builtin_HEXAGON_Y5_l2fetch(0, 0);
-
-  // CHECK: @llvm.hexagon.L2.loadrb.pbr
+  // CHECK: @llvm.hexagon.brev.ldb
   __builtin_brev_ldb(0, 0, 0);
-  // CHECK: @llvm.hexagon.L2.loadrd.pbr
+  // CHECK: @llvm.hexagon.brev.ldd
   __builtin_brev_ldd(0, 0, 0);
-  // CHECK: @llvm.hexagon.L2.loadrh.pbr
+  // CHECK: @llvm.hexagon.brev.ldh
   __builtin_brev_ldh(0, 0, 0);
-  // CHECK: @llvm.hexagon.L2.loadrub.pbr
+  // CHECK: @llvm.hexagon.brev.ldub
   __builtin_brev_ldub(0, 0, 0);
-  // CHECK: @llvm.hexagon.L2.loadruh.pbr
+  // CHECK: @llvm.hexagon.brev.lduh
   __builtin_brev_lduh(0, 0, 0);
-  // CHECK: @llvm.hexagon.L2.loadri.pbr
+  // CHECK: @llvm.hexagon.brev.ldw
   __builtin_brev_ldw(0, 0, 0);
-  // CHECK: @llvm.hexagon.S2.storerb.pbr
+  // CHECK: @llvm.hexagon.brev.stb
   __builtin_brev_stb(0, 0, 0);
-  // CHECK: @llvm.hexagon.S2.storerd.pbr
-  __builtin_brev_std(0, 0LL, 0);
-  // CHECK: @llvm.hexagon.S2.storerh.pbr
+  // CHECK: @llvm.hexagon.brev.std
+  __builtin_brev_std(0, 0, 0);
+  // CHECK: @llvm.hexagon.brev.sth
   __builtin_brev_sth(0, 0, 0);
-  // CHECK: @llvm.hexagon.S2.storerf.pbr
+  // CHECK: @llvm.hexagon.brev.sthhi
   __builtin_brev_sthhi(0, 0, 0);
-  // CHECK: @llvm.hexagon.S2.storeri.pbr
+  // CHECK: @llvm.hexagon.brev.stw
   __builtin_brev_stw(0, 0, 0);
-
   // CHECK: @llvm.hexagon.circ.ldb
   __builtin_circ_ldb(0, 0, 0, 0);
   // CHECK: @llvm.hexagon.circ.ldd

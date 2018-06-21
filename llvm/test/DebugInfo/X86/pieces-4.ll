@@ -17,7 +17,7 @@
 ; CHECK:               callq   g
 ; CHECK:               movl    %eax, [[offs:[0-9]+]](%rsp)          # 4-byte Spill
 ; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_LLVM_fragment 32 32] 0
-; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offs]], DW_OP_LLVM_fragment 0 32] [$rsp+0]
+; CHECK:               #DEBUG_VALUE: bitpiece_spill:o <- [DW_OP_plus_uconst [[offs]], DW_OP_LLVM_fragment 0 32] [%rsp+0]
 ; CHECK:               #APP
 ; CHECK:               #NO_APP
 ; CHECK:               movl    [[offs]](%rsp), %eax          # 4-byte Reload
@@ -69,7 +69,7 @@ attributes #3 = { nounwind }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
 !6 = !{!"clang version 4.0.0 "}
-!7 = distinct !DISubprogram(name: "bitpiece_spill", scope: !1, file: !1, line: 3, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, retainedNodes: !11)
+!7 = distinct !DISubprogram(name: "bitpiece_spill", scope: !1, file: !1, line: 3, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, variables: !11)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10}
 !10 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

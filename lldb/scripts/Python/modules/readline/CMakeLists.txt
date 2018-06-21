@@ -1,18 +1,16 @@
 # FIXME: if a non-standard version of python is requested, the cmake macro
 # below will need Python_ADDITIONAL_VERSIONS set in order to find it.
 include(FindPythonInterp)
-SET(PYTHON_DIRECTORY python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages)
+SET(PYTHON_DIRECTORY python2.7/site-packages)
 
 # Build the readline python module
 include_directories(${PYTHON_INCLUDE_DIR})
 add_library(readline SHARED readline.cpp)
-target_link_libraries(readline ${PYTHON_LIBRARY})
 
 if (NOT LLDB_DISABLE_LIBEDIT)
-  target_include_directories(readline
-                             PRIVATE
-                               ${libedit_INCLUDE_DIRS})
-  target_link_libraries(readline ${libedit_LIBRARIES})
+  target_link_libraries(readline ${PYTHON_LIBRARY} edit)
+else()
+  target_link_libraries(readline ${PYTHON_LIBRARY})
 endif()
 
 # FIXME: the LIBRARY_OUTPUT_PATH seems to be ignored - this is not a

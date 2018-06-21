@@ -1,11 +1,6 @@
 Overview
 ========
 
-.. warning::
-
-   If you are using a released version of LLVM, see `the download page
-   <http://llvm.org/releases/>`_ to find your documentation.
-
 The LLVM compiler infrastructure supports a wide range of projects, from
 industrial strength compilers to specialized JIT applications to small
 research projects.
@@ -242,8 +237,6 @@ For developers of applications which use LLVM as a library.
 :doc:`OptBisect`
   A command line option for debugging optimization-induced failures.
 
-.. _index-subsystem-docs:
-
 Subsystem Documentation
 =======================
 
@@ -433,7 +426,6 @@ Information about LLVM's development process.
 .. toctree::
    :hidden:
 
-   Contributing
    DeveloperPolicy
    Projects
    LLVMBuild
@@ -441,9 +433,6 @@ Information about LLVM's development process.
    Packaging
    ReleaseProcess
    Phabricator
-
-:doc:`Contributing`
-   An overview on how to contribute to LLVM.
 
 :doc:`DeveloperPolicy`
    The LLVM project's policy towards developers and their contributions.

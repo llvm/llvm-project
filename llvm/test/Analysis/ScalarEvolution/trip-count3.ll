@@ -50,7 +50,7 @@ sha_update.exit.exitStub:                         ; preds = %bb3.i
 bb2.i:                                            ; preds = %bb3.i
   %1 = getelementptr %struct.SHA_INFO, %struct.SHA_INFO* %sha_info, i64 0, i32 3
   %2 = bitcast [16 x i32]* %1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %buffer_addr.0.i, i64 64, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %2, i8* %buffer_addr.0.i, i64 64, i32 1, i1 false)
   %3 = getelementptr %struct.SHA_INFO, %struct.SHA_INFO* %sha_info, i64 0, i32 3, i64 0
   %4 = bitcast i32* %3 to i8*
   br label %codeRepl
@@ -74,7 +74,7 @@ bb3.i:                                            ; preds = %byte_reverse.exit.i
 
 declare void @sha_stream_bb3_2E_i_bb1_2E_i_2E_i(i8*) nounwind
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
 

@@ -40,7 +40,7 @@ namespace {
 StringRef getInMemoryPreamblePath() {
 #if defined(LLVM_ON_UNIX)
   return "/__clang_tmp/___clang_inmemory_preamble___";
-#elif defined(_WIN32)
+#elif defined(LLVM_ON_WIN32)
   return "C:\\__clang_tmp\\___clang_inmemory_preamble___";
 #else
 #warning "Unknown platform. Defaulting to UNIX-style paths for in-memory PCHs"
@@ -303,6 +303,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   VFS =
       createVFSFromCompilerInvocation(Clang->getInvocation(), Diagnostics, VFS);
+  if (!VFS)
+    return BuildPreambleError::CouldntCreateVFSOverlay;
 
   // Create a file manager object to provide access to and cache the filesystem.
   Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), VFS));
@@ -483,15 +485,20 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
 void PrecompiledPreamble::AddImplicitPreamble(
     CompilerInvocation &CI, IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
     llvm::MemoryBuffer *MainFileBuffer) const {
-  PreambleBounds Bounds(PreambleBytes.size(), PreambleEndsAtStartOfLine);
-  configurePreamble(Bounds, CI, VFS, MainFileBuffer);
-}
+  assert(VFS && "VFS must not be null");
 
-void PrecompiledPreamble::OverridePreamble(
-    CompilerInvocation &CI, IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
-    llvm::MemoryBuffer *MainFileBuffer) const {
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), MainFileBuffer, 0);
-  configurePreamble(Bounds, CI, VFS, MainFileBuffer);
+  auto &PreprocessorOpts = CI.getPreprocessorOpts();
+
+  // Remap main file to point to MainFileBuffer.
+  auto MainFilePath = CI.getFrontendOpts().Inputs[0].getFile();
+  PreprocessorOpts.addRemappedFile(MainFilePath, MainFileBuffer);
+
+  // Configure ImpicitPCHInclude.
+  PreprocessorOpts.PrecompiledPreambleBytes.first = PreambleBytes.size();
+  PreprocessorOpts.PrecompiledPreambleBytes.second = PreambleEndsAtStartOfLine;
+  PreprocessorOpts.DisablePCHValidation = true;
+
+  setupPreambleStorage(Storage, PreprocessorOpts, VFS);
 }
 
 PrecompiledPreamble::PrecompiledPreamble(
@@ -674,27 +681,6 @@ PrecompiledPreamble::PreambleFileHash::createForMemoryBuffer(
   return Result;
 }
 
-void PrecompiledPreamble::configurePreamble(
-    PreambleBounds Bounds, CompilerInvocation &CI,
-    IntrusiveRefCntPtr<vfs::FileSystem> &VFS,
-    llvm::MemoryBuffer *MainFileBuffer) const {
-  assert(VFS);
-
-  auto &PreprocessorOpts = CI.getPreprocessorOpts();
-
-  // Remap main file to point to MainFileBuffer.
-  auto MainFilePath = CI.getFrontendOpts().Inputs[0].getFile();
-  PreprocessorOpts.addRemappedFile(MainFilePath, MainFileBuffer);
-
-  // Configure ImpicitPCHInclude.
-  PreprocessorOpts.PrecompiledPreambleBytes.first = Bounds.Size;
-  PreprocessorOpts.PrecompiledPreambleBytes.second =
-      Bounds.PreambleEndsAtStartOfLine;
-  PreprocessorOpts.DisablePCHValidation = true;
-
-  setupPreambleStorage(Storage, PreprocessorOpts, VFS);
-}
-
 void PrecompiledPreamble::setupPreambleStorage(
     const PCHStorage &Storage, PreprocessorOptions &PreprocessorOpts,
     IntrusiveRefCntPtr<vfs::FileSystem> &VFS) {
@@ -754,6 +740,8 @@ std::string BuildPreambleErrorCategory::message(int condition) const {
     return "Could not create temporary file for PCH";
   case BuildPreambleError::CouldntCreateTargetInfo:
     return "CreateTargetInfo() return null";
+  case BuildPreambleError::CouldntCreateVFSOverlay:
+    return "Could not create VFS Overlay";
   case BuildPreambleError::BeginSourceFileFailed:
     return "BeginSourceFile() return an error";
   case BuildPreambleError::CouldntEmitPCH:

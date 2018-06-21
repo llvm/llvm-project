@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
   Core
   IPO
   IRReader
-  AggressiveInstCombine
   InstCombine
   Instrumentation
   Linker

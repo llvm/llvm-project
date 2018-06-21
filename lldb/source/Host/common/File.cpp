@@ -75,7 +75,8 @@ File::File(const char *path, uint32_t options, uint32_t permissions)
     : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
       m_stream(kInvalidStream), m_options(), m_own_stream(false),
       m_is_interactive(eLazyBoolCalculate),
-      m_is_real_terminal(eLazyBoolCalculate) {
+      m_is_real_terminal(eLazyBoolCalculate),
+      m_supports_colors(eLazyBoolCalculate) {
   Open(path, options, permissions);
 }
 
@@ -83,9 +84,8 @@ File::File(const FileSpec &filespec, uint32_t options, uint32_t permissions)
     : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
       m_stream(kInvalidStream), m_options(0), m_own_stream(false),
       m_is_interactive(eLazyBoolCalculate),
-      m_is_real_terminal(eLazyBoolCalculate)
-
-{
+      m_is_real_terminal(eLazyBoolCalculate),
+      m_supports_colors(eLazyBoolCalculate) {
   if (filespec) {
     Open(filespec.GetPath().c_str(), options, permissions);
   }
@@ -100,7 +100,7 @@ int File::GetDescriptor() const {
   // Don't open the file descriptor if we don't need to, just get it from the
   // stream if we have one.
   if (StreamIsValid()) {
-#if defined(_WIN32)
+#if defined(LLVM_ON_WIN32)
     return _fileno(m_stream);
 #else
     return fileno(m_stream);
@@ -126,8 +126,8 @@ FILE *File::GetStream() {
       const char *mode = GetStreamOpenModeFromOptions(m_options);
       if (mode) {
         if (!m_should_close_fd) {
-// We must duplicate the file descriptor if we don't own it because when you
-// call fdopen, the stream will own the fd
+// We must duplicate the file descriptor if we don't own it because
+// when you call fdopen, the stream will own the fd
 #ifdef _WIN32
           m_descriptor = ::_dup(GetDescriptor());
 #else
@@ -139,8 +139,8 @@ FILE *File::GetStream() {
         m_stream =
             llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode);
 
-        // If we got a stream, then we own the stream and should no longer own
-        // the descriptor because fclose() will close it for us
+        // If we got a stream, then we own the stream and should no
+        // longer own the descriptor because fclose() will close it for us
 
         if (m_stream) {
           m_own_stream = true;
@@ -315,7 +315,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
     if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)
       error.SetErrorToErrno();
     else
-      file_spec.SetFile(path, false, FileSpec::Style::native);
+      file_spec.SetFile(path, false);
   } else {
     error.SetErrorString("invalid file handle");
   }
@@ -330,7 +330,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
       error.SetErrorToErrno();
     else {
       path[len] = '\0';
-      file_spec.SetFile(path, false, FileSpec::Style::native);
+      file_spec.SetFile(path, false);
     }
   }
 #else
@@ -802,6 +802,7 @@ void File::CalculateInteractiveAndTerminal() {
   if (fd >= 0) {
     m_is_interactive = eLazyBoolNo;
     m_is_real_terminal = eLazyBoolNo;
+    m_supports_colors = eLazyBoolNo;
 #if defined(_WIN32)
     if (_isatty(fd)) {
       m_is_interactive = eLazyBoolYes;

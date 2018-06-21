@@ -43,7 +43,7 @@
 
 using namespace clang;
 
-/// Print a template integral argument value.
+/// \brief Print a template integral argument value.
 ///
 /// \param TemplArg the TemplateArgument instance to print.
 ///
@@ -406,7 +406,7 @@ void TemplateArgument::print(const PrintingPolicy &Policy,
   }
     
   case Declaration: {
-    NamedDecl *ND = getAsDecl();
+    NamedDecl *ND = cast<NamedDecl>(getAsDecl());
     Out << '&';
     if (ND->getDeclName()) {
       // FIXME: distinguish between pointer and reference args?

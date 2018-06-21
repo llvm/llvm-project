@@ -61,7 +61,7 @@ protected:
   void computeDetailedSummary();
 
 public:
-  /// A vector of useful cutoff values for detailed summary.
+  /// \brief A vector of useful cutoff values for detailed summary.
   static const ArrayRef<uint32_t> DefaultCutoffs;
 };
 

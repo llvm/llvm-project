@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements a sorter for JavaScript ES6 imports.
+/// \brief This file implements a sorter for JavaScript ES6 imports.
 ///
 //===----------------------------------------------------------------------===//
 

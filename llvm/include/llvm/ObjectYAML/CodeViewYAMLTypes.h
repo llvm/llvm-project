@@ -51,10 +51,8 @@ struct LeafRecord {
   static Expected<LeafRecord> fromCodeViewRecord(codeview::CVType Type);
 };
 
-std::vector<LeafRecord> fromDebugT(ArrayRef<uint8_t> DebugTorP,
-                                   StringRef SectionName);
-ArrayRef<uint8_t> toDebugT(ArrayRef<LeafRecord>, BumpPtrAllocator &Alloc,
-                           StringRef SectionName);
+std::vector<LeafRecord> fromDebugT(ArrayRef<uint8_t> DebugT);
+ArrayRef<uint8_t> toDebugT(ArrayRef<LeafRecord>, BumpPtrAllocator &Alloc);
 
 } // end namespace CodeViewYAML
 

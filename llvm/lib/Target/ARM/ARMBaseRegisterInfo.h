@@ -154,7 +154,6 @@ public:
 
   void updateRegAllocHint(unsigned Reg, unsigned NewReg,
                           MachineFunction &MF) const override;
-  bool enableMultipleCopyHints() const override { return true; }
 
   bool hasBasePointer(const MachineFunction &MF) const;
 
@@ -201,7 +200,7 @@ public:
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
-  /// SrcRC and DstRC will be morphed into NewRC if this returns true
+  /// \brief SrcRC and DstRC will be morphed into NewRC if this returns true
   bool shouldCoalesce(MachineInstr *MI,
                       const TargetRegisterClass *SrcRC,
                       unsigned SubReg,

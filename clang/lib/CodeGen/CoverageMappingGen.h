@@ -31,7 +31,7 @@ class Preprocessor;
 class Decl;
 class Stmt;
 
-/// Stores additional source code information like skipped ranges which
+/// \brief Stores additional source code information like skipped ranges which
 /// is required by the coverage mapping generator and is obtained from
 /// the preprocessor.
 class CoverageSourceInfo : public PPCallbacks {
@@ -46,7 +46,7 @@ namespace CodeGen {
 
 class CodeGenModule;
 
-/// Organizes the cross-function state that is used while generating
+/// \brief Organizes the cross-function state that is used while generating
 /// code coverage mapping data.
 class CoverageMappingModuleGen {
   CodeGenModule &CGM;
@@ -65,7 +65,7 @@ public:
     return SourceInfo;
   }
 
-  /// Add a function's coverage mapping record to the collection of the
+  /// \brief Add a function's coverage mapping record to the collection of the
   /// function mapping records.
   void addFunctionMappingRecord(llvm::GlobalVariable *FunctionName,
                                 StringRef FunctionNameValue,
@@ -73,15 +73,15 @@ public:
                                 const std::string &CoverageMapping,
                                 bool IsUsed = true);
 
-  /// Emit the coverage mapping data for a translation unit.
+  /// \brief Emit the coverage mapping data for a translation unit.
   void emit();
 
-  /// Return the coverage mapping translation unit file id
+  /// \brief Return the coverage mapping translation unit file id
   /// for the given file.
   unsigned getFileID(const FileEntry *File);
 };
 
-/// Organizes the per-function state that is used while generating
+/// \brief Organizes the per-function state that is used while generating
 /// code coverage mapping data.
 class CoverageMappingGen {
   CoverageMappingModuleGen &CVM;
@@ -99,12 +99,12 @@ public:
                      llvm::DenseMap<const Stmt *, unsigned> *CounterMap)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap) {}
 
-  /// Emit the coverage mapping data which maps the regions of
+  /// \brief Emit the coverage mapping data which maps the regions of
   /// code to counters that will be used to find the execution
   /// counts for those regions.
   void emitCounterMapping(const Decl *D, llvm::raw_ostream &OS);
 
-  /// Emit the coverage mapping data for an unused function.
+  /// \brief Emit the coverage mapping data for an unused function.
   /// It creates mapping regions with the counter of zero.
   void emitEmptyMapping(const Decl *D, llvm::raw_ostream &OS);
 };

@@ -68,7 +68,7 @@ static raw_ostream &operator <<(raw_ostream &os, const indent &in) {
   return os;
 }
 
-/// Pretty print a tag by replacing tag:yaml.org,2002: with !!.
+/// \brief Pretty print a tag by replacing tag:yaml.org,2002: with !!.
 static std::string prettyTag(yaml::Node *N) {
   std::string Tag = N->getVerbatimTag();
   if (StringRef(Tag).startswith("tag:yaml.org,2002:")) {

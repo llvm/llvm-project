@@ -1,7 +1,7 @@
 set(LLVM_LINK_COMPONENTS
-  Core
-  Support
-  )
+  core
+  support
+)
 
 if(NOT CLANG_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)

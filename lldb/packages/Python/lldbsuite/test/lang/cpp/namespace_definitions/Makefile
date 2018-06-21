@@ -3,10 +3,9 @@ LEVEL := ../../../make
 LD_EXTRAS := -L. -l$(LIB_PREFIX)a -l$(LIB_PREFIX)b
 CXX_SOURCES := main.cpp
 
-include $(LEVEL)/Makefile.rules
+all: lib_a lib_b a.out
 
-.PHONY:
-a.out: lib_a lib_b
+include $(LEVEL)/Makefile.rules
 
 lib_%:
 	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/$*.mk

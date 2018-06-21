@@ -207,28 +207,17 @@ public:
   bool isFast() const          { return all(); }
 
   /// Flag setters
-  void setAllowReassoc(bool B = true) {
-    Flags = (Flags & ~AllowReassoc) | B * AllowReassoc;
-  }
-  void setNoNaNs(bool B = true) {
-    Flags = (Flags & ~NoNaNs) | B * NoNaNs;
-  }
-  void setNoInfs(bool B = true) {
-    Flags = (Flags & ~NoInfs) | B * NoInfs;
-  }
-  void setNoSignedZeros(bool B = true) {
-    Flags = (Flags & ~NoSignedZeros) | B * NoSignedZeros;
-  }
-  void setAllowReciprocal(bool B = true) {
-    Flags = (Flags & ~AllowReciprocal) | B * AllowReciprocal;
-  }
-  void setAllowContract(bool B = true) {
+  void setAllowReassoc()    { Flags |= AllowReassoc; }
+  void setNoNaNs()          { Flags |= NoNaNs; }
+  void setNoInfs()          { Flags |= NoInfs; }
+  void setNoSignedZeros()   { Flags |= NoSignedZeros; }
+  void setAllowReciprocal() { Flags |= AllowReciprocal; }
+  // TODO: Change the other set* functions to take a parameter?
+  void setAllowContract(bool B) {
     Flags = (Flags & ~AllowContract) | B * AllowContract;
   }
-  void setApproxFunc(bool B = true) {
-    Flags = (Flags & ~ApproxFunc) | B * ApproxFunc;
-  }
-  void setFast(bool B = true) { B ? set() : clear(); }
+  void setApproxFunc()      { Flags |= ApproxFunc; }
+  void setFast()            { set(); }
 
   void operator&=(const FastMathFlags &OtherFlags) {
     Flags &= OtherFlags.Flags;
@@ -518,7 +507,7 @@ public:
       });
   }
 
-  /// Accumulate the constant address offset of this GEP if possible.
+  /// \brief Accumulate the constant address offset of this GEP if possible.
   ///
   /// This routine accepts an APInt into which it will accumulate the constant
   /// offset of this GEP if the GEP is in fact constant. If the GEP is not

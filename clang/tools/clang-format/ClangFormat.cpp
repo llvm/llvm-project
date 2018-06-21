@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements a clang-format tool that automatically formats
+/// \brief This file implements a clang-format tool that automatically formats
 /// (fragments of) C++ code.
 ///
 //===----------------------------------------------------------------------===//
@@ -22,8 +22,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/Process.h"
+#include "llvm/Support/Signals.h"
 
 using namespace llvm;
 using clang::tooling::Replacements;
@@ -338,7 +337,7 @@ static void PrintVersion(raw_ostream &OS) {
 }
 
 int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   cl::HideUnrelatedOptions(ClangFormatCategory);
 
@@ -358,27 +357,10 @@ int main(int argc, const char **argv) {
   }
 
   if (DumpConfig) {
-    StringRef FileName;
-    std::unique_ptr<llvm::MemoryBuffer> Code;
-    if (FileNames.empty()) {
-      // We can't read the code to detect the language if there's no
-      // file name, so leave Code empty here.
-      FileName = AssumeFileName;
-    } else {
-      // Read in the code in case the filename alone isn't enough to
-      // detect the language.
-      ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-          MemoryBuffer::getFileOrSTDIN(FileNames[0]);
-      if (std::error_code EC = CodeOrErr.getError()) {
-        llvm::errs() << EC.message() << "\n";
-        return 1;
-      }
-      FileName = (FileNames[0] == "-") ? AssumeFileName : FileNames[0];
-      Code = std::move(CodeOrErr.get());
-    }
     llvm::Expected<clang::format::FormatStyle> FormatStyle =
-        clang::format::getStyle(Style, FileName, FallbackStyle,
-                                Code ? Code->getBuffer() : "");
+        clang::format::getStyle(
+            Style, FileNames.empty() ? AssumeFileName : FileNames[0],
+            FallbackStyle);
     if (!FormatStyle) {
       llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
       return 1;

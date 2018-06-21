@@ -66,7 +66,7 @@ namespace clang {
     ~VariadicMacroScopeGuard() { exitScope(); }
   };
 
-  /// A class for tracking whether we're inside a VA_OPT during a
+  /// \brief A class for tracking whether we're inside a VA_OPT during a
   /// traversal of the tokens of a variadic macro definition.
   class VAOptDefinitionContext {
     /// Contains all the locations of so far unmatched lparens.
@@ -116,7 +116,7 @@ namespace clang {
     
   };
 
-  /// A class for tracking whether we're inside a VA_OPT during a
+  /// \brief A class for tracking whether we're inside a VA_OPT during a
   /// traversal of the tokens of a macro during macro expansion.
   class VAOptExpansionContext : VAOptDefinitionContext {
 

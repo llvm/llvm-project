@@ -12,6 +12,7 @@
 #include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
 
@@ -30,7 +31,7 @@ private:
   llvm::StringMap<FileData, llvm::BumpPtrAllocator> StatCalls;
 
   void InjectFileOrDirectory(const char *Path, ino_t INode, bool IsFile) {
-#ifndef _WIN32
+#ifndef LLVM_ON_WIN32
     SmallString<128> NormalizedPath(Path);
     llvm::sys::path::native(NormalizedPath);
     Path = NormalizedPath.c_str();
@@ -62,7 +63,7 @@ public:
   LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
                        std::unique_ptr<vfs::File> *F,
                        vfs::FileSystem &FS) override {
-#ifndef _WIN32
+#ifndef LLVM_ON_WIN32
     SmallString<128> NormalizedPath(Path);
     llvm::sys::path::native(NormalizedPath);
     Path = NormalizedPath.c_str();
@@ -142,7 +143,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
   statCache->InjectDirectory("/tmp", 42);
   statCache->InjectFile("/tmp/test", 43);
 
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
   const char *DirName = "C:.";
   const char *FileName = "C:test";
   statCache->InjectDirectory(DirName, 44);
@@ -160,7 +161,7 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
   ASSERT_TRUE(dir != nullptr);
   EXPECT_EQ("/tmp", dir->getName());
 
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
   file = manager.getFile(FileName);
   ASSERT_TRUE(file != NULL);
 
@@ -224,7 +225,7 @@ TEST_F(FileManagerTest, getFileReturnsNULLForNonexistentFile) {
 
 // The following tests apply to Unix-like system only.
 
-#ifndef _WIN32
+#ifndef LLVM_ON_WIN32
 
 // getFile() returns the same FileEntry for real files that are aliases.
 TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
@@ -294,11 +295,11 @@ TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   EXPECT_EQ(123, file2->getSize());
 }
 
-#endif  // !_WIN32
+#endif  // !LLVM_ON_WIN32
 
 TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
   SmallString<64> CustomWorkingDir;
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
   CustomWorkingDir = "C:";
 #else
   CustomWorkingDir = "/";

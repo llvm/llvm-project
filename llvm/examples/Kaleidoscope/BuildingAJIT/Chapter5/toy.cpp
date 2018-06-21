@@ -1243,9 +1243,7 @@ std::unique_ptr<FDRPCChannel> connect() {
   sockaddr_in servAddr;
   memset(&servAddr, 0, sizeof(servAddr));
   servAddr.sin_family = PF_INET;
-  char *src;
-  memcpy(&src, &server->h_addr, sizeof(char *));
-  memcpy(&servAddr.sin_addr.s_addr, src, server->h_length);
+  memcpy(&servAddr.sin_addr.s_addr, server->h_addr, server->h_length);
   servAddr.sin_port = htons(Port);
   if (connect(sockfd, reinterpret_cast<sockaddr*>(&servAddr),
               sizeof(servAddr)) < 0) {
@@ -1278,10 +1276,9 @@ int main(int argc, char *argv[]) {
   BinopPrecedence['-'] = 20;
   BinopPrecedence['*'] = 40; // highest.
 
-  ExecutionSession ES;
   auto TCPChannel = connect();
-  auto Remote = ExitOnErr(MyRemote::Create(*TCPChannel, ES));
-  TheJIT = llvm::make_unique<KaleidoscopeJIT>(ES, *Remote);
+  auto Remote = ExitOnErr(MyRemote::Create(*TCPChannel, ExitOnErr));
+  TheJIT = llvm::make_unique<KaleidoscopeJIT>(*Remote);
 
   // Automatically inject a definition for 'printExprResult'.
   FunctionProtos["printExprResult"] =

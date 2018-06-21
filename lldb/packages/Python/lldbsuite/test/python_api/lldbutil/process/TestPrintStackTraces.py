@@ -27,6 +27,7 @@ class ThreadsStackTracesTestCase(TestBase):
     # We are unable to produce a backtrace of the main thread when the thread
     # is blocked in fgets
     @expectedFailureAll("llvm.org/pr23043", ["linux"], archs=["i386"])
+    @expectedFailureAll(bugnumber="<rdar://problem/30931804>", oslist=["linux"])
     # The __thread_start function in libc doesn't contain any epilogue and prologue instructions
     # hence unwinding fail when we are stopped in __thread_start
     @expectedFailureAll(triple='mips*')

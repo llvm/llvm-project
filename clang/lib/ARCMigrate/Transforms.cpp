@@ -111,7 +111,7 @@ bool trans::isPlusOne(const Expr *E) {
   return implCE && implCE->getCastKind() == CK_ARCConsumeObject;
 }
 
-/// 'Loc' is the end of a statement range. This returns the location
+/// \brief 'Loc' is the end of a statement range. This returns the location
 /// immediately after the semicolon following the statement.
 /// If no semicolon is found or the location is inside a macro, the returned
 /// source location will be invalid.
@@ -123,7 +123,7 @@ SourceLocation trans::findLocationAfterSemi(SourceLocation loc,
   return SemiLoc.getLocWithOffset(1);
 }
 
-/// \arg Loc is the end of a statement range. This returns the location
+/// \brief \arg Loc is the end of a statement range. This returns the location
 /// of the semicolon following the statement.
 /// If no semicolon is found or the location is inside a macro, the returned
 /// source location will be invalid.

@@ -66,7 +66,7 @@ extern "C" kern_return_t catch_mach_exception_raise_state(
     mach_msg_type_number_t old_stateCnt, thread_state_t new_state,
     mach_msg_type_number_t *new_stateCnt) {
   // TODO change to LIBLLDB_LOG_EXCEPTION
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
   if (log) {
     log->Printf("::%s(exc_port = 0x%4.4x, exc_type = %d (%s), "
                 "exc_data = 0x%llx, exc_data_count = %d)",
@@ -82,7 +82,7 @@ extern "C" kern_return_t catch_mach_exception_raise_state_identity(
     mach_msg_type_number_t exc_data_count, int *flavor,
     thread_state_t old_state, mach_msg_type_number_t old_stateCnt,
     thread_state_t new_state, mach_msg_type_number_t *new_stateCnt) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
   if (log) {
     log->Printf("::%s(exc_port = 0x%4.4x, thd_port = 0x%4.4x, "
                 "tsk_port = 0x%4.4x, exc_type = %d (%s), exc_data[%d] = "
@@ -101,7 +101,7 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
                            mach_port_t task_port, exception_type_t exc_type,
                            mach_exception_data_t exc_data,
                            mach_msg_type_number_t exc_data_count) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
   if (log) {
     log->Printf("::%s(exc_port = 0x%4.4x, thd_port = 0x%4.4x, "
                 "tsk_port = 0x%4.4x, exc_type = %d (%s), exc_data[%d] "
@@ -247,24 +247,25 @@ bool MachException::Message::CatchExceptionRaise(task_t task) {
   bool success = false;
   state.task_port = task;
   g_message = &state;
-  // The exc_server function is the MIG generated server handling function to
-  // handle messages from the kernel relating to the occurrence of an exception
-  // in a thread. Such messages are delivered to the exception port set via
-  // thread_set_exception_ports or task_set_exception_ports. When an exception
-  // occurs in a thread, the thread sends an exception message to its exception
-  // port, blocking in the kernel waiting for the receipt of a reply. The
-  // exc_server function performs all necessary argument handling for this
-  // kernel message and calls catch_exception_raise,
-  // catch_exception_raise_state or catch_exception_raise_state_identity, which
-  // should handle the exception. If the called routine returns KERN_SUCCESS, a
-  // reply message will be sent, allowing the thread to continue from the point
-  // of the exception; otherwise, no reply message is sent and the called
-  // routine must have dealt with the exception thread directly.
+  // The exc_server function is the MIG generated server handling function
+  // to handle messages from the kernel relating to the occurrence of an
+  // exception in a thread. Such messages are delivered to the exception port
+  // set via thread_set_exception_ports or task_set_exception_ports. When an
+  // exception occurs in a thread, the thread sends an exception message to
+  // its exception port, blocking in the kernel waiting for the receipt of a
+  // reply. The exc_server function performs all necessary argument handling
+  // for this kernel message and calls catch_exception_raise,
+  // catch_exception_raise_state or catch_exception_raise_state_identity,
+  // which should handle the exception. If the called routine returns
+  // KERN_SUCCESS, a reply message will be sent, allowing the thread to
+  // continue from the point of the exception; otherwise, no reply message
+  // is sent and the called routine must have dealt with the exception
+  // thread directly.
   if (mach_exc_server(&exc_msg.hdr, &reply_msg.hdr)) {
     success = true;
   } else {
     Log *log(
-        GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+        GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
     if (log)
       log->Printf("MachException::Message::%s(): mach_exc_server "
                   "returned zero...",
@@ -279,7 +280,7 @@ Status MachException::Message::Reply(::pid_t inferior_pid, task_t inferior_task,
   // Reply to the exception...
   Status error;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
 
   // If we had a soft signal, we need to update the thread first so it can
   // continue without signaling
@@ -382,9 +383,9 @@ Status MachException::PortInfo::Save(task_t task) {
     log->Printf("MachException::PortInfo::%s(task = 0x%4.4x)", __FUNCTION__,
                 task);
 
-  // Be careful to be able to have debugserver built on a newer OS than what it
-  // is currently running on by being able to start with all exceptions and
-  // back off to just what is supported on the current system
+  // Be careful to be able to have debugserver built on a newer OS than what
+  // it is currently running on by being able to start with all exceptions
+  // and back off to just what is supported on the current system
   mask = LLDB_EXC_MASK;
 
   count = (sizeof(ports) / sizeof(ports[0]));
@@ -436,7 +437,7 @@ Status MachException::PortInfo::Save(task_t task) {
 Status MachException::PortInfo::Restore(task_t task) {
   Status error;
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS ));
 
   if (log)
     log->Printf("MachException::PortInfo::Restore(task = 0x%4.4x)", task);

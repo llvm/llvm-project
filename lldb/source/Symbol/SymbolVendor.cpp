@@ -15,9 +15,11 @@
 // Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -26,9 +28,9 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // FindPlugin
 //
-// Platforms can register a callback to use when creating symbol vendors to
-// allow for complex debug information file setups, and to also allow for
-// finding separate debug information files.
+// Platforms can register a callback to use when creating symbol
+// vendors to allow for complex debug information file setups, and to
+// also allow for finding separate debug information files.
 //----------------------------------------------------------------------
 SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
                                        lldb_private::Stream *feedback_strm) {
@@ -45,8 +47,8 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
       return instance_ap.release();
     }
   }
-  // The default implementation just tries to create debug information using
-  // the file representation for the module.
+  // The default implementation just tries to create debug information using the
+  // file representation for the module.
   instance_ap.reset(new SymbolVendor(module_sp));
   if (instance_ap.get()) {
     ObjectFile *objfile = module_sp->GetObjectFile();
@@ -88,11 +90,11 @@ bool SymbolVendor::SetCompileUnitAtIndex(size_t idx, const CompUnitSP &cu_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     const size_t num_compile_units = GetNumCompileUnits();
     if (idx < num_compile_units) {
-      // Fire off an assertion if this compile unit already exists for now. The
-      // partial parsing should take care of only setting the compile unit
-      // once, so if this assertion fails, we need to make sure that we don't
-      // have a race condition, or have a second parse of the same compile
-      // unit.
+      // Fire off an assertion if this compile unit already exists for now.
+      // The partial parsing should take care of only setting the compile
+      // unit once, so if this assertion fails, we need to make sure that
+      // we don't have a race condition, or have a second parse of the same
+      // compile unit.
       assert(m_compile_units[idx].get() == nullptr);
       m_compile_units[idx] = cu_sp;
       return true;
@@ -111,10 +113,10 @@ size_t SymbolVendor::GetNumCompileUnits() {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_compile_units.empty()) {
       if (m_sym_file_ap.get()) {
-        // Resize our array of compile unit shared pointers -- which will each
-        // remain NULL until someone asks for the actual compile unit
-        // information. When this happens, the symbol file will be asked to
-        // parse this compile unit information.
+        // Resize our array of compile unit shared pointers -- which will
+        // each remain NULL until someone asks for the actual compile unit
+        // information. When this happens, the symbol file will be asked
+        // to parse this compile unit information.
         m_compile_units.resize(m_sym_file_ap->GetNumCompileUnits());
       }
     }
@@ -260,28 +262,28 @@ uint32_t SymbolVendor::ResolveSymbolContext(const FileSpec &file_spec,
   return 0;
 }
 
-size_t
-SymbolVendor::FindGlobalVariables(const ConstString &name,
-                                  const CompilerDeclContext *parent_decl_ctx,
-                                  size_t max_matches, VariableList &variables) {
+size_t SymbolVendor::FindGlobalVariables(
+    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    bool append, size_t max_matches, VariableList &variables) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->FindGlobalVariables(name, parent_decl_ctx,
+      return m_sym_file_ap->FindGlobalVariables(name, parent_decl_ctx, append,
                                                 max_matches, variables);
   }
   return 0;
 }
 
 size_t SymbolVendor::FindGlobalVariables(const RegularExpression &regex,
-                                         size_t max_matches,
+                                         bool append, size_t max_matches,
                                          VariableList &variables) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     if (m_sym_file_ap.get())
-      return m_sym_file_ap->FindGlobalVariables(regex, max_matches, variables);
+      return m_sym_file_ap->FindGlobalVariables(regex, append, max_matches,
+                                                variables);
   }
   return 0;
 }
@@ -392,8 +394,6 @@ void SymbolVendor::Dump(Stream *s) {
       }
     }
     s->EOL();
-    if (m_sym_file_ap)
-      m_sym_file_ap->Dump(*s);
     s->IndentMore();
     m_type_list.Dump(s, show_context);
 
@@ -459,6 +459,37 @@ void SymbolVendor::ClearSymtab() {
   }
 }
 
+bool SymbolVendor::GetCompileOption(const char *option, std::string &value,
+                                    lldb_private::CompileUnit *cu) {
+  SymbolFile *sym_file = GetSymbolFile();
+
+  if (sym_file)
+    return sym_file->GetCompileOption(option, value, cu);
+
+  value.clear();
+  return false;
+}
+
+int SymbolVendor::GetCompileOptions(const char *option,
+                                    std::vector<std::string> &values,
+                                    lldb_private::CompileUnit *cu) {
+  SymbolFile *sym_file = GetSymbolFile();
+
+  if (sym_file)
+    return sym_file->GetCompileOptions(option, values, cu);
+
+  values.clear();
+  return false;
+}
+
+void SymbolVendor::GetLoadedModules(lldb::LanguageType language,
+                                    FileSpecList &modules) {
+  SymbolFile *sym_file = GetSymbolFile();
+
+  if (sym_file)
+    sym_file->GetLoadedModules(language, modules);
+}
+
 void SymbolVendor::SectionFileAddressesChanged() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
@@ -484,3 +515,66 @@ lldb_private::ConstString SymbolVendor::GetPluginName() {
 }
 
 uint32_t SymbolVendor::GetPluginVersion() { return 1; }
+
+bool SymbolVendor::SetLimitSourceFileRange(const FileSpec &file,
+                                           uint32_t first_line,
+                                           uint32_t last_line) {
+  SymbolFile *sym_file = GetSymbolFile();
+
+  if (sym_file)
+    return sym_file->SetLimitSourceFileRange(file, first_line, last_line);
+
+  return false;
+}
+
+bool SymbolVendor::SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                                 uint32_t actual_line) {
+  SymbolFile *sym_file = GetSymbolFile();
+
+  if (sym_file)
+    return sym_file->SymbolContextShouldBeExcluded(sc, actual_line);
+
+  return false;
+}
+
+std::vector<DataBufferSP>
+SymbolVendor::GetASTData(lldb::LanguageType language) {
+  std::vector<DataBufferSP> ast_datas;
+
+  if (language != eLanguageTypeSwift)
+    return ast_datas;
+
+  // Sometimes the AST Section data is found from the module, so look there
+  // first:
+  SectionList *section_list = GetModule()->GetSectionList();
+
+  if (section_list) {
+    SectionSP section_sp(
+        section_list->FindSectionByType(eSectionTypeSwiftModules, true));
+    if (section_sp) {
+      DataExtractor section_data;
+
+      if (section_sp->GetSectionData(section_data)) {
+        ast_datas.push_back(DataBufferSP(
+            new DataBufferHeap((const char *)section_data.GetDataStart(),
+                               section_data.GetByteSize())));
+        return ast_datas;
+      }
+    }
+  }
+
+  // If we couldn't find it in the Module, then look for it in the SymbolFile:
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    ast_datas = sym_file->GetASTData(language);
+
+  return ast_datas;
+}
+
+bool SymbolVendor::ForceInlineSourceFileCheck() {
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    return sym_file->ForceInlineSourceFileCheck();
+
+  return false;
+}

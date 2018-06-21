@@ -50,9 +50,9 @@ template <typename DomTreeT>
 struct SemiNCAInfo;
 }  // namespace DomTreeBuilder
 
-/// Base class for the actual dominator tree node.
+/// \brief Base class for the actual dominator tree node.
 template <class NodeT> class DomTreeNodeBase {
-  friend class PostDominatorTree;
+  friend struct PostDominatorTree;
   friend class DominatorTreeBase<NodeT, false>;
   friend class DominatorTreeBase<NodeT, true>;
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase<NodeT, false>>;
@@ -234,10 +234,10 @@ void ApplyUpdates(DomTreeT &DT,
                   ArrayRef<typename DomTreeT::UpdateType> Updates);
 
 template <typename DomTreeT>
-bool Verify(const DomTreeT &DT, typename DomTreeT::VerificationLevel VL);
+bool Verify(const DomTreeT &DT);
 }  // namespace DomTreeBuilder
 
-/// Core dominator tree base class.
+/// \brief Core dominator tree base class.
 ///
 /// This class is a generic template over graph nodes. It is instantiated for
 /// various graphs in the LLVM IR or in the code generator.
@@ -259,9 +259,7 @@ class DominatorTreeBase {
   static constexpr UpdateKind Insert = UpdateKind::Insert;
   static constexpr UpdateKind Delete = UpdateKind::Delete;
 
-  enum class VerificationLevel { Fast, Basic, Full };
-
-protected:
+ protected:
   // Dominators always have a single root, postdominators can have more.
   SmallVector<NodeT *, IsPostDom ? 4 : 1> Roots;
 
@@ -318,12 +316,6 @@ protected:
   bool compare(const DominatorTreeBase &Other) const {
     if (Parent != Other.Parent) return true;
 
-    if (Roots.size() != Other.Roots.size())
-      return true;
-
-    if (!std::is_permutation(Roots.begin(), Roots.end(), Other.Roots.begin()))
-      return true;
-
     const DomTreeNodeMapType &OtherDomTreeNodes = Other.DomTreeNodes;
     if (DomTreeNodes.size() != OtherDomTreeNodes.size())
       return true;
@@ -351,7 +343,7 @@ protected:
   /// block.  This is the same as using operator[] on this class.  The result
   /// may (but is not required to) be null for a forward (backwards)
   /// statically unreachable block.
-  DomTreeNodeBase<NodeT> *getNode(const NodeT *BB) const {
+  DomTreeNodeBase<NodeT> *getNode(NodeT *BB) const {
     auto I = DomTreeNodes.find(BB);
     if (I != DomTreeNodes.end())
       return I->second.get();
@@ -359,9 +351,7 @@ protected:
   }
 
   /// See getNode.
-  DomTreeNodeBase<NodeT> *operator[](const NodeT *BB) const {
-    return getNode(BB);
-  }
+  DomTreeNodeBase<NodeT> *operator[](NodeT *BB) const { return getNode(BB); }
 
   /// getRootNode - This returns the entry node for the CFG of the function.  If
   /// this tree represents the post-dominance relations for a function, however,
@@ -760,25 +750,10 @@ public:
     DomTreeBuilder::Calculate(*this);
   }
 
-  /// verify - checks if the tree is correct. There are 3 level of verification:
-  ///  - Full --  verifies if the tree is correct by making sure all the
-  ///             properties (including the parent and the sibling property)
-  ///             hold.
-  ///             Takes O(N^3) time.
-  ///
-  ///  - Basic -- checks if the tree is correct, but compares it to a freshly
-  ///             constructed tree instead of checking the sibling property.
-  ///             Takes O(N^2) time.
-  ///
-  ///  - Fast  -- checks basic tree structure and compares it with a freshly
-  ///             constructed tree.
-  ///             Takes O(N^2) time worst case, but is faster in practise (same
-  ///             as tree construction).
-  bool verify(VerificationLevel VL = VerificationLevel::Full) const {
-    return DomTreeBuilder::Verify(*this, VL);
-  }
+  /// verify - check parent and sibling property
+  bool verify() const { return DomTreeBuilder::Verify(*this); }
 
-protected:
+ protected:
   void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
   void reset() {
@@ -860,7 +835,7 @@ protected:
     return IDom != nullptr;
   }
 
-  /// Wipe this tree's state without releasing any resources.
+  /// \brief Wipe this tree's state without releasing any resources.
   ///
   /// This is essentially a post-move helper only. It leaves the object in an
   /// assignable and destroyable state, but otherwise invalid.

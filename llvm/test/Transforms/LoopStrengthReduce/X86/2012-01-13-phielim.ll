@@ -96,8 +96,7 @@ while.end:                                        ; preds = %entry
 ; itself a phi.
 ;
 ; CHECK: @test3
-; CHECK: %meshBB1
-; CHECK: %meshBB
+; CHECK: %for.body3.lr.ph.us.i.loopexit
 ; CHECK-NEXT: Parent Loop
 ; CHECK-NEXT: Inner Loop
 ; CHECK-NEXT: incq

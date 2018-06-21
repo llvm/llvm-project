@@ -42,16 +42,18 @@ public:
   /// \returns true to continue indexing, or false to abort.
   virtual bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
                                    ArrayRef<SymbolRelation> Relations,
-                                   SourceLocation Loc, ASTNodeInfo ASTNode);
+                                   FileID FID, unsigned Offset,
+                                   ASTNodeInfo ASTNode);
 
   /// \returns true to continue indexing, or false to abort.
   virtual bool handleMacroOccurence(const IdentifierInfo *Name,
                                     const MacroInfo *MI, SymbolRoleSet Roles,
-                                    SourceLocation Loc);
+                                    FileID FID, unsigned Offset);
 
   /// \returns true to continue indexing, or false to abort.
   virtual bool handleModuleOccurence(const ImportDecl *ImportD,
-                                     SymbolRoleSet Roles, SourceLocation Loc);
+                                     SymbolRoleSet Roles,
+                                     FileID FID, unsigned Offset);
 
   virtual void finish() {}
 

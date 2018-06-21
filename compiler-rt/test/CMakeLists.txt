@@ -61,8 +61,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(ubsan cfi)
     compiler_rt_test_runtime(sanitizer_common)
 
-    # OpenBSD not supporting asan, cannot run the tests
-    if(COMPILER_RT_BUILD_LIBFUZZER AND NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
+    if(COMPILER_RT_BUILD_LIBFUZZER)
       compiler_rt_test_runtime(fuzzer)
     endif()
 
@@ -79,9 +78,6 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   if(COMPILER_RT_BUILD_XRAY)
     compiler_rt_test_runtime(xray)
   endif()
-  # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
-  # include their own minimal runtime
-  add_subdirectory(shadowcallstack)
 endif()
 
 if(COMPILER_RT_STANDALONE_BUILD)

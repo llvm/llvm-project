@@ -23,7 +23,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ;
 ; KNL-32-LABEL: pr25080:
 ; KNL-32:       # %bb.0: # %entry
-; KNL-32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL-32-NEXT:    # kill: def %ymm0 killed %ymm0 def %zmm0
 ; KNL-32-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [8388607,8388607,8388607,8388607,8388607,8388607,8388607,8388607]
 ; KNL-32-NEXT:    vptestnmd %zmm1, %zmm0, %k0
 ; KNL-32-NEXT:    movb $15, %al
@@ -31,7 +31,7 @@ define <8 x i16> @pr25080(<8 x i32> %a) {
 ; KNL-32-NEXT:    korw %k1, %k0, %k1
 ; KNL-32-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
 ; KNL-32-NEXT:    vpmovdw %zmm0, %ymm0
-; KNL-32-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; KNL-32-NEXT:    # kill: def %xmm0 killed %xmm0 killed %ymm0
 ; KNL-32-NEXT:    retl
 entry:
   %0 = trunc <8 x i32> %a to <8 x i23>
@@ -43,7 +43,7 @@ entry:
 
 define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-LABEL: pr26232:
-; AVX:       # %bb.0: # %allocas
+; AVX:       # %bb.0: # %for_loop599.preheader
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX-NEXT:    .p2align 4, 0x90
@@ -64,7 +64,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-NEXT:    retq
 ;
 ; KNL-32-LABEL: pr26232:
-; KNL-32:       # %bb.0: # %allocas
+; KNL-32:       # %bb.0: # %for_loop599.preheader
 ; KNL-32-NEXT:    pushl %esi
 ; KNL-32-NEXT:    .cfi_def_cfa_offset 8
 ; KNL-32-NEXT:    .cfi_offset %esi, -8
@@ -73,7 +73,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; KNL-32-NEXT:    movl $65535, %edx # imm = 0xFFFF
+; KNL-32-NEXT:    movw $-1, %dx
 ; KNL-32-NEXT:    .p2align 4, 0x90
 ; KNL-32-NEXT:  .LBB1_1: # %for_loop599
 ; KNL-32-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -81,14 +81,14 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    movl %eax, %esi
 ; KNL-32-NEXT:    sbbl $0, %esi
 ; KNL-32-NEXT:    movl $0, %esi
-; KNL-32-NEXT:    cmovll %edx, %esi
+; KNL-32-NEXT:    cmovlw %dx, %si
 ; KNL-32-NEXT:    kmovw %esi, %k1
 ; KNL-32-NEXT:    kandw %k0, %k1, %k1
-; KNL-32-NEXT:    kortestw %k1, %k1
+; KNL-32-NEXT:    kmovw %k1, %esi
+; KNL-32-NEXT:    testw %si, %si
 ; KNL-32-NEXT:    jne .LBB1_1
 ; KNL-32-NEXT:  # %bb.2: # %for_exit600
 ; KNL-32-NEXT:    popl %esi
-; KNL-32-NEXT:    .cfi_def_cfa_offset 4
 ; KNL-32-NEXT:    retl
 allocas:
   br label %for_test11.preheader

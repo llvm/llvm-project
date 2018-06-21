@@ -85,7 +85,6 @@ public:
     addDirectiveHandler<
       &ELFAsmParser::ParseDirectiveSymbolAttribute>(".hidden");
     addDirectiveHandler<&ELFAsmParser::ParseDirectiveSubsection>(".subsection");
-    addDirectiveHandler<&ELFAsmParser::ParseDirectiveCGProfile>(".cg_profile");
   }
 
   // FIXME: Part of this logic is duplicated in the MCELFStreamer. What is
@@ -150,7 +149,6 @@ public:
   bool ParseDirectiveWeakref(StringRef, SMLoc);
   bool ParseDirectiveSymbolAttribute(StringRef, SMLoc);
   bool ParseDirectiveSubsection(StringRef, SMLoc);
-  bool ParseDirectiveCGProfile(StringRef, SMLoc);
 
 private:
   bool ParseSectionName(StringRef &SectionName);
@@ -382,6 +380,7 @@ bool ELFAsmParser::ParseDirectivePopSection(StringRef, SMLoc) {
   return false;
 }
 
+// FIXME: This is a work in progress.
 bool ELFAsmParser::ParseDirectiveSection(StringRef, SMLoc loc) {
   return ParseSectionArguments(/*IsPush=*/false, loc);
 }
@@ -499,17 +498,17 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   // Set the defaults first.
   if (hasPrefix(SectionName, ".rodata.") || SectionName == ".rodata1")
     Flags |= ELF::SHF_ALLOC;
-  else if (SectionName == ".fini" || SectionName == ".init" ||
-           hasPrefix(SectionName, ".text."))
+  if (SectionName == ".fini" || SectionName == ".init" ||
+      hasPrefix(SectionName, ".text."))
     Flags |= ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
-  else if (hasPrefix(SectionName, ".data.") || SectionName == ".data1" ||
-           hasPrefix(SectionName, ".bss.") ||
-           hasPrefix(SectionName, ".init_array.") ||
-           hasPrefix(SectionName, ".fini_array.") ||
-           hasPrefix(SectionName, ".preinit_array."))
+  if (hasPrefix(SectionName, ".data.") || SectionName == ".data1" ||
+      hasPrefix(SectionName, ".bss.") ||
+      hasPrefix(SectionName, ".init_array.") ||
+      hasPrefix(SectionName, ".fini_array.") ||
+      hasPrefix(SectionName, ".preinit_array."))
     Flags |= ELF::SHF_ALLOC | ELF::SHF_WRITE;
-  else if (hasPrefix(SectionName, ".tdata.") ||
-           hasPrefix(SectionName, ".tbss."))
+  if (hasPrefix(SectionName, ".tdata.") ||
+      hasPrefix(SectionName, ".tbss."))
     Flags |= ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_TLS;
 
   if (getLexer().is(AsmToken::Comma)) {
@@ -609,10 +608,6 @@ EndStmt:
       Type = ELF::SHT_X86_64_UNWIND;
     else if (TypeName == "llvm_odrtab")
       Type = ELF::SHT_LLVM_ODRTAB;
-    else if (TypeName == "llvm_linker_options")
-      Type = ELF::SHT_LLVM_LINKER_OPTIONS;
-    else if (TypeName == "llvm_call_graph_profile")
-      Type = ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }
@@ -772,8 +767,12 @@ bool ELFAsmParser::ParseDirectiveSymver(StringRef, SMLoc) {
   if (AliasName.find('@') == StringRef::npos)
     return TokError("expected a '@' in the name");
 
+  MCSymbol *Alias = getContext().getOrCreateSymbol(AliasName);
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-  getStreamer().emitELFSymverDirective(AliasName, Sym);
+  const MCExpr *Value = MCSymbolRefExpr::create(Sym, getContext());
+
+  getStreamer().EmitAssignment(Alias, Value);
+  getStreamer().emitELFSymverDirective(Alias, Sym);
   return false;
 }
 
@@ -840,47 +839,6 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
   Lex();
 
   getStreamer().SubSection(Subsection);
-  return false;
-}
-
-/// ParseDirectiveCGProfile
-///  ::= .cg_profile identifier, identifier, <number>
-bool ELFAsmParser::ParseDirectiveCGProfile(StringRef, SMLoc) {
-  StringRef From;
-  SMLoc FromLoc = getLexer().getLoc();
-  if (getParser().parseIdentifier(From))
-    return TokError("expected identifier in directive");
-
-  if (getLexer().isNot(AsmToken::Comma))
-    return TokError("expected a comma");
-  Lex();
-
-  StringRef To;
-  SMLoc ToLoc = getLexer().getLoc();
-  if (getParser().parseIdentifier(To))
-    return TokError("expected identifier in directive");
-
-  if (getLexer().isNot(AsmToken::Comma))
-    return TokError("expected a comma");
-  Lex();
-
-  int64_t Count;
-  if (getParser().parseIntToken(
-          Count, "expected integer count in '.cg_profile' directive"))
-    return true;
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return TokError("unexpected token in directive");
-
-  MCSymbol *FromSym = getContext().getOrCreateSymbol(From);
-  MCSymbol *ToSym = getContext().getOrCreateSymbol(To);
-
-  getStreamer().emitCGProfileEntry(
-      MCSymbolRefExpr::create(FromSym, MCSymbolRefExpr::VK_None, getContext(),
-                              FromLoc),
-      MCSymbolRefExpr::create(ToSym, MCSymbolRefExpr::VK_None, getContext(),
-                              ToLoc),
-      Count);
   return false;
 }
 

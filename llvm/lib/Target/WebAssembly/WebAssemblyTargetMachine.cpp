@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the WebAssembly-specific subclass of TargetMachine.
+/// \brief This file defines the WebAssembly-specific subclass of TargetMachine.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +25,6 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm"
@@ -49,29 +48,9 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
   RegisterTargetMachine<WebAssemblyTargetMachine> Y(
       getTheWebAssemblyTarget64());
 
-  // Register backend passes
-  auto &PR = *PassRegistry::getPassRegistry();
-  initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
-  initializeLowerGlobalDtorsPass(PR);
-  initializeFixFunctionBitcastsPass(PR);
-  initializeOptimizeReturnedPass(PR);
-  initializeWebAssemblyArgumentMovePass(PR);
-  initializeWebAssemblySetP2AlignOperandsPass(PR);
-  initializeWebAssemblyReplacePhysRegsPass(PR);
-  initializeWebAssemblyPrepareForLiveIntervalsPass(PR);
-  initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
-  initializeWebAssemblyStoreResultsPass(PR);
-  initializeWebAssemblyRegStackifyPass(PR);
-  initializeWebAssemblyRegColoringPass(PR);
-  initializeWebAssemblyExplicitLocalsPass(PR);
-  initializeWebAssemblyFixIrreducibleControlFlowPass(PR);
-  initializeWebAssemblyExceptionPreparePass(PR);
-  initializeWebAssemblyCFGSortPass(PR);
-  initializeWebAssemblyCFGStackifyPass(PR);
-  initializeWebAssemblyLowerBrUnlessPass(PR);
-  initializeWebAssemblyRegNumberingPass(PR);
-  initializeWebAssemblyPeepholePass(PR);
-  initializeWebAssemblyCallIndirectFixupPass(PR);
+  // Register exception handling pass to opt
+  initializeWebAssemblyLowerEmscriptenEHSjLjPass(
+      *PassRegistry::getPassRegistry());
 }
 
 //===----------------------------------------------------------------------===//
@@ -147,22 +126,6 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 namespace {
-class StripThreadLocal final : public ModulePass {
-  // The default thread model for wasm is single, where thread-local variables
-  // are identical to regular globals and should be treated the same. So this
-  // pass just converts all GlobalVariables to NotThreadLocal
-  static char ID;
-
- public:
-  StripThreadLocal() : ModulePass(ID) {}
-  bool runOnModule(Module &M) override {
-    for (auto &GV : M.globals())
-      GV.setThreadLocalMode(GlobalValue::ThreadLocalMode::NotThreadLocal);
-    return true;
-  }
-};
-char StripThreadLocal::ID = 0;
-
 /// WebAssembly Code Generator Pass Configuration Options.
 class WebAssemblyPassConfig final : public TargetPassConfig {
 public:
@@ -203,15 +166,13 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single) {
+  if (TM->Options.ThreadModel == ThreadModel::Single)
     // In "single" mode, atomics get lowered to non-atomics.
     addPass(createLowerAtomicPass());
-    addPass(new StripThreadLocal());
-  } else {
+  else
     // Expand some atomic operations. WebAssemblyTargetLowering has hooks which
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass());
-  }
 
   // Lower .llvm.global_dtors into .llvm_global_ctors with __cxa_atexit calls.
   addPass(createWebAssemblyLowerGlobalDtors());
@@ -229,8 +190,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   // blocks. Lowering invokes when there is no EH support is done in
   // TargetPassConfig::addPassesToHandleExceptions, but this runs after this
   // function and SjLj handling expects all invokes to be lowered before.
-  if (!EnableEmException &&
-      TM->Options.ExceptionModel == ExceptionHandling::None) {
+  if (!EnableEmException) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -265,15 +225,16 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   // virtual registers. Consider removing their restrictions and re-enabling
   // them.
 
+  // Has no asserts of its own, but was not written to handle virtual regs.
+  disablePass(&ShrinkWrapID);
+
   // These functions all require the NoVRegs property.
   disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
   disablePass(&PostRASchedulerID);
   disablePass(&FuncletLayoutID);
   disablePass(&StackMapLivenessID);
   disablePass(&LiveDebugValuesID);
   disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
 
   TargetPassConfig::addPostRegAlloc();
 }
@@ -320,9 +281,6 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
   // Insert explicit get_local and set_local operators.
   addPass(createWebAssemblyExplicitLocals());
-
-  // Do various transformations for exception handling
-  addPass(createWebAssemblyExceptionPrepare());
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.

@@ -1,0 +1,32 @@
+// Test that String works in the REPL.
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s --check-prefix=STRING
+
+"hello world"
+// STRING: $R0: String = "hello world"
+
+"a\0b\0c\0d"
+// STRING: $R1: String = "a\0b\0c\0d"
+
+"a\\0b\\0c\\0d"
+// STRING: $R2: String = "a\\0b\\0c\\0d"
+
+"a very long prefix prior to saying a\0b\0c\0d"
+// STRING: $R3: String = "a very long prefix prior to saying a\0b\0c\0d"
+
+"a\u{0}b"
+// STRING: $R4: String = "a\0b"
+
+"a very long prefix prior to saying a\u{0}b"
+// STRING: $R5: String = "a very long prefix prior to saying a\0b"
+
+"😀"
+// STRING: $R6: String = "😀"
+
+"ようこそ"
+// STRING: $R7: String = "ようこそ"
+
+"👩‍👩‍👦‍👦☠️ ☠️ ☠️ ⚰️ ⚰️ ⚰️ ⚰️ 🧛‍♀️🧛‍♀️🧛‍♂️🧛‍♂️"
+// STRING: $R8: String = "👩‍👩‍👦‍👦☠️ ☠️ ☠️ ⚰️ ⚰️ ⚰️ ⚰️ 🧛‍♀️🧛‍♀️🧛‍♂️🧛‍♂️"
+

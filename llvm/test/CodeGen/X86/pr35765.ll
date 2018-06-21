@@ -12,7 +12,7 @@ define void @PR35765() {
 ; CHECK-NEXT:    movzwl {{.*}}(%rip), %ecx
 ; CHECK-NEXT:    addl $-1398, %ecx # imm = 0xFA8A
 ; CHECK-NEXT:    movl $4, %eax
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    # kill: def %cl killed %cl killed %ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    movzwl {{.*}}(%rip), %ecx
 ; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx

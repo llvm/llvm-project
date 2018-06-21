@@ -2,11 +2,11 @@
 ; CHECK: 0x00000[[G:.*]]:     DW_TAG_variable
 ; CHECK-NEXT:                DW_AT_name	("g")
 ; CHECK: DW_TAG_array_type
-; CHECK-NEXT:  DW_AT_type	({{.*}} "int")
+; CHECK-NEXT:  DW_AT_type	(cu + {{.*}} "int")
 ; CHECK-NOT: DW_TAG
 ; CHECK:       DW_TAG_subrange_type
-; CHECK-NEXT:     DW_AT_type	({{.*}} "__ARRAY_SIZE_TYPE__")
-; CHECK-NEXT:      DW_AT_count	(0x00000[[G]])
+; CHECK-NEXT:     DW_AT_type	(cu + {{.*}} "sizetype")
+; CHECK-NEXT:      DW_AT_count	(cu + 0x0[[G]])
 ; Test that a VLA referring to a global variable is handled correctly.
 ; Clang doesn't generate this, but the verifier allows it.
 source_filename = "/tmp/test.c"
@@ -52,7 +52,7 @@ attributes #0 = { nounwind readnone speculatable }
 !9 = !{i32 1, !"wchar_size", i32 4}
 !10 = !{i32 7, !"PIC Level", i32 2}
 !11 = !{!"clang version 7.0.0 (trunk 324259) (llvm/trunk 324261)"}
-!12 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 3, type: !13, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !2, retainedNodes: !15)
+!12 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 3, type: !13, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !2, variables: !15)
 !13 = !DISubroutineType(types: !14)
 !14 = !{null}
 !15 = !{!16, !21}

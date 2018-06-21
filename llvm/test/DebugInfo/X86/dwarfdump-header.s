@@ -137,7 +137,6 @@ CU_split_5_version:
         .byte 5                 # DWARF Unit Type
         .byte 8                 # Address Size (in bytes)
         .long .debug_abbrev.dwo # Offset Into Abbrev. Section
-        .quad 0x5a              # DWO ID
 # The split compile-unit DIE, with DW_AT_producer, DW_AT_name, DW_AT_stmt_list.
         .byte 1
         .long dwo_producer
@@ -146,8 +145,8 @@ CU_split_5_version:
         .byte 0 # NULL
 CU_split_5_end:
 
-# CHECK: 0x00000000: Compile Unit: length = 0x0000001e version = 0x0005 unit_type = DW_UT_split_compile abbr_offset = 0x0000 addr_size = 0x08 DWO_id = 0x000000000000005a (next unit at 0x00000022)
-# CHECK: 0x00000014: DW_TAG_compile_unit
+# CHECK: 0x00000000: Compile Unit: length = 0x00000016 version = 0x0005 unit_type = DW_UT_split_compile abbr_offset = 0x0000 addr_size = 0x08 (next unit at 0x0000001a)
+# CHECK: 0x0000000c: DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer {{.*}} "Handmade DWO producer"
 # CHECK-NEXT: DW_AT_name {{.*}} "V5_dwo_compile_unit"
 
@@ -256,19 +255,11 @@ LH_4_end:
 # CHECK-NOT: address_size
 # CHECK-NOT: seg_select_size
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  1] = "Directory4a"
-# CHECK: include_directories[  2] = "Directory4b"
+# CHECK: include_directories[  1] = 'Directory4a'
+# CHECK: include_directories[  2] = 'Directory4b'
 # CHECK-NOT: include_directories
-# CHECK: file_names[  1]:
-# CHECK-NEXT: name: "File4a"
-# CHECK-NEXT: dir_index: 1
-# CHECK-NEXT: mod_time: 0x00000041
-# CHECK-NEXT: length: 0x00000042
-# CHECK: file_names[  2]:
-# CHECK-NEXT: name: "File4b"
-# CHECK-NEXT: dir_index: 0
-# CHECK-NEXT: mod_time: 0x00000043
-# CHECK-NEXT: length: 0x00000044
+# CHECK: file_names[  1]    1 0x00000041 0x00000042 File4a{{$}}
+# CHECK: file_names[  2]    0 0x00000043 0x00000044 File4b{{$}}
 # CHECK-NOT: file_names
 
 # DWARF v5 line-table header.
@@ -309,19 +300,19 @@ LH_5_params:
         # File table format
         .byte   3               # Three elements per file entry
         .byte   1               # DW_LNCT_path
-        .byte   0x1f            # DW_FORM_line_strp (-> .debug_line_str)
+        .byte   0x08            # DW_FORM_string
         .byte   2               # DW_LNCT_directory_index
         .byte   0x0b            # DW_FORM_data1
         .byte   5               # DW_LNCT_MD5
         .byte   0x1e            # DW_FORM_data16
         # File table entries
         .byte   2               # Two files
-        .long   lstr_LT_5a
-        .byte   0
+        .asciz "File5a"
+        .byte   1
         .quad   0x7766554433221100
         .quad   0xffeeddccbbaa9988
-        .long   lstr_LT_5b
-        .byte   1
+        .asciz "File5b"
+        .byte   2
         .quad   0x8899aabbccddeeff
         .quad   0x0011223344556677
 LH_5_header_end:
@@ -333,26 +324,13 @@ LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# Mixing .debug_str (here) with .debug_line_str (in file_names) is not
-# something a producer would do, but both are legal and we want to test them.
-# CHECK: include_directories[  0] = .debug_str[0x00000045] = "Directory5a"
-# CHECK: include_directories[  1] = .debug_str[0x00000051] = "Directory5b"
+# CHECK: include_directories[  1] = 'Directory5a'
+# CHECK: include_directories[  2] = 'Directory5b'
 # CHECK-NOT: include_directories
-# CHECK: file_names[  0]:
-# CHECK-NEXT: name: .debug_line_str[0x00000000] = "File5a"
-# CHECK-NEXT: dir_index: 0
-# CHECK-NEXT: md5_checksum: 00112233445566778899aabbccddeeff
-# CHECK: file_names[  1]:
-# CHECK-NEXT: name: .debug_line_str[0x00000007] = "File5b"
-# CHECK-NEXT: dir_index: 1
-# CHECK-NEXT: md5_checksum: ffeeddccbbaa99887766554433221100
+# CHECK: MD5 Checksum
+# CHECK: file_names[  1]    1 00112233445566778899aabbccddeeff File5a{{$}}
+# CHECK: file_names[  2]    2 ffeeddccbbaa99887766554433221100 File5b{{$}}
 # CHECK-NOT: file_names
-
-        .section .debug_line_str,"MS",@progbits,1
-lstr_LT_5a:
-        .asciz "File5a"
-lstr_LT_5b:
-        .asciz "File5b"
 
 	.section .debug_line.dwo,"",@progbits
 # CHECK-LABEL: .debug_line.dwo
@@ -405,11 +383,11 @@ dwo_LH_5_params:
         # File table entries
         .byte   2               # Two files
         .asciz "DWOFile5a"
-        .byte   0
+        .byte   1
         .byte   0x15
         .byte   0x25
         .asciz "DWOFile5b"
-        .byte   1
+        .byte   2
         .byte   0x35
         .byte   0x45
 dwo_LH_5_header_end:
@@ -421,17 +399,9 @@ dwo_LH_5_end:
 # CHECK: address_size: 8
 # CHECK: seg_select_size: 0
 # CHECK: max_ops_per_inst: 1
-# CHECK: include_directories[  0] = .debug_str[0x0000003d] = "DWODirectory5a"
-# CHECK: include_directories[  1] = .debug_str[0x0000004c] = "DWODirectory5b"
+# CHECK: include_directories[  1] = 'DWODirectory5a'
+# CHECK: include_directories[  2] = 'DWODirectory5b'
 # CHECK-NOT: include_directories
-# CHECK: file_names[  0]:
-# CHECK-NEXT: name: "DWOFile5a"
-# CHECK-NEXT: dir_index: 0
-# CHECK-NEXT: mod_time: 0x00000015
-# CHECK-NEXT: length: 0x00000025
-# CHECK: file_names[  1]:
-# CHECK-NEXT: name: "DWOFile5b"
-# CHECK-NEXT: dir_index: 1
-# CHECK-NEXT: mod_time: 0x00000035
-# CHECK-NEXT: length: 0x00000045
+# CHECK: file_names[  1]    1 0x00000015 0x00000025 DWOFile5a{{$}}
+# CHECK: file_names[  2]    2 0x00000035 0x00000045 DWOFile5b{{$}}
 # CHECK-NOT: file_names

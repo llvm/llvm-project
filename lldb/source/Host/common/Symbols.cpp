@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Symbols.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -91,7 +91,7 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
         ::strncat(path, exec_fspec->GetFilename().AsCString(),
                   sizeof(path) - strlen(path) - 1);
 
-        dsym_fspec.SetFile(path, false, FileSpec::Style::native);
+        dsym_fspec.SetFile(path, false);
 
         ModuleSpecList module_specs;
         ModuleSpec matched_module_spec;
@@ -111,15 +111,15 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
 
           // Add a ".dSYM" name to each directory component of the path,
           // stripping off components.  e.g. we may have a binary like
-          // /S/L/F/Foundation.framework/Versions/A/Foundation and
+          // /S/L/F/Foundation.framework/Versions/A/Foundation
+          // and
           // /S/L/F/Foundation.framework.dSYM
           //
-          // so we'll need to start with
-          // /S/L/F/Foundation.framework/Versions/A, add the .dSYM part to the
-          // "A", and if that doesn't exist, strip off the "A" and try it again
-          // with "Versions", etc., until we find a dSYM bundle or we've
-          // stripped off enough path components that there's no need to
-          // continue.
+          // so we'll need to start with /S/L/F/Foundation.framework/Versions/A,
+          // add the .dSYM part to the "A", and if that doesn't exist, strip off
+          // the "A" and try it again with "Versions", etc., until we find a
+          // dSYM bundle or we've stripped off enough path components that
+          // there's no need to continue.
 
           for (int i = 0; i < 4; i++) {
             // Does this part of the path have a "." character - could it be a
@@ -131,8 +131,7 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
               dsym_fspec = parent_dirs;
               dsym_fspec.RemoveLastPathComponent();
 
-              // If the current directory name is "Foundation.framework", see
-              // if
+              // If the current directory name is "Foundation.framework", see if
               // "Foundation.framework.dSYM/Contents/Resources/DWARF/Foundation"
               // exists & has the right uuid.
               std::string dsym_fn = fn;
@@ -223,18 +222,14 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
         Target::GetDefaultDebugFileSearchPaths());
 
     // Add module directory.
-    FileSpec module_file_spec = module_spec.GetFileSpec();
-    // We keep the unresolved pathname if it fails.
-    FileSystem::ResolveSymbolicLink(module_file_spec, module_file_spec);
-
-    const ConstString &file_dir = module_file_spec.GetDirectory();
+    const ConstString &file_dir = module_spec.GetFileSpec().GetDirectory();
     debug_file_search_paths.AppendIfUnique(
         FileSpec(file_dir.AsCString("."), true));
 
     // Add current working directory.
     debug_file_search_paths.AppendIfUnique(FileSpec(".", true));
 
-#ifndef _WIN32
+#ifndef LLVM_ON_WIN32
 #if defined(__NetBSD__)
     // Add /usr/libdata/debug directory.
     debug_file_search_paths.AppendIfUnique(
@@ -243,7 +238,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
     // Add /usr/lib/debug directory.
     debug_file_search_paths.AppendIfUnique(FileSpec("/usr/lib/debug", true));
 #endif
-#endif // _WIN32
+#endif // LLVM_ON_WIN32
 
     std::string uuid_str;
     const UUID &module_uuid = module_spec.GetUUID();
@@ -251,8 +246,6 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
       // Some debug files are stored in the .build-id directory like this:
       //   /usr/lib/debug/.build-id/ff/e7fe727889ad82bb153de2ad065b2189693315.debug
       uuid_str = module_uuid.GetAsString("");
-      std::transform(uuid_str.begin(), uuid_str.end(), uuid_str.begin(),
-          ::tolower);
       uuid_str.insert(2, 1, '/');
       uuid_str = uuid_str + ".debug";
     }
@@ -282,7 +275,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
         FileSpec file_spec(filename, true);
 
         if (llvm::sys::fs::equivalent(file_spec.GetPath(),
-                                      module_file_spec.GetPath()))
+                                      module_spec.GetFileSpec().GetPath()))
           continue;
 
         if (file_spec.Exists()) {
@@ -294,9 +287,10 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
           if (num_specs == 1) {
             ModuleSpec mspec;
             if (specs.GetModuleSpecAtIndex(0, mspec)) {
-              // Skip the uuids check if module_uuid is invalid. For example,
-              // this happens for *.dwp files since at the moment llvm-dwp
-              // doesn't output build ids, nor does binutils dwp.
+              // Skip the uuids check if module_uuid is invalid.
+              // For example, this happens for *.dwp files since
+              // at the moment llvm-dwp doesn't output build ids,
+              // nor does binutils dwp.
               if (!module_uuid.IsValid() || module_uuid == mspec.GetUUID())
                 return file_spec;
             }

@@ -36,7 +36,7 @@ bool findMIPSMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 
 namespace tools {
 
-/// Base class for all GNU tools that provide the same behavior when
+/// \brief Base class for all GNU tools that provide the same behavior when
 /// it comes to response files support
 class LLVM_LIBRARY_VISIBILITY GnuTool : public Tool {
   virtual void anchor();
@@ -139,7 +139,7 @@ namespace toolchains {
 /// command line options.
 class LLVM_LIBRARY_VISIBILITY Generic_GCC : public ToolChain {
 public:
-  /// Struct to store and manipulate GCC versions.
+  /// \brief Struct to store and manipulate GCC versions.
   ///
   /// We rely on assumptions about the form and structure of GCC version
   /// numbers: they consist of at most three '.'-separated components, and each
@@ -155,16 +155,16 @@ public:
   /// in the way that (for example) Debian's version format does. If that ever
   /// becomes necessary, it can be added.
   struct GCCVersion {
-    /// The unparsed text of the version.
+    /// \brief The unparsed text of the version.
     std::string Text;
 
-    /// The parsed major, minor, and patch numbers.
+    /// \brief The parsed major, minor, and patch numbers.
     int Major, Minor, Patch;
 
-    /// The text of the parsed major, and major+minor versions.
+    /// \brief The text of the parsed major, and major+minor versions.
     std::string MajorStr, MinorStr;
 
-    /// Any textual suffix on the patch number.
+    /// \brief Any textual suffix on the patch number.
     std::string PatchSuffix;
 
     static GCCVersion Parse(StringRef VersionText);
@@ -178,7 +178,7 @@ public:
     bool operator>=(const GCCVersion &RHS) const { return !(*this < RHS); }
   };
 
-  /// This is a class to find a viable GCC installation for Clang to
+  /// \brief This is a class to find a viable GCC installation for Clang to
   /// use.
   ///
   /// This class tries to find a GCC installation on the system, and report
@@ -213,32 +213,32 @@ public:
     void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args,
               ArrayRef<std::string> ExtraTripleAliases = None);
 
-    /// Check whether we detected a valid GCC install.
+    /// \brief Check whether we detected a valid GCC install.
     bool isValid() const { return IsValid; }
 
-    /// Get the GCC triple for the detected install.
+    /// \brief Get the GCC triple for the detected install.
     const llvm::Triple &getTriple() const { return GCCTriple; }
 
-    /// Get the detected GCC installation path.
+    /// \brief Get the detected GCC installation path.
     StringRef getInstallPath() const { return GCCInstallPath; }
 
-    /// Get the detected GCC parent lib path.
+    /// \brief Get the detected GCC parent lib path.
     StringRef getParentLibPath() const { return GCCParentLibPath; }
 
-    /// Get the detected Multilib
+    /// \brief Get the detected Multilib
     const Multilib &getMultilib() const { return SelectedMultilib; }
 
-    /// Get the whole MultilibSet
+    /// \brief Get the whole MultilibSet
     const MultilibSet &getMultilibs() const { return Multilibs; }
 
     /// Get the biarch sibling multilib (if it exists).
     /// \return true iff such a sibling exists
     bool getBiarchSibling(Multilib &M) const;
 
-    /// Get the detected GCC version string.
+    /// \brief Get the detected GCC version string.
     const GCCVersion &getVersion() const { return Version; }
 
-    /// Print information about the detected GCC installation.
+    /// \brief Print information about the detected GCC installation.
     void print(raw_ostream &OS) const;
 
   private:
@@ -249,10 +249,6 @@ public:
                              SmallVectorImpl<StringRef> &TripleAliases,
                              SmallVectorImpl<StringRef> &BiarchLibDirs,
                              SmallVectorImpl<StringRef> &BiarchTripleAliases);
-
-    void AddDefaultGCCPrefixes(const llvm::Triple &TargetTriple,
-                               SmallVectorImpl<std::string> &Prefixes,
-                               StringRef SysRoot);
 
     bool ScanGCCForMultilibs(const llvm::Triple &TargetTriple,
                              const llvm::opt::ArgList &Args,
@@ -265,10 +261,11 @@ public:
                                 StringRef CandidateTriple,
                                 bool NeedsBiarchSuffix = false);
 
-    bool ScanGentooConfigs(const llvm::Triple &TargetTriple,
-                           const llvm::opt::ArgList &Args,
-                           const SmallVectorImpl<StringRef> &CandidateTriples,
-                           const SmallVectorImpl<StringRef> &BiarchTriples);
+    void scanLibDirForGCCTripleSolaris(const llvm::Triple &TargetArch,
+                                       const llvm::opt::ArgList &Args,
+                                       const std::string &LibDir,
+                                       StringRef CandidateTriple,
+                                       bool NeedsBiarchSuffix = false);
 
     bool ScanGentooGccConfig(const llvm::Triple &TargetTriple,
                              const llvm::opt::ArgList &Args,
@@ -304,21 +301,19 @@ protected:
   /// \name ToolChain Implementation Helper Functions
   /// @{
 
-  /// Check whether the target triple's architecture is 64-bits.
+  /// \brief Check whether the target triple's architecture is 64-bits.
   bool isTarget64Bit() const { return getTriple().isArch64Bit(); }
 
-  /// Check whether the target triple's architecture is 32-bits.
+  /// \brief Check whether the target triple's architecture is 32-bits.
   bool isTarget32Bit() const { return getTriple().isArch32Bit(); }
 
-  // FIXME: This should be final, but the CrossWindows toolchain does weird
-  // things that can't be easily generalized.
+  // FIXME: This should be final, but the Solaris tool chain does weird
+  // things we can't easily represent.
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
 
-  virtual void
-  addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args) const;
+  virtual std::string findLibCxxIncludePath() const;
   virtual void
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const;

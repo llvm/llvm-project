@@ -16,7 +16,6 @@
 #define LLVM_CLANG_SERIALIZATION_CONTINUOUSRANGEMAP_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cassert>
@@ -24,7 +23,7 @@
 
 namespace clang {
 
-/// A map from continuous integer ranges to some value, with a very
+/// \brief A map from continuous integer ranges to some value, with a very
 /// specialized interface.
 ///
 /// CRM maps from integer ranges to values. The ranges are continuous, i.e.
@@ -107,7 +106,7 @@ public:
   reference back() { return Rep.back(); }
   const_reference back() const { return Rep.back(); }
   
-  /// An object that helps properly build a continuous range map
+  /// \brief An object that helps properly build a continuous range map
   /// from a set of values.
   class Builder {
     ContinuousRangeMap &Self;
@@ -118,7 +117,7 @@ public:
     Builder &operator=(const Builder&) = delete;
     
     ~Builder() {
-      llvm::sort(Self.Rep.begin(), Self.Rep.end(), Compare());
+      std::sort(Self.Rep.begin(), Self.Rep.end(), Compare());
       std::unique(Self.Rep.begin(), Self.Rep.end(),
                   [](const_reference A, const_reference B) {
         // FIXME: we should not allow any duplicate keys, but there are a lot of

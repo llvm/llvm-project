@@ -77,20 +77,20 @@ private:
   /// Split unrelated subregister components and rename them to new vregs.
   bool renameComponents(LiveInterval &LI) const;
 
-  /// Build a vector of SubRange infos and a union find set of
+  /// \brief Build a vector of SubRange infos and a union find set of
   /// equivalence classes.
   /// Returns true if more than 1 equivalence class was found.
   bool findComponents(IntEqClasses &Classes,
                       SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
                       LiveInterval &LI) const;
 
-  /// Distribute the LiveInterval segments into the new LiveIntervals
+  /// \brief Distribute the LiveInterval segments into the new LiveIntervals
   /// belonging to their class.
   void distribute(const IntEqClasses &Classes,
                   const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
                   const SmallVectorImpl<LiveInterval*> &Intervals) const;
 
-  /// Constructs main liverange and add missing undef+dead flags.
+  /// \brief Constructs main liverange and add missing undef+dead flags.
   void computeMainRangesFixFlags(const IntEqClasses &Classes,
       const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
       const SmallVectorImpl<LiveInterval*> &Intervals) const;
@@ -134,17 +134,17 @@ bool RenameIndependentSubregs::renameComponents(LiveInterval &LI) const {
   const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
   SmallVector<LiveInterval*, 4> Intervals;
   Intervals.push_back(&LI);
-  LLVM_DEBUG(dbgs() << printReg(Reg) << ": Found " << Classes.getNumClasses()
-                    << " equivalence classes.\n");
-  LLVM_DEBUG(dbgs() << printReg(Reg) << ": Splitting into newly created:");
+  DEBUG(dbgs() << printReg(Reg) << ": Found " << Classes.getNumClasses()
+        << " equivalence classes.\n");
+  DEBUG(dbgs() << printReg(Reg) << ": Splitting into newly created:");
   for (unsigned I = 1, NumClasses = Classes.getNumClasses(); I < NumClasses;
        ++I) {
     unsigned NewVReg = MRI->createVirtualRegister(RegClass);
     LiveInterval &NewLI = LIS->createEmptyInterval(NewVReg);
     Intervals.push_back(&NewLI);
-    LLVM_DEBUG(dbgs() << ' ' << printReg(NewVReg));
+    DEBUG(dbgs() << ' ' << printReg(NewVReg));
   }
-  LLVM_DEBUG(dbgs() << '\n');
+  DEBUG(dbgs() << '\n');
 
   rewriteOperands(Classes, SubRangeInfos, Intervals);
   distribute(Classes, SubRangeInfos, Intervals);
@@ -376,8 +376,8 @@ bool RenameIndependentSubregs::runOnMachineFunction(MachineFunction &MF) {
   if (!MRI->subRegLivenessEnabled())
     return false;
 
-  LLVM_DEBUG(dbgs() << "Renaming independent subregister live ranges in "
-                    << MF.getName() << '\n');
+  DEBUG(dbgs() << "Renaming independent subregister live ranges in "
+        << MF.getName() << '\n');
 
   LIS = &getAnalysis<LiveIntervals>();
   TII = MF.getSubtarget().getInstrInfo();

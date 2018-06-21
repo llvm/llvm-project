@@ -31,7 +31,7 @@
 
 namespace llvm {
 
-/// A vector that has set insertion semantics.
+/// \brief A vector that has set insertion semantics.
 ///
 /// This adapter class provides a way to keep a set of things that also has the
 /// property of a deterministic iteration order. The order of iteration is the
@@ -52,10 +52,10 @@ public:
   using const_reverse_iterator = typename vector_type::const_reverse_iterator;
   using size_type = typename vector_type::size_type;
 
-  /// Construct an empty SetVector
+  /// \brief Construct an empty SetVector
   SetVector() = default;
 
-  /// Initialize a SetVector with a range of elements
+  /// \brief Initialize a SetVector with a range of elements
   template<typename It>
   SetVector(It Start, It End) {
     insert(Start, End);
@@ -69,75 +69,75 @@ public:
     return std::move(vector_);
   }
 
-  /// Determine if the SetVector is empty or not.
+  /// \brief Determine if the SetVector is empty or not.
   bool empty() const {
     return vector_.empty();
   }
 
-  /// Determine the number of elements in the SetVector.
+  /// \brief Determine the number of elements in the SetVector.
   size_type size() const {
     return vector_.size();
   }
 
-  /// Get an iterator to the beginning of the SetVector.
+  /// \brief Get an iterator to the beginning of the SetVector.
   iterator begin() {
     return vector_.begin();
   }
 
-  /// Get a const_iterator to the beginning of the SetVector.
+  /// \brief Get a const_iterator to the beginning of the SetVector.
   const_iterator begin() const {
     return vector_.begin();
   }
 
-  /// Get an iterator to the end of the SetVector.
+  /// \brief Get an iterator to the end of the SetVector.
   iterator end() {
     return vector_.end();
   }
 
-  /// Get a const_iterator to the end of the SetVector.
+  /// \brief Get a const_iterator to the end of the SetVector.
   const_iterator end() const {
     return vector_.end();
   }
 
-  /// Get an reverse_iterator to the end of the SetVector.
+  /// \brief Get an reverse_iterator to the end of the SetVector.
   reverse_iterator rbegin() {
     return vector_.rbegin();
   }
 
-  /// Get a const_reverse_iterator to the end of the SetVector.
+  /// \brief Get a const_reverse_iterator to the end of the SetVector.
   const_reverse_iterator rbegin() const {
     return vector_.rbegin();
   }
 
-  /// Get a reverse_iterator to the beginning of the SetVector.
+  /// \brief Get a reverse_iterator to the beginning of the SetVector.
   reverse_iterator rend() {
     return vector_.rend();
   }
 
-  /// Get a const_reverse_iterator to the beginning of the SetVector.
+  /// \brief Get a const_reverse_iterator to the beginning of the SetVector.
   const_reverse_iterator rend() const {
     return vector_.rend();
   }
 
-  /// Return the first element of the SetVector.
+  /// \brief Return the first element of the SetVector.
   const T &front() const {
     assert(!empty() && "Cannot call front() on empty SetVector!");
     return vector_.front();
   }
 
-  /// Return the last element of the SetVector.
+  /// \brief Return the last element of the SetVector.
   const T &back() const {
     assert(!empty() && "Cannot call back() on empty SetVector!");
     return vector_.back();
   }
 
-  /// Index into the SetVector.
+  /// \brief Index into the SetVector.
   const_reference operator[](size_type n) const {
     assert(n < vector_.size() && "SetVector access out of range!");
     return vector_[n];
   }
 
-  /// Insert a new element into the SetVector.
+  /// \brief Insert a new element into the SetVector.
   /// \returns true if the element was inserted into the SetVector.
   bool insert(const value_type &X) {
     bool result = set_.insert(X).second;
@@ -146,7 +146,7 @@ public:
     return result;
   }
 
-  /// Insert a range of elements into the SetVector.
+  /// \brief Insert a range of elements into the SetVector.
   template<typename It>
   void insert(It Start, It End) {
     for (; Start != End; ++Start)
@@ -154,7 +154,7 @@ public:
         vector_.push_back(*Start);
   }
 
-  /// Remove an item from the set vector.
+  /// \brief Remove an item from the set vector.
   bool remove(const value_type& X) {
     if (set_.erase(X)) {
       typename vector_type::iterator I = find(vector_, X);
@@ -183,7 +183,7 @@ public:
     return vector_.erase(NI);
   }
 
-  /// Remove items from the set vector based on a predicate function.
+  /// \brief Remove items from the set vector based on a predicate function.
   ///
   /// This is intended to be equivalent to the following code, if we could
   /// write it:
@@ -206,19 +206,19 @@ public:
     return true;
   }
 
-  /// Count the number of elements of a given key in the SetVector.
+  /// \brief Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
   size_type count(const key_type &key) const {
     return set_.count(key);
   }
 
-  /// Completely clear the SetVector
+  /// \brief Completely clear the SetVector
   void clear() {
     set_.clear();
     vector_.clear();
   }
 
-  /// Remove the last element of the SetVector.
+  /// \brief Remove the last element of the SetVector.
   void pop_back() {
     assert(!empty() && "Cannot remove an element from an empty SetVector!");
     set_.erase(back());
@@ -239,7 +239,7 @@ public:
     return vector_ != that.vector_;
   }
 
-  /// Compute This := This u S, return whether 'This' changed.
+  /// \brief Compute This := This u S, return whether 'This' changed.
   /// TODO: We should be able to use set_union from SetOperations.h, but
   ///       SetVector interface is inconsistent with DenseSet.
   template <class STy>
@@ -254,7 +254,7 @@ public:
     return Changed;
   }
 
-  /// Compute This := This - B
+  /// \brief Compute This := This - B
   /// TODO: We should be able to use set_subtract from SetOperations.h, but
   ///       SetVector interface is inconsistent with DenseSet.
   template <class STy>
@@ -265,7 +265,7 @@ public:
   }
 
 private:
-  /// A wrapper predicate designed for use with std::remove_if.
+  /// \brief A wrapper predicate designed for use with std::remove_if.
   ///
   /// This predicate wraps a predicate suitable for use with std::remove_if to
   /// call set_.erase(x) on each element which is slated for removal.
@@ -292,7 +292,7 @@ private:
   vector_type vector_;   ///< The vector.
 };
 
-/// A SetVector that performs no allocations if smaller than
+/// \brief A SetVector that performs no allocations if smaller than
 /// a certain size.
 template <typename T, unsigned N>
 class SmallSetVector
@@ -300,7 +300,7 @@ class SmallSetVector
 public:
   SmallSetVector() = default;
 
-  /// Initialize a SmallSetVector with a range of elements
+  /// \brief Initialize a SmallSetVector with a range of elements
   template<typename It>
   SmallSetVector(It Start, It End) {
     this->insert(Start, End);

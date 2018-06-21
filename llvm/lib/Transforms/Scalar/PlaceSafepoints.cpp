@@ -55,7 +55,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -66,6 +65,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "safepoint-placement"
 
@@ -323,7 +323,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
     // avoiding the runtime cost of the actual safepoint.
     if (!AllBackedges) {
       if (mustBeFiniteCountedLoop(L, SE, Pred)) {
-        LLVM_DEBUG(dbgs() << "skipping safepoint placement in finite loop\n");
+        DEBUG(dbgs() << "skipping safepoint placement in finite loop\n");
         FiniteExecution++;
         continue;
       }
@@ -332,9 +332,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
         // Note: This is only semantically legal since we won't do any further
         // IPO or inlining before the actual call insertion..  If we hadn't, we
         // might latter loose this call safepoint.
-        LLVM_DEBUG(
-            dbgs()
-            << "skipping safepoint placement due to unconditional call\n");
+        DEBUG(dbgs() << "skipping safepoint placement due to unconditional call\n");
         CallInLoop++;
         continue;
       }
@@ -350,7 +348,7 @@ bool PlaceBackedgeSafepointsImpl::runOnLoop(Loop *L) {
     // variables) and branches to the true header
     TerminatorInst *Term = Pred->getTerminator();
 
-    LLVM_DEBUG(dbgs() << "[LSP] terminator instruction: " << *Term);
+    DEBUG(dbgs() << "[LSP] terminator instruction: " << *Term);
 
     PollLocations.push_back(Term);
   }
@@ -524,7 +522,7 @@ bool PlaceSafepoints::runOnFunction(Function &F) {
     };
     // We need the order of list to be stable so that naming ends up stable
     // when we split edges.  This makes test cases much easier to write.
-    llvm::sort(PollLocations.begin(), PollLocations.end(), OrderByBBName);
+    std::sort(PollLocations.begin(), PollLocations.end(), OrderByBBName);
 
     // We can sometimes end up with duplicate poll locations.  This happens if
     // a single loop is visited more than once.   The fact this happens seems

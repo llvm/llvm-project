@@ -15,7 +15,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
-#include "llvm/CodeGen/CommandFlags.inc"
+#include "llvm/CodeGen/CommandFlags.def"
 #include "llvm/FuzzMutate/FuzzerCLI.h"
 #include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/FuzzMutate/Operations.h"
@@ -84,8 +84,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     return 0;
 
   LLVMContext Context;
-  auto M = parseAndVerify(Data, Size, Context);
-  if (!M) {
+  auto M = parseModule(Data, Size, Context);
+  if (!M || verifyModule(*M, &errs())) {
     errs() << "error: input module is broken!\n";
     return 0;
   }
@@ -99,7 +99,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   TargetLibraryInfoImpl TLII(TM->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   raw_null_ostream OS;
-  TM->addPassesToEmitFile(PM, OS, nullptr, TargetMachine::CGFT_Null);
+  TM->addPassesToEmitFile(PM, OS, TargetMachine::CGFT_Null);
   PM.run(*M);
 
   return 0;

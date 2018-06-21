@@ -47,7 +47,6 @@
 
 namespace __sanitizer {
 class FlagParser;
-class ThreadRegistry;
 struct DTLS;
 }
 
@@ -96,7 +95,7 @@ struct LeakedObject {
 // Aggregates leaks by stack trace prefix.
 class LeakReport {
  public:
-  LeakReport() {}
+  LeakReport() : next_id_(0), leaks_(1), leaked_objects_(1) {}
   void AddLeakedChunk(uptr chunk, u32 stack_trace_id, uptr leaked_size,
                       ChunkTag tag);
   void ReportTopLeaks(uptr max_leaks);
@@ -104,11 +103,12 @@ class LeakReport {
   void ApplySuppressions();
   uptr UnsuppressedLeakCount();
 
+
  private:
   void PrintReportForLeak(uptr index);
   void PrintLeakedObjectsForLeak(uptr index);
 
-  u32 next_id_ = 0;
+  u32 next_id_;
   InternalMmapVector<Leak> leaks_;
   InternalMmapVector<LeakedObject> leaked_objects_;
 };
@@ -205,7 +205,6 @@ bool WordIsPoisoned(uptr addr);
 // Wrappers for ThreadRegistry access.
 void LockThreadRegistry();
 void UnlockThreadRegistry();
-ThreadRegistry *GetThreadRegistryLocked();
 bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls);

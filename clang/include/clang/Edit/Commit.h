@@ -1,4 +1,4 @@
-//===- Commit.h - A unit of edits -------------------------------*- C++ -*-===//
+//===----- Commit.h - A unit of edits ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,22 +10,17 @@
 #ifndef LLVM_CLANG_EDIT_COMMIT_H
 #define LLVM_CLANG_EDIT_COMMIT_H
 
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Edit/FileOffset.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 
 namespace clang {
-
-class LangOptions;
-class PPConditionalDirectiveRecord;
-class SourceManager;
+  class LangOptions;
+  class PPConditionalDirectiveRecord;
 
 namespace edit {
-
-class EditedSource;
+  class EditedSource;
 
 class Commit {
 public:
@@ -53,9 +48,9 @@ private:
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   const PPConditionalDirectiveRecord *PPRec;
-  EditedSource *Editor = nullptr;
+  EditedSource *Editor;
 
-  bool IsCommitable = true;
+  bool IsCommitable;
   SmallVector<Edit, 8> CachedEdits;
   
   llvm::BumpPtrAllocator StrAlloc;
@@ -64,23 +59,21 @@ public:
   explicit Commit(EditedSource &Editor);
   Commit(const SourceManager &SM, const LangOptions &LangOpts,
          const PPConditionalDirectiveRecord *PPRec = nullptr)
-      : SourceMgr(SM), LangOpts(LangOpts), PPRec(PPRec) {}
+    : SourceMgr(SM), LangOpts(LangOpts), PPRec(PPRec), Editor(nullptr),
+      IsCommitable(true) { }
 
   bool isCommitable() const { return IsCommitable; }
 
   bool insert(SourceLocation loc, StringRef text, bool afterToken = false,
               bool beforePreviousInsertions = false);
-
   bool insertAfterToken(SourceLocation loc, StringRef text,
                         bool beforePreviousInsertions = false) {
     return insert(loc, text, /*afterToken=*/true, beforePreviousInsertions);
   }
-
   bool insertBefore(SourceLocation loc, StringRef text) {
     return insert(loc, text, /*afterToken=*/false,
                   /*beforePreviousInsertions=*/true);
   }
-
   bool insertFromRange(SourceLocation loc, CharSourceRange range,
                        bool afterToken = false,
                        bool beforePreviousInsertions = false);
@@ -99,26 +92,21 @@ public:
     return insertFromRange(loc, CharSourceRange::getTokenRange(TokenRange),
                            afterToken, beforePreviousInsertions);
   }
-
   bool insertWrap(StringRef before, SourceRange TokenRange, StringRef after) {
     return insertWrap(before, CharSourceRange::getTokenRange(TokenRange), after);
   }
-
   bool remove(SourceRange TokenRange) {
     return remove(CharSourceRange::getTokenRange(TokenRange));
   }
-
   bool replace(SourceRange TokenRange, StringRef text) {
     return replace(CharSourceRange::getTokenRange(TokenRange), text);
   }
-
   bool replaceWithInner(SourceRange TokenRange, SourceRange TokenInnerRange) {
     return replaceWithInner(CharSourceRange::getTokenRange(TokenRange),
                             CharSourceRange::getTokenRange(TokenInnerRange));
   }
 
-  using edit_iterator = SmallVectorImpl<Edit>::const_iterator;
-
+  typedef SmallVectorImpl<Edit>::const_iterator edit_iterator;
   edit_iterator edit_begin() const { return CachedEdits.begin(); }
   edit_iterator edit_end() const { return CachedEdits.end(); }
 
@@ -148,8 +136,8 @@ private:
                                SourceLocation *MacroEnd = nullptr) const;
 };
 
-} // namespace edit
+}
 
-} // namespace clang
+} // end namespace clang
 
-#endif // LLVM_CLANG_EDIT_COMMIT_H
+#endif

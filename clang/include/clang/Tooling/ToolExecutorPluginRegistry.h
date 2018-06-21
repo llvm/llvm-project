@@ -1,4 +1,4 @@
-//===- ToolExecutorPluginRegistry.h -----------------------------*- C++ -*-===//
+//===--- ToolExecutorPluginRegistry.h - -------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,9 +16,9 @@
 namespace clang {
 namespace tooling {
 
-using ToolExecutorPluginRegistry = llvm::Registry<ToolExecutorPlugin>;
+typedef llvm::Registry<ToolExecutorPlugin> ToolExecutorPluginRegistry;
 
-} // namespace tooling
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang
 
 #endif // LLVM_CLANG_TOOLING_TOOLEXECUTORPLUGINREGISTRY_H

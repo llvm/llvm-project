@@ -1,4 +1,4 @@
-//===- AttributeList.cpp --------------------------------------------------===//
+//===--- AttributeList.cpp --------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,17 +13,14 @@
 
 #include "clang/Sema/AttributeList.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include <cassert>
-#include <cstddef>
-#include <utility>
-
 using namespace clang;
 
 IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,
@@ -47,7 +44,7 @@ AttributeFactory::AttributeFactory() {
   // Go ahead and configure all the inline capacity.  This is just a memset.
   FreeLists.resize(InlineFreeListsCapacity);
 }
-AttributeFactory::~AttributeFactory() = default;
+AttributeFactory::~AttributeFactory() {}
 
 static size_t getFreeListIndexForSize(size_t size) {
   assert(size >= sizeof(AttributeList));
@@ -178,10 +175,8 @@ struct ParsedAttrInfo {
 };
 
 namespace {
-
-#include "clang/Sema/AttrParsedAttrImpl.inc"
-
-} // namespace
+  #include "clang/Sema/AttrParsedAttrImpl.inc"
+}
 
 static const ParsedAttrInfo &getInfo(const AttributeList &A) {
   return AttrInfoMap[A.getKind()];

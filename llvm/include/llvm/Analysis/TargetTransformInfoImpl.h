@@ -27,7 +27,7 @@
 
 namespace llvm {
 
-/// Base class for use as a mix-in that aids implementing
+/// \brief Base class for use as a mix-in that aids implementing
 /// a TargetTransformInfo-compatible class.
 class TargetTransformInfoImplBase {
 protected:
@@ -155,7 +155,6 @@ public:
     case Intrinsic::sideeffect:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::lifetime_start:
@@ -247,10 +246,6 @@ public:
                     C2.ScaleCost, C2.ImmCost, C2.SetupCost);
   }
 
-  bool canMacroFuseCmp() { return false; }
-
-  bool shouldFavorPostInc() const { return false; }
-
   bool isLegalMaskedStore(Type *DataType) { return false; }
 
   bool isLegalMaskedLoad(Type *DataType) { return false; }
@@ -280,8 +275,6 @@ public:
 
   bool isProfitableToHoist(Instruction *I) { return true; }
 
-  bool useAA() { return false; }
-
   bool isTypeLegal(Type *Ty) { return false; }
 
   unsigned getJumpBufAlignment() { return 0; }
@@ -290,8 +283,6 @@ public:
 
   bool shouldBuildLookupTables() { return true; }
   bool shouldBuildLookupTablesForConstant(Constant *C) { return true; }
-
-  bool useColdCCForColdCall(Function &F) { return false; }
 
   unsigned getScalarizationOverhead(Type *Ty, bool Insert, bool Extract) {
     return 0;
@@ -351,10 +342,6 @@ public:
   unsigned getRegisterBitWidth(bool Vector) const { return 32; }
 
   unsigned getMinVectorRegisterBitWidth() { return 128; }
-
-  bool shouldMaximizeVectorBandwidth(bool OptSize) const { return false; }
-
-  unsigned getMinimumVF(unsigned ElemWidth) const { return 0; }
 
   bool
   shouldConsiderAddressTypePromotion(const Instruction &I,
@@ -520,16 +507,6 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
-  bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                          const DataLayout &DL) const {
-    return false;
-  }
-
-  bool isIndexedStoreLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                           const DataLayout &DL) const {
-    return false;
-  }
-
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const { return 128; }
 
   bool isLegalToVectorizeLoad(LoadInst *LI) const { return true; }
@@ -652,7 +629,7 @@ protected:
   }
 };
 
-/// CRTP base class for use as a mix-in that aids implementing
+/// \brief CRTP base class for use as a mix-in that aids implementing
 /// a TargetTransformInfo-compatible class.
 template <typename T>
 class TargetTransformInfoImplCRTPBase : public TargetTransformInfoImplBase {

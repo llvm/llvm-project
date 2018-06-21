@@ -342,10 +342,10 @@ define void @shl_add_ptr_combine_2use_private(i16 zeroext %idx.arg) #0 {
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 2
   %shl1 = shl i32 %idx.add, 3
-  %ptr0 = inttoptr i32 %shl0 to i32 addrspace(5)*
-  %ptr1 = inttoptr i32 %shl1 to i32 addrspace(5)*
-  store volatile i32 9, i32 addrspace(5)* %ptr0
-  store volatile i32 10, i32 addrspace(5)* %ptr1
+  %ptr0 = inttoptr i32 %shl0 to i32*
+  %ptr1 = inttoptr i32 %shl1 to i32*
+  store volatile i32 9, i32* %ptr0
+  store volatile i32 10, i32* %ptr1
   ret void
 }
 
@@ -360,10 +360,10 @@ define void @shl_add_ptr_combine_2use_max_private_offset(i16 zeroext %idx.arg) #
   %idx.add = add nuw i32 %idx, 511
   %shl0 = shl i32 %idx.add, 3
   %shl1 = shl i32 %idx.add, 4
-  %ptr0 = inttoptr i32 %shl0 to i32 addrspace(5)*
-  %ptr1 = inttoptr i32 %shl1 to i32 addrspace(5)*
-  store volatile i32 9, i32 addrspace(5)* %ptr0
-  store volatile i32 10, i32 addrspace(5)* %ptr1
+  %ptr0 = inttoptr i32 %shl0 to i32*
+  %ptr1 = inttoptr i32 %shl1 to i32*
+  store volatile i32 9, i32* %ptr0
+  store volatile i32 10, i32* %ptr1
   ret void
 }
 ; GCN-LABEL: {{^}}shl_add_ptr_combine_2use_both_max_private_offset:
@@ -377,10 +377,10 @@ define void @shl_add_ptr_combine_2use_both_max_private_offset(i16 zeroext %idx.a
   %idx.add = add nuw i32 %idx, 256
   %shl0 = shl i32 %idx.add, 4
   %shl1 = shl i32 %idx.add, 5
-  %ptr0 = inttoptr i32 %shl0 to i32 addrspace(5)*
-  %ptr1 = inttoptr i32 %shl1 to i32 addrspace(5)*
-  store volatile i32 9, i32 addrspace(5)* %ptr0
-  store volatile i32 10, i32 addrspace(5)* %ptr1
+  %ptr0 = inttoptr i32 %shl0 to i32*
+  %ptr1 = inttoptr i32 %shl1 to i32*
+  store volatile i32 9, i32* %ptr0
+  store volatile i32 10, i32* %ptr1
   ret void
 }
 

@@ -28,7 +28,7 @@ extern "C" {
  */
 
 /**
- * A character string.
+ * \brief A character string.
  *
  * The \c CXString type is used to return strings from the interface when
  * the ownership of that string might differ from one call to the next.
@@ -46,17 +46,17 @@ typedef struct {
 } CXStringSet;
 
 /**
- * Retrieve the character data associated with the given string.
+ * \brief Retrieve the character data associated with the given string.
  */
 CINDEX_LINKAGE const char *clang_getCString(CXString string);
 
 /**
- * Free the given string.
+ * \brief Free the given string.
  */
 CINDEX_LINKAGE void clang_disposeString(CXString string);
 
 /**
- * Free the given string set.
+ * \brief Free the given string set.
  */
 CINDEX_LINKAGE void clang_disposeStringSet(CXStringSet *set);
 

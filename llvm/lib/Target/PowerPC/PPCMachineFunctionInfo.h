@@ -45,11 +45,6 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// PEI.
   bool MustSaveLR;
 
-  /// Do we have to disable shrink-wrapping? This has to be set if we emit any
-  /// instructions that clobber LR in the entry block because discovering this
-  /// in PEI is too late (happens after shrink-wrapping);
-  bool ShrinkWrapDisabled = false;
-
   /// Does this function have any stack spills.
   bool HasSpills = false;
 
@@ -152,12 +147,6 @@ public:
   void setMustSaveLR(bool U) { MustSaveLR = U; }
   bool mustSaveLR() const    { return MustSaveLR; }
 
-  /// We certainly don't want to shrink wrap functions if we've emitted a
-  /// MovePCtoLR8 as that has to go into the entry, so the prologue definitely
-  /// has to go into the entry block.
-  void setShrinkWrapDisabled(bool U) { ShrinkWrapDisabled = U; }
-  bool shrinkWrapDisabled() const { return ShrinkWrapDisabled; }
-
   void setHasSpills()      { HasSpills = true; }
   bool hasSpills() const   { return HasSpills; }
 
@@ -196,11 +185,11 @@ public:
     LiveInAttrs.push_back(std::make_pair(VReg, Flags));
   }
 
-  /// This function returns true if the specified vreg is
+  /// This function returns true if the spesified vreg is
   /// a live-in register and sign-extended.
   bool isLiveInSExt(unsigned VReg) const;
 
-  /// This function returns true if the specified vreg is
+  /// This function returns true if the spesified vreg is
   /// a live-in register and zero-extended.
   bool isLiveInZExt(unsigned VReg) const;
 

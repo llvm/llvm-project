@@ -16,13 +16,13 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/ObjectMemoryBuffer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -35,65 +35,45 @@ class Module;
 
 namespace orc {
 
-/// Simple compile functor: Takes a single IR module and returns an
+/// @brief Simple compile functor: Takes a single IR module and returns an
 ///        ObjectFile.
 class SimpleCompiler {
-private:
-  class SmallVectorMemoryBuffer : public MemoryBuffer {
-  public:
-    SmallVectorMemoryBuffer(SmallVector<char, 0> Buffer)
-        : Buffer(std::move(Buffer)) {
-      init(this->Buffer.data(), this->Buffer.data() + this->Buffer.size(),
-           false);
-    }
-
-    BufferKind getBufferKind() const override { return MemoryBuffer_Malloc; }
-
-  private:
-    SmallVector<char, 0> Buffer;
-  };
-
 public:
-  using CompileResult = std::unique_ptr<MemoryBuffer>;
 
-  /// Construct a simple compile functor with the given target.
+  using CompileResult = object::OwningBinary<object::ObjectFile>;
+
+  /// @brief Construct a simple compile functor with the given target.
   SimpleCompiler(TargetMachine &TM, ObjectCache *ObjCache = nullptr)
     : TM(TM), ObjCache(ObjCache) {}
 
-  /// Set an ObjectCache to query before compiling.
+  /// @brief Set an ObjectCache to query before compiling.
   void setObjectCache(ObjectCache *NewCache) { ObjCache = NewCache; }
 
-  /// Compile a Module to an ObjectFile.
+  /// @brief Compile a Module to an ObjectFile.
   CompileResult operator()(Module &M) {
     CompileResult CachedObject = tryToLoadFromObjectCache(M);
-    if (CachedObject)
+    if (CachedObject.getBinary())
       return CachedObject;
 
     SmallVector<char, 0> ObjBufferSV;
+    raw_svector_ostream ObjStream(ObjBufferSV);
 
-    {
-      raw_svector_ostream ObjStream(ObjBufferSV);
-
-      legacy::PassManager PM;
-      MCContext *Ctx;
-      if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
-        llvm_unreachable("Target does not support MC emission.");
-      PM.run(M);
-    }
-
-    auto ObjBuffer =
-        llvm::make_unique<SmallVectorMemoryBuffer>(std::move(ObjBufferSV));
-    auto Obj =
+    legacy::PassManager PM;
+    MCContext *Ctx;
+    if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
+      llvm_unreachable("Target does not support MC emission.");
+    PM.run(M);
+    std::unique_ptr<MemoryBuffer> ObjBuffer(
+        new ObjectMemoryBuffer(std::move(ObjBufferSV)));
+    Expected<std::unique_ptr<object::ObjectFile>> Obj =
         object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-
     if (Obj) {
       notifyObjectCompiled(M, *ObjBuffer);
-      return std::move(ObjBuffer);
+      return CompileResult(std::move(*Obj), std::move(ObjBuffer));
     }
-
     // TODO: Actually report errors helpfully.
     consumeError(Obj.takeError());
-    return nullptr;
+    return CompileResult(nullptr, nullptr);
   }
 
 private:
@@ -102,7 +82,19 @@ private:
     if (!ObjCache)
       return CompileResult();
 
-    return ObjCache->getObject(&M);
+    std::unique_ptr<MemoryBuffer> ObjBuffer = ObjCache->getObject(&M);
+    if (!ObjBuffer)
+      return CompileResult();
+
+    Expected<std::unique_ptr<object::ObjectFile>> Obj =
+        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
+    if (!Obj) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Obj.takeError());
+      return CompileResult();
+    }
+
+    return CompileResult(std::move(*Obj), std::move(ObjBuffer));
   }
 
   void notifyObjectCompiled(const Module &M, const MemoryBuffer &ObjBuffer) {

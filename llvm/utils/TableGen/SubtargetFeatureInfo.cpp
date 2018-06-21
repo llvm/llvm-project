@@ -10,7 +10,6 @@
 #include "SubtargetFeatureInfo.h"
 
 #include "Types.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/TableGen/Record.h"
 
 #include <map>

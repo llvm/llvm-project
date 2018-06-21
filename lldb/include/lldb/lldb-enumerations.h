@@ -21,8 +21,8 @@
 // warning, as it's part of -Wmicrosoft which also catches a whole slew of
 // other useful issues.
 //
-// To make matters worse, early versions of SWIG don't recognize the syntax of
-// specifying the underlying type of an enum (and Python doesn't care anyway)
+// To make matters worse, early versions of SWIG don't recognize the syntax
+// of specifying the underlying type of an enum (and Python doesn't care anyway)
 // so we need a way to specify the underlying type when the enum is being used
 // from C++ code, but just use a regular enum when swig is pre-processing.
 #define FLAGS_ENUM(Name) enum Name : unsigned
@@ -44,9 +44,6 @@ enum StateType {
                    ///launched or attached to anything yet
   eStateAttaching, ///< Process is currently trying to attach
   eStateLaunching, ///< Process is in the process of launching
-  // The state changes eStateAttaching and eStateLaunching are both sent while the
-  // private state thread is either not yet started or paused. For that reason, they
-  // should only be signaled as public state changes, and not private state changes.
   eStateStopped,   ///< Process or thread is stopped and can be examined.
   eStateRunning,   ///< Process or thread is running and can't be examined.
   eStateStepping,  ///< Process or thread is in the process of stepping and can
@@ -196,8 +193,9 @@ enum ScriptLanguage {
 
 //----------------------------------------------------------------------
 // Register numbering types
-// See RegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
-// these to the lldb internal register numbering scheme (eRegisterKindLLDB).
+// See RegisterContext::ConvertRegisterKindToRegisterNumber to convert
+// any of these to the lldb internal register numbering scheme
+// (eRegisterKindLLDB).
 //----------------------------------------------------------------------
 enum RegisterKind {
   eRegisterKindEHFrame = 0, // the register numbers seen in eh_frame
@@ -447,8 +445,8 @@ enum LanguageType {
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
   // assumes these can be used as indexes into array language_names, and
-  // Language::SetLanguageFromCString and Language::AsCString assume these can
-  // be used as indexes into array g_languages.
+  // Language::SetLanguageFromCString and Language::AsCString
+  // assume these can be used as indexes into array g_languages.
   eLanguageTypeMipsAssembler = 0x0024,   ///< Mips_Assembler.
   eLanguageTypeExtRenderScript = 0x0025, ///< RenderScript.
   eNumLanguageTypes
@@ -608,7 +606,10 @@ enum SymbolType {
   eSymbolTypeObjCClass,
   eSymbolTypeObjCMetaClass,
   eSymbolTypeObjCIVar,
-  eSymbolTypeReExported
+  eSymbolTypeIVarOffset, // A symbol that contains an offset for an instance
+                         // variable
+  eSymbolTypeReExported,
+  eSymbolTypeASTFile   // A symbol whose name is the path to a compiler AST file
 };
 
 enum SectionType {
@@ -626,7 +627,7 @@ enum SectionType {
   eSectionTypeDebug,
   eSectionTypeZeroFill,
   eSectionTypeDataObjCMessageRefs, // Pointer to function pointer + selector
-  eSectionTypeDataObjCCFStrings, // Objective-C const CFString/NSString objects
+  eSectionTypeDataObjCCFStrings, // Objective C const CFString/NSString objects
   eSectionTypeDWARFDebugAbbrev,
   eSectionTypeDWARFDebugAddr,
   eSectionTypeDWARFDebugAranges,
@@ -644,6 +645,7 @@ enum SectionType {
   eSectionTypeDWARFDebugStrOffsets,
   eSectionTypeDWARFAppleNames,
   eSectionTypeDWARFAppleTypes,
+  eSectionTypeDWARFAppleExternalTypes,
   eSectionTypeDWARFAppleNamespaces,
   eSectionTypeDWARFAppleObjC,
   eSectionTypeELFSymbolTable,       // Elf SHT_SYMTAB section
@@ -651,6 +653,7 @@ enum SectionType {
   eSectionTypeELFRelocationEntries, // Elf SHT_REL or SHT_REL section
   eSectionTypeELFDynamicLinkInfo,   // Elf SHT_DYNAMIC section
   eSectionTypeEHFrame,
+  eSectionTypeSwiftModules,
   eSectionTypeARMexidx,
   eSectionTypeARMextab,
   eSectionTypeCompactUnwind, // compact unwind section in Mach-O,
@@ -658,9 +661,6 @@ enum SectionType {
   eSectionTypeGoSymtab,
   eSectionTypeAbsoluteAddress, // Dummy section for symbols with absolute
                                // address
-  eSectionTypeDWARFGNUDebugAltLink,
-  eSectionTypeDWARFDebugTypes, // DWARF .debug_types section
-  eSectionTypeDWARFDebugNames, // DWARF v5 .debug_names
   eSectionTypeOther
 };
 
@@ -675,10 +675,10 @@ FLAGS_ENUM(FunctionNameType){
         (1u << 1), // Automatically figure out which FunctionNameType
                    // bits to set based on the function name.
     eFunctionNameTypeFull = (1u << 2), // The function name.
-    // For C this is the same as just the name of the function For C++ this is
-    // the mangled or demangled version of the mangled name. For ObjC this is
-    // the full function signature with the + or - and the square brackets and
-    // the class and selector
+    // For C this is the same as just the name of the function
+    // For C++ this is the mangled or demangled version of the mangled name.
+    // For ObjC this is the full function signature with the + or
+    // - and the square brackets and the class and selector
     eFunctionNameTypeBase = (1u << 3), // The function name only, no namespaces
                                        // or arguments and no class
                                        // methods or selectors will be searched.
@@ -749,7 +749,8 @@ enum StructuredDataType {
 };
 
 FLAGS_ENUM(TypeClass){
-    eTypeClassInvalid = (0u), eTypeClassArray = (1u << 0),
+    eTypeClassInvalid = (0u), 
+  eTypeClassArray = (1u << 0),
     eTypeClassBlockPointer = (1u << 1), eTypeClassBuiltin = (1u << 2),
     eTypeClassClass = (1u << 3), eTypeClassComplexFloat = (1u << 4),
     eTypeClassComplexInteger = (1u << 5), eTypeClassEnumeration = (1u << 6),
@@ -773,12 +774,19 @@ enum TemplateArgumentKind {
   eTemplateArgumentKindTemplateExpansion,
   eTemplateArgumentKindExpression,
   eTemplateArgumentKindPack,
-  eTemplateArgumentKindNullPtr,
+  eTemplateArgumentKindNullPtr
+};
+
+// Kind of argument for generics, either bound or unbound.
+enum GenericKind {
+  eNullGenericKindType = 0,
+  eBoundGenericKindType,
+  eUnboundGenericKindType
 };
 
 //----------------------------------------------------------------------
-// Options that can be set for a formatter to alter its behavior Not all of
-// these are applicable to all formatter types
+// Options that can be set for a formatter to alter its behavior
+// Not all of these are applicable to all formatter types
 //----------------------------------------------------------------------
 FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionCascade = (1u << 0),
@@ -792,17 +800,20 @@ FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionHideEmptyAggregates = (1u << 8)};
 
 //----------------------------------------------------------------------
-// This is the return value for frame comparisons.  If you are comparing frame
-// A to frame B the following cases arise: 1) When frame A pushes frame B (or a
-// frame that ends up pushing B) A is Older than B. 2) When frame A pushed
-// frame B (or if frame A is on the stack but B is not) A is Younger than B 3)
-// When frame A and frame B have the same StackID, they are Equal. 4) When
-// frame A and frame B have the same immediate parent frame, but are not equal,
-// the comparison yields
+// This is the return value for frame comparisons.  If you are comparing frame A
+// to frame B
+// the following cases arise:
+// 1) When frame A pushes frame B (or a frame that ends up pushing B) A is Older
+// than B.
+// 2) When frame A pushed frame B (or if frame A is on the stack but B is not) A
+// is Younger than B
+// 3) When frame A and frame B have the same StackID, they are Equal.
+// 4) When frame A and frame B have the same immediate parent frame, but are not
+// equal, the comparison yields
 //    SameParent.
 // 5) If the two frames are on different threads or processes the comparison is
-// Invalid 6) If for some reason we can't figure out what went on, we return
-// Unknown.
+// Invalid
+// 6) If for some reason we can't figure out what went on, we return Unknown.
 //----------------------------------------------------------------------
 enum FrameComparison {
   eFrameCompareInvalid,
@@ -817,11 +828,11 @@ enum FrameComparison {
 // Address Class
 //
 // A way of classifying an address used for disassembling and setting
-// breakpoints. Many object files can track exactly what parts of their object
-// files are code, data and other information. This is of course above and
-// beyond just looking at the section types. For example, code might contain PC
-// relative data and the object file might be able to tell us that an address
-// in code is data.
+// breakpoints. Many object files can track exactly what parts of their
+// object files are code, data and other information. This is of course
+// above and beyond just looking at the section types. For example, code
+// might contain PC relative data and the object file might be able to
+// tell us that an address in code is data.
 //----------------------------------------------------------------------
 enum AddressClass {
   eAddressClassInvalid,
@@ -836,8 +847,9 @@ enum AddressClass {
 //----------------------------------------------------------------------
 // File Permissions
 //
-// Designed to mimic the unix file permission bits so they can be used with
-// functions that set 'mode_t' to certain values for permissions.
+// Designed to mimic the unix file permission bits so they can be
+// used with functions that set 'mode_t' to certain values for
+// permissions.
 //----------------------------------------------------------------------
 FLAGS_ENUM(FilePermissions){
     eFilePermissionsUserRead = (1u << 8), eFilePermissionsUserWrite = (1u << 7),
@@ -897,8 +909,8 @@ FLAGS_ENUM(FilePermissions){
 //----------------------------------------------------------------------
 // Queue work item types
 //
-// The different types of work that can be enqueued on a libdispatch aka Grand
-// Central Dispatch (GCD) queue.
+// The different types of work that can be enqueued on a libdispatch
+// aka Grand Central Dispatch (GCD) queue.
 //----------------------------------------------------------------------
 enum QueueItemKind {
   eQueueItemKindUnknown = 0,
@@ -932,8 +944,8 @@ enum ExpressionEvaluationPhase {
 
 //----------------------------------------------------------------------
 // Watchpoint Kind
-// Indicates what types of events cause the watchpoint to fire. Used by Native
-// *Protocol-related classes.
+// Indicates what types of events cause the watchpoint to fire.
+// Used by Native*Protocol-related classes.
 //----------------------------------------------------------------------
 FLAGS_ENUM(WatchpointKind){eWatchpointKindWrite = (1u << 0),
                            eWatchpointKindRead = (1u << 1)};
@@ -948,24 +960,27 @@ enum GdbSignal {
 };
 
 //----------------------------------------------------------------------
-// Used with SBHost::GetPath (lldb::PathType) to find files that are related to
-// LLDB on the current host machine. Most files are relative to LLDB or are in
-// known locations.
+// Used with SBHost::GetPath (lldb::PathType) to find files that are
+// related to LLDB on the current host machine. Most files are relative
+// to LLDB or are in known locations.
 //----------------------------------------------------------------------
 enum PathType {
   ePathTypeLLDBShlibDir, // The directory where the lldb.so (unix) or LLDB
                          // mach-o file in LLDB.framework (MacOSX) exists
   ePathTypeSupportExecutableDir, // Find LLDB support executable directory
                                  // (debugserver, etc)
-  ePathTypeHeaderDir,            // Find LLDB header file directory
-  ePathTypePythonDir,            // Find Python modules (PYTHONPATH) directory
-  ePathTypeLLDBSystemPlugins,    // System plug-ins directory
-  ePathTypeLLDBUserPlugins,      // User plug-ins directory
-  ePathTypeLLDBTempSystemDir,    // The LLDB temp directory for this system that
-                                 // will be cleaned up on exit
+  ePathTypeSupportFileDir, // Find LLDB support file directory (non-executable
+                           // files)
+  ePathTypeHeaderDir,      // Find LLDB header file directory
+  ePathTypePythonDir,      // Find Python modules (PYTHONPATH) directory
+  ePathTypeLLDBSystemPlugins, // System plug-ins directory
+  ePathTypeLLDBUserPlugins,   // User plug-ins directory
+  ePathTypeLLDBTempSystemDir, // The LLDB temp directory for this system that
+                              // will be cleaned up on exit
   ePathTypeGlobalLLDBTempSystemDir, // The LLDB temp directory for this system,
                                     // NOT cleaned up on a process exit.
-  ePathTypeClangDir                 // Find path to Clang builtin headers
+  ePathTypeClangDir,                // Find path to Clang builtin headers
+  ePathTypeSwiftDir                 // Find path to Swift libraries
 };
 
 //----------------------------------------------------------------------
@@ -991,72 +1006,93 @@ enum MatchType { eMatchTypeNormal, eMatchTypeRegex, eMatchTypeStartsWith };
 //----------------------------------------------------------------------
 // Bitmask that describes details about a type
 //----------------------------------------------------------------------
-FLAGS_ENUM(TypeFlags){
-    eTypeHasChildren = (1u << 0),       eTypeHasValue = (1u << 1),
-    eTypeIsArray = (1u << 2),           eTypeIsBlock = (1u << 3),
-    eTypeIsBuiltIn = (1u << 4),         eTypeIsClass = (1u << 5),
-    eTypeIsCPlusPlus = (1u << 6),       eTypeIsEnumeration = (1u << 7),
-    eTypeIsFuncPrototype = (1u << 8),   eTypeIsMember = (1u << 9),
-    eTypeIsObjC = (1u << 10),           eTypeIsPointer = (1u << 11),
-    eTypeIsReference = (1u << 12),      eTypeIsStructUnion = (1u << 13),
-    eTypeIsTemplate = (1u << 14),       eTypeIsTypedef = (1u << 15),
-    eTypeIsVector = (1u << 16),         eTypeIsScalar = (1u << 17),
-    eTypeIsInteger = (1u << 18),        eTypeIsFloat = (1u << 19),
-    eTypeIsComplex = (1u << 20),        eTypeIsSigned = (1u << 21),
-    eTypeInstanceIsPointer = (1u << 22)};
+FLAGS_ENUM(TypeFlags){eTypeHasChildren = (1u << 0),
+                      eTypeHasValue = (1u << 1),
+                      eTypeIsArray = (1u << 2),
+                      eTypeIsBlock = (1u << 3),
+                      eTypeIsBuiltIn = (1u << 4),
+                      eTypeIsClass = (1u << 5),
+                      eTypeIsCPlusPlus = (1u << 6),
+                      eTypeIsEnumeration = (1u << 7),
+                      eTypeIsFuncPrototype = (1u << 8),
+                      eTypeIsMember = (1u << 9),
+                      eTypeIsObjC = (1u << 10),
+                      eTypeIsPointer = (1u << 11),
+                      eTypeIsReference = (1u << 12),
+                      eTypeIsStructUnion = (1u << 13),
+                      eTypeIsTemplate = (1u << 14),
+                      eTypeIsTypedef = (1u << 15),
+                      eTypeIsVector = (1u << 16),
+                      eTypeIsScalar = (1u << 17),
+                      eTypeIsInteger = (1u << 18),
+                      eTypeIsFloat = (1u << 19),
+                      eTypeIsComplex = (1u << 20),
+                      eTypeIsSigned = (1u << 21),
+                      eTypeInstanceIsPointer = (1u << 22),
+                      eTypeIsSwift = (1u << 23),
+                      eTypeIsArchetype = (1u << 24),
+                      eTypeIsProtocol = (1u << 25),
+                      eTypeIsTuple = (1u << 26),
+                      eTypeIsMetatype = (1u << 27),
+                      eTypeIsGeneric = (1u << 28),
+                      eTypeIsBound = (1u << 29)};
 
 FLAGS_ENUM(CommandFlags){
     //----------------------------------------------------------------------
     // eCommandRequiresTarget
     //
-    // Ensures a valid target is contained in m_exe_ctx prior to executing the
-    // command. If a target doesn't exist or is invalid, the command will fail
-    // and CommandObject::GetInvalidTargetDescription() will be returned as the
-    // error. CommandObject subclasses can override the virtual function for
-    // GetInvalidTargetDescription() to provide custom strings when needed.
+    // Ensures a valid target is contained in m_exe_ctx prior to executing
+    // the command. If a target doesn't exist or is invalid, the command
+    // will fail and CommandObject::GetInvalidTargetDescription() will be
+    // returned as the error. CommandObject subclasses can override the
+    // virtual function for GetInvalidTargetDescription() to provide custom
+    // strings when needed.
     //----------------------------------------------------------------------
     eCommandRequiresTarget = (1u << 0),
     //----------------------------------------------------------------------
     // eCommandRequiresProcess
     //
-    // Ensures a valid process is contained in m_exe_ctx prior to executing the
-    // command. If a process doesn't exist or is invalid, the command will fail
-    // and CommandObject::GetInvalidProcessDescription() will be returned as
-    // the error. CommandObject subclasses can override the virtual function
-    // for GetInvalidProcessDescription() to provide custom strings when
-    // needed.
+    // Ensures a valid process is contained in m_exe_ctx prior to executing
+    // the command. If a process doesn't exist or is invalid, the command
+    // will fail and CommandObject::GetInvalidProcessDescription() will be
+    // returned as the error. CommandObject subclasses can override the
+    // virtual function for GetInvalidProcessDescription() to provide custom
+    // strings when needed.
     //----------------------------------------------------------------------
     eCommandRequiresProcess = (1u << 1),
     //----------------------------------------------------------------------
     // eCommandRequiresThread
     //
-    // Ensures a valid thread is contained in m_exe_ctx prior to executing the
-    // command. If a thread doesn't exist or is invalid, the command will fail
-    // and CommandObject::GetInvalidThreadDescription() will be returned as the
-    // error. CommandObject subclasses can override the virtual function for
-    // GetInvalidThreadDescription() to provide custom strings when needed.
+    // Ensures a valid thread is contained in m_exe_ctx prior to executing
+    // the command. If a thread doesn't exist or is invalid, the command
+    // will fail and CommandObject::GetInvalidThreadDescription() will be
+    // returned as the error. CommandObject subclasses can override the
+    // virtual function for GetInvalidThreadDescription() to provide custom
+    // strings when needed.
     //----------------------------------------------------------------------
     eCommandRequiresThread = (1u << 2),
     //----------------------------------------------------------------------
     // eCommandRequiresFrame
     //
-    // Ensures a valid frame is contained in m_exe_ctx prior to executing the
-    // command. If a frame doesn't exist or is invalid, the command will fail
-    // and CommandObject::GetInvalidFrameDescription() will be returned as the
-    // error. CommandObject subclasses can override the virtual function for
-    // GetInvalidFrameDescription() to provide custom strings when needed.
+    // Ensures a valid frame is contained in m_exe_ctx prior to executing
+    // the command. If a frame doesn't exist or is invalid, the command
+    // will fail and CommandObject::GetInvalidFrameDescription() will be
+    // returned as the error. CommandObject subclasses can override the
+    // virtual function for GetInvalidFrameDescription() to provide custom
+    // strings when needed.
     //----------------------------------------------------------------------
     eCommandRequiresFrame = (1u << 3),
     //----------------------------------------------------------------------
     // eCommandRequiresRegContext
     //
-    // Ensures a valid register context (from the selected frame if there is a
-    // frame in m_exe_ctx, or from the selected thread from m_exe_ctx) is
-    // available from m_exe_ctx prior to executing the command. If a target
-    // doesn't exist or is invalid, the command will fail and
-    // CommandObject::GetInvalidRegContextDescription() will be returned as the
-    // error. CommandObject subclasses can override the virtual function for
-    // GetInvalidRegContextDescription() to provide custom strings when needed.
+    // Ensures a valid register context (from the selected frame if there
+    // is a frame in m_exe_ctx, or from the selected thread from m_exe_ctx)
+    // is available from m_exe_ctx prior to executing the command. If a
+    // target doesn't exist or is invalid, the command will fail and
+    // CommandObject::GetInvalidRegContextDescription() will be returned as
+    // the error. CommandObject subclasses can override the virtual function
+    // for GetInvalidRegContextDescription() to provide custom strings when
+    // needed.
     //----------------------------------------------------------------------
     eCommandRequiresRegContext = (1u << 4),
     //----------------------------------------------------------------------
@@ -1070,15 +1106,15 @@ FLAGS_ENUM(CommandFlags){
     //----------------------------------------------------------------------
     // eCommandProcessMustBeLaunched
     //
-    // Verifies that there is a launched process in m_exe_ctx, if there isn't,
-    // the command will fail with an appropriate error message.
+    // Verifies that there is a launched process in m_exe_ctx, if there
+    // isn't, the command will fail with an appropriate error message.
     //----------------------------------------------------------------------
     eCommandProcessMustBeLaunched = (1u << 6),
     //----------------------------------------------------------------------
     // eCommandProcessMustBePaused
     //
-    // Verifies that there is a paused process in m_exe_ctx, if there isn't,
-    // the command will fail with an appropriate error message.
+    // Verifies that there is a paused process in m_exe_ctx, if there
+    // isn't, the command will fail with an appropriate error message.
     //----------------------------------------------------------------------
     eCommandProcessMustBePaused = (1u << 7)};
 

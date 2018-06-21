@@ -17,7 +17,7 @@
 
 namespace clang {
 
-/// Loop optimization hint for loop and unroll pragmas.
+/// \brief Loop optimization hint for loop and unroll pragmas.
 struct LoopHint {
   // Source range of the directive.
   SourceRange Range;

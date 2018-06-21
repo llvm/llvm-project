@@ -220,7 +220,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
   }
 
   // write bitcode to it
-  WriteBitcodeToFile(*MergedModule, Out.os(), ShouldEmbedUselists);
+  WriteBitcodeToFile(MergedModule.get(), Out.os(), ShouldEmbedUselists);
   Out.os().close();
 
   if (Out.os().has_error()) {

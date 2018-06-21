@@ -20,8 +20,9 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-// The Decl vendor class is intended as a generic interface to search for named
-// declarations that are not necessarily backed by a specific symbol file.
+// The Decl vendor class is intended as a generic interface to search
+// for named declarations that are not necessarily backed by a specific
+// symbol file.
 //----------------------------------------------------------------------
 class DeclVendor {
 public:

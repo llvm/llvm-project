@@ -31,25 +31,25 @@ sw.epilog:
 ; Check if weights are correctly assigned to edges generated from switch
 ; statement.
 ;
-; CHECK: bb.0{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.0:
 ; %bb.0 to %bb.4: [0, 1133] (65 = 60 + 5)
 ; %bb.0 to %bb.5: [1134, UINT32_MAX] (25 = 20 + 5)
-; CHECK: successors: %bb.4(0x5c71c71c), %bb.5(0x238e38e4)
+; CHECK: Successors according to CFG: %bb.4({{[0-9a-fx/= ]+}}72.22%) %bb.5({{[0-9a-fx/= ]+}}27.78%)
 ;
-; CHECK: bb.4{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.4:
 ; %bb.4 to %bb.1: [155, 159] (50)
 ; %bb.4 to %bb.5: [0, 1133] - [155, 159] (15 = 10 + 5)
-; CHECK: successors: %bb.1(0x62762762), %bb.7(0x1d89d89e)
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}76.92%) %bb.7({{[0-9a-fx/= ]+}}23.08%)
 ;
-; CHECK: bb.5{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.5:
 ; %bb.5 to %bb.1: {1140} (10)
 ; %bb.5 to %bb.6: [1134, UINT32_MAX] - {1140} (15 = 10 + 5)
-; CHECK: successors: %bb.1(0x33333333), %bb.6(0x4ccccccd)
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}40.00%) %bb.6({{[0-9a-fx/= ]+}}60.00%)
 ;
-; CHECK: bb.6{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.6:
 ; %bb.6 to %bb.1: {1134} (10)
 ; %bb.6 to %bb.2: [1134, UINT32_MAX] - {1134, 1140} (5)
-; CHECK: successors: %bb.1(0x55555555), %bb.2(0x2aaaaaab)
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}66.67%) %bb.2({{[0-9a-fx/= ]+}}33.33%)
 }
 
 ; CHECK-LABEL: test2
@@ -99,19 +99,19 @@ sw.epilog:
 ; Check if weights are correctly assigned to edges generated from switch
 ; statement.
 ;
-; CHECK: bb.0{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.0:
 ; %bb.0 to %bb.6: {0} + [15, UINT32_MAX] (5)
 ; %bb.0 to %bb.8: [1, 14] (jump table) (65 = 60 + 5)
-; CHECK: successors: %bb.6(0x09249249), %bb.8(0x76db6db7)
+; CHECK: Successors according to CFG: %bb.6({{[0-9a-fx/= ]+}}7.14%) %bb.8({{[0-9a-fx/= ]+}}92.86%
 ;
-; CHECK: bb.8{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.8:
 ; %bb.8 to %bb.1: {1} (10)
 ; %bb.8 to %bb.6: [2, 9] (5)
 ; %bb.8 to %bb.2: {10} (10)
 ; %bb.8 to %bb.3: {11} (10)
 ; %bb.8 to %bb.4: {12} (10)
 ; %bb.8 to %bb.5: {13, 14} (20)
-; CHECK: successors: %bb.1(0x13b13b14), %bb.6(0x09d89d8a), %bb.2(0x13b13b14), %bb.3(0x13b13b14), %bb.4(0x13b13b14), %bb.5(0x27627628)
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}15.38%) %bb.6({{[0-9a-fx/= ]+}}7.69%) %bb.2({{[0-9a-fx/= ]+}}15.38%) %bb.3({{[0-9a-fx/= ]+}}15.38%) %bb.4({{[0-9a-fx/= ]+}}15.38%) %bb.5({{[0-9a-fx/= ]+}}30.77%)
 }
 
 ; CHECK-LABEL: test3
@@ -160,18 +160,18 @@ sw.epilog:
 ; Check if weights are correctly assigned to edges generated from switch
 ; statement.
 ;
-; CHECK: bb.0{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.0:
 ; %bb.0 to %bb.6: [0, 9] + [15, UINT32_MAX] {10}
 ; %bb.0 to %bb.8: [10, 14] (jump table) (50)
-; CHECK: successors: %bb.6(0x15555555), %bb.8(0x6aaaaaab)
+; CHECK: Successors according to CFG: %bb.6({{[0-9a-fx/= ]+}}16.67%) %bb.8({{[0-9a-fx/= ]+}}83.33%)
 ;
-; CHECK: bb.8{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.8:
 ; %bb.8 to %bb.1: {10} (10)
 ; %bb.8 to %bb.2: {11} (10)
 ; %bb.8 to %bb.3: {12} (10)
 ; %bb.8 to %bb.4: {13} (10)
 ; %bb.8 to %bb.5: {14} (10)
-; CHECK: successors: %bb.1(0x1999999a), %bb.2(0x1999999a), %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a)
+; CHECK: Successors according to CFG: %bb.1({{[0-9a-fx/= ]+}}20.00%) %bb.2({{[0-9a-fx/= ]+}}20.00%) %bb.3({{[0-9a-fx/= ]+}}20.00%) %bb.4({{[0-9a-fx/= ]+}}20.00%) %bb.5({{[0-9a-fx/= ]+}}20.00%)
 }
 
 ; CHECK-LABEL: test4
@@ -213,15 +213,15 @@ sw.epilog:
 ; Check if weights are correctly assigned to edges generated from switch
 ; statement.
 ;
-; CHECK: bb.0{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.0:
 ; %bb.0 to %bb.6: [0, 110] + [116, UINT32_MAX] (20)
 ; %bb.0 to %bb.7: [111, 115] (bit test) (50)
-; CHECK: successors: %bb.6(0x24924925), %bb.7(0x5b6db6db)
+; CHECK: Successors according to CFG: %bb.6({{[0-9a-fx/= ]+}}28.57%) %bb.7({{[0-9a-fx/= ]+}}71.43%)
 ;
-; CHECK: bb.7{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.7:
 ; %bb.7 to %bb.2: {111, 114, 115} (30)
 ; %bb.7 to %bb.3: {112, 113} (20)
-; CHECK: successors: %bb.2(0x4ccccccd), %bb.3(0x33333333)
+; CHECK: Successors according to CFG: %bb.2({{[0-9a-fx/= ]+}}60.00%) %bb.3({{[0-9a-fx/= ]+}}40.00%)
 }
 
 ; CHECK-LABEL: test5
@@ -270,10 +270,10 @@ sw.epilog:
 ; Check if weights are correctly assigned to edges generated from switch
 ; statement.
 ;
-; CHECK: bb.0{{[0-9a-zA-Z.]*}}:
+; CHECK: %bb.0:
 ; %bb.0 to %bb.6: [10, UINT32_MAX] (15)
 ; %bb.0 to %bb.8: [4, 20, 28, 36] (jump table) (45)
-; CHECK: successors: %bb.8(0x20000001), %bb.9(0x5fffffff)
+; CHECK: Successors according to CFG: %bb.8({{[0-9a-fx/= ]+}}25.00%) %bb.9({{[0-9a-fx/= ]+}}75.00%)
 }
 
 !1 = !{!"branch_weights", i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10, i32 10} 

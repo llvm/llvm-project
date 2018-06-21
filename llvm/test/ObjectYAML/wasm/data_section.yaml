@@ -22,17 +22,6 @@ Sections:
         Index:           0
         Offset:          0x00000006
         Addend:          -6
-  - Type:            CUSTOM
-    Name:            linking
-    Version:         1
-    SymbolTable:
-      - Index:           0
-        Kind:            DATA
-        Name:            dataSymbol
-        Flags:           [  ]
-        Segment:         0
-        Offset:          0
-        Size:            4
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
@@ -55,4 +44,4 @@ Sections:
 # CHECK-NEXT:           Opcode:          I32_CONST
 # CHECK-NEXT:           Value:           4
 # CHECK-NEXT:         Content:         '10001000'
-# CHECK-NEXT:   - Type:            CUSTOM
+# CHECK-NEXT: ...

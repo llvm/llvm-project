@@ -35,13 +35,11 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   initThread(MinimalInit);
 }
 
-ALWAYS_INLINE ScudoTSD *getTSDAndLock(bool *UnlockRequired) {
+ALWAYS_INLINE ScudoTSD *getTSDAndLock() {
   if (UNLIKELY(ScudoThreadState != ThreadInitialized)) {
     FallbackTSD.lock();
-    *UnlockRequired = true;
     return &FallbackTSD;
   }
-  *UnlockRequired = false;
   return &TSD;
 }
 

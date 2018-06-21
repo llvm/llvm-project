@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file provides signature information for runtime libcalls.
+/// \brief This file provides signature information for runtime libcalls.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -9,6 +9,20 @@
 
 #include "lldb/Core/Debugger.h"
 
+// C Includes
+// C++ Includes
+#include <map>
+#include <mutex>
+
+// Other libraries and framework includes
+#include "swift/Basic/Version.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Threading.h"
+
+// Project includes
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/Breakpoint.h" // for Breakpoint, Brea...
 #include "lldb/Core/Event.h"            // for Event, EventData...
 #include "lldb/Core/FormatEntity.h"
@@ -26,6 +40,7 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h" // for OptionValue, Opt...
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -35,6 +50,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h" // for SymbolContext
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StructuredDataPlugin.h"
@@ -48,7 +64,7 @@
 #include "lldb/Utility/StreamCallback.h"
 #include "lldb/Utility/StreamString.h"
 
-#if defined(_WIN32)
+#if defined(LLVM_ON_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
 #endif
 
@@ -77,6 +93,69 @@ class Address;
 
 using namespace lldb;
 using namespace lldb_private;
+
+inline std::string FormatAnsiTerminalCodes(const char *format,
+                                           bool do_color = true) {
+  // Convert "${ansi.XXX}" tokens to ansi values or clear them if do_color is
+  // false.
+  static const struct {
+    const char *name;
+    const char *value;
+  } g_color_tokens[] = {
+      {"fg.black}", ANSI_ESCAPE1(ANSI_FG_COLOR_BLACK)},
+      {"fg.red}", ANSI_ESCAPE1(ANSI_FG_COLOR_RED)},
+      {"fg.green}", ANSI_ESCAPE1(ANSI_FG_COLOR_GREEN)},
+      {"fg.yellow}", ANSI_ESCAPE1(ANSI_FG_COLOR_YELLOW)},
+      {"fg.blue}", ANSI_ESCAPE1(ANSI_FG_COLOR_BLUE)},
+      {"fg.purple}", ANSI_ESCAPE1(ANSI_FG_COLOR_PURPLE)},
+      {"fg.cyan}", ANSI_ESCAPE1(ANSI_FG_COLOR_CYAN)},
+      {"fg.white}", ANSI_ESCAPE1(ANSI_FG_COLOR_WHITE)},
+      {"bg.black}", ANSI_ESCAPE1(ANSI_BG_COLOR_BLACK)},
+      {"bg.red}", ANSI_ESCAPE1(ANSI_BG_COLOR_RED)},
+      {"bg.green}", ANSI_ESCAPE1(ANSI_BG_COLOR_GREEN)},
+      {"bg.yellow}", ANSI_ESCAPE1(ANSI_BG_COLOR_YELLOW)},
+      {"bg.blue}", ANSI_ESCAPE1(ANSI_BG_COLOR_BLUE)},
+      {"bg.purple}", ANSI_ESCAPE1(ANSI_BG_COLOR_PURPLE)},
+      {"bg.cyan}", ANSI_ESCAPE1(ANSI_BG_COLOR_CYAN)},
+      {"bg.white}", ANSI_ESCAPE1(ANSI_BG_COLOR_WHITE)},
+      {"normal}", ANSI_ESCAPE1(ANSI_CTRL_NORMAL)},
+      {"bold}", ANSI_ESCAPE1(ANSI_CTRL_BOLD)},
+      {"faint}", ANSI_ESCAPE1(ANSI_CTRL_FAINT)},
+      {"italic}", ANSI_ESCAPE1(ANSI_CTRL_ITALIC)},
+      {"underline}", ANSI_ESCAPE1(ANSI_CTRL_UNDERLINE)},
+      {"slow-blink}", ANSI_ESCAPE1(ANSI_CTRL_SLOW_BLINK)},
+      {"fast-blink}", ANSI_ESCAPE1(ANSI_CTRL_FAST_BLINK)},
+      {"negative}", ANSI_ESCAPE1(ANSI_CTRL_IMAGE_NEGATIVE)},
+      {"conceal}", ANSI_ESCAPE1(ANSI_CTRL_CONCEAL)},
+      {"crossed-out}", ANSI_ESCAPE1(ANSI_CTRL_CROSSED_OUT)},
+  };
+  static const char tok_hdr[] = "${ansi.";
+
+  std::string fmt;
+  for (const char *p = format; *p; ++p) {
+    const char *tok_start = strstr(p, tok_hdr);
+    if (!tok_start) {
+      fmt.append(p, strlen(p));
+      break;
+    }
+
+    fmt.append(p, tok_start - p);
+    p = tok_start;
+
+    const char *tok_str = tok_start + sizeof(tok_hdr) - 1;
+    for (size_t i = 0; i < sizeof(g_color_tokens) / sizeof(g_color_tokens[0]);
+         ++i) {
+      if (!strncmp(tok_str, g_color_tokens[i].name,
+                   strlen(g_color_tokens[i].name))) {
+        if (do_color)
+          fmt.append(g_color_tokens[i].value);
+        p = tok_str + strlen(g_color_tokens[i].name) - 1;
+        break;
+      }
+    }
+  }
+  return fmt;
+}
 
 static lldb::user_id_t g_unique_id = 1;
 static size_t g_debugger_event_thread_stack_bytes = 8 * 1024 * 1024;
@@ -167,15 +246,13 @@ OptionEnumValueElement g_language_enumerators[] = {
   "}${addr-file-or-load}{ "                                                    \
   "<${function.concrete-only-addr-offset-no-padding}>}: "
 
-// gdb's disassembly format can be emulated with ${current-pc-arrow}${addr-
-// file-or-load}{ <${function.name-without-args}${function.concrete-only-addr-
-// offset-no-padding}>}:
+// gdb's disassembly format can be emulated with
+// ${current-pc-arrow}${addr-file-or-load}{
+// <${function.name-without-args}${function.concrete-only-addr-offset-no-padding}>}:
 
 // lldb's original format for disassembly would look like this format string -
-// {${function.initial-function}{${module.file.basename}`}{${function.name-
-// without-
-// args}}:\n}{${function.changed}\n{${module.file.basename}`}{${function.name-
-// without-args}}:\n}{${current-pc-arrow} }{${addr-file-or-load}}:
+// {${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\n}{${function.changed}\n{${module.file.basename}`}{${function.name-without-args}}:\n}{${current-pc-arrow}
+// }{${addr-file-or-load}}:
 
 #define DEFAULT_STOP_SHOW_COLUMN_ANSI_PREFIX "${ansi.underline}"
 #define DEFAULT_STOP_SHOW_COLUMN_ANSI_SUFFIX "${ansi.normal}"
@@ -592,9 +669,9 @@ bool Debugger::LoadPlugin(const FileSpec &spec, Status &error) {
       return true;
     }
   } else {
-    // The g_load_plugin_callback is registered in SBDebugger::Initialize() and
-    // if the public API layer isn't available (code is linking against all of
-    // the internal LLDB static libraries), then we can't load plugins
+    // The g_load_plugin_callback is registered in SBDebugger::Initialize()
+    // and if the public API layer isn't available (code is linking against
+    // all of the internal LLDB static libraries), then we can't load plugins
     error.SetErrorString("Public API layer is not available");
   }
   return false;
@@ -605,8 +682,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    const FileSpec &file_spec) {
   Status error;
 
-  static ConstString g_dylibext(".dylib");
-  static ConstString g_solibext(".so");
+  static ConstString g_dylibext("dylib");
+  static ConstString g_solibext("so");
 
   if (!baton)
     return FileSpec::eEnumerateDirectoryResultQuit;
@@ -614,8 +691,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
   Debugger *debugger = (Debugger *)baton;
 
   namespace fs = llvm::sys::fs;
-  // If we have a regular file, a symbolic link or unknown file type, try and
-  // process the file. We must handle unknown as sometimes the directory
+  // If we have a regular file, a symbolic link or unknown file type, try
+  // and process the file. We must handle unknown as sometimes the directory
   // enumeration might be enumerating a file system that doesn't have correct
   // file type information.
   if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
@@ -635,9 +712,9 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
   } else if (ft == fs::file_type::directory_file ||
              ft == fs::file_type::symlink_file ||
              ft == fs::file_type::type_unknown) {
-    // Try and recurse into anything that a directory or symbolic link. We must
-    // also do this for unknown as sometimes the directory enumeration might be
-    // enumerating a file system that doesn't have correct file type
+    // Try and recurse into anything that a directory or symbolic link.
+    // We must also do this for unknown as sometimes the directory enumeration
+    // might be enumerating a file system that doesn't have correct file type
     // information.
     return FileSpec::eEnumerateDirectoryResultEnter;
   }
@@ -646,18 +723,19 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
 }
 
 void Debugger::InstanceInitialize() {
+  FileSpec dir_spec;
   const bool find_directories = true;
   const bool find_files = true;
   const bool find_other = true;
   char dir_path[PATH_MAX];
-  if (FileSpec dir_spec = HostInfo::GetSystemPluginDir()) {
+  if (HostInfo::GetLLDBPath(ePathTypeLLDBSystemPlugins, dir_spec)) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
       FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
                                    find_other, LoadPluginCallback, this);
     }
   }
 
-  if (FileSpec dir_spec = HostInfo::GetUserPluginDir()) {
+  if (HostInfo::GetLLDBPath(ePathTypeLLDBUserPlugins, dir_spec)) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
       FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
                                    find_other, LoadPluginCallback, this);
@@ -801,9 +879,10 @@ Debugger::~Debugger() { Clear(); }
 
 void Debugger::Clear() {
   //----------------------------------------------------------------------
-  // Make sure we call this function only once. With the C++ global destructor
-  // chain having a list of debuggers and with code that can be running on
-  // other threads, we need to ensure this doesn't happen multiple times.
+  // Make sure we call this function only once. With the C++ global
+  // destructor chain having a list of debuggers and with code that can be
+  // running on other threads, we need to ensure this doesn't happen
+  // multiple times.
   //
   // The following functions call Debugger::Clear():
   //     Debugger::~Debugger();
@@ -828,7 +907,8 @@ void Debugger::Clear() {
     m_broadcaster_manager_sp->Clear();
 
     // Close the input file _before_ we close the input read communications
-    // class as it does NOT own the input file, our m_input_file does.
+    // class
+    // as it does NOT own the input file, our m_input_file does.
     m_terminal_state.Clear();
     if (m_input_file_sp)
       m_input_file_sp->GetFile().Close();
@@ -864,8 +944,8 @@ void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership) {
   if (!in_file.IsValid())
     in_file.SetStream(stdin, true);
 
-  // Save away the terminal state if that is relevant, so that we can restore
-  // it in RestoreInputState.
+  // Save away the terminal state if that is relevant, so that we can restore it
+  // in RestoreInputState.
   SaveInputTerminalState();
 }
 
@@ -879,8 +959,8 @@ void Debugger::SetOutputFileHandle(FILE *fh, bool tranfer_ownership) {
   if (!out_file.IsValid())
     out_file.SetStream(stdout, false);
 
-  // do not create the ScriptInterpreter just for setting the output file
-  // handle as the constructor will know how to do the right thing on its own
+  // do not create the ScriptInterpreter just for setting the output file handle
+  // as the constructor will know how to do the right thing on its own
   const bool can_create = false;
   ScriptInterpreter *script_interpreter =
       GetCommandInterpreter().GetScriptInterpreter(can_create);
@@ -1026,10 +1106,11 @@ void Debugger::RunIOHandler(const IOHandlerSP &reader_sp) {
 void Debugger::AdoptTopIOHandlerFilesIfInvalid(StreamFileSP &in,
                                                StreamFileSP &out,
                                                StreamFileSP &err) {
-  // Before an IOHandler runs, it must have in/out/err streams. This function
-  // is called when one ore more of the streams are nullptr. We use the top
-  // input reader's in/out/err streams, or fall back to the debugger file
-  // handles, or we fall back onto stdin/stdout/stderr as a last resort.
+  // Before an IOHandler runs, it must have in/out/err streams.
+  // This function is called when one ore more of the streams
+  // are nullptr. We use the top input reader's in/out/err streams,
+  // or fall back to the debugger file handles, or we fall back
+  // onto stdin/stdout/stderr as a last resort.
 
   std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
   IOHandlerSP top_reader_sp(m_input_reader_stack.Top());
@@ -1085,12 +1166,48 @@ void Debugger::PushIOHandler(const IOHandlerSP &reader_sp) {
   m_input_reader_stack.Push(reader_sp);
   reader_sp->Activate();
 
-  // Interrupt the top input reader to it will exit its Run() function and let
-  // this new input reader take over
+  // Interrupt the top input reader to it will exit its Run() function
+  // and let this new input reader take over
   if (top_reader_sp) {
     top_reader_sp->Deactivate();
     top_reader_sp->Cancel();
   }
+}
+
+// Pop 2 IOHandlers and don't active the second one after the first is popped
+uint32_t Debugger::PopIOHandlers(const IOHandlerSP &reader1_sp,
+                                 const IOHandlerSP &reader2_sp) {
+  uint32_t result = 0;
+
+  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
+
+  // The reader on the stop of the stack is done, so let the next
+  // read on the stack refresh its prompt and if there is one...
+  if (!m_input_reader_stack.IsEmpty()) {
+    IOHandlerSP reader_sp(m_input_reader_stack.Top());
+
+    if (!reader1_sp || reader1_sp.get() == reader_sp.get()) {
+      reader_sp->Deactivate();
+      reader_sp->Cancel();
+      m_input_reader_stack.Pop();
+      ++result;
+
+      reader_sp = m_input_reader_stack.Top();
+
+      if (reader2_sp && reader2_sp.get() == reader_sp.get()) {
+        m_input_reader_stack.Pop();
+        ++result;
+        reader_sp = m_input_reader_stack.Top();
+      }
+
+      if (reader_sp)
+        reader_sp->Activate();
+
+    } else if (PopIOHandler(reader2_sp)) {
+      ++result;
+    }
+  }
+  return result;
 }
 
 bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
@@ -1099,8 +1216,8 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
 
   std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
 
-  // The reader on the stop of the stack is done, so let the next read on the
-  // stack refresh its prompt and if there is one...
+  // The reader on the stop of the stack is done, so let the next
+  // read on the stack refresh its prompt and if there is one...
   if (m_input_reader_stack.IsEmpty())
     return false;
 
@@ -1195,8 +1312,8 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
       }
     }
   }
-  // The first context on a list of instructions will have a prev_sc that has
-  // no Function or Symbol -- if SymbolContext had an IsValid() method, it
+  // The first context on a list of instructions will have a prev_sc that
+  // has no Function or Symbol -- if SymbolContext had an IsValid() method, it
   // would return false.  But we do get a prev_sc pointer.
   if ((sc && (sc->function || sc->symbol)) && prev_sc &&
       (prev_sc->function == nullptr && prev_sc->symbol == nullptr)) {
@@ -1240,8 +1357,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
       if (log_options & LLDB_LOG_OPTION_APPEND)
         flags |= llvm::sys::fs::F_Append;
       int FD;
-      if (std::error_code ec = llvm::sys::fs::openFileForWrite(
-              log_file, FD, llvm::sys::fs::CD_CreateAlways, flags)) {
+      if (std::error_code ec =
+              llvm::sys::fs::openFileForWrite(log_file, FD, flags)) {
         error_stream << "Unable to open log file: " << ec.message();
         return false;
       }
@@ -1385,6 +1502,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
   if (!gui_enabled) {
     bool pop_process_io_handler = false;
+    bool pop_command_interpreter = false;
     assert(process_sp);
 
     bool state_is_stopped = false;
@@ -1404,7 +1522,8 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Display running state changes first before any STDIO
     if (got_state_changed && !state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              pop_command_interpreter);
     }
 
     // Now display and STDOUT
@@ -1450,20 +1569,21 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Now display any stopped state changes after any STDIO
     if (got_state_changed && state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              pop_command_interpreter);
     }
 
     output_stream_sp->Flush();
     error_stream_sp->Flush();
 
     if (pop_process_io_handler)
-      process_sp->PopProcessIOHandler();
+      process_sp->PopProcessIOHandler(pop_command_interpreter);
   }
 }
 
 void Debugger::HandleThreadEvent(const EventSP &event_sp) {
-  // At present the only thread event we handle is the Frame Changed event, and
-  // all we do for that is just reprint the thread status for that thread.
+  // At present the only thread event we handle is the Frame Changed event,
+  // and all we do for that is just reprint the thread status for that thread.
   using namespace lldb;
   const uint32_t event_type = event_sp->GetType();
   const bool stop_format = true;
@@ -1516,8 +1636,8 @@ void Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousOutputData |
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
-  // Let the thread that spawned us know that we have started up and that we
-  // are now listening to all required events so no events get missed
+  // Let the thread that spawned us know that we have started up and
+  // that we are now listening to all required events so no events get missed
   m_sync_broadcaster.BroadcastEvent(eBroadcastBitEventThreadIsListening);
 
   bool done = false;
@@ -1582,9 +1702,9 @@ lldb::thread_result_t Debugger::EventHandlerThread(lldb::thread_arg_t arg) {
 
 bool Debugger::StartEventHandlerThread() {
   if (!m_event_handler_thread.IsJoinable()) {
-    // We must synchronize with the DefaultEventHandler() thread to ensure it
-    // is up and running and listening to events before we return from this
-    // function. We do this by listening to events for the
+    // We must synchronize with the DefaultEventHandler() thread to ensure
+    // it is up and running and listening to events before we return from
+    // this function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
     ListenerSP listener_sp(
         Listener::MakeListener("lldb.debugger.event-handler"));
@@ -1596,11 +1716,13 @@ bool Debugger::StartEventHandlerThread() {
         "lldb.debugger.event-handler", EventHandlerThread, this, nullptr,
         g_debugger_event_thread_stack_bytes);
 
-    // Make sure DefaultEventHandler() is running and listening to events
-    // before we return from this function. We are only listening for events of
-    // type eBroadcastBitEventThreadIsListening so we don't need to check the
-    // event, we just need to wait an infinite amount of time for it (nullptr
-    // timeout as the first parameter)
+    // Make sure DefaultEventHandler() is running and listening to events before
+    // we return
+    // from this function. We are only listening for events of type
+    // eBroadcastBitEventThreadIsListening so we don't need to check the event,
+    // we just need
+    // to wait an infinite amount of time for it (nullptr timeout as the first
+    // parameter)
     lldb::EventSP event_sp;
     listener_sp->GetEvent(event_sp, llvm::None);
   }

@@ -21,6 +21,10 @@
 #include "DWARFFormValue.h"
 #include "NameToDIE.h"
 
+class SymbolFileDWARF;
+class DWARFCompileUnit;
+class DWARFDebugInfoEntry;
+
 class DWARFMappedHash {
 public:
   enum AtomType : uint16_t {
@@ -30,15 +34,16 @@ public:
                              // contains the item in question
     eAtomTypeTag = 3u, // DW_TAG_xxx value, should be encoded as DW_FORM_data1
                        // (if no tags exceed 255) or DW_FORM_data2
-    eAtomTypeNameFlags = 4u,   // Flags from enum NameFlags
-    eAtomTypeTypeFlags = 5u,   // Flags from enum TypeFlags,
-    eAtomTypeQualNameHash = 6u // A 32 bit hash of the full qualified name
-                               // (since all hash entries are basename only)
+    eAtomTypeNameFlags = 4u,    // Flags from enum NameFlags
+    eAtomTypeTypeFlags = 5u,    // Flags from enum TypeFlags,
+    eAtomTypeQualNameHash = 6u, // A 32 bit hash of the full qualified name
+                                // (since all hash entries are basename only)
     // For example a type like "std::vector<int>::iterator" would have a name of
     // "iterator"
     // and a 32 bit hash for "std::vector<int>::iterator" to allow us to not
     // have to pull
     // in debug info for a type when we know the fully qualified name.
+    eAtomTypeString = 7u // A 64 bit string offset into the .debug_str table
   };
 
   // Bit definitions for the eAtomTypeTypeFlags flags
@@ -54,9 +59,11 @@ public:
     dw_tag_t tag;
     uint32_t type_flags;          // Any flags for this DIEInfo
     uint32_t qualified_name_hash; // A 32 bit hash of the fully qualified name
+    uint64_t strp;                // 64 bit string table offset
 
     DIEInfo();
-    DIEInfo(dw_offset_t c, dw_offset_t o, dw_tag_t t, uint32_t f, uint32_t h);
+    DIEInfo(dw_offset_t c, dw_offset_t o, dw_tag_t t, uint32_t f, uint32_t h,
+            uint64_t s = UINT64_MAX);
   };
 
   struct Atom {
@@ -132,17 +139,17 @@ public:
                                 const uint32_t die_offset_end,
                                 DIEInfoArray &die_info_array) const;
 
-    size_t FindByName(llvm::StringRef name, DIEArray &die_offsets);
+    size_t FindByName(const char *name, DIEArray &die_offsets);
 
-    size_t FindByNameAndTag(llvm::StringRef name, const dw_tag_t tag,
+    size_t FindByNameAndTag(const char *name, const dw_tag_t tag,
                             DIEArray &die_offsets);
 
-    size_t FindByNameAndTagAndQualifiedNameHash(
-        llvm::StringRef name, const dw_tag_t tag,
-        const uint32_t qualified_name_hash, DIEArray &die_offsets);
+    size_t
+    FindByNameAndTagAndQualifiedNameHash(const char *name, const dw_tag_t tag,
+                                         const uint32_t qualified_name_hash,
+                                         DIEArray &die_offsets);
 
-    size_t FindCompleteObjCClassByName(llvm::StringRef name,
-                                       DIEArray &die_offsets,
+    size_t FindCompleteObjCClassByName(const char *name, DIEArray &die_offsets,
                                        bool must_be_implementation);
 
   protected:
@@ -150,14 +157,14 @@ public:
         const lldb_private::RegularExpression &regex,
         lldb::offset_t *hash_data_offset_ptr, Pair &pair) const;
 
-    size_t FindByName(llvm::StringRef name, DIEInfoArray &die_info_array);
+    size_t FindByName(const char *name, DIEInfoArray &die_info_array);
 
-    Result GetHashDataForName(llvm::StringRef name,
+    Result GetHashDataForName(const char *name,
                               lldb::offset_t *hash_data_offset_ptr,
                               Pair &pair) const override;
 
-    lldb_private::DWARFDataExtractor m_data;
-    lldb_private::DWARFDataExtractor m_string_table;
+    const lldb_private::DWARFDataExtractor &m_data;
+    const lldb_private::DWARFDataExtractor &m_string_table;
     std::string m_name;
   };
 

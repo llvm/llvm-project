@@ -13,7 +13,6 @@
 
 #include "lldb/lldb-forward.h"
 
-#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/ConstString.h"
 

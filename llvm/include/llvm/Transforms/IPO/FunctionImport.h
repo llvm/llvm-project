@@ -107,24 +107,12 @@ void ComputeCrossModuleImportForModuleFromIndex(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList);
 
-/// PrevailingType enum used as a return type of callback passed
-/// to computeDeadSymbols. Yes and No values used when status explicitly
-/// set by symbols resolution, otherwise status is Unknown.
-enum class PrevailingType { Yes, No, Unknown };
-
 /// Compute all the symbols that are "dead": i.e these that can't be reached
 /// in the graph from any of the given symbols listed in
-/// \p GUIDPreservedSymbols. Non-prevailing symbols are symbols without a
-/// prevailing copy anywhere in IR and are normally dead, \p isPrevailing
-/// predicate returns status of symbol.
+/// \p GUIDPreservedSymbols.
 void computeDeadSymbols(
     ModuleSummaryIndex &Index,
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
-    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
-
-/// Converts value \p GV to declaration, or replaces with a declaration if
-/// it is an alias. Returns true if converted, false if replaced.
-bool convertToDeclaration(GlobalValue &GV);
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols);
 
 /// Compute the set of summaries needed for a ThinLTO backend compilation of
 /// \p ModulePath.

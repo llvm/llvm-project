@@ -175,87 +175,6 @@ def : PRFM<"pstl3keep", 0x14>;
 def : PRFM<"pstl3strm", 0x15>;
 
 //===----------------------------------------------------------------------===//
-// SVE Prefetch instruction options.
-//===----------------------------------------------------------------------===//
-
-class SVEPRFM<string name, bits<4> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
-  string Name = name;
-  bits<4> Encoding;
-  let Encoding = encoding;
-  code Requires = [{ {} }];
-}
-
-let Requires = [{ {AArch64::FeatureSVE} }] in {
-def : SVEPRFM<"pldl1keep", 0x00>;
-def : SVEPRFM<"pldl1strm", 0x01>;
-def : SVEPRFM<"pldl2keep", 0x02>;
-def : SVEPRFM<"pldl2strm", 0x03>;
-def : SVEPRFM<"pldl3keep", 0x04>;
-def : SVEPRFM<"pldl3strm", 0x05>;
-def : SVEPRFM<"pstl1keep", 0x08>;
-def : SVEPRFM<"pstl1strm", 0x09>;
-def : SVEPRFM<"pstl2keep", 0x0a>;
-def : SVEPRFM<"pstl2strm", 0x0b>;
-def : SVEPRFM<"pstl3keep", 0x0c>;
-def : SVEPRFM<"pstl3strm", 0x0d>;
-}
-
-//===----------------------------------------------------------------------===//
-// SVE Predicate patterns
-//===----------------------------------------------------------------------===//
-
-class SVEPREDPAT<string name, bits<5> encoding> : SearchableTable {
-  let SearchableFields = ["Name", "Encoding"];
-  let EnumValueField = "Encoding";
-
-  string Name = name;
-  bits<5> Encoding;
-  let Encoding = encoding;
-}
-
-def : SVEPREDPAT<"pow2",  0x00>;
-def : SVEPREDPAT<"vl1",   0x01>;
-def : SVEPREDPAT<"vl2",   0x02>;
-def : SVEPREDPAT<"vl3",   0x03>;
-def : SVEPREDPAT<"vl4",   0x04>;
-def : SVEPREDPAT<"vl5",   0x05>;
-def : SVEPREDPAT<"vl6",   0x06>;
-def : SVEPREDPAT<"vl7",   0x07>;
-def : SVEPREDPAT<"vl8",   0x08>;
-def : SVEPREDPAT<"vl16",  0x09>;
-def : SVEPREDPAT<"vl32",  0x0a>;
-def : SVEPREDPAT<"vl64",  0x0b>;
-def : SVEPREDPAT<"vl128", 0x0c>;
-def : SVEPREDPAT<"vl256", 0x0d>;
-def : SVEPREDPAT<"mul4",  0x1d>;
-def : SVEPREDPAT<"mul3",  0x1e>;
-def : SVEPREDPAT<"all",   0x1f>;
-
-//===----------------------------------------------------------------------===//
-// Exact FP Immediates.
-//
-// These definitions are used to create a lookup table with FP Immediates that
-// is used for a few instructions that only accept a limited set of exact FP
-// immediates values.
-//===----------------------------------------------------------------------===//
-class ExactFPImm<string name, string repr, bits<4> enum > : SearchableTable {
-  let SearchableFields = ["Enum", "Repr"];
-  let EnumValueField = "Enum";
-
-  string Name = name;
-  bits<4> Enum = enum;
-  string Repr = repr;
-}
-
-def : ExactFPImm<"zero", "0.0", 0x0>;
-def : ExactFPImm<"half", "0.5", 0x1>;
-def : ExactFPImm<"one",  "1.0", 0x2>;
-def : ExactFPImm<"two",  "2.0", 0x3>;
-
-//===----------------------------------------------------------------------===//
 // PState instruction options.
 //===----------------------------------------------------------------------===//
 
@@ -501,7 +420,7 @@ def : ROSysReg<"ICC_HPPIR0_EL1",     0b11, 0b000, 0b1100, 0b1000, 0b010>;
 def : ROSysReg<"ICC_RPR_EL1",        0b11, 0b000, 0b1100, 0b1011, 0b011>;
 def : ROSysReg<"ICH_VTR_EL2",        0b11, 0b100, 0b1100, 0b1011, 0b001>;
 def : ROSysReg<"ICH_EISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b011>;
-def : ROSysReg<"ICH_ELRSR_EL2",      0b11, 0b100, 0b1100, 0b1011, 0b101>;
+def : ROSysReg<"ICH_ELSR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b101>;
 
 // v8.1a "Limited Ordering Regions" extension-specific system register
 //                         Op0    Op1     CRn     CRm    Op2

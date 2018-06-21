@@ -137,7 +137,6 @@ unsigned parseFPU(StringRef FPU);
 ArchKind parseArch(StringRef Arch);
 unsigned parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
-void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 ISAKind parseArchISA(StringRef Arch);
 EndianKind parseArchEndian(StringRef Arch);
 ProfileKind parseArchProfile(StringRef Arch);
@@ -204,15 +203,12 @@ StringRef getDefaultCPU(StringRef Arch);
 // Parser
 unsigned parseFPU(StringRef FPU);
 AArch64::ArchKind parseArch(StringRef Arch);
-ArchExtKind parseArchExt(StringRef ArchExt);
+unsigned parseArchExt(StringRef ArchExt);
 ArchKind parseCPUArch(StringRef CPU);
-void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 ARM::ISAKind parseArchISA(StringRef Arch);
 ARM::EndianKind parseArchEndian(StringRef Arch);
 ARM::ProfileKind parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
-
-bool isX18ReservedByDefault(const Triple &TT);
 
 } // namespace AArch64
 

@@ -123,9 +123,10 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  llvm::VersionTuple GetVersion() override;
+  uint32_t GetVersion(uint32_t *versions, uint32_t num_versions) override;
 
-  llvm::VersionTuple GetMinimumOSVersion() override;
+  uint32_t GetMinimumOSVersion(uint32_t *versions,
+                               uint32_t num_versions) override;
 
   uint32_t GetSDKVersion(uint32_t *versions, uint32_t num_versions) override;
 
@@ -184,18 +185,6 @@ protected:
 
   size_t ParseSymtab();
 
-  typedef lldb_private::RangeArray<uint32_t, uint32_t, 8> EncryptedFileRanges;
-  EncryptedFileRanges GetEncryptedFileRanges();
-
-  struct SegmentParsingContext;
-  void ProcessDysymtabCommand(const llvm::MachO::load_command &load_cmd,
-                              lldb::offset_t offset);
-  void ProcessSegmentCommand(const llvm::MachO::load_command &load_cmd,
-                             lldb::offset_t offset, uint32_t cmd_idx,
-                             SegmentParsingContext &context);
-  void SanitizeSegmentCommand(llvm::MachO::segment_command_64 &seg_cmd,
-                              uint32_t cmd_idx);
-
   llvm::MachO::mach_header m_header;
   static const lldb_private::ConstString &GetSegmentNameTEXT();
   static const lldb_private::ConstString &GetSegmentNameDATA();
@@ -208,7 +197,7 @@ protected:
   llvm::MachO::dysymtab_command m_dysymtab;
   std::vector<llvm::MachO::segment_command_64> m_mach_segments;
   std::vector<llvm::MachO::section_64> m_mach_sections;
-  llvm::Optional<llvm::VersionTuple> m_min_os_version;
+  std::vector<uint32_t> m_min_os_versions;
   std::vector<uint32_t> m_sdk_versions;
   typedef lldb_private::RangeVector<uint32_t, uint32_t> FileRangeArray;
   lldb_private::Address m_entry_point_address;

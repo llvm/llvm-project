@@ -21,7 +21,7 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined __X86INTRIN_H && !defined __IMMINTRIN_H
+#ifndef __X86INTRIN_H
 #error "Never use <rdseedintrin.h> directly; include <x86intrin.h> instead."
 #endif
 

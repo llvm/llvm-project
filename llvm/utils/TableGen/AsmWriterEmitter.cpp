@@ -351,8 +351,8 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
 
     // If we don't have enough bits for this operand, don't include it.
     if (NumBits > BitsLeft) {
-      LLVM_DEBUG(errs() << "Not enough bits to densely encode " << NumBits
-                        << " more bits\n");
+      DEBUG(errs() << "Not enough bits to densely encode " << NumBits
+                   << " more bits\n");
       break;
     }
 
@@ -727,6 +727,10 @@ public:
 } // end anonymous namespace
 
 static unsigned CountNumOperands(StringRef AsmString, unsigned Variant) {
+  std::string FlatAsmString =
+      CodeGenInstruction::FlattenAsmStringVariants(AsmString, Variant);
+  AsmString = FlatAsmString;
+
   return AsmString.count(' ') + AsmString.count('\t');
 }
 
@@ -778,7 +782,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
     const DagInit *DI = R->getValueAsDag("ResultInst");
     const DefInit *Op = cast<DefInit>(DI->getOperator());
     AliasMap[getQualifiedName(Op->getDef())].insert(
-        std::make_pair(CodeGenInstAlias(R, Target), Priority));
+        std::make_pair(CodeGenInstAlias(R, Variant, Target), Priority));
   }
 
   // A map of which conditions need to be met for each instruction operand
@@ -795,20 +799,14 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
     for (auto &Alias : Aliases.second) {
       const CodeGenInstAlias &CGA = Alias.first;
       unsigned LastOpNo = CGA.ResultInstOperandIndex.size();
-      std::string FlatInstAsmString =
-         CodeGenInstruction::FlattenAsmStringVariants(CGA.ResultInst->AsmString,
-                                                      Variant);
-      unsigned NumResultOps = CountNumOperands(FlatInstAsmString, Variant);
-
-      std::string FlatAliasAsmString =
-        CodeGenInstruction::FlattenAsmStringVariants(CGA.AsmString,
-                                                      Variant);
+      unsigned NumResultOps =
+          CountNumOperands(CGA.ResultInst->AsmString, Variant);
 
       // Don't emit the alias if it has more operands than what it's aliasing.
-      if (NumResultOps < CountNumOperands(FlatAliasAsmString, Variant))
+      if (NumResultOps < CountNumOperands(CGA.AsmString, Variant))
         continue;
 
-      IAPrinter IAP(CGA.Result->getAsString(), FlatAliasAsmString);
+      IAPrinter IAP(CGA.Result->getAsString(), CGA.AsmString);
 
       StringRef Namespace = Target.getName();
       std::vector<Record *> ReqFeatures;

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Interface definition for R600RegisterInfo
+/// \brief Interface definition for R600RegisterInfo
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,12 +30,12 @@ struct R600RegisterInfo final : public AMDGPURegisterInfo {
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 
-  /// get the HW encoding for a register's channel.
+  /// \brief get the HW encoding for a register's channel.
   unsigned getHWRegChan(unsigned reg) const;
 
   unsigned getHWRegIndex(unsigned Reg) const;
 
-  /// get the register class of the specified type to use in the
+  /// \brief get the register class of the specified type to use in the
   /// CFGStructurizer
   const TargetRegisterClass *getCFGStructurizerRegClass(MVT VT) const;
 

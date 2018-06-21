@@ -15,7 +15,7 @@ struct add_reference {
 };
 
 struct bogus {
-  struct apply { // expected-note{{declared as a non-template here}}
+  struct apply {
     typedef int type;
   };
 };

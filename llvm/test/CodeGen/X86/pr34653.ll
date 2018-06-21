@@ -64,7 +64,7 @@ define void @pr34653() {
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm5[1,0]
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm11 = xmm11[1,0]
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm13 = xmm13[1,0]
-; CHECK-NEXT:    # kill: def $ymm10 killed $ymm10 killed $zmm10
+; CHECK-NEXT:    # kill: def %ymm10 killed %ymm10 killed %zmm10
 ; CHECK-NEXT:    vextractf128 $1, %ymm10, %xmm10
 ; CHECK-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    vmovaps %xmm10, %xmm0
@@ -75,7 +75,7 @@ define void @pr34653() {
 ; CHECK-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    # kill: def $ymm9 killed $ymm9 killed $zmm9
+; CHECK-NEXT:    # kill: def %ymm9 killed %ymm9 killed %zmm9
 ; CHECK-NEXT:    vextractf128 $1, %ymm9, %xmm9
 ; CHECK-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    vmovaps %xmm9, %xmm0
@@ -88,7 +88,7 @@ define void @pr34653() {
 ; CHECK-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    # kill: def $ymm8 killed $ymm8 killed $zmm8
+; CHECK-NEXT:    # kill: def %ymm8 killed %ymm8 killed %zmm8
 ; CHECK-NEXT:    vextractf128 $1, %ymm8, %xmm8
 ; CHECK-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    vmovaps %xmm8, %xmm0
@@ -101,7 +101,7 @@ define void @pr34653() {
 ; CHECK-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; CHECK-NEXT:    # kill: def $ymm7 killed $ymm7 killed $zmm7
+; CHECK-NEXT:    # kill: def %ymm7 killed %ymm7 killed %zmm7
 ; CHECK-NEXT:    vextractf128 $1, %ymm7, %xmm7
 ; CHECK-NEXT:    vmovsd %xmm0, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    vmovaps %xmm7, %xmm0
@@ -199,7 +199,6 @@ define void @pr34653() {
 ; CHECK-NEXT:    vmovsd %xmm7, {{[0-9]+}}(%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

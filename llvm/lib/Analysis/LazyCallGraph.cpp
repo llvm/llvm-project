@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -66,15 +65,15 @@ static void addEdge(SmallVectorImpl<LazyCallGraph::Edge> &Edges,
   if (!EdgeIndexMap.insert({&N, Edges.size()}).second)
     return;
 
-  LLVM_DEBUG(dbgs() << "    Added callable function: " << N.getName() << "\n");
+  DEBUG(dbgs() << "    Added callable function: " << N.getName() << "\n");
   Edges.emplace_back(LazyCallGraph::Edge(N, EK));
 }
 
 LazyCallGraph::EdgeSequence &LazyCallGraph::Node::populateSlow() {
   assert(!Edges && "Must not have already populated the edges for this node!");
 
-  LLVM_DEBUG(dbgs() << "  Adding functions called by '" << getName()
-                    << "' to the graph.\n");
+  DEBUG(dbgs() << "  Adding functions called by '" << getName()
+               << "' to the graph.\n");
 
   Edges = EdgeSequence();
 
@@ -152,8 +151,8 @@ static bool isKnownLibFunction(Function &F, TargetLibraryInfo &TLI) {
 }
 
 LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
-  LLVM_DEBUG(dbgs() << "Building CG for module: " << M.getModuleIdentifier()
-                    << "\n");
+  DEBUG(dbgs() << "Building CG for module: " << M.getModuleIdentifier()
+               << "\n");
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
@@ -168,8 +167,8 @@ LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
 
     // External linkage defined functions have edges to them from other
     // modules.
-    LLVM_DEBUG(dbgs() << "  Adding '" << F.getName()
-                      << "' to entry set of the graph.\n");
+    DEBUG(dbgs() << "  Adding '" << F.getName()
+                 << "' to entry set of the graph.\n");
     addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(F), Edge::Ref);
   }
 
@@ -181,9 +180,8 @@ LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
       if (Visited.insert(GV.getInitializer()).second)
         Worklist.push_back(GV.getInitializer());
 
-  LLVM_DEBUG(
-      dbgs() << "  Adding functions referenced by global initializers to the "
-                "entry set.\n");
+  DEBUG(dbgs() << "  Adding functions referenced by global initializers to the "
+                  "entry set.\n");
   visitReferences(Worklist, Visited, [&](Function &F) {
     addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(F),
             LazyCallGraph::Edge::Ref);
@@ -429,7 +427,7 @@ bool LazyCallGraph::RefSCC::isAncestorOf(const RefSCC &RC) const {
 ///   source to target.
 ///
 /// This helper routine, in addition to updating the postorder sequence itself
-/// will also update a map from SCCs to indices within that sequence.
+/// will also update a map from SCCs to indices within that sequecne.
 ///
 /// The sequence and the map must operate on pointers to the SCC type.
 ///
@@ -715,7 +713,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
   //
   // However, we specially handle the target node. The target node is known to
   // reach all other nodes in the original SCC by definition. This means that
-  // we want the old SCC to be replaced with an SCC containing that node as it
+  // we want the old SCC to be replaced with an SCC contaning that node as it
   // will be the root of whatever SCC DAG results from the DFS. Assumptions
   // about an SCC such as the set of functions called will continue to hold,
   // etc.
@@ -824,7 +822,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
         // Cleared the DFS early, start another round.
         break;
 
-      // We've finished processing N and its descendants, put it on our pending
+      // We've finished processing N and its descendents, put it on our pending
       // SCC stack to eventually get merged into an SCC of nodes.
       PendingSCCStack.push_back(N);
 
@@ -1236,7 +1234,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
         ++I;
       }
 
-      // We've finished processing N and its descendants, put it on our pending
+      // We've finished processing N and its descendents, put it on our pending
       // stack to eventually get merged into a RefSCC.
       PendingRefSCCStack.push_back(N);
 
@@ -1273,7 +1271,8 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
       // the removal hasn't changed the structure at all. This is an important
       // special case and we can directly exit the entire routine more
       // efficiently as soon as we discover it.
-      if (llvm::size(RefSCCNodes) == NumRefSCCNodes) {
+      if (std::distance(RefSCCNodes.begin(), RefSCCNodes.end()) ==
+          NumRefSCCNodes) {
         // Clear out the low link field as we won't need it.
         for (Node *N : RefSCCNodes)
           N->LowLink = -1;
@@ -1295,7 +1294,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdge(Node &SourceN,
 
   // Otherwise we create a collection of new RefSCC nodes and build
   // a radix-sort style map from postorder number to these new RefSCCs. We then
-  // append SCCs to each of these RefSCCs in the order they occurred in the
+  // append SCCs to each of these RefSCCs in the order they occured in the
   // original SCCs container.
   for (int i = 0; i < PostOrderNumber; ++i)
     Result.push_back(G->createRefSCC(*G));
@@ -1618,7 +1617,7 @@ void LazyCallGraph::buildGenericSCCs(RootsT &&Roots, GetBeginT &&GetBegin,
         ++I;
       }
 
-      // We've finished processing N and its descendants, put it on our pending
+      // We've finished processing N and its descendents, put it on our pending
       // SCC stack to eventually get merged into an SCC of nodes.
       PendingSCCStack.push_back(N);
 
@@ -1739,7 +1738,7 @@ static void printNode(raw_ostream &OS, LazyCallGraph::Node &N) {
 }
 
 static void printSCC(raw_ostream &OS, LazyCallGraph::SCC &C) {
-  ptrdiff_t Size = size(C);
+  ptrdiff_t Size = std::distance(C.begin(), C.end());
   OS << "    SCC with " << Size << " functions:\n";
 
   for (LazyCallGraph::Node &N : C)
@@ -1747,7 +1746,7 @@ static void printSCC(raw_ostream &OS, LazyCallGraph::SCC &C) {
 }
 
 static void printRefSCC(raw_ostream &OS, LazyCallGraph::RefSCC &C) {
-  ptrdiff_t Size = size(C);
+  ptrdiff_t Size = std::distance(C.begin(), C.end());
   OS << "  RefSCC with " << Size << " call SCCs:\n";
 
   for (LazyCallGraph::SCC &InnerC : C)

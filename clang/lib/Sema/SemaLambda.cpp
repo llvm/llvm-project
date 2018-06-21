@@ -24,7 +24,7 @@
 using namespace clang;
 using namespace sema;
 
-/// Examines the FunctionScopeInfo stack to determine the nearest
+/// \brief Examines the FunctionScopeInfo stack to determine the nearest
 /// enclosing lambda (to the current lambda) that is 'capture-ready' for 
 /// the variable referenced in the current lambda (i.e. \p VarToCapture).
 /// If successful, returns the index into Sema's FunctionScopeInfo stack
@@ -135,7 +135,7 @@ getStackIndexOfNearestEnclosingCaptureReadyLambda(
   return NoLambdaIsCaptureReady;
 }
 
-/// Examines the FunctionScopeInfo stack to determine the nearest
+/// \brief Examines the FunctionScopeInfo stack to determine the nearest
 /// enclosing lambda (to the current lambda) that is 'capture-capable' for 
 /// the variable referenced in the current lambda (i.e. \p VarToCapture).
 /// If successful, returns the index into Sema's FunctionScopeInfo stack
@@ -263,7 +263,7 @@ CXXRecordDecl *Sema::createLambdaClosureType(SourceRange IntroducerRange,
   return Class;
 }
 
-/// Determine whether the given context is or is enclosed in an inline
+/// \brief Determine whether the given context is or is enclosed in an inline
 /// function.
 static bool isInInlineFunction(const DeclContext *DC) {
   while (!DC->isFileContext()) {
@@ -904,10 +904,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
                             ParamInfo.getDeclSpec().isConstexprSpecified());
   if (ExplicitParams)
     CheckCXXDefaultArguments(Method);
-
-  // This represents the function body for the lambda function, check if we
-  // have to apply optnone due to a pragma.
-  AddRangeBasedOptnone(Method);
   
   // Attributes on the lambda apply to the method.  
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
@@ -1189,7 +1185,7 @@ QualType Sema::getLambdaConversionFunctionResultType(
                                  CallOpProto->getParamTypes(), InvokerExtInfo);
 }
 
-/// Add a lambda's conversion to function pointer, as described in
+/// \brief Add a lambda's conversion to function pointer, as described in
 /// C++11 [expr.prim.lambda]p6.
 static void addFunctionPointerConversion(Sema &S,
                                          SourceRange IntroducerRange,
@@ -1358,7 +1354,7 @@ static void addFunctionPointerConversion(Sema &S,
     Class->addDecl(Invoke);
 }
 
-/// Add a lambda's conversion to block pointer.
+/// \brief Add a lambda's conversion to block pointer.
 static void addBlockPointerConversion(Sema &S, 
                                       SourceRange IntroducerRange,
                                       CXXRecordDecl *Class,
@@ -1392,9 +1388,8 @@ static void addBlockPointerConversion(Sema &S,
   Class->addDecl(Conversion);
 }
 
-static ExprResult performLambdaVarCaptureInitialization(Sema &S,
-                                                        const Capture &Capture,
-                                                        FieldDecl *Field) {
+static ExprResult performLambdaVarCaptureInitialization(
+    Sema &S, const LambdaScopeInfo::Capture &Capture, FieldDecl *Field) {
   assert(Capture.isVariableCapture() && "not a variable capture");
 
   auto *Var = Capture.getVariable();
@@ -1448,7 +1443,7 @@ mapImplicitCaptureStyle(CapturingScopeInfo::ImplicitCaptureStyle ICS) {
   llvm_unreachable("Unknown implicit capture style");
 }
 
-bool Sema::CaptureHasSideEffects(const Capture &From) {
+bool Sema::CaptureHasSideEffects(const LambdaScopeInfo::Capture &From) {
   if (!From.isVLATypeCapture()) {
     Expr *Init = From.getInitExpr();
     if (Init && Init->HasSideEffects(Context))
@@ -1473,7 +1468,7 @@ bool Sema::CaptureHasSideEffects(const Capture &From) {
   return false;
 }
 
-void Sema::DiagnoseUnusedLambdaCapture(const Capture &From) {
+void Sema::DiagnoseUnusedLambdaCapture(const LambdaScopeInfo::Capture &From) {
   if (CaptureHasSideEffects(From))
     return;
 
@@ -1528,7 +1523,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // Translate captures.
     auto CurField = Class->field_begin();
     for (unsigned I = 0, N = LSI->Captures.size(); I != N; ++I, ++CurField) {
-      const Capture &From = LSI->Captures[I];
+      const LambdaScopeInfo::Capture &From = LSI->Captures[I];
       assert(!From.isBlockCapture() && "Cannot capture __block variables");
       bool IsImplicit = I >= LSI->NumExplicitCaptures;
 

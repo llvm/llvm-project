@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/WindowsError.h"
 #include <malloc.h>
@@ -25,7 +24,14 @@
 #include <psapi.h>
 #include <shellapi.h>
 
-#if !defined(__MINGW32__)
+#ifdef __MINGW32__
+ #if (HAVE_LIBPSAPI != 1)
+  #error "libpsapi.a should be present"
+ #endif
+ #if (HAVE_LIBSHELL32 != 1)
+  #error "libshell32.a should be present"
+ #endif
+#else
  #pragma comment(lib, "psapi.lib")
  #pragma comment(lib, "shell32.lib")
 #endif
@@ -140,38 +146,39 @@ Optional<std::string> Process::GetEnv(StringRef Name) {
   return std::string(Res.data());
 }
 
-static const char *AllocateString(const SmallVectorImpl<char> &S,
-                                  BumpPtrAllocator &Alloc) {
-  char *Buf = reinterpret_cast<char *>(Alloc.Allocate(S.size() + 1, 1));
-  ::memcpy(Buf, S.data(), S.size());
-  Buf[S.size()] = '\0';
-  return Buf;
+static void AllocateAndPush(const SmallVectorImpl<char> &S,
+                            SmallVectorImpl<const char *> &Vector,
+                            SpecificBumpPtrAllocator<char> &Allocator) {
+  char *Buffer = Allocator.Allocate(S.size() + 1);
+  ::memcpy(Buffer, S.data(), S.size());
+  Buffer[S.size()] = '\0';
+  Vector.push_back(Buffer);
 }
 
 /// Convert Arg from UTF-16 to UTF-8 and push it onto Args.
-static std::error_code ConvertAndPushArg(const wchar_t *Arg,
-                                         SmallVectorImpl<const char *> &Args,
-                                         BumpPtrAllocator &Alloc) {
+static std::error_code
+ConvertAndPushArg(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
+                  SpecificBumpPtrAllocator<char> &Allocator) {
   SmallVector<char, MAX_PATH> ArgString;
   if (std::error_code ec = windows::UTF16ToUTF8(Arg, wcslen(Arg), ArgString))
     return ec;
-  Args.push_back(AllocateString(ArgString, Alloc));
+  AllocateAndPush(ArgString, Args, Allocator);
   return std::error_code();
 }
 
-/// Perform wildcard expansion of Arg, or just push it into Args if it
+/// \brief Perform wildcard expansion of Arg, or just push it into Args if it
 /// doesn't have wildcards or doesn't match any files.
-static std::error_code WildcardExpand(const wchar_t *Arg,
-                                      SmallVectorImpl<const char *> &Args,
-                                      BumpPtrAllocator &Alloc) {
+static std::error_code
+WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
+               SpecificBumpPtrAllocator<char> &Allocator) {
   if (!wcspbrk(Arg, L"*?")) {
     // Arg does not contain any wildcard characters. This is the common case.
-    return ConvertAndPushArg(Arg, Args, Alloc);
+    return ConvertAndPushArg(Arg, Args, Allocator);
   }
 
   if (wcscmp(Arg, L"/?") == 0 || wcscmp(Arg, L"-?") == 0) {
     // Don't wildcard expand /?. Always treat it as an option.
-    return ConvertAndPushArg(Arg, Args, Alloc);
+    return ConvertAndPushArg(Arg, Args, Allocator);
   }
 
   // Extract any directory part of the argument.
@@ -188,7 +195,7 @@ static std::error_code WildcardExpand(const wchar_t *Arg,
   WIN32_FIND_DATAW FileData;
   HANDLE FindHandle = FindFirstFileW(Arg, &FileData);
   if (FindHandle == INVALID_HANDLE_VALUE) {
-    return ConvertAndPushArg(Arg, Args, Alloc);
+    return ConvertAndPushArg(Arg, Args, Allocator);
   }
 
   std::error_code ec;
@@ -201,7 +208,7 @@ static std::error_code WildcardExpand(const wchar_t *Arg,
 
     // Append FileName to Dir, and remove it afterwards.
     llvm::sys::path::append(Dir, StringRef(FileName.data(), FileName.size()));
-    Args.push_back(AllocateString(Dir, Alloc));
+    AllocateAndPush(Dir, Args, Allocator);
     Dir.resize(DirSize);
   } while (FindNextFileW(FindHandle, &FileData));
 
@@ -209,65 +216,56 @@ static std::error_code WildcardExpand(const wchar_t *Arg,
   return ec;
 }
 
-static std::error_code GetExecutableName(SmallVectorImpl<char> &Filename) {
-  // The first argument may contain just the name of the executable (e.g.,
-  // "clang") rather than the full path, so swap it with the full path.
-  wchar_t ModuleName[MAX_PATH];
-  size_t Length = ::GetModuleFileNameW(NULL, ModuleName, MAX_PATH);
-  if (Length == 0 || Length == MAX_PATH) {
-    return mapWindowsError(GetLastError());
-  }
-
-  // If the first argument is a shortened (8.3) name (which is possible even
-  // if we got the module name), the driver will have trouble distinguishing it
-  // (e.g., clang.exe v. clang++.exe), so expand it now.
-  Length = GetLongPathNameW(ModuleName, ModuleName, MAX_PATH);
+static std::error_code
+ExpandShortFileName(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
+                    SpecificBumpPtrAllocator<char> &Allocator) {
+  SmallVector<wchar_t, MAX_PATH> LongPath;
+  DWORD Length = GetLongPathNameW(Arg, LongPath.data(), LongPath.capacity());
   if (Length == 0)
     return mapWindowsError(GetLastError());
-  if (Length > MAX_PATH) {
+  if (Length > LongPath.capacity()) {
     // We're not going to try to deal with paths longer than MAX_PATH, so we'll
     // treat this as an error.  GetLastError() returns ERROR_SUCCESS, which
     // isn't useful, so we'll hardcode an appropriate error value.
     return mapWindowsError(ERROR_INSUFFICIENT_BUFFER);
   }
-
-  std::error_code EC = windows::UTF16ToUTF8(ModuleName, Length, Filename);
-  if (EC)
-    return EC;
-
-  StringRef Base = sys::path::filename(Filename.data());
-  Filename.assign(Base.begin(), Base.end());
-  return std::error_code();
+  LongPath.set_size(Length);
+  return ConvertAndPushArg(LongPath.data(), Args, Allocator);
 }
 
 std::error_code
-windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
-                                 BumpPtrAllocator &Alloc) {
+Process::GetArgumentVector(SmallVectorImpl<const char *> &Args,
+                           ArrayRef<const char *>,
+                           SpecificBumpPtrAllocator<char> &ArgAllocator) {
   int ArgCount;
-  std::unique_ptr<wchar_t *[], decltype(&LocalFree)> UnicodeCommandLine{
-    CommandLineToArgvW(GetCommandLineW(), &ArgCount), &LocalFree};
+  wchar_t **UnicodeCommandLine =
+      CommandLineToArgvW(GetCommandLineW(), &ArgCount);
   if (!UnicodeCommandLine)
     return mapWindowsError(::GetLastError());
 
-  std::error_code EC;
-
   Args.reserve(ArgCount);
+  std::error_code ec;
 
-  for (int I = 0; I < ArgCount; ++I) {
-    EC = WildcardExpand(UnicodeCommandLine[I], Args, Alloc);
-    if (EC)
-      return EC;
+  // The first argument may contain just the name of the executable (e.g.,
+  // "clang") rather than the full path, so swap it with the full path.
+  wchar_t ModuleName[MAX_PATH];
+  int Length = ::GetModuleFileNameW(NULL, ModuleName, MAX_PATH);
+  if (0 < Length && Length < MAX_PATH)
+    UnicodeCommandLine[0] = ModuleName;
+
+  // If the first argument is a shortened (8.3) name (which is possible even
+  // if we got the module name), the driver will have trouble distinguishing it
+  // (e.g., clang.exe v. clang++.exe), so expand it now.
+  ec = ExpandShortFileName(UnicodeCommandLine[0], Args, ArgAllocator);
+
+  for (int i = 1; i < ArgCount && !ec; ++i) {
+    ec = WildcardExpand(UnicodeCommandLine[i], Args, ArgAllocator);
+    if (ec)
+      break;
   }
 
-  SmallVector<char, MAX_PATH> Arg0(Args[0], Args[0] + strlen(Args[0]));
-  SmallVector<char, MAX_PATH> Filename;
-  sys::path::remove_filename(Arg0);
-  EC = GetExecutableName(Filename);
-  if (EC)
-    return EC;
-  sys::path::append(Arg0, Filename);
-  Args[0] = AllocateString(Arg0, Alloc);
-  return std::error_code();
+  LocalFree(UnicodeCommandLine);
+  return ec;
 }
 
 std::error_code Process::FixupStandardFileDescriptors() {

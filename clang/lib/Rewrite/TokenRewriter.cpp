@@ -1,4 +1,4 @@
-//===- TokenRewriter.cpp - Token-based code rewriting interface -----------===//
+//===--- TokenRewriter.cpp - Token-based code rewriting interface ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,12 +16,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/ScratchBuffer.h"
-#include "clang/Lex/Token.h"
-#include <cassert>
-#include <cstring>
-#include <map>
-#include <utility>
-
 using namespace clang;
 
 TokenRewriter::TokenRewriter(FileID FID, SourceManager &SM,
@@ -52,7 +46,9 @@ TokenRewriter::TokenRewriter(FileID FID, SourceManager &SM,
   }
 }
 
-TokenRewriter::~TokenRewriter() = default;
+TokenRewriter::~TokenRewriter() {
+}
+
 
 /// RemapIterator - Convert from token_iterator (a const iterator) to
 /// TokenRefTy (a non-const iterator).
@@ -67,6 +63,7 @@ TokenRewriter::TokenRefTy TokenRewriter::RemapIterator(token_iterator I) {
   return MapIt->second;
 }
 
+
 /// AddToken - Add the specified token into the Rewriter before the other
 /// position.
 TokenRewriter::TokenRefTy
@@ -79,6 +76,7 @@ TokenRewriter::AddToken(const Token &T, TokenRefTy Where) {
   (void)InsertSuccess;
   return Where;
 }
+
 
 TokenRewriter::token_iterator
 TokenRewriter::AddTokenBefore(token_iterator I, const char *Val) {
@@ -98,3 +96,4 @@ TokenRewriter::AddTokenBefore(token_iterator I, const char *Val) {
 
   return AddToken(Tok, RemapIterator(I));
 }
+

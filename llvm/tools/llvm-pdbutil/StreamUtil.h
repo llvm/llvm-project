@@ -19,20 +19,7 @@
 namespace llvm {
 namespace pdb {
 class PDBFile;
-enum class StreamPurpose {
-  NamedStream,
-  ModuleStream,
-  Symbols,
-  PDB,
-  DBI,
-  TPI,
-  IPI,
-  GlobalHash,
-  PublicHash,
-  TpiHash,
-  IpiHash,
-  Other
-};
+enum class StreamPurpose { NamedStream, ModuleStream, Symbols, Other };
 
 struct StreamInfo {
 public:

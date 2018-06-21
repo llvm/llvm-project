@@ -1,6 +1,4 @@
 ; RUN: opt -S -functionattrs -enable-nonnull-arg-prop %s | FileCheck %s
-; RUN: opt -S -passes=function-attrs -enable-nonnull-arg-prop %s | FileCheck %s
-
 declare nonnull i8* @ret_nonnull()
 
 ; Return a pointer trivially nonnull (call return attribute)

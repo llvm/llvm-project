@@ -5,6 +5,4 @@ add_llvm_library(LLVMRISCVDesc
   RISCVMCCodeEmitter.cpp
   RISCVMCExpr.cpp
   RISCVMCTargetDesc.cpp
-  RISCVTargetStreamer.cpp
-  RISCVELFStreamer.cpp
 )

@@ -24,7 +24,7 @@
 // FreeBSD's dlopen() returns a pointer to an Obj_Entry structure that
 // incorporates the map structure.
 # define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-    ((link_map*)((handle) == nullptr ? nullptr : ((char*)(handle) + 560)))
+    ((link_map*)((handle) == nullptr ? nullptr : ((char*)(handle) + 544)))
 // Get sys/_types.h, because that tells us whether 64-bit inodes are
 // used in struct dirent below.
 #include <sys/_types.h>
@@ -414,18 +414,6 @@ namespace __sanitizer {
   typedef long __sanitizer_time_t;
 #endif
 
-  typedef long __sanitizer_suseconds_t;
-
-  struct __sanitizer_timeval {
-    __sanitizer_time_t tv_sec;
-    __sanitizer_suseconds_t tv_usec;
-  };
-
-  struct __sanitizer_itimerval {
-    struct __sanitizer_timeval it_interval;
-    struct __sanitizer_timeval it_value;
-  };
-
   struct __sanitizer_timeb {
     __sanitizer_time_t time;
     unsigned short millitm;
@@ -460,12 +448,6 @@ namespace __sanitizer {
     int mnt_freq;
     int mnt_passno;
   };
-
-  struct __sanitizer_file_handle {
-    unsigned int handle_bytes;
-    int handle_type;
-    unsigned char f_handle[1];  // variable sized
-  };
 #endif
 
 #if SANITIZER_MAC || SANITIZER_FREEBSD
@@ -497,13 +479,6 @@ namespace __sanitizer {
     uptr cmsg_len;
     int cmsg_level;
     int cmsg_type;
-  };
-#endif
-
-#if SANITIZER_LINUX
-  struct __sanitizer_mmsghdr {
-    __sanitizer_msghdr msg_hdr;
-    unsigned int msg_len;
   };
 #endif
 

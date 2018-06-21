@@ -20,13 +20,13 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "bdce"
@@ -100,7 +100,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       // For live instructions that have all dead bits, first make them dead by
       // replacing all uses with something else. Then, if they don't need to
       // remain live (because they have side effects, etc.) we can remove them.
-      LLVM_DEBUG(dbgs() << "BDCE: Trivializing: " << I << " (all bits dead)\n");
+      DEBUG(dbgs() << "BDCE: Trivializing: " << I << " (all bits dead)\n");
 
       clearAssumptionsOfUsers(&I, DB);
 

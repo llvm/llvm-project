@@ -1900,7 +1900,8 @@ define <16 x i32> @test_masked_v16i32(i8 * %addr, <16 x i32> %old, <16 x i32> %m
 ;
 ; AVX512-LABEL: test_masked_v16i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmd %zmm1, %zmm1, %k1
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpcmpneqd %zmm2, %zmm1, %k1
 ; AVX512-NEXT:    vmovntdqa (%rdi), %zmm1
 ; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq

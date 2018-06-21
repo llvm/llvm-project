@@ -68,7 +68,7 @@ if(WIN32)
     list(APPEND PROFILE_SOURCES WindowsMMap.c)
 endif()
 
-if(FUCHSIA OR UNIX)
+if(UNIX)
  set(EXTRA_FLAGS
      -fPIC
      -Wno-pedantic)

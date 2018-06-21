@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements FormatTokenLexer, which tokenizes a source file
+/// \brief This file implements FormatTokenLexer, which tokenizes a source file
 /// into a FormatToken stream suitable for ClangFormat.
 ///
 //===----------------------------------------------------------------------===//
@@ -38,7 +38,7 @@ FormatTokenLexer::FormatTokenLexer(const SourceManager &SourceMgr, FileID ID,
 
   for (const std::string &ForEachMacro : Style.ForEachMacros)
     ForEachMacros.push_back(&IdentTable.get(ForEachMacro));
-  llvm::sort(ForEachMacros.begin(), ForEachMacros.end());
+  std::sort(ForEachMacros.begin(), ForEachMacros.end());
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -334,7 +334,7 @@ void FormatTokenLexer::handleTemplateStrings() {
 
 void FormatTokenLexer::tryParsePythonComment() {
   FormatToken *HashToken = Tokens.back();
-  if (!HashToken->isOneOf(tok::hash, tok::hashhash))
+  if (HashToken->isNot(tok::hash))
     return;
   // Turn the remainder of this line into a comment.
   const char *CommentBegin =
@@ -691,9 +691,7 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     }
   }
 
-  if ((Style.Language == FormatStyle::LK_JavaScript ||
-       Style.Language == FormatStyle::LK_Proto ||
-       Style.Language == FormatStyle::LK_TextProto) &&
+  if (Style.Language == FormatStyle::LK_JavaScript &&
       Tok.is(tok::char_constant)) {
     Tok.Tok.setKind(tok::string_literal);
   }

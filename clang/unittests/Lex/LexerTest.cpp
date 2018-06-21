@@ -286,7 +286,9 @@ TEST_F(LexerTest, LexAPI) {
   SourceLocation lsqrLoc = toks[0].getLocation();
   SourceLocation idLoc = toks[1].getLocation();
   SourceLocation rsqrLoc = toks[2].getLocation();
-  CharSourceRange macroRange = SourceMgr.getExpansionRange(lsqrLoc);
+  std::pair<SourceLocation,SourceLocation>
+    macroPair = SourceMgr.getExpansionRange(lsqrLoc);
+  SourceRange macroRange = SourceRange(macroPair.first, macroPair.second);
 
   SourceLocation Loc;
   EXPECT_TRUE(Lexer::isAtStartOfMacroExpansion(lsqrLoc, SourceMgr, LangOpts, &Loc));
@@ -295,7 +297,6 @@ TEST_F(LexerTest, LexAPI) {
   EXPECT_FALSE(Lexer::isAtEndOfMacroExpansion(idLoc, SourceMgr, LangOpts));
   EXPECT_TRUE(Lexer::isAtEndOfMacroExpansion(rsqrLoc, SourceMgr, LangOpts, &Loc));
   EXPECT_EQ(Loc, macroRange.getEnd());
-  EXPECT_TRUE(macroRange.isTokenRange());
 
   CharSourceRange range = Lexer::makeFileCharRange(
            CharSourceRange::getTokenRange(lsqrLoc, idLoc), SourceMgr, LangOpts);
@@ -333,11 +334,11 @@ TEST_F(LexerTest, LexAPI) {
   EXPECT_EQ(SourceRange(fileIdLoc, fileRsqrLoc.getLocWithOffset(1)),
             range.getAsRange());
 
-  macroRange = SourceMgr.getExpansionRange(macroLsqrLoc);
+  macroPair = SourceMgr.getExpansionRange(macroLsqrLoc);
   range = Lexer::makeFileCharRange(
                      CharSourceRange::getTokenRange(macroLsqrLoc, macroRsqrLoc),
                      SourceMgr, LangOpts);
-  EXPECT_EQ(SourceRange(macroRange.getBegin(), macroRange.getEnd().getLocWithOffset(1)),
+  EXPECT_EQ(SourceRange(macroPair.first, macroPair.second.getLocWithOffset(1)),
             range.getAsRange());
 
   text = Lexer::getSourceText(
@@ -473,7 +474,8 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
 }
 
 TEST_F(LexerTest, AvoidPastEndOfStringDereference) {
-  EXPECT_TRUE(Lex("  //  \\\n").empty());
+  std::vector<Token> LexedTokens = Lex("  //  \\\n");
+  EXPECT_TRUE(LexedTokens.empty());
   EXPECT_TRUE(Lex("#include <\\\\").empty());
   EXPECT_TRUE(Lex("#include <\\\\\n").empty());
 }

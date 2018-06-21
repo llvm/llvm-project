@@ -1,4 +1,4 @@
-//===- FixItRewriter.cpp - Fix-It Rewriter Diagnostic Client --------------===//
+//===--- FixItRewriter.cpp - Fix-It Rewriter Diagnostic Client --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,32 +14,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
-#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditsReceiver.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Rewrite/Core/RewriteBuffer.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <memory>
-#include <string>
-#include <system_error>
-#include <utility>
 
 using namespace clang;
 
 FixItRewriter::FixItRewriter(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                              const LangOptions &LangOpts,
                              FixItOptions *FixItOpts)
-    : Diags(Diags), Editor(SourceMgr, LangOpts), Rewrite(SourceMgr, LangOpts),
-      FixItOpts(FixItOpts) {
+  : Diags(Diags),
+    Editor(SourceMgr, LangOpts),
+    Rewrite(SourceMgr, LangOpts),
+    FixItOpts(FixItOpts),
+    NumFailures(0),
+    PrevDiagSilenced(false) {
   Owner = Diags.takeClient();
   Client = Diags.getClient();
   Diags.setClient(this, false);
@@ -63,21 +59,20 @@ class RewritesReceiver : public edit::EditsReceiver {
   Rewriter &Rewrite;
 
 public:
-  RewritesReceiver(Rewriter &Rewrite) : Rewrite(Rewrite) {}
+  RewritesReceiver(Rewriter &Rewrite) : Rewrite(Rewrite) { }
 
   void insert(SourceLocation loc, StringRef text) override {
     Rewrite.InsertText(loc, text);
   }
-
   void replace(CharSourceRange range, StringRef text) override {
     Rewrite.ReplaceText(range.getBegin(), Rewrite.getRangeSize(range), text);
   }
 };
 
-} // namespace
+}
 
 bool FixItRewriter::WriteFixedFiles(
-             std::vector<std::pair<std::string, std::string>> *RewrittenFiles) {
+            std::vector<std::pair<std::string, std::string> > *RewrittenFiles) {
   if (NumFailures > 0 && !FixItOpts->FixWhatYouCan) {
     Diag(FullSourceLoc(), diag::warn_fixit_no_changes);
     return true;
@@ -194,7 +189,7 @@ void FixItRewriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   Diag(Info.getLocation(), diag::note_fixit_applied);
 }
 
-/// Emit a diagnostic via the adapted diagnostic client.
+/// \brief Emit a diagnostic via the adapted diagnostic client.
 void FixItRewriter::Diag(SourceLocation Loc, unsigned DiagID) {
   // When producing this diagnostic, we temporarily bypass ourselves,
   // clear out any current diagnostic, and let the downstream client
@@ -205,4 +200,4 @@ void FixItRewriter::Diag(SourceLocation Loc, unsigned DiagID) {
   Diags.setClient(this, false);
 }
 
-FixItOptions::~FixItOptions() = default;
+FixItOptions::~FixItOptions() {}

@@ -106,16 +106,16 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 let isCodeGenOnly = 1 in {
 def SLTi64  : SetCC_I<"slti", setlt, simm16_64, immSExt16, GPR64Opnd>,
-              SLTI_FM<0xa>, GPR_64;
+              SLTI_FM<0xa>;
 def SLTiu64 : SetCC_I<"sltiu", setult, simm16_64, immSExt16, GPR64Opnd>,
-              SLTI_FM<0xb>, GPR_64;
+              SLTI_FM<0xb>;
 def ANDi64 : ArithLogicI<"andi", uimm16_64, GPR64Opnd, II_AND, immZExt16, and>,
-             ADDI_FM<0xc>, GPR_64;
+             ADDI_FM<0xc>;
 def ORi64   : ArithLogicI<"ori", uimm16_64, GPR64Opnd, II_OR, immZExt16, or>,
-              ADDI_FM<0xd>, GPR_64;
+              ADDI_FM<0xd>;
 def XORi64  : ArithLogicI<"xori", uimm16_64, GPR64Opnd, II_XOR, immZExt16, xor>,
-              ADDI_FM<0xe>, GPR_64;
-def LUi64   : LoadUpper<"lui", GPR64Opnd, uimm16_64_relaxed>, LUI_FM, GPR_64;
+              ADDI_FM<0xe>;
+def LUi64   : LoadUpper<"lui", GPR64Opnd, uimm16_64_relaxed>, LUI_FM;
 }
 
 /// Arithmetic Instructions (3-Operand, R-Type)
@@ -131,15 +131,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 
 let isCodeGenOnly = 1 in {
-def SLT64  : SetCC_R<"slt", setlt, GPR64Opnd>, ADD_FM<0, 0x2a>, GPR_64;
-def SLTu64 : SetCC_R<"sltu", setult, GPR64Opnd>, ADD_FM<0, 0x2b>, GPR_64;
-def AND64  : ArithLogicR<"and", GPR64Opnd, 1, II_AND, and>, ADD_FM<0, 0x24>,
-             GPR_64;
-def OR64   : ArithLogicR<"or", GPR64Opnd, 1, II_OR, or>, ADD_FM<0, 0x25>,
-             GPR_64;
-def XOR64  : ArithLogicR<"xor", GPR64Opnd, 1, II_XOR, xor>, ADD_FM<0, 0x26>,
-             GPR_64;
-def NOR64  : LogicNOR<"nor", GPR64Opnd>, ADD_FM<0, 0x27>, GPR_64;
+def SLT64  : SetCC_R<"slt", setlt, GPR64Opnd>, ADD_FM<0, 0x2a>;
+def SLTu64 : SetCC_R<"sltu", setult, GPR64Opnd>, ADD_FM<0, 0x2b>;
+def AND64  : ArithLogicR<"and", GPR64Opnd, 1, II_AND, and>, ADD_FM<0, 0x24>;
+def OR64   : ArithLogicR<"or", GPR64Opnd, 1, II_OR, or>, ADD_FM<0, 0x25>;
+def XOR64  : ArithLogicR<"xor", GPR64Opnd, 1, II_XOR, xor>, ADD_FM<0, 0x26>;
+def NOR64  : LogicNOR<"nor", GPR64Opnd>, ADD_FM<0, 0x27>;
 }
 
 /// Shift Instructions
@@ -179,24 +176,22 @@ let AdditionalPredicates = [NotInMicroMips] in {
 /// Load and Store Instructions
 ///  aligned
 let isCodeGenOnly = 1 in {
-def LB64  : Load<"lb", GPR64Opnd, sextloadi8, II_LB>, LW_FM<0x20>, GPR_64;
-def LBu64 : Load<"lbu", GPR64Opnd, zextloadi8, II_LBU>, LW_FM<0x24>, GPR_64;
-def LH64  : Load<"lh", GPR64Opnd, sextloadi16, II_LH>, LW_FM<0x21>, GPR_64;
-def LHu64 : Load<"lhu", GPR64Opnd, zextloadi16, II_LHU>, LW_FM<0x25>, GPR_64;
-def LW64  : Load<"lw", GPR64Opnd, sextloadi32, II_LW>, LW_FM<0x23>, GPR_64;
-def SB64  : Store<"sb", GPR64Opnd, truncstorei8, II_SB>, LW_FM<0x28>, GPR_64;
-def SH64  : Store<"sh", GPR64Opnd, truncstorei16, II_SH>, LW_FM<0x29>,
-            GPR_64;
-def SW64  : Store<"sw", GPR64Opnd, truncstorei32, II_SW>, LW_FM<0x2b>,
-            GPR_64;
+def LB64  : Load<"lb", GPR64Opnd, sextloadi8, II_LB>, LW_FM<0x20>;
+def LBu64 : Load<"lbu", GPR64Opnd, zextloadi8, II_LBU>, LW_FM<0x24>;
+def LH64  : Load<"lh", GPR64Opnd, sextloadi16, II_LH>, LW_FM<0x21>;
+def LHu64 : Load<"lhu", GPR64Opnd, zextloadi16, II_LHU>, LW_FM<0x25>;
+def LW64  : Load<"lw", GPR64Opnd, sextloadi32, II_LW>, LW_FM<0x23>;
+def SB64  : Store<"sb", GPR64Opnd, truncstorei8, II_SB>, LW_FM<0x28>;
+def SH64  : Store<"sh", GPR64Opnd, truncstorei16, II_SH>, LW_FM<0x29>;
+def SW64  : Store<"sw", GPR64Opnd, truncstorei32, II_SW>, LW_FM<0x2b>;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def LWu : MMRel, Load<"lwu", GPR64Opnd, zextloadi32, II_LWU>,
             LW_FM<0x27>, ISA_MIPS3;
-  def LD  : LoadMemory<"ld", GPR64Opnd, mem_simmptr, load, II_LD>,
+  def LD  : LoadMemory<"ld", GPR64Opnd, mem_simm16, load, II_LD>,
             LW_FM<0x37>, ISA_MIPS3;
-  def SD  : StoreMemory<"sd", GPR64Opnd, mem_simmptr, store, II_SD>,
+  def SD  : StoreMemory<"sd", GPR64Opnd, mem_simm16, store, II_SD>,
             LW_FM<0x3f>, ISA_MIPS3;
 }
 
@@ -204,14 +199,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 /// load/store left/right
 let isCodeGenOnly = 1 in {
-def LWL64 : LoadLeftRight<"lwl", MipsLWL, GPR64Opnd, II_LWL>, LW_FM<0x22>,
-            GPR_64;
-def LWR64 : LoadLeftRight<"lwr", MipsLWR, GPR64Opnd, II_LWR>, LW_FM<0x26>,
-            GPR_64;
-def SWL64 : StoreLeftRight<"swl", MipsSWL, GPR64Opnd, II_SWL>, LW_FM<0x2a>,
-            GPR_64;
-def SWR64 : StoreLeftRight<"swr", MipsSWR, GPR64Opnd, II_SWR>, LW_FM<0x2e>,
-            GPR_64;
+def LWL64 : LoadLeftRight<"lwl", MipsLWL, GPR64Opnd, II_LWL>, LW_FM<0x22>;
+def LWR64 : LoadLeftRight<"lwr", MipsLWR, GPR64Opnd, II_LWR>, LW_FM<0x26>;
+def SWL64 : StoreLeftRight<"swl", MipsSWL, GPR64Opnd, II_SWL>, LW_FM<0x2a>;
+def SWR64 : StoreLeftRight<"swr", MipsSWR, GPR64Opnd, II_SWR>, LW_FM<0x2e>;
 }
 
 def LDL   : LoadLeftRight<"ldl", MipsLDL, GPR64Opnd, II_LDL>, LW_FM<0x1a>,
@@ -225,7 +216,7 @@ def SDR   : StoreLeftRight<"sdr", MipsSDR, GPR64Opnd, II_SDR>, LW_FM<0x2d>,
 
 /// Load-linked, Store-conditional
 let AdditionalPredicates = [NotInMicroMips] in {
-  def LLD : LLBase<"lld", GPR64Opnd, mem_simmptr>, LW_FM<0x34>,
+  def LLD : LLBase<"lld", GPR64Opnd, mem_simm16>, LW_FM<0x34>,
             ISA_MIPS3_NOT_32R6_64R6;
 }
 def SCD : SCBase<"scd", GPR64Opnd>, LW_FM<0x3c>, ISA_MIPS3_NOT_32R6_64R6;
@@ -243,44 +234,19 @@ def JALR64 : JumpLinkReg<"jalr", GPR64Opnd>, JALR_FM;
 
 /// Jump and Branch Instructions
 let isCodeGenOnly = 1 in {
-  def BEQ64  : CBranch<"beq", brtarget, seteq, GPR64Opnd>, BEQ_FM<4>,
-               GPR_64;
-  def BNE64  : CBranch<"bne", brtarget, setne, GPR64Opnd>, BEQ_FM<5>,
-               GPR_64;
-  def BGEZ64 : CBranchZero<"bgez", brtarget, setge, GPR64Opnd>, BGEZ_FM<1, 1>,
-               GPR_64;
-  def BGTZ64 : CBranchZero<"bgtz", brtarget, setgt, GPR64Opnd>, BGEZ_FM<7, 0>,
-               GPR_64;
-  def BLEZ64 : CBranchZero<"blez", brtarget, setle, GPR64Opnd>, BGEZ_FM<6, 0>,
-               GPR_64;
-  def BLTZ64 : CBranchZero<"bltz", brtarget, setlt, GPR64Opnd>, BGEZ_FM<1, 0>,
-               GPR_64;
-  let AdditionalPredicates = [NoIndirectJumpGuards] in
-    def JALR64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR, RA, GPR32Opnd>;
+  def BEQ64  : CBranch<"beq", brtarget, seteq, GPR64Opnd>, BEQ_FM<4>;
+  def BNE64  : CBranch<"bne", brtarget, setne, GPR64Opnd>, BEQ_FM<5>;
+  def BGEZ64 : CBranchZero<"bgez", brtarget, setge, GPR64Opnd>, BGEZ_FM<1, 1>;
+  def BGTZ64 : CBranchZero<"bgtz", brtarget, setgt, GPR64Opnd>, BGEZ_FM<7, 0>;
+  def BLEZ64 : CBranchZero<"blez", brtarget, setle, GPR64Opnd>, BGEZ_FM<6, 0>;
+  def BLTZ64 : CBranchZero<"bltz", brtarget, setlt, GPR64Opnd>, BGEZ_FM<1, 0>;
+  def JALR64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR, RA, GPR32Opnd>;
 }
-let AdditionalPredicates = [NotInMicroMips],
-    DecoderNamespace = "Mips64" in {
-  def JR_HB64 : JR_HB_DESC<GPR64Opnd>, JR_HB_ENC, ISA_MIPS32_NOT_32R6_64R6;
-  def JALR_HB64 : JALR_HB_DESC<GPR64Opnd>, JALR_HB_ENC, ISA_MIPS32R2;
-}
+
+def TAILCALLREG64 : TailCallReg<GPR64Opnd>;
+
 def PseudoReturn64 : PseudoReturnBase<GPR64Opnd>;
-
-let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
-                            NoIndirectJumpGuards] in {
-  def TAILCALLREG64 : TailCallReg<JR64, GPR64Opnd>, ISA_MIPS3_NOT_32R6_64R6,
-                      PTR_64;
-  def PseudoIndirectBranch64 : PseudoIndirectBranchBase<JR64, GPR64Opnd>,
-                               ISA_MIPS3_NOT_32R6_64R6;
-}
-
-let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
-                            UseIndirectJumpsHazard] in {
-  def TAILCALLREGHB64 : TailCallReg<JR_HB64, GPR64Opnd>,
-                        ISA_MIPS32R2_NOT_32R6_64R6, PTR_64;
-  def PseudoIndirectHazardBranch64 : PseudoIndirectBranchBase<JR_HB64,
-                                                              GPR64Opnd>,
-                                     ISA_MIPS32R2_NOT_32R6_64R6;
-}
+def PseudoIndirectBranch64 : PseudoIndirectBranchBase<GPR64Opnd>;
 
 /// Multiply and Divide Instructions.
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -338,13 +304,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
              ISA_MIPS64R2;
   def DSHD : SubwordSwap<"dshd", GPR64Opnd, II_DSHD>, SEB_FM<5, 0x24>,
              ISA_MIPS64R2;
-
-  def LEA_ADDiu64 : EffectiveAddress<"daddiu", GPR64Opnd>, LW_FM<0x19>,
-                    GPR_64;
 }
 
+def LEA_ADDiu64 : EffectiveAddress<"daddiu", GPR64Opnd>, LW_FM<0x19>;
+
 let isCodeGenOnly = 1 in
-def RDHWR64 : ReadHardware<GPR64Opnd, HWRegsOpnd>, RDHWR_FM, GPR_64;
+def RDHWR64 : ReadHardware<GPR64Opnd, HWRegsOpnd>, RDHWR_FM;
 
 let AdditionalPredicates = [NotInMicroMips] in {
   // The 'pos + size' constraints for code generation are enforced by the
@@ -392,13 +357,11 @@ let isCodeGenOnly = 1, AdditionalPredicates = [NotInMicroMips] in {
 
 let isCodeGenOnly = 1, rs = 0, shamt = 0 in {
   def DSLL64_32 : FR<0x00, 0x3c, (outs GPR64:$rd), (ins GPR32:$rt),
-                     "dsll\t$rd, $rt, 32", [], II_DSLL>, GPR_64;
-  let isMoveReg = 1 in {
-    def SLL64_32 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR32:$rt),
-                      "sll\t$rd, $rt, 0", [], II_SLL>, GPR_64;
-    def SLL64_64 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR64:$rt),
-                      "sll\t$rd, $rt, 0", [], II_SLL>, GPR_64;
-  }
+                     "dsll\t$rd, $rt, 32", [], II_DSLL>;
+  def SLL64_32 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR32:$rt),
+                    "sll\t$rd, $rt, 0", [], II_SLL>;
+  def SLL64_64 : FR<0x0, 0x00, (outs GPR64:$rd), (ins GPR64:$rt),
+                    "sll\t$rd, $rt, 0", [], II_SLL>;
 }
 
 // We need the following pseudo instruction to avoid offset calculation for
@@ -409,7 +372,7 @@ let isCodeGenOnly = 1, rs = 0, shamt = 0 in {
 // where %PART may be %hi or %lo, depending on the relocation kind
 // that $tgt is annotated with.
 def LONG_BRANCH_DADDiu : PseudoSE<(outs GPR64Opnd:$dst),
-  (ins GPR64Opnd:$src, brtarget:$tgt, brtarget:$baltgt), []>, GPR_64;
+  (ins GPR64Opnd:$src, brtarget:$tgt, brtarget:$baltgt), []>;
 
 // Cavium Octeon cnMIPS instructions
 let DecoderNamespace = "CnMips",
@@ -563,26 +526,15 @@ def DMTC2_OCTEON : MFC2OP<"dmtc2", GPR64Opnd, II_DMTC2>, MFC2OP_FM<0x12, 5>,
 
 /// Move between CPU and coprocessor registers
 let DecoderNamespace = "Mips64", Predicates = [HasMips64] in {
-def DMFC0 : MFC3OP<"dmfc0", GPR64Opnd, COP0Opnd, II_DMFC0>,
-            MFC3OP_FM<0x10, 1, 0>, ISA_MIPS3;
-def DMTC0 : MTC3OP<"dmtc0", COP0Opnd, GPR64Opnd, II_DMTC0>,
-            MFC3OP_FM<0x10, 5, 0>, ISA_MIPS3;
-def DMFC2 : MFC3OP<"dmfc2", GPR64Opnd, COP2Opnd, II_DMFC2>,
-            MFC3OP_FM<0x12, 1, 0>, ISA_MIPS3;
-def DMTC2 : MTC3OP<"dmtc2", COP2Opnd, GPR64Opnd, II_DMTC2>,
-            MFC3OP_FM<0x12, 5, 0>, ISA_MIPS3;
+def DMFC0 : MFC3OP<"dmfc0", GPR64Opnd, COP0Opnd, II_DMFC0>, MFC3OP_FM<0x10, 1>,
+            ISA_MIPS3;
+def DMTC0 : MTC3OP<"dmtc0", COP0Opnd, GPR64Opnd, II_DMTC0>, MFC3OP_FM<0x10, 5>,
+            ISA_MIPS3;
+def DMFC2 : MFC3OP<"dmfc2", GPR64Opnd, COP2Opnd, II_DMFC2>, MFC3OP_FM<0x12, 1>,
+            ISA_MIPS3;
+def DMTC2 : MTC3OP<"dmtc2", COP2Opnd, GPR64Opnd, II_DMTC2>, MFC3OP_FM<0x12, 5>,
+            ISA_MIPS3;
 }
-
-/// Move between CPU and guest coprocessor registers (Virtualization ASE)
-let DecoderNamespace = "Mips64" in {
-  def DMFGC0 : MFC3OP<"dmfgc0", GPR64Opnd, COP0Opnd, II_DMFGC0>,
-               MFC3OP_FM<0x10, 3, 1>, ISA_MIPS64R5, ASE_VIRT;
-  def DMTGC0 : MTC3OP<"dmtgc0", COP0Opnd, GPR64Opnd, II_DMTGC0>,
-               MFC3OP_FM<0x10, 3, 3>, ISA_MIPS64R5, ASE_VIRT;
-}
-
-let AdditionalPredicates = [UseIndirectJumpsHazard] in
-  def JALRHB64Pseudo : JumpLinkRegPseudo<GPR64Opnd, JALR_HB64, RA_64>;
 
 //===----------------------------------------------------------------------===//
 //  Arbitrary patterns that map to one or more instructions
@@ -753,7 +705,7 @@ def : MipsPat<(i64 (sext_inreg GPR64:$src, i32)),
               (SLL64_64 GPR64:$src)>;
 
 // bswap MipsPattern
-def : MipsPat<(bswap GPR64:$rt), (DSHD (DSBH GPR64:$rt))>, ISA_MIPS64R2;
+def : MipsPat<(bswap GPR64:$rt), (DSHD (DSBH GPR64:$rt))>;
 
 // Carry pattern
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -817,13 +769,13 @@ let AdditionalPredicates = [NotInMicroMips] in {
                       0>, ISA_MIPS3;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"and", ANDi64, GPR64Opnd, imm64>,
-         ISA_MIPS3, GPR_64;
+         GPR_64;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"or", ORi64, GPR64Opnd, imm64>,
-         ISA_MIPS3, GPR_64;
+         GPR_64;
 
   defm : OneOrTwoOperandMacroImmediateAlias<"xor", XORi64, GPR64Opnd, imm64>,
-         ISA_MIPS3, GPR_64;
+         GPR_64;
 }
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"dneg $rt, $rs",
@@ -891,19 +843,12 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"dext $rt, $rs, $pos, $size",
                       (DEXTU GPR64Opnd:$rt, GPR64Opnd:$rs, uimm5_plus32:$pos,
                              uimm5_plus1:$size), 0>, ISA_MIPS64R2;
-  def : MipsInstAlias<"jalr.hb $rs", (JALR_HB64 RA_64, GPR64Opnd:$rs), 1>,
-        ISA_MIPS64;
+
 // Two operand (implicit 0 selector) versions:
   def : MipsInstAlias<"dmtc0 $rt, $rd",
                       (DMTC0 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>;
   def : MipsInstAlias<"dmfc0 $rt, $rd",
                       (DMFC0 GPR64Opnd:$rt, COP0Opnd:$rd, 0), 0>;
-  def : MipsInstAlias<"dmfgc0 $rt, $rd",
-                      (DMFGC0 GPR64Opnd:$rt, COP0Opnd:$rd, 0), 0>,
-                      ISA_MIPS64R5, ASE_VIRT;
-  def : MipsInstAlias<"dmtgc0 $rt, $rd",
-                      (DMTGC0 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>,
-                      ISA_MIPS64R5, ASE_VIRT;
 }
 def : MipsInstAlias<"dmfc2 $rt, $rd", (DMFC2 GPR64Opnd:$rt, COP2Opnd:$rd, 0), 0>;
 def : MipsInstAlias<"dmtc2 $rt, $rd", (DMTC2 COP2Opnd:$rd, GPR64Opnd:$rt, 0), 0>;

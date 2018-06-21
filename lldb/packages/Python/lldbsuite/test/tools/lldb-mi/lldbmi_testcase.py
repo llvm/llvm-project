@@ -27,6 +27,7 @@ class MiTestCaseBase(Base):
             raise("mydir is empty")
 
         Base.setUp(self)
+        self.makeBuildDir()
         self.buildDefault()
         self.child_prompt = "(gdb)"
         self.myexe = self.getBuildArtifact("a.out")

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Diagnostics class to manage error messages.
+/// \brief Diagnostics class to manage error messages.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -39,7 +39,7 @@ struct SourceRange {
   SourceLocation End;
 };
 
-/// A VariantValue instance annotated with its parser context.
+/// \brief A VariantValue instance annotated with its parser context.
 struct ParserValue {
   ParserValue() : Text(), Range(), Value() {}
   StringRef Text;
@@ -47,16 +47,16 @@ struct ParserValue {
   VariantValue Value;
 };
 
-/// Helper class to manage error messages.
+/// \brief Helper class to manage error messages.
 class Diagnostics {
 public:
-  /// Parser context types.
+  /// \brief Parser context types.
   enum ContextType {
     CT_MatcherArg = 0,
     CT_MatcherConstruct = 1
   };
 
-  /// All errors from the system.
+  /// \brief All errors from the system.
   enum ErrorType {
     ET_None = 0,
 
@@ -80,7 +80,7 @@ public:
     ET_ParserOverloadedType = 110
   };
 
-  /// Helper stream class.
+  /// \brief Helper stream class.
   class ArgStream {
   public:
     ArgStream(std::vector<std::string> *Out) : Out(Out) {}
@@ -93,7 +93,7 @@ public:
     std::vector<std::string> *Out;
   };
 
-  /// Class defining a parser context.
+  /// \brief Class defining a parser context.
   ///
   /// Used by the parser to specify (possibly recursive) contexts where the
   /// parsing/construction can fail. Any error triggered within a context will
@@ -101,11 +101,11 @@ public:
   /// This class should be used as a RAII instance in the stack.
   struct Context {
   public:
-    /// About to call the constructor for a matcher.
+    /// \brief About to call the constructor for a matcher.
     enum ConstructMatcherEnum { ConstructMatcher };
     Context(ConstructMatcherEnum, Diagnostics *Error, StringRef MatcherName,
             SourceRange MatcherRange);
-    /// About to recurse into parsing one argument for a matcher.
+    /// \brief About to recurse into parsing one argument for a matcher.
     enum MatcherArgEnum { MatcherArg };
     Context(MatcherArgEnum, Diagnostics *Error, StringRef MatcherName,
             SourceRange MatcherRange, unsigned ArgNumber);
@@ -115,7 +115,7 @@ public:
     Diagnostics *const Error;
   };
 
-  /// Context for overloaded matcher construction.
+  /// \brief Context for overloaded matcher construction.
   ///
   /// This context will take care of merging all errors that happen within it
   /// as "candidate" overloads for the same matcher.
@@ -124,7 +124,7 @@ public:
    OverloadContext(Diagnostics* Error);
    ~OverloadContext();
 
-   /// Revert all errors that happened within this context.
+   /// \brief Revert all errors that happened within this context.
    void revertErrors();
 
   private:
@@ -132,21 +132,21 @@ public:
     unsigned BeginIndex;
   };
 
-  /// Add an error to the diagnostics.
+  /// \brief Add an error to the diagnostics.
   ///
   /// All the context information will be kept on the error message.
   /// \return a helper class to allow the caller to pass the arguments for the
   /// error message, using the << operator.
   ArgStream addError(SourceRange Range, ErrorType Error);
 
-  /// Information stored for one frame of the context.
+  /// \brief Information stored for one frame of the context.
   struct ContextFrame {
     ContextType Type;
     SourceRange Range;
     std::vector<std::string> Args;
   };
 
-  /// Information stored for each error found.
+  /// \brief Information stored for each error found.
   struct ErrorContent {
     std::vector<ContextFrame> ContextStack;
     struct Message {
@@ -158,20 +158,20 @@ public:
   };
   ArrayRef<ErrorContent> errors() const { return Errors; }
 
-  /// Returns a simple string representation of each error.
+  /// \brief Returns a simple string representation of each error.
   ///
   /// Each error only shows the error message without any context.
   void printToStream(llvm::raw_ostream &OS) const;
   std::string toString() const;
 
-  /// Returns the full string representation of each error.
+  /// \brief Returns the full string representation of each error.
   ///
   /// Each error message contains the full context.
   void printToStreamFull(llvm::raw_ostream &OS) const;
   std::string toStringFull() const;
 
 private:
-  /// Helper function used by the constructors of ContextFrame.
+  /// \brief Helper function used by the constructors of ContextFrame.
   ArgStream pushContextFrame(ContextType Type, SourceRange Range);
 
   std::vector<ContextFrame> ContextStack;

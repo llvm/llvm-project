@@ -16,13 +16,16 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/Block.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
@@ -45,8 +48,11 @@ ThreadPlanStepOut::ThreadPlanStepOut(
                  run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
       m_return_bp_id(LLDB_INVALID_BREAK_ID),
-      m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
-      m_immediate_step_from_function(nullptr),
+      m_return_addr(LLDB_INVALID_ADDRESS),
+      m_swift_error_return(),
+      m_swift_error_check_after_return(false),
+      m_stop_others(stop_others), m_immediate_step_from_function(nullptr),
+      m_is_swift_error_value(false),
       m_calculate_return_value(gather_return_value) {
   SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
@@ -63,14 +69,17 @@ ThreadPlanStepOut::ThreadPlanStepOut(
   m_step_out_to_id = return_frame_sp->GetStackID();
   m_immediate_step_from_id = immediate_return_from_sp->GetStackID();
 
-  // If the frame directly below the one we are returning to is inlined, we
-  // have to be a little more careful.  It is non-trivial to determine the real
-  // "return code address" for an inlined frame, so we have to work our way to
-  // that frame and then step out.
+  // If the frame directly below the one we are returning to is inlined, we have
+  // to be
+  // a little more careful.  It is non-trivial to determine the real "return
+  // code address" for
+  // an inlined frame, so we have to work our way to that frame and then step
+  // out.
   if (immediate_return_from_sp && immediate_return_from_sp->IsInlined()) {
     if (frame_idx > 0) {
       // First queue a plan that gets us to this inlined frame, and when we get
-      // there we'll queue a second plan that walks us out of this frame.
+      // there we'll queue a second
+      // plan that walks us out of this frame.
       m_step_out_to_inline_plan_sp.reset(new ThreadPlanStepOut(
           m_thread, nullptr, false, stop_others, eVoteNoOpinion, eVoteNoOpinion,
           frame_idx - 1, eLazyBoolNo, continue_to_next_branch));
@@ -78,8 +87,8 @@ ThreadPlanStepOut::ThreadPlanStepOut(
           ->SetShouldStopHereCallbacks(nullptr, nullptr);
       m_step_out_to_inline_plan_sp->SetPrivate(true);
     } else {
-      // If we're already at the inlined frame we're stepping through, then
-      // just do that now.
+      // If we're already at the inlined frame we're stepping through, then just
+      // do that now.
       QueueInlinedStepPlan(false);
     }
   } else if (return_frame_sp) {
@@ -126,6 +135,41 @@ ThreadPlanStepOut::ThreadPlanStepOut(
           immediate_return_from_sp->GetSymbolContext(eSymbolContextFunction);
       if (sc.function) {
         m_immediate_step_from_function = sc.function;
+      }
+    }
+  }
+
+  // If we are about to step out of a swift frame, we need to store away the
+  // location that swift will use for
+  // any error return:
+  // FIXME: I'm only doing this if you are stepping out ONE frame at present.
+  // I'll have to change the stepping
+  // code so that it first runs to the frame we are stepping out FROM, then
+  // capture the error return pointer, then
+  // step out.  That's more than I have time to do right now.
+
+  if (frame_idx == 0) {
+    bool stepping_from_swift = false;
+    StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+    Symbol *symbol = frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
+    if (symbol) {
+      Mangled symbol_mangled = symbol->GetMangled();
+      if (symbol_mangled.GuessLanguage() == eLanguageTypeSwift)
+        stepping_from_swift = true;
+    } else {
+      CompileUnit *comp_unit =
+          frame_sp->GetSymbolContext(eSymbolContextCompUnit).comp_unit;
+      if (comp_unit && comp_unit->GetLanguage() == eLanguageTypeSwift)
+        stepping_from_swift = true;
+    }
+
+    if (stepping_from_swift) {
+      SwiftLanguageRuntime *swift_runtime =
+          m_thread.GetProcess()->GetSwiftLanguageRuntime();
+      if (swift_runtime) {
+        m_swift_error_return =
+            swift_runtime->GetErrorReturnLocationBeforeReturn(frame_sp,
+                                                              m_swift_error_check_after_return);
       }
     }
   }
@@ -214,8 +258,8 @@ bool ThreadPlanStepOut::ValidatePlan(Stream *error) {
 }
 
 bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
-  // If the step out plan is done, then we just need to step through the
-  // inlined frame.
+  // If the step out plan is done, then we just need to step through the inlined
+  // frame.
   if (m_step_out_to_inline_plan_sp) {
     return m_step_out_to_inline_plan_sp->MischiefManaged();
   } else if (m_step_through_inline_plan_sp) {
@@ -230,14 +274,15 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
   }
 
   // We don't explain signals or breakpoints (breakpoints that handle stepping
-  // in or out will be handled by a child plan.
+  // in or
+  // out will be handled by a child plan.
 
   StopInfoSP stop_info_sp = GetPrivateStopInfo();
   if (stop_info_sp) {
     StopReason reason = stop_info_sp->GetStopReason();
     if (reason == eStopReasonBreakpoint) {
-      // If this is OUR breakpoint, we're fine, otherwise we don't know why
-      // this happened...
+      // If this is OUR breakpoint, we're fine, otherwise we don't know why this
+      // happened...
       BreakpointSiteSP site_sp(
           m_thread.GetProcess()->GetBreakpointSiteList().FindByID(
               stop_info_sp->GetValue()));
@@ -257,17 +302,18 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
         }
 
         if (done) {
+          CalculateReturnValue();
           if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
-            CalculateReturnValue();
             SetPlanComplete();
           }
         }
 
         // If there was only one owner, then we're done.  But if we also hit
-        // some user breakpoint on our way out, we should mark ourselves as
-        // done, but also not claim to explain the stop, since it is more
-        // important to report the user breakpoint than the step out
-        // completion.
+        // some
+        // user breakpoint on our way out, we should mark ourselves as done, but
+        // also not claim to explain the stop, since it is more important to
+        // report
+        // the user breakpoint than the step out completion.
 
         if (site_sp->GetNumberOfOwners() == 1)
           return true;
@@ -315,16 +361,26 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     done = !(frame_zero_id < m_step_out_to_id);
   }
 
-  // The normal step out computations think we are done, so all we need to do
-  // is consult the ShouldStopHere, and we are done.
+  // The normal step out computations think we are done, so all we need to do is
+  // consult the ShouldStopHere,
+  // and we are done.
 
   if (done) {
+    CalculateReturnValue();
     if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
-      CalculateReturnValue();
       SetPlanComplete();
     } else {
       m_step_out_further_plan_sp =
           QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder);
+      if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
+      {
+        // If we are planning to step out further, then the frame we are going
+        // to step out to is about to go away, so we need to reset the frame
+        // we are stepping out to to the one our step out plan is aiming for.
+        ThreadPlanStepOut *as_step_out 
+          = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
+        m_step_out_to_id = as_step_out->m_step_out_to_id;
+      }
       done = false;
     }
   }
@@ -371,7 +427,8 @@ bool ThreadPlanStepOut::MischiefManaged() {
     // I also check the stack depth, since if we've blown past the breakpoint
     // for some
     // reason and we're now stopping for some other reason altogether, then
-    // we're done with this step out operation.
+    // we're done
+    // with this step out operation.
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (log)
@@ -390,8 +447,10 @@ bool ThreadPlanStepOut::MischiefManaged() {
 
 bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
   // Now figure out the range of this inlined block, and set up a "step through
-  // range" plan for that.  If we've been provided with a context, then use the
-  // block in that context.
+  // range"
+  // plan for that.  If we've been provided with a context, then use the block
+  // in that
+  // context.
   StackFrameSP immediate_return_from_sp(m_thread.GetStackFrameAtIndex(0));
   if (!immediate_return_from_sp)
     return false;
@@ -448,12 +507,44 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
 }
 
 void ThreadPlanStepOut::CalculateReturnValue() {
-  if (m_return_valobj_sp)
-    return;
-
   if (!m_calculate_return_value)
     return;
 
+  if (m_return_valobj_sp)
+    return;
+  // First check if we have an error return address, and if that pointer
+  // contains a valid error return, grab it:
+  SwiftLanguageRuntime *swift_runtime =
+        m_thread.GetProcess()->GetSwiftLanguageRuntime();
+
+  if (swift_runtime) {
+    // In some ABI's the error is in a memory location in the caller's frame
+    // and we need to fetch that location from the frame before we leave the
+    // throwing frame.  In others, the actual error address is in a register,
+    // so we need to fetch the value of the address AFTER leaving the frame.
+    if (m_swift_error_check_after_return)
+    {
+      StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
+      if (!frame_sp)
+          return;
+      
+      m_swift_error_return =
+            swift_runtime->GetErrorReturnLocationAfterReturn(frame_sp);
+    }
+    if (m_swift_error_return) {
+      ConstString name("swift_thrown_error");
+
+      m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectFromValue(
+          m_swift_error_return.getValue(), name, true);
+      // Even if we couldn't figure out what the error return was, we
+      // were told there was an error, so don't show the user a false return value
+      // instead.
+      m_is_swift_error_value = true;
+      return;
+    }
+  }
+
+  // We don't have a swift error, so let's compute the actual return:
   if (m_immediate_step_from_function != nullptr) {
     CompilerType return_compiler_type =
         m_immediate_step_from_function->GetCompilerType()
@@ -468,8 +559,8 @@ void ThreadPlanStepOut::CalculateReturnValue() {
 }
 
 bool ThreadPlanStepOut::IsPlanStale() {
-  // If we are still lower on the stack than the frame we are returning to,
-  // then there's something for us to do.  Otherwise, we're stale.
+  // If we are still lower on the stack than the frame we are returning to, then
+  // there's something for us to do.  Otherwise, we're stale.
 
   StackID frame_zero_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
   return !(frame_zero_id < m_step_out_to_id);

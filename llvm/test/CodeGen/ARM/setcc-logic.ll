@@ -20,12 +20,12 @@ define zeroext i1 @ne_neg1_and_ne_zero(i32 %x) nounwind {
 define zeroext i1 @and_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; CHECK-LABEL: and_eq:
 ; CHECK:       @ %bb.0:
-; CHECK: eor     r2, r2, r3
-; CHECK: eor     r0, r0, r1
-; CHECK: orr     r0, r0, r2
-; CHECK: clz     r0, r0
-; CHECK: lsr     r0, r0, #5
-; CHECK: bx      lr
+; CHECK-NEXT:    eor r2, r2, r3
+; CHECK-NEXT:    eor r0, r0, r1
+; CHECK-NEXT:    orrs r0, r0, r2
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    movweq r0, #1
+; CHECK-NEXT:    bx lr
   %cmp1 = icmp eq i32 %a, %b
   %cmp2 = icmp eq i32 %c, %d
   %and = and i1 %cmp1, %cmp2

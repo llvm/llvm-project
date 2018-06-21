@@ -19,7 +19,7 @@ using namespace arcmt;
 
 namespace {
 
-/// Collects transformations and merges them before applying them with
+/// \brief Collects transformations and merges them before applying them with
 /// with applyRewrites(). E.g. if the same source range
 /// is requested to be removed twice, only one rewriter remove will be invoked.
 /// Rewrites happen in "transactions"; if one rewrite in the transaction cannot
@@ -61,7 +61,7 @@ class TransformActionsImpl {
     Range_ExtendsEnd
   };
 
-  /// A range to remove. It is a character range.
+  /// \brief A range to remove. It is a character range.
   struct CharRange {
     FullSourceLoc Begin, End;
 
@@ -107,7 +107,7 @@ class TransformActionsImpl {
   typedef std::map<FullSourceLoc, TextsVec, FullSourceLoc::BeforeThanCompare>
       InsertsMap;
   InsertsMap Inserts;
-  /// A list of ranges to remove. They are always sorted and they never
+  /// \brief A list of ranges to remove. They are always sorted and they never
   /// intersect with each other.
   std::list<CharRange> Removals;
 
@@ -115,7 +115,7 @@ class TransformActionsImpl {
 
   std::vector<std::pair<CharRange, SourceLocation> > IndentationRanges;
 
-  /// Keeps text passed to transformation methods.
+  /// \brief Keeps text passed to transformation methods.
   llvm::StringMap<bool> UniqueText;
 
 public:
@@ -167,12 +167,12 @@ private:
   void addRemoval(CharSourceRange range);
   void addInsertion(SourceLocation loc, StringRef text);
 
-  /// Stores text passed to the transformation methods to keep the string
+  /// \brief Stores text passed to the transformation methods to keep the string
   /// "alive". Since the vast majority of text will be the same, we also unique
   /// the strings using a StringMap.
   StringRef getUniqueText(StringRef text);
 
-  /// Computes the source location just past the end of the token at
+  /// \brief Computes the source location just past the end of the token at
   /// the given source location. If the location points at a macro, the whole
   /// macro expansion is skipped.
   static SourceLocation getLocForEndOfToken(SourceLocation loc,
@@ -577,25 +577,21 @@ void TransformActionsImpl::applyRewrites(
   }
 }
 
-/// Stores text passed to the transformation methods to keep the string
+/// \brief Stores text passed to the transformation methods to keep the string
 /// "alive". Since the vast majority of text will be the same, we also unique
 /// the strings using a StringMap.
 StringRef TransformActionsImpl::getUniqueText(StringRef text) {
   return UniqueText.insert(std::make_pair(text, false)).first->first();
 }
 
-/// Computes the source location just past the end of the token at
+/// \brief Computes the source location just past the end of the token at
 /// the given source location. If the location points at a macro, the whole
 /// macro expansion is skipped.
 SourceLocation TransformActionsImpl::getLocForEndOfToken(SourceLocation loc,
                                                          SourceManager &SM,
                                                          Preprocessor &PP) {
-  if (loc.isMacroID()) {
-    CharSourceRange Exp = SM.getExpansionRange(loc);
-    if (Exp.isCharRange())
-      return Exp.getEnd();
-    loc = Exp.getEnd();
-  }
+  if (loc.isMacroID())
+    loc = SM.getExpansionRange(loc).second;
   return PP.getLocForEndOfToken(loc);
 }
 

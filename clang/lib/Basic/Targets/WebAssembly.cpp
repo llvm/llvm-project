@@ -29,25 +29,19 @@ const Builtin::Info WebAssemblyTargetInfo::BuiltinInfo[] = {
 #include "clang/Basic/BuiltinsWebAssembly.def"
 };
 
-static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"mvp"}, {"bleeding-edge"}, {"generic"}};
-
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
-      .Case("sign-ext", HasSignExt)
-      .Case("exception-handling", HasExceptionHandling)
       .Default(false);
 }
 
 bool WebAssemblyTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
-}
-
-void WebAssemblyTargetInfo::fillValidCPUList(
-    SmallVectorImpl<StringRef> &Values) const {
-  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+  return llvm::StringSwitch<bool>(Name)
+      .Case("mvp", true)
+      .Case("bleeding-edge", true)
+      .Case("generic", true)
+      .Default(false);
 }
 
 void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -74,22 +68,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-nontrapping-fptoint") {
       HasNontrappingFPToInt = false;
-      continue;
-    }
-    if (Feature == "+sign-ext") {
-      HasSignExt = true;
-      continue;
-    }
-    if (Feature == "-sign-ext") {
-      HasSignExt = false;
-      continue;
-    }
-    if (Feature == "+exception-handling") {
-      HasExceptionHandling = true;
-      continue;
-    }
-    if (Feature == "-exception-handling") {
-      HasExceptionHandling = false;
       continue;
     }
 

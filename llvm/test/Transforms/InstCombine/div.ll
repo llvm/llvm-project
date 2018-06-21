@@ -21,6 +21,15 @@ define i32 @test2(i32 %A) {
   ret i32 %B
 }
 
+define i32 @test3(i32 %A) {
+        ; => 0, don't need to keep traps
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:    ret i32 0
+;
+  %B = sdiv i32 0, %A             ; <i32> [#uses=1]
+  ret i32 %B
+}
+
 define i32 @test4(i32 %A) {
         ; 0-A
 ; CHECK-LABEL: @test4(
@@ -553,58 +562,3 @@ define <2 x i8> @PR34841(<2 x i8> %x) {
   %div = udiv <2 x i8> <i8 1, i8 1>, %neg
   ret <2 x i8> %div
 }
-
-; X / (X * Y) -> 1 / Y if the multiplication does not overflow
-
-define i8 @div_factor_signed(i8 %x, i8 %y) {
-; CHECK-LABEL: @div_factor_signed(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i8 [[TMP1]], 3
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i8 [[Y]], i8 0
-; CHECK-NEXT:    ret i8 [[R]]
-;
-  %a = mul nsw i8 %x, %y
-  %r = sdiv i8 %x, %a
-  ret i8 %r
-}
-
-; X / (Y * X) -> 1 / Y if the multiplication does not overflow
-
-define <2 x i8> @div_factor_signed_vec(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @div_factor_signed_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i8> [[TMP1]], <i8 3, i8 3>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> [[Y]], <2 x i8> zeroinitializer
-; CHECK-NEXT:    ret <2 x i8> [[R]]
-;
-  %a = mul nsw <2 x i8> %y, %x
-  %r = sdiv <2 x i8> %x, %a
-  ret <2 x i8> %r
-}
-
-; X / (Y * X) -> 1 / Y if the multiplication does not overflow
-
-define i8 @div_factor_unsigned(i8 %x, i8 %y) {
-; CHECK-LABEL: @div_factor_unsigned(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i8
-; CHECK-NEXT:    ret i8 [[R]]
-;
-  %a = mul nuw i8 %y, %x
-  %r = udiv i8 %x, %a
-  ret i8 %r
-}
-
-; X / (X * Y) -> 1 / Y if the multiplication does not overflow
-
-define <2 x i8> @div_factor_unsigned_vec(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @div_factor_unsigned_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
-; CHECK-NEXT:    ret <2 x i8> [[R]]
-;
-  %a = mul nuw <2 x i8> %x, %y
-  %r = udiv <2 x i8> %x, %a
-  ret <2 x i8> %r
-}
-

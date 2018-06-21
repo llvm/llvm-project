@@ -1,3 +1,5 @@
+include_directories(../Utility)
+
 add_lldb_library(lldbPluginProcessElfCore PLUGIN
   ProcessElfCore.cpp
   ThreadElfCore.cpp

@@ -12,14 +12,14 @@ entry:
 
 bb:                                               ; preds = %bb, %entry
   %String2Loc9 = getelementptr inbounds [31 x i8], [31 x i8]* %String2Loc, i64 0, i64 0
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %String2Loc9, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str3, i64 0, i64 0), i64 31, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %String2Loc9, i8* getelementptr inbounds ([31 x i8], [31 x i8]* @.str3, i64 0, i64 0), i64 31, i32 1, i1 false)
   br label %bb
 
 return:                                           ; No predecessors!
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32, i1) nounwind
 
 ; I386: calll {{_?}}memcpy
 

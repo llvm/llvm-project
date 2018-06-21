@@ -1,15 +1,11 @@
 add_llvm_library(LLVMGlobalISel
         CallLowering.cpp
         GlobalISel.cpp
-        Combiner.cpp
-        CombinerHelper.cpp
         IRTranslator.cpp
         InstructionSelect.cpp
         InstructionSelector.cpp
-        LegalityPredicates.cpp
-        LegalizeMutations.cpp
-        Legalizer.cpp
         LegalizerHelper.cpp
+        Legalizer.cpp
         LegalizerInfo.cpp
         Localizer.cpp
         MachineIRBuilder.cpp

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file handles ELF-specific object emission, converting LLVM's
+/// \brief This file handles ELF-specific object emission, converting LLVM's
 /// internal fixups into the appropriate relocations.
 ///
 //===----------------------------------------------------------------------===//
@@ -59,7 +59,10 @@ unsigned WebAssemblyELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 }
 
-std::unique_ptr<MCObjectTargetWriter>
-llvm::createWebAssemblyELFObjectWriter(bool Is64Bit, uint8_t OSABI) {
-  return llvm::make_unique<WebAssemblyELFObjectWriter>(Is64Bit, OSABI);
+std::unique_ptr<MCObjectWriter>
+llvm::createWebAssemblyELFObjectWriter(raw_pwrite_stream &OS,
+                                       bool Is64Bit,
+                                       uint8_t OSABI) {
+  auto MOTW = llvm::make_unique<WebAssemblyELFObjectWriter>(Is64Bit, OSABI);
+  return createELFObjectWriter(std::move(MOTW), OS, /*IsLittleEndian=*/true);
 }

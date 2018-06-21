@@ -6,19 +6,19 @@
 # GCN:        %[[HI:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
 # GCN-NEXT:   %[[LO:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
 # GCN-NEXT:   %[[SGPR_PAIR:[0-9]+]]:sreg_64 = REG_SEQUENCE killed %[[LO]], %subreg.sub0, killed %[[HI]], %subreg.sub1
-# GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit $exec
+# GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit %exec
 
 
 # GCN-LABEL: {{^}}name: const_to_sgpr_multiple_use{{$}}
 # GCN:        %[[HI:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
 # GCN-NEXT:   %[[LO:[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
 # GCN-NEXT:   %[[SGPR_PAIR:[0-9]+]]:sreg_64 = REG_SEQUENCE killed %[[LO]], %subreg.sub0, killed %[[HI]], %subreg.sub1
-# GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit $exec
-# GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit $exec
+# GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit %exec
+# GCN-NEXT:   V_CMP_LT_U64_e64 killed %{{[0-9]+}}, %[[SGPR_PAIR]], implicit %exec
 
 # GCN-LABEL: {{^}}name: const_to_sgpr_subreg{{$}}
 # GCN:       %[[OP0:[0-9]+]]:vreg_64 = REG_SEQUENCE killed %{{[0-9]+}}, %subreg.sub0, killed %{{[0-9]+}}, %subreg.sub1
-# GCN-NEXT:  V_CMP_LT_U32_e64 killed %[[OP0]].sub0, 12, implicit $exec
+# GCN-NEXT:  V_CMP_LT_U32_e64 killed %[[OP0]].sub0, 12, implicit %exec
 
 --- |
   define amdgpu_kernel void @const_to_sgpr(i32 addrspace(1)* nocapture %arg, i64 %id) {
@@ -96,15 +96,15 @@ registers:
   - { id: 29, class: vgpr_32 }
   - { id: 30, class: vreg_64 }
 liveins:
-  - { reg: '$vgpr0', virtual-reg: '%2' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '%vgpr0', virtual-reg: '%2' }
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%3' }
 body:             |
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: %vgpr0, %sgpr0_sgpr1
 
-    %3 = COPY $sgpr0_sgpr1
-    %2 = COPY $vgpr0
+    %3 = COPY %sgpr0_sgpr1
+    %2 = COPY %vgpr0
     %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
     %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
     %6 = COPY %7
@@ -115,32 +115,32 @@ body:             |
     %12 = COPY %10.sub1
     %13 = COPY %8.sub0
     %14 = COPY %8.sub1
-    %15 = S_ADD_U32 killed %11, killed %13, implicit-def $scc
-    %16 = S_ADDC_U32 killed %12, killed %14, implicit-def dead $scc, implicit $scc
+    %15 = S_ADD_U32 killed %11, killed %13, implicit-def %scc
+    %16 = S_ADDC_U32 killed %12, killed %14, implicit-def dead %scc, implicit %scc
     %17 = REG_SEQUENCE killed %15, %subreg.sub0, killed %16, %subreg.sub1
     %18 = S_MOV_B32 0
     %19 = S_MOV_B32 1048576
     %20 = REG_SEQUENCE killed %19, %subreg.sub0, killed %18, %subreg.sub1
     %22 = COPY killed %20
-    %21 = V_CMP_LT_U64_e64 killed %17, %22, implicit $exec
-    %1 = SI_IF killed %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %21 = V_CMP_LT_U64_e64 killed %17, %22, implicit %exec
+    %1 = SI_IF killed %21, %bb.2.bb2, implicit-def dead %exec, implicit-def dead %scc, implicit %exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
     successors: %bb.2.bb2(0x80000000)
 
     %23 = S_MOV_B32 2
-    %24 = S_LSHL_B64 %0, killed %23, implicit-def dead $scc
+    %24 = S_LSHL_B64 %0, killed %23, implicit-def dead %scc
     %25 = S_MOV_B32 61440
     %26 = S_MOV_B32 0
     %27 = REG_SEQUENCE killed %26, %subreg.sub0, killed %25, %subreg.sub1
     %28 = REG_SEQUENCE %6, 17, killed %27, 18
-    %29 = V_MOV_B32_e32 0, implicit $exec
+    %29 = V_MOV_B32_e32 0, implicit %exec
     %30 = COPY %24
-    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, implicit %exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_END_CF %1, implicit-def dead %exec, implicit-def dead %scc, implicit %exec
     S_ENDPGM
 
 ...
@@ -194,15 +194,15 @@ registers:
   - { id: 38, class: vgpr_32 }
   - { id: 39, class: vreg_64 }
 liveins:
-  - { reg: '$vgpr0', virtual-reg: '%2' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '%vgpr0', virtual-reg: '%2' }
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%3' }
 body:             |
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: %vgpr0, %sgpr0_sgpr1
 
-    %3 = COPY $sgpr0_sgpr1
-    %2 = COPY $vgpr0
+    %3 = COPY %sgpr0_sgpr1
+    %2 = COPY %vgpr0
     %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
     %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
     %9 = S_LOAD_DWORDX2_IMM %3, 13, 0
@@ -214,39 +214,39 @@ body:             |
     %13 = COPY %11.sub1
     %14 = COPY %8.sub0
     %15 = COPY %8.sub1
-    %16 = S_ADD_U32 %12, killed %14, implicit-def $scc
-    %17 = S_ADDC_U32 %13, killed %15, implicit-def dead $scc, implicit $scc
+    %16 = S_ADD_U32 %12, killed %14, implicit-def %scc
+    %17 = S_ADDC_U32 %13, killed %15, implicit-def dead %scc, implicit %scc
     %18 = REG_SEQUENCE killed %16, %subreg.sub0, killed %17, %subreg.sub1
     %19 = COPY %9.sub0
     %20 = COPY %9.sub1
-    %21 = S_ADD_U32 %12, killed %19, implicit-def $scc
-    %22 = S_ADDC_U32 %13, killed %20, implicit-def dead $scc, implicit $scc
+    %21 = S_ADD_U32 %12, killed %19, implicit-def %scc
+    %22 = S_ADDC_U32 %13, killed %20, implicit-def dead %scc, implicit %scc
     %23 = REG_SEQUENCE killed %21, %subreg.sub0, killed %22, %subreg.sub1
     %24 = S_MOV_B32 0
     %25 = S_MOV_B32 1048576
     %26 = REG_SEQUENCE killed %25, %subreg.sub0, killed %24, %subreg.sub1
     %28 = COPY %26
-    %27 = V_CMP_LT_U64_e64 killed %18, %28, implicit $exec
-    %29 = V_CMP_LT_U64_e64 killed %23, %28, implicit $exec
-    %31 = S_AND_B64 killed %27, killed %29, implicit-def dead $scc
-    %1 = SI_IF killed %31, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %27 = V_CMP_LT_U64_e64 killed %18, %28, implicit %exec
+    %29 = V_CMP_LT_U64_e64 killed %23, %28, implicit %exec
+    %31 = S_AND_B64 killed %27, killed %29, implicit-def dead %scc
+    %1 = SI_IF killed %31, %bb.2.bb2, implicit-def dead %exec, implicit-def dead %scc, implicit %exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
     successors: %bb.2.bb2(0x80000000)
 
     %32 = S_MOV_B32 2
-    %33 = S_LSHL_B64 %0, killed %32, implicit-def dead $scc
+    %33 = S_LSHL_B64 %0, killed %32, implicit-def dead %scc
     %34 = S_MOV_B32 61440
     %35 = S_MOV_B32 0
     %36 = REG_SEQUENCE killed %35, %subreg.sub0, killed %34, %subreg.sub1
     %37 = REG_SEQUENCE %6, 17, killed %36, 18
-    %38 = V_MOV_B32_e32 0, implicit $exec
+    %38 = V_MOV_B32_e32 0, implicit %exec
     %39 = COPY %33
-    BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %38, killed %39, killed %37, 0, 0, 0, 0, 0, implicit %exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_END_CF %1, implicit-def dead %exec, implicit-def dead %scc, implicit %exec
     S_ENDPGM
 
 ...
@@ -291,15 +291,15 @@ registers:
   - { id: 29, class: vgpr_32 }
   - { id: 30, class: vreg_64 }
 liveins:
-  - { reg: '$vgpr0', virtual-reg: '%2' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
+  - { reg: '%vgpr0', virtual-reg: '%2' }
+  - { reg: '%sgpr0_sgpr1', virtual-reg: '%3' }
 body:             |
   bb.0.bb:
     successors: %bb.1.bb1(0x40000000), %bb.2.bb2(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1
+    liveins: %vgpr0, %sgpr0_sgpr1
 
-    %3 = COPY $sgpr0_sgpr1
-    %2 = COPY $vgpr0
+    %3 = COPY %sgpr0_sgpr1
+    %2 = COPY %vgpr0
     %7 = S_LOAD_DWORDX2_IMM %3, 9, 0
     %8 = S_LOAD_DWORDX2_IMM %3, 11, 0
     %6 = COPY %7
@@ -310,32 +310,32 @@ body:             |
     %12 = COPY %10.sub1
     %13 = COPY %8.sub0
     %14 = COPY %8.sub1
-    %15 = S_ADD_U32 killed %11, killed %13, implicit-def $scc
-    %16 = S_ADDC_U32 killed %12, killed %14, implicit-def dead $scc, implicit $scc
+    %15 = S_ADD_U32 killed %11, killed %13, implicit-def %scc
+    %16 = S_ADDC_U32 killed %12, killed %14, implicit-def dead %scc, implicit %scc
     %17 = REG_SEQUENCE killed %15, %subreg.sub0, killed %16, %subreg.sub1
     %18 = S_MOV_B32 12
     %19 = S_MOV_B32 1048576
     %20 = REG_SEQUENCE killed %19, %subreg.sub0, killed %18, %subreg.sub1
     %22 = COPY killed %20.sub1
-    %21 = V_CMP_LT_U32_e64 killed %17.sub0, %22, implicit $exec
-    %1 = SI_IF killed %21, %bb.2.bb2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %21 = V_CMP_LT_U32_e64 killed %17.sub0, %22, implicit %exec
+    %1 = SI_IF killed %21, %bb.2.bb2, implicit-def dead %exec, implicit-def dead %scc, implicit %exec
     S_BRANCH %bb.1.bb1
 
   bb.1.bb1:
     successors: %bb.2.bb2(0x80000000)
 
     %23 = S_MOV_B32 2
-    %24 = S_LSHL_B64 %0, killed %23, implicit-def dead $scc
+    %24 = S_LSHL_B64 %0, killed %23, implicit-def dead %scc
     %25 = S_MOV_B32 61440
     %26 = S_MOV_B32 0
     %27 = REG_SEQUENCE killed %26, %subreg.sub0, killed %25, %subreg.sub1
     %28 = REG_SEQUENCE %6, 17, killed %27, 18
-    %29 = V_MOV_B32_e32 0, implicit $exec
+    %29 = V_MOV_B32_e32 0, implicit %exec
     %30 = COPY %24
-    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 killed %29, killed %30, killed %28, 0, 0, 0, 0, 0, implicit %exec
 
   bb.2.bb2:
-    SI_END_CF %1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    SI_END_CF %1, implicit-def dead %exec, implicit-def dead %scc, implicit %exec
     S_ENDPGM
 
 ...

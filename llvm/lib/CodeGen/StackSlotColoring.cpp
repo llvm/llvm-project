@@ -209,14 +209,14 @@ void StackSlotColoring::InitializeSlots() {
   Intervals.reserve(LS->getNumIntervals());
   for (auto &I : *LS)
     Intervals.push_back(&I);
-  llvm::sort(Intervals.begin(), Intervals.end(),
-             [](Pair *LHS, Pair *RHS) { return LHS->first < RHS->first; });
+  std::sort(Intervals.begin(), Intervals.end(),
+            [](Pair *LHS, Pair *RHS) { return LHS->first < RHS->first; });
 
   // Gather all spill slots into a list.
-  LLVM_DEBUG(dbgs() << "Spill slot intervals:\n");
+  DEBUG(dbgs() << "Spill slot intervals:\n");
   for (auto *I : Intervals) {
     LiveInterval &li = I->second;
-    LLVM_DEBUG(li.dump());
+    DEBUG(li.dump());
     int FI = TargetRegisterInfo::stackSlot2Index(li.reg);
     if (MFI->isDeadObjectIndex(FI))
       continue;
@@ -225,7 +225,7 @@ void StackSlotColoring::InitializeSlots() {
     OrigSizes[FI]      = MFI->getObjectSize(FI);
     AllColors.set(FI);
   }
-  LLVM_DEBUG(dbgs() << '\n');
+  DEBUG(dbgs() << '\n');
 
   // Sort them by weight.
   std::stable_sort(SSIntervals.begin(), SSIntervals.end(), IntervalSorter());
@@ -267,7 +267,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   }
 
   if (Color != -1 && MFI->getStackID(Color) != MFI->getStackID(FI)) {
-    LLVM_DEBUG(dbgs() << "cannot share FIs with different stack IDs\n");
+    DEBUG(dbgs() << "cannot share FIs with different stack IDs\n");
     Share = false;
   }
 
@@ -282,7 +282,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
 
   // Record the assignment.
   Assignments[Color].push_back(li);
-  LLVM_DEBUG(dbgs() << "Assigning fi#" << FI << " to fi#" << Color << "\n");
+  DEBUG(dbgs() << "Assigning fi#" << FI << " to fi#" << Color << "\n");
 
   // Change size and alignment of the allocated slot. If there are multiple
   // objects sharing the same slot, then make sure the size and alignment
@@ -305,7 +305,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   SmallVector<SmallVector<int, 4>, 16> RevMap(NumObjs);
   BitVector UsedColors(NumObjs);
 
-  LLVM_DEBUG(dbgs() << "Color spill slot intervals:\n");
+  DEBUG(dbgs() << "Color spill slot intervals:\n");
   bool Changed = false;
   for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i) {
     LiveInterval *li = SSIntervals[i];
@@ -319,7 +319,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
     Changed |= (SS != NewSS);
   }
 
-  LLVM_DEBUG(dbgs() << "\nSpill slots after coloring:\n");
+  DEBUG(dbgs() << "\nSpill slots after coloring:\n");
   for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i) {
     LiveInterval *li = SSIntervals[i];
     int SS = TargetRegisterInfo::stackSlot2Index(li->reg);
@@ -330,8 +330,8 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
 #ifndef NDEBUG
   for (unsigned i = 0, e = SSIntervals.size(); i != e; ++i)
-    LLVM_DEBUG(SSIntervals[i]->dump());
-  LLVM_DEBUG(dbgs() << '\n');
+    DEBUG(SSIntervals[i]->dump());
+  DEBUG(dbgs() << '\n');
 #endif
 
   if (!Changed)
@@ -358,8 +358,7 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
   // Delete unused stack slots.
   while (NextColor != -1) {
-    LLVM_DEBUG(dbgs() << "Removing unused stack object fi#" << NextColor
-                      << "\n");
+    DEBUG(dbgs() << "Removing unused stack object fi#" << NextColor << "\n");
     MFI->RemoveStackObject(NextColor);
     NextColor = AllColors.find_next(NextColor);
   }
@@ -419,21 +418,17 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
     unsigned LoadReg = 0;
     unsigned StoreReg = 0;
-    unsigned LoadSize = 0;
-    unsigned StoreSize = 0;
-    if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS, LoadSize)))
+    if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS)))
       continue;
     // Skip the ...pseudo debugging... instructions between a load and store.
-    while ((NextMI != E) && NextMI->isDebugInstr()) {
+    while ((NextMI != E) && NextMI->isDebugValue()) {
       ++NextMI;
       ++I;
     }
     if (NextMI == E) continue;
-    if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
+    if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS)))
       continue;
-    if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
-        LoadSize != StoreSize)
-      continue;
+    if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1) continue;
 
     ++NumDead;
     changed = true;
@@ -455,13 +450,10 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 }
 
 bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG({
-    dbgs() << "********** Stack Slot Coloring **********\n"
-           << "********** Function: " << MF.getName() << '\n';
-  });
-
-  if (skipFunction(MF.getFunction()))
-    return false;
+  DEBUG({
+      dbgs() << "********** Stack Slot Coloring **********\n"
+             << "********** Function: " << MF.getName() << '\n';
+    });
 
   MFI = &MF.getFrameInfo();
   TII = MF.getSubtarget().getInstrInfo();

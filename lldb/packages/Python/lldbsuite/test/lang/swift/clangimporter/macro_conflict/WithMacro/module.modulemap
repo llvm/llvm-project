@@ -1,0 +1,4 @@
+module WithMacro {
+  header "WithMacro.h"
+  config_macros STRUCTNAME
+}

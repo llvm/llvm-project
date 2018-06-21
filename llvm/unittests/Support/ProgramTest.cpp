@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Program.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
@@ -27,7 +26,7 @@ extern char **environ;
 void sleep_for(unsigned int seconds) {
   sleep(seconds);
 }
-#elif defined(_WIN32)
+#elif defined(LLVM_ON_WIN32)
 #include <windows.h>
 void sleep_for(unsigned int seconds) {
   Sleep(seconds * 1000);
@@ -60,13 +59,13 @@ static cl::opt<std::string>
 ProgramTestStringArg2("program-test-string-arg2");
 
 class ProgramEnvTest : public testing::Test {
-  std::vector<StringRef> EnvTable;
+  std::vector<const char *> EnvTable;
   std::vector<std::string> EnvStorage;
 
 protected:
   void SetUp() override {
     auto EnvP = [] {
-#if defined(_WIN32)
+#if defined(LLVM_ON_WIN32)
       _wgetenv(L"TMP"); // Populate _wenviron, initially is null
       return _wenviron;
 #elif defined(__APPLE__)
@@ -77,8 +76,8 @@ protected:
     }();
     ASSERT_TRUE(EnvP);
 
-    auto prepareEnvVar = [this](decltype(*EnvP) Var) -> StringRef {
-#if defined(_WIN32)
+    auto prepareEnvVar = [this](decltype(*EnvP) Var) {
+#if defined(LLVM_ON_WIN32)
       // On Windows convert UTF16 encoded variable to UTF8
       auto Len = wcslen(Var);
       ArrayRef<char> Ref{reinterpret_cast<char const *>(Var),
@@ -86,10 +85,10 @@ protected:
       EnvStorage.emplace_back();
       auto convStatus = convertUTF16ToUTF8String(Ref, EnvStorage.back());
       EXPECT_TRUE(convStatus);
-      return EnvStorage.back();
+      return EnvStorage.back().c_str();
 #else
       (void)this;
-      return StringRef(Var);
+      return Var;
 #endif
     };
 
@@ -104,12 +103,19 @@ protected:
     EnvStorage.clear();
   }
 
-  void addEnvVar(StringRef Var) { EnvTable.emplace_back(Var); }
+  void addEnvVar(const char *Var) {
+    ASSERT_TRUE(EnvTable.empty() || EnvTable.back()) << "Env table sealed";
+    EnvTable.emplace_back(Var);
+  }
 
-  ArrayRef<StringRef> getEnviron() const { return EnvTable; }
+  const char **getEnviron() {
+    if (EnvTable.back() != nullptr)
+      EnvTable.emplace_back(nullptr); // Seal table.
+    return &EnvTable[0];
+  }
 };
 
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
 TEST_F(ProgramEnvTest, CreateProcessLongPath) {
   if (getenv("LLVM_PROGRAM_TEST_LONG_PATH"))
     exit(0);
@@ -122,8 +128,11 @@ TEST_F(ProgramEnvTest, CreateProcessLongPath) {
     MyExe.append("\\\\?\\");
   MyExe.append(MyAbsExe);
 
-  StringRef ArgV[] = {MyExe,
-                      "--gtest_filter=ProgramEnvTest.CreateProcessLongPath"};
+  const char *ArgV[] = {
+    MyExe.c_str(),
+    "--gtest_filter=ProgramEnvTest.CreateProcessLongPath",
+    nullptr
+  };
 
   // Add LLVM_PROGRAM_TEST_LONG_PATH to the environment of the child.
   addEnvVar("LLVM_PROGRAM_TEST_LONG_PATH=1");
@@ -163,13 +172,13 @@ TEST_F(ProgramEnvTest, CreateProcessTrailingSlash) {
 
   std::string my_exe =
       sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
-  StringRef argv[] = {
-      my_exe,
-      "--gtest_filter=ProgramEnvTest.CreateProcessTrailingSlash",
-      "-program-test-string-arg1",
-      "has\\\\ trailing\\",
-      "-program-test-string-arg2",
-      "has\\\\ trailing\\"};
+  const char *argv[] = {
+    my_exe.c_str(),
+    "--gtest_filter=ProgramEnvTest.CreateProcessTrailingSlash",
+    "-program-test-string-arg1", "has\\\\ trailing\\",
+    "-program-test-string-arg2", "has\\\\ trailing\\",
+    nullptr
+  };
 
   // Add LLVM_PROGRAM_TEST_CHILD to the environment of the child.
   addEnvVar("LLVM_PROGRAM_TEST_CHILD=1");
@@ -177,7 +186,7 @@ TEST_F(ProgramEnvTest, CreateProcessTrailingSlash) {
   std::string error;
   bool ExecutionFailed;
   // Redirect stdout and stdin to NUL, but let stderr through.
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
   StringRef nul("NUL");
 #else
   StringRef nul("/dev/null");
@@ -200,8 +209,11 @@ TEST_F(ProgramEnvTest, TestExecuteNoWait) {
 
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
-  StringRef argv[] = {Executable,
-                      "--gtest_filter=ProgramEnvTest.TestExecuteNoWait"};
+  const char *argv[] = {
+    Executable.c_str(),
+    "--gtest_filter=ProgramEnvTest.TestExecuteNoWait",
+    nullptr
+  };
 
   // Add LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT to the environment of the child.
   addEnvVar("LLVM_PROGRAM_TEST_EXECUTE_NO_WAIT=1");
@@ -255,8 +267,11 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
 
   std::string Executable =
       sys::fs::getMainExecutable(TestMainArgv0, &ProgramTestStringArg1);
-  StringRef argv[] = {
-      Executable, "--gtest_filter=ProgramEnvTest.TestExecuteAndWaitTimeout"};
+  const char *argv[] = {
+    Executable.c_str(),
+    "--gtest_filter=ProgramEnvTest.TestExecuteAndWaitTimeout",
+    nullptr
+  };
 
   // Add LLVM_PROGRAM_TEST_TIMEOUT to the environment of the child.
  addEnvVar("LLVM_PROGRAM_TEST_TIMEOUT=1");
@@ -271,12 +286,12 @@ TEST_F(ProgramEnvTest, TestExecuteAndWaitTimeout) {
 
 TEST(ProgramTest, TestExecuteNegative) {
   std::string Executable = "i_dont_exist";
-  StringRef argv[] = {Executable};
+  const char *argv[] = { Executable.c_str(), nullptr };
 
   {
     std::string Error;
     bool ExecutionFailed;
-    int RetCode = ExecuteAndWait(Executable, argv, llvm::None, {}, 0, 0, &Error,
+    int RetCode = ExecuteAndWait(Executable, argv, nullptr, {}, 0, 0, &Error,
                                  &ExecutionFailed);
     ASSERT_TRUE(RetCode < 0) << "On error ExecuteAndWait should return 0 or "
                                 "positive value indicating the result code";
@@ -287,7 +302,7 @@ TEST(ProgramTest, TestExecuteNegative) {
   {
     std::string Error;
     bool ExecutionFailed;
-    ProcessInfo PI = ExecuteNoWait(Executable, argv, llvm::None, {}, 0, &Error,
+    ProcessInfo PI = ExecuteNoWait(Executable, argv, nullptr, {}, 0, &Error,
                                    &ExecutionFailed);
     ASSERT_EQ(PI.Pid, ProcessInfo::InvalidPid)
         << "On error ExecuteNoWait should return an invalid ProcessInfo";
@@ -297,7 +312,7 @@ TEST(ProgramTest, TestExecuteNegative) {
 
 }
 
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
 const char utf16le_text[] =
     "\x6c\x00\x69\x00\x6e\x00\x67\x00\xfc\x00\x69\x00\xe7\x00\x61\x00";
 const char utf16be_text[] =
@@ -317,7 +332,7 @@ TEST(ProgramTest, TestWriteWithSystemEncoding) {
                                              sys::WEM_UTF16));
   int fd = 0;
   ASSERT_NO_ERROR(fs::openFileForRead(file_pathname.c_str(), fd));
-#if defined(_WIN32)
+#if defined(LLVM_ON_WIN32)
   char buf[18];
   ASSERT_EQ(::read(fd, buf, 18), 18);
   if (strncmp(buf, "\xfe\xff", 2) == 0) { // UTF16-BE

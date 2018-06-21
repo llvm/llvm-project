@@ -2,13 +2,18 @@
 #include "java.h"
 #include <memory.h>
 
-extern "C" void __tsan_symbolize_external_ex(
-    jptr pc, void (*add_frame)(void *, const char *, const char *, int, int),
-    void *ctx) {
+extern "C" bool __tsan_symbolize_external(jptr pc,
+                                          char *func_buf, jptr func_siz,
+                                          char *file_buf, jptr file_siz,
+                                          int *line, int *col) {
   if (pc == (1234 | kExternalPCBit)) {
-    add_frame(ctx, "MyInnerFunc", "MyInnerFile.java", 1234, 56);
-    add_frame(ctx, "MyOuterFunc", "MyOuterFile.java", 4321, 65);
+    memcpy(func_buf, "MyFunc", sizeof("MyFunc"));
+    memcpy(file_buf, "MyFile.java", sizeof("MyFile.java"));
+    *line = 1234;
+    *col = 56;
+    return true;
   }
+  return false;
 }
 
 void *Thread(void *p) {
@@ -35,6 +40,5 @@ int main() {
 }
 
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK:     #0 MyInnerFunc MyInnerFile.java:1234:56
-// CHECK:     #1 MyOuterFunc MyOuterFile.java:4321:65
+// CHECK:     #0 MyFunc MyFile.java:1234:56
 // CHECK: DONE

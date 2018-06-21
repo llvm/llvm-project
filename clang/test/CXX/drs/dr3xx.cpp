@@ -123,7 +123,8 @@ namespace dr305 { // dr305: no
     template<typename T> using T2 = T;
   };
   void k(Z *z) {
-    z->~T1<int>(); // expected-error {{no member named 'T1' in 'dr305::Z'}} expected-error +{{}}
+    // FIXME: This diagnostic is terrible.
+    z->~T1<int>(); // expected-error {{'T1' following the 'template' keyword does not refer to a template}} expected-error +{{}}
     z->~T2<int>(); // expected-error {{no member named '~int'}}
     z->~T2<Z>();
   }
@@ -905,25 +906,6 @@ namespace dr372 { // dr372: no
       };
     };
   }
-
-  // FIXME: This is valid: deriving from A gives D access to A::B
-  namespace std_example {
-    class A {
-    protected:
-      struct B {}; // expected-note {{here}}
-    };
-    struct D : A::B, A {}; // expected-error {{protected}}
-  }
-
-  // FIXME: This is valid: deriving from A::B gives access to A::B!
-  namespace badwolf {
-    class A {
-    protected:
-      struct B; // expected-note {{here}}
-    };
-    struct A::B : A {};
-    struct C : A::B {}; // expected-error {{protected}}
-  }
 }
 
 namespace dr373 { // dr373: 5
@@ -943,7 +925,7 @@ namespace dr373 { // dr373: 5
   using namespace A::B; // expected-error {{expected namespace name}}
 }
 
-namespace dr374 { // dr374: yes
+namespace dr374 { // dr374: yes c++11
   namespace N {
     template<typename T> void f();
     template<typename T> struct A { void f(); };
@@ -951,6 +933,11 @@ namespace dr374 { // dr374: yes
   template<> void N::f<char>() {}
   template<> void N::A<char>::f() {}
   template<> struct N::A<int> {};
+#if __cplusplus < 201103L
+  // expected-error@-4 {{extension}} expected-note@-7 {{here}}
+  // expected-error@-4 {{extension}} expected-note@-7 {{here}}
+  // expected-error@-4 {{extension}} expected-note@-8 {{here}}
+#endif
 }
 
 // dr375: dup 345

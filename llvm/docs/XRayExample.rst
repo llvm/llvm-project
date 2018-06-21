@@ -48,11 +48,11 @@ Getting Traces
 --------------
 
 By default, XRay does not write out the trace files or patch the application
-before main starts. If we run ``llc`` it should work like a normally built
-binary. If we want to get a full trace of the application's operations (of the
-functions we do end up instrumenting with XRay) then we need to enable XRay
-at application start. To do this, XRay checks the ``XRAY_OPTIONS`` environment
-variable.
+before main starts. If we just run ``llc`` it should just work like a normally
+built binary. However, if we want to get a full trace of the application's
+operations (of the functions we do end up instrumenting with XRay) then we need
+to enable XRay at application start. To do this, XRay checks the
+``XRAY_OPTIONS`` environment variable.
 
 ::
 
@@ -73,8 +73,9 @@ instrumented, and how much time we're spending in parts of the code. To make
 sense of this data, we use the ``llvm-xray`` tool which has a few subcommands
 to help us understand our trace.
 
-One of the things we can do is to get an accounting of the functions that have
-been instrumented. We can see an example accounting with ``llvm-xray account``:
+One of the simplest things we can do is to get an accounting of the functions
+that have been instrumented. We can see an example accounting with ``llvm-xray
+account``:
 
 ::
 
@@ -177,22 +178,22 @@ add the attribute to the source.
 To use this feature, you can define one file for the functions to always
 instrument, and another for functions to never instrument. The format of these
 files are exactly the same as the SanitizerLists files that control similar
-things for the sanitizer implementations. For example:
+things for the sanitizer implementations. For example, we can have two
+different files like below:
 
 ::
 
-  # xray-attr-list.txt
+  # always-instrument.txt
   # always instrument functions that match the following filters:
-  [always]
   fun:main
 
+  # never-instrument.txt
   # never instrument functions that match the following filters:
-  [never]
   fun:__cxx_*
 
-Given the file above we can re-build by providing it to the
-``-fxray-attr-list=`` flag to clang. You can have multiple files, each defining
-different sets of attribute sets, to be combined into a single list by clang.
+Given the above two files we can re-build by providing those two files as
+arguments to clang as ``-fxray-always-instrument=always-instrument.txt`` or
+``-fxray-never-instrument=never-instrument.txt``.
 
 The XRay stack tool
 -------------------
@@ -201,7 +202,8 @@ Given a trace, and optionally an instrumentation map, the ``llvm-xray stack``
 command can be used to analyze a call stack graph constructed from the function
 call timeline.
 
-The way to use the command is to output the top stacks by call count and time spent.
+The simplest way to use the command is simply to output the top stacks by call
+count and time spent.
 
 ::
 
@@ -243,7 +245,7 @@ FlameGraph tool, currently available on `github
 
 To generate output for a flamegraph, a few more options are necessary.
 
-- ``-all-stacks`` - Emits all of the stacks.
+- ``-all-stacks`` - Emits all of the stacks instead of just the top stacks.
 - ``-stack-format`` - Choose the flamegraph output format 'flame'.
 - ``-aggregation-type`` - Choose the metric to graph.
 

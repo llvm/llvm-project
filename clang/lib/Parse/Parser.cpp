@@ -24,7 +24,7 @@ using namespace clang;
 
 
 namespace {
-/// A comment handler that passes comments found by the preprocessor
+/// \brief A comment handler that passes comments found by the preprocessor
 /// to the parser action.
 class ActionCommentHandler : public CommentHandler {
   Sema &S;
@@ -67,6 +67,11 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   PP.addCommentHandler(CommentSemaHandler.get());
 
   PP.setCodeCompletionHandler(*this);
+
+  Actions.ParseTypeFromStringCallback =
+    [this](StringRef typeStr, StringRef context, SourceLocation includeLoc) {
+      return this->parseTypeFromString(typeStr, context, includeLoc);
+    };
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -77,7 +82,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
   return Diag(Tok.getLocation(), DiagID);
 }
 
-/// Emits a diagnostic suggesting parentheses surrounding a
+/// \brief Emits a diagnostic suggesting parentheses surrounding a
 /// given range.
 ///
 /// \param Loc The location where we'll emit the diagnostic.
@@ -406,6 +411,9 @@ Parser::ParseScopeFlags::~ParseScopeFlags() {
 //===----------------------------------------------------------------------===//
 
 Parser::~Parser() {
+  // Clear out the parse-type-from-string callback.
+  Actions.ParseTypeFromStringCallback = nullptr;
+
   // If we still have scopes active, delete the scope tree.
   delete getCurScope();
   Actions.CurScope = nullptr;
@@ -741,7 +749,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     break;
   }
   case tok::at:
-    return ParseObjCAtDirectives(attrs);
+    return ParseObjCAtDirectives();
   case tok::minus:
   case tok::plus:
     if (!getLangOpts().ObjC1) {
@@ -858,7 +866,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   return Actions.ConvertDeclToDeclGroup(SingleDecl);
 }
 
-/// Determine whether the current token, if it occurs after a
+/// \brief Determine whether the current token, if it occurs after a
 /// declarator, continues a declaration or declaration list.
 bool Parser::isDeclarationAfterDeclarator() {
   // Check for '= delete' or '= default'
@@ -877,7 +885,7 @@ bool Parser::isDeclarationAfterDeclarator() {
      Tok.is(tok::l_paren));         // int X(0) -> not a function def [C++]
 }
 
-/// Determine whether the current token, if it occurs after a
+/// \brief Determine whether the current token, if it occurs after a
 /// declarator, indicates the start of a function definition.
 bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
   assert(Declarator.isFunctionDeclarator() && "Isn't a function declarator");
@@ -1451,7 +1459,7 @@ ExprResult Parser::ParseSimpleAsm(SourceLocation *EndLoc) {
   return Result;
 }
 
-/// Get the TemplateIdAnnotation from the token and put it in the
+/// \brief Get the TemplateIdAnnotation from the token and put it in the
 /// cleanup pool so that it gets destroyed when parsing the current top level
 /// declaration is finished.
 TemplateIdAnnotation *Parser::takeTemplateIdAnnotation(const Token &tok) {
@@ -1479,7 +1487,7 @@ void Parser::AnnotateScopeToken(CXXScopeSpec &SS, bool IsNewAnnotation) {
     PP.AnnotateCachedTokens(Tok);
 }
 
-/// Attempt to classify the name at the current token position. This may
+/// \brief Attempt to classify the name at the current token position. This may
 /// form a type, scope or primary expression annotation, or replace the token
 /// with a typo-corrected keyword. This is only appropriate when the current
 /// name must refer to an entity which has already been declared.
@@ -1764,7 +1772,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation);
 }
 
-/// Try to annotate a type or scope token, having already parsed an
+/// \brief Try to annotate a type or scope token, having already parsed an
 /// optional scope specifier. \p IsNewScope should be \c true unless the scope
 /// specifier was extracted from an existing tok::annot_cxxscope annotation.
 bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
@@ -1775,8 +1783,8 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
             *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), &SS,
             false, NextToken().is(tok::period), nullptr,
             /*IsCtorOrDtorName=*/false,
-            /*NonTrivialTypeSourceInfo*/true,
-            /*IsClassTemplateDeductionContext*/true)) {
+            /*NonTrivialTypeSourceInfo*/ true,
+            /*IsClassTemplateDeductionContext*/GreaterThanIsOperator)) {
       SourceLocation BeginLoc = Tok.getLocation();
       if (SS.isNotEmpty()) // it was a C++ qualified type name.
         BeginLoc = SS.getBeginLoc();
@@ -2002,7 +2010,7 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   if (ParseUnqualifiedId(
           Result.SS, /*EnteringContext*/false, /*AllowDestructorName*/true,
           /*AllowConstructorName*/true, /*AllowDeductionGuide*/false, nullptr,
-          &TemplateKWLoc, Result.Name)) {
+          TemplateKWLoc, Result.Name)) {
     T.skipToEnd();
     return true;
   }
@@ -2185,7 +2193,7 @@ bool Parser::ParseModuleName(
   }
 }
 
-/// Try recover parser when module annotation appears where it must not
+/// \brief Try recover parser when module annotation appears where it must not
 /// be found.
 /// \returns false if the recover was successful and parsing may be continued, or
 /// true if parser must bail out to top level and handle the token there.
@@ -2250,7 +2258,7 @@ bool BalancedDelimiterTracker::expectAndConsume(unsigned DiagID,
     return true;
   }
 
-  if (getDepth() < P.getLangOpts().BracketDepth)
+  if (getDepth() < MaxDepth)
     return false;
     
   return diagnoseOverflow();

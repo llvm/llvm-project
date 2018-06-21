@@ -104,7 +104,7 @@ static void checkPropertyDeclWithOwnership(Sema &S,
     << propertyLifetime;
 }
 
-/// Check this Objective-C property against a property declared in the
+/// \brief Check this Objective-C property against a property declared in the
 /// given protocol.
 static void
 CheckPropertyAgainstProtocol(Sema &S, ObjCPropertyDecl *Prop,
@@ -618,7 +618,7 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
     TInfo = Context.getTrivialTypeSourceInfo(T, TLoc);
   }
 
-  DeclContext *DC = CDecl;
+  DeclContext *DC = cast<DeclContext>(CDecl);
   ObjCPropertyDecl *PDecl = ObjCPropertyDecl::Create(Context, DC,
                                                      FD.D.getIdentifierLoc(),
                                                      PropertyId, AtLoc, 
@@ -644,14 +644,14 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
     PDecl->setInvalidDecl();
   }
 
-  ProcessDeclAttributes(S, PDecl, FD.D);
-
   // Regardless of setter/getter attribute, we save the default getter/setter
   // selector names in anticipation of declaration of setter/getter methods.
   PDecl->setGetterName(GetterSel, GetterNameLoc);
   PDecl->setSetterName(SetterSel, SetterNameLoc);
   PDecl->setPropertyAttributesAsWritten(
                           makePropertyAttributesAsWritten(AttributesAsWritten));
+
+  ProcessDeclAttributes(S, PDecl, FD.D);
 
   if (Attributes & ObjCDeclSpec::DQ_PR_readonly)
     PDecl->setPropertyAttributes(ObjCPropertyDecl::OBJC_PR_readonly);
@@ -897,24 +897,14 @@ SelectPropertyForSynthesisFromProtocols(Sema &S, SourceLocation AtLoc,
                                                  : HasUnexpectedAttribute;
         Mismatches.push_back({Prop, Kind, AttributeName});
       };
-      // The ownership might be incompatible unless the property has no explicit
-      // ownership.
-      bool HasOwnership = (Attr & (ObjCPropertyDecl::OBJC_PR_retain |
-                                   ObjCPropertyDecl::OBJC_PR_strong |
-                                   ObjCPropertyDecl::OBJC_PR_copy |
-                                   ObjCPropertyDecl::OBJC_PR_assign |
-                                   ObjCPropertyDecl::OBJC_PR_unsafe_unretained |
-                                   ObjCPropertyDecl::OBJC_PR_weak)) != 0;
-      if (HasOwnership &&
-          isIncompatiblePropertyAttribute(OriginalAttributes, Attr,
+      if (isIncompatiblePropertyAttribute(OriginalAttributes, Attr,
                                           ObjCPropertyDecl::OBJC_PR_copy)) {
         Diag(OriginalAttributes & ObjCPropertyDecl::OBJC_PR_copy, "copy");
         continue;
       }
-      if (HasOwnership && areIncompatiblePropertyAttributes(
-                              OriginalAttributes, Attr,
-                              ObjCPropertyDecl::OBJC_PR_retain |
-                                  ObjCPropertyDecl::OBJC_PR_strong)) {
+      if (areIncompatiblePropertyAttributes(
+              OriginalAttributes, Attr, ObjCPropertyDecl::OBJC_PR_retain |
+                                            ObjCPropertyDecl::OBJC_PR_strong)) {
         Diag(OriginalAttributes & (ObjCPropertyDecl::OBJC_PR_retain |
                                    ObjCPropertyDecl::OBJC_PR_strong),
              "retain (or strong)");
@@ -1829,7 +1819,7 @@ static bool SuperClassImplementsProperty(ObjCInterfaceDecl *IDecl,
   return false;
 }
 
-/// Default synthesizes all properties which must be synthesized
+/// \brief Default synthesizes all properties which must be synthesized
 /// in class's \@implementation.
 void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl *IMPDecl,
                                        ObjCInterfaceDecl *IDecl,
@@ -2416,6 +2406,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
           SectionAttr::CreateImplicit(Context, SectionAttr::GNU_section,
                                       SA->getName(), Loc));
 
+    ProcessAPINotes(GetterMethod);
+
     if (getLangOpts().ObjCAutoRefCount)
       CheckARCMethodDecl(GetterMethod);
   } else
@@ -2481,6 +2473,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
         SetterMethod->addAttr(
             SectionAttr::CreateImplicit(Context, SectionAttr::GNU_section,
                                         SA->getName(), Loc));
+
+    ProcessAPINotes(SetterMethod);
+
       // It's possible for the user to have set a very odd custom
       // setter selector that causes it to have a method family.
       if (getLangOpts().ObjCAutoRefCount)

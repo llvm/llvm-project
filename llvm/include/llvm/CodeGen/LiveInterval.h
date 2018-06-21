@@ -609,7 +609,7 @@ namespace llvm {
     void print(raw_ostream &OS) const;
     void dump() const;
 
-    /// Walk the range and assert if any invariants fail to hold.
+    /// \brief Walk the range and assert if any invariants fail to hold.
     ///
     /// Note that this is a no-op when asserts are disabled.
 #ifdef NDEBUG
@@ -802,7 +802,7 @@ namespace llvm {
     void print(raw_ostream &OS) const;
     void dump() const;
 
-    /// Walks the interval and assert if any invariants fail to hold.
+    /// \brief Walks the interval and assert if any invariants fail to hold.
     ///
     /// Note that this is a no-op when asserts are disabled.
 #ifdef NDEBUG

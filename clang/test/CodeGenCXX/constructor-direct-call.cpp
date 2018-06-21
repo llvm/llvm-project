@@ -9,7 +9,7 @@ void f1() {
   Test1 var;
   var.Test1::Test1();
 
-  // CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %{{.*}}, i8* align 4 %{{.*}}, i32 4, i1 false)
+  // CHECK:   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %{{.*}}, i8* %{{.*}}, i32 4, i32 4, i1 false)
   var.Test1::Test1(var);
 }
 
@@ -28,7 +28,7 @@ void f2() {
   // CHECK-NEXT:  call x86_thiscallcc void @_ZN5Test2C1Ev(%class.Test2* %var)
   var.Test2::Test2();
 
-  // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %{{.*}}, i8* align 4 %{{.*}}, i32 8, i1 false)
+  // CHECK:  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %{{.*}}, i8* %{{.*}}, i32 8, i32 4, i1 false)
   var.Test2::Test2(var);
 }
 

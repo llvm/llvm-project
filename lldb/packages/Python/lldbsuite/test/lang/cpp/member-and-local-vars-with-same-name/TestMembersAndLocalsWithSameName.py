@@ -155,7 +155,9 @@ class TestMembersAndLocalsWithSameName(TestBase):
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame.IsValid())
 
+        self.enable_expression_log()
         val = frame.EvaluateExpression("a")
+        self.disable_expression_log_and_check_for_locals(['a'])
         self.assertTrue(val.IsValid())
         self.assertEqual(val.GetValueAsUnsigned(), 12345)
 
@@ -189,6 +191,12 @@ class TestMembersAndLocalsWithSameName(TestBase):
         self.assertTrue(val.IsValid())
         self.assertEqual(val.GetValueAsUnsigned(), 10003)
 
+        self.enable_expression_log()
+        val = frame.EvaluateExpression("c-b")
+        self.disable_expression_log_and_check_for_locals(['c','b'])
+        self.assertTrue(val.IsValid())
+        self.assertEqual(val.GetValueAsUnsigned(), 1)
+
         self.process.Continue()
         self.assertTrue(
             self.process.GetState() == lldb.eStateStopped,
@@ -210,6 +218,13 @@ class TestMembersAndLocalsWithSameName(TestBase):
         val = frame.EvaluateExpression("c")
         self.assertTrue(val.IsValid())
         self.assertEqual(val.GetValueAsUnsigned(), 778899)
+
+        self.enable_expression_log()
+        val = frame.EvaluateExpression("a+b")
+        self.disable_expression_log_and_check_for_locals(['a','b'])
+        self.assertTrue(val.IsValid())
+        self.assertEqual(val.GetValueAsUnsigned(), 3)
+
 
     def _load_exe(self):
         self.build()
@@ -234,7 +249,9 @@ class TestMembersAndLocalsWithSameName(TestBase):
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame.IsValid())
 
+        self.enable_expression_log()
         val = frame.EvaluateExpression("a")
+        self.disable_expression_log_and_check_for_locals([])
         self.assertTrue(val.IsValid())
         self.assertEqual(val.GetValueAsUnsigned(), 112233)
 
@@ -245,3 +262,23 @@ class TestMembersAndLocalsWithSameName(TestBase):
         val = frame.EvaluateExpression("c")
         self.assertTrue(val.IsValid())
         self.assertEqual(val.GetValueAsUnsigned(), 778899)
+
+    def enable_expression_log(self):
+        log_file = os.path.join(self.getBuildDir(), "expr.log")
+        self.runCmd("log enable  -f '%s' lldb expr" % (log_file))
+
+    def disable_expression_log_and_check_for_locals(self, variables):
+        log_file = os.path.join(self.getBuildDir(), "expr.log")
+        self.runCmd("log disable lldb expr")
+        local_var_regex = re.compile(r".*__lldb_local_vars::(.*);")
+        matched = []
+        with open(log_file, 'r') as log:
+            for line in log:
+                if line.find('LLDB_BODY_START') != -1:
+                    break
+                m = re.match(local_var_regex, line)
+                if m:
+                    self.assertIn(m.group(1), variables)
+                    matched.append(m.group(1))
+        self.assertEqual([item for item in variables if item not in matched],
+                         [])

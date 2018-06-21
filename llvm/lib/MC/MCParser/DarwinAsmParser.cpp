@@ -40,7 +40,7 @@ using namespace llvm;
 
 namespace {
 
-/// Implementation of directive handling which is shared across all
+/// \brief Implementation of directive handling which is shared across all
 /// Darwin targets.
 class DarwinAsmParser : public MCAsmParserExtension {
   template<bool (DarwinAsmParser::*HandlerMethod)(StringRef, SMLoc)>

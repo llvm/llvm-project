@@ -5,16 +5,16 @@ set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSRevision.h")
 
 set(get_svn_script "${LLVM_CMAKE_PATH}/GenerateVersionFromCVS.cmake")
 
-file(WRITE "${version_inc}.undef" "#undef LLVM_REVISION\n")
+file(WRITE "${version_inc}.empty" "")
 if((DEFINED llvm_vc) AND LLVM_APPEND_VC_REV)
 
   execute_process(COMMAND ${CMAKE_COMMAND} -E compare_files
-      "${version_inc}.undef" "${version_inc}"
+      "${version_inc}.empty" "${version_inc}"
       RESULT_VARIABLE files_not_equal
       OUTPUT_QUIET
       ERROR_QUIET)
-  # Remove ${version_inc} if it doesn't define a revision. This will force it
-  # to be regenerated when toggling LLVM_APPEND_VC_REV from OFF to ON.
+  # Remove ${version_inc} if it's empty -- toggling LLVM_APPEND_VC_REV
+  # from OFF to ON.
   if(NOT files_not_equal)
     file(REMOVE "${version_inc}")
   endif()
@@ -28,11 +28,11 @@ if((DEFINED llvm_vc) AND LLVM_APPEND_VC_REV)
                      "-DHEADER_FILE=${version_inc}"
                      -P "${get_svn_script}")
 else()
-  # Make sure ${version_inc} doesn't define a revision
+  # Make sure ${version_inc} is an empty file.
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${version_inc}.undef" "${version_inc}")
+    "${version_inc}.empty" "${version_inc}")
 endif()
-file(REMOVE "${version_inc}.undef")
+file(REMOVE "${version_inc}.empty")
 
 # Mark the generated header as being generated.
 set_source_files_properties("${version_inc}"

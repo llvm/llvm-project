@@ -669,11 +669,12 @@ void MachODumper::printStackMap() const {
       StackMapContents.size());
 
   if (Obj->isLittleEndian())
-    prettyPrintStackMap(
-        W, StackMapV2Parser<support::little>(StackMapContentsArray));
+     prettyPrintStackMap(
+                      llvm::outs(),
+                      StackMapV2Parser<support::little>(StackMapContentsArray));
   else
-    prettyPrintStackMap(W,
-                        StackMapV2Parser<support::big>(StackMapContentsArray));
+     prettyPrintStackMap(llvm::outs(),
+                         StackMapV2Parser<support::big>(StackMapContentsArray));
 }
 
 void MachODumper::printNeededLibraries() {

@@ -87,8 +87,6 @@ GetFlattenedSpellings(const Record &Attr) {
     } else if (Variety == "Clang") {
       Ret.emplace_back("GNU", Name, "", false);
       Ret.emplace_back("CXX11", Name, "clang", false);
-      if (Spelling->getValueAsBit("AllowInC"))
-        Ret.emplace_back("C2x", Name, "clang", false);
     } else
       Ret.push_back(FlattenedSpelling(*Spelling));
   }
@@ -104,7 +102,6 @@ static std::string ReadPCHRecord(StringRef type) {
     .Case("Expr *", "Record.readExpr()")
     .Case("IdentifierInfo *", "Record.getIdentifierInfo()")
     .Case("StringRef", "Record.readString()")
-    .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
     .Default("Record.readInt()");
 }
 
@@ -123,7 +120,6 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
     .Case("Expr *", "AddStmt(" + std::string(name) + ");\n")
     .Case("IdentifierInfo *", "AddIdentifierRef(" + std::string(name) + ");\n")
     .Case("StringRef", "AddString(" + std::string(name) + ");\n")
-    .Case("ParamIdx", "push_back(" + std::string(name) + ".serialize());\n")
     .Default("push_back(" + std::string(name) + ");\n");
 }
 
@@ -233,7 +229,6 @@ namespace {
     virtual void writePCHReadArgs(raw_ostream &OS) const = 0;
     virtual void writePCHReadDecls(raw_ostream &OS) const = 0;
     virtual void writePCHWrite(raw_ostream &OS) const = 0;
-    virtual std::string getIsOmitted() const { return "false"; }
     virtual void writeValue(raw_ostream &OS) const = 0;
     virtual void writeDump(raw_ostream &OS) const = 0;
     virtual void writeDumpChildren(raw_ostream &OS) const {}
@@ -301,29 +296,23 @@ namespace {
                                            std::string(getUpperName()) + "()");
     }
 
-    std::string getIsOmitted() const override {
-      if (type == "IdentifierInfo *")
-        return "!get" + getUpperName().str() + "()";
-      if (type == "ParamIdx")
-        return "!get" + getUpperName().str() + "().isValid()";
-      return "false";
-    }
-
     void writeValue(raw_ostream &OS) const override {
-      if (type == "FunctionDecl *")
+      if (type == "FunctionDecl *") {
         OS << "\" << get" << getUpperName()
            << "()->getNameInfo().getAsString() << \"";
-      else if (type == "IdentifierInfo *")
-        // Some non-optional (comma required) identifier arguments can be the
-        // empty string but are then recorded as a nullptr.
-        OS << "\" << (get" << getUpperName() << "() ? get" << getUpperName()
-           << "()->getName() : \"\") << \"";
-      else if (type == "TypeSourceInfo *")
+      } else if (type == "IdentifierInfo *") {
+        OS << "\";\n";
+        if (isOptional())
+          OS << "    if (get" << getUpperName() << "()) ";
+        else
+          OS << "    ";
+        OS << "OS << get" << getUpperName() << "()->getName();\n";
+        OS << "    OS << \"";
+      } else if (type == "TypeSourceInfo *") {
         OS << "\" << get" << getUpperName() << "().getAsString() << \"";
-      else if (type == "ParamIdx")
-        OS << "\" << get" << getUpperName() << "().getSourceIndex() << \"";
-      else
+      } else {
         OS << "\" << get" << getUpperName() << "() << \"";
+      }
     }
 
     void writeDump(raw_ostream &OS) const override {
@@ -331,10 +320,9 @@ namespace {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n"; 
       } else if (type == "IdentifierInfo *") {
-        // Some non-optional (comma required) identifier arguments can be the
-        // empty string but are then recorded as a nullptr.
-        OS << "    if (SA->get" << getUpperName() << "())\n"
-           << "      OS << \" \" << SA->get" << getUpperName()
+        if (isOptional())
+          OS << "    if (SA->get" << getUpperName() << "())\n  ";
+        OS << "    OS << \" \" << SA->get" << getUpperName()
            << "()->getName();\n";
       } else if (type == "TypeSourceInfo *") {
         OS << "    OS << \" \" << SA->get" << getUpperName()
@@ -344,11 +332,6 @@ namespace {
            << getUpperName() << "\";\n";
       } else if (type == "int" || type == "unsigned") {
         OS << "    OS << \" \" << SA->get" << getUpperName() << "();\n";
-      } else if (type == "ParamIdx") {
-        if (isOptional())
-          OS << "    if (SA->get" << getUpperName() << "().isValid())\n  ";
-        OS << "    OS << \" \" << SA->get" << getUpperName()
-           << "().getSourceIndex();\n";
       } else {
         llvm_unreachable("Unknown SimpleArgument type!");
       }
@@ -591,15 +574,12 @@ namespace {
          << "Type());\n";
     }
 
-    std::string getIsOmitted() const override {
-      return "!is" + getLowerName().str() + "Expr || !" + getLowerName().str()
-             + "Expr";
-    }
-
     void writeValue(raw_ostream &OS) const override {
       OS << "\";\n";
-      OS << "    " << getLowerName()
-         << "Expr->printPretty(OS, nullptr, Policy);\n";
+      // The aligned attribute argument expression is optional.
+      OS << "    if (is" << getLowerName() << "Expr && "
+         << getLowerName() << "Expr)\n";
+      OS << "      " << getLowerName() << "Expr->printPretty(OS, nullptr, Policy);\n";
       OS << "    OS << \"";
     }
 
@@ -625,10 +605,6 @@ namespace {
     // Assumed to receive a parameter: raw_ostream OS.
     virtual void writeValueImpl(raw_ostream &OS) const {
       OS << "    OS << Val;\n";
-    }
-    // Assumed to receive a parameter: raw_ostream OS.
-    virtual void writeDumpImpl(raw_ostream &OS) const {
-      OS << "      OS << \" \" << Val;\n";
     }
 
   public:
@@ -756,22 +732,7 @@ namespace {
 
     void writeDump(raw_ostream &OS) const override {
       OS << "    for (const auto &Val : SA->" << RangeName << "())\n";
-      writeDumpImpl(OS);
-    }
-  };
-
-  class VariadicParamIdxArgument : public VariadicArgument {
-  public:
-    VariadicParamIdxArgument(const Record &Arg, StringRef Attr)
-        : VariadicArgument(Arg, Attr, "ParamIdx") {}
-
-  public:
-    void writeValueImpl(raw_ostream &OS) const override {
-      OS << "    OS << Val.getSourceIndex();\n";
-    }
-
-    void writeDumpImpl(raw_ostream &OS) const override {
-      OS << "      OS << \" \" << Val.getSourceIndex();\n";
+      OS << "      OS << \" \" << Val;\n";
     }
   };
 
@@ -1227,6 +1188,32 @@ namespace {
     }
   };
 
+  class AttrArgument : public SimpleArgument {
+  public:
+    AttrArgument(const Record &Arg, StringRef Attr)
+      : SimpleArgument(Arg, Attr, "Attr *")
+    {}
+
+    void writePCHReadDecls(raw_ostream &OS) const override {
+      OS << "    AttrVec vec;\n"
+            "    ReadAttributes(Record, vec);\n"
+            "    assert(vec.size() == 1);\n"
+            "    Attr *" << getLowerName() << " = vec.front();";
+    }
+
+    void writePCHWrite(raw_ostream &OS) const override {
+      OS << "    AddAttributes(SA->get" << getUpperName() << "());";
+    }
+
+    void writeDump(raw_ostream &OS) const override {}
+  
+    void writeDumpChildren(raw_ostream &OS) const override {
+      OS << "    dumpAttr(SA->get" << getUpperName() << "());\n";
+    }
+
+    void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
+  };
+
 } // end anonymous namespace
 
 static std::unique_ptr<Argument>
@@ -1274,12 +1261,10 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<VariadicEnumArgument>(Arg, Attr);
   else if (ArgName == "VariadicExprArgument")
     Ptr = llvm::make_unique<VariadicExprArgument>(Arg, Attr);
-  else if (ArgName == "VariadicParamIdxArgument")
-    Ptr = llvm::make_unique<VariadicParamIdxArgument>(Arg, Attr);
-  else if (ArgName == "ParamIdxArgument")
-    Ptr = llvm::make_unique<SimpleArgument>(Arg, Attr, "ParamIdx");
   else if (ArgName == "VersionArgument")
     Ptr = llvm::make_unique<VersionArgument>(Arg, Attr);
+  else if (ArgName == "AttrArgument")
+    Ptr = llvm::make_unique<AttrArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
@@ -1409,7 +1394,7 @@ writePrettyPrintFunction(Record &R,
       "    OS << \"" << Prefix << Spelling;
 
     if (Variety == "Pragma") {
-      OS << "\";\n";
+      OS << " \";\n";
       OS << "    printPrettyPragma(OS, Policy);\n";
       OS << "    OS << \"\\n\";";
       OS << "    break;\n";
@@ -1417,83 +1402,33 @@ writePrettyPrintFunction(Record &R,
       continue;
     }
 
+    // Fake arguments aren't part of the parsed form and should not be
+    // pretty-printed.
+    bool hasNonFakeArgs = llvm::any_of(
+        Args, [](const std::unique_ptr<Argument> &A) { return !A->isFake(); });
+
+    // FIXME: always printing the parenthesis isn't the correct behavior for
+    // attributes which have optional arguments that were not provided. For
+    // instance: __attribute__((aligned)) will be pretty printed as
+    // __attribute__((aligned())). The logic should check whether there is only
+    // a single argument, and if it is optional, whether it has been provided.
+    if (hasNonFakeArgs)
+      OS << "(";
     if (Spelling == "availability") {
-      OS << "(";
       writeAvailabilityValue(OS);
-      OS << ")";
     } else if (Spelling == "deprecated" || Spelling == "gnu::deprecated") {
-      OS << "(";
-      writeDeprecatedAttrValue(OS, Variety);
-      OS << ")";
+        writeDeprecatedAttrValue(OS, Variety);
     } else {
-      // To avoid printing parentheses around an empty argument list or
-      // printing spurious commas at the end of an argument list, we need to
-      // determine where the last provided non-fake argument is.
-      unsigned NonFakeArgs = 0;
-      unsigned TrailingOptArgs = 0;
-      bool FoundNonOptArg = false;
-      for (const auto &arg : llvm::reverse(Args)) {
-        if (arg->isFake())
-          continue;
-        ++NonFakeArgs;
-        if (FoundNonOptArg)
-          continue;
-        // FIXME: arg->getIsOmitted() == "false" means we haven't implemented
-        // any way to detect whether the argument was omitted.
-        if (!arg->isOptional() || arg->getIsOmitted() == "false") {
-          FoundNonOptArg = true;
-          continue;
-        }
-        if (!TrailingOptArgs++)
-          OS << "\";\n"
-             << "    unsigned TrailingOmittedArgs = 0;\n";
-        OS << "    if (" << arg->getIsOmitted() << ")\n"
-           << "      ++TrailingOmittedArgs;\n";
-      }
-      if (TrailingOptArgs)
-        OS << "    OS << \"";
-      if (TrailingOptArgs < NonFakeArgs)
-        OS << "(";
-      else if (TrailingOptArgs)
-        OS << "\";\n"
-           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
-           << "       OS << \"(\";\n"
-           << "    OS << \"";
-      unsigned ArgIndex = 0;
+      unsigned index = 0;
       for (const auto &arg : Args) {
-        if (arg->isFake())
-          continue;
-        if (ArgIndex) {
-          if (ArgIndex >= NonFakeArgs - TrailingOptArgs)
-            OS << "\";\n"
-               << "    if (" << ArgIndex << " < " << NonFakeArgs
-               << " - TrailingOmittedArgs)\n"
-               << "      OS << \", \";\n"
-               << "    OS << \"";
-          else
-            OS << ", ";
-        }
-        std::string IsOmitted = arg->getIsOmitted();
-        if (arg->isOptional() && IsOmitted != "false")
-          OS << "\";\n"
-             << "    if (!(" << IsOmitted << ")) {\n"
-             << "      OS << \"";
+        if (arg->isFake()) continue;
+        if (index++) OS << ", ";
         arg->writeValue(OS);
-        if (arg->isOptional() && IsOmitted != "false")
-          OS << "\";\n"
-             << "    }\n"
-             << "    OS << \"";
-        ++ArgIndex;
       }
-      if (TrailingOptArgs < NonFakeArgs)
-        OS << ")";
-      else if (TrailingOptArgs)
-        OS << "\";\n"
-           << "    if (TrailingOmittedArgs < " << NonFakeArgs << ")\n"
-           << "       OS << \")\";\n"
-           << "    OS << \"";
     }
 
+    if (hasNonFakeArgs)
+      OS << ")";
     OS << Suffix + "\";\n";
 
     OS <<
@@ -1507,7 +1442,7 @@ writePrettyPrintFunction(Record &R,
   OS << "}\n\n";
 }
 
-/// Return the index of a spelling in a spelling list.
+/// \brief Return the index of a spelling in a spelling list.
 static unsigned
 getSpellingListIndex(const std::vector<FlattenedSpelling> &SpellingList,
                      const FlattenedSpelling &Spelling) {
@@ -2056,7 +1991,7 @@ static void forEachUniqueSpelling(const Record &Attr, Fn &&F) {
   }
 }
 
-/// Emits the first-argument-is-type property for attributes.
+/// \brief Emits the first-argument-is-type property for attributes.
 static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#if defined(CLANG_ATTR_TYPE_ARG_LIST)\n";
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
@@ -2078,7 +2013,7 @@ static void emitClangAttrTypeArgList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // CLANG_ATTR_TYPE_ARG_LIST\n\n";
 }
 
-/// Emits the parse-arguments-in-unevaluated-context property for
+/// \brief Emits the parse-arguments-in-unevaluated-context property for
 /// attributes.
 static void emitClangAttrArgContextList(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#if defined(CLANG_ATTR_ARG_CONTEXT_LIST)\n";
@@ -2156,14 +2091,10 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
     ArrayRef<std::pair<Record *, SMRange>> Supers = R.getSuperClasses();
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
-    bool Inheritable = false;
     for (const auto &Super : llvm::reverse(Supers)) {
       const Record *R = Super.first;
-      if (R->getName() != "TargetSpecificAttr" &&
-          R->getName() != "DeclOrTypeAttr" && SuperName.empty())
+      if (R->getName() != "TargetSpecificAttr" && SuperName.empty())
         SuperName = R->getName();
-      if (R->getName() == "InheritableAttr")
-        Inheritable = true;
     }
 
     OS << "class " << R.getName() << "Attr : public " << SuperName << " {\n";
@@ -2257,13 +2188,8 @@ void EmitClangAttrClass(RecordKeeper &Records, raw_ostream &OS) {
 
       OS << "             )\n";
       OS << "    : " << SuperName << "(attr::" << R.getName() << ", R, SI, "
-         << ( R.getValueAsBit("LateParsed") ? "true" : "false" );
-      if (Inheritable) {
-        OS << ", "
-           << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
-                                                              : "false");
-      }
-      OS << ")\n";
+         << ( R.getValueAsBit("LateParsed") ? "true" : "false" ) << ", "
+         << ( R.getValueAsBit("DuplicatesAllowedWhileMerging") ? "true" : "false" ) << ")\n";
 
       for (auto const &ai : Args) {
         OS << "              , ";
@@ -3529,9 +3455,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     emitArgInfo(*I->second, SS);
     SS << ", " << I->second->getValueAsBit("HasCustomParsing");
     SS << ", " << I->second->isSubClassOf("TargetSpecificAttr");
-    SS << ", "
-       << (I->second->isSubClassOf("TypeAttr") ||
-           I->second->isSubClassOf("DeclOrTypeAttr"));
+    SS << ", " << I->second->isSubClassOf("TypeAttr");
     SS << ", " << I->second->isSubClassOf("StmtAttr");
     SS << ", " << IsKnownToGCC(*I->second);
     SS << ", " << PragmaAttributeSupport.isAttributedSupported(*I->second);
@@ -3857,8 +3781,8 @@ static void WriteDocumentation(RecordKeeper &Records,
     const Record &Deprecated = *Doc.Documentation->getValueAsDef("Deprecated");
     const StringRef Replacement = Deprecated.getValueAsString("Replacement");
     if (!Replacement.empty())
-      OS << "  This attribute has been superseded by ``" << Replacement
-         << "``.";
+      OS << "  This attribute has been superseded by ``"
+         << Replacement << "``.";
     OS << "\n\n";
   }
 
@@ -3911,9 +3835,9 @@ void EmitClangAttrDocs(RecordKeeper &Records, raw_ostream &OS) {
   for (auto &I : SplitDocs) {
     WriteCategoryHeader(I.first, OS);
 
-    llvm::sort(I.second.begin(), I.second.end(),
-               [](const DocumentationData &D1, const DocumentationData &D2) {
-                 return D1.Heading < D2.Heading;
+    std::sort(I.second.begin(), I.second.end(),
+              [](const DocumentationData &D1, const DocumentationData &D2) {
+                return D1.Heading < D2.Heading;
               });
 
     // Walk over each of the attributes in the category and write out their

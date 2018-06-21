@@ -46,7 +46,6 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   case X86::reloc_signed_4byte:
   case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:
-  case X86::reloc_branch_4byte_pcrel:
   case FK_SecRel_4:
   case FK_Data_4:
     return 2;
@@ -68,10 +67,19 @@ public:
 };
 
 class X86AsmBackend : public MCAsmBackend {
-  const MCSubtargetInfo &STI;
+  const StringRef CPU;
+  bool HasNopl;
+  const uint64_t MaxNopLength;
 public:
-  X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
-      : MCAsmBackend(support::little), STI(STI) {}
+  X86AsmBackend(const Target &T, StringRef CPU)
+      : MCAsmBackend(), CPU(CPU),
+        MaxNopLength((CPU == "slm" || CPU == "silvermont") ? 7 : 15) {
+    HasNopl = CPU != "generic" && CPU != "i386" && CPU != "i486" &&
+              CPU != "i586" && CPU != "pentium" && CPU != "pentium-mmx" &&
+              CPU != "i686" && CPU != "k6" && CPU != "k6-2" && CPU != "k6-3" &&
+              CPU != "geode" && CPU != "winchip-c6" && CPU != "winchip2" &&
+              CPU != "c3" && CPU != "c3-2" && CPU != "lakemont" && CPU != "";
+  }
 
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
@@ -87,7 +95,6 @@ public:
         {"reloc_signed_4byte_relax", 0, 32, 0},
         {"reloc_global_offset_table", 0, 32, 0},
         {"reloc_global_offset_table8", 0, 64, 0},
-        {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
     };
 
     if (Kind < FirstTargetFixupKind)
@@ -95,14 +102,12 @@ public:
 
     assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
            "Invalid kind!");
-    assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
     return Infos[Kind - FirstTargetFixupKind];
   }
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t Value, bool IsResolved) const override {
     unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
 
     assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
@@ -118,8 +123,7 @@ public:
       Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override;
+  bool mayNeedRelaxation(const MCInst &Inst) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -128,7 +132,7 @@ public:
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
                         MCInst &Res) const override;
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
+  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };
 } // end anonymous namespace
 
@@ -266,8 +270,7 @@ static unsigned getRelaxedOpcode(const MCInst &Inst, bool is16BitMode) {
   return getRelaxedOpcodeBranch(Inst, is16BitMode);
 }
 
-bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                                      const MCSubtargetInfo &STI) const {
+bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
   // Branches can always be relaxed in either mode.
   if (getRelaxedOpcodeBranch(Inst, false) != Inst.getOpcode())
     return true;
@@ -315,61 +318,52 @@ void X86AsmBackend::relaxInstruction(const MCInst &Inst,
   Res.setOpcode(RelaxedOp);
 }
 
-/// Write a sequence of optimal nops to the output, covering \p Count
+/// \brief Write a sequence of optimal nops to the output, covering \p Count
 /// bytes.
 /// \return - true on success, false on failure
-bool X86AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count) const {
-  static const char Nops[10][11] = {
+bool X86AsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
+  static const uint8_t Nops[10][10] = {
     // nop
-    "\x90",
+    {0x90},
     // xchg %ax,%ax
-    "\x66\x90",
+    {0x66, 0x90},
     // nopl (%[re]ax)
-    "\x0f\x1f\x00",
+    {0x0f, 0x1f, 0x00},
     // nopl 0(%[re]ax)
-    "\x0f\x1f\x40\x00",
+    {0x0f, 0x1f, 0x40, 0x00},
     // nopl 0(%[re]ax,%[re]ax,1)
-    "\x0f\x1f\x44\x00\x00",
+    {0x0f, 0x1f, 0x44, 0x00, 0x00},
     // nopw 0(%[re]ax,%[re]ax,1)
-    "\x66\x0f\x1f\x44\x00\x00",
+    {0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00},
     // nopl 0L(%[re]ax)
-    "\x0f\x1f\x80\x00\x00\x00\x00",
+    {0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00},
     // nopl 0L(%[re]ax,%[re]ax,1)
-    "\x0f\x1f\x84\x00\x00\x00\x00\x00",
+    {0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
     // nopw 0L(%[re]ax,%[re]ax,1)
-    "\x66\x0f\x1f\x84\x00\x00\x00\x00\x00",
+    {0x66, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
     // nopw %cs:0L(%[re]ax,%[re]ax,1)
-    "\x66\x2e\x0f\x1f\x84\x00\x00\x00\x00\x00",
+    {0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00},
   };
 
   // This CPU doesn't support long nops. If needed add more.
+  // FIXME: Can we get this from the subtarget somehow?
   // FIXME: We could generated something better than plain 0x90.
-  if (!STI.getFeatureBits()[X86::FeatureNOPL]) {
+  if (!HasNopl) {
     for (uint64_t i = 0; i < Count; ++i)
-      OS << '\x90';
+      OW->write8(0x90);
     return true;
   }
 
-  // 15-bytes is the longest single NOP instruction, but 10-bytes is
-  // commonly the longest that can be efficiently decoded.
-  uint64_t MaxNopLength = 10;
-  if (STI.getFeatureBits()[X86::ProcIntelSLM])
-    MaxNopLength = 7;
-  else if (STI.getFeatureBits()[X86::FeatureFast15ByteNOP])
-    MaxNopLength = 15;
-  else if (STI.getFeatureBits()[X86::FeatureFast11ByteNOP])
-    MaxNopLength = 11;
-
-  // Emit as many MaxNopLength NOPs as needed, then emit a NOP of the remaining
-  // length.
+  // 15 is the longest single nop instruction.  Emit as many 15-byte nops as
+  // needed, then emit a nop of the remaining length.
   do {
     const uint8_t ThisNopLength = (uint8_t) std::min(Count, MaxNopLength);
     const uint8_t Prefixes = ThisNopLength <= 10 ? 0 : ThisNopLength - 10;
     for (uint8_t i = 0; i < Prefixes; i++)
-      OS << '\x66';
+      OW->write8(0x66);
     const uint8_t Rest = ThisNopLength - Prefixes;
-    if (Rest != 0)
-      OS.write(Nops[Rest - 1], Rest);
+    for (uint8_t i = 0; i < Rest; i++)
+      OW->write8(Nops[Rest - 1][i]);
     Count -= ThisNopLength;
   } while (Count != 0);
 
@@ -383,57 +377,53 @@ namespace {
 class ELFX86AsmBackend : public X86AsmBackend {
 public:
   uint8_t OSABI;
-  ELFX86AsmBackend(const Target &T, uint8_t OSABI, const MCSubtargetInfo &STI)
-      : X86AsmBackend(T, STI), OSABI(OSABI) {}
+  ELFX86AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
+      : X86AsmBackend(T, CPU), OSABI(OSABI) {}
 };
 
 class ELFX86_32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_32AsmBackend(const Target &T, uint8_t OSABI,
-                      const MCSubtargetInfo &STI)
-    : ELFX86AsmBackend(T, OSABI, STI) {}
+  ELFX86_32AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
+    : ELFX86AsmBackend(T, OSABI, CPU) {}
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86ELFObjectWriter(/*IsELF64*/ false, OSABI, ELF::EM_386);
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createX86ELFObjectWriter(OS, /*IsELF64*/ false, OSABI, ELF::EM_386);
   }
 };
 
 class ELFX86_X32AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_X32AsmBackend(const Target &T, uint8_t OSABI,
-                       const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(T, OSABI, STI) {}
+  ELFX86_X32AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
+      : ELFX86AsmBackend(T, OSABI, CPU) {}
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86ELFObjectWriter(/*IsELF64*/ false, OSABI,
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createX86ELFObjectWriter(OS, /*IsELF64*/ false, OSABI,
                                     ELF::EM_X86_64);
   }
 };
 
 class ELFX86_IAMCUAsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_IAMCUAsmBackend(const Target &T, uint8_t OSABI,
-                         const MCSubtargetInfo &STI)
-      : ELFX86AsmBackend(T, OSABI, STI) {}
+  ELFX86_IAMCUAsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
+      : ELFX86AsmBackend(T, OSABI, CPU) {}
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86ELFObjectWriter(/*IsELF64*/ false, OSABI,
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createX86ELFObjectWriter(OS, /*IsELF64*/ false, OSABI,
                                     ELF::EM_IAMCU);
   }
 };
 
 class ELFX86_64AsmBackend : public ELFX86AsmBackend {
 public:
-  ELFX86_64AsmBackend(const Target &T, uint8_t OSABI,
-                      const MCSubtargetInfo &STI)
-    : ELFX86AsmBackend(T, OSABI, STI) {}
+  ELFX86_64AsmBackend(const Target &T, uint8_t OSABI, StringRef CPU)
+    : ELFX86AsmBackend(T, OSABI, CPU) {}
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86ELFObjectWriter(/*IsELF64*/ true, OSABI, ELF::EM_X86_64);
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createX86ELFObjectWriter(OS, /*IsELF64*/ true, OSABI, ELF::EM_X86_64);
   }
 };
 
@@ -441,9 +431,8 @@ class WindowsX86AsmBackend : public X86AsmBackend {
   bool Is64Bit;
 
 public:
-  WindowsX86AsmBackend(const Target &T, bool is64Bit,
-                       const MCSubtargetInfo &STI)
-    : X86AsmBackend(T, STI)
+  WindowsX86AsmBackend(const Target &T, bool is64Bit, StringRef CPU)
+    : X86AsmBackend(T, CPU)
     , Is64Bit(is64Bit) {
   }
 
@@ -455,9 +444,9 @@ public:
         .Default(MCAsmBackend::getFixupKind(Name));
   }
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86WinCOFFObjectWriter(Is64Bit);
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createX86WinCOFFObjectWriter(OS, Is64Bit);
   }
 };
 
@@ -490,7 +479,7 @@ namespace CU {
 class DarwinX86AsmBackend : public X86AsmBackend {
   const MCRegisterInfo &MRI;
 
-  /// Number of registers that can be saved in a compact unwind encoding.
+  /// \brief Number of registers that can be saved in a compact unwind encoding.
   enum { CU_NUM_SAVED_REGS = 6 };
 
   mutable unsigned SavedRegs[CU_NUM_SAVED_REGS];
@@ -500,7 +489,7 @@ class DarwinX86AsmBackend : public X86AsmBackend {
   unsigned MoveInstrSize;                ///< Size of a "move" instruction.
   unsigned StackDivide;                  ///< Amount to adjust stack size by.
 protected:
-  /// Size of a "push" instruction for the given register.
+  /// \brief Size of a "push" instruction for the given register.
   unsigned PushInstrSize(unsigned Reg) const {
     switch (Reg) {
       case X86::EBX:
@@ -521,7 +510,7 @@ protected:
     return 1;
   }
 
-  /// Implementation of algorithm to generate the compact unwind encoding
+  /// \brief Implementation of algorithm to generate the compact unwind encoding
   /// for the CFI instructions.
   uint32_t
   generateCompactUnwindEncodingImpl(ArrayRef<MCCFIInstruction> Instrs) const {
@@ -666,7 +655,8 @@ protected:
         // instruction.
         CompactUnwindEncoding |= (SubtractInstrIdx & 0xFF) << 16;
 
-        // Encode any extra stack adjustments (done via push instructions).
+        // Encode any extra stack stack adjustments (done via push
+        // instructions).
         CompactUnwindEncoding |= (StackAdjust & 0x7) << 13;
       }
 
@@ -688,7 +678,7 @@ protected:
   }
 
 private:
-  /// Get the compact unwind number for a given register. The number
+  /// \brief Get the compact unwind number for a given register. The number
   /// corresponds to the enum lists in compact_unwind_encoding.h.
   int getCompactUnwindRegNum(unsigned Reg) const {
     static const MCPhysReg CU32BitRegs[7] = {
@@ -705,7 +695,7 @@ private:
     return -1;
   }
 
-  /// Return the registers encoded for a compact encoding with a frame
+  /// \brief Return the registers encoded for a compact encoding with a frame
   /// pointer.
   uint32_t encodeCompactUnwindRegistersWithFrame() const {
     // Encode the registers in the order they were saved --- 3-bits per
@@ -729,7 +719,7 @@ private:
     return RegEnc;
   }
 
-  /// Create the permutation encoding used with frameless stacks. It is
+  /// \brief Create the permutation encoding used with frameless stacks. It is
   /// passed the number of registers to be saved and an array of the registers
   /// saved.
   uint32_t encodeCompactUnwindRegistersWithoutFrame(unsigned RegCount) const {
@@ -800,9 +790,9 @@ private:
   }
 
 public:
-  DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                      const MCSubtargetInfo &STI, bool Is64Bit)
-    : X86AsmBackend(T, STI), MRI(MRI), Is64Bit(Is64Bit) {
+  DarwinX86AsmBackend(const Target &T, const MCRegisterInfo &MRI, StringRef CPU,
+                      bool Is64Bit)
+    : X86AsmBackend(T, CPU), MRI(MRI), Is64Bit(Is64Bit) {
     memset(SavedRegs, 0, sizeof(SavedRegs));
     OffsetSize = Is64Bit ? 8 : 4;
     MoveInstrSize = Is64Bit ? 3 : 2;
@@ -813,17 +803,17 @@ public:
 class DarwinX86_32AsmBackend : public DarwinX86AsmBackend {
 public:
   DarwinX86_32AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                         const MCSubtargetInfo &STI)
-      : DarwinX86AsmBackend(T, MRI, STI, false) {}
+                         StringRef CPU)
+      : DarwinX86AsmBackend(T, MRI, CPU, false) {}
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86MachObjectWriter(/*Is64Bit=*/false,
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createX86MachObjectWriter(OS, /*Is64Bit=*/false,
                                      MachO::CPU_TYPE_I386,
                                      MachO::CPU_SUBTYPE_I386_ALL);
   }
 
-  /// Generate the compact unwind encoding for the CFI instructions.
+  /// \brief Generate the compact unwind encoding for the CFI instructions.
   uint32_t generateCompactUnwindEncoding(
                              ArrayRef<MCCFIInstruction> Instrs) const override {
     return generateCompactUnwindEncodingImpl(Instrs);
@@ -834,16 +824,16 @@ class DarwinX86_64AsmBackend : public DarwinX86AsmBackend {
   const MachO::CPUSubTypeX86 Subtype;
 public:
   DarwinX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                         const MCSubtargetInfo &STI, MachO::CPUSubTypeX86 st)
-      : DarwinX86AsmBackend(T, MRI, STI, true), Subtype(st) {}
+                         StringRef CPU, MachO::CPUSubTypeX86 st)
+      : DarwinX86AsmBackend(T, MRI, CPU, true), Subtype(st) {}
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override {
-    return createX86MachObjectWriter(/*Is64Bit=*/true, MachO::CPU_TYPE_X86_64,
-                                     Subtype);
+  std::unique_ptr<MCObjectWriter>
+  createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createX86MachObjectWriter(OS, /*Is64Bit=*/true,
+                                     MachO::CPU_TYPE_X86_64, Subtype);
   }
 
-  /// Generate the compact unwind encoding for the CFI instructions.
+  /// \brief Generate the compact unwind encoding for the CFI instructions.
   uint32_t generateCompactUnwindEncoding(
                              ArrayRef<MCCFIInstruction> Instrs) const override {
     return generateCompactUnwindEncodingImpl(Instrs);
@@ -857,18 +847,19 @@ MCAsmBackend *llvm::createX86_32AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
+  StringRef CPU = STI.getCPU();
   if (TheTriple.isOSBinFormatMachO())
-    return new DarwinX86_32AsmBackend(T, MRI, STI);
+    return new DarwinX86_32AsmBackend(T, MRI, CPU);
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
-    return new WindowsX86AsmBackend(T, false, STI);
+    return new WindowsX86AsmBackend(T, false, CPU);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
   if (TheTriple.isOSIAMCU())
-    return new ELFX86_IAMCUAsmBackend(T, OSABI, STI);
+    return new ELFX86_IAMCUAsmBackend(T, OSABI, CPU);
 
-  return new ELFX86_32AsmBackend(T, OSABI, STI);
+  return new ELFX86_32AsmBackend(T, OSABI, CPU);
 }
 
 MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
@@ -876,20 +867,21 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
                                            const MCRegisterInfo &MRI,
                                            const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
+  StringRef CPU = STI.getCPU();
   if (TheTriple.isOSBinFormatMachO()) {
     MachO::CPUSubTypeX86 CS =
         StringSwitch<MachO::CPUSubTypeX86>(TheTriple.getArchName())
             .Case("x86_64h", MachO::CPU_SUBTYPE_X86_64_H)
             .Default(MachO::CPU_SUBTYPE_X86_64_ALL);
-    return new DarwinX86_64AsmBackend(T, MRI, STI, CS);
+    return new DarwinX86_64AsmBackend(T, MRI, CPU, CS);
   }
 
   if (TheTriple.isOSWindows() && TheTriple.isOSBinFormatCOFF())
-    return new WindowsX86AsmBackend(T, true, STI);
+    return new WindowsX86AsmBackend(T, true, CPU);
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
   if (TheTriple.getEnvironment() == Triple::GNUX32)
-    return new ELFX86_X32AsmBackend(T, OSABI, STI);
-  return new ELFX86_64AsmBackend(T, OSABI, STI);
+    return new ELFX86_X32AsmBackend(T, OSABI, CPU);
+  return new ELFX86_64AsmBackend(T, OSABI, CPU);
 }

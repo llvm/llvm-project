@@ -555,7 +555,7 @@ public:
   }
 
   const RetainSummary *find(IdentifierInfo* II, Selector S) {
-    // FIXME: Class method lookup.  Right now we don't have a good way
+    // FIXME: Class method lookup.  Right now we dont' have a good way
     // of going between IdentifierInfo* and the class hierarchy.
     MapTy::iterator I = M.find(ObjCSummaryKey(II, S));
 
@@ -883,22 +883,21 @@ RetainSummaryManager::getPersistentSummary(const RetainSummary &OldSumm) {
 //===----------------------------------------------------------------------===//
 
 static bool isRetain(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_lower("retain") || FName.endswith_lower("retain");
+  return FName.endswith("Retain");
 }
 
 static bool isRelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_lower("release") || FName.endswith_lower("release");
+  return FName.endswith("Release");
 }
 
 static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_lower("autorelease") ||
-         FName.endswith_lower("autorelease");
+  return FName.endswith("Autorelease");
 }
 
 static bool isMakeCollectable(const FunctionDecl *FD, StringRef FName) {
   // FIXME: Remove FunctionDecl parameter.
   // FIXME: Is it really okay if MakeCollectable isn't a suffix?
-  return FName.find_lower("MakeCollectable") != StringRef::npos;
+  return FName.find("MakeCollectable") != StringRef::npos;
 }
 
 static ArgEffect getStopTrackingHardEquivalent(ArgEffect E) {
@@ -1930,12 +1929,10 @@ static bool isNumericLiteralExpression(const Expr *E) {
          isa<CXXBoolLiteralExpr>(E);
 }
 
-static Optional<std::string> describeRegion(const MemRegion *MR) {
-  if (const auto *VR = dyn_cast_or_null<VarRegion>(MR))
-    return std::string(VR->getDecl()->getName());
+static std::string describeRegion(const MemRegion *MR) {
   // Once we support more storage locations for bindings,
   // this would need to be improved.
-  return None;
+  return cast<VarRegion>(MR)->getDecl()->getName();
 }
 
 /// Returns true if this stack frame is for an Objective-C method that is a
@@ -2402,9 +2399,9 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 
   os << "Object leaked: ";
 
-  Optional<std::string> RegionDescription = describeRegion(FirstBinding);
-  if (RegionDescription) {
-    os << "object allocated and stored into '" << *RegionDescription << '\'';
+  if (FirstBinding) {
+    os << "object allocated and stored into '"
+       << describeRegion(FirstBinding) << '\'';
   }
   else
     os << "allocated object";
@@ -2522,8 +2519,7 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
   UniqueingDecl = AllocNode->getLocationContext()->getDecl();
 }
 
-void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled,
-                                        bool IncludeAllocationLine) {
+void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled, bool IncludeAllocationLine) {
   assert(Location.isValid() && UniqueingDecl && UniqueingLocation.isValid());
   Description.clear();
   llvm::raw_string_ostream os(Description);
@@ -2532,9 +2528,8 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled,
     os << "(when using garbage collection) ";
   os << "of an object";
 
-  Optional<std::string> RegionDescription = describeRegion(AllocBinding);
-  if (RegionDescription) {
-    os << " stored into '" << *RegionDescription << '\'';
+  if (AllocBinding) {
+    os << " stored into '" << describeRegion(AllocBinding) << '\'';
     if (IncludeAllocationLine) {
       FullSourceLoc SL(AllocStmt->getLocStart(), Ctx.getSourceManager());
       os << " (allocated on line " << SL.getSpellingLineNumber() << ")";

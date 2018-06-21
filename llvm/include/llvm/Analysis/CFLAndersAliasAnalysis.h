@@ -56,7 +56,7 @@ public:
   /// Evict the given function from cache
   void evict(const Function *Fn);
 
-  /// Get the alias summary for the given function
+  /// \brief Get the alias summary for the given function
   /// Return nullptr if the summary is not found or not available
   const cflaa::AliasSummary *getAliasSummary(const Function &);
 
@@ -64,19 +64,19 @@ public:
   AliasResult alias(const MemoryLocation &, const MemoryLocation &);
 
 private:
-  /// Ensures that the given function is available in the cache.
+  /// \brief Ensures that the given function is available in the cache.
   /// Returns the appropriate entry from the cache.
   const Optional<FunctionInfo> &ensureCached(const Function &);
 
-  /// Inserts the given Function into the cache.
+  /// \brief Inserts the given Function into the cache.
   void scan(const Function &);
 
-  /// Build summary for a given function
+  /// \brief Build summary for a given function
   FunctionInfo buildInfoFrom(const Function &);
 
   const TargetLibraryInfo &TLI;
 
-  /// Cached mapping of Functions to their StratifiedSets.
+  /// \brief Cached mapping of Functions to their StratifiedSets.
   /// If a function's sets are currently being built, it is marked
   /// in the cache as an Optional without a value. This way, if we
   /// have any kind of recursion, it is discernable from a function

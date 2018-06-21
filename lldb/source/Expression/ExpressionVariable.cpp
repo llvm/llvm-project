@@ -31,6 +31,11 @@ uint8_t *ExpressionVariable::GetValueBytes() {
 
 PersistentExpressionState::~PersistentExpressionState() {}
 
+void PersistentExpressionState::RegisterSymbol(const ConstString &name,
+                                               lldb::addr_t addr) {
+  m_symbol_map[name.GetCString()] = addr;
+}
+
 lldb::addr_t PersistentExpressionState::LookupSymbol(const ConstString &name) {
   SymbolMap::iterator si = m_symbol_map.find(name.GetCString());
 
@@ -70,8 +75,8 @@ void PersistentExpressionState::RegisterExecutionUnit(
        execution_unit_sp->GetJittedGlobalVariables()) {
     if (global_var.m_remote_addr != LLDB_INVALID_ADDRESS) {
       // Demangle the name before inserting it, so that lookups by the ConstStr
-      // of the demangled name will find the mangled one (needed for looking up
-      // metadata pointers.)
+      // of the demangled name
+      // will find the mangled one (needed for looking up metadata pointers.)
       Mangled mangler(global_var.m_name);
       mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
       m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;

@@ -63,9 +63,9 @@ class SizeClassAllocator32 {
 
   struct TransferBatch {
     static const uptr kMaxNumCached = SizeClassMap::kMaxNumCachedHint - 2;
-    void SetFromArray(void *batch[], uptr count) {
-      DCHECK_LE(count, kMaxNumCached);
+    void SetFromArray(uptr region_beg_unused, void *batch[], uptr count) {
       count_ = count;
+      CHECK_LE(count_, kMaxNumCached);
       for (uptr i = 0; i < count; i++)
         batch_[i] = batch[i];
     }
@@ -73,9 +73,9 @@ class SizeClassAllocator32 {
     void Clear() { count_ = 0; }
     void Add(void *ptr) {
       batch_[count_++] = ptr;
-      DCHECK_LE(count_, kMaxNumCached);
+      CHECK_LE(count_, kMaxNumCached);
     }
-    void CopyToArray(void *to_batch[]) const {
+    void CopyToArray(void *to_batch[]) {
       for (uptr i = 0, n = Count(); i < n; i++)
         to_batch[i] = batch_[i];
     }
@@ -84,8 +84,8 @@ class SizeClassAllocator32 {
     static uptr AllocationSizeRequiredForNElements(uptr n) {
       return sizeof(uptr) * 2 + sizeof(void *) * n;
     }
-    static uptr MaxCached(uptr size) {
-      return Min(kMaxNumCached, SizeClassMap::MaxCachedHint(size));
+    static uptr MaxCached(uptr class_id) {
+      return Min(kMaxNumCached, SizeClassMap::MaxCachedHint(class_id));
     }
 
     TransferBatch *next;
@@ -108,7 +108,7 @@ class SizeClassAllocator32 {
   typedef SizeClassAllocator32LocalCache<ThisT> AllocatorCache;
 
   void Init(s32 release_to_os_interval_ms) {
-    possible_regions.Init();
+    possible_regions.TestOnlyInit();
     internal_memset(size_class_info_array, 0, sizeof(size_class_info_array));
   }
 
@@ -125,7 +125,7 @@ class SizeClassAllocator32 {
   }
 
   void *MapWithCallback(uptr size) {
-    void *res = MmapOrDie(size, PrimaryAllocatorName);
+    void *res = MmapOrDie(size, "SizeClassAllocator32");
     MapUnmapCallback().OnMap((uptr)res, size);
     return res;
   }
@@ -153,14 +153,13 @@ class SizeClassAllocator32 {
 
   NOINLINE TransferBatch *AllocateBatch(AllocatorStats *stat, AllocatorCache *c,
                                         uptr class_id) {
-    DCHECK_LT(class_id, kNumClasses);
+    CHECK_LT(class_id, kNumClasses);
     SizeClassInfo *sci = GetSizeClassInfo(class_id);
     SpinMutexLock l(&sci->mutex);
-    if (sci->free_list.empty()) {
-      if (UNLIKELY(!PopulateFreeList(stat, c, sci, class_id)))
-        return nullptr;
-      DCHECK(!sci->free_list.empty());
-    }
+    if (sci->free_list.empty() &&
+        UNLIKELY(!PopulateFreeList(stat, c, sci, class_id)))
+      return nullptr;
+    CHECK(!sci->free_list.empty());
     TransferBatch *b = sci->free_list.front();
     sci->free_list.pop_front();
     return b;
@@ -168,12 +167,14 @@ class SizeClassAllocator32 {
 
   NOINLINE void DeallocateBatch(AllocatorStats *stat, uptr class_id,
                                 TransferBatch *b) {
-    DCHECK_LT(class_id, kNumClasses);
+    CHECK_LT(class_id, kNumClasses);
     CHECK_GT(b->Count(), 0);
     SizeClassInfo *sci = GetSizeClassInfo(class_id);
     SpinMutexLock l(&sci->mutex);
     sci->free_list.push_front(b);
   }
+
+  uptr GetRegionBeginBySizeClass(uptr class_id) { return 0; }
 
   bool PointerIsMine(const void *p) {
     uptr mem = reinterpret_cast<uptr>(p);
@@ -250,9 +251,12 @@ class SizeClassAllocator32 {
       }
   }
 
-  void PrintStats() {}
+  void PrintStats() {
+  }
 
-  static uptr AdditionalSize() { return 0; }
+  static uptr AdditionalSize() {
+    return 0;
+  }
 
   typedef SizeClassMap SizeClassMapT;
   static const uptr kNumClasses = SizeClassMap::kNumClasses;
@@ -261,15 +265,17 @@ class SizeClassAllocator32 {
   static const uptr kRegionSize = 1 << kRegionSizeLog;
   static const uptr kNumPossibleRegions = kSpaceSize / kRegionSize;
 
-  struct ALIGNED(SANITIZER_CACHE_LINE_SIZE) SizeClassInfo {
-    StaticSpinMutex mutex;
+  struct SizeClassInfo {
+    SpinMutex mutex;
     IntrusiveList<TransferBatch> free_list;
     u32 rand_state;
+    char padding[kCacheLineSize - 2 * sizeof(uptr) -
+                 sizeof(IntrusiveList<TransferBatch>)];
   };
-  COMPILER_CHECK(sizeof(SizeClassInfo) % kCacheLineSize == 0);
+  COMPILER_CHECK(sizeof(SizeClassInfo) == kCacheLineSize);
 
   uptr ComputeRegionId(uptr mem) {
-    const uptr res = mem >> kRegionSizeLog;
+    uptr res = mem >> kRegionSizeLog;
     CHECK_LT(res, kNumPossibleRegions);
     return res;
   }
@@ -279,9 +285,9 @@ class SizeClassAllocator32 {
   }
 
   uptr AllocateRegion(AllocatorStats *stat, uptr class_id) {
-    DCHECK_LT(class_id, kNumClasses);
-    const uptr res = reinterpret_cast<uptr>(MmapAlignedOrDieOnFatalError(
-        kRegionSize, kRegionSize, PrimaryAllocatorName));
+    CHECK_LT(class_id, kNumClasses);
+    uptr res = reinterpret_cast<uptr>(MmapAlignedOrDieOnFatalError(
+        kRegionSize, kRegionSize, "SizeClassAllocator32"));
     if (UNLIKELY(!res))
       return 0;
     MapUnmapCallback().OnMap(res, kRegionSize);
@@ -292,7 +298,7 @@ class SizeClassAllocator32 {
   }
 
   SizeClassInfo *GetSizeClassInfo(uptr class_id) {
-    DCHECK_LT(class_id, kNumClasses);
+    CHECK_LT(class_id, kNumClasses);
     return &size_class_info_array[class_id];
   }
 
@@ -323,22 +329,22 @@ class SizeClassAllocator32 {
 
   bool PopulateFreeList(AllocatorStats *stat, AllocatorCache *c,
                         SizeClassInfo *sci, uptr class_id) {
-    const uptr region = AllocateRegion(stat, class_id);
-    if (UNLIKELY(!region))
+    uptr size = ClassIdToSize(class_id);
+    uptr reg = AllocateRegion(stat, class_id);
+    if (UNLIKELY(!reg))
       return false;
     if (kRandomShuffleChunks)
       if (UNLIKELY(sci->rand_state == 0))
         // The random state is initialized from ASLR (PIE) and time.
         sci->rand_state = reinterpret_cast<uptr>(sci) ^ NanoTime();
-    const uptr size = ClassIdToSize(class_id);
-    const uptr n_chunks = kRegionSize / (size + kMetadataSize);
-    const uptr max_count = TransferBatch::MaxCached(size);
-    DCHECK_GT(max_count, 0);
+    uptr n_chunks = kRegionSize / (size + kMetadataSize);
+    uptr max_count = TransferBatch::MaxCached(class_id);
+    CHECK_GT(max_count, 0);
     TransferBatch *b = nullptr;
-    constexpr uptr kShuffleArraySize = 48;
+    const uptr kShuffleArraySize = 48;
     uptr shuffle_array[kShuffleArraySize];
     uptr count = 0;
-    for (uptr i = region; i < region + n_chunks * size; i += size) {
+    for (uptr i = reg; i < reg + n_chunks * size; i += size) {
       shuffle_array[count++] = i;
       if (count == kShuffleArraySize) {
         if (UNLIKELY(!PopulateBatches(c, sci, class_id, &b, max_count,

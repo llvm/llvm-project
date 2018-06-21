@@ -34,14 +34,12 @@ threw:
 ; CHECK:      [[EXCEPTION_LABEL]]:
 ; CHECK-NEXT: .byte 255
 ; CHECK-NEXT: .byte 3
-; CHECK-NEXT: .uleb128 .Lttbase{{[0-9]+}}-[[TTBASEREF:.Lttbaseref[0-9]+]]
-; CHECK-NEXT: [[TTBASEREF]]:
-; CHECK-NEXT: .byte 1
-; CHECK-NEXT: .uleb128 .Lcst_end{{[0-9]+}}-[[CST_BEGIN:.Lcst_begin[0-9]+]]
-; CHECK-NEXT: [[CST_BEGIN]]:
+; CHECK-NEXT: .byte 21
+; CHECK-NEXT: .byte 3
+; CHECK-NEXT: .byte 13
 ; Verify that the unwind data covers the entire patchpoint region:
-; CHECK-NEXT: .uleb128 .Ltmp0-[[FUNC_BEGIN]]
-; CHECK-NEXT: .uleb128 [[PP_END]]-.Ltmp0
+; CHECK-NEXT: .long .Ltmp0-[[FUNC_BEGIN]]
+; CHECK-NEXT: .long [[PP_END]]-.Ltmp0
 
 
 ; Verify that the stackmap section got emitted:

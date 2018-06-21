@@ -159,8 +159,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     NewYAMLSection.Header.PointerToRelocations =
         COFFSection->PointerToRelocations;
     NewYAMLSection.Header.SizeOfRawData = COFFSection->SizeOfRawData;
-    uint32_t Shift = (COFFSection->Characteristics >> 20) & 0xF;
-    NewYAMLSection.Alignment = (1U << Shift) >> 1;
+    NewYAMLSection.Alignment = ObjSection.getAlignment();
     assert(NewYAMLSection.Alignment <= 8192);
 
     ArrayRef<uint8_t> sectionData;
@@ -171,11 +170,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     if (NewYAMLSection.Name == ".debug$S")
       NewYAMLSection.DebugS = CodeViewYAML::fromDebugS(sectionData, SC);
     else if (NewYAMLSection.Name == ".debug$T")
-      NewYAMLSection.DebugT = CodeViewYAML::fromDebugT(sectionData,
-                                                       NewYAMLSection.Name);
-    else if (NewYAMLSection.Name == ".debug$P")
-      NewYAMLSection.DebugP = CodeViewYAML::fromDebugT(sectionData,
-                                                       NewYAMLSection.Name);
+      NewYAMLSection.DebugT = CodeViewYAML::fromDebugT(sectionData);
     else if (NewYAMLSection.Name == ".debug$H")
       NewYAMLSection.DebugH = CodeViewYAML::fromDebugH(sectionData);
 

@@ -39,9 +39,9 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 // A ValueObject that obtains its children from some source other than
 // real information
-// This is currently used to implement Python-based children and filters but
-// you can bind it to any source of synthetic information and have it behave
-// accordingly
+// This is currently used to implement Python-based children and filters
+// but you can bind it to any source of synthetic information and have
+// it behave accordingly
 //----------------------------------------------------------------------
 class ValueObjectSynthetic : public ValueObject {
 public:
@@ -77,6 +77,12 @@ public:
 
   bool IsSynthetic() override { return true; }
 
+  bool IsBaseClass() override {
+    if (m_parent)
+      return m_parent->IsBaseClass();
+    return false;
+  }
+
   void CalculateSyntheticValue(bool use_synthetic) override {}
 
   bool IsDynamic() override {
@@ -106,6 +112,16 @@ public:
 
   bool DoesProvideSyntheticValue() override {
     return (UpdateValueIfNeeded(), m_provides_value == eLazyBoolYes);
+  }
+
+  lldb::ValueObjectSP
+  GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
+                            bool can_create,
+                            ConstString name = ConstString()) override {
+    if (m_parent)
+      return m_parent->GetSyntheticChildAtOffset(offset, type, can_create,
+                                                 name);
+    return nullptr;
   }
 
   bool GetIsConstant() const override { return false; }

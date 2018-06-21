@@ -16,7 +16,6 @@
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 
 #include "msan.h"
-#include "msan_report.h"
 #include "msan_thread.h"
 
 #include <elf.h>

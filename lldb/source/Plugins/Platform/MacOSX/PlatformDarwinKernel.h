@@ -204,7 +204,6 @@ public:
 // source/Host/macosx/cfcpp utilities.
 
 class PlatformDarwinKernel {
-public:
   static lldb_private::ConstString GetPluginNameStatic();
 };
 

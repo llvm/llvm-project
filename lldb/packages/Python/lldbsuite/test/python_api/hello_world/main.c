@@ -1,11 +1,5 @@
 #include <stdio.h>
-#ifdef _MSC_VER
-#include <windows.h>
-#define sleep(x) Sleep((x) * 1000)
-#else
 #include <unistd.h>
-#endif
-
 int main(int argc, char const *argv[])
 {
     lldb_enable_attach();

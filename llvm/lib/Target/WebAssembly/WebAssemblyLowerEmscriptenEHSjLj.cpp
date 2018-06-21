@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file lowers exception-related instructions and setjmp/longjmp
+/// \brief This file lowers exception-related instructions and setjmp/longjmp
 /// function calls in order to use Emscripten's JavaScript try and catch
 /// mechanism.
 ///

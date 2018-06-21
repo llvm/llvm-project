@@ -118,9 +118,9 @@ void AppleGetQueuesHandler::Detach() {
 }
 
 // Construct a CompilerType for the structure that
-// g_get_current_queues_function_code will return by value so we can extract
-// the fields after performing the function call. i.e. we are getting this
-// struct returned to us:
+// g_get_current_queues_function_code will return by value
+// so we can extract the fields after performing the function call.
+// i.e. we are getting this struct returned to us:
 //
 //    struct get_current_queues_return_values
 //    {
@@ -130,9 +130,11 @@ void AppleGetQueuesHandler::Detach() {
 //    };
 
 // Compile our __lldb_backtrace_recording_get_current_queues() function (from
-// the source above in g_get_current_queues_function_code) if we don't find
-// that function in the inferior already with USE_BUILTIN_FUNCTION defined.
-// (e.g. this would be the case for testing.)
+// the
+// source above in g_get_current_queues_function_code) if we don't find that
+// function in the inferior
+// already with USE_BUILTIN_FUNCTION defined.  (e.g. this would be the case for
+// testing.)
 //
 // Insert the __lldb_backtrace_recording_get_current_queues into the inferior
 // process if needed.
@@ -141,13 +143,14 @@ void AppleGetQueuesHandler::Detach() {
 // the call.
 //
 // Returns the address of the arguments written down in the inferior process,
-// which can be used to make the function call.
+// which can be used to
+// make the function call.
 
 lldb::addr_t
 AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
                                               ValueList &get_queues_arglist) {
   ThreadSP thread_sp(thread.shared_from_this());
-  ExecutionContext exe_ctx(thread_sp);
+  ExecutionContext exe_ctx(thread.shared_from_this());
 
   Address impl_code_address;
   DiagnosticManager diagnostics;
@@ -214,9 +217,10 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
   diagnostics.Clear();
 
   // Now write down the argument values for this particular call.  This looks
-  // like it might be a race condition if other threads were calling into here,
-  // but actually it isn't because we allocate a new args structure for this
-  // call by passing args_addr = LLDB_INVALID_ADDRESS...
+  // like it might be a race condition
+  // if other threads were calling into here, but actually it isn't because we
+  // allocate a new args structure for
+  // this call by passing args_addr = LLDB_INVALID_ADDRESS...
 
   if (!get_queues_caller->WriteFunctionArguments(
           exe_ctx, args_addr, get_queues_arglist, diagnostics)) {
@@ -276,7 +280,8 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   //                                          uint64_t page_to_free_size);
 
   // Where the return_buffer argument points to a 24 byte region of memory
-  // already allocated by lldb in the inferior process.
+  // already allocated by lldb in
+  // the inferior process.
 
   CompilerType clang_void_ptr_type =
       clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();

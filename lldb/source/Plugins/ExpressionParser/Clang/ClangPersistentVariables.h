@@ -21,12 +21,20 @@
 
 #include "lldb/Expression/ExpressionVariable.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <set>
+#include <string>
+#include <unordered_map>
+
 namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ClangPersistentVariables ClangPersistentVariables.h
-/// "lldb/Expression/ClangPersistentVariables.h" Manages persistent values
-/// that need to be preserved between expression invocations.
+/// "lldb/Expression/ClangPersistentVariables.h"
+/// @brief Manages persistent values that need to be preserved between
+/// expression invocations.
 ///
 /// A list of variables that can be accessed and updated by any expression.  See
 /// ClangPersistentVariable for more discussion.  Also provides an increasing,
@@ -34,6 +42,9 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class ClangPersistentVariables : public PersistentExpressionState {
 public:
+  //----------------------------------------------------------------------
+  /// Constructor
+  //----------------------------------------------------------------------
   ClangPersistentVariables();
 
   ~ClangPersistentVariables() override = default;
@@ -59,6 +70,22 @@ public:
     return "$";
   }
 
+  // This just adds this module to the list of hand-loaded modules, it doesn't
+  // actually load it.
+  void AddHandLoadedModule(const ConstString &module_name) {
+    m_hand_loaded_modules.insert(module_name);
+  }
+
+  using HandLoadedModuleCallback = std::function<bool(const ConstString)>;
+
+  bool RunOverHandLoadedModules(HandLoadedModuleCallback callback) {
+    for (ConstString name : m_hand_loaded_modules) {
+      if (!callback(name))
+        return false;
+    }
+    return true;
+  }
+
   void RegisterPersistentDecl(const ConstString &name, clang::NamedDecl *decl);
 
   clang::NamedDecl *GetPersistentDecl(const ConstString &name);
@@ -74,6 +101,27 @@ public:
 private:
   uint32_t m_next_persistent_variable_id; ///< The counter used by
                                           ///GetNextResultName().
+  uint32_t m_next_persistent_error_id;    ///< The counter used by
+                                       ///GetNextResultName() when is_error is
+                                       ///true.
+
+  typedef llvm::DenseMap<const char *, clang::TypeDecl *>
+      ClangPersistentTypeMap;
+  ClangPersistentTypeMap
+      m_clang_persistent_types; ///< The persistent types declared by the user.
+
+  typedef std::set<lldb::IRExecutionUnitSP> ExecutionUnitSet;
+  ExecutionUnitSet
+      m_execution_units; ///< The execution units that contain valuable symbols.
+
+  typedef std::set<lldb_private::ConstString> HandLoadedModuleSet;
+  HandLoadedModuleSet m_hand_loaded_modules; ///< These are the names of modules
+                                             ///that we have loaded by
+  ///< hand into the Contexts we make for parsing.
+
+  typedef llvm::DenseMap<const char *, lldb::addr_t> SymbolMap;
+  SymbolMap
+      m_symbol_map; ///< The addresses of the symbols in m_execution_units.
 
   typedef llvm::DenseMap<const char *, clang::NamedDecl *> PersistentDeclMap;
   PersistentDeclMap

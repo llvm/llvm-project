@@ -23,7 +23,7 @@ namespace llvm {
 namespace clang {
 namespace CodeGen {
 
-/// Structure with information about how a bitfield should be accessed.
+/// \brief Structure with information about how a bitfield should be accessed.
 ///
 /// Often we layout a sequence of bitfields as a contiguous sequence of bits.
 /// When the AST record layout does this, we represent it in the LLVM IR's type
@@ -92,7 +92,7 @@ struct CGBitFieldInfo {
   void print(raw_ostream &OS) const;
   void dump() const;
 
-  /// Given a bit-field decl, build an appropriate helper object for
+  /// \brief Given a bit-field decl, build an appropriate helper object for
   /// accessing that field (which is expected to have the given offset and
   /// size).
   static CGBitFieldInfo MakeInfo(class CodeGenTypes &Types,
@@ -156,31 +156,31 @@ public:
       IsZeroInitializable(IsZeroInitializable),
       IsZeroInitializableAsBase(IsZeroInitializableAsBase) {}
 
-  /// Return the "complete object" LLVM type associated with
+  /// \brief Return the "complete object" LLVM type associated with
   /// this record.
   llvm::StructType *getLLVMType() const {
     return CompleteObjectType;
   }
 
-  /// Return the "base subobject" LLVM type associated with
+  /// \brief Return the "base subobject" LLVM type associated with
   /// this record.
   llvm::StructType *getBaseSubobjectLLVMType() const {
     return BaseSubobjectType;
   }
 
-  /// Check whether this struct can be C++ zero-initialized
+  /// \brief Check whether this struct can be C++ zero-initialized
   /// with a zeroinitializer.
   bool isZeroInitializable() const {
     return IsZeroInitializable;
   }
 
-  /// Check whether this struct can be C++ zero-initialized
+  /// \brief Check whether this struct can be C++ zero-initialized
   /// with a zeroinitializer when considered as a base subobject.
   bool isZeroInitializableAsBase() const {
     return IsZeroInitializableAsBase;
   }
 
-  /// Return llvm::StructType element number that corresponds to the
+  /// \brief Return llvm::StructType element number that corresponds to the
   /// field FD.
   unsigned getLLVMFieldNo(const FieldDecl *FD) const {
     FD = FD->getCanonicalDecl();
@@ -193,14 +193,14 @@ public:
     return NonVirtualBases.lookup(RD);
   }
 
-  /// Return the LLVM field index corresponding to the given
+  /// \brief Return the LLVM field index corresponding to the given
   /// virtual base.  Only valid when operating on the complete object.
   unsigned getVirtualBaseIndex(const CXXRecordDecl *base) const {
     assert(CompleteObjectVirtualBases.count(base) && "Invalid virtual base!");
     return CompleteObjectVirtualBases.lookup(base);
   }
 
-  /// Return the BitFieldInfo that corresponds to the field FD.
+  /// \brief Return the BitFieldInfo that corresponds to the field FD.
   const CGBitFieldInfo &getBitFieldInfo(const FieldDecl *FD) const {
     FD = FD->getCanonicalDecl();
     assert(FD->isBitField() && "Invalid call for non-bit-field decl!");

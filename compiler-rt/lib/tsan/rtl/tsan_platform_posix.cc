@@ -23,27 +23,6 @@
 
 namespace __tsan {
 
-static const char kShadowMemoryMappingWarning[] =
-    "FATAL: %s can not madvise shadow region [%zx, %zx] with %s\n";
-
-static void NoHugePagesInShadow(uptr addr, uptr size) {
-  if (common_flags()->no_huge_pages_for_shadow)
-    if (!NoHugePagesInRegion(addr, size)) {
-      Printf(kShadowMemoryMappingWarning, SanitizerToolName, addr, addr + size,
-             "MADV_NOHUGEPAGE");
-      Die();
-    }
-}
-
-static void DontDumpShadow(uptr addr, uptr size) {
-  if (common_flags()->use_madv_dontdump)
-    if (!DontDumpShadowMemory(addr, size)) {
-      Printf(kShadowMemoryMappingWarning, SanitizerToolName, addr, addr + size,
-             "MADV_DONTDUMP");
-      Die();
-    }
-}
-
 #if !SANITIZER_GO
 void InitializeShadowMemory() {
   // Map memory shadow.
@@ -95,9 +74,14 @@ void InitializeShadowMemory() {
     DCHECK(0);
   }
 #endif
-  NoHugePagesInShadow(MemToShadow(kMadviseRangeBeg),
+  NoHugePagesInRegion(MemToShadow(kMadviseRangeBeg),
                       kMadviseRangeSize * kShadowMultiplier);
-  DontDumpShadow(ShadowBeg(), ShadowEnd() - ShadowBeg());
+  // Meta shadow is compressing and we don't flush it,
+  // so it makes sense to mark it as NOHUGEPAGE to not over-allocate memory.
+  // On one program it reduces memory consumption from 5GB to 2.5GB.
+  NoHugePagesInRegion(MetaShadowBeg(), MetaShadowEnd() - MetaShadowBeg());
+  if (common_flags()->use_madv_dontdump)
+    DontDumpShadowMemory(ShadowBeg(), ShadowEnd() - ShadowBeg());
   DPrintf("memory shadow: %zx-%zx (%zuGB)\n",
       ShadowBeg(), ShadowEnd(),
       (ShadowEnd() - ShadowBeg()) >> 30);
@@ -112,8 +96,8 @@ void InitializeShadowMemory() {
                "to link with -pie (%p, %p).\n", meta, MetaShadowBeg());
     Die();
   }
-  NoHugePagesInShadow(meta, meta_size);
-  DontDumpShadow(meta, meta_size);
+  if (common_flags()->use_madv_dontdump)
+    DontDumpShadowMemory(meta, meta_size);
   DPrintf("meta shadow: %zx-%zx (%zuGB)\n",
       meta, meta + meta_size, meta_size >> 30);
 

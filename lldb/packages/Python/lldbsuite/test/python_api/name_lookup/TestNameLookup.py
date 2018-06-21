@@ -20,7 +20,6 @@ class TestNameLookup(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test_target(self):
         """Exercise SBTarget.FindFunctions() with various name masks.
         
@@ -63,5 +62,3 @@ class TestNameLookup(TestBase):
             for symbol_context in symbol_contexts:
                 self.assertTrue(symbol_context.GetFunction().IsValid())
                 self.assertTrue(symbol_context.GetSymbol().IsValid())
-            
-            

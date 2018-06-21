@@ -20,9 +20,9 @@
 ; }
 
 ; CHECK-LABEL: _Z3foo10NonTrivial:
-; CHECK: #DEBUG_VALUE: foo:nt <- [$rdi+0]
+; CHECK: #DEBUG_VALUE: foo:nt <- [%rdi+0]
 ; CHECK: movq    %rdi, -8(%rsp)          # 8-byte Spill
-; CHECK: #DEBUG_VALUE: foo:nt <- [DW_OP_constu 8, DW_OP_minus, DW_OP_deref] [$rsp+0]
+; CHECK: #DEBUG_VALUE: foo:nt <- [DW_OP_constu 8, DW_OP_minus, DW_OP_deref] [%rsp+0]
 ; CHECK: #APP
 ; CHECK: #NO_APP
 ; CHECK: movq    -8(%rsp), %rax          # 8-byte Reload
@@ -63,7 +63,7 @@ attributes #2 = { nounwind }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{!"clang version 6.0.0 "}
-!7 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foo10NonTrivial", scope: !1, file: !1, line: 10, type: !8, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !19)
+!7 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foo10NonTrivial", scope: !1, file: !1, line: 10, type: !8, isLocal: false, isDefinition: true, scopeLine: 10, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !19)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10, !11}
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

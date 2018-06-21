@@ -65,8 +65,8 @@
 	skinit %eax
 // CHECK: skinit %eax
 // CHECK: encoding: [0x0f,0x01,0xde]
-	invlpga %eax, %ecx
-// CHECK: invlpga %eax, %ecx
+	invlpga %ecx, %eax
+// CHECK: invlpga %ecx, %eax
 // CHECK: encoding: [0x0f,0x01,0xdf]
 
 	rdtscp
@@ -644,6 +644,8 @@ inl	(%dx), %eax
 
 //PR15455
 
+outs	(%esi), (%dx)
+// CHECK: outsw	(%esi), %dx
 outsb	(%esi), (%dx)
 // CHECK: outsb	(%esi), %dx
 outsw	(%esi), (%dx)
@@ -651,6 +653,8 @@ outsw	(%esi), (%dx)
 outsl	(%esi), (%dx)
 // CHECK: outsl	(%esi), %dx
 
+ins 	(%dx), %es:(%edi)
+// CHECK: insw	%dx, %es:(%edi)
 insb	(%dx), %es:(%edi)
 // CHECK: insb	%dx, %es:(%edi)
 insw	(%dx), %es:(%edi)
@@ -766,13 +770,13 @@ pshufw $90, %mm4, %mm0
 // CHECK:  encoding: [0x66,0xca,0xce,0x7a]
         	lretw	$0x7ace
 
-// CHECK: bound	%bx, 2(%eax)
+// CHECK: bound	2(%eax), %bx
 // CHECK:  encoding: [0x66,0x62,0x58,0x02]
-        	bound	%bx,2(%eax)
+        	bound	2(%eax),%bx
 
-// CHECK: bound	%ecx, 4(%ebx)
+// CHECK: bound	4(%ebx), %ecx
 // CHECK:  encoding: [0x62,0x4b,0x04]
-        	bound	%ecx,4(%ebx)
+        	bound	4(%ebx),%ecx
 
 // CHECK: arpl	%bx, %bx
 // CHECK:  encoding: [0x63,0xdb]

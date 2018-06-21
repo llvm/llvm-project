@@ -74,15 +74,6 @@ main_body:
   ret float %f
 }
 
-; GCN-LABEL: {{^}}init_unreachable:
-;
-; This used to crash.
-define amdgpu_ps void @init_unreachable() {
-main_body:
-  call void @llvm.amdgcn.init.exec(i64 -1)
-  unreachable
-}
-
 declare void @llvm.amdgcn.init.exec(i64) #1
 declare void @llvm.amdgcn.init.exec.from.input(i32, i32) #1
 

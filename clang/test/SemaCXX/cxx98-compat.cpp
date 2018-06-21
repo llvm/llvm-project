@@ -47,8 +47,6 @@ namespace TemplateParsing {
 
 void Lambda() {
   []{}(); // expected-warning {{lambda expressions are incompatible with C++98}}
-  // Don't warn about implicit "-> auto" here.
-  [](){}(); // expected-warning {{lambda expressions are incompatible with C++98}}
 }
 
 struct Ctor {
@@ -187,9 +185,9 @@ namespace RedundantParensInAddressTemplateParam {
 }
 
 namespace TemplateSpecOutOfScopeNs {
-  template<typename T> struct S {};
+  template<typename T> struct S {}; // expected-note {{here}}
 }
-template<> struct TemplateSpecOutOfScopeNs::S<char> {};
+template<> struct TemplateSpecOutOfScopeNs::S<char> {}; // expected-warning {{class template specialization of 'S' outside namespace 'TemplateSpecOutOfScopeNs' is incompatible with C++98}}
 
 struct Typename {
   template<typename T> struct Inner {};
@@ -241,13 +239,13 @@ namespace UnionOrAnonStructMembers {
     ~NonTrivDtor(); // expected-note 2{{user-provided destructor}}
   };
   union BadUnion {
-    NonTrivCtor ntc; // expected-warning {{union member 'ntc' with a non-trivial default constructor is incompatible with C++98}}
+    NonTrivCtor ntc; // expected-warning {{union member 'ntc' with a non-trivial constructor is incompatible with C++98}}
     NonTrivCopy ntcp; // expected-warning {{union member 'ntcp' with a non-trivial copy constructor is incompatible with C++98}}
     NonTrivDtor ntd; // expected-warning {{union member 'ntd' with a non-trivial destructor is incompatible with C++98}}
   };
   struct Wrap {
     struct {
-      NonTrivCtor ntc; // expected-warning {{anonymous struct member 'ntc' with a non-trivial default constructor is incompatible with C++98}}
+      NonTrivCtor ntc; // expected-warning {{anonymous struct member 'ntc' with a non-trivial constructor is incompatible with C++98}}
       NonTrivCopy ntcp; // expected-warning {{anonymous struct member 'ntcp' with a non-trivial copy constructor is incompatible with C++98}}
       NonTrivDtor ntd; // expected-warning {{anonymous struct member 'ntd' with a non-trivial destructor is incompatible with C++98}}
     };
@@ -348,7 +346,7 @@ namespace rdar11736429 {
   };
 
   union S {
-    X x; // expected-warning{{union member 'x' with a non-trivial default constructor is incompatible with C++98}}
+    X x; // expected-warning{{union member 'x' with a non-trivial constructor is incompatible with C++98}}
   };
 }
 

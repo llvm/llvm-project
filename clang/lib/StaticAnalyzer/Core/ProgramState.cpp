@@ -126,27 +126,16 @@ ProgramStateRef ProgramState::bindLoc(Loc LV,
   return newState;
 }
 
-ProgramStateRef
-ProgramState::bindDefaultInitial(SVal loc, SVal V,
-                                 const LocationContext *LCtx) const {
+ProgramStateRef ProgramState::bindDefault(SVal loc,
+                                          SVal V,
+                                          const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
+  const StoreRef &newStore = Mgr.StoreMgr->BindDefault(getStore(), R, V);
   ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine()
-             ? Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx)
-             : new_state;
-}
-
-ProgramStateRef
-ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
-  ProgramStateManager &Mgr = getStateManager();
-  const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
-  ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine()
-             ? Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx)
-             : new_state;
+  return Mgr.getOwningEngine() ?
+           Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx) :
+           new_state;
 }
 
 typedef ArrayRef<const MemRegion *> RegionList;
@@ -266,7 +255,7 @@ SVal ProgramState::getSValAsScalarOrLoc(const MemRegion *R) const {
 }
 
 SVal ProgramState::getSVal(Loc location, QualType T) const {
-  SVal V = getRawSVal(location, T);
+  SVal V = getRawSVal(cast<Loc>(location), T);
 
   // If 'V' is a symbolic value that is *perfectly* constrained to
   // be a constant value, use that value instead to lessen the burden

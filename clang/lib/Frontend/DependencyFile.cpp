@@ -63,8 +63,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override {
+                          const Module *Imported) override {
     if (!File)
       DepCollector.maybeAddDependency(FileName, /*FromModule*/false,
                                      /*IsSystem*/false, /*IsModuleFile*/false,
@@ -163,7 +162,6 @@ class DFGImpl : public PPCallbacks {
   bool SeenMissingHeader;
   bool IncludeModuleFiles;
   DependencyOutputFormat OutputFormat;
-  unsigned InputFileIndex;
 
 private:
   bool FileMatchesDepCriteria(const char *Filename,
@@ -178,33 +176,26 @@ public:
       AddMissingHeaderDeps(Opts.AddMissingHeaderDeps),
       SeenMissingHeader(false),
       IncludeModuleFiles(Opts.IncludeModuleFiles),
-      OutputFormat(Opts.OutputFormat),
-      InputFileIndex(0) {
+      OutputFormat(Opts.OutputFormat) {
     for (const auto &ExtraDep : Opts.ExtraDeps) {
-      if (AddFilename(ExtraDep))
-        ++InputFileIndex;
+      AddFilename(ExtraDep);
     }
   }
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) override;
-
-  void FileSkipped(const FileEntry &SkippedFile, const Token &FilenameTok,
-                   SrcMgr::CharacteristicKind FileType) override;
-
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported,
-                          SrcMgr::CharacteristicKind FileType) override;
+                          const Module *Imported) override;
 
   void EndOfMainFile() override {
     OutputDependencyFile();
   }
 
-  bool AddFilename(StringRef Filename);
+  void AddFilename(StringRef Filename);
   bool includeSystemHeaders() const { return IncludeSystemHeaders; }
   bool includeModuleFiles() const { return IncludeModuleFiles; }
 };
@@ -300,16 +291,6 @@ void DFGImpl::FileChanged(SourceLocation Loc,
   AddFilename(llvm::sys::path::remove_leading_dotslash(Filename));
 }
 
-void DFGImpl::FileSkipped(const FileEntry &SkippedFile,
-                          const Token &FilenameTok,
-                          SrcMgr::CharacteristicKind FileType) {
-  StringRef Filename = SkippedFile.getName();
-  if (!FileMatchesDepCriteria(Filename.data(), FileType))
-    return;
-
-  AddFilename(llvm::sys::path::remove_leading_dotslash(Filename));
-}
-
 void DFGImpl::InclusionDirective(SourceLocation HashLoc,
                                  const Token &IncludeTok,
                                  StringRef FileName,
@@ -318,8 +299,7 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
                                  const FileEntry *File,
                                  StringRef SearchPath,
                                  StringRef RelativePath,
-                                 const Module *Imported, 
-                                 SrcMgr::CharacteristicKind FileType) {
+                                 const Module *Imported) {
   if (!File) {
     if (AddMissingHeaderDeps)
       AddFilename(FileName);
@@ -328,12 +308,9 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
   }
 }
 
-bool DFGImpl::AddFilename(StringRef Filename) {
-  if (FilesSet.insert(Filename).second) {
+void DFGImpl::AddFilename(StringRef Filename) {
+  if (FilesSet.insert(Filename).second)
     Files.push_back(Filename);
-    return true;
-  }
-  return false;
 }
 
 /// Print the filename, with escaping or quoting that accommodates the three
@@ -469,10 +446,8 @@ void DFGImpl::OutputDependencyFile() {
 
   // Create phony targets if requested.
   if (PhonyTarget && !Files.empty()) {
-    unsigned Index = 0;
-    for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
-      if (Index++ == InputFileIndex)
-        continue;
+    // Skip the first entry, this is always the input file itself.
+    for (auto I = Files.begin() + 1, E = Files.end(); I != E; ++I) {
       OS << '\n';
       PrintFilename(OS, *I, OutputFormat);
       OS << ":\n";

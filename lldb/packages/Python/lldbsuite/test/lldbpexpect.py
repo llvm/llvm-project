@@ -1,6 +1,10 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
+
+import lldb
+from lldbsuite.test.lldbtest import *
+import lldbsuite.test.lldbutil as lldbutil
 # System modules
 import os
 import sys
@@ -18,6 +22,26 @@ if sys.platform.startswith('win32'):
         pass
 else:
     import pexpect
+
+    class LLDBPExpectException(Exception):
+
+        def __init__(self, kind, patterns, child):
+            self.kind = kind
+            self.patterns = patterns
+            self.child = child
+
+        def str_as_pattern(self, s):
+            return '\n------\n%s\n------\n' % s
+
+        def __str__(self):
+            s = '%s error raised in pexpect.\n' % self.kind
+            s += 'expecting patterns%sinstead received %s\n' % (
+                self.str_as_pattern(self.patterns), self.str_as_pattern(self.child.buffer))
+            s += 'stored buffer contents are %s\n' % self.str_as_pattern(
+                self.child.before)
+            s += 'inferior process (pid = %d) has%sbeen closed - exit status is %s' % (
+                self.child.pid, ' ' if self.child.closed else ' not ', self.child.exitstatus)
+            return s
 
     class PExpectTest(TestBase):
 
@@ -46,10 +70,16 @@ else:
                 timeout = self.timeout
             if exact is None:
                 exact = False
-            if exact:
-                return self.child.expect_exact(patterns, timeout=timeout)
-            else:
-                return self.child.expect(patterns, timeout=timeout)
+            try:
+                if exact:
+                    return self.child.expect_exact(patterns, timeout=timeout)
+                else:
+                    return self.child.expect(patterns, timeout=timeout)
+            except pexpect.EOF as eof_except:
+                self.child.close()
+                raise LLDBPExpectException('EOF', patterns, self.child)
+            except pexpect.TIMEOUT as timeout_except:
+                raise LLDBPExpectException('TIMEOUT', patterns, self.child)
 
         def expectall(self, patterns=None, timeout=None, exact=None):
             if patterns is None:

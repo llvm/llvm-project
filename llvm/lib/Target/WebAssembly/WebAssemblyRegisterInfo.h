@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the WebAssembly implementation of the
+/// \brief This file contains the WebAssembly implementation of the
 /// WebAssemblyRegisterInfo class.
 ///
 //===----------------------------------------------------------------------===//
@@ -45,8 +45,6 @@ public:
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,
                      unsigned Kind = 0) const override;
-  // This does not apply to wasm.
-  const uint32_t *getNoPreservedMask() const override { return nullptr; }
 };
 
 } // end namespace llvm

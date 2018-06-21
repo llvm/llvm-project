@@ -70,9 +70,4 @@ __rdtscp(unsigned int *__A) {
 
 #define _rdpmc(A) __rdpmc(A)
 
-static __inline__ void __attribute__((__always_inline__, __nodebug__))
-_wbinvd(void) {
-  __builtin_ia32_wbinvd();
-}
-
 #endif /* __IA32INTRIN_H */

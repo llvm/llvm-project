@@ -311,8 +311,6 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
   if (!Changed)
     return false;
 
-  SelectInlineAsmMemoryOperands(AsmNodeOperands, SDLoc(N));
-
   SDValue New = CurDAG->getNode(ISD::INLINEASM, SDLoc(N),
       CurDAG->getVTList(MVT::Other, MVT::Glue), AsmNodeOperands);
   New->setNodeId(-1);
@@ -362,6 +360,12 @@ void SparcDAGToDAGISel::Select(SDNode *N) {
 
     // FIXME: Handle div by immediate.
     unsigned Opcode = N->getOpcode() == ISD::SDIV ? SP::SDIVrr : SP::UDIVrr;
+    // SDIV is a hardware erratum on some LEON2 processors. Replace it with SDIVcc here.
+    if (((SparcTargetMachine&)TM).getSubtargetImpl()->performSDIVReplace()
+        &&
+        Opcode == SP::SDIVrr) {
+      Opcode = SP::SDIVCCrr;
+    }
     CurDAG->SelectNodeTo(N, Opcode, MVT::i32, DivLHS, DivRHS, TopPart);
     return;
   }

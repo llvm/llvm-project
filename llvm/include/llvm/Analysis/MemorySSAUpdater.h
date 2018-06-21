@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// An automatic updater for MemorySSA that handles arbitrary insertion,
+// \brief An automatic updater for MemorySSA that handles arbitrary insertion,
 // deletion, and moves.  It performs phi insertion where necessary, and
 // automatically updates the MemorySSA IR to be correct.
 // While updating loads or removing instructions is often easy enough to not
@@ -33,7 +33,6 @@
 #define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/BasicBlock.h"
@@ -44,7 +43,6 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -62,7 +60,6 @@ private:
   MemorySSA *MSSA;
   SmallVector<MemoryPhi *, 8> InsertedPHIs;
   SmallPtrSet<BasicBlock *, 8> VisitedBlocks;
-  SmallSet<AssertingVH<MemoryPhi>, 8> NonOptPhis;
 
 public:
   MemorySSAUpdater(MemorySSA *MSSA) : MSSA(MSSA) {}
@@ -96,7 +93,7 @@ public:
   // the edge cases right, and the above calls already operate in near-optimal
   // time bounds.
 
-  /// Create a MemoryAccess in MemorySSA at a specified point in a block,
+  /// \brief Create a MemoryAccess in MemorySSA at a specified point in a block,
   /// with a specified clobbering definition.
   ///
   /// Returns the new MemoryAccess.
@@ -113,7 +110,7 @@ public:
                                        const BasicBlock *BB,
                                        MemorySSA::InsertionPlace Point);
 
-  /// Create a MemoryAccess in MemorySSA before or after an existing
+  /// \brief Create a MemoryAccess in MemorySSA before or after an existing
   /// MemoryAccess.
   ///
   /// Returns the new MemoryAccess.
@@ -130,7 +127,7 @@ public:
                                           MemoryAccess *Definition,
                                           MemoryAccess *InsertPt);
 
-  /// Remove a MemoryAccess from MemorySSA, including updating all
+  /// \brief Remove a MemoryAccess from MemorySSA, including updating all
   /// definitions and uses.
   /// This should be called when a memory instruction that has a MemoryAccess
   /// associated with it is erased from the program.  For example, if a store or
@@ -138,29 +135,14 @@ public:
   /// on the MemoryAccess for that store/load.
   void removeMemoryAccess(MemoryAccess *);
 
-  /// Remove MemoryAccess for a given instruction, if a MemoryAccess exists.
-  /// This should be called when an instruction (load/store) is deleted from
-  /// the program.
-  void removeMemoryAccess(const Instruction *I) {
-    if (MemoryAccess *MA = MSSA->getMemoryAccess(I))
-      removeMemoryAccess(MA);
-  }
-
-  /// Get handle on MemorySSA.
-  MemorySSA* getMemorySSA() const { return MSSA; }
-
 private:
   // Move What before Where in the MemorySSA IR.
   template <class WhereType>
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, WhereType Where);
   MemoryAccess *getPreviousDef(MemoryAccess *);
   MemoryAccess *getPreviousDefInBlock(MemoryAccess *);
-  MemoryAccess *
-  getPreviousDefFromEnd(BasicBlock *,
-                        DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
-  MemoryAccess *
-  getPreviousDefRecursive(BasicBlock *,
-                          DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
+  MemoryAccess *getPreviousDefFromEnd(BasicBlock *);
+  MemoryAccess *getPreviousDefRecursive(BasicBlock *);
   MemoryAccess *recursePhi(MemoryAccess *Phi);
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);

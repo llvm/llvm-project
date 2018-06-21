@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Interface definition for SIInstrInfo.
+/// \brief Interface definition for SIInstrInfo.
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,7 +44,7 @@ private:
   const SIRegisterInfo RI;
   const SISubtarget &ST;
 
-  // The inverse predicate should have the negative value.
+  // The the inverse predicate should have the negative value.
   enum BranchPredicate {
     INVALID_BR = 0,
     SCC_TRUE = 1,
@@ -203,7 +203,7 @@ public:
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  // Returns an opcode that can be used to move a value to a \p DstRC
+  // \brief Returns an opcode that can be used to move a value to a \p DstRC
   // register.  If there is no hardware instruction that can store to \p
   // DstRC, then AMDGPU::COPY is returned.
   unsigned getMovOpcode(const TargetRegisterClass *DstRC) const;
@@ -419,7 +419,18 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SMRD;
   }
 
-  bool isBufferSMRD(const MachineInstr &MI) const;
+  bool isBufferSMRD(const MachineInstr &MI) const {
+    if (!isSMRD(MI))
+      return false;
+
+    // Check that it is using a buffer resource.
+    int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::sbase);
+    if (Idx == -1) // e.g. s_memtime
+      return false;
+
+    const auto RCID = MI.getDesc().OpInfo[Idx].RegClass;
+    return RCID == AMDGPU::SReg_128RegClassID;
+  }
 
   static bool isDS(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::DS;
@@ -663,16 +674,16 @@ public:
   bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const;
 
-  /// Return true if this 64-bit VALU instruction has a 32-bit encoding.
+  /// \brief Return true if this 64-bit VALU instruction has a 32-bit encoding.
   /// This function will return false if you pass it a 32-bit instruction.
   bool hasVALU32BitEncoding(unsigned Opcode) const;
 
-  /// Returns true if this operand uses the constant bus.
+  /// \brief Returns true if this operand uses the constant bus.
   bool usesConstantBus(const MachineRegisterInfo &MRI,
                        const MachineOperand &MO,
                        const MCOperandInfo &OpInfo) const;
 
-  /// Return true if this instruction has any modifiers.
+  /// \brief Return true if this instruction has any modifiers.
   ///  e.g. src[012]_mod, omod, clamp.
   bool hasModifiers(unsigned Opcode) const;
 
@@ -685,7 +696,7 @@ public:
 
   unsigned getVALUOp(const MachineInstr &MI) const;
 
-  /// Return the correct register class for \p OpNo.  For target-specific
+  /// \brief Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
   /// in tablegen.  For generic instructions, like REG_SEQUENCE it will return
   /// the register class of its machine operand.
@@ -693,7 +704,7 @@ public:
   const TargetRegisterClass *getOpRegClass(const MachineInstr &MI,
                                            unsigned OpNo) const;
 
-  /// Return the size in bytes of the operand OpNo on the given
+  /// \brief Return the size in bytes of the operand OpNo on the given
   // instruction opcode.
   unsigned getOpSize(uint16_t Opcode, unsigned OpNo) const {
     const MCOperandInfo &OpInfo = get(Opcode).OpInfo[OpNo];
@@ -707,7 +718,7 @@ public:
     return RI.getRegSizeInBits(*RI.getRegClass(OpInfo.RegClass)) / 8;
   }
 
-  /// This form should usually be preferred since it handles operands
+  /// \brief This form should usually be preferred since it handles operands
   /// with unknown register classes.
   unsigned getOpSize(const MachineInstr &MI, unsigned OpNo) const {
     return RI.getRegSizeInBits(*getOpRegClass(MI, OpNo)) / 8;
@@ -717,7 +728,7 @@ public:
   /// to read a VGPR.
   bool canReadVGPR(const MachineInstr &MI, unsigned OpNo) const;
 
-  /// Legalize the \p OpIndex operand of this instruction by inserting
+  /// \brief Legalize the \p OpIndex operand of this instruction by inserting
   /// a MOV.  For example:
   /// ADD_I32_e32 VGPR0, 15
   /// to
@@ -728,29 +739,29 @@ public:
   /// instead of MOV.
   void legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const;
 
-  /// Check if \p MO is a legal operand if it was the \p OpIdx Operand
+  /// \brief Check if \p MO is a legal operand if it was the \p OpIdx Operand
   /// for \p MI.
   bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
-  /// Check if \p MO would be a valid operand for the given operand
+  /// \brief Check if \p MO would be a valid operand for the given operand
   /// definition \p OpInfo. Note this does not attempt to validate constant bus
   /// restrictions (e.g. literal constant usage).
   bool isLegalVSrcOperand(const MachineRegisterInfo &MRI,
                           const MCOperandInfo &OpInfo,
                           const MachineOperand &MO) const;
 
-  /// Check if \p MO (a register operand) is a legal register for the
+  /// \brief Check if \p MO (a register operand) is a legal register for the
   /// given operand description.
   bool isLegalRegOperand(const MachineRegisterInfo &MRI,
                          const MCOperandInfo &OpInfo,
                          const MachineOperand &MO) const;
 
-  /// Legalize operands in \p MI by either commuting it or inserting a
+  /// \brief Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
   void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
-  /// Fix operands in \p MI to satisfy constant bus requirements.
+  /// \brief Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
   /// Copy a value from a VGPR (\p SrcReg) to SGPR.  This function can only
@@ -768,11 +779,11 @@ public:
                               MachineOperand &Op, MachineRegisterInfo &MRI,
                               const DebugLoc &DL) const;
 
-  /// Legalize all operands in this instruction.  This function may
+  /// \brief Legalize all operands in this instruction.  This function may
   /// create new instruction and insert them before \p MI.
   void legalizeOperands(MachineInstr &MI) const;
 
-  /// Replace this instruction's opcode with the equivalent VALU
+  /// \brief Replace this instruction's opcode with the equivalent VALU
   /// opcode.  This function will also move the users of \p MI to the
   /// VALU if necessary.
   void moveToVALU(MachineInstr &MI) const;
@@ -784,11 +795,11 @@ public:
                   MachineBasicBlock::iterator MI) const override;
 
   void insertReturn(MachineBasicBlock &MBB) const;
-  /// Return the number of wait states that result from executing this
+  /// \brief Return the number of wait states that result from executing this
   /// instruction.
   unsigned getNumWaitStates(const MachineInstr &MI) const;
 
-  /// Returns the operand named \p Op.  If \p MI does not have an
+  /// \brief Returns the operand named \p Op.  If \p MI does not have an
   /// operand named \c Op, this function returns nullptr.
   LLVM_READONLY
   MachineOperand *getNamedOperand(MachineInstr &MI, unsigned OperandName) const;
@@ -811,7 +822,7 @@ public:
   bool isLowLatencyInstruction(const MachineInstr &MI) const;
   bool isHighLatencyInstruction(const MachineInstr &MI) const;
 
-  /// Return the descriptor of the target-specific machine instruction
+  /// \brief Return the descriptor of the target-specific machine instruction
   /// that corresponds to the specified pseudo or native opcode.
   const MCInstrDesc &getMCOpcodeFromPseudo(unsigned Opcode) const {
     return get(pseudoToMCOpcode(Opcode));
@@ -856,7 +867,7 @@ public:
 
   bool isBasicBlockPrologue(const MachineInstr &MI) const override;
 
-  /// Return a partially built integer add instruction without carry.
+  /// \brief Return a partially built integer add instruction without carry.
   /// Caller must add source operands.
   /// For pre-GFX9 it will generate unused carry destination operand.
   /// TODO: After GFX9 it should return a no-carry operation.
@@ -895,9 +906,6 @@ namespace AMDGPU {
 
   LLVM_READONLY
   int getAddr64Inst(uint16_t Opcode);
-
-  LLVM_READONLY
-  int getMUBUFNoLdsInst(uint16_t Opcode);
 
   LLVM_READONLY
   int getAtomicRetOp(uint16_t Opcode);

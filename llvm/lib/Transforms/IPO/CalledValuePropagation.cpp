@@ -69,15 +69,12 @@ public:
 
   CVPLatticeVal() : LatticeState(Undefined) {}
   CVPLatticeVal(CVPLatticeStateTy LatticeState) : LatticeState(LatticeState) {}
-  CVPLatticeVal(std::vector<Function *> &&Functions)
-      : LatticeState(FunctionSet), Functions(std::move(Functions)) {
-    assert(std::is_sorted(this->Functions.begin(), this->Functions.end(),
-                          Compare()));
-  }
+  CVPLatticeVal(std::set<Function *, Compare> &&Functions)
+      : LatticeState(FunctionSet), Functions(Functions) {}
 
   /// Get a reference to the functions held by this lattice value. The number
   /// of functions will be zero for states other than FunctionSet.
-  const std::vector<Function *> &getFunctions() const {
+  const std::set<Function *, Compare> &getFunctions() const {
     return Functions;
   }
 
@@ -102,8 +99,7 @@ private:
   /// MaxFunctionsPerValue. Since most LLVM values are expected to be in
   /// uninteresting states (i.e., overdefined), CVPLatticeVal objects should be
   /// small and efficiently copyable.
-  // FIXME: This could be a TinyPtrVector and/or merge with LatticeState.
-  std::vector<Function *> Functions;
+  std::set<Function *, Compare> Functions;
 };
 
 /// The custom lattice function used by the generic sparse propagation solver.
@@ -154,10 +150,11 @@ public:
       return getOverdefinedVal();
     if (X == getUndefVal() && Y == getUndefVal())
       return getUndefVal();
-    std::vector<Function *> Union;
+    std::set<Function *, CVPLatticeVal::Compare> Union;
     std::set_union(X.getFunctions().begin(), X.getFunctions().end(),
                    Y.getFunctions().begin(), Y.getFunctions().end(),
-                   std::back_inserter(Union), CVPLatticeVal::Compare{});
+                   std::inserter(Union, Union.begin()),
+                   CVPLatticeVal::Compare{});
     if (Union.size() > MaxFunctionsPerValue)
       return getOverdefinedVal();
     return CVPLatticeVal(std::move(Union));
@@ -380,7 +377,8 @@ static bool runCVP(Module &M) {
     CVPLatticeVal LV = Solver.getExistingValueState(RegI);
     if (!LV.isFunctionSet() || LV.getFunctions().empty())
       continue;
-    MDNode *Callees = MDB.createCallees(LV.getFunctions());
+    MDNode *Callees = MDB.createCallees(SmallVector<Function *, 4>(
+        LV.getFunctions().begin(), LV.getFunctions().end()));
     C->setMetadata(LLVMContext::MD_callees, Callees);
     Changed = true;
   }

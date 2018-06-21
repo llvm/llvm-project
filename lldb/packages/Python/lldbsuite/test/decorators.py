@@ -27,6 +27,7 @@ from lldbsuite.test_event.event_builder import EventBuilder
 from lldbsuite.support import funcutils
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
+import swift
 
 
 class DecorateMode:
@@ -306,12 +307,15 @@ def add_test_categories(cat):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
             raise Exception(
                 "@add_test_categories can only be used to decorate a test method")
-        try:
-            if hasattr(func, "categories"):
-                cat.extend(func.categories)
-            setattr(func, "categories", cat)
-        except AttributeError:
-            raise Exception('Cannot assign categories to inline tests.')
+
+        # Update or set the categories attribute. For instance methods, the
+        # attribute must be set on the actual function.
+        func_for_attr = func
+        if inspect.ismethod(func_for_attr):
+            func_for_attr = func.__func__
+        if hasattr(func_for_attr, "categories"):
+            cat.extend(func_for_attr.categories)
+        setattr(func_for_attr, "categories", cat)
 
         return func
 
@@ -457,6 +461,12 @@ def expectedFlakey(expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
+def expectedFlakeyDwarf(bugnumber=None):
+    def fn(self):
+        return self.getDebugInfo() == "dwarf"
+    return expectedFlakey(fn, bugnumber)
+
+
 def expectedFlakeyDsym(bugnumber=None):
     def fn(self):
         return self.getDebugInfo() == "dwarf"
@@ -489,6 +499,27 @@ def expectedFlakeyLinux(bugnumber=None, compilers=None):
 
 def expectedFlakeyNetBSD(bugnumber=None, compilers=None):
     return expectedFlakeyOS(['netbsd'], bugnumber, compilers)
+
+
+def expectedFlakeyCompiler(compiler, compiler_version=None, bugnumber=None):
+    if compiler_version is None:
+        compiler_version = ['=', None]
+
+    def fn(self):
+        return compiler in self.getCompiler() and self.expectedCompilerVersion(compiler_version)
+    return expectedFlakey(fn, bugnumber)
+
+# @expectedFlakeyClang('bugnumber', ['<=', '3.4'])
+
+
+def expectedFlakeyClang(bugnumber=None, compiler_version=None):
+    return expectedFlakeyCompiler('clang', compiler_version, bugnumber)
+
+# @expectedFlakeyGcc('bugnumber', ['<=', '3.4'])
+
+
+def expectedFlakeyGcc(bugnumber=None, compiler_version=None):
+    return expectedFlakeyCompiler('gcc', compiler_version, bugnumber)
 
 
 def expectedFlakeyAndroid(bugnumber=None, api_levels=None, archs=None):
@@ -600,6 +631,31 @@ def skipUnlessDarwin(func):
     return skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples())(func)
 
 
+def swiftTest(func):
+    """Decorate the item as a Swift test (Darwin/Linux only, no i386)."""
+
+    def is_not_swift_compatible(self):
+        if "i386" == self.getArchitecture():
+            return "skipping Swift test because i386 is not a supported architecture"
+        elif not(any(x in sys.platform for x in ['darwin', 'linux'])):
+            return "skipping Swift test because only Darwin and Linux are supported OSes"
+        else:
+            # This configuration is Swift-compatible
+            return None
+    return skipTestIfFn(is_not_swift_compatible)(func)
+
+
+def skipIfSmooshbase(func):
+    """Decorate the item to skip tests that should be skipped on the smooshbase buildbot."""
+
+    def is_smooshbase(self):
+        if os.environ.get('IS_SMOOSHBASE', 'FAIL') != 'FAIL':
+            return 'skip on the smooshbase buildbot'
+        else:
+            return None
+    return skipTestIfFn(is_smooshbase)(func)
+
+
 def skipUnlessGoInstalled(func):
     """Decorate the item to skip tests when no Go compiler is available."""
 
@@ -680,7 +736,7 @@ def skipUnlessSupportedTypeAttribute(attr):
         compiler_path = self.getCompiler()
         f = tempfile.NamedTemporaryFile()
         cmd = [self.getCompiler(), "-x", "c++", "-c", "-o", f.name, "-"]
-        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate('struct __attribute__((%s)) Test {};'%attr)
         if attr in stderr:
             return "Compiler does not support attribute %s"%(attr)
@@ -715,7 +771,7 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
 
     def is_compiler_clang_with_ubsan(self):
         # Write out a temp file which exhibits UB.
-        inputf = tempfile.NamedTemporaryFile(suffix='.c', mode='w')
+        inputf = tempfile.NamedTemporaryFile(suffix='.c')
         inputf.write('int main() { int x = 0; return x / x; }\n')
         inputf.flush()
 
@@ -775,13 +831,37 @@ def skipUnlessAddressSanitizer(func):
         return None
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
 
-def skipIfXmlSupportMissing(func):
-    config = lldb.SBDebugger.GetBuildConfiguration()
-    xml = config.GetValueForKey("xml")
 
-    fail_value = True # More likely to notice if something goes wrong
-    have_xml = xml.GetValueForKey("value").GetBooleanValue(fail_value)
-    return unittest2.skipIf(not have_xml, "requires xml support")(func)
+def skipUnlessSwiftAddressSanitizer(func):
+    """Decorate the item to skip test unless Swift -sanitize=address is supported."""
+
+    def is_swift_compiler_with_address_sanitizer(self):
+        swiftc = swift.getSwiftCompiler()
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'print(1)' | %s -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return None  # The compiler cannot compile at all, let's *not* skip the test
+        cmd = "echo 'print(1)' | %s -sanitize=address -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Compiler cannot compile with -sanitize=address"
+        return None
+    return skipTestIfFn(is_swift_compiler_with_address_sanitizer)(func)
+
+
+def skipUnlessSwiftThreadSanitizer(func):
+    """Decorate the item to skip test unless Swift -sanitize=thread is supported."""
+
+    def is_swift_compiler_with_thread_sanitizer(self):
+        swiftc = swift.getSwiftCompiler()
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo 'print(1)' | %s -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return None  # The compiler cannot compile at all, let's *not* skip the test
+        cmd = "echo 'print(1)' | %s -sanitize=thread -o %s -" % (swiftc, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Compiler cannot compile with -sanitize=thread"
+        return None
+    return skipTestIfFn(is_swift_compiler_with_thread_sanitizer)(func)
 
 # Call sysctl on darwin to see if a specified hardware feature is available on this machine.
 def skipUnlessFeature(feature):

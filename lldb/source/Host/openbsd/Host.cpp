@@ -22,8 +22,10 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/Module.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -42,17 +44,16 @@ extern char **environ;
 using namespace lldb;
 using namespace lldb_private;
 
-Environment Host::GetEnvironment() {
-  Environment env;
+size_t Host::GetEnvironment(StringList &env) {
   char *v;
   char **var = environ;
   for (; var != NULL && *var != NULL; ++var) {
     v = strchr(*var, (int)'-');
     if (v == NULL)
       continue;
-    env.insert(v);
+    env.AppendString(v);
   }
-  return env;
+  return env.GetSize();
 }
 
 static bool
@@ -72,8 +73,7 @@ GetOpenBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
 
       cstr = data.GetCStr(&offset);
       if (cstr) {
-        process_info.GetExecutableFile().SetFile(cstr, false,
-                                                 FileSpec::Style::native);
+        process_info.GetExecutableFile().SetFile(cstr, false);
 
         if (!(match_info_ptr == NULL ||
               NameMatches(

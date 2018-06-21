@@ -1,0 +1,30 @@
+// Test that the REPL allows defining subclasses of NSObject.
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+import Foundation
+
+class Foo : NSObject {
+  var bar : Int
+  var baaz : Int
+  init (a: Int, b: Int) {
+    bar = a
+    baaz = b
+  }
+  func sum() -> Int {
+    return bar + baaz
+  }
+}
+
+Foo(a:2, b:3)
+// CHECK: $R0: Foo = {
+// CHECK-NEXT:   ObjectiveC.NSObject = {
+// CHECK-NEXT:     isa = __lldb_expr_{{[0-9]+}}.Foo
+// CHECK-NEXT:   }
+// CHECK-NEXT:   bar = 2
+// CHECK-NEXT:   baaz = 3
+// CHECK-NEXT: }
+
+$R0.sum()
+// CHECK: $R1: Int = 5

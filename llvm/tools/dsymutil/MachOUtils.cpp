@@ -10,17 +10,17 @@
 #include "MachOUtils.h"
 #include "BinaryHolder.h"
 #include "DebugMap.h"
-#include "NonRelocatableStringpool.h"
 #include "dsymutil.h"
-#include "llvm/MC/MCAsmLayout.h"
-#include "llvm/MC/MCMachObjectWriter.h"
-#include "llvm/MC/MCObjectStreamer.h"
+#include "NonRelocatableStringpool.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -33,20 +33,21 @@ std::string getArchName(StringRef Arch) {
   return Arch;
 }
 
-static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
+static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
   auto Path = sys::findProgramByName("lipo", makeArrayRef(SDKPath));
   if (!Path)
     Path = sys::findProgramByName("lipo");
 
   if (!Path) {
-    WithColor::error() << "lipo: " << Path.getError().message() << "\n";
+    errs() << "error: lipo: " << Path.getError().message() << "\n";
     return false;
   }
 
   std::string ErrMsg;
-  int result = sys::ExecuteAndWait(*Path, Args, None, {}, 0, 0, &ErrMsg);
+  int result =
+      sys::ExecuteAndWait(*Path, Args.data(), nullptr, {}, 0, 0, &ErrMsg);
   if (result) {
-    WithColor::error() << "lipo: " << ErrMsg << "\n";
+    errs() << "error: lipo: " << ErrMsg << "\n";
     return false;
   }
 
@@ -63,8 +64,8 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
     StringRef From(ArchFiles.front().Path);
     if (sys::fs::rename(From, OutputFileName)) {
       if (std::error_code EC = sys::fs::copy_file(From, OutputFileName)) {
-        WithColor::error() << "while copying " << From << " to "
-                           << OutputFileName << ": " << EC.message() << "\n";
+        errs() << "error: while copying " << From << " to " << OutputFileName
+               << ": " << EC.message() << "\n";
         return false;
       }
       sys::fs::remove(From);
@@ -72,37 +73,37 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
     return true;
   }
 
-  SmallVector<StringRef, 8> Args;
+  SmallVector<const char *, 8> Args;
   Args.push_back("lipo");
   Args.push_back("-create");
 
   for (auto &Thin : ArchFiles)
-    Args.push_back(Thin.Path);
+    Args.push_back(Thin.Path.c_str());
 
   // Align segments to match dsymutil-classic alignment
   for (auto &Thin : ArchFiles) {
     Thin.Arch = getArchName(Thin.Arch);
     Args.push_back("-segalign");
-    Args.push_back(Thin.Arch);
+    Args.push_back(Thin.Arch.c_str());
     Args.push_back("20");
   }
 
   Args.push_back("-output");
   Args.push_back(OutputFileName.data());
+  Args.push_back(nullptr);
 
   if (Options.Verbose) {
     outs() << "Running lipo\n";
     for (auto Arg : Args)
-      outs() << ' ' << Arg;
-    outs() << "\n";
+      outs() << ' ' << ((Arg == nullptr) ? "\n" : Arg);
   }
 
   return Options.NoOutput ? true : runLipo(SDKPath, Args);
 }
 
-// Return a MachO::segment_command_64 that holds the same values as the passed
-// MachO::segment_command. We do that to avoid having to duplicate the logic
-// for 32bits and 64bits segments.
+// Return a MachO::segment_command_64 that holds the same values as
+// the passed MachO::segment_command. We do that to avoid having to
+// duplicat the logic for 32bits and 64bits segments.
 struct MachO::segment_command_64 adaptFrom32bits(MachO::segment_command Seg) {
   MachO::segment_command_64 Seg64;
   Seg64.cmd = Seg.cmd;
@@ -136,9 +137,9 @@ static void iterateOnSegments(const object::MachOObjectFile &Obj,
   }
 }
 
-// Transfer the symbols described by \a NList to \a NewSymtab which is just the
-// raw contents of the symbol table for the dSYM companion file. \returns
-// whether the symbol was transferred or not.
+// Transfer the symbols described by \a NList to \a NewSymtab which is
+// just the raw contents of the symbol table for the dSYM companion file.
+// \returns whether the symbol was tranfered or not.
 template <typename NListTy>
 static bool transferSymbol(NListTy NList, bool IsLittleEndian,
                            StringRef Strings, SmallVectorImpl<char> &NewSymtab,
@@ -224,7 +225,7 @@ getSection(const object::MachOObjectFile &Obj,
 template <typename SegmentTy>
 static void transferSegmentAndSections(
     const object::MachOObjectFile::LoadCommandInfo &LCI, SegmentTy Segment,
-    const object::MachOObjectFile &Obj, MachObjectWriter &Writer,
+    const object::MachOObjectFile &Obj, MCObjectWriter &Writer,
     uint64_t LinkeditOffset, uint64_t LinkeditSize, uint64_t DwarfSegmentSize,
     uint64_t &GapForDwarf, uint64_t &EndAddress) {
   if (StringRef("__DWARF") == Segment.segname)
@@ -254,13 +255,14 @@ static void transferSegmentAndSections(
   unsigned nsects = Segment.nsects;
   if (Obj.isLittleEndian() != sys::IsLittleEndianHost)
     MachO::swapStruct(Segment);
-  Writer.W.OS.write(reinterpret_cast<char *>(&Segment), sizeof(Segment));
+  Writer.writeBytes(
+      StringRef(reinterpret_cast<char *>(&Segment), sizeof(Segment)));
   for (unsigned i = 0; i < nsects; ++i) {
     auto Sect = getSection(Obj, Segment, LCI, i);
     Sect.offset = Sect.reloff = Sect.nreloc = 0;
     if (Obj.isLittleEndian() != sys::IsLittleEndianHost)
       MachO::swapStruct(Sect);
-    Writer.W.OS.write(reinterpret_cast<char *>(&Sect), sizeof(Sect));
+    Writer.writeBytes(StringRef(reinterpret_cast<char *>(&Sect), sizeof(Sect)));
   }
 }
 
@@ -427,9 +429,10 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   // Write the load commands.
   assert(OutFile.tell() == HeaderSize);
   if (UUIDCmd.cmd != 0) {
-    Writer.W.write<uint32_t>(UUIDCmd.cmd);
-    Writer.W.write<uint32_t>(UUIDCmd.cmdsize);
-    OutFile.write(reinterpret_cast<const char *>(UUIDCmd.uuid), 16);
+    Writer.write32(UUIDCmd.cmd);
+    Writer.write32(UUIDCmd.cmdsize);
+    Writer.writeBytes(
+        StringRef(reinterpret_cast<const char *>(UUIDCmd.uuid), 16));
     assert(OutFile.tell() == HeaderSize + sizeof(UUIDCmd));
   }
 
@@ -464,7 +467,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   if (DwarfVMAddr + DwarfSegmentSize > DwarfVMMax ||
       DwarfVMAddr + DwarfSegmentSize < DwarfVMAddr /* Overflow */) {
     // There is no room for the __DWARF segment at the end of the
-    // address space. Look through segments to find a gap.
+    // address space. Look trhough segments to find a gap.
     DwarfVMAddr = GapForDwarf;
     if (DwarfVMAddr == UINT64_MAX)
       warn("not enough VM space for the __DWARF segment.",
@@ -476,12 +479,12 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
                      NumDwarfSections, Layout, Writer);
 
   assert(OutFile.tell() == LoadCommandSize + HeaderSize);
-  OutFile.write_zeros(SymtabStart - (LoadCommandSize + HeaderSize));
+  Writer.WriteZeros(SymtabStart - (LoadCommandSize + HeaderSize));
   assert(OutFile.tell() == SymtabStart);
 
   // Transfer symbols.
   if (ShouldEmitSymtab) {
-    OutFile << NewSymtab.str();
+    Writer.writeBytes(NewSymtab.str());
     assert(OutFile.tell() == StringStart);
 
     // Transfer string table.
@@ -489,20 +492,21 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
     // dsymutil-classic starts the reconstructed string table with 2 of these.
     // Reproduce that behavior for now (there is corresponding code in
     // transferSymbol).
-    OutFile << '\0';
+    Writer.WriteZeros(1);
     std::vector<DwarfStringPoolEntryRef> Strings = NewStrings.getEntries();
     for (auto EntryRef : Strings) {
       if (EntryRef.getIndex() == -1U)
         break;
-      OutFile.write(EntryRef.getString().data(),
-                    EntryRef.getString().size() + 1);
+      StringRef ZeroTerminated(EntryRef.getString().data(),
+                               EntryRef.getString().size() + 1);
+      Writer.writeBytes(ZeroTerminated);
     }
   }
 
   assert(OutFile.tell() == StringStart + NewStringsSize);
 
   // Pad till the Dwarf segment start.
-  OutFile.write_zeros(DwarfSegmentStart - (StringStart + NewStringsSize));
+  Writer.WriteZeros(DwarfSegmentStart - (StringStart + NewStringsSize));
   assert(OutFile.tell() == DwarfSegmentStart);
 
   // Emit the Dwarf sections contents.
@@ -511,12 +515,12 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
       continue;
 
     uint64_t Pos = OutFile.tell();
-    OutFile.write_zeros(alignTo(Pos, Sec.getAlignment()) - Pos);
-    MCAsm.writeSectionData(OutFile, &Sec, Layout);
+    Writer.WriteZeros(alignTo(Pos, Sec.getAlignment()) - Pos);
+    MCAsm.writeSectionData(&Sec, Layout);
   }
 
   return true;
 }
-} // namespace MachOUtils
-} // namespace dsymutil
-} // namespace llvm
+}
+}
+}

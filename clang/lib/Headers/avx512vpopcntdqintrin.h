@@ -1,4 +1,5 @@
-/*===----- avx512vpopcntdqintrin.h - AVX512VPOPCNTDQ intrinsics-------------===
+/*===------------- avx512vpopcntdqintrin.h - AVX512VPOPCNTDQ intrinsics
+ *------------------===
  *
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

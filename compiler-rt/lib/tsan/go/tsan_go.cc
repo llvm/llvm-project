@@ -282,3 +282,11 @@ void __tsan_report_count(u64 *pn) {
 
 }  // extern "C"
 }  // namespace __tsan
+
+namespace __sanitizer {
+
+void SymbolizerPrepareForSandboxing() {
+  // Nothing to do here for Go.
+}
+
+}  // namespace __sanitizer

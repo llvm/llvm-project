@@ -24,7 +24,7 @@ namespace StringConvert {
 
 //----------------------------------------------------------------------
 /// @namespace StringConvert StringConvert.h "lldb/Host/StringConvert.h"
-/// Utility classes for converting strings into Integers
+/// @brief Utility classes for converting strings into Integers
 //----------------------------------------------------------------------
 
 int32_t ToSInt32(const char *s, int32_t fail_value = 0, int base = 0,

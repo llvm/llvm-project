@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -73,7 +74,6 @@ STATISTIC(NumReadOnlyArg, "Number of arguments marked readonly");
 STATISTIC(NumNoAlias, "Number of function returns marked noalias");
 STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
-STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 
 // FIXME: This is disabled by default to avoid exposing security vulnerabilities
 // in C/C++ code compiled by clang:
@@ -82,10 +82,6 @@ static cl::opt<bool> EnableNonnullArgPropagation(
     "enable-nonnull-arg-prop", cl::Hidden,
     cl::desc("Try to propagate nonnull argument attributes from callsites to "
              "caller functions."));
-
-static cl::opt<bool> DisableNoUnwindInference(
-    "disable-nounwind-inference", cl::Hidden,
-    cl::desc("Stop inferring nounwind attribute during function-attrs pass"));
 
 namespace {
 
@@ -405,7 +401,7 @@ static Attribute::AttrKind
 determinePointerReadAttrs(Argument *A,
                           const SmallPtrSet<Argument *, 8> &SCCNodes) {
   SmallVector<Use *, 32> Worklist;
-  SmallPtrSet<Use *, 32> Visited;
+  SmallSet<Use *, 32> Visited;
 
   // inalloca arguments are always clobbered by the call.
   if (A->hasInAllocaAttr())
@@ -1012,8 +1008,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
       if (!Speculative) {
         // Mark the function eagerly since we may discover a function
         // which prevents us from speculating about the entire SCC
-        LLVM_DEBUG(dbgs() << "Eagerly marking " << F->getName()
-                          << " as nonnull\n");
+        DEBUG(dbgs() << "Eagerly marking " << F->getName() << " as nonnull\n");
         F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
         ++NumNonNullReturn;
         MadeChange = true;
@@ -1032,7 +1027,7 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
           !F->getReturnType()->isPointerTy())
         continue;
 
-      LLVM_DEBUG(dbgs() << "SCC marking " << F->getName() << " as nonnull\n");
+      DEBUG(dbgs() << "SCC marking " << F->getName() << " as nonnull\n");
       F->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
       ++NumNonNullReturn;
       MadeChange = true;
@@ -1042,212 +1037,47 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
   return MadeChange;
 }
 
-namespace {
-
-/// Collects a set of attribute inference requests and performs them all in one
-/// go on a single SCC Node. Inference involves scanning function bodies
-/// looking for instructions that violate attribute assumptions.
-/// As soon as all the bodies are fine we are free to set the attribute.
-/// Customization of inference for individual attributes is performed by
-/// providing a handful of predicates for each attribute.
-class AttributeInferer {
-public:
-  /// Describes a request for inference of a single attribute.
-  struct InferenceDescriptor {
-
-    /// Returns true if this function does not have to be handled.
-    /// General intent for this predicate is to provide an optimization
-    /// for functions that do not need this attribute inference at all
-    /// (say, for functions that already have the attribute).
-    std::function<bool(const Function &)> SkipFunction;
-
-    /// Returns true if this instruction violates attribute assumptions.
-    std::function<bool(Instruction &)> InstrBreaksAttribute;
-
-    /// Sets the inferred attribute for this function.
-    std::function<void(Function &)> SetAttribute;
-
-    /// Attribute we derive.
-    Attribute::AttrKind AKind;
-
-    /// If true, only "exact" definitions can be used to infer this attribute.
-    /// See GlobalValue::isDefinitionExact.
-    bool RequiresExactDefinition;
-
-    InferenceDescriptor(Attribute::AttrKind AK,
-                        std::function<bool(const Function &)> SkipFunc,
-                        std::function<bool(Instruction &)> InstrScan,
-                        std::function<void(Function &)> SetAttr,
-                        bool ReqExactDef)
-        : SkipFunction(SkipFunc), InstrBreaksAttribute(InstrScan),
-          SetAttribute(SetAttr), AKind(AK),
-          RequiresExactDefinition(ReqExactDef) {}
-  };
-
-private:
-  SmallVector<InferenceDescriptor, 4> InferenceDescriptors;
-
-public:
-  void registerAttrInference(InferenceDescriptor AttrInference) {
-    InferenceDescriptors.push_back(AttrInference);
-  }
-
-  bool run(const SCCNodeSet &SCCNodes);
-};
-
-/// Perform all the requested attribute inference actions according to the
-/// attribute predicates stored before.
-bool AttributeInferer::run(const SCCNodeSet &SCCNodes) {
-  SmallVector<InferenceDescriptor, 4> InferInSCC = InferenceDescriptors;
-  // Go through all the functions in SCC and check corresponding attribute
-  // assumptions for each of them. Attributes that are invalid for this SCC
-  // will be removed from InferInSCC.
+/// Remove the convergent attribute from all functions in the SCC if every
+/// callsite within the SCC is not convergent (except for calls to functions
+/// within the SCC).  Returns true if changes were made.
+static bool removeConvergentAttrs(const SCCNodeSet &SCCNodes) {
+  // For every function in SCC, ensure that either
+  //  * it is not convergent, or
+  //  * we can remove its convergent attribute.
+  bool HasConvergentFn = false;
   for (Function *F : SCCNodes) {
+    if (!F->isConvergent()) continue;
+    HasConvergentFn = true;
 
-    // No attributes whose assumptions are still valid - done.
-    if (InferInSCC.empty())
-      return false;
+    // Can't remove convergent from function declarations.
+    if (F->isDeclaration()) return false;
 
-    // Check if our attributes ever need scanning/can be scanned.
-    llvm::erase_if(InferInSCC, [F](const InferenceDescriptor &ID) {
-      if (ID.SkipFunction(*F))
-        return false;
-
-      // Remove from further inference (invalidate) when visiting a function
-      // that has no instructions to scan/has an unsuitable definition.
-      return F->isDeclaration() ||
-             (ID.RequiresExactDefinition && !F->hasExactDefinition());
-    });
-
-    // For each attribute still in InferInSCC that doesn't explicitly skip F,
-    // set up the F instructions scan to verify assumptions of the attribute.
-    SmallVector<InferenceDescriptor, 4> InferInThisFunc;
-    llvm::copy_if(
-        InferInSCC, std::back_inserter(InferInThisFunc),
-        [F](const InferenceDescriptor &ID) { return !ID.SkipFunction(*F); });
-
-    if (InferInThisFunc.empty())
-      continue;
-
-    // Start instruction scan.
+    // Can't remove convergent if any of our functions has a convergent call to a
+    // function not in the SCC.
     for (Instruction &I : instructions(*F)) {
-      llvm::erase_if(InferInThisFunc, [&](const InferenceDescriptor &ID) {
-        if (!ID.InstrBreaksAttribute(I))
-          return false;
-        // Remove attribute from further inference on any other functions
-        // because attribute assumptions have just been violated.
-        llvm::erase_if(InferInSCC, [&ID](const InferenceDescriptor &D) {
-          return D.AKind == ID.AKind;
-        });
-        // Remove attribute from the rest of current instruction scan.
-        return true;
-      });
-
-      if (InferInThisFunc.empty())
-        break;
+      CallSite CS(&I);
+      // Bail if CS is a convergent call to a function not in the SCC.
+      if (CS && CS.isConvergent() &&
+          SCCNodes.count(CS.getCalledFunction()) == 0)
+        return false;
     }
   }
 
-  if (InferInSCC.empty())
-    return false;
+  // If the SCC doesn't have any convergent functions, we have nothing to do.
+  if (!HasConvergentFn) return false;
 
-  bool Changed = false;
-  for (Function *F : SCCNodes)
-    // At this point InferInSCC contains only functions that were either:
-    //   - explicitly skipped from scan/inference, or
-    //   - verified to have no instructions that break attribute assumptions.
-    // Hence we just go and force the attribute for all non-skipped functions.
-    for (auto &ID : InferInSCC) {
-      if (ID.SkipFunction(*F))
-        continue;
-      Changed = true;
-      ID.SetAttribute(*F);
-    }
-  return Changed;
-}
+  // If we got here, all of the calls the SCC makes to functions not in the SCC
+  // are non-convergent.  Therefore all of the SCC's functions can also be made
+  // non-convergent.  We'll remove the attr from the callsites in
+  // InstCombineCalls.
+  for (Function *F : SCCNodes) {
+    if (!F->isConvergent()) continue;
 
-} // end anonymous namespace
-
-/// Helper for non-Convergent inference predicate InstrBreaksAttribute.
-static bool InstrBreaksNonConvergent(Instruction &I,
-                                     const SCCNodeSet &SCCNodes) {
-  const CallSite CS(&I);
-  // Breaks non-convergent assumption if CS is a convergent call to a function
-  // not in the SCC.
-  return CS && CS.isConvergent() && SCCNodes.count(CS.getCalledFunction()) == 0;
-}
-
-/// Helper for NoUnwind inference predicate InstrBreaksAttribute.
-static bool InstrBreaksNonThrowing(Instruction &I, const SCCNodeSet &SCCNodes) {
-  if (!I.mayThrow())
-    return false;
-  if (const auto *CI = dyn_cast<CallInst>(&I)) {
-    if (Function *Callee = CI->getCalledFunction()) {
-      // I is a may-throw call to a function inside our SCC. This doesn't
-      // invalidate our current working assumption that the SCC is no-throw; we
-      // just have to scan that other function.
-      if (SCCNodes.count(Callee) > 0)
-        return false;
-    }
+    DEBUG(dbgs() << "Removing convergent attr from fn " << F->getName()
+                 << "\n");
+    F->setNotConvergent();
   }
   return true;
-}
-
-/// Infer attributes from all functions in the SCC by scanning every
-/// instruction for compliance to the attribute assumptions. Currently it
-/// does:
-///   - removal of Convergent attribute
-///   - addition of NoUnwind attribute
-///
-/// Returns true if any changes to function attributes were made.
-static bool inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes) {
-
-  AttributeInferer AI;
-
-  // Request to remove the convergent attribute from all functions in the SCC
-  // if every callsite within the SCC is not convergent (except for calls
-  // to functions within the SCC).
-  // Note: Removal of the attr from the callsites will happen in
-  // InstCombineCalls separately.
-  AI.registerAttrInference(AttributeInferer::InferenceDescriptor{
-      Attribute::Convergent,
-      // Skip non-convergent functions.
-      [](const Function &F) { return !F.isConvergent(); },
-      // Instructions that break non-convergent assumption.
-      [SCCNodes](Instruction &I) {
-        return InstrBreaksNonConvergent(I, SCCNodes);
-      },
-      [](Function &F) {
-        LLVM_DEBUG(dbgs() << "Removing convergent attr from fn " << F.getName()
-                          << "\n");
-        F.setNotConvergent();
-      },
-      /* RequiresExactDefinition= */ false});
-
-  if (!DisableNoUnwindInference)
-    // Request to infer nounwind attribute for all the functions in the SCC if
-    // every callsite within the SCC is not throwing (except for calls to
-    // functions within the SCC). Note that nounwind attribute suffers from
-    // derefinement - results may change depending on how functions are
-    // optimized. Thus it can be inferred only from exact definitions.
-    AI.registerAttrInference(AttributeInferer::InferenceDescriptor{
-        Attribute::NoUnwind,
-        // Skip non-throwing functions.
-        [](const Function &F) { return F.doesNotThrow(); },
-        // Instructions that break non-throwing assumption.
-        [SCCNodes](Instruction &I) {
-          return InstrBreaksNonThrowing(I, SCCNodes);
-        },
-        [](Function &F) {
-          LLVM_DEBUG(dbgs()
-                     << "Adding nounwind attr to fn " << F.getName() << "\n");
-          F.setDoesNotThrow();
-          ++NumNoUnwind;
-        },
-        /* RequiresExactDefinition= */ true});
-
-  // Perform all the requested attribute inference actions.
-  return AI.run(SCCNodes);
 }
 
 static bool setDoesNotRecurse(Function &F) {
@@ -1306,8 +1136,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   bool HasUnknownCall = false;
   for (LazyCallGraph::Node &N : C) {
     Function &F = N.getFunction();
-    if (F.hasFnAttribute(Attribute::OptimizeNone) ||
-        F.hasFnAttribute(Attribute::Naked)) {
+    if (F.hasFnAttribute(Attribute::OptimizeNone)) {
       // Treat any function we're trying not to optimize as if it were an
       // indirect call and omit it from the node set used below.
       HasUnknownCall = true;
@@ -1338,7 +1167,7 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   if (!HasUnknownCall) {
     Changed |= addNoAliasAttrs(SCCNodes);
     Changed |= addNonNullAttrs(SCCNodes);
-    Changed |= inferAttrsFromFunctionBodies(SCCNodes);
+    Changed |= removeConvergentAttrs(SCCNodes);
     Changed |= addNoRecurseAttrs(SCCNodes);
   }
 
@@ -1392,8 +1221,7 @@ static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
   bool ExternalNode = false;
   for (CallGraphNode *I : SCC) {
     Function *F = I->getFunction();
-    if (!F || F->hasFnAttribute(Attribute::OptimizeNone) ||
-        F->hasFnAttribute(Attribute::Naked)) {
+    if (!F || F->hasFnAttribute(Attribute::OptimizeNone)) {
       // External node or function we're trying not to optimize - we both avoid
       // transform them and avoid leveraging information they provide.
       ExternalNode = true;
@@ -1416,7 +1244,7 @@ static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
   if (!ExternalNode) {
     Changed |= addNoAliasAttrs(SCCNodes);
     Changed |= addNonNullAttrs(SCCNodes);
-    Changed |= inferAttrsFromFunctionBodies(SCCNodes);
+    Changed |= removeConvergentAttrs(SCCNodes);
     Changed |= addNoRecurseAttrs(SCCNodes);
   }
 

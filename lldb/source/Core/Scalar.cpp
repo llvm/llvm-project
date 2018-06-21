@@ -9,6 +9,7 @@
 
 #include "lldb/Core/Scalar.h"
 
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
@@ -24,8 +25,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
-// Promote to max type currently follows the ANSI C rule for type promotion in
-// expressions.
+// Promote to max type currently follows the ANSI C rule for type
+// promotion in expressions.
 //----------------------------------------------------------------------
 static Scalar::Type PromoteToMaxType(
     const Scalar &lhs,  // The const left hand side object
@@ -40,9 +41,10 @@ static Scalar::Type PromoteToMaxType(
                                      // lhs/rhs will get promoted)
     ) {
   Scalar result;
-  // Initialize the promoted values for both the right and left hand side
-  // values to be the objects themselves. If no promotion is needed (both right
-  // and left have the same type), then the temp_value will not get used.
+  // Initialize the promoted values for both the right and left hand side values
+  // to be the objects themselves. If no promotion is needed (both right and
+  // left
+  // have the same type), then the temp_value will not get used.
   promoted_lhs_ptr = &lhs;
   promoted_rhs_ptr = &rhs;
   // Extract the types of both the right and left hand side values
@@ -126,13 +128,14 @@ bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
 
     if (limit_byte_size < byte_size) {
       if (endian::InlHostByteOrder() == eByteOrderLittle) {
-        // On little endian systems if we want fewer bytes from the current
-        // type we just specify fewer bytes since the LSByte is first...
+        // On little endian systems if we want fewer bytes from the
+        // current type we just specify fewer bytes since the LSByte
+        // is first...
         byte_size = limit_byte_size;
       } else if (endian::InlHostByteOrder() == eByteOrderBig) {
-        // On big endian systems if we want fewer bytes from the current type
-        // have to advance our initial byte pointer and trim down the number of
-        // bytes since the MSByte is first
+        // On big endian systems if we want fewer bytes from the
+        // current type have to advance our initial byte pointer and
+        // trim down the number of bytes since the MSByte is first
         bytes += byte_size - limit_byte_size;
         byte_size = limit_byte_size;
       }
@@ -161,8 +164,9 @@ const void *Scalar::GetBytes() const {
   case e_slonglong:
   case e_ulonglong:
     bytes = reinterpret_cast<const uint8_t *>(m_integer.getRawData());
-    // getRawData always returns a pointer to an uint64_t.  If we have a
-    // smaller type, we need to update the pointer on big-endian systems.
+    // getRawData always returns a pointer to an uint64_t.  If we have a smaller
+    // type,
+    // we need to update the pointer on big-endian systems.
     if (endian::InlHostByteOrder() == eByteOrderBig) {
       size_t byte_size = m_integer.getBitWidth() / 8;
       if (byte_size < 8)
@@ -487,24 +491,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -551,24 +551,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -611,24 +607,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -667,24 +659,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -719,24 +707,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -767,24 +751,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -815,24 +795,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -859,24 +835,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -903,24 +875,20 @@ bool Scalar::Promote(Scalar::Type type) {
       break;
 
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, true,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -943,24 +911,20 @@ bool Scalar::Promote(Scalar::Type type) {
       success = true;
       break;
     case e_float:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
       success = true;
       break;
 
     case e_double:
-      m_float = llvm::APFloat(llvm::APFloat::IEEEdouble());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
       success = true;
       break;
 
     case e_long_double:
-      m_float = llvm::APFloat(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                          : llvm::APFloat::x87DoubleExtended());
-      m_float.convertFromAPInt(m_integer, false,
-                               llvm::APFloat::rmNearestTiesToEven);
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
       success = true;
       break;
     }
@@ -984,18 +948,19 @@ bool Scalar::Promote(Scalar::Type type) {
       success = true;
       break;
     case e_double:
-      m_float = llvm::APFloat((double_t)m_float.convertToFloat());
+      m_float = llvm::APFloat((float_t)m_float.convertToFloat());
       success = true;
       break;
 
-    case e_long_double: {
-      bool ignore;
-      m_float.convert(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                  : llvm::APFloat::x87DoubleExtended(),
-                      llvm::APFloat::rmNearestTiesToEven, &ignore);
+    case e_long_double:
+      if (m_ieee_quad)
+        m_float =
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
+                                m_float.bitcastToAPInt());
       success = true;
       break;
-    }
     }
     break;
 
@@ -1017,14 +982,15 @@ bool Scalar::Promote(Scalar::Type type) {
     case e_double:
       success = true;
       break;
-    case e_long_double: {
-      bool ignore;
-      m_float.convert(m_ieee_quad ? llvm::APFloat::IEEEquad()
-                                  : llvm::APFloat::x87DoubleExtended(),
-                      llvm::APFloat::rmNearestTiesToEven, &ignore);
+    case e_long_double:
+      if (m_ieee_quad)
+        m_float =
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
+                                m_float.bitcastToAPInt());
       success = true;
       break;
-    }
     }
     break;
 
@@ -1120,6 +1086,253 @@ Scalar::Type Scalar::GetValueTypeForFloatWithByteSize(size_t byte_size) {
   if (byte_size == sizeof(long_double_t))
     return e_long_double;
   return e_void;
+}
+
+bool Scalar::Cast(Scalar::Type type) {
+  bool success = false;
+  switch (m_type) {
+  case e_void:
+    break;
+
+  case e_sint:
+  case e_uint:
+  case e_slong:
+  case e_ulong:
+  case e_slonglong:
+  case e_ulonglong:
+  case e_sint128:
+  case e_uint128:
+  case e_sint256:
+  case e_uint256:
+    switch (type) {
+    case e_void:
+      break;
+    case e_sint:
+      m_integer = m_integer.sextOrTrunc(sizeof(sint_t) * 8);
+      success = true;
+      break;
+
+    case e_uint:
+      m_integer = m_integer.zextOrTrunc(sizeof(sint_t) * 8);
+      success = true;
+      break;
+
+    case e_slong:
+      m_integer = m_integer.sextOrTrunc(sizeof(slong_t) * 8);
+      success = true;
+      break;
+
+    case e_ulong:
+      m_integer = m_integer.zextOrTrunc(sizeof(slong_t) * 8);
+      success = true;
+      break;
+
+    case e_slonglong:
+      m_integer = m_integer.sextOrTrunc(sizeof(slonglong_t) * 8);
+      success = true;
+      break;
+
+    case e_ulonglong:
+      m_integer = m_integer.zextOrTrunc(sizeof(slonglong_t) * 8);
+      success = true;
+      break;
+
+    case e_sint128:
+      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT128);
+      success = true;
+      break;
+
+    case e_uint128:
+      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT128);
+      success = true;
+      break;
+
+    case e_sint256:
+      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
+      success = true;
+      break;
+
+    case e_uint256:
+      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
+      success = true;
+      break;
+
+    case e_float:
+      m_float = llvm::APFloat(m_integer.bitsToFloat());
+      success = true;
+      break;
+
+    case e_double:
+      m_float = llvm::APFloat(m_integer.bitsToDouble());
+      success = true;
+      break;
+
+    case e_long_double:
+      if (m_ieee_quad)
+        m_float = llvm::APFloat(llvm::APFloat::IEEEquad(), m_integer);
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(), m_integer);
+      success = true;
+      break;
+    }
+    break;
+
+  case e_float:
+    switch (type) {
+    case e_void:
+      break;
+    case e_sint:
+    case e_uint:
+    case e_slong:
+    case e_ulong:
+    case e_slonglong:
+    case e_ulonglong:
+    case e_sint128:
+    case e_uint128:
+    case e_sint256:
+    case e_uint256:
+      m_integer = m_float.bitcastToAPInt();
+      success = true;
+      break;
+    case e_float:
+      m_float = llvm::APFloat(m_float.convertToFloat());
+      success = true;
+      break;
+    case e_double:
+      m_float = llvm::APFloat(m_float.convertToFloat());
+      success = true;
+      break;
+    case e_long_double:
+      if (m_ieee_quad)
+        m_float =
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
+                                m_float.bitcastToAPInt());
+      success = true;
+      break;
+    }
+    break;
+
+  case e_double:
+    switch (type) {
+    case e_void:
+      break;
+    case e_sint:
+    case e_uint:
+    case e_slong:
+    case e_ulong:
+    case e_slonglong:
+    case e_ulonglong:
+    case e_sint128:
+    case e_uint128:
+    case e_sint256:
+    case e_uint256:
+      m_integer = m_float.bitcastToAPInt();
+      success = true;
+      break;
+    case e_float:
+      m_float = llvm::APFloat(m_float.convertToDouble());
+      success = true;
+      break;
+    case e_double:
+      m_float = llvm::APFloat(m_float.convertToDouble());
+      success = true;
+      break;
+    case e_long_double:
+      if (m_ieee_quad)
+        m_float =
+            llvm::APFloat(llvm::APFloat::IEEEquad(), m_float.bitcastToAPInt());
+      else
+        m_float = llvm::APFloat(llvm::APFloat::x87DoubleExtended(),
+                                m_float.bitcastToAPInt());
+      success = true;
+      break;
+    }
+    break;
+
+  case e_long_double:
+    switch (type) {
+    case e_void:
+      break;
+    case e_sint:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.sextOrTrunc(sizeof(sint_t) * 8);
+      success = true;
+      break;
+
+    case e_uint:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.zextOrTrunc(sizeof(sint_t) * 8);
+      success = true;
+      break;
+
+    case e_slong:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.sextOrTrunc(sizeof(slong_t) * 8);
+      success = true;
+      break;
+
+    case e_ulong:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.zextOrTrunc(sizeof(slong_t) * 8);
+      success = true;
+      break;
+
+    case e_slonglong:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.sextOrTrunc(sizeof(slonglong_t) * 8);
+      success = true;
+      break;
+
+    case e_ulonglong:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.zextOrTrunc(sizeof(slonglong_t) * 8);
+      success = true;
+      break;
+
+    case e_sint128:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT128);
+      success = true;
+      break;
+
+    case e_uint128:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT128);
+      success = true;
+      break;
+
+    case e_sint256:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.sextOrTrunc(BITWIDTH_INT256);
+      success = true;
+      break;
+
+    case e_uint256:
+      m_integer = m_float.bitcastToAPInt();
+      m_integer = m_integer.zextOrTrunc(BITWIDTH_INT256);
+      success = true;
+      break;
+
+    case e_float:
+      m_float = llvm::APFloat(m_float.convertToFloat());
+      success = true;
+      break;
+    case e_double:
+      m_float = llvm::APFloat(m_float.convertToFloat());
+      success = true;
+      break;
+    case e_long_double:
+      success = true;
+      break;
+    }
+    break;
+  }
+
+  if (success)
+    m_type = type;
+  return success;
 }
 
 bool Scalar::MakeSigned() {
@@ -1606,7 +1819,7 @@ float Scalar::Float(float fail_value) const {
   case e_uint128:
   case e_sint256:
   case e_uint256:
-    return llvm::APIntOps::RoundAPIntToFloat(m_integer);
+    return m_integer.bitsToFloat();
   case e_float:
     return m_float.convertToFloat();
   case e_double:
@@ -1632,7 +1845,7 @@ double Scalar::Double(double fail_value) const {
   case e_uint128:
   case e_sint256:
   case e_uint256:
-    return llvm::APIntOps::RoundAPIntToDouble(m_integer);
+    return m_integer.bitsToDouble();
   case e_float:
     return (double_t)m_float.convertToFloat();
   case e_double:
@@ -1658,7 +1871,7 @@ long double Scalar::LongDouble(long double fail_value) const {
   case e_uint128:
   case e_sint256:
   case e_uint256:
-    return (long_double_t)llvm::APIntOps::RoundAPIntToDouble(m_integer);
+    return (long_double_t)m_integer.bitsToDouble();
   case e_float:
     return (long_double_t)m_float.convertToFloat();
   case e_double:
@@ -2053,7 +2266,7 @@ const Scalar lldb_private::operator/(const Scalar &lhs, const Scalar &rhs) {
     case Scalar::e_float:
     case Scalar::e_double:
     case Scalar::e_long_double:
-      if (!b->m_float.isZero()) {
+      if (b->m_float.isZero()) {
         result.m_float = a->m_float / b->m_float;
         return result;
       }
@@ -2061,7 +2274,8 @@ const Scalar lldb_private::operator/(const Scalar &lhs, const Scalar &rhs) {
     }
   }
   // For division only, the only way it should make it here is if a promotion
-  // failed, or if we are trying to do a divide by zero.
+  // failed,
+  // or if we are trying to do a divide by zero.
   result.m_type = Scalar::e_void;
   return result;
 }
@@ -2253,15 +2467,17 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     error.SetErrorString("Invalid c-string value string.");
     return error;
   }
+  bool success = false;
   switch (encoding) {
   case eEncodingInvalid:
     error.SetErrorString("Invalid encoding.");
     break;
 
   case eEncodingUint:
-    if (byte_size <= sizeof(uint64_t)) {
-      uint64_t uval64;
-      if (!llvm::to_integer(value_str, uval64))
+    if (byte_size <= sizeof(unsigned long long)) {
+      uint64_t uval64 =
+          StringConvert::ToUInt64(value_str, UINT64_MAX, 0, &success);
+      if (!success)
         error.SetErrorStringWithFormat(
             "'%s' is not a valid unsigned integer string value", value_str);
       else if (!UIntValueIsValidForSize(uval64, byte_size))
@@ -2297,9 +2513,10 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     break;
 
   case eEncodingSint:
-    if (byte_size <= sizeof(int64_t)) {
-      int64_t sval64;
-      if (!llvm::to_integer(value_str, sval64))
+    if (byte_size <= sizeof(long long)) {
+      uint64_t sval64 =
+          StringConvert::ToSInt64(value_str, INT64_MAX, 0, &success);
+      if (!success)
         error.SetErrorStringWithFormat(
             "'%s' is not a valid signed integer string value", value_str);
       else if (!SIntValueIsValidForSize(sval64, byte_size))
@@ -2572,6 +2789,11 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   if (bit_size == 0)
     return true;
 
+  size_t this_bit_size = 8 * GetByteSize();
+  
+  if (bit_offset > this_bit_size)
+    return false;
+
   switch (m_type) {
   case Scalar::e_void:
   case Scalar::e_float:
@@ -2586,7 +2808,7 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   case Scalar::e_sint256:
     m_integer = m_integer.ashr(bit_offset)
                     .sextOrTrunc(bit_size)
-                    .sextOrSelf(8 * GetByteSize());
+                    .sextOrSelf(this_bit_size);
     return true;
 
   case Scalar::e_uint:
@@ -2596,7 +2818,7 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   case Scalar::e_uint256:
     m_integer = m_integer.lshr(bit_offset)
                     .zextOrTrunc(bit_size)
-                    .zextOrSelf(8 * GetByteSize());
+                    .zextOrSelf(this_bit_size);
     return true;
   }
   return false;

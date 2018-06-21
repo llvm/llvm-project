@@ -4,5 +4,7 @@
 #include <tmmintrin.h>
 
 __m64 test1(__m64 a, __m64 b, int c) {
-   return _mm_alignr_pi8(a, b, c); // expected-error {{argument to '__builtin_ia32_palignr' must be a constant integer}}
+   // FIXME: The "incompatible result type" error is due to pr10112 and should
+   // be removed when that is fixed.
+   return _mm_alignr_pi8(a, b, c); // expected-error {{argument to '__builtin_ia32_palignr' must be a constant integer}} expected-error {{incompatible result type}}
 }

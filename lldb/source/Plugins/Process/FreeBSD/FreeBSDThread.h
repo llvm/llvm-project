@@ -24,7 +24,7 @@ class POSIXBreakpointProtocol;
 
 //------------------------------------------------------------------------------
 // @class FreeBSDThread
-// Abstraction of a FreeBSD thread.
+// @brief Abstraction of a FreeBSD thread.
 class FreeBSDThread : public lldb_private::Thread {
 public:
   //------------------------------------------------------------------

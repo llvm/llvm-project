@@ -16,9 +16,6 @@
 #ifndef LLVM_IR_COMDAT_H
 #define LLVM_IR_COMDAT_H
 
-#include "llvm-c/Types.h"
-#include "llvm/Support/CBindingWrapping.h"
-
 namespace llvm {
 
 class raw_ostream;
@@ -57,9 +54,6 @@ private:
   StringMapEntry<Comdat> *Name = nullptr;
   SelectionKind SK = Any;
 };
-
-// Create wrappers for C Binding types (see CBindingWrapping.h).
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Comdat, LLVMComdatRef)
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Comdat &C) {
   C.print(OS);

@@ -27,9 +27,7 @@ public:
     return getTriple().getArch() == llvm::Triple::x86_64;
   }
 
-  void addLibCxxIncludePaths(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
+  std::string findLibCxxIncludePath() const override;
   void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;

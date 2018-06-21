@@ -62,7 +62,6 @@ def FeatureLoadStoreOnCond : SystemZFeature<
   "load-store-on-cond", "LoadStoreOnCond",
   "Assume that the load/store-on-condition facility is installed"
 >;
-def FeatureNoLoadStoreOnCond : SystemZMissingFeature<"LoadStoreOnCond">;
 
 def FeaturePopulationCount : SystemZFeature<
   "population-count", "PopulationCount",

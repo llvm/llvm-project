@@ -23,6 +23,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Index/IndexingAction.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
@@ -31,8 +32,6 @@
 #include "llvm/Support/ErrorHandling.h"
 using namespace clang;
 using namespace llvm::opt;
-
-namespace clang {
 
 static std::unique_ptr<FrontendAction>
 CreateFrontendBaseAction(CompilerInstance &CI) {
@@ -45,8 +44,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case ASTDump:                return llvm::make_unique<ASTDumpAction>();
   case ASTPrint:               return llvm::make_unique<ASTPrintAction>();
   case ASTView:                return llvm::make_unique<ASTViewAction>();
-  case DumpCompilerOptions:
-    return llvm::make_unique<DumpCompilerOptionsAction>();
   case DumpRawTokens:          return llvm::make_unique<DumpRawTokensAction>();
   case DumpTokens:             return llvm::make_unique<DumpTokensAction>();
   case EmitAssembly:           return llvm::make_unique<EmitAssemblyAction>();
@@ -67,7 +64,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case ParseSyntaxOnly:        return llvm::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return llvm::make_unique<DumpModuleInfoAction>();
   case VerifyPCH:              return llvm::make_unique<VerifyPCHAction>();
-  case TemplightDump:          return llvm::make_unique<TemplightDumpAction>();
 
   case PluginAction: {
     for (FrontendPluginRegistry::iterator it =
@@ -127,7 +123,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #endif
 }
 
-std::unique_ptr<FrontendAction>
+static std::unique_ptr<FrontendAction>
 CreateFrontendAction(CompilerInstance &CI) {
   // Create the underlying action.
   std::unique_ptr<FrontendAction> Act = CreateFrontendBaseAction(CI);
@@ -169,6 +165,11 @@ CreateFrontendAction(CompilerInstance &CI) {
   }
 #endif
 
+  if (!FEOpts.IndexStorePath.empty()) {
+    Act = index::createIndexDataRecordingAction(FEOpts, std::move(Act));
+    CI.setGenModuleActionWrapper(&index::createIndexDataRecordingAction);
+  }
+
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
@@ -178,7 +179,7 @@ CreateFrontendAction(CompilerInstance &CI) {
   return Act;
 }
 
-bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
+bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
     std::unique_ptr<OptTable> Opts = driver::createDriverOptTable();
@@ -259,5 +260,3 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     BuryPointer(std::move(Act));
   return Success;
 }
-
-} // namespace clang 

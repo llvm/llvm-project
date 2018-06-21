@@ -16,9 +16,9 @@
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/CVDebugRecord.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryByteStream.h"
@@ -452,12 +452,11 @@ struct coff_section {
     if (Characteristics & COFF::IMAGE_SCN_TYPE_NO_PAD)
       return 1;
 
-    // Bit [20:24] contains section alignment. 0 means use a default alignment
-    // of 16.
+    // Bit [20:24] contains section alignment. Both 0 and 1 mean alignment 1.
     uint32_t Shift = (Characteristics >> 20) & 0xF;
     if (Shift > 0)
       return 1U << (Shift - 1);
-    return 16;
+    return 1;
   }
 };
 
@@ -1013,7 +1012,8 @@ public:
     llvm_unreachable("null symbol table pointer!");
   }
 
-  ArrayRef<coff_relocation> getRelocations(const coff_section *Sec) const;
+  iterator_range<const coff_relocation *>
+  getRelocations(const coff_section *Sec) const;
 
   std::error_code getSectionName(const coff_section *Sec, StringRef &Res) const;
   uint64_t getSectionSize(const coff_section *Sec) const;

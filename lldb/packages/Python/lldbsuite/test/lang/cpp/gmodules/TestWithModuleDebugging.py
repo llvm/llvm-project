@@ -3,13 +3,13 @@ import os
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import decorators
 
 
 class TestWithGmodulesDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(bugnumber="llvm.org/pr36146", oslist=["linux"], archs=["i386"])
     @add_test_categories(["gmodules"])
     def test_specialized_typedef_from_pch(self):
         self.build()

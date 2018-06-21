@@ -74,7 +74,7 @@ static cl::opt<bool>
     if (TraceGVPlacement) {                                                    \
       TRACE_TO(errs(), X);                                                     \
     } else {                                                                   \
-      LLVM_DEBUG(TRACE_TO(dbgs(), X));                                         \
+      DEBUG(TRACE_TO(dbgs(), X));                                              \
     }                                                                          \
   } while (false)
 #endif
@@ -200,11 +200,11 @@ MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
 bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
       const TargetMachine &TM) const {
   // Only global variables, not functions.
-  LLVM_DEBUG(dbgs() << "Checking if value is in small-data, -G"
-                    << SmallDataThreshold << ": \"" << GO->getName() << "\": ");
+  DEBUG(dbgs() << "Checking if value is in small-data, -G"
+               << SmallDataThreshold << ": \"" << GO->getName() << "\": ");
   const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GO);
   if (!GVar) {
-    LLVM_DEBUG(dbgs() << "no, not a global variable\n");
+    DEBUG(dbgs() << "no, not a global variable\n");
     return false;
   }
 
@@ -213,19 +213,19 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
   // small data or not. This is how we can support mixing -G0/-G8 in LTO.
   if (GVar->hasSection()) {
     bool IsSmall = isSmallDataSection(GVar->getSection());
-    LLVM_DEBUG(dbgs() << (IsSmall ? "yes" : "no")
-                      << ", has section: " << GVar->getSection() << '\n');
+    DEBUG(dbgs() << (IsSmall ? "yes" : "no") << ", has section: "
+                 << GVar->getSection() << '\n');
     return IsSmall;
   }
 
   if (GVar->isConstant()) {
-    LLVM_DEBUG(dbgs() << "no, is a constant\n");
+    DEBUG(dbgs() << "no, is a constant\n");
     return false;
   }
 
   bool IsLocal = GVar->hasLocalLinkage();
   if (!StaticsInSData && IsLocal) {
-    LLVM_DEBUG(dbgs() << "no, is static\n");
+    DEBUG(dbgs() << "no, is static\n");
     return false;
   }
 
@@ -234,7 +234,7 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
     GType = PT->getElementType();
 
   if (isa<ArrayType>(GType)) {
-    LLVM_DEBUG(dbgs() << "no, is an array\n");
+    DEBUG(dbgs() << "no, is an array\n");
     return false;
   }
 
@@ -244,22 +244,22 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
   // these objects end up in the sdata, the references will still be valid.
   if (StructType *ST = dyn_cast<StructType>(GType)) {
     if (ST->isOpaque()) {
-      LLVM_DEBUG(dbgs() << "no, has opaque type\n");
+      DEBUG(dbgs() << "no, has opaque type\n");
       return false;
     }
   }
 
   unsigned Size = GVar->getParent()->getDataLayout().getTypeAllocSize(GType);
   if (Size == 0) {
-    LLVM_DEBUG(dbgs() << "no, has size 0\n");
+    DEBUG(dbgs() << "no, has size 0\n");
     return false;
   }
   if (Size > SmallDataThreshold) {
-    LLVM_DEBUG(dbgs() << "no, size exceeds sdata threshold: " << Size << '\n');
+    DEBUG(dbgs() << "no, size exceeds sdata threshold: " << Size << '\n');
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "yes\n");
+  DEBUG(dbgs() << "yes\n");
   return true;
 }
 

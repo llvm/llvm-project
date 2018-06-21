@@ -164,7 +164,7 @@ enum enumB { enumB_X, enumB_Y, enumB_Z };
 static enum enumB myVal = enumB_X;
 void test_nested_switch() {
   switch (enumA_E) { // expected-warning {{no case matching constant}}
-    switch (myVal) { // expected-warning {{enumeration values 'enumB_X' and 'enumB_Z' not handled in switch}}
+    switch (myVal) { // expected-warning {{enumeration values 'enumB_X' and 'enumB_Z' not handled in switch}} expected-note {{add missing switch cases}}
       case enumB_Y: ;
     }
   }
@@ -268,19 +268,4 @@ int operator+(const struct P &s1, const struct P &s2);
 int test_operator_overload_struct_array_index() {
   struct P x[10] = {0}; // expected-note {{array 'x' declared here}}
   return x[1] + x[11]; // expected-warning {{array index 11 is past the end of the array (which contains 10 elements)}}
-}
-
-int multi[2][2][2]; // expected-note 3 {{array 'multi' declared here}}
-int test_multiarray() {
-  return multi[2][0][0] + // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-         multi[0][2][0] + // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-         multi[0][0][2];  // expected-warning {{array index 2 is past the end of the array (which contains 2 elements)}}
-}
-
-struct multi_s {
-  int arr[4];
-};
-struct multi_s multi2[4]; // expected-note {{array 'multi2' declared here}}
-int test_struct_multiarray() {
-  return multi2[4].arr[0]; // expected-warning {{array index 4 is past the end of the array (which contains 4 elements)}}
 }

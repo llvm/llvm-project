@@ -86,11 +86,11 @@ public:
 
 namespace {
 enum SelfFlagEnum {
-  /// No flag set.
+  /// \brief No flag set.
   SelfFlag_None = 0x0,
-  /// Value came from 'self'.
+  /// \brief Value came from 'self'.
   SelfFlag_Self    = 0x1,
-  /// Value came from the result of an initializer (e.g. [super init]).
+  /// \brief Value came from the result of an initializer (e.g. [super init]).
   SelfFlag_InitRes = 0x2
 };
 }
@@ -98,7 +98,7 @@ enum SelfFlagEnum {
 REGISTER_MAP_WITH_PROGRAMSTATE(SelfFlag, SymbolRef, unsigned)
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CalledInit, bool)
 
-/// A call receiving a reference to 'self' invalidates the object that
+/// \brief A call receiving a reference to 'self' invalidates the object that
 /// 'self' contains. This keeps the "self flags" assigned to the 'self'
 /// object before the call so we can assign them to the new object that 'self'
 /// points to after the call.
@@ -128,7 +128,7 @@ static bool hasSelfFlag(SVal val, SelfFlagEnum flag, CheckerContext &C) {
   return getSelfFlags(val, C) & flag;
 }
 
-/// Returns true of the value of the expression is the object that 'self'
+/// \brief Returns true of the value of the expression is the object that 'self'
 /// points to and is an object that did not come from the result of calling
 /// an initializer.
 static bool isInvalidSelf(const Expr *E, CheckerContext &C) {
@@ -407,7 +407,7 @@ static bool shouldRunOnFunctionOrMethod(const NamedDecl *ND) {
   return ID != nullptr;
 }
 
-/// Returns true if the location is 'self'.
+/// \brief Returns true if the location is 'self'.
 static bool isSelfVar(SVal location, CheckerContext &C) {
   AnalysisDeclContext *analCtx = C.getCurrentAnalysisDeclContext();
   if (!analCtx->getSelfDecl())

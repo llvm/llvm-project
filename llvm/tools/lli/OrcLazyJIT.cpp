@@ -54,10 +54,10 @@ static cl::opt<bool> OrcInlineStubs("orc-lazy-inline-stubs",
 OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
   switch (OrcDumpKind) {
   case DumpKind::NoDump:
-    return [](std::unique_ptr<Module> M) { return M; };
+    return [](std::shared_ptr<Module> M) { return M; };
 
   case DumpKind::DumpFuncsToStdOut:
-    return [](std::unique_ptr<Module> M) {
+    return [](std::shared_ptr<Module> M) {
       printf("[ ");
 
       for (const auto &F : *M) {
@@ -76,25 +76,26 @@ OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
     };
 
   case DumpKind::DumpModsToStdOut:
-    return [](std::unique_ptr<Module> M) {
-      outs() << "----- Module Start -----\n"
-             << *M << "----- Module End -----\n";
+    return [](std::shared_ptr<Module> M) {
+             outs() << "----- Module Start -----\n" << *M
+                    << "----- Module End -----\n";
 
-      return M;
-    };
+             return M;
+           };
 
   case DumpKind::DumpModsToDisk:
-    return [](std::unique_ptr<Module> M) {
-      std::error_code EC;
-      raw_fd_ostream Out(M->getModuleIdentifier() + ".ll", EC, sys::fs::F_Text);
-      if (EC) {
-        errs() << "Couldn't open " << M->getModuleIdentifier()
-               << " for dumping.\nError:" << EC.message() << "\n";
-        exit(1);
-      }
-      Out << *M;
-      return M;
-    };
+    return [](std::shared_ptr<Module> M) {
+             std::error_code EC;
+             raw_fd_ostream Out(M->getModuleIdentifier() + ".ll", EC,
+                                sys::fs::F_Text);
+             if (EC) {
+               errs() << "Couldn't open " << M->getModuleIdentifier()
+                      << " for dumping.\nError:" << EC.message() << "\n";
+               exit(1);
+             }
+             Out << *M;
+             return M;
+           };
   }
   llvm_unreachable("Unknown DumpKind");
 }
@@ -121,6 +122,15 @@ int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
   EB.setOptLevel(getOptLevel());
   auto TM = std::unique_ptr<TargetMachine>(EB.selectTarget());
   Triple T(TM->getTargetTriple());
+  auto CompileCallbackMgr = orc::createLocalCompileCallbackManager(T, 0);
+
+  // If we couldn't build the factory function then there must not be a callback
+  // manager for this target. Bail out.
+  if (!CompileCallbackMgr) {
+    errs() << "No callback manager available for target '"
+           << TM->getTargetTriple().str() << "'.\n";
+    return 1;
+  }
 
   auto IndirectStubsMgrBuilder = orc::createLocalIndirectStubsManagerBuilder(T);
 
@@ -132,12 +142,13 @@ int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
   }
 
   // Everything looks good. Build the JIT.
-  OrcLazyJIT J(std::move(TM), std::move(IndirectStubsMgrBuilder),
+  OrcLazyJIT J(std::move(TM), std::move(CompileCallbackMgr),
+               std::move(IndirectStubsMgrBuilder),
                OrcInlineStubs);
 
   // Add the module, look up main and run it.
   for (auto &M : Ms)
-    cantFail(J.addModule(std::move(M)));
+    cantFail(J.addModule(std::shared_ptr<Module>(std::move(M))));
 
   if (auto MainSym = J.findSymbol("main")) {
     typedef int (*MainFnPtr)(int, const char*[]);

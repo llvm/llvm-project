@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4.1 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
-#include <immintrin.h>
+#include <x86intrin.h>
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse41-intrinsics-fast-isel.ll
 
@@ -220,20 +220,20 @@ __m128 test_mm_floor_ss(__m128 x, __m128 y) {
 
 __m128i test_mm_insert_epi8(__m128i x, char b) {
   // CHECK-LABEL: test_mm_insert_epi8
-  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 1
-  return _mm_insert_epi8(x, b, 1);
+  // CHECK: insertelement <16 x i8> %{{.*}}, i8 %{{.*}}, i32 0
+  return _mm_insert_epi8(x, b, 16);
 }
 
 __m128i test_mm_insert_epi32(__m128i x, int b) {
   // CHECK-LABEL: test_mm_insert_epi32
-  // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 1
-  return _mm_insert_epi32(x, b, 1);
+  // CHECK: insertelement <4 x i32> %{{.*}}, i32 %{{.*}}, i32 0
+  return _mm_insert_epi32(x, b, 4);
 }
 
 __m128i test_mm_insert_epi64(__m128i x, long long b) {
   // CHECK-LABEL: test_mm_insert_epi64
-  // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 1
-  return _mm_insert_epi64(x, b, 1);
+  // CHECK: insertelement <2 x i64> %{{.*}}, i64 %{{.*}}, i32 0
+  return _mm_insert_epi64(x, b, 2);
 }
 
 __m128 test_mm_insert_ps(__m128 x, __m128 y) {
@@ -312,11 +312,7 @@ __m128i test_mm_mpsadbw_epu8(__m128i x, __m128i y) {
 
 __m128i test_mm_mul_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_mul_epi32
-  // CHECK: shl <2 x i64> %{{.*}}, <i64 32, i64 32>
-  // CHECK: ashr <2 x i64> %{{.*}}, <i64 32, i64 32>
-  // CHECK: shl <2 x i64> %{{.*}}, <i64 32, i64 32>
-  // CHECK: ashr <2 x i64> %{{.*}}, <i64 32, i64 32>
-  // CHECK: mul <2 x i64> %{{.*}}, %{{.*}}
+  // CHECK: call <2 x i64> @llvm.x86.sse41.pmuldq(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_mul_epi32(x, y);
 }
 

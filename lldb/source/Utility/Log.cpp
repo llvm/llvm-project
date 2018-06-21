@@ -28,7 +28,7 @@
 #include <utility> // for pair
 
 #include <assert.h>  // for assert
-#if defined(_WIN32)
+#if defined(LLVM_ON_WIN32)
 #include <process.h> // for getpid
 #else
 #include <unistd.h>
@@ -121,9 +121,9 @@ void Log::Printf(const char *format, ...) {
 }
 
 //----------------------------------------------------------------------
-// All logging eventually boils down to this function call. If we have a
-// callback registered, then we call the logging callback. If we have a valid
-// file handle, we also log to the file.
+// All logging eventually boils down to this function call. If we have
+// a callback registered, then we call the logging callback. If we have
+// a valid file handle, we also log to the file.
 //----------------------------------------------------------------------
 void Log::VAPrintf(const char *format, va_list args) {
   llvm::SmallString<64> FinalMessage;
@@ -156,7 +156,8 @@ void Log::VAError(const char *format, va_list args) {
 }
 
 //----------------------------------------------------------------------
-// Printing of warnings that are not fatal only if verbose mode is enabled.
+// Printing of warnings that are not fatal only if verbose mode is
+// enabled.
 //----------------------------------------------------------------------
 void Log::Verbose(const char *format, ...) {
   if (!GetVerbose())
@@ -301,8 +302,8 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
 }
 
 void Log::WriteMessage(const std::string &message) {
-  // Make a copy of our stream shared pointer in case someone disables our log
-  // while we are logging and releases the stream
+  // Make a copy of our stream shared pointer in case someone disables our
+  // log while we are logging and releases the stream
   auto stream_sp = GetStream();
   if (!stream_sp)
     return;

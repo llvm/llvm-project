@@ -29,7 +29,7 @@ class MCStreamer;
 class raw_ostream;
 class TargetRegisterInfo;
 
-/// MI-level stackmap operands.
+/// \brief MI-level stackmap operands.
 ///
 /// MI stackmap operations take the form:
 /// <id>, <numBytes>, live args...
@@ -60,7 +60,7 @@ public:
   }
 };
 
-/// MI-level patchpoint operands.
+/// \brief MI-level patchpoint operands.
 ///
 /// MI patchpoint operations take the form:
 /// [<def>], <id>, <numBytes>, <target>, <numArgs>, <cc>, ...
@@ -137,7 +137,7 @@ public:
     return getVarIdx();
   }
 
-  /// Get the next scratch register operand index.
+  /// \brief Get the next scratch register operand index.
   unsigned getNextScratchIdx(unsigned StartIdx = 0) const;
 };
 
@@ -236,15 +236,15 @@ public:
     FnInfos.clear();
   }
 
-  /// Generate a stackmap record for a stackmap instruction.
+  /// \brief Generate a stackmap record for a stackmap instruction.
   ///
   /// MI must be a raw STACKMAP, not a PATCHPOINT.
   void recordStackMap(const MachineInstr &MI);
 
-  /// Generate a stackmap record for a patchpoint instruction.
+  /// \brief Generate a stackmap record for a patchpoint instruction.
   void recordPatchPoint(const MachineInstr &MI);
 
-  /// Generate a stackmap record for a statepoint instruction.
+  /// \brief Generate a stackmap record for a statepoint instruction.
   void recordStatepoint(const MachineInstr &MI);
 
   /// If there is any stack map data, create a stack map section and serialize
@@ -293,11 +293,11 @@ private:
                MachineInstr::const_mop_iterator MOE, LocationVec &Locs,
                LiveOutVec &LiveOuts) const;
 
-  /// Create a live-out register record for the given register @p Reg.
+  /// \brief Create a live-out register record for the given register @p Reg.
   LiveOutReg createLiveOutReg(unsigned Reg,
                               const TargetRegisterInfo *TRI) const;
 
-  /// Parse the register live-out mask and return a vector of live-out
+  /// \brief Parse the register live-out mask and return a vector of live-out
   /// registers that need to be recorded in the stackmap.
   LiveOutVec parseRegisterLiveOutMask(const uint32_t *Mask) const;
 
@@ -311,16 +311,16 @@ private:
                            MachineInstr::const_mop_iterator MOE,
                            bool recordResult = false);
 
-  /// Emit the stackmap header.
+  /// \brief Emit the stackmap header.
   void emitStackmapHeader(MCStreamer &OS);
 
-  /// Emit the function frame record for each function.
+  /// \brief Emit the function frame record for each function.
   void emitFunctionFrameRecords(MCStreamer &OS);
 
-  /// Emit the constant pool.
+  /// \brief Emit the constant pool.
   void emitConstantPoolEntries(MCStreamer &OS);
 
-  /// Emit the callsite info for each stackmap/patchpoint intrinsic call.
+  /// \brief Emit the callsite info for each stackmap/patchpoint intrinsic call.
   void emitCallsiteEntries(MCStreamer &OS);
 
   void print(raw_ostream &OS);

@@ -8,14 +8,14 @@
 //===----------------------------------------------------------------------===//
 //
 /// @file
-/// Generic structures and typedefs for ELF files.
+/// @brief Generic structures and typedefs for ELF files.
 ///
 /// This file provides definitions for the various entities comprising an ELF
 /// file.  The structures are generic in the sense that they do not correspond
 /// to the exact binary layout of an ELF, but can be used to hold the
 /// information present in both 32 and 64 bit variants of the format.  Each
-/// entity provides a \c Parse method which is capable of transparently
-/// reading both 32 and 64 bit instances of the object.
+/// entity provides a \c Parse method which is capable of transparently reading
+/// both 32 and 64 bit instances of the object.
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_ELFHeader_h_
@@ -35,9 +35,8 @@ namespace elf {
 //------------------------------------------------------------------------------
 /// @name ELF type definitions.
 ///
-/// Types used to represent the various components of ELF structures.  All
-/// types are signed or unsigned integral types wide enough to hold values
-/// from both
+/// Types used to represent the various components of ELF structures.  All types
+/// are signed or unsigned integral types wide enough to hold values from both
 /// 32 and 64 bit ELF variants.
 //@{
 typedef uint64_t elf_addr;
@@ -52,10 +51,10 @@ typedef int64_t elf_sxword;
 
 //------------------------------------------------------------------------------
 /// @class ELFHeader
-/// Generic representation of an ELF file header.
+/// @brief Generic representation of an ELF file header.
 ///
-/// This object is used to identify the general attributes on an ELF file and
-/// to locate additional sections within the file.
+/// This object is used to identify the general attributes on an ELF file and to
+/// locate additional sections within the file.
 struct ELFHeader {
   unsigned char e_ident[llvm::ELF::EI_NIDENT]; ///< ELF file identification.
   elf_addr e_entry;     ///< Virtual address program entry point.
@@ -119,9 +118,9 @@ struct ELFHeader {
   bool HasHeaderExtension() const;
 
   //--------------------------------------------------------------------------
-  /// Parse an ELFHeader entry starting at position \p offset and update the
-  /// data extractor with the address size and byte order attributes as
-  /// defined by the header.
+  /// Parse an ELFHeader entry starting at position \p offset and
+  /// update the data extractor with the address size and byte order
+  /// attributes as defined by the header.
   ///
   /// @param[in,out] data
   ///    The DataExtractor to read from.  Updated with the address size and
@@ -158,8 +157,8 @@ struct ELFHeader {
 private:
 
   //--------------------------------------------------------------------------
-  /// Parse an ELFHeader header extension entry.  This method is called by
-  /// Parse().
+  /// Parse an ELFHeader header extension entry.  This method is called
+  /// by Parse().
   ///
   /// @param[in] data
   ///    The DataExtractor to read from.
@@ -168,7 +167,7 @@ private:
 
 //------------------------------------------------------------------------------
 /// @class ELFSectionHeader
-/// Generic representation of an ELF section header.
+/// @brief Generic representation of an ELF section header.
 struct ELFSectionHeader {
   elf_word sh_name;       ///< Section name string index.
   elf_word sh_type;       ///< Section type.
@@ -203,7 +202,7 @@ struct ELFSectionHeader {
 
 //------------------------------------------------------------------------------
 /// @class ELFProgramHeader
-/// Generic representation of an ELF program header.
+/// @brief Generic representation of an ELF program header.
 struct ELFProgramHeader {
   elf_word p_type;    ///< Type of program segment.
   elf_word p_flags;   ///< Segment attributes.
@@ -236,7 +235,7 @@ struct ELFProgramHeader {
 
 //------------------------------------------------------------------------------
 /// @class ELFSymbol
-/// Represents a symbol within an ELF symbol table.
+/// @brief Represents a symbol within an ELF symbol table.
 struct ELFSymbol {
   elf_addr st_value;      ///< Absolute or relocatable address.
   elf_xword st_size;      ///< Size of the symbol or zero.
@@ -289,7 +288,7 @@ struct ELFSymbol {
 
 //------------------------------------------------------------------------------
 /// @class ELFDynamic
-/// Represents an entry in an ELF dynamic table.
+/// @brief Represents an entry in an ELF dynamic table.
 struct ELFDynamic {
   elf_sxword d_tag; ///< Type of dynamic table entry.
   union {
@@ -319,7 +318,7 @@ struct ELFDynamic {
 
 //------------------------------------------------------------------------------
 /// @class ELFRel
-/// Represents a relocation entry with an implicit addend.
+/// @brief Represents a relocation entry with an implicit addend.
 struct ELFRel {
   elf_addr r_offset; ///< Address of reference.
   elf_xword r_info;  ///< symbol index and type of relocation.
@@ -361,7 +360,7 @@ struct ELFRel {
 
 //------------------------------------------------------------------------------
 /// @class ELFRela
-/// Represents a relocation entry with an explicit addend.
+/// @brief Represents a relocation entry with an explicit addend.
 struct ELFRela {
   elf_addr r_offset;   ///< Address of reference.
   elf_xword r_info;    ///< Symbol index and type of relocation.

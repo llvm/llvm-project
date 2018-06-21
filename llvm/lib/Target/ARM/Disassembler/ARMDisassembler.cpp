@@ -158,8 +158,6 @@ static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeHPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                   uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -996,11 +994,6 @@ static DecodeStatus DecodeSPRRegisterClass(MCInst &Inst, unsigned RegNo,
   unsigned Register = SPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeHPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                   uint64_t Address, const void *Decoder) {
-  return DecodeSPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static const uint16_t DPRDecoderTable[] = {
@@ -4149,6 +4142,7 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val,
     case 0x8a: // msplim_ns
     case 0x8b: // psplim_ns
     case 0x91: // basepri_ns
+    case 0x92: // basepri_max_ns
     case 0x93: // faultmask_ns
       if (!(FeatureBits[ARM::HasV8MMainlineOps]))
         return MCDisassembler::Fail;
@@ -4164,9 +4158,7 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val,
         return MCDisassembler::Fail;
       break;
     default:
-      // Architecturally defined as unpredictable
-      S = MCDisassembler::SoftFail;
-      break;
+      return MCDisassembler::Fail;
     }
 
     if (Inst.getOpcode() == ARM::t2MSR_M) {
@@ -4206,8 +4198,15 @@ static DecodeStatus DecodeBankedReg(MCInst &Inst, unsigned Val,
   // The table of encodings for these banked registers comes from B9.2.3 of the
   // ARM ARM. There are patterns, but nothing regular enough to make this logic
   // neater. So by fiat, these values are UNPREDICTABLE:
-  if (!ARMBankedReg::lookupBankedRegByEncoding((R << 5) | SysM))
-    return MCDisassembler::Fail;
+  if (!R) {
+    if (SysM == 0x7 || SysM == 0xf || SysM == 0x18 || SysM == 0x19 ||
+        SysM == 0x1a || SysM == 0x1b)
+      return MCDisassembler::SoftFail;
+  } else {
+    if (SysM != 0xe && SysM != 0x10 && SysM != 0x12 && SysM != 0x14 &&
+        SysM != 0x16 && SysM != 0x1c && SysM != 0x1e)
+      return MCDisassembler::SoftFail;
+  }
 
   Inst.addOperand(MCOperand::createImm(Val));
   return MCDisassembler::Success;

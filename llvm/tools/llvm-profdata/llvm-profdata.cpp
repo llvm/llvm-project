@@ -24,42 +24,32 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/WithColor.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
 using namespace llvm;
 
-enum ProfileFormat {
-  PF_None = 0,
-  PF_Text,
-  PF_Compact_Binary,
-  PF_GCC,
-  PF_Binary
-};
+enum ProfileFormat { PF_None = 0, PF_Text, PF_Binary, PF_GCC };
 
-static void warn(Twine Message, std::string Whence = "",
+static void warn(StringRef Prefix, Twine Message, std::string Whence = "",
                  std::string Hint = "") {
-  WithColor::warning();
+  errs() << Prefix;
   if (!Whence.empty())
     errs() << Whence << ": ";
   errs() << Message << "\n";
   if (!Hint.empty())
-    WithColor::note() << Hint << "\n";
+    errs() << Hint << "\n";
 }
 
 static void exitWithError(Twine Message, std::string Whence = "",
                           std::string Hint = "") {
-  WithColor::error();
-  if (!Whence.empty())
-    errs() << Whence << ": ";
-  errs() << Message << "\n";
-  if (!Hint.empty())
-    WithColor::note() << Hint << "\n";
+  warn("error: ", Message, Whence, Hint);
   ::exit(1);
 }
 
@@ -242,8 +232,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if (OutputFilename.compare("-") == 0)
     exitWithError("Cannot write indexed profdata format to stdout.");
 
-  if (OutputFormat != PF_Binary && OutputFormat != PF_Compact_Binary &&
-      OutputFormat != PF_Text)
+  if (OutputFormat != PF_Binary && OutputFormat != PF_Text)
     exitWithError("Unknown format is specified.");
 
   std::error_code EC;
@@ -309,7 +298,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     if (isFatalError(IPE))
       exitWithError(make_error<InstrProfError>(IPE), WC->ErrWhence);
     else
-      warn(toString(make_error<InstrProfError>(IPE)),
+      warn("warning: ", toString(make_error<InstrProfError>(IPE)),
            WC->ErrWhence);
   }
 
@@ -323,8 +312,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
-    sampleprof::SPF_None, sampleprof::SPF_Text, sampleprof::SPF_Compact_Binary,
-    sampleprof::SPF_GCC, sampleprof::SPF_Binary};
+    sampleprof::SPF_None, sampleprof::SPF_Text, sampleprof::SPF_Binary,
+    sampleprof::SPF_GCC};
 
 static void mergeSampleProfile(const WeightedFileVector &Inputs,
                                StringRef OutputFilename,
@@ -473,8 +462,6 @@ static int merge_main(int argc, const char *argv[]) {
   cl::opt<ProfileFormat> OutputFormat(
       cl::desc("Format of output profile"), cl::init(PF_Binary),
       cl::values(clEnumValN(PF_Binary, "binary", "Binary encoding (default)"),
-                 clEnumValN(PF_Compact_Binary, "compbinary",
-                            "Compact binary encoding"),
                  clEnumValN(PF_Text, "text", "Text encoding"),
                  clEnumValN(PF_GCC, "gcc",
                             "GCC encoding (only meaningful for -sample)")));
@@ -800,7 +787,7 @@ static int show_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !ShowFunction.empty())
-    WithColor::warning() << "-function argument ignored: showing all functions\n";
+    errs() << "warning: -function argument ignored: showing all functions\n";
 
   std::vector<uint32_t> Cutoffs(DetailedSummaryCutoffs.begin(),
                                 DetailedSummaryCutoffs.end());
@@ -815,7 +802,10 @@ static int show_main(int argc, const char *argv[]) {
 }
 
 int main(int argc, const char *argv[]) {
-  InitLLVM X(argc, argv);
+  // Print a stack trace if we signal out.
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   StringRef ProgName(sys::path::filename(argv[0]));
   if (argc > 1) {

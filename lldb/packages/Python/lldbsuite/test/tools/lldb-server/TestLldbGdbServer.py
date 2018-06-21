@@ -330,9 +330,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure we have a program counter register.
         self.assertTrue('pc' in generic_regs)
 
-        # Ensure we have a frame pointer register. PPC64le's FP is the same as SP
-        if self.getArchitecture() != 'powerpc64le':
-            self.assertTrue('fp' in generic_regs)
+        # Ensure we have a frame pointer register.
+        self.assertTrue('fp' in generic_regs)
 
         # Ensure we have a stack pointer register.
         self.assertTrue('sp' in generic_regs)
@@ -603,6 +602,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
     @llgs_test
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054771")
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch_llgs(
             self):
         self.init_llgs_test()
@@ -620,6 +620,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.p_returns_correct_data_size_for_each_qRegisterInfo()
 
     @llgs_test
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054771")
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_attach_llgs(
             self):
         self.init_llgs_test()
@@ -811,6 +812,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # expectations about fixed signal numbers.
         self.Hc_then_Csignal_signals_correct_thread(self.TARGET_EXC_BAD_ACCESS)
 
+    # this is failing 1 in 4 times on some Ubuntu 14.04 and 15.10 setups
+    @unittest2.expectedFailure()
     @llgs_test
     def test_Hc_then_Csignal_signals_correct_thread_launch_llgs(self):
         self.init_llgs_test()

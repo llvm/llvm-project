@@ -21,9 +21,6 @@ if(NOT APPLE)
   set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 endif()
 
-set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
-set(CLANG_DEFAULT_RTLIB compiler-rt CACHE STRING "")
-
 if(APPLE)
   set(COMPILER_RT_ENABLE_IOS OFF CACHE BOOL "")
   set(COMPILER_RT_ENABLE_TVOS OFF CACHE BOOL "")
@@ -41,23 +38,16 @@ set(CLANG_BOOTSTRAP_TARGETS
   clang-test-depends
   distribution
   install-distribution
-  install-distribution-stripped
   clang CACHE STRING "")
 
-get_cmake_property(variableNames VARIABLES)
-foreach(variableName ${variableNames})
-  if(variableName MATCHES "^STAGE2_")
-    string(REPLACE "STAGE2_" "" new_name ${variableName})
-    list(APPEND EXTRA_ARGS "-D${new_name}=${${variableName}}")
+foreach(target x86_64;aarch64)
+  if(FUCHSIA_${target}_SYSROOT)
+    list(APPEND EXTRA_ARGS -DFUCHSIA_${target}_SYSROOT=${FUCHSIA_${target}_SYSROOT})
   endif()
 endforeach()
 
 # Setup the bootstrap build.
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
-set(CLANG_BOOTSTRAP_EXTRA_DEPS
-  builtins
-  runtimes
-  CACHE STRING "")
 set(CLANG_BOOTSTRAP_CMAKE_ARGS
   ${EXTRA_ARGS}
   -C ${CMAKE_CURRENT_LIST_DIR}/Fuchsia-stage2.cmake

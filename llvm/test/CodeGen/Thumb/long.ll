@@ -60,10 +60,10 @@ entry:
         %tmp1 = add i64 %y, 10
         ret i64 %tmp1
 ; CHECK-LABEL: f6a:
-; CHECK: movs r0, r2
 ; CHECK: movs r1, #0
-; CHECK: adds r0, #10
+; CHECK: adds r2, #10
 ; CHECK: adcs r1, r3
+; CHECK: movs r0, r2
 }
 
 define i64 @f6b(i64 %x, i64 %y) {
@@ -102,11 +102,11 @@ entry:
         %tmp1 = sub i64 %y, 10
         ret i64 %tmp1
 ; CHECK-LABEL: f9a:
-; CHECK: movs r1, r3
+; CHECK: movs r0, #0
+; CHECK: subs r2, #10
+; CHECK: sbcs r3, r0
 ; CHECK: movs r0, r2
-; CHECK: movs r2, #0
-; CHECK: subs r0, #10
-; CHECK: sbcs r1, r2
+; CHECK: movs r1, r3
 }
 
 define i64 @f9b(i64 %x, i64 %y) { ; ADDC with big negative imm => SUBS reg
@@ -187,14 +187,14 @@ entry:
         %tmp2 = add i64 %tmp1, -1000
         ret i64 %tmp2
 ; CHECK-LABEL: f11:
-; CHECK: movs r1, r3
 ; CHECK: movs r0, #125
 ; CHECK: lsls r0, r0, #3
-; CHECK: movs r3, #0
+; CHECK: movs r1, #0
 ; CHECK: subs r2, r2, r0
-; CHECK: sbcs r1, r3
+; CHECK: sbcs r3, r1
 ; CHECK: subs r0, r2, r0
-; CHECK: sbcs r1, r3
+; CHECK: sbcs r3, r1
+; CHECK: movs r1, r3
 }
 
 ; "sub 2147483648" has to be lowered into "add -2147483648"

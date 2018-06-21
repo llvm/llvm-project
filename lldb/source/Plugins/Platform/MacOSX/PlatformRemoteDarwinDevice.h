@@ -60,7 +60,9 @@ protected:
     SDKDirectoryInfo(const lldb_private::FileSpec &sdk_dir_spec);
     lldb_private::FileSpec directory;
     lldb_private::ConstString build;
-    llvm::VersionTuple version;
+    uint32_t version_major;
+    uint32_t version_minor;
+    uint32_t version_update;
     bool user_cached;
   };
 

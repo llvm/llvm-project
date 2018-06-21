@@ -1,0 +1,89 @@
+Searching 6897 files for "LIBLLDB_LOG_VERBOSE"
+
+/Users/cbieneman/dev/swift/lldb/source/Plugins/Process/Darwin/MachException.cpp:
+   72      mach_msg_type_number_t *new_stateCnt) {
+   73    // TODO change to LIBLLDB_LOG_EXCEPTION
+   74:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+   75    if (log) {
+   76      log->Printf("::%s(exc_port = 0x%4.4x, exc_type = %d (%s), "
+   ..
+   88      thread_state_t old_state, mach_msg_type_number_t old_stateCnt,
+   89      thread_state_t new_state, mach_msg_type_number_t *new_stateCnt) {
+   90:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+   91    if (log) {
+   92      log->Printf("::%s(exc_port = 0x%4.4x, thd_port = 0x%4.4x, "
+   ..
+  109                             mach_exception_data_t exc_data,
+  110                             mach_msg_type_number_t exc_data_count) {
+  111:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  112    if (log) {
+  113      log->Printf("::%s(exc_port = 0x%4.4x, thd_port = 0x%4.4x, "
+  ...
+  217                                        mach_port_t notify_port) {
+  218    Error error;
+  219:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  220  
+  221    mach_msg_timeout_t mach_msg_timeout =
+  ...
+  303    } else {
+  304      Log *log(
+  305:         GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  306      if (log)
+  307        log->Printf("MachException::Message::%s(): mach_exc_server "
+  ...
+  318    Error error;
+  319  
+  320:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  321  
+  322    // If we had a soft signal, we need to update the thread first so it can
+  ...
+  415  Error MachException::PortInfo::Save(task_t task) {
+  416    Error error;
+  417:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  418  
+  419    if (log)
+  ...
+  475    Error error;
+  476  
+  477:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  478  
+  479    if (log)
+
+/Users/cbieneman/dev/swift/lldb/source/Plugins/Process/Darwin/NativeProcessDarwin.cpp:
+  281  void NativeProcessDarwin::ExceptionMessageReceived(
+  282      const MachException::Message &message) {
+  283:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  284  
+  285    std::lock_guard<std::recursive_mutex> locker(m_exception_messages_mutex);
+  ...
+  299  
+  300  void *NativeProcessDarwin::ExceptionThread(void *arg) {
+  301:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  302    if (!arg) {
+  303      if (log)
+  ...
+  312  
+  313  void *NativeProcessDarwin::DoExceptionThread() {
+  314:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  315  
+  316    if (log)
+  ...
+  694    // We have a complete bundle of exceptions for our child process.
+  695    Error error;
+  696:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+  697  
+  698    std::lock_guard<std::recursive_mutex> locker(m_exception_messages_mutex);
+  ...
+ 1226  Error NativeProcessDarwin::ReplyToAllExceptions() {
+ 1227    Error error;
+ 1228:   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+ 1229  
+ 1230    TaskPortForProcessID(error);
+ ....
+ 1396  
+ 1397    Log *verbose_log(
+ 1398:       GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_VERBOSE));
+ 1399    if (verbose_log) {
+ 1400      float user = (float)info->user_time.seconds +
+
+14 matches across 2 files

@@ -47,7 +47,7 @@ public:
   FileManager FakeFiles;
   llvm::DenseMap<unsigned, const FileEntry *> Files;
 
-  /// Copy the string into our own allocator.
+  /// \brief Copy the string into our own allocator.
   const char *copyString(StringRef Blob) {
     char *mem = Alloc.Allocate<char>(Blob.size() + 1);
     memcpy(mem, Blob.data(), Blob.size());

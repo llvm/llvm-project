@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the functions of the WebAssembly-specific subclass
+/// \brief This file defines the functions of the WebAssembly-specific subclass
 /// of TargetLoweringObjectFile.
 ///
 //===----------------------------------------------------------------------===//

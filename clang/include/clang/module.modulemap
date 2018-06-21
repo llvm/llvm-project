@@ -42,7 +42,6 @@ module Clang_Basic {
   textual header "Basic/BuiltinsX86_64.def"
   textual header "Basic/BuiltinsXCore.def"
   textual header "Basic/DiagnosticOptions.def"
-  textual header "Basic/Features.def"
   textual header "Basic/LangOptions.def"
   textual header "Basic/OpenCLExtensions.def"
   textual header "Basic/OpenCLImageTypes.def"
@@ -148,14 +147,12 @@ module Clang_Tooling {
   // importing the AST matchers library gives a link dependency on the AST
   // matchers (and thus the AST), which clang-format should not have.
   exclude header "Tooling/RefactoringCallbacks.h"
+  exclude header "Tooling/Refactor/USRFinder.h"
+
+  textual header "Tooling/Refactor/RefactoringActions.def"
 }
 
 module Clang_ToolingCore {
   requires cplusplus
   umbrella "Tooling/Core" module * { export * }
-}
-
-module Clang_ToolingInclusions {
-  requires cplusplus
-  umbrella "Tooling/Inclusions" module * { export * }
 }

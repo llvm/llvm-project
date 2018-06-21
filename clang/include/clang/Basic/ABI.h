@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Enums/classes describing ABI related information about constructors,
+/// \brief Enums/classes describing ABI related information about constructors,
 /// destructors and thunks.
 ///
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@
 
 namespace clang {
 
-/// C++ constructor types.
+/// \brief C++ constructor types.
 enum CXXCtorType {
   Ctor_Complete,       ///< Complete object ctor
   Ctor_Base,           ///< Base object ctor
@@ -30,7 +30,7 @@ enum CXXCtorType {
   Ctor_DefaultClosure, ///< Default closure variant of a ctor
 };
 
-/// C++ destructor types.
+/// \brief C++ destructor types.
 enum CXXDtorType {
     Dtor_Deleting, ///< Deleting dtor
     Dtor_Complete, ///< Complete object dtor
@@ -38,29 +38,29 @@ enum CXXDtorType {
     Dtor_Comdat    ///< The COMDAT used for dtors
 };
 
-/// A return adjustment.
+/// \brief A return adjustment.
 struct ReturnAdjustment {
-  /// The non-virtual adjustment from the derived object to its
+  /// \brief The non-virtual adjustment from the derived object to its
   /// nearest virtual base.
   int64_t NonVirtual;
 
-  /// Holds the ABI-specific information about the virtual return
+  /// \brief Holds the ABI-specific information about the virtual return
   /// adjustment, if needed.
   union VirtualAdjustment {
     // Itanium ABI
     struct {
-      /// The offset (in bytes), relative to the address point
+      /// \brief The offset (in bytes), relative to the address point
       /// of the virtual base class offset.
       int64_t VBaseOffsetOffset;
     } Itanium;
 
     // Microsoft ABI
     struct {
-      /// The offset (in bytes) of the vbptr, relative to the beginning
+      /// \brief The offset (in bytes) of the vbptr, relative to the beginning
       /// of the derived class.
       uint32_t VBPtrOffset;
 
-      /// Index of the virtual base in the vbtable.
+      /// \brief Index of the virtual base in the vbtable.
       uint32_t VBIndex;
     } Microsoft;
 
@@ -104,31 +104,31 @@ struct ReturnAdjustment {
   }
 };
   
-/// A \c this pointer adjustment.
+/// \brief A \c this pointer adjustment.
 struct ThisAdjustment {
-  /// The non-virtual adjustment from the derived object to its
+  /// \brief The non-virtual adjustment from the derived object to its
   /// nearest virtual base.
   int64_t NonVirtual;
 
-  /// Holds the ABI-specific information about the virtual this
+  /// \brief Holds the ABI-specific information about the virtual this
   /// adjustment, if needed.
   union VirtualAdjustment {
     // Itanium ABI
     struct {
-      /// The offset (in bytes), relative to the address point,
+      /// \brief The offset (in bytes), relative to the address point,
       /// of the virtual call offset.
       int64_t VCallOffsetOffset;
     } Itanium;
 
     struct {
-      /// The offset of the vtordisp (in bytes), relative to the ECX.
+      /// \brief The offset of the vtordisp (in bytes), relative to the ECX.
       int32_t VtordispOffset;
 
-      /// The offset of the vbptr of the derived class (in bytes),
+      /// \brief The offset of the vbptr of the derived class (in bytes),
       /// relative to the ECX after vtordisp adjustment.
       int32_t VBPtrOffset;
 
-      /// The offset (in bytes) of the vbase offset in the vbtable.
+      /// \brief The offset (in bytes) of the vbase offset in the vbtable.
       int32_t VBOffsetOffset;
     } Microsoft;
 
@@ -174,16 +174,16 @@ struct ThisAdjustment {
 
 class CXXMethodDecl;
 
-/// The \c this pointer adjustment as well as an optional return
+/// \brief The \c this pointer adjustment as well as an optional return
 /// adjustment for a thunk.
 struct ThunkInfo {
-  /// The \c this pointer adjustment.
+  /// \brief The \c this pointer adjustment.
   ThisAdjustment This;
     
-  /// The return adjustment.
+  /// \brief The return adjustment.
   ReturnAdjustment Return;
 
-  /// Holds a pointer to the overridden method this thunk is for,
+  /// \brief Holds a pointer to the overridden method this thunk is for,
   /// if needed by the ABI to distinguish different thunks with equal
   /// adjustments. Otherwise, null.
   /// CAUTION: In the unlikely event you need to sort ThunkInfos, consider using

@@ -33,8 +33,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -269,16 +270,8 @@ struct NMSymbol {
 } // anonymous namespace
 
 static bool compareSymbolAddress(const NMSymbol &A, const NMSymbol &B) {
-  bool ADefined;
-  if (A.Sym.getRawDataRefImpl().p)
-    ADefined = !(A.Sym.getFlags() & SymbolRef::SF_Undefined);
-  else
-    ADefined = A.TypeChar != 'U';
-  bool BDefined;
-  if (B.Sym.getRawDataRefImpl().p)
-    BDefined = !(B.Sym.getFlags() & SymbolRef::SF_Undefined);
-  else
-    BDefined = B.TypeChar != 'U';
+  bool ADefined = !(A.Sym.getFlags() & SymbolRef::SF_Undefined);
+  bool BDefined = !(B.Sym.getFlags() & SymbolRef::SF_Undefined);
   return std::make_tuple(ADefined, A.Address, A.Name, A.Size) <
          std::make_tuple(BDefined, B.Address, B.Name, B.Size);
 }
@@ -704,7 +697,7 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
 
     if (ReverseSort)
       Cmp = [=](const NMSymbol &A, const NMSymbol &B) { return Cmp(B, A); };
-    llvm::sort(SymbolList.begin(), SymbolList.end(), Cmp);
+    std::sort(SymbolList.begin(), SymbolList.end(), Cmp);
   }
 
   if (!PrintFileName) {
@@ -1011,10 +1004,6 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
     StringRef SectionName;
     Obj.getSectionName(Ref, SectionName);
     StringRef SegmentName = Obj.getSectionFinalSegmentName(Ref);
-    if (Obj.is64Bit() && 
-        Obj.getHeader64().filetype == MachO::MH_KEXT_BUNDLE &&
-        SegmentName == "__TEXT_EXEC" && SectionName == "__text")
-      return 't';
     if (SegmentName == "__TEXT" && SectionName == "__text")
       return 't';
     if (SegmentName == "__DATA" && SectionName == "__data")
@@ -1214,8 +1203,6 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
   raw_string_ostream LOS(LazysNameBuffer);
   std::string WeaksNameBuffer;
   raw_string_ostream WOS(WeaksNameBuffer);
-  std::string FunctionStartsNameBuffer;
-  raw_string_ostream FOS(FunctionStartsNameBuffer);
   if (MachO && !NoDyldInfo) {
     MachO::mach_header H;
     MachO::mach_header_64 H_64;
@@ -1586,93 +1573,6 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
           I++;
         }
       }
-
-      // Trying adding symbol from the function starts table and LC_MAIN entry
-      // point.
-      SmallVector<uint64_t, 8> FoundFns;
-      uint64_t lc_main_offset = UINT64_MAX;
-      for (const auto &Command : MachO->load_commands()) {
-        if (Command.C.cmd == MachO::LC_FUNCTION_STARTS) {
-          // We found a function starts segment, parse the addresses for 
-          // consumption.
-          MachO::linkedit_data_command LLC =
-            MachO->getLinkeditDataLoadCommand(Command);
-
-          MachO->ReadULEB128s(LLC.dataoff, FoundFns);
-        } else if (Command.C.cmd == MachO::LC_MAIN) {
-          MachO::entry_point_command LCmain =
-            MachO->getEntryPointCommand(Command);
-          lc_main_offset = LCmain.entryoff;
-        }
-      }
-      // See if these addresses are already in the symbol table.
-      unsigned FunctionStartsAdded = 0;
-      for (uint64_t f = 0; f < FoundFns.size(); f++) {
-        bool found = false;
-        for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-          if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
-            found = true;
-        }
-        // See this address is not already in the symbol table fake up an
-        // nlist for it.
-	if (!found) {
-          NMSymbol F;
-          memset(&F, '\0', sizeof(NMSymbol));
-          F.Name = "<redacted function X>";
-          F.Address = FoundFns[f] + BaseSegmentAddress;
-          F.Size = 0;
-          // There is no symbol in the nlist symbol table for this so we set
-          // Sym effectivly to null and the rest of code in here must test for
-          // it and not do things like Sym.getFlags() for it.
-          F.Sym = BasicSymbolRef();
-          F.SymFlags = 0;
-          F.NType = MachO::N_SECT;
-          F.NSect = 0;
-          StringRef SegmentName = StringRef();
-          StringRef SectionName = StringRef();
-          for (const SectionRef &Section : MachO->sections()) {
-            Section.getName(SectionName);
-            SegmentName = MachO->getSectionFinalSegmentName(
-                                                Section.getRawDataRefImpl());
-            F.NSect++;
-            if (F.Address >= Section.getAddress() &&
-                F.Address < Section.getAddress() + Section.getSize()) {
-              F.Section = Section;
-              break;
-            }
-          }
-          if (SegmentName == "__TEXT" && SectionName == "__text")
-            F.TypeChar = 't';
-          else if (SegmentName == "__DATA" && SectionName == "__data")
-            F.TypeChar = 'd';
-          else if (SegmentName == "__DATA" && SectionName == "__bss")
-            F.TypeChar = 'b';
-          else
-            F.TypeChar = 's';
-          F.NDesc = 0;
-          F.IndirectName = StringRef();
-          SymbolList.push_back(F);
-          if (FoundFns[f] == lc_main_offset)
-            FOS << "<redacted LC_MAIN>";
-          else
-            FOS << "<redacted function " << f << ">";
-          FOS << '\0';
-          FunctionStartsAdded++;
-        }
-      }
-      if (FunctionStartsAdded) {
-        FOS.flush();
-        const char *Q = FunctionStartsNameBuffer.c_str();
-        for (unsigned K = 0; K < FunctionStartsAdded; K++) {
-          SymbolList[I].Name = Q;
-          Q += strlen(Q) + 1;
-          if (SymbolList[I].TypeChar == 'I') {
-            SymbolList[I].IndirectName = Q;
-            Q += strlen(Q) + 1;
-          }
-          I++;
-        }
-      }
     }
   }
 
@@ -2015,7 +1915,11 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
 }
 
 int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+  // Print a stack trace if we signal out.
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
+  PrettyStackTraceProgram X(argc, argv);
+
+  llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
   cl::ParseCommandLineOptions(argc, argv, "llvm symbol table dumper\n");
 
   // llvm-nm only reads binary files.

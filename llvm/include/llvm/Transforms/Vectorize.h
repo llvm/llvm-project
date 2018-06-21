@@ -21,88 +21,88 @@ class BasicBlockPass;
 class Pass;
 
 //===----------------------------------------------------------------------===//
-/// Vectorize configuration.
+/// @brief Vectorize configuration.
 struct VectorizeConfig {
   //===--------------------------------------------------------------------===//
   // Target architecture related parameters
 
-  /// The size of the native vector registers.
+  /// @brief The size of the native vector registers.
   unsigned VectorBits;
 
-  /// Vectorize boolean values.
+  /// @brief Vectorize boolean values.
   bool VectorizeBools;
 
-  /// Vectorize integer values.
+  /// @brief Vectorize integer values.
   bool VectorizeInts;
 
-  /// Vectorize floating-point values.
+  /// @brief Vectorize floating-point values.
   bool VectorizeFloats;
 
-  /// Vectorize pointer values.
+  /// @brief Vectorize pointer values.
   bool VectorizePointers;
 
-  /// Vectorize casting (conversion) operations.
+  /// @brief Vectorize casting (conversion) operations.
   bool VectorizeCasts;
 
-  /// Vectorize floating-point math intrinsics.
+  /// @brief Vectorize floating-point math intrinsics.
   bool VectorizeMath;
 
-  /// Vectorize bit intrinsics.
+  /// @brief Vectorize bit intrinsics.
   bool VectorizeBitManipulations;
 
-  /// Vectorize the fused-multiply-add intrinsic.
+  /// @brief Vectorize the fused-multiply-add intrinsic.
   bool VectorizeFMA;
 
-  /// Vectorize select instructions.
+  /// @brief Vectorize select instructions.
   bool VectorizeSelect;
 
-  /// Vectorize comparison instructions.
+  /// @brief Vectorize comparison instructions.
   bool VectorizeCmp;
 
-  /// Vectorize getelementptr instructions.
+  /// @brief Vectorize getelementptr instructions.
   bool VectorizeGEP;
 
-  /// Vectorize loads and stores.
+  /// @brief Vectorize loads and stores.
   bool VectorizeMemOps;
 
-  /// Only generate aligned loads and stores.
+  /// @brief Only generate aligned loads and stores.
   bool AlignedOnly;
 
   //===--------------------------------------------------------------------===//
   // Misc parameters
 
-  /// The required chain depth for vectorization.
+  /// @brief The required chain depth for vectorization.
   unsigned ReqChainDepth;
 
-  /// The maximum search distance for instruction pairs.
+  /// @brief The maximum search distance for instruction pairs.
   unsigned SearchLimit;
 
-  /// The maximum number of candidate pairs with which to use a full
+  /// @brief The maximum number of candidate pairs with which to use a full
   ///        cycle check.
   unsigned MaxCandPairsForCycleCheck;
 
-  /// Replicating one element to a pair breaks the chain.
+  /// @brief Replicating one element to a pair breaks the chain.
   bool SplatBreaksChain;
 
-  /// The maximum number of pairable instructions per group.
+  /// @brief The maximum number of pairable instructions per group.
   unsigned MaxInsts;
 
-  /// The maximum number of candidate instruction pairs per group.
+  /// @brief The maximum number of candidate instruction pairs per group.
   unsigned MaxPairs;
 
-  /// The maximum number of pairing iterations.
+  /// @brief The maximum number of pairing iterations.
   unsigned MaxIter;
 
-  /// Don't try to form odd-length vectors.
+  /// @brief Don't try to form odd-length vectors.
   bool Pow2LenOnly;
 
-  /// Don't boost the chain-depth contribution of loads and stores.
+  /// @brief Don't boost the chain-depth contribution of loads and stores.
   bool NoMemOpBoost;
 
-  /// Use a fast instruction dependency analysis.
+  /// @brief Use a fast instruction dependency analysis.
   bool FastDep;
 
-  /// Initialize the VectorizeConfig from command line options.
+  /// @brief Initialize the VectorizeConfig from command line options.
   VectorizeConfig();
 };
 
@@ -120,7 +120,7 @@ Pass *createLoopVectorizePass(bool NoUnrolling = false,
 Pass *createSLPVectorizerPass();
 
 //===----------------------------------------------------------------------===//
-/// Vectorize the BasicBlock.
+/// @brief Vectorize the BasicBlock.
 ///
 /// @param BB The BasicBlock to be vectorized
 /// @param P  The current running pass, should require AliasAnalysis and

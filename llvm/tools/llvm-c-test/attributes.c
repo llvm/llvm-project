@@ -14,7 +14,6 @@
 
 #include "llvm-c-test.h"
 
-#include <assert.h>
 #include <stdlib.h>
 
 int llvm_test_function_attributes(void) {
@@ -31,7 +30,6 @@ int llvm_test_function_attributes(void) {
       int AttrCount = LLVMGetAttributeCountAtIndex(F, Idx);
       LLVMAttributeRef *Attrs =
           (LLVMAttributeRef *)malloc(AttrCount * sizeof(LLVMAttributeRef));
-      assert(Attrs);
       LLVMGetAttributesAtIndex(F, Idx, Attrs);
       free(Attrs);
     }
@@ -63,7 +61,6 @@ int llvm_test_callsite_attributes(void) {
             int AttrCount = LLVMGetCallSiteAttributeCount(I, Idx);
             LLVMAttributeRef *Attrs = (LLVMAttributeRef *)malloc(
                 AttrCount * sizeof(LLVMAttributeRef));
-            assert(Attrs);
             LLVMGetCallSiteAttributes(I, Idx, Attrs);
             free(Attrs);
           }

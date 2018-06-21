@@ -30,8 +30,7 @@ add_lldb_library(lldbExpression
     lldbTarget
     lldbUtility
     lldbPluginExpressionParserClang
-    lldbPluginObjectFileJIT
-
+    lldbPluginExpressionParserSwift
   LINK_COMPONENTS
     Core
     ExecutionEngine

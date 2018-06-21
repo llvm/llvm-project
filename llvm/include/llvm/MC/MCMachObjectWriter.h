@@ -26,7 +26,7 @@ namespace llvm {
 
 class MachObjectWriter;
 
-class MCMachObjectTargetWriter : public MCObjectTargetWriter {
+class MCMachObjectTargetWriter {
   const unsigned Is64Bit : 1;
   const uint32_t CPUType;
   const uint32_t CPUSubtype;
@@ -42,11 +42,6 @@ protected:
 
 public:
   virtual ~MCMachObjectTargetWriter();
-
-  virtual Triple::ObjectFormatType getFormat() const { return Triple::MachO; }
-  static bool classof(const MCObjectTargetWriter *W) {
-    return W->getFormat() == Triple::MachO;
-  }
 
   /// \name Lifetime Management
   /// @{
@@ -121,15 +116,11 @@ class MachObjectWriter : public MCObjectWriter {
 
   MachSymbolData *findSymbolData(const MCSymbol &Sym);
 
-  void writeWithPadding(StringRef Str, uint64_t Size);
-
 public:
   MachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
                    raw_pwrite_stream &OS, bool IsLittleEndian)
-      : TargetObjectWriter(std::move(MOTW)),
-        W(OS, IsLittleEndian ? support::little : support::big) {}
-
-  support::endian::Writer W;
+      : MCObjectWriter(OS, IsLittleEndian),
+        TargetObjectWriter(std::move(MOTW)) {}
 
   const MCSymbol &findAliasedSymbol(const MCSymbol &Sym) const;
 
@@ -269,7 +260,7 @@ public:
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  void writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
 };
 
 /// Construct a new Mach-O writer instance.

@@ -5,23 +5,23 @@
 ; This test is meant to make sure bad eviction sequence like the one described
 ; below does not occur
 ;
-; movl	%ebp, 8($esp)           # 4-byte Spill
+; movl	%ebp, 8(%esp)           # 4-byte Spill
 ; movl	%ecx, %ebp
 ; movl	%ebx, %ecx
-; movl	$edi, %ebx
-; movl	$edx, $edi
+; movl	%edi, %ebx
+; movl	%edx, %edi
 ; cltd
 ; idivl	%esi
-; movl	$edi, $edx
-; movl	%ebx, $edi
+; movl	%edi, %edx
+; movl	%ebx, %edi
 ; movl	%ecx, %ebx
 ; movl	%ebp, %ecx
-; movl	16($esp), %ebp          # 4 - byte Reload
+; movl	16(%esp), %ebp          # 4 - byte Reload
 
 ; Make sure we have no redundant copies in the problematic code seqtion
 ; CHECK-LABEL: name: bar
 ; CHECK: bb.3.for.body:
-; CHECK: $eax = COPY
+; CHECK: %eax = COPY
 ; CHECK-NEXT: CDQ
 ; CHECK-NEXT: IDIV32r
 ; CHECK-NEXT: ADD32rr

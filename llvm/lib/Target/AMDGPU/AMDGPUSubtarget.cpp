@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Implements the AMDGPU specific subclass of TargetSubtarget.
+/// \brief Implements the AMDGPU specific subclass of TargetSubtarget.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +20,6 @@
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/MDBuilder.h"
@@ -133,12 +132,10 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     EnableLoadStoreOpt(false),
     EnableUnsafeDSOffsetFolding(false),
     EnableSIScheduler(false),
-    EnableDS128(false),
     DumpCode(false),
 
     FP64(false),
     FMA(false),
-    MIMG_R128(false),
     IsGCN(false),
     GCN3Encoding(false),
     CIInsts(false),
@@ -149,11 +146,9 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasIntClamp(false),
     HasVOP3PInsts(false),
     HasMadMixInsts(false),
-    HasFmaMixInsts(false),
     HasMovrel(false),
     HasVGPRIndexMode(false),
     HasScalarStores(false),
-    HasScalarAtomics(false),
     HasInv2PiInlineImm(false),
     HasSDWA(false),
     HasSDWAOmod(false),
@@ -162,14 +157,11 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasSDWAMac(false),
     HasSDWAOutModsVOPC(false),
     HasDPP(false),
-    HasDLInsts(false),
-    D16PreservesUnusedBits(false),
     FlatAddressSpace(false),
     FlatInstOffsets(false),
     FlatGlobalInsts(false),
     FlatScratchInsts(false),
     AddNoCarryInsts(false),
-    HasUnpackedD16VMem(false),
 
     R600ALUInst(false),
     CaymanISA(false),
@@ -204,12 +196,6 @@ unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
   NumWaves = std::min(NumWaves, MaxWaves);
   NumWaves = std::max(NumWaves, 1u);
   return NumWaves;
-}
-
-unsigned
-AMDGPUSubtarget::getOccupancyWithLocalMemSize(const MachineFunction &MF) const {
-  const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  return getOccupancyWithLocalMemSize(MFI->getLDSSize(), MF.getFunction());
 }
 
 std::pair<unsigned, unsigned>
@@ -379,16 +365,16 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
   TLInfo(TM, *this) {}
 
 SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                         const GCNTargetMachine &TM)
+                         const TargetMachine &TM)
     : AMDGPUSubtarget(TT, GPU, FS, TM), InstrInfo(*this),
       FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
       TLInfo(TM, *this) {
   CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
-  Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
+  Legalizer.reset(new AMDGPULegalizerInfo());
 
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
   InstSelector.reset(new AMDGPUInstructionSelector(
-      *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
+      *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get())));
 }
 
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
@@ -412,18 +398,14 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
-unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
+unsigned SISubtarget::getKernArgSegmentSize(const MachineFunction &MF,
                                             unsigned ExplicitArgBytes) const {
-  uint64_t TotalSize = ExplicitArgBytes;
-  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
+  unsigned ImplicitBytes = getImplicitArgNumBytes(MF);
+  if (ImplicitBytes == 0)
+    return ExplicitArgBytes;
 
-  if (ImplicitBytes != 0) {
-    unsigned Alignment = getAlignmentForImplicitArgPtr();
-    TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
-  }
-
-  // Being able to dereference past the end is useful for emitting scalar loads.
-  return alignTo(TotalSize, 4);
+  unsigned Alignment = getAlignmentForImplicitArgPtr();
+  return alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
 }
 
 unsigned SISubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {

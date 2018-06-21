@@ -38,7 +38,7 @@ class raw_ostream;
 class TargetLibraryInfo;
 class Value;
 
-/// Analysis providing branch probability information.
+/// \brief Analysis providing branch probability information.
 ///
 /// This is a function analysis which provides information on the relative
 /// probabilities of each "edge" in the function's CFG where such an edge is
@@ -79,7 +79,7 @@ public:
 
   void print(raw_ostream &OS) const;
 
-  /// Get an edge's probability, relative to other out-edges of the Src.
+  /// \brief Get an edge's probability, relative to other out-edges of the Src.
   ///
   /// This routine provides access to the fractional probability between zero
   /// (0%) and one (100%) of this edge executing, relative to other edges
@@ -88,7 +88,7 @@ public:
   BranchProbability getEdgeProbability(const BasicBlock *Src,
                                        unsigned IndexInSuccessors) const;
 
-  /// Get the probability of going from Src to Dst.
+  /// \brief Get the probability of going from Src to Dst.
   ///
   /// It returns the sum of all probabilities for edges from Src to Dst.
   BranchProbability getEdgeProbability(const BasicBlock *Src,
@@ -97,19 +97,19 @@ public:
   BranchProbability getEdgeProbability(const BasicBlock *Src,
                                        succ_const_iterator Dst) const;
 
-  /// Test if an edge is hot relative to other out-edges of the Src.
+  /// \brief Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot
   /// as having a relative probability >= 80%.
   bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
 
-  /// Retrieve the hot successor of a block if one exists.
+  /// \brief Retrieve the hot successor of a block if one exists.
   ///
   /// Given a basic block, look through its successors and if one exists for
   /// which \see isEdgeHot would return true, return that successor block.
   const BasicBlock *getHotSucc(const BasicBlock *BB) const;
 
-  /// Print an edge's probability.
+  /// \brief Print an edge's probability.
   ///
   /// Retrieves an edge's probability similarly to \see getEdgeProbability, but
   /// then prints that probability to the provided stream. That stream is then
@@ -117,7 +117,7 @@ public:
   raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
                                     const BasicBlock *Dst) const;
 
-  /// Set the raw edge probability for the given edge.
+  /// \brief Set the raw edge probability for the given edge.
   ///
   /// This allows a pass to explicitly set the edge probability for an edge. It
   /// can be used when updating the CFG to update and preserve the branch
@@ -179,13 +179,13 @@ private:
 
   DenseMap<Edge, BranchProbability> Probs;
 
-  /// Track the last function we run over for printing.
+  /// \brief Track the last function we run over for printing.
   const Function *LastF;
 
-  /// Track the set of blocks directly succeeded by a returning block.
+  /// \brief Track the set of blocks directly succeeded by a returning block.
   SmallPtrSet<const BasicBlock *, 16> PostDominatedByUnreachable;
 
-  /// Track the set of blocks that always lead to a cold call.
+  /// \brief Track the set of blocks that always lead to a cold call.
   SmallPtrSet<const BasicBlock *, 16> PostDominatedByColdCall;
 
   void updatePostDominatedByUnreachable(const BasicBlock *BB);
@@ -201,7 +201,7 @@ private:
   bool calcInvokeHeuristics(const BasicBlock *BB);
 };
 
-/// Analysis pass which computes \c BranchProbabilityInfo.
+/// \brief Analysis pass which computes \c BranchProbabilityInfo.
 class BranchProbabilityAnalysis
     : public AnalysisInfoMixin<BranchProbabilityAnalysis> {
   friend AnalysisInfoMixin<BranchProbabilityAnalysis>;
@@ -209,14 +209,14 @@ class BranchProbabilityAnalysis
   static AnalysisKey Key;
 
 public:
-  /// Provide the result type for this analysis pass.
+  /// \brief Provide the result type for this analysis pass.
   using Result = BranchProbabilityInfo;
 
-  /// Run the analysis pass over a function and produce BPI.
+  /// \brief Run the analysis pass over a function and produce BPI.
   BranchProbabilityInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Printer pass for the \c BranchProbabilityAnalysis results.
+/// \brief Printer pass for the \c BranchProbabilityAnalysis results.
 class BranchProbabilityPrinterPass
     : public PassInfoMixin<BranchProbabilityPrinterPass> {
   raw_ostream &OS;
@@ -227,7 +227,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Legacy analysis pass which computes \c BranchProbabilityInfo.
+/// \brief Legacy analysis pass which computes \c BranchProbabilityInfo.
 class BranchProbabilityInfoWrapperPass : public FunctionPass {
   BranchProbabilityInfo BPI;
 

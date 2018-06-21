@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines the clang::FileManager interface and associated types.
+/// \brief Defines the clang::FileManager interface and associated types.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -40,7 +40,7 @@ namespace clang {
 
 class FileSystemStatCache;
 
-/// Cached information about one directory (either on disk or in
+/// \brief Cached information about one directory (either on disk or in
 /// the virtual file system).
 class DirectoryEntry {
   friend class FileManager;
@@ -51,7 +51,7 @@ public:
   StringRef getName() const { return Name; }
 };
 
-/// Cached information about one file (either on disk
+/// \brief Cached information about one file (either on disk
 /// or in the virtual file system).
 ///
 /// If the 'File' member is valid, then this FileEntry has an open file
@@ -70,7 +70,7 @@ class FileEntry {
   bool InPCH;
   bool IsValid;               // Is this \c FileEntry initialized and valid?
 
-  /// The open file, if it is owned by the \p FileEntry.
+  /// \brief The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<vfs::File> File;
 
 public:
@@ -90,12 +90,12 @@ public:
   bool isInPCH() const { return InPCH; }
   time_t getModificationTime() const { return ModTime; }
 
-  /// Return the directory the file lives in.
+  /// \brief Return the directory the file lives in.
   const DirectoryEntry *getDir() const { return Dir; }
 
   bool operator<(const FileEntry &RHS) const { return UniqueID < RHS.UniqueID; }
 
-  /// Check whether the file is a named pipe (and thus can't be opened by
+  /// \brief Check whether the file is a named pipe (and thus can't be opened by
   /// the native FileManager methods).
   bool isNamedPipe() const { return IsNamedPipe; }
 
@@ -106,7 +106,7 @@ public:
 
 struct FileData;
 
-/// Implements support for file system lookup, file system caching,
+/// \brief Implements support for file system lookup, file system caching,
 /// and directory search management.
 ///
 /// This also handles more advanced properties, such as uniquing files based
@@ -117,21 +117,21 @@ class FileManager : public RefCountedBase<FileManager> {
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
   FileSystemOptions FileSystemOpts;
 
-  /// Cache for existing real directories.
+  /// \brief Cache for existing real directories.
   std::map<llvm::sys::fs::UniqueID, DirectoryEntry> UniqueRealDirs;
 
-  /// Cache for existing real files.
+  /// \brief Cache for existing real files.
   std::map<llvm::sys::fs::UniqueID, FileEntry> UniqueRealFiles;
 
-  /// The virtual directories that we have allocated.
+  /// \brief The virtual directories that we have allocated.
   ///
   /// For each virtual file (e.g. foo/bar/baz.cpp), we add all of its parent
   /// directories (foo/ and foo/bar/) here.
   SmallVector<std::unique_ptr<DirectoryEntry>, 4> VirtualDirectoryEntries;
-  /// The virtual files that we have allocated.
+  /// \brief The virtual files that we have allocated.
   SmallVector<std::unique_ptr<FileEntry>, 4> VirtualFileEntries;
 
-  /// A cache that maps paths to directory entries (either real or
+  /// \brief A cache that maps paths to directory entries (either real or
   /// virtual) we have looked up
   ///
   /// The actual Entries for real directories/files are
@@ -141,19 +141,19 @@ class FileManager : public RefCountedBase<FileManager> {
   ///
   llvm::StringMap<DirectoryEntry*, llvm::BumpPtrAllocator> SeenDirEntries;
 
-  /// A cache that maps paths to file entries (either real or
+  /// \brief A cache that maps paths to file entries (either real or
   /// virtual) we have looked up.
   ///
   /// \see SeenDirEntries
   llvm::StringMap<FileEntry*, llvm::BumpPtrAllocator> SeenFileEntries;
 
-  /// The canonical names of directories.
+  /// \brief The canonical names of directories.
   llvm::DenseMap<const DirectoryEntry *, llvm::StringRef> CanonicalDirNames;
 
-  /// Storage for canonical names that we have computed.
+  /// \brief Storage for canonical names that we have computed.
   llvm::BumpPtrAllocator CanonicalNameStorage;
 
-  /// Each FileEntry we create is assigned a unique ID #.
+  /// \brief Each FileEntry we create is assigned a unique ID #.
   ///
   unsigned NextFileUID;
 
@@ -176,7 +176,7 @@ public:
               IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
   ~FileManager();
 
-  /// Installs the provided FileSystemStatCache object within
+  /// \brief Installs the provided FileSystemStatCache object within
   /// the FileManager.
   ///
   /// Ownership of this object is transferred to the FileManager.
@@ -190,13 +190,13 @@ public:
   void addStatCache(std::unique_ptr<FileSystemStatCache> statCache,
                     bool AtBeginning = false);
 
-  /// Removes the specified FileSystemStatCache object from the manager.
+  /// \brief Removes the specified FileSystemStatCache object from the manager.
   void removeStatCache(FileSystemStatCache *statCache);
 
-  /// Removes all FileSystemStatCache objects from the manager.
+  /// \brief Removes all FileSystemStatCache objects from the manager.
   void clearStatCaches();
 
-  /// Lookup, cache, and verify the specified directory (real or
+  /// \brief Lookup, cache, and verify the specified directory (real or
   /// virtual).
   ///
   /// This returns NULL if the directory doesn't exist.
@@ -206,7 +206,7 @@ public:
   const DirectoryEntry *getDirectory(StringRef DirName,
                                      bool CacheFailure = true);
 
-  /// Lookup, cache, and verify the specified file (real or
+  /// \brief Lookup, cache, and verify the specified file (real or
   /// virtual).
   ///
   /// This returns NULL if the file doesn't exist.
@@ -218,7 +218,7 @@ public:
   const FileEntry *getFile(StringRef Filename, bool OpenFile = false,
                            bool CacheFailure = true);
 
-  /// Returns the current file system options
+  /// \brief Returns the current file system options
   FileSystemOptions &getFileSystemOpts() { return FileSystemOpts; }
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
@@ -226,22 +226,22 @@ public:
     return FS;
   }
 
-  /// Retrieve a file entry for a "virtual" file that acts as
+  /// \brief Retrieve a file entry for a "virtual" file that acts as
   /// if there were a file with the given name on disk.
   ///
   /// The file itself is not accessed.
   const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
                                   time_t ModificationTime);
 
-  /// Open the specified file as a MemoryBuffer, returning a new
+  /// \brief Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
                    bool ShouldCloseOpenFile = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(StringRef Filename, bool isVolatile = false);
+  getBufferForFile(StringRef Filename);
 
-  /// Get the 'stat' information for the given \p Path.
+  /// \brief Get the 'stat' information for the given \p Path.
   ///
   /// If the path is relative, it will be resolved against the WorkingDir of the
   /// FileManager's FileSystemOptions.
@@ -250,10 +250,10 @@ public:
   bool getNoncachedStatValue(StringRef Path,
                              vfs::Status &Result);
 
-  /// Remove the real file \p Entry from the cache.
+  /// \brief Remove the real file \p Entry from the cache.
   void invalidateCache(const FileEntry *Entry);
 
-  /// If path is not absolute and FileSystemOptions set the working
+  /// \brief If path is not absolute and FileSystemOptions set the working
   /// directory, the path is modified to be relative to the given
   /// working directory.
   /// \returns true if \c path changed.
@@ -264,17 +264,17 @@ public:
   /// \returns true if \c Path changed to absolute.
   bool makeAbsolutePath(SmallVectorImpl<char> &Path) const;
 
-  /// Produce an array mapping from the unique IDs assigned to each
+  /// \brief Produce an array mapping from the unique IDs assigned to each
   /// file to the corresponding FileEntry pointer.
   void GetUniqueIDMapping(
                     SmallVectorImpl<const FileEntry *> &UIDToFiles) const;
 
-  /// Modifies the size and modification time of a previously created
+  /// \brief Modifies the size and modification time of a previously created
   /// FileEntry. Use with caution.
   static void modifyFileEntry(FileEntry *File, off_t Size,
                               time_t ModificationTime);
 
-  /// Retrieve the canonical name for a given directory.
+  /// \brief Retrieve the canonical name for a given directory.
   ///
   /// This is a very expensive operation, despite its results being cached,
   /// and should only be used when the physical layout of the file system is

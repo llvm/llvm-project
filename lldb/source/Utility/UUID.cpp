@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
-using namespace lldb_private;
+namespace lldb_private {
 
 UUID::UUID() { Clear(); }
 
@@ -46,12 +46,14 @@ void UUID::Clear() {
   ::memset(m_uuid, 0, sizeof(m_uuid));
 }
 
+const void *UUID::GetBytes() const { return m_uuid; }
+
 std::string UUID::GetAsString(const char *separator) const {
   std::string result;
   char buf[256];
   if (!separator)
     separator = "-";
-  const uint8_t *u = GetBytes().data();
+  const uint8_t *u = (const uint8_t *)GetBytes();
   if (sizeof(buf) >
       (size_t)snprintf(buf, sizeof(buf), "%2.2X%2.2X%2.2X%2.2X%s%2.2X%2.2X%s%2."
                                          "2X%2.2X%s%2.2X%2.2X%s%2.2X%2.2X%2.2X%"
@@ -99,6 +101,8 @@ bool UUID::SetBytes(const void *uuid_bytes, uint32_t num_uuid_bytes) {
   return false;
 }
 
+size_t UUID::GetByteSize() const { return m_num_uuid_bytes; }
+
 bool UUID::IsValid() const {
   return m_uuid[0] || m_uuid[1] || m_uuid[2] || m_uuid[3] || m_uuid[4] ||
          m_uuid[5] || m_uuid[6] || m_uuid[7] || m_uuid[8] || m_uuid[9] ||
@@ -129,8 +133,8 @@ llvm::StringRef UUID::DecodeUUIDBytesFromString(llvm::StringRef p,
       // Skip both hex digits
       p = p.drop_front(2);
 
-      // Increment the byte that we are decoding within the UUID value and
-      // break out if we are done
+      // Increment the byte that we are decoding within the UUID value
+      // and break out if we are done
       if (++uuid_byte_idx == num_uuid_bytes)
         break;
     } else if (p.front() == '-') {
@@ -170,9 +174,18 @@ size_t UUID::SetFromStringRef(llvm::StringRef str, uint32_t num_uuid_bytes) {
   return 0;
 }
 
+size_t UUID::SetFromCString(const char *cstr, uint32_t num_uuid_bytes) {
+  if (cstr == NULL)
+    return 0;
+
+  return SetFromStringRef(cstr, num_uuid_bytes);
+}
+}
+
 bool lldb_private::operator==(const lldb_private::UUID &lhs,
                               const lldb_private::UUID &rhs) {
-  return lhs.GetBytes() == rhs.GetBytes();
+  return ::memcmp(lhs.GetBytes(), rhs.GetBytes(),
+                  sizeof(lldb_private::UUID::ValueType)) == 0;
 }
 
 bool lldb_private::operator!=(const lldb_private::UUID &lhs,
@@ -182,11 +195,8 @@ bool lldb_private::operator!=(const lldb_private::UUID &lhs,
 
 bool lldb_private::operator<(const lldb_private::UUID &lhs,
                              const lldb_private::UUID &rhs) {
-  if (lhs.GetBytes().size() != rhs.GetBytes().size())
-    return lhs.GetBytes().size() < rhs.GetBytes().size();
-
-  return std::memcmp(lhs.GetBytes().data(), rhs.GetBytes().data(),
-                     lhs.GetBytes().size());
+  return ::memcmp(lhs.GetBytes(), rhs.GetBytes(),
+                  sizeof(lldb_private::UUID::ValueType)) < 0;
 }
 
 bool lldb_private::operator<=(const lldb_private::UUID &lhs,

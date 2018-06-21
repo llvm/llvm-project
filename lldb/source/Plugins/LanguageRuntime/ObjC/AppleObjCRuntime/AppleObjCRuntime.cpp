@@ -54,20 +54,23 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &str, ValueObject &valobj) {
   CompilerType compiler_type(valobj.GetCompilerType());
   bool is_signed;
   // ObjC objects can only be pointers (or numbers that actually represents
-  // pointers but haven't been typecast, because reasons..)
+  // pointers
+  // but haven't been typecast, because reasons..)
   if (!compiler_type.IsIntegerType(is_signed) && !compiler_type.IsPointerType())
     return false;
 
-  // Make the argument list: we pass one arg, the address of our pointer, to
-  // the print function.
+  // Make the argument list: we pass one arg, the address of our pointer, to the
+  // print function.
   Value val;
 
   if (!valobj.ResolveValue(val.GetScalar()))
     return false;
 
   // Value Objects may not have a process in their ExecutionContextRef.  But we
-  // need to have one in the ref we pass down to eventually call description.
-  // Get it from the target if it isn't present.
+  // need to have one
+  // in the ref we pass down to eventually call description.  Get it from the
+  // target if it isn't
+  // present.
   ExecutionContext exe_ctx;
   if (valobj.GetProcessSP()) {
     exe_ctx = ExecutionContext(valobj.GetExecutionContextRef());
@@ -232,10 +235,17 @@ Address *AppleObjCRuntime::GetPrintForDebuggerAddr() {
 }
 
 bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
+  return CouldHaveDynamicValue(in_value,
+                               /* allow_swift = */ false);
+}
+
+bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value,
+                                             bool allow_swift) {
   return in_value.GetCompilerType().IsPossibleDynamicType(
       NULL,
       false, // do not check C++
-      true); // check ObjC
+      true,  // check ObjC
+      allow_swift);
 }
 
 bool AppleObjCRuntime::GetDynamicTypeAndAddress(
@@ -254,9 +264,10 @@ AppleObjCRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
   TypeAndOrName ret(type_and_or_name);
   if (type_and_or_name.HasType()) {
     // The type will always be the type of the dynamic object.  If our parent's
-    // type was a pointer, then our type should be a pointer to the type of the
-    // dynamic object.  If a reference, then the original type should be
-    // okay...
+    // type was a pointer,
+    // then our type should be a pointer to the type of the dynamic object.  If
+    // a reference, then the original type
+    // should be okay...
     CompilerType orig_type = type_and_or_name.GetCompilerType();
     CompilerType corrected_type = orig_type;
     if (static_type_flags.AllSet(eTypeIsPointer))
@@ -273,6 +284,17 @@ AppleObjCRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
     ret.SetName(corrected_name.c_str());
   }
   return ret;
+}
+
+bool AppleObjCRuntime::GetDynamicTypeAndAddress(
+    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+    TypeAndOrName &class_type_or_name, Address &address,
+    Value::ValueType &value_type, bool allow_swift) {
+  if (!allow_swift)
+    return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name,
+                                    address, value_type);
+  else
+    return false;
 }
 
 bool AppleObjCRuntime::AppleIsModuleObjCLibrary(const ModuleSP &module_sp) {
@@ -293,14 +315,16 @@ bool AppleObjCRuntime::AppleIsModuleObjCLibrary(const ModuleSP &module_sp) {
 uint32_t AppleObjCRuntime::GetFoundationVersion() {
   if (!m_Foundation_major.hasValue()) {
     const ModuleList &modules = m_process->GetTarget().GetImages();
+    uint32_t major = UINT32_MAX;
     for (uint32_t idx = 0; idx < modules.GetSize(); idx++) {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
       if (!module_sp)
         continue;
       if (strcmp(module_sp->GetFileSpec().GetFilename().AsCString(""),
                  "Foundation") == 0) {
-        m_Foundation_major = module_sp->GetVersion().getMajor();
-        return *m_Foundation_major;
+        module_sp->GetVersion(&major, 1);
+        m_Foundation_major = major;
+        return major;
       }
     }
     return LLDB_INVALID_MODULE_VERSION;
@@ -319,8 +343,8 @@ bool AppleObjCRuntime::IsModuleObjCLibrary(const ModuleSP &module_sp) {
 
 bool AppleObjCRuntime::ReadObjCLibrary(const ModuleSP &module_sp) {
   // Maybe check here and if we have a handler already, and the UUID of this
-  // module is the same as the one in the current module, then we don't have to
-  // reread it?
+  // module is the same as the one in the
+  // current module, then we don't have to reread it?
   m_objc_trampoline_handler_ap.reset(
       new AppleObjCTrampolineHandler(m_process->shared_from_this(), module_sp));
   if (m_objc_trampoline_handler_ap.get() != NULL) {
@@ -359,9 +383,11 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
   for (size_t i = 0; i < num_images; i++) {
     ModuleSP module_sp = target_modules.GetModuleAtIndexUnlocked(i);
     // One tricky bit here is that we might get called as part of the initial
-    // module loading, but before all the pre-run libraries get winnowed from
-    // the module list.  So there might actually be an old and incorrect ObjC
-    // library sitting around in the list, and we don't want to look at that.
+    // module loading, but
+    // before all the pre-run libraries get winnowed from the module list.  So
+    // there might actually
+    // be an old and incorrect ObjC library sitting around in the list, and we
+    // don't want to look at that.
     // That's why we call IsLoadedInTarget.
 
     if (AppleIsModuleObjCLibrary(module_sp) &&

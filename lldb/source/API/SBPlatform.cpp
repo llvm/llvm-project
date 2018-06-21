@@ -13,10 +13,10 @@
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBUnixSignals.h"
 #include "lldb/Host/File.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -53,7 +53,8 @@ struct PlatformConnectOptions {
 //----------------------------------------------------------------------
 struct PlatformShellCommand {
   PlatformShellCommand(const char *shell_command = NULL)
-      : m_command(), m_working_dir(), m_status(0), m_signo(0) {
+      : m_command(), m_working_dir(), m_status(0), m_signo(0),
+        m_timeout_sec(UINT32_MAX) {
     if (shell_command && shell_command[0])
       m_command = shell_command;
   }
@@ -65,7 +66,7 @@ struct PlatformShellCommand {
   std::string m_output;
   int m_status;
   int m_signo;
-  Timeout<std::ratio<1>> m_timeout = llvm::None;
+  uint32_t m_timeout_sec;
 };
 //----------------------------------------------------------------------
 // SBPlatformConnectOptions
@@ -181,16 +182,11 @@ void SBPlatformShellCommand::SetWorkingDirectory(const char *path) {
 }
 
 uint32_t SBPlatformShellCommand::GetTimeoutSeconds() {
-  if (m_opaque_ptr->m_timeout)
-    return m_opaque_ptr->m_timeout->count();
-  return UINT32_MAX;
+  return m_opaque_ptr->m_timeout_sec;
 }
 
 void SBPlatformShellCommand::SetTimeoutSeconds(uint32_t sec) {
-  if (sec == UINT32_MAX)
-    m_opaque_ptr->m_timeout = llvm::None;
-  else
-    m_opaque_ptr->m_timeout = std::chrono::seconds(sec);
+  m_opaque_ptr->m_timeout_sec = sec;
 }
 
 int SBPlatformShellCommand::GetSignal() { return m_opaque_ptr->m_signo; }
@@ -330,24 +326,27 @@ const char *SBPlatform::GetHostname() {
 }
 
 uint32_t SBPlatform::GetOSMajorVersion() {
-  llvm::VersionTuple version;
-  if (PlatformSP platform_sp = GetSP())
-    version = platform_sp->GetOSVersion();
-  return version.empty() ? UINT32_MAX : version.getMajor();
+  uint32_t major, minor, update;
+  PlatformSP platform_sp(GetSP());
+  if (platform_sp && platform_sp->GetOSVersion(major, minor, update))
+    return major;
+  return UINT32_MAX;
 }
 
 uint32_t SBPlatform::GetOSMinorVersion() {
-  llvm::VersionTuple version;
-  if (PlatformSP platform_sp = GetSP())
-    version = platform_sp->GetOSVersion();
-  return version.getMinor().getValueOr(UINT32_MAX);
+  uint32_t major, minor, update;
+  PlatformSP platform_sp(GetSP());
+  if (platform_sp && platform_sp->GetOSVersion(major, minor, update))
+    return minor;
+  return UINT32_MAX;
 }
 
 uint32_t SBPlatform::GetOSUpdateVersion() {
-  llvm::VersionTuple version;
-  if (PlatformSP platform_sp = GetSP())
-    version = platform_sp->GetOSVersion();
-  return version.getSubminor().getValueOr(UINT32_MAX);
+  uint32_t major, minor, update;
+  PlatformSP platform_sp(GetSP());
+  if (platform_sp && platform_sp->GetOSVersion(major, minor, update))
+    return update;
+  return UINT32_MAX;
 }
 
 SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {
@@ -406,20 +405,18 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
       if (working_dir)
         shell_command.SetWorkingDirectory(working_dir);
     }
-    return platform_sp->RunShellCommand(command, FileSpec{working_dir, false},
-                                        &shell_command.m_opaque_ptr->m_status,
-                                        &shell_command.m_opaque_ptr->m_signo,
-                                        &shell_command.m_opaque_ptr->m_output,
-                                        shell_command.m_opaque_ptr->m_timeout);
+    return platform_sp->RunShellCommand(
+        command, FileSpec{working_dir, false},
+        &shell_command.m_opaque_ptr->m_status,
+        &shell_command.m_opaque_ptr->m_signo,
+        &shell_command.m_opaque_ptr->m_output,
+        shell_command.m_opaque_ptr->m_timeout_sec);
   });
 }
 
 SBError SBPlatform::Launch(SBLaunchInfo &launch_info) {
   return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-    ProcessLaunchInfo info = launch_info.ref();
-    Status error = platform_sp->LaunchProcess(info);
-    launch_info.set_ref(info);
-    return error;
+    return platform_sp->LaunchProcess(launch_info.ref());
   });
 }
 

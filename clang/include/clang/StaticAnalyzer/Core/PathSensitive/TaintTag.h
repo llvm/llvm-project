@@ -1,4 +1,4 @@
-//===- TaintTag.h - Path-sensitive "State" for tracking values --*- C++ -*-===//
+//== TaintTag.h - Path-sensitive "State" for tracking values -*- C++ -*--=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,6 @@
 // of taint.
 //
 //===----------------------------------------------------------------------===//
-
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_TAINTTAG_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_TAINTTAG_H
 
@@ -20,11 +19,9 @@ namespace ento {
 
 /// The type of taint, which helps to differentiate between different types of
 /// taint.
-using TaintTagType = unsigned;
-
+typedef unsigned TaintTagType;
 static const TaintTagType TaintTagGeneric = 0;
 
-} // namespace ento
-} // namespace clang
+}}
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_TAINTTAG_H
+#endif

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-c/Index.h"
-#include "llvm/ADT/StringRef.h"
+#include "clang-c/Refactor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -467,17 +467,15 @@ public:
     unsigned NumDiagnostics = clang_getNumDiagnostics(ClangTU);
     for (unsigned i = 0; i < NumDiagnostics; ++i) {
       auto Diag = clang_getDiagnostic(ClangTU, i);
-      LLVM_DEBUG(llvm::dbgs()
-                 << clang_getCString(clang_formatDiagnostic(
-                        Diag, clang_defaultDiagnosticDisplayOptions()))
-                 << "\n");
+      DEBUG(llvm::dbgs() << clang_getCString(clang_formatDiagnostic(
+          Diag, clang_defaultDiagnosticDisplayOptions())) << "\n");
       clang_disposeDiagnostic(Diag);
     }
   }
   bool ReparseTU(unsigned num_unsaved_files, CXUnsavedFile* unsaved_files) {
     if (clang_reparseTranslationUnit(ClangTU, num_unsaved_files, unsaved_files,
                                      clang_defaultReparseOptions(ClangTU))) {
-      LLVM_DEBUG(llvm::dbgs() << "Reparse failed\n");
+      DEBUG(llvm::dbgs() << "Reparse failed\n");
       return false;
     }
     DisplayDiagnostics();
@@ -485,21 +483,6 @@ public:
   }
 };
 
-TEST_F(LibclangReparseTest, FileName) {
-  std::string CppName = "main.cpp";
-  WriteFile(CppName, "int main() {}");
-  ClangTU = clang_parseTranslationUnit(Index, CppName.c_str(), nullptr, 0,
-                                       nullptr, 0, TUFlags);
-  CXFile cxf = clang_getFile(ClangTU, CppName.c_str());
-
-  CXString cxname = clang_getFileName(cxf);
-  ASSERT_STREQ(clang_getCString(cxname), CppName.c_str());
-  clang_disposeString(cxname);
-
-  cxname = clang_File_tryGetRealPathName(cxf);
-  ASSERT_TRUE(llvm::StringRef(clang_getCString(cxname)).endswith("main.cpp"));
-  clang_disposeString(cxname);
-}
 
 TEST_F(LibclangReparseTest, Reparse) {
   const char *HeaderTop = "#ifndef H\n#define H\nstruct Foo { int bar;";
@@ -591,177 +574,70 @@ TEST_F(LibclangReparseTest, clang_parseTranslationUnit2FullArgv) {
   DisplayDiagnostics();
 }
 
-class LibclangPrintingPolicyTest : public LibclangParseTest {
-public:
-  CXPrintingPolicy Policy = nullptr;
-
-  void SetUp() override {
-    LibclangParseTest::SetUp();
-    std::string File = "file.cpp";
-    WriteFile(File, "int i;\n");
-    ClangTU = clang_parseTranslationUnit(Index, File.c_str(), nullptr, 0,
-                                         nullptr, 0, TUFlags);
-    CXCursor TUCursor = clang_getTranslationUnitCursor(ClangTU);
-    Policy = clang_getCursorPrintingPolicy(TUCursor);
-  }
-  void TearDown() override {
-    clang_PrintingPolicy_dispose(Policy);
-    LibclangParseTest::TearDown();
-  }
-};
-
-TEST_F(LibclangPrintingPolicyTest, SetAndGetProperties) {
-  for (unsigned Value = 0; Value < 2; ++Value) {
-    for (int I = 0; I < CXPrintingPolicy_LastProperty; ++I) {
-      auto Property = static_cast<enum CXPrintingPolicyProperty>(I);
-
-      clang_PrintingPolicy_setProperty(Policy, Property, Value);
-      EXPECT_EQ(Value, clang_PrintingPolicy_getProperty(Policy, Property));
-    }
-  }
+TEST(libclang, RefactoringAction) {
+  std::string Name =
+      clang_getCString(clang_RefactoringActionType_getName(CXRefactor_Rename));
+  EXPECT_EQ(Name, "Rename");
 }
 
-TEST_F(LibclangReparseTest, PreprocessorSkippedRanges) {
-  std::string Header = "header.h", Main = "main.cpp";
-  WriteFile(Header,
-    "#ifdef MANGOS\n"
-    "printf(\"mmm\");\n"
-    "#endif");
-  WriteFile(Main,
-    "#include \"header.h\"\n"
-    "#ifdef GUAVA\n"
-    "#endif\n"
-    "#ifdef KIWIS\n"
-    "printf(\"mmm!!\");\n"
-    "#endif");
+TEST_F(LibclangParseTest, RefactoringFindRenamedCursor) {
+  std::string Filename = "test.cpp";
+  WriteFile(Filename, "int renamable = 0;\n");
 
-  for (int i = 0; i != 3; ++i) {
-    unsigned flags = TUFlags | CXTranslationUnit_PrecompiledPreamble;
-    if (i == 2)
-      flags |= CXTranslationUnit_CreatePreambleOnFirstParse;
-
-    if (i != 0)
-       clang_disposeTranslationUnit(ClangTU);  // dispose from previous iter
-
-    // parse once
-    ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0,
-                                         nullptr, 0, flags);
-    if (i != 0) {
-      // reparse
-      ASSERT_TRUE(ReparseTU(0, nullptr /* No unsaved files. */));
-    }
-
-    // Check all ranges are there
-    CXSourceRangeList *Ranges = clang_getAllSkippedRanges(ClangTU);
-    EXPECT_EQ(3U, Ranges->count);
-
-    CXSourceLocation cxl;
-    unsigned line;
-    cxl = clang_getRangeStart(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(1U, line);
-    cxl = clang_getRangeEnd(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(3U, line);
-
-    cxl = clang_getRangeStart(Ranges->ranges[1]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(2U, line);
-    cxl = clang_getRangeEnd(Ranges->ranges[1]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(3U, line);
-
-    cxl = clang_getRangeStart(Ranges->ranges[2]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(4U, line);
-    cxl = clang_getRangeEnd(Ranges->ranges[2]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(6U, line);
-
-    clang_disposeSourceRangeList(Ranges);
-
-    // Check obtaining ranges by each file works
-    CXFile cxf = clang_getFile(ClangTU, Header.c_str());
-    Ranges = clang_getSkippedRanges(ClangTU, cxf);
-    EXPECT_EQ(1U, Ranges->count);
-    cxl = clang_getRangeStart(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(1U, line);
-    clang_disposeSourceRangeList(Ranges);
-
-    cxf = clang_getFile(ClangTU, Main.c_str());
-    Ranges = clang_getSkippedRanges(ClangTU, cxf);
-    EXPECT_EQ(2U, Ranges->count);
-    cxl = clang_getRangeStart(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(2U, line);
-    cxl = clang_getRangeStart(Ranges->ranges[1]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(4U, line);
-    clang_disposeSourceRangeList(Ranges);
-  }
+  ClangTU = clang_parseTranslationUnit(Index, Filename.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+  CXSourceLocation Loc = clang_getLocation(
+      ClangTU, clang_getFile(ClangTU, Filename.c_str()), 1, 5);
+  CXSourceRange Range = clang_getRange(Loc, Loc);
+  CXCursor Cursor;
+  EXPECT_EQ(CXError_Success,
+            clang_Refactoring_findRenamedCursor(ClangTU, Loc, Range, &Cursor));
+  EXPECT_EQ(Cursor.kind, CXCursor_VarDecl);
 }
 
-class LibclangSerializationTest : public LibclangParseTest {
-public:
-  bool SaveAndLoadTU(const std::string &Filename) {
-    unsigned options = clang_defaultSaveOptions(ClangTU);
-    if (clang_saveTranslationUnit(ClangTU, Filename.c_str(), options) !=
-        CXSaveError_None) {
-      LLVM_DEBUG(llvm::dbgs() << "Saving failed\n");
-      return false;
-    }
+TEST_F(LibclangParseTest, RefactoringRenameIndexedUnsavedFiles) {
+  std::string Filename = "test.cpp";
+  std::string PartialSource = "class Test { };\n";
+  WriteFile(Filename, PartialSource);
+  std::string FullSource = PartialSource + "Test t;\n";
 
-    clang_disposeTranslationUnit(ClangTU);
+  CXIndexedSymbolLocation IndexedLocations[2] = {
+      {{1, 7}, CXCursor_DeclRefExpr}, {{2, 1}, CXCursor_DeclRefExpr}};
+  CXIndexedSymbol Symbols[1] = {
+      {IndexedLocations, 2, CXCursor_DeclRefExpr, /*Name=*/"Test"}};
 
-    ClangTU = clang_createTranslationUnit(Index, Filename.c_str());
+  CXIndex Idx = clang_createIndex(0, 0);
 
-    if (!ClangTU) {
-      LLVM_DEBUG(llvm::dbgs() << "Loading failed\n");
-      return false;
-    }
-
-    return true;
-  }
-};
-
-TEST_F(LibclangSerializationTest, TokenKindsAreCorrectAfterLoading) {
-  // Ensure that "class" is recognized as a keyword token after serializing
-  // and reloading the AST, as it is not a keyword for the default LangOptions.
-  std::string HeaderName = "test.h";
-  WriteFile(HeaderName, "enum class Something {};");
-
-  const char *Argv[] = {"-xc++-header", "-std=c++11"};
-
-  ClangTU = clang_parseTranslationUnit(Index, HeaderName.c_str(), Argv,
-                                       sizeof(Argv) / sizeof(Argv[0]), nullptr,
-                                       0, TUFlags);
-
-  auto CheckTokenKinds = [=]() {
-    CXSourceRange Range =
-        clang_getCursorExtent(clang_getTranslationUnitCursor(ClangTU));
-
-    CXToken *Tokens;
-    unsigned int NumTokens;
-    clang_tokenize(ClangTU, Range, &Tokens, &NumTokens);
-
-    ASSERT_EQ(6u, NumTokens);
-    EXPECT_EQ(CXToken_Keyword, clang_getTokenKind(Tokens[0]));
-    EXPECT_EQ(CXToken_Keyword, clang_getTokenKind(Tokens[1]));
-    EXPECT_EQ(CXToken_Identifier, clang_getTokenKind(Tokens[2]));
-    EXPECT_EQ(CXToken_Punctuation, clang_getTokenKind(Tokens[3]));
-    EXPECT_EQ(CXToken_Punctuation, clang_getTokenKind(Tokens[4]));
-    EXPECT_EQ(CXToken_Punctuation, clang_getTokenKind(Tokens[5]));
-
-    clang_disposeTokens(ClangTU, Tokens, NumTokens);
+  auto test = [&](CXUnsavedFile *File = nullptr) -> CXSymbolOccurrencesInFile {
+    CXSymbolOccurrencesResult Result;
+    CXErrorCode Err = clang_Refactoring_findSymbolOccurrencesInIndexedFile(
+        Symbols, 1, Idx, Filename.c_str(), nullptr, 0, File, File ? 1 : 0,
+        /*Options=*/nullptr, &Result);
+    EXPECT_EQ(CXError_Success, Err);
+    unsigned NumFiles = clang_SymbolOccurrences_getNumFiles(Result);
+    EXPECT_EQ(NumFiles, 1u);
+    CXSymbolOccurrencesInFile Occurrences;
+    clang_SymbolOccurrences_getOccurrencesForFile(Result, 0, &Occurrences);
+    return Occurrences;
   };
+  CXSymbolOccurrencesInFile FileOccurrences = test();
+  EXPECT_EQ(FileOccurrences.NumOccurrences, 1u);
+  EXPECT_EQ(clang_getCString(FileOccurrences.Filename), Filename);
+  EXPECT_EQ(FileOccurrences.Occurrences[0].NumNamePieces, 1u);
+  EXPECT_EQ(FileOccurrences.Occurrences[0].NamePieces[0].Begin.Line, 1u);
+  EXPECT_EQ(FileOccurrences.Occurrences[0].NamePieces[0].Begin.Column, 7u);
 
-  CheckTokenKinds();
-
-  std::string ASTName = "test.ast";
-  WriteFile(ASTName, "");
-
-  ASSERT_TRUE(SaveAndLoadTU(ASTName));
-
-  CheckTokenKinds();
+  CXUnsavedFile UnsavedFile = {Filename.c_str(), FullSource.c_str(),
+                               FullSource.size()};
+  CXSymbolOccurrencesInFile UnsavedFileOccurrences = test(&UnsavedFile);
+  EXPECT_EQ(UnsavedFileOccurrences.NumOccurrences, 2u);
+  EXPECT_EQ(clang_getCString(UnsavedFileOccurrences.Filename), Filename);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[0].NumNamePieces, 1u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[0].NamePieces[0].Begin.Line, 1u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[0].NamePieces[0].Begin.Column,
+            7u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[1].NumNamePieces, 1u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[1].NamePieces[0].Begin.Line, 2u);
+  EXPECT_EQ(UnsavedFileOccurrences.Occurrences[1].NamePieces[0].Begin.Column,
+            1u);
 }

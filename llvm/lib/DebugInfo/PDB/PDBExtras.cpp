@@ -113,8 +113,6 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_LocType &Loc) {
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_LocType, IlRel, "IL rel", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_LocType, MetaData, "metadata", OS)
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_LocType, Constant, "constant", OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_LocType, RegRelAliasIndir,
-                               "regrelaliasindir", OS)
   default:
     OS << "Unknown";
   }
@@ -141,7 +139,6 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Checksum, None, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Checksum, MD5, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Checksum, SHA1, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Checksum, SHA256, OS)
   }
   return OS;
 }
@@ -253,18 +250,6 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Machine, WceMipsV2, OS)
   default:
     OS << "Unknown";
-  }
-  return OS;
-}
-
-raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
-                                   const PDB_SourceCompression &Compression) {
-  switch (Compression) {
-    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SourceCompression, None, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SourceCompression, Huffman, OS)
-    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_SourceCompression, LZ, OS)
-    CASE_OUTPUT_ENUM_CLASS_STR(PDB_SourceCompression, RunLengthEncoded, "RLE",
-                               OS)
   }
   return OS;
 }

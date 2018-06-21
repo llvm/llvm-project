@@ -207,7 +207,8 @@ public:
   void addBlock(DIE &Die, dwarf::Attribute Attribute, DIEBlock *Block);
 
   /// Add location information to specified debug information entry.
-  void addSourceLine(DIE &Die, unsigned Line, const DIFile *File);
+  void addSourceLine(DIE &Die, unsigned Line, StringRef File,
+                     StringRef Directory);
   void addSourceLine(DIE &Die, const DILocalVariable *V);
   void addSourceLine(DIE &Die, const DIGlobalVariable *G);
   void addSourceLine(DIE &Die, const DISubprogram *SP);
@@ -306,19 +307,15 @@ public:
                                       const MCSymbol *Label,
                                       const MCSymbol *Sec);
 
-  /// If the \p File has an MD5 checksum, return it as an MD5Result
-  /// allocated in the MCContext.
-  MD5::MD5Result *getMD5AsBytes(const DIFile *File) const;
-
 protected:
   ~DwarfUnit();
 
   /// Create new static data member DIE.
   DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT);
 
-  /// Look up the source ID for the given file. If none currently exists,
-  /// create a new ID and insert it in the line table.
-  virtual unsigned getOrCreateSourceID(const DIFile *File) = 0;
+  /// Look up the source ID with the given directory and source file names. If
+  /// none currently exists, create a new ID and insert it in the line table.
+  virtual unsigned getOrCreateSourceID(StringRef File, StringRef Directory) = 0;
 
   /// Look in the DwarfDebug map for the MDNode that corresponds to the
   /// reference.
@@ -367,9 +364,8 @@ class DwarfTypeUnit final : public DwarfUnit {
   const DIE *Ty;
   DwarfCompileUnit &CU;
   MCDwarfDwoLineTable *SplitLineTable;
-  bool UsedLineTable = false;
 
-  unsigned getOrCreateSourceID(const DIFile *File) override;
+  unsigned getOrCreateSourceID(StringRef File, StringRef Directory) override;
   bool isDwoUnit() const override;
 
 public:

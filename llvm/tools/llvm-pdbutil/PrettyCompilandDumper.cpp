@@ -55,73 +55,62 @@ void CompilandDumper::start(const PDBSymbolCompiland &Symbol,
 
   if (opts & Flags::Lines) {
     const IPDBSession &Session = Symbol.getSession();
-    if (auto Files = Session.getSourceFilesForCompiland(Symbol)) {
+    auto Files = Session.getSourceFilesForCompiland(Symbol);
+    Printer.Indent();
+    while (auto File = Files->getNext()) {
+      Printer.NewLine();
+      WithColor(Printer, PDB_ColorItem::Path).get() << File->getFileName();
+
+      auto Lines = Session.findLineNumbers(Symbol, *File);
       Printer.Indent();
-      while (auto File = Files->getNext()) {
+      while (auto Line = Lines->getNext()) {
         Printer.NewLine();
-        WithColor(Printer, PDB_ColorItem::Path).get() << File->getFileName();
-        if (File->getChecksumType() != PDB_Checksum::None) {
-          auto ChecksumType = File->getChecksumType();
-          auto ChecksumHexString = toHex(File->getChecksum());
-          WithColor(Printer, PDB_ColorItem::Comment).get()
-              << " (" << ChecksumType << ": " << ChecksumHexString << ")";
+        uint32_t LineStart = Line->getLineNumber();
+        uint32_t LineEnd = Line->getLineNumberEnd();
+
+        Printer << "Line ";
+        PDB_ColorItem StatementColor = Line->isStatement()
+                                           ? PDB_ColorItem::Keyword
+                                           : PDB_ColorItem::LiteralValue;
+        WithColor(Printer, StatementColor).get() << LineStart;
+        if (LineStart != LineEnd)
+          WithColor(Printer, StatementColor).get() << " - " << LineEnd;
+
+        uint32_t ColumnStart = Line->getColumnNumber();
+        uint32_t ColumnEnd = Line->getColumnNumberEnd();
+        if (ColumnStart != 0 || ColumnEnd != 0) {
+          Printer << ", Column: ";
+          WithColor(Printer, StatementColor).get() << ColumnStart;
+          if (ColumnEnd != ColumnStart)
+            WithColor(Printer, StatementColor).get() << " - " << ColumnEnd;
         }
 
-        auto Lines = Session.findLineNumbers(Symbol, *File);
-        if (!Lines)
-          continue;
-
-        Printer.Indent();
-        while (auto Line = Lines->getNext()) {
-          Printer.NewLine();
-          uint32_t LineStart = Line->getLineNumber();
-          uint32_t LineEnd = Line->getLineNumberEnd();
-
-          Printer << "Line ";
-          PDB_ColorItem StatementColor = Line->isStatement()
-            ? PDB_ColorItem::Keyword
-            : PDB_ColorItem::LiteralValue;
-          WithColor(Printer, StatementColor).get() << LineStart;
-          if (LineStart != LineEnd)
-            WithColor(Printer, StatementColor).get() << " - " << LineEnd;
-
-          uint32_t ColumnStart = Line->getColumnNumber();
-          uint32_t ColumnEnd = Line->getColumnNumberEnd();
-          if (ColumnStart != 0 || ColumnEnd != 0) {
-            Printer << ", Column: ";
-            WithColor(Printer, StatementColor).get() << ColumnStart;
-            if (ColumnEnd != ColumnStart)
-              WithColor(Printer, StatementColor).get() << " - " << ColumnEnd;
-          }
-
-          Printer << ", Address: ";
-          if (Line->getLength() > 0) {
-            uint64_t AddrStart = Line->getVirtualAddress();
-            uint64_t AddrEnd = AddrStart + Line->getLength() - 1;
-            WithColor(Printer, PDB_ColorItem::Address).get()
+        Printer << ", Address: ";
+        if (Line->getLength() > 0) {
+          uint64_t AddrStart = Line->getVirtualAddress();
+          uint64_t AddrEnd = AddrStart + Line->getLength() - 1;
+          WithColor(Printer, PDB_ColorItem::Address).get()
               << "[" << format_hex(AddrStart, 10) << " - "
               << format_hex(AddrEnd, 10) << "]";
-            Printer << " (" << Line->getLength() << " bytes)";
-          } else {
-            uint64_t AddrStart = Line->getVirtualAddress();
-            WithColor(Printer, PDB_ColorItem::Address).get()
+          Printer << " (" << Line->getLength() << " bytes)";
+        } else {
+          uint64_t AddrStart = Line->getVirtualAddress();
+          WithColor(Printer, PDB_ColorItem::Address).get()
               << "[" << format_hex(AddrStart, 10) << "] ";
-            Printer << "(0 bytes)";
-          }
+          Printer << "(0 bytes)";
         }
-        Printer.Unindent();
       }
       Printer.Unindent();
     }
+    Printer.Unindent();
   }
 
   if (opts & Flags::Children) {
-    if (auto ChildrenEnum = Symbol.findAllChildren()) {
-      Printer.Indent();
-      while (auto Child = ChildrenEnum->getNext())
-        Child->dump(*this);
-      Printer.Unindent();
-    }
+    auto ChildrenEnum = Symbol.findAllChildren();
+    Printer.Indent();
+    while (auto Child = ChildrenEnum->getNext())
+      Child->dump(*this);
+    Printer.Unindent();
   }
 }
 

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This defines IdenticalExprChecker, a check that warns about
+/// \brief This defines IdenticalExprChecker, a check that warns about
 /// unintended use of identical expressions.
 ///
 /// It checks for use of identical expressions with comparison operators and
@@ -296,7 +296,7 @@ bool FindIdenticalExprVisitor::VisitConditionalOperator(
   return true;
 }
 
-/// Determines whether two statement trees are identical regarding
+/// \brief Determines whether two statement trees are identical regarding
 /// operators and symbols.
 ///
 /// Exceptions: expressions containing macros or functions with possible side

@@ -31,7 +31,7 @@ namespace {
 std::error_code CreateFileWithContent(const SmallString<128> &FilePath,
                                       const StringRef &content) {
   int FD = 0;
-  if (std::error_code ec = fs::openFileForWrite(FilePath, FD))
+  if (std::error_code ec = fs::openFileForWrite(FilePath, FD, fs::F_None))
     return ec;
 
   const bool ShouldClose = true;

@@ -96,7 +96,6 @@ private:
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
   void findGccLibDir();
   llvm::ErrorOr<std::string> findGcc();
-  llvm::ErrorOr<std::string> findClangRelativeSysroot();
 };
 
 } // end namespace toolchains

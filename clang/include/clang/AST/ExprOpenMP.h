@@ -17,7 +17,7 @@
 #include "clang/AST/Expr.h"
 
 namespace clang {
-/// OpenMP 4.0 [2.4, Array Sections].
+/// \brief OpenMP 4.0 [2.4, Array Sections].
 /// To specify an array section in an OpenMP construct, array subscript
 /// expressions are extended with the following syntax:
 /// \code
@@ -72,33 +72,33 @@ public:
     SubExprs[LENGTH] = Length;
   }
 
-  /// Create an empty array section expression.
+  /// \brief Create an empty array section expression.
   explicit OMPArraySectionExpr(EmptyShell Shell)
       : Expr(OMPArraySectionExprClass, Shell) {}
 
   /// An array section can be written only as Base[LowerBound:Length].
 
-  /// Get base of the array section.
+  /// \brief Get base of the array section.
   Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
   const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
-  /// Set base of the array section.
+  /// \brief Set base of the array section.
   void setBase(Expr *E) { SubExprs[BASE] = E; }
 
-  /// Return original type of the base expression for array section.
+  /// \brief Return original type of the base expression for array section.
   static QualType getBaseOriginalType(const Expr *Base);
 
-  /// Get lower bound of array section.
+  /// \brief Get lower bound of array section.
   Expr *getLowerBound() { return cast_or_null<Expr>(SubExprs[LOWER_BOUND]); }
   const Expr *getLowerBound() const {
     return cast_or_null<Expr>(SubExprs[LOWER_BOUND]);
   }
-  /// Set lower bound of the array section.
+  /// \brief Set lower bound of the array section.
   void setLowerBound(Expr *E) { SubExprs[LOWER_BOUND] = E; }
 
-  /// Get length of array section.
+  /// \brief Get length of array section.
   Expr *getLength() { return cast_or_null<Expr>(SubExprs[LENGTH]); }
   const Expr *getLength() const { return cast_or_null<Expr>(SubExprs[LENGTH]); }
-  /// Set length of the array section.
+  /// \brief Set length of the array section.
   void setLength(Expr *E) { SubExprs[LENGTH] = E; }
 
   SourceLocation getLocStart() const LLVM_READONLY {

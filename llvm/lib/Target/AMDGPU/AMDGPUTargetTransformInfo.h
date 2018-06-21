@@ -21,7 +21,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -47,29 +46,6 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   const AMDGPUSubtarget *ST;
   const AMDGPUTargetLowering *TLI;
-
-public:
-  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(TM->getSubtargetImpl(F)),
-      TLI(ST->getTargetLowering()) {}
-
-  const AMDGPUSubtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
-
-  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
-};
-
-class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
-  using BaseT = BasicTTIImplBase<GCNTTIImpl>;
-  using TTI = TargetTransformInfo;
-
-  friend BaseT;
-
-  const AMDGPUSubtarget *ST;
-  const AMDGPUTargetLowering *TLI;
-  AMDGPUTTIImpl CommonTTI;
   bool IsGraphicsShader;
 
   const FeatureBitset InlineFeatureIgnoreList = {
@@ -122,11 +98,10 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   }
 
 public:
-  explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
       ST(TM->getSubtargetImpl(F)),
       TLI(ST->getTargetLowering()),
-      CommonTTI(TM, F),
       IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())) {}
 
   bool hasBranchDivergence() { return true; }
@@ -143,12 +118,6 @@ public:
   unsigned getNumberOfRegisters(bool Vector) const;
   unsigned getRegisterBitWidth(bool Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
-  unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
-                               unsigned ChainSizeInBytes,
-                               VectorType *VecTy) const;
-  unsigned getStoreVectorFactor(unsigned VF, unsigned StoreSize,
-                                unsigned ChainSizeInBytes,
-                                VectorType *VecTy) const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
 
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,
@@ -197,53 +166,6 @@ public:
                            const Function *Callee) const;
 
   unsigned getInliningThresholdMultiplier() { return 9; }
-
-  int getArithmeticReductionCost(unsigned Opcode,
-                                 Type *Ty,
-                                 bool IsPairwise);
-  int getMinMaxReductionCost(Type *Ty, Type *CondTy,
-                             bool IsPairwiseForm,
-                             bool IsUnsigned);
-};
-
-class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
-  using BaseT = BasicTTIImplBase<R600TTIImpl>;
-  using TTI = TargetTransformInfo;
-
-  friend BaseT;
-
-  const AMDGPUSubtarget *ST;
-  const AMDGPUTargetLowering *TLI;
-  AMDGPUTTIImpl CommonTTI;
-
-public:
-  explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(TM->getSubtargetImpl(F)),
-      TLI(ST->getTargetLowering()),
-      CommonTTI(TM, F)	{}
-
-  const AMDGPUSubtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
-
-  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
-  unsigned getHardwareNumberOfRegisters(bool Vec) const;
-  unsigned getNumberOfRegisters(bool Vec) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
-  unsigned getMinVectorRegisterBitWidth() const;
-  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
-  bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, unsigned Alignment,
-                                  unsigned AddrSpace) const;
-  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
-		                   unsigned Alignment,
-                                   unsigned AddrSpace) const;
-  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
-                                    unsigned Alignment,
-                                    unsigned AddrSpace) const;
-  unsigned getMaxInterleaveFactor(unsigned VF);
-  unsigned getCFInstrCost(unsigned Opcode);
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
 };
 
 } // end namespace llvm

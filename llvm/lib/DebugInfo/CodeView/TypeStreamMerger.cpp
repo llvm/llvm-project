@@ -20,11 +20,6 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-static inline size_t slotForIndex(TypeIndex Idx) {
-  assert(!Idx.isSimple() && "simple type indices have no slots");
-  return Idx.getIndex() - TypeIndex::FirstNonSimpleIndex;
-}
-
 namespace {
 
 /// Implementation of CodeView type stream merging.
@@ -99,22 +94,8 @@ private:
 
   void addMapping(TypeIndex Idx);
 
-  inline bool remapTypeIndex(TypeIndex &Idx) {
-    // If we're mapping a pure index stream, then IndexMap only contains
-    // mappings from OldIdStream -> NewIdStream, in which case we will need to
-    // use the special mapping from OldTypeStream -> NewTypeStream which was
-    // computed externally.  Regardless, we use this special map if and only if
-    // we are doing an id-only mapping.
-    if (!hasTypeStream())
-      return remapIndex(Idx, TypeLookup);
-
-    assert(TypeLookup.empty());
-    return remapIndex(Idx, IndexMap);
-  }
-  inline bool remapItemIndex(TypeIndex &Idx) {
-    assert(hasIdStream());
-    return remapIndex(Idx, IndexMap);
-  }
+  bool remapTypeIndex(TypeIndex &Idx);
+  bool remapItemIndex(TypeIndex &Idx);
 
   bool hasTypeStream() const {
     return (UseGlobalHashes) ? (!!DestGlobalTypeStream) : (!!DestTypeStream);
@@ -124,33 +105,16 @@ private:
     return (UseGlobalHashes) ? (!!DestGlobalIdStream) : (!!DestIdStream);
   }
 
-  ArrayRef<uint8_t> remapIndices(const CVType &OriginalType,
-                                 MutableArrayRef<uint8_t> Storage);
+  ArrayRef<uint8_t> serializeRemapped(const RemappedType &Record);
 
-  inline bool remapIndex(TypeIndex &Idx, ArrayRef<TypeIndex> Map) {
-    if (LLVM_LIKELY(remapIndexSimple(Idx, Map)))
-      return true;
+  bool remapIndices(RemappedType &Record, ArrayRef<TiReference> Refs);
 
-    return remapIndexFallback(Idx, Map);
+  bool remapIndex(TypeIndex &Idx, ArrayRef<TypeIndex> Map);
+
+  size_t slotForIndex(TypeIndex Idx) const {
+    assert(!Idx.isSimple() && "simple type indices have no slots");
+    return Idx.getIndex() - TypeIndex::FirstNonSimpleIndex;
   }
-
-  inline bool remapIndexSimple(TypeIndex &Idx, ArrayRef<TypeIndex> Map) const {
-    // Simple types are unchanged.
-    if (Idx.isSimple())
-      return true;
-
-    // Check if this type index refers to a record we've already translated
-    // successfully. If it refers to a type later in the stream or a record we
-    // had to defer, defer it until later pass.
-    unsigned MapPos = slotForIndex(Idx);
-    if (LLVM_UNLIKELY(MapPos >= Map.size() || Map[MapPos] == Untranslated))
-      return false;
-
-    Idx = Map[MapPos];
-    return true;
-  }
-
-  bool remapIndexFallback(TypeIndex &Idx, ArrayRef<TypeIndex> Map);
 
   Error errorCorruptRecord() const {
     return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);
@@ -189,6 +153,27 @@ private:
 
 } // end anonymous namespace
 
+ArrayRef<uint8_t>
+TypeStreamMerger::serializeRemapped(const RemappedType &Record) {
+  TypeIndex TI;
+  ArrayRef<uint8_t> OriginalData = Record.OriginalRecord.RecordData;
+  if (Record.Mappings.empty())
+    return OriginalData;
+
+  // At least one type index was remapped.  We copy the full record bytes,
+  // re-write each type index, then return that.
+  RemapStorage.resize(OriginalData.size());
+  ::memcpy(&RemapStorage[0], OriginalData.data(), OriginalData.size());
+  uint8_t *ContentBegin = RemapStorage.data() + sizeof(RecordPrefix);
+  for (const auto &M : Record.Mappings) {
+    // First 4 bytes of every record are the record prefix, but the mapping
+    // offset is relative to the content which starts after.
+    *(TypeIndex *)(ContentBegin + M.first) = M.second;
+  }
+  auto RemapRef = makeArrayRef(RemapStorage);
+  return RemapRef;
+}
+
 const TypeIndex TypeStreamMerger::Untranslated(SimpleTypeKind::NotTranslated);
 
 static bool isIdRecord(TypeLeafKind K) {
@@ -217,9 +202,19 @@ void TypeStreamMerger::addMapping(TypeIndex Idx) {
   }
 }
 
-bool TypeStreamMerger::remapIndexFallback(TypeIndex &Idx,
-                                          ArrayRef<TypeIndex> Map) {
-  size_t MapPos = slotForIndex(Idx);
+bool TypeStreamMerger::remapIndex(TypeIndex &Idx, ArrayRef<TypeIndex> Map) {
+  // Simple types are unchanged.
+  if (Idx.isSimple())
+    return true;
+
+  // Check if this type index refers to a record we've already translated
+  // successfully. If it refers to a type later in the stream or a record we
+  // had to defer, defer it until later pass.
+  unsigned MapPos = slotForIndex(Idx);
+  if (MapPos < Map.size() && Map[MapPos] != Untranslated) {
+    Idx = Map[MapPos];
+    return true;
+  }
 
   // If this is the second pass and this index isn't in the map, then it points
   // outside the current type stream, and this is a corrupt record.
@@ -235,6 +230,24 @@ bool TypeStreamMerger::remapIndexFallback(TypeIndex &Idx,
   // and return failure.
   Idx = Untranslated;
   return false;
+}
+
+bool TypeStreamMerger::remapTypeIndex(TypeIndex &Idx) {
+  // If we're mapping a pure index stream, then IndexMap only contains mappings
+  // from OldIdStream -> NewIdStream, in which case we will need to use the
+  // special mapping from OldTypeStream -> NewTypeStream which was computed
+  // externally.  Regardless, we use this special map if and only if we are
+  // doing an id-only mapping.
+  if (!hasTypeStream())
+    return remapIndex(Idx, TypeLookup);
+
+  assert(TypeLookup.empty());
+  return remapIndex(Idx, IndexMap);
+}
+
+bool TypeStreamMerger::remapItemIndex(TypeIndex &Idx) {
+  assert(hasIdStream());
+  return remapIndex(Idx, IndexMap);
 }
 
 // Local hashing entry points
@@ -333,34 +346,35 @@ Error TypeStreamMerger::doit(const CVTypeArray &Types) {
 }
 
 Error TypeStreamMerger::remapAllTypes(const CVTypeArray &Types) {
-  BinaryStreamRef Stream = Types.getUnderlyingStream();
-  ArrayRef<uint8_t> Buffer;
-  cantFail(Stream.readBytes(0, Stream.getLength(), Buffer));
-
-  return forEachCodeViewRecord<CVType>(
-      Buffer, [this](const CVType &T) { return remapType(T); });
+  for (const CVType &Type : Types)
+    if (auto EC = remapType(Type))
+      return EC;
+  return Error::success();
 }
 
 Error TypeStreamMerger::remapType(const CVType &Type) {
-  auto DoSerialize =
-      [this, Type](MutableArrayRef<uint8_t> Storage) -> ArrayRef<uint8_t> {
-    return remapIndices(Type, Storage);
+  auto DoSerialize = [this, Type]() -> ArrayRef<uint8_t> {
+    RemappedType R(Type);
+    SmallVector<TiReference, 32> Refs;
+    discoverTypeIndices(Type.RecordData, Refs);
+    if (!remapIndices(R, Refs))
+      return {};
+    return serializeRemapped(R);
   };
 
   TypeIndex DestIdx = Untranslated;
-  if (LLVM_LIKELY(UseGlobalHashes)) {
+  if (UseGlobalHashes) {
     GlobalTypeTableBuilder &Dest =
         isIdRecord(Type.kind()) ? *DestGlobalIdStream : *DestGlobalTypeStream;
     GloballyHashedType H = GlobalHashes[CurIndex.toArrayIndex()];
-    DestIdx = Dest.insertRecordAs(H, Type.RecordData.size(), DoSerialize);
+    DestIdx = Dest.insertRecordAs(H, DoSerialize);
   } else {
     MergingTypeTableBuilder &Dest =
         isIdRecord(Type.kind()) ? *DestIdStream : *DestTypeStream;
 
-    RemapStorage.resize(Type.RecordData.size());
-    ArrayRef<uint8_t> Result = DoSerialize(RemapStorage);
-    if (!Result.empty())
-      DestIdx = Dest.insertRecordBytes(Result);
+    auto Data = DoSerialize();
+    if (!Data.empty())
+      DestIdx = Dest.insertRecordBytes(Data);
   }
   addMapping(DestIdx);
 
@@ -370,32 +384,27 @@ Error TypeStreamMerger::remapType(const CVType &Type) {
   return Error::success();
 }
 
-ArrayRef<uint8_t>
-TypeStreamMerger::remapIndices(const CVType &OriginalType,
-                               MutableArrayRef<uint8_t> Storage) {
-  SmallVector<TiReference, 4> Refs;
-  discoverTypeIndices(OriginalType.RecordData, Refs);
-  if (Refs.empty())
-    return OriginalType.RecordData;
-
-  ::memcpy(Storage.data(), OriginalType.RecordData.data(),
-           OriginalType.RecordData.size());
-
-  uint8_t *DestContent = Storage.data() + sizeof(RecordPrefix);
-
+bool TypeStreamMerger::remapIndices(RemappedType &Record,
+                                    ArrayRef<TiReference> Refs) {
+  ArrayRef<uint8_t> OriginalData = Record.OriginalRecord.content();
+  bool Success = true;
   for (auto &Ref : Refs) {
-    TypeIndex *DestTIs =
-        reinterpret_cast<TypeIndex *>(DestContent + Ref.Offset);
-
-    for (size_t I = 0; I < Ref.Count; ++I) {
-      TypeIndex &TI = DestTIs[I];
-      bool Success = (Ref.Kind == TiRefKind::IndexRef) ? remapItemIndex(TI)
-                                                       : remapTypeIndex(TI);
-      if (LLVM_UNLIKELY(!Success))
-        return {};
+    uint32_t Offset = Ref.Offset;
+    ArrayRef<uint8_t> Bytes = OriginalData.slice(Ref.Offset, sizeof(TypeIndex));
+    ArrayRef<TypeIndex> TIs(reinterpret_cast<const TypeIndex *>(Bytes.data()),
+                            Ref.Count);
+    for (auto TI : TIs) {
+      TypeIndex NewTI = TI;
+      bool ThisSuccess = (Ref.Kind == TiRefKind::IndexRef)
+                             ? remapItemIndex(NewTI)
+                             : remapTypeIndex(NewTI);
+      if (ThisSuccess && NewTI != TI)
+        Record.Mappings.emplace_back(Offset, NewTI);
+      Offset += sizeof(TypeIndex);
+      Success &= ThisSuccess;
     }
   }
-  return Storage;
+  return Success;
 }
 
 Error llvm::codeview::mergeTypeRecords(MergingTypeTableBuilder &Dest,

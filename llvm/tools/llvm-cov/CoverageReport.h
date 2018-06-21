@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-/// Displays the code coverage report.
+/// \brief Displays the code coverage report.
 class CoverageReport {
   const CoverageViewOptions &Options;
   const coverage::CoverageMapping &Coverage;
@@ -53,8 +53,7 @@ public:
                           const CoverageFilter *Filters);
 
   /// Render file reports for every unique file in the coverage mapping.
-  void renderFileReports(raw_ostream &OS,
-                         const CoverageFilters &IgnoreFilenameFilters) const;
+  void renderFileReports(raw_ostream &OS) const;
 
   /// Render file reports for the files specified in \p Files.
   void renderFileReports(raw_ostream &OS, ArrayRef<std::string> Files) const;

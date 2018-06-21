@@ -1701,9 +1701,10 @@ void FilterChooser::emitTableEntries(DecoderTableInfo &TableInfo) const {
 static std::string findOperandDecoderMethod(TypedInit *TI) {
   std::string Decoder;
 
-  Record *Record = cast<DefInit>(TI)->getDef();
+  RecordRecTy *Type = cast<RecordRecTy>(TI->getType());
+  Record *TypeRecord = Type->getRecord();
 
-  RecordVal *DecoderString = Record->getValue("DecoderMethod");
+  RecordVal *DecoderString = TypeRecord->getValue("DecoderMethod");
   StringInit *String = DecoderString ?
     dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
   if (String) {
@@ -1712,14 +1713,14 @@ static std::string findOperandDecoderMethod(TypedInit *TI) {
       return Decoder;
   }
 
-  if (Record->isSubClassOf("RegisterOperand"))
-    Record = Record->getValueAsDef("RegClass");
+  if (TypeRecord->isSubClassOf("RegisterOperand"))
+    TypeRecord = TypeRecord->getValueAsDef("RegClass");
 
-  if (Record->isSubClassOf("RegisterClass")) {
-    Decoder = "Decode" + Record->getName().str() + "RegisterClass";
-  } else if (Record->isSubClassOf("PointerLikeRegClass")) {
+  if (TypeRecord->isSubClassOf("RegisterClass")) {
+    Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
+  } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
     Decoder = "DecodePointerLikeRegClass" +
-      utostr(Record->getValueAsInt("RegClassKind"));
+      utostr(TypeRecord->getValueAsInt("RegClassKind"));
   }
 
   return Decoder;
@@ -1859,9 +1860,9 @@ static bool populateInstruction(CodeGenTarget &Target,
         CGI.Operands.getSubOperandNumber(OpIdx);
       const std::string &Name = CGI.Operands[SO.first].Name;
 
-      LLVM_DEBUG(dbgs() << "Numbered operand mapping for " << Def.getName()
-                        << ": " << Name << "(" << SO.first << ", " << SO.second
-                        << ") => " << Vals[i].getName() << "\n");
+      DEBUG(dbgs() << "Numbered operand mapping for " << Def.getName() << ": " <<
+                      Name << "(" << SO.first << ", " << SO.second << ") => " <<
+                      Vals[i].getName() << "\n");
 
       std::string Decoder;
       Record *TypeRecord = CGI.Operands[SO.first].Rec;
@@ -1877,8 +1878,10 @@ static bool populateInstruction(CodeGenTarget &Target,
           CGI.Operands[SO.first].MIOperandInfo->getNumArgs()) {
         Init *Arg = CGI.Operands[SO.first].MIOperandInfo->
                       getArg(SO.second);
-        if (DefInit *DI = cast<DefInit>(Arg))
-          TypeRecord = DI->getDef();
+        if (TypedInit *TI = cast<TypedInit>(Arg)) {
+          RecordRecTy *Type = cast<RecordRecTy>(TI->getType());
+          TypeRecord = Type->getRecord();
+        }
       }
 
       bool isReg = false;
@@ -1956,7 +1959,7 @@ static bool populateInstruction(CodeGenTarget &Target,
     // to interpret it.  As a first step, require the target to provide
     // callbacks for decoding register classes.
     std::string Decoder = findOperandDecoderMethod(TI);
-    Record *TypeRecord = cast<DefInit>(TI)->getDef();
+    Record *TypeRecord = cast<RecordRecTy>(TI->getType())->getRecord();
 
     RecordVal *HasCompleteDecoderVal =
       TypeRecord->getValue("hasCompleteDecoder");
@@ -2023,7 +2026,7 @@ static bool populateInstruction(CodeGenTarget &Target,
   Operands[Opc] = InsnOperands;
 
 #if 0
-  LLVM_DEBUG({
+  DEBUG({
       // Dumps the instruction encoding bits.
       dumpBits(errs(), Bits);
 
@@ -2065,10 +2068,8 @@ static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS) {
   OS << "template<typename InsnType>\n"
-     << "static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], "
-        "MCInst &MI,\n"
-     << "                                      InsnType insn, uint64_t "
-        "Address,\n"
+     << "static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,\n"
+     << "                                      InsnType insn, uint64_t Address,\n"
      << "                                      const void *DisAsm,\n"
      << "                                      const MCSubtargetInfo &STI) {\n"
      << "  const FeatureBitset& Bits = STI.getFeatureBits();\n"
@@ -2087,8 +2088,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      unsigned Len = *++Ptr;\n"
      << "      ++Ptr;\n"
      << "      CurFieldValue = fieldFromInstruction(insn, Start, Len);\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_ExtractField(\" << Start << "
-        "\", \"\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_ExtractField(\" << Start << \", \"\n"
      << "                   << Len << \"): \" << CurFieldValue << \"\\n\");\n"
      << "      break;\n"
      << "    }\n"
@@ -2104,12 +2104,9 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      // Perform the filter operation.\n"
      << "      if (Val != CurFieldValue)\n"
      << "        Ptr += NumToSkip;\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_FilterValue(\" << Val << "
-        "\", \" << NumToSkip\n"
-     << "                   << \"): \" << ((Val != CurFieldValue) ? \"FAIL:\" "
-        ": \"PASS:\")\n"
-     << "                   << \" continuing at \" << (Ptr - DecodeTable) << "
-        "\"\\n\");\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_FilterValue(\" << Val << \", \" << NumToSkip\n"
+     << "                   << \"): \" << ((Val != CurFieldValue) ? \"FAIL:\" : \"PASS:\")\n"
+     << "                   << \" continuing at \" << (Ptr - DecodeTable) << \"\\n\");\n"
      << "\n"
      << "      break;\n"
      << "    }\n"
@@ -2127,15 +2124,11 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      // If the actual and expected values don't match, skip.\n"
      << "      if (ExpectedValue != FieldValue)\n"
      << "        Ptr += NumToSkip;\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_CheckField(\" << Start << "
-        "\", \"\n"
-     << "                   << Len << \", \" << ExpectedValue << \", \" << "
-        "NumToSkip\n"
-     << "                   << \"): FieldValue = \" << FieldValue << \", "
-        "ExpectedValue = \"\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_CheckField(\" << Start << \", \"\n"
+     << "                   << Len << \", \" << ExpectedValue << \", \" << NumToSkip\n"
+     << "                   << \"): FieldValue = \" << FieldValue << \", ExpectedValue = \"\n"
      << "                   << ExpectedValue << \": \"\n"
-     << "                   << ((ExpectedValue == FieldValue) ? \"PASS\\n\" : "
-        "\"FAIL\\n\"));\n"
+     << "                   << ((ExpectedValue == FieldValue) ? \"PASS\\n\" : \"FAIL\\n\"));\n"
      << "      break;\n"
      << "    }\n"
      << "    case MCD::OPC_CheckPredicate: {\n"
@@ -2151,8 +2144,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      if (!(Pred = checkDecoderPredicate(PIdx, Bits)))\n"
      << "        Ptr += NumToSkip;\n"
      << "      (void)Pred;\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_CheckPredicate(\" << PIdx "
-        "<< \"): \"\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_CheckPredicate(\" << PIdx << \"): \"\n"
      << "            << (Pred ? \"PASS\\n\" : \"FAIL\\n\"));\n"
      << "\n"
      << "      break;\n"
@@ -2168,14 +2160,12 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      MI.clear();\n"
      << "      MI.setOpcode(Opc);\n"
      << "      bool DecodeComplete;\n"
-     << "      S = decodeToMCInst(S, DecodeIdx, insn, MI, Address, DisAsm, "
-        "DecodeComplete);\n"
+     << "      S = decodeToMCInst(S, DecodeIdx, insn, MI, Address, DisAsm, DecodeComplete);\n"
      << "      assert(DecodeComplete);\n"
      << "\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_Decode: opcode \" << Opc\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_Decode: opcode \" << Opc\n"
      << "                   << \", using decoder \" << DecodeIdx << \": \"\n"
-     << "                   << (S != MCDisassembler::Fail ? \"PASS\" : "
-        "\"FAIL\") << \"\\n\");\n"
+     << "                   << (S != MCDisassembler::Fail ? \"PASS\" : \"FAIL\") << \"\\n\");\n"
      << "      return S;\n"
      << "    }\n"
      << "    case MCD::OPC_TryDecode: {\n"
@@ -2193,26 +2183,21 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      MCInst TmpMI;\n"
      << "      TmpMI.setOpcode(Opc);\n"
      << "      bool DecodeComplete;\n"
-     << "      S = decodeToMCInst(S, DecodeIdx, insn, TmpMI, Address, DisAsm, "
-        "DecodeComplete);\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_TryDecode: opcode \" << "
-        "Opc\n"
+     << "      S = decodeToMCInst(S, DecodeIdx, insn, TmpMI, Address, DisAsm, DecodeComplete);\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_TryDecode: opcode \" << Opc\n"
      << "                   << \", using decoder \" << DecodeIdx << \": \");\n"
      << "\n"
      << "      if (DecodeComplete) {\n"
      << "        // Decoding complete.\n"
-     << "        LLVM_DEBUG(dbgs() << (S != MCDisassembler::Fail ? \"PASS\" : "
-        "\"FAIL\") << \"\\n\");\n"
+     << "        DEBUG(dbgs() << (S != MCDisassembler::Fail ? \"PASS\" : \"FAIL\") << \"\\n\");\n"
      << "        MI = TmpMI;\n"
      << "        return S;\n"
      << "      } else {\n"
      << "        assert(S == MCDisassembler::Fail);\n"
      << "        // If the decoding was incomplete, skip.\n"
      << "        Ptr += NumToSkip;\n"
-     << "        LLVM_DEBUG(dbgs() << \"FAIL: continuing at \" << (Ptr - "
-        "DecodeTable) << \"\\n\");\n"
-     << "        // Reset decode status. This also drops a SoftFail status "
-        "that could be\n"
+     << "        DEBUG(dbgs() << \"FAIL: continuing at \" << (Ptr - DecodeTable) << \"\\n\");\n"
+     << "        // Reset decode status. This also drops a SoftFail status that could be\n"
      << "        // set before the decode attempt.\n"
      << "        S = MCDisassembler::Success;\n"
      << "      }\n"
@@ -2228,18 +2213,16 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
      << "      bool Fail = (insn & PositiveMask) || (~insn & NegativeMask);\n"
      << "      if (Fail)\n"
      << "        S = MCDisassembler::SoftFail;\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_SoftFail: \" << (Fail ? "
-        "\"FAIL\\n\":\"PASS\\n\"));\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_SoftFail: \" << (Fail ? \"FAIL\\n\":\"PASS\\n\"));\n"
      << "      break;\n"
      << "    }\n"
      << "    case MCD::OPC_Fail: {\n"
-     << "      LLVM_DEBUG(dbgs() << Loc << \": OPC_Fail\\n\");\n"
+     << "      DEBUG(dbgs() << Loc << \": OPC_Fail\\n\");\n"
      << "      return MCDisassembler::Fail;\n"
      << "    }\n"
      << "    }\n"
      << "  }\n"
-     << "  llvm_unreachable(\"bogosity detected in disassembler state "
-        "machine!\");\n"
+     << "  llvm_unreachable(\"bogosity detected in disassembler state machine!\");\n"
      << "}\n\n";
 }
 

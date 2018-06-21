@@ -59,7 +59,7 @@ class StructType;
 /// A module maintains a GlobalValRefMap object that is used to hold all
 /// constant references to global variables in the module.  When a global
 /// variable is destroyed, it should have no entries in the GlobalValueRefMap.
-/// The main container class for the LLVM Intermediate Representation.
+/// @brief The main container class for the LLVM Intermediate Representation.
 class Module {
 /// @name Types And Enumerations
 /// @{
@@ -207,18 +207,13 @@ public:
   /// @returns the module identifier as a string
   const std::string &getModuleIdentifier() const { return ModuleID; }
 
-  /// Returns the number of non-debug IR instructions in the module.
-  /// This is equivalent to the sum of the IR instruction counts of each
-  /// function contained in the module.
-  unsigned getInstructionCount();
-
   /// Get the module's original source file name. When compiling from
   /// bitcode, this is taken from a bitcode record where it was recorded.
   /// For other compiles it is the same as the ModuleID, which would
   /// contain the source file name.
   const std::string &getSourceFileName() const { return SourceFileName; }
 
-  /// Get a short "name" for the module.
+  /// \brief Get a short "name" for the module.
   ///
   /// This is useful for debugging or logging. It is essentially a convenience
   /// wrapper around getModuleIdentifier().
@@ -800,14 +795,14 @@ public:
 /// @name Utility functions for querying Debug information.
 /// @{
 
-  /// Returns the Number of Register ParametersDwarf Version by checking
+  /// \brief Returns the Number of Register ParametersDwarf Version by checking
   /// module flags.
   unsigned getNumberRegisterParameters() const;
 
-  /// Returns the Dwarf Version by checking module flags.
+  /// \brief Returns the Dwarf Version by checking module flags.
   unsigned getDwarfVersion() const;
 
-  /// Returns the CodeView Version by checking module flags.
+  /// \brief Returns the CodeView Version by checking module flags.
   /// Returns zero if not present in module.
   unsigned getCodeViewFlag() const;
 
@@ -815,10 +810,10 @@ public:
 /// @name Utility functions for querying and setting PIC level
 /// @{
 
-  /// Returns the PIC level (small or large model)
+  /// \brief Returns the PIC level (small or large model)
   PICLevel::Level getPICLevel() const;
 
-  /// Set the PIC level (small or large model)
+  /// \brief Set the PIC level (small or large model)
   void setPICLevel(PICLevel::Level PL);
 /// @}
 
@@ -826,35 +821,28 @@ public:
 /// @name Utility functions for querying and setting PIE level
 /// @{
 
-  /// Returns the PIE level (small or large model)
+  /// \brief Returns the PIE level (small or large model)
   PIELevel::Level getPIELevel() const;
 
-  /// Set the PIE level (small or large model)
+  /// \brief Set the PIE level (small or large model)
   void setPIELevel(PIELevel::Level PL);
 /// @}
 
   /// @name Utility functions for querying and setting PGO summary
   /// @{
 
-  /// Attach profile summary metadata to this module.
+  /// \brief Attach profile summary metadata to this module.
   void setProfileSummary(Metadata *M);
 
-  /// Returns profile summary metadata
+  /// \brief Returns profile summary metadata
   Metadata *getProfileSummary();
   /// @}
-
-  /// Returns true if PLT should be avoided for RTLib calls.
-  bool getRtLibUseGOT() const;
-
-  /// Set that PLT should be avoid for RTLib calls.
-  void setRtLibUseGOT();
-
 
   /// Take ownership of the given memory buffer.
   void setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB);
 };
 
-/// Given "llvm.used" or "llvm.compiler.used" as a global name, collect
+/// \brief Given "llvm.used" or "llvm.compiler.used" as a global name, collect
 /// the initializer elements of that global in Set and return the global itself.
 GlobalVariable *collectUsedGlobalVariables(const Module &M,
                                            SmallPtrSetImpl<GlobalValue *> &Set,

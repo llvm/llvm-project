@@ -20,6 +20,9 @@ struct NonDefaultConstructible {
 //     -- function template
 namespace N0 {
   template<typename T> void f0(T) {
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{explicitly specialized declaration is here}}
+#endif
     T t;
   }
 
@@ -40,13 +43,16 @@ namespace N1 {
 }
 
 template<> void N0::f0(double);
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of function template specialization of 'f0' outside namespace 'N0' is a C++11 extension}}
+#endif
 
 template<> void N0::f0(double) { }
 
 struct X1 {
   template<typename T> void f(T);
   
-  template<> void f(int);
+  template<> void f(int); // expected-error{{in class scope}}
 };
 
 //     -- class template
@@ -54,20 +60,38 @@ namespace N0 {
   
 template<typename T>
 struct X0 { // expected-note {{explicitly specialized declaration is here}}
+#if __cplusplus <= 199711L
+// expected-note@-2 {{explicitly specialized declaration is here}}
+#endif
   static T member;
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{explicitly specialized declaration is here}}
+#endif
   
   void f1(T t) {
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{explicitly specialized declaration is here}}
+#endif
     t = 17;
   }
   
   struct Inner : public T { }; // expected-note 2{{explicitly specialized declaration is here}}
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{explicitly specialized declaration is here}}
+#endif
   
   template<typename U>
   struct InnerTemplate : public T { }; // expected-note {{explicitly specialized declaration is here}}
-  // expected-error@-1 {{base specifier must name a class}}
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{explicitly specialized declaration is here}}
+#endif
+  // expected-error@-4 {{base specifier must name a class}}
   
   template<typename U>
   void ft1(T t, U u);
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{explicitly specialized declaration is here}}
+#endif
 };
 
 }
@@ -81,6 +105,9 @@ void N0::X0<T>::ft1(T t, U u) {
 template<typename T> T N0::X0<T>::member;
 
 template<> struct N0::X0<void> { };
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of class template specialization of 'X0' outside namespace 'N0' is a C++11 extension}}
+#endif
 N0::X0<void> test_X0;
 
 namespace N1 {
@@ -97,6 +124,9 @@ template<> struct N0::X0<volatile void> {
 
 //     -- member function of a class template
 template<> void N0::X0<void*>::f1(void *) { }
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of member function specialization of 'f1' outside namespace 'N0' is a C++11 extension}}
+#endif
 
 void test_spec(N0::X0<void*> xvp, void *vp) {
   xvp.f1(vp);
@@ -130,6 +160,9 @@ NonDefaultConstructible &get_static_member() {
 }
 
 template<> int N0::X0<int>::member;
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of static data member specialization of 'member' outside namespace 'N0' is a C++11 extension}}
+#endif
 
 template<> float N0::X0<float>::member = 3.14f;
 
@@ -158,6 +191,9 @@ namespace N0 {
 
 template<>
 struct N0::X0<long>::Inner { };
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of member class specialization of 'Inner' outside namespace 'N0' is a C++11 extension}}
+#endif
 
 template<>
 struct N0::X0<float>::Inner { };
@@ -197,6 +233,9 @@ struct N0::X0<int>::InnerTemplate<long> { }; // okay
 
 template<> template<>
 struct N0::X0<int>::InnerTemplate<float> { };
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of class template specialization of 'InnerTemplate' outside namespace 'N0' is a C++11 extension}}
+#endif
 
 namespace N1 {
   template<> template<>
@@ -229,6 +268,9 @@ void N0::X0<void*>::ft1(void *, unsigned) { } // okay
 
 template<> template<>
 void N0::X0<void*>::ft1(void *, float) { }
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of function template specialization of 'ft1' outside namespace 'N0' is a C++11 extension}}
+#endif
 
 namespace N1 {
   template<> template<>
@@ -251,6 +293,6 @@ namespace PR8979 {
     template<typename T, typename U> void f(Inner<T, U>&);
 
     typedef Inner<OtherInner, OtherInner> MyInner;
-    template<> void f(MyInner&);
+    template<> void f(MyInner&); // expected-error{{cannot specialize a function 'f' within class scope}}
   };
 }

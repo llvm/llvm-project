@@ -103,7 +103,7 @@ public:
   }
 };
 
-/// Subclasses \c clang::FixItRewriter to not count fixed errors/warnings
+/// \brief Subclasses \c clang::FixItRewriter to not count fixed errors/warnings
 /// in the final error counts.
 ///
 /// This has the side-effect that clang-check -fixit exits with code 0 on
@@ -120,7 +120,7 @@ public:
   bool IncludeInDiagnosticCounts() const override { return false; }
 };
 
-/// Subclasses \c clang::FixItAction so that we can install the custom
+/// \brief Subclasses \c clang::FixItAction so that we can install the custom
 /// \c FixItRewriter.
 class FixItAction : public clang::FixItAction {
 public:
@@ -138,9 +138,7 @@ public:
     if (ASTList)
       return clang::CreateASTDeclNodeLister();
     if (ASTDump)
-      return clang::CreateASTDumper(nullptr /*Dump to stdout.*/,
-                                    ASTDumpFilter,
-                                    /*DumpDecls=*/true,
+      return clang::CreateASTDumper(ASTDumpFilter, /*DumpDecls=*/true,
                                     /*Deserialize=*/false,
                                     /*DumpLookups=*/false);
     if (ASTPrint)

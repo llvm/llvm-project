@@ -44,7 +44,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Instrumentation.h"
-#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
+#include "llvm/Transforms/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cassert>
 #include <cstdint>
@@ -151,9 +151,8 @@ public:
       if (perform(MI)) {
         Changed = true;
         ++NumOfPGOMemOPOpt;
-        LLVM_DEBUG(dbgs() << "MemOP call: "
-                          << MI->getCalledFunction()->getName()
-                          << "is Transformed.\n");
+        DEBUG(dbgs() << "MemOP call: " << MI->getCalledFunction()->getName()
+                     << "is Transformed.\n");
       }
     }
   }
@@ -246,9 +245,9 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
   }
 
   ArrayRef<InstrProfValueData> VDs(ValueDataArray.get(), NumVals);
-  LLVM_DEBUG(dbgs() << "Read one memory intrinsic profile with count "
-                    << ActualCount << "\n");
-  LLVM_DEBUG(
+  DEBUG(dbgs() << "Read one memory intrinsic profile with count " << ActualCount
+               << "\n");
+  DEBUG(
       for (auto &VD
            : VDs) { dbgs() << "  (" << VD.Value << "," << VD.Count << ")\n"; });
 
@@ -261,8 +260,8 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
 
   TotalCount = ActualCount;
   if (MemOPScaleCount)
-    LLVM_DEBUG(dbgs() << "Scale counts: numerator = " << ActualCount
-                      << " denominator = " << SavedTotalCount << "\n");
+    DEBUG(dbgs() << "Scale counts: numerator = " << ActualCount
+                 << " denominator = " << SavedTotalCount << "\n");
 
   // Keeping track of the count of the default case:
   uint64_t RemainCount = TotalCount;
@@ -311,9 +310,9 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
 
   uint64_t SumForOpt = TotalCount - RemainCount;
 
-  LLVM_DEBUG(dbgs() << "Optimize one memory intrinsic call to " << Version
-                    << " Versions (covering " << SumForOpt << " out of "
-                    << TotalCount << ")\n");
+  DEBUG(dbgs() << "Optimize one memory intrinsic call to " << Version
+               << " Versions (covering " << SumForOpt << " out of "
+               << TotalCount << ")\n");
 
   // mem_op(..., size)
   // ==>
@@ -332,8 +331,8 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
   // merge_bb:
 
   BasicBlock *BB = MI->getParent();
-  LLVM_DEBUG(dbgs() << "\n\n== Basic Block Before ==\n");
-  LLVM_DEBUG(dbgs() << *BB << "\n");
+  DEBUG(dbgs() << "\n\n== Basic Block Before ==\n");
+  DEBUG(dbgs() << *BB << "\n");
   auto OrigBBFreq = BFI.getBlockFreq(BB);
 
   BasicBlock *DefaultBB = SplitBlock(BB, MI);
@@ -359,7 +358,7 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
     annotateValueSite(*Func.getParent(), *MI, VDs.slice(Version),
                       SavedRemainCount, IPVK_MemOPSize, NumVals);
 
-  LLVM_DEBUG(dbgs() << "\n\n== Basic Block After==\n");
+  DEBUG(dbgs() << "\n\n== Basic Block After==\n");
 
   for (uint64_t SizeId : SizeIds) {
     BasicBlock *CaseBB = BasicBlock::Create(
@@ -375,13 +374,13 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
     IRBuilder<> IRBCase(CaseBB);
     IRBCase.CreateBr(MergeBB);
     SI->addCase(CaseSizeId, CaseBB);
-    LLVM_DEBUG(dbgs() << *CaseBB << "\n");
+    DEBUG(dbgs() << *CaseBB << "\n");
   }
   setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
 
-  LLVM_DEBUG(dbgs() << *BB << "\n");
-  LLVM_DEBUG(dbgs() << *DefaultBB << "\n");
-  LLVM_DEBUG(dbgs() << *MergeBB << "\n");
+  DEBUG(dbgs() << *BB << "\n");
+  DEBUG(dbgs() << *DefaultBB << "\n");
+  DEBUG(dbgs() << *MergeBB << "\n");
 
   ORE.emit([&]() {
     using namespace ore;

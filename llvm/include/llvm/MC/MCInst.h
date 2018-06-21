@@ -30,7 +30,7 @@ class MCInst;
 class MCInstPrinter;
 class raw_ostream;
 
-/// Instances of this class represent operands of the MCInst class.
+/// \brief Instances of this class represent operands of the MCInst class.
 /// This is a simple discriminated union.
 class MCOperand {
   enum MachineOperandType : unsigned char {
@@ -61,13 +61,13 @@ public:
   bool isExpr() const { return Kind == kExpr; }
   bool isInst() const { return Kind == kInst; }
 
-  /// Returns the register number.
+  /// \brief Returns the register number.
   unsigned getReg() const {
     assert(isReg() && "This is not a register operand!");
     return RegVal;
   }
 
-  /// Set the register number.
+  /// \brief Set the register number.
   void setReg(unsigned Reg) {
     assert(isReg() && "This is not a register operand!");
     RegVal = Reg;
@@ -150,13 +150,11 @@ public:
 
   void print(raw_ostream &OS) const;
   void dump() const;
-  bool isBareSymbolRef() const;
-  bool evaluateAsConstantImm(int64_t &Imm) const;
 };
 
 template <> struct isPodLike<MCOperand> { static const bool value = true; };
 
-/// Instances of this class represent a single low-level machine
+/// \brief Instances of this class represent a single low-level machine
 /// instruction.
 class MCInst {
   unsigned Opcode = 0;
@@ -203,7 +201,7 @@ public:
   void print(raw_ostream &OS) const;
   void dump() const;
 
-  /// Dump the MCInst as prettily as possible using the additional MC
+  /// \brief Dump the MCInst as prettily as possible using the additional MC
   /// structures, if given. Operators are separated by the \p Separator
   /// string.
   void dump_pretty(raw_ostream &OS, const MCInstPrinter *Printer = nullptr,

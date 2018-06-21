@@ -7,7 +7,7 @@
 // RUN: %clangxx_asan -O3 -xc %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Unwind problem on arm: "main" is missing from the allocation stack trace.
-// REQUIRES: (arm-target-arch || armhf-target-arch), fast-unwinder-works
+// UNSUPPORTED: armv7l-unknown-linux-gnueabihf
 
 // FIXME: We fail to intercept strdup with the dynamic WinASan RTL, so it's not
 // in the stack trace.

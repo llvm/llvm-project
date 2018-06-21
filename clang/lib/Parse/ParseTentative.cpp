@@ -401,7 +401,7 @@ struct Parser::ConditionDeclarationOrInitStatementState {
   }
 };
 
-/// Disambiguates between a declaration in a condition, a
+/// \brief Disambiguates between a declaration in a condition, a
 /// simple-declaration in an init-statement, and an expression for
 /// a condition of a if/switch statement.
 ///
@@ -472,7 +472,7 @@ Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement) {
     return ConditionOrInitStatement::Expression;
 }
 
-  /// Determine whether the next set of tokens contains a type-id.
+  /// \brief Determine whether the next set of tokens contains a type-id.
   ///
   /// The context parameter states what context we're parsing right
   /// now, which affects how this routine copes with the token
@@ -553,7 +553,7 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
   return TPR == TPResult::True;
 }
 
-/// Returns true if this is a C++11 attribute-specifier. Per
+/// \brief Returns true if this is a C++11 attribute-specifier. Per
 /// C++11 [dcl.attr.grammar]p6, two consecutive left square bracket tokens
 /// always introduce an attribute. In Objective-C++11, this rule does not
 /// apply if either '[' begins a message-send.
@@ -873,8 +873,7 @@ Parser::TPResult Parser::TryParseOperatorId() {
 ///           template-id                                                 [TODO]
 ///
 Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
-                                            bool mayHaveIdentifier,
-                                            bool mayHaveDirectInit) {
+                                            bool mayHaveIdentifier) {
   // declarator:
   //   direct-declarator
   //   ptr-operator declarator
@@ -930,9 +929,6 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
   } else if (!mayBeAbstract) {
     return TPResult::False;
   }
-
-  if (mayHaveDirectInit)
-    return TPResult::Ambiguous;
 
   while (1) {
     TPResult TPR(TPResult::Ambiguous);
@@ -1052,7 +1048,6 @@ Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   case tok::kw_class:
   case tok::kw_typename:
   case tok::kw_wchar_t:
-  case tok::kw_char8_t:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw__Decimal32:
@@ -1247,17 +1242,6 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       case ANK_TentativeDecl:
         return TPResult::False;
       case ANK_TemplateName:
-        // In C++17, this could be a type template for class template argument
-        // deduction. Try to form a type annotation for it. If we're in a
-        // template template argument, we'll undo this when checking the
-        // validity of the argument.
-        if (getLangOpts().CPlusPlus17) {
-          if (TryAnnotateTypeOrScopeToken())
-            return TPResult::Error;
-          if (Tok.isNot(tok::identifier))
-            break;
-        }
-
         // A bare type template-name which can't be a template template
         // argument is an error, and was probably intended to be a type.
         return GreaterThanIsOperator ? TPResult::True : TPResult::False;
@@ -1436,6 +1420,8 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
             *HasMissingTypename = true;
             return TPResult::Ambiguous;
           }
+
+          // FIXME: Fails to either revert or commit the tentative parse!
         } else {
           // Try to resolve the name. If it doesn't exist, assume it was
           // intended to name a type and keep disambiguating.
@@ -1445,33 +1431,19 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
           case ANK_TentativeDecl:
             return TPResult::False;
           case ANK_TemplateName:
-            // In C++17, this could be a type template for class template
-            // argument deduction.
-            if (getLangOpts().CPlusPlus17) {
-              if (TryAnnotateTypeOrScopeToken())
-                return TPResult::Error;
-              if (Tok.isNot(tok::identifier))
-                break;
-            }
-
             // A bare type template-name which can't be a template template
             // argument is an error, and was probably intended to be a type.
-            // In C++17, this could be class template argument deduction.
-            return (getLangOpts().CPlusPlus17 || GreaterThanIsOperator)
-                       ? TPResult::True
-                       : TPResult::False;
+            return GreaterThanIsOperator ? TPResult::True : TPResult::False;
           case ANK_Unresolved:
             return HasMissingTypename ? TPResult::Ambiguous
                                       : TPResult::False;
           case ANK_Success:
-            break;
+            // Annotated it, check again.
+            assert(Tok.isNot(tok::annot_cxxscope) ||
+                   NextToken().isNot(tok::identifier));
+            return isCXXDeclarationSpecifier(BracedCastResult,
+                                             HasMissingTypename);
           }
-
-          // Annotated it, check again.
-          assert(Tok.isNot(tok::annot_cxxscope) ||
-                 NextToken().isNot(tok::identifier));
-          return isCXXDeclarationSpecifier(BracedCastResult,
-                                           HasMissingTypename);
         }
       }
       return TPResult::False;
@@ -1524,7 +1496,6 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       
   case tok::kw_char:
   case tok::kw_wchar_t:
-  case tok::kw_char8_t:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_bool:
@@ -1616,7 +1587,6 @@ bool Parser::isCXXDeclarationSpecifierAType() {
     // simple-type-specifier
   case tok::kw_char:
   case tok::kw_wchar_t:
-  case tok::kw_char8_t:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_bool:
@@ -1897,8 +1867,7 @@ Parser::TPResult Parser::TryParseFunctionDeclarator() {
     return TPResult::Error;
 
   // cv-qualifier-seq
-  while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw___unaligned,
-                     tok::kw_restrict))
+  while (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict))
     ConsumeToken();
 
   // ref-qualifier[opt]

@@ -2,9 +2,9 @@ LEVEL = ../../make
 
 CXX_SOURCES := main.cpp test.cpp
 
-include $(LEVEL)/Makefile.rules
+all: dummy a.out
 
-a.out: dummy
+include $(LEVEL)/Makefile.rules
 
 dummy:
 	$(MAKE) VPATH=$(VPATH) -I $(SRCDIR) -f $(SRCDIR)/dummy.mk

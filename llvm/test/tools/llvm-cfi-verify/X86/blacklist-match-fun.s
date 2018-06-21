@@ -3,7 +3,7 @@
 # RUN: echo "fun:*main*" > %t.blacklist.txt
 # RUN: llvm-cfi-verify %t.o %t.blacklist.txt | FileCheck %s
 
-# CHECK-LABEL: {{^Instruction: .* \(FAIL_BAD_CONDITIONAL_BRANCH\)}}
+# CHECK-LABEL: U
 # CHECK-NEXT: tiny.cc:11
 # CHECK-NEXT: {{^Blacklist Match:.*blacklist\.txt:1$}}
 # CHECK-NEXT: ====> Expected Unprotected

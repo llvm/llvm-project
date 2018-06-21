@@ -13,12 +13,14 @@ def MipsP5600Model : SchedMachineModel {
   int LoadLatency = 4;
   int MispredictPenalty = 8; // TODO: Estimated
 
-  let CompleteModel = 0;
+  let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = [HasMips32r6, HasMips64r6,
                                          HasMips64, HasMips64r2, HasCnMips,
                                          InMicroMips, InMips16Mode,
-                                         HasDSP, HasDSPR2, HasMT];
+                                         HasMicroMips32r6, HasDSP,
+                                         HasDSPR2, HasMT];
+
 }
 
 let SchedModel = MipsP5600Model in {
@@ -319,6 +321,23 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^LDI_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(AND|OR|[XN]OR)_V$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(AND|OR|[XN]OR)I_B$")>;
 
+// vshf.[bhwd], binsl.[bhwd], binsr.[bhwd], insert.[bhwd], sld?.[bhwd],
+// bset.[bhwd], bclr.[bhwd], bneg.[bhwd], bsel_v, bseli_b
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^VSHF_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BINSL|BINSLI)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BINSR|BINSRI)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^INSERT_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^(SLD|SLDI)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BSET|BSETI)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BCLR|BCLRI)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BNEG|BNEGI)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BSEL_V|BSELI_B)$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^BMN*Z.*$")>;
+
+// pcnt.[bhwd], sat_s.[bhwd], sat_u.bhwd]
+def : InstRW<[P5600WriteMSAOther3], (instregex "^PCNT_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAOther3], (instregex "^SAT_(S|U)_[BHWD]$")>;
+
 // fexp2_w, fexp2_d
 def : InstRW<[P5600WriteFPUS], (instregex "^FEXP2_(W|D)$")>;
 
@@ -405,6 +424,7 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(SRLR|SRLRI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(SLL|SLLI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(PCKEV|PCKOD)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(NLOC|NLZC)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortLogic], (instregex "^INSVE_[BHWD]$")>;
 
 // Long Pipe
 // ----------

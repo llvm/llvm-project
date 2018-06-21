@@ -1,12 +1,11 @@
 LEVEL := ../../../make
 
-LD_EXTRAS := -L. -LOne -l$(LIB_PREFIX)One -LTwo -l$(LIB_PREFIX)Two
+LD_EXTRAS := -L$(shell pwd) -LOne -l$(LIB_PREFIX)One -LTwo -l$(LIB_PREFIX)Two
 C_SOURCES := main.c
 
-include $(LEVEL)/Makefile.rules
+all: lib_One lib_Two a.out
 
-.PHONY:
-a.out: lib_One lib_Two
+include $(LEVEL)/Makefile.rules
 
 lib_%:
 	$(MAKE) VPATH=$(SRCDIR)/$* -I $(SRCDIR) -f $(SRCDIR)/$*.mk

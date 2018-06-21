@@ -40,6 +40,7 @@ public:
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
+  unsigned ehDataReg(unsigned I) const;
 
 private:
   void emitInterruptEpilogueStub(MachineFunction &MF,

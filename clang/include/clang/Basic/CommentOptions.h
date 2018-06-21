@@ -1,4 +1,4 @@
-//===- CommentOptions.h - Options for parsing comments ----------*- C++ -*-===//
+//===--- CommentOptions.h - Options for parsing comments -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+///
 /// \file
-/// Defines the clang::CommentOptions interface.
-//
+/// \brief Defines the clang::CommentOptions interface.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_COMMENTOPTIONS_H
@@ -20,20 +20,20 @@
 
 namespace clang {
 
-/// Options for controlling comment parsing.
+/// \brief Options for controlling comment parsing.
 struct CommentOptions {
-  using BlockCommandNamesTy = std::vector<std::string>;
+  typedef std::vector<std::string> BlockCommandNamesTy;
 
-  /// Command names to treat as block commands in comments.
+  /// \brief Command names to treat as block commands in comments.
   /// Should not include the leading backslash.
   BlockCommandNamesTy BlockCommandNames;
 
-  /// Treat ordinary comments as documentation comments.
-  bool ParseAllComments = false;
+  /// \brief Treat ordinary comments as documentation comments.
+  bool ParseAllComments;
 
-  CommentOptions() = default;
+  CommentOptions() : ParseAllComments(false) { }
 };
 
-} // namespace clang
+}  // end namespace clang
 
-#endif // LLVM_CLANG_BASIC_COMMENTOPTIONS_H
+#endif

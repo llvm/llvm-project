@@ -24,7 +24,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
-class MCObjectTargetWriter;
+class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
@@ -48,7 +48,8 @@ MCAsmBackend *createAVRAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                   const llvm::MCTargetOptions &TO);
 
 /// Creates an ELF object writer for AVR.
-std::unique_ptr<MCObjectTargetWriter> createAVRELFObjectWriter(uint8_t OSABI);
+std::unique_ptr<MCObjectWriter>
+createAVRELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI);
 
 } // end namespace llvm
 

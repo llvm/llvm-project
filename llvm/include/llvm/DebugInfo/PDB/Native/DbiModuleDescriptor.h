@@ -47,8 +47,6 @@ public:
 
   uint32_t getRecordLength() const;
 
-  const SectionContrib &getSectionContrib() const;
-
 private:
   StringRef ModuleName;
   StringRef ObjFileName;

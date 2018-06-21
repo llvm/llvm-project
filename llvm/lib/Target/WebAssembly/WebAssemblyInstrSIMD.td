@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// WebAssembly SIMD operand code-gen constructs.
+/// \brief WebAssembly SIMD operand code-gen constructs.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines an enumeration for C++ overloaded operators.
+/// \brief Defines an enumeration for C++ overloaded operators.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +17,7 @@
 
 namespace clang {
 
-/// Enumeration specifying the different kinds of C++ overloaded
+/// \brief Enumeration specifying the different kinds of C++ overloaded
 /// operators.
 enum OverloadedOperatorKind : int {
   OO_None,                ///< Not an overloaded operator
@@ -27,7 +27,7 @@ enum OverloadedOperatorKind : int {
   NUM_OVERLOADED_OPERATORS
 };
 
-/// Retrieve the spelling of the given overloaded operator, without 
+/// \brief Retrieve the spelling of the given overloaded operator, without 
 /// the preceding "operator" keyword.
 const char *getOperatorSpelling(OverloadedOperatorKind Operator);
 

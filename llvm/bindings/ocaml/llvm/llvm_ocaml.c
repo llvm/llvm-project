@@ -20,7 +20,6 @@
 #include <string.h>
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
-#include "llvm/Config/llvm-config.h"
 #include "caml/alloc.h"
 #include "caml/custom.h"
 #include "caml/memory.h"

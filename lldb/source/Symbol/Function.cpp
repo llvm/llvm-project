@@ -24,8 +24,9 @@ using namespace lldb;
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
-// Basic function information is contained in the FunctionInfo class. It is
-// designed to contain the name, linkage name, and declaration location.
+// Basic function information is contained in the FunctionInfo class.
+// It is designed to contain the name, linkage name, and declaration
+// location.
 //----------------------------------------------------------------------
 FunctionInfo::FunctionInfo(const char *name, const Declaration *decl_ptr)
     : m_name(name), m_declaration(decl_ptr) {}
@@ -111,7 +112,7 @@ ConstString InlineFunctionInfo::GetName(LanguageType language) const {
 ConstString InlineFunctionInfo::GetDisplayName(LanguageType language) const {
   if (m_mangled)
     return m_mangled.GetDisplayDemangledName(language);
-  return m_name;
+  return GetName(language);
 }
 
 Declaration &InlineFunctionInfo::GetCallSite() { return m_call_decl; }
@@ -133,22 +134,29 @@ size_t InlineFunctionInfo::MemorySize() const {
 //----------------------------------------------------------------------
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   const AddressRange &range)
+                   const AddressRange &range, bool canThrow)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(mangled), m_block(func_uid), m_range(range),
       m_frame_base(nullptr), m_flags(), m_prologue_byte_size(0) {
   m_block.SetParentScope(this);
+  if (canThrow)
+    m_flags.Set(flagsFunctionCanThrow);
+    
   assert(comp_unit != nullptr);
 }
 
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const char *mangled, Type *type,
-                   const AddressRange &range)
+                   const AddressRange &range, bool canThrow)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(ConstString(mangled), true), m_block(func_uid),
       m_range(range), m_frame_base(nullptr), m_flags(),
       m_prologue_byte_size(0) {
   m_block.SetParentScope(this);
+
+  if (canThrow)
+    m_flags.Set(flagsFunctionCanThrow);
+
   assert(comp_unit != nullptr);
 }
 
@@ -187,7 +195,8 @@ void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
   source_file.Clear();
 
   // The -1 is kind of cheesy, but I want to get the last line entry for the
-  // given function, not the first entry of the next.
+  // given function, not the
+  // first entry of the next.
   Address scratch_addr(GetAddressRange().GetBaseAddress());
   scratch_addr.SetOffset(scratch_addr.GetOffset() +
                          GetAddressRange().GetByteSize() - 1);
@@ -329,8 +338,9 @@ size_t Function::MemorySize() const {
 bool Function::GetIsOptimized() {
   bool result = false;
 
-  // Currently optimization is only indicted by the vendor extension
-  // DW_AT_APPLE_optimized which is set on a compile unit level.
+  // Currently optimization is only indicted by the
+  // vendor extension DW_AT_APPLE_optimized which
+  // is set on a compile unit level.
   if (m_comp_unit) {
     result = m_comp_unit->GetIsOptimized();
   }
@@ -347,6 +357,8 @@ bool Function::IsTopLevelFunction() {
 }
 
 ConstString Function::GetDisplayName() const {
+  if (!m_mangled)
+    return GetName();
   return m_mangled.GetDisplayDemangledName(GetLanguage());
 }
 
@@ -438,11 +450,11 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        // If we didn't find the end of the prologue in the line tables, then
-        // just use the end address of the first line table entry
+        // If we didn't find the end of the prologue in the line tables,
+        // then just use the end address of the first line table entry
         if (prologue_end_file_addr == LLDB_INVALID_ADDRESS) {
-          // Check the first few instructions and look for one that has a line
-          // number that's different than the first entry.
+          // Check the first few instructions and look for one that has
+          // a line number that's different than the first entry.
           uint32_t last_line_entry_idx = first_line_entry_idx + 6;
           for (uint32_t idx = first_line_entry_idx + 1;
                idx < last_line_entry_idx; ++idx) {
@@ -495,8 +507,8 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        // Verify that this prologue end file address in the function's address
-        // range just to be sure
+        // Verify that this prologue end file address in the function's
+        // address range just to be sure
         if (func_start_file_addr < prologue_end_file_addr &&
             prologue_end_file_addr < func_end_file_addr) {
           m_prologue_byte_size = prologue_end_file_addr - func_start_file_addr;

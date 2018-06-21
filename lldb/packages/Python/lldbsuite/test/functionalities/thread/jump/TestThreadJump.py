@@ -17,7 +17,6 @@ class ThreadJumpTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test(self):
         """Test thread jump handling."""
         self.build(dictionary=self.getBuildFlags())
@@ -51,10 +50,8 @@ class ThreadJumpTestCase(TestBase):
         self.do_min_test(self.mark3, self.mark2, "i", "5")
         # Try the double path, force it to return 'a'
         self.do_min_test(self.mark4, self.mark1, "j", "7")
-        # Expected to fail on powerpc64le architecture
-        if not self.isPPC64le():
-            # Try the double path, force it to return 'b'
-            self.do_min_test(self.mark4, self.mark2, "j", "8")
+        # Try the double path, force it to return 'b'
+        self.do_min_test(self.mark4, self.mark2, "j", "8")
 
         # Try jumping to another function in a different file.
         self.runCmd(

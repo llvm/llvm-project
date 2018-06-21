@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements UsingDeclarationsSorter, a TokenAnalyzer that
+/// \brief This file implements UsingDeclarationsSorter, a TokenAnalyzer that
 /// sorts consecutive using declarations.
 ///
 //===----------------------------------------------------------------------===//
@@ -161,7 +161,7 @@ void endUsingDeclarationBlock(
     StringRef Text(SourceMgr.getCharacterData(SortedBegin),
                    SourceMgr.getCharacterData(SortedEnd) -
                        SourceMgr.getCharacterData(SortedBegin));
-    LLVM_DEBUG({
+    DEBUG({
       StringRef OldText(SourceMgr.getCharacterData(Begin),
                         SourceMgr.getCharacterData(End) -
                             SourceMgr.getCharacterData(Begin));
@@ -187,7 +187,8 @@ std::pair<tooling::Replacements, unsigned> UsingDeclarationsSorter::analyze(
     TokenAnnotator &Annotator, SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
     FormatTokenLexer &Tokens) {
   const SourceManager &SourceMgr = Env.getSourceManager();
-  AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+  AffectedRangeMgr.computeAffectedLines(AnnotatedLines.begin(),
+                                        AnnotatedLines.end());
   tooling::Replacements Fixes;
   SmallVector<UsingDeclaration, 4> UsingDeclarations;
   for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {

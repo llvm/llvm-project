@@ -22,13 +22,14 @@
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-// The symbol vendor class is designed to abstract the process of searching for
-// debug information for a given module. Platforms can subclass this class and
-// provide extra ways to find debug information. Examples would be a subclass
-// that would allow for locating a stand alone debug file, parsing debug maps,
-// or runtime data in the object files. A symbol vendor can use multiple
-// sources (SymbolFile objects) to provide the information and only parse as
-// deep as needed in order to provide the information that is requested.
+// The symbol vendor class is designed to abstract the process of
+// searching for debug information for a given module. Platforms can
+// subclass this class and provide extra ways to find debug information.
+// Examples would be a subclass that would allow for locating a stand
+// alone debug file, parsing debug maps, or runtime data in the object
+// files. A symbol vendor can use multiple sources (SymbolFile
+// objects) to provide the information and only parse as deep as needed
+// in order to provide the information that is requested.
 //----------------------------------------------------------------------
 class SymbolVendor : public ModuleChild, public PluginInterface {
 public:
@@ -81,11 +82,11 @@ public:
 
   virtual size_t FindGlobalVariables(const ConstString &name,
                                      const CompilerDeclContext *parent_decl_ctx,
-                                     size_t max_matches,
+                                     bool append, size_t max_matches,
                                      VariableList &variables);
 
   virtual size_t FindGlobalVariables(const RegularExpression &regex,
-                                     size_t max_matches,
+                                     bool append, size_t max_matches,
                                      VariableList &variables);
 
   virtual size_t FindFunctions(const ConstString &name,
@@ -135,6 +136,14 @@ public:
   // Clear module unified section list symbol table.
   virtual void ClearSymtab();
 
+  bool GetCompileOption(const char *option, std::string &value,
+                        CompileUnit *cu = nullptr);
+
+  int GetCompileOptions(const char *option, std::vector<std::string> &values,
+                        CompileUnit *cu = nullptr);
+
+  void GetLoadedModules(lldb::LanguageType language, FileSpecList &modules);
+
   //------------------------------------------------------------------
   /// Notify the SymbolVendor that the file addresses in the Sections
   /// for this module have been changed.
@@ -147,6 +156,17 @@ public:
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
+
+  virtual bool SetLimitSourceFileRange(const FileSpec &file,
+                                       uint32_t first_line, uint32_t last_line);
+
+  virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                             uint32_t actual_line);
+
+  virtual std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language);
+
+  virtual bool ForceInlineSourceFileCheck();
 
 protected:
   //------------------------------------------------------------------

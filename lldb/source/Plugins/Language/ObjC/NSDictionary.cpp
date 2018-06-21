@@ -427,6 +427,16 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   } else if (class_name == g_Dictionary0) {
     value = 0;
   }
+  /*else if (!strcmp(class_name,"__NSCFDictionary"))
+   {
+   Status error;
+   value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + (is_64bit ?
+   20 : 12), 4, 0, error);
+   if (error.Fail())
+   return false;
+   if (is_64bit)
+   value &= ~0x0f1f000000000000UL;
+   }*/
   else {
     auto &map(NSDictionary_Additionals::GetAdditionalSummaries());
     for (auto &candidate : map) {
@@ -464,7 +474,7 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   CompilerType valobj_type(valobj_sp->GetCompilerType());
   Flags flags(valobj_type.GetTypeInfo());
 
-  if (flags.IsClear(eTypeIsPointer)) {
+  if (flags.IsClear(eTypeIsPointer) && flags.IsClear(eTypeIsSwift)) {
     Status error;
     valobj_sp = valobj_sp->AddressOf(error);
     if (error.Fail() || !valobj_sp)
@@ -667,7 +677,11 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
 size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
     GetIndexOfChildWithName(const ConstString &name) {
   static const ConstString g_zero("[0]");
-  return name == g_zero ? 0 : UINT32_MAX;
+
+  if (name == g_zero)
+    return 0;
+
+  return UINT32_MAX;
 }
 
 size_t lldb_private::formatters::NSDictionary1SyntheticFrontEnd::

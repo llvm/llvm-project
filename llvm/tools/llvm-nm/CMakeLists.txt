@@ -2,7 +2,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsAsmParsers
   AllTargetsDescs
   AllTargetsInfos
-  BinaryFormat
   Core
   Demangle
   Object

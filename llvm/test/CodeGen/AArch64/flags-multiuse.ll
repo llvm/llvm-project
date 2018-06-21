@@ -17,9 +17,6 @@ define i32 @test_multiflag(i32 %n, i32 %m, i32 %o) {
   %val = zext i1 %test to i32
 ; CHECK: cset {{[xw][0-9]+}}, ne
 
-; CHECK: mov [[RHSCOPY:w[0-9]+]], [[RHS]]
-; CHECK: mov [[LHSCOPY:w[0-9]+]], [[LHS]]
-
   store i32 %val, i32* @var
 
   call void @bar()
@@ -28,7 +25,7 @@ define i32 @test_multiflag(i32 %n, i32 %m, i32 %o) {
   ; Currently, the comparison is emitted again. An MSR/MRS pair would also be
   ; acceptable, but assuming the call preserves NZCV is not.
   br i1 %test, label %iftrue, label %iffalse
-; CHECK: cmp [[LHSCOPY]], [[RHSCOPY]]
+; CHECK: cmp [[LHS]], [[RHS]]
 ; CHECK: b.eq
 
 iftrue:

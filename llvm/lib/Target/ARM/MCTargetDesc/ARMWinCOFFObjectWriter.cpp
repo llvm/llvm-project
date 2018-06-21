@@ -91,9 +91,10 @@ bool ARMWinCOFFObjectWriter::recordRelocation(const MCFixup &Fixup) const {
 
 namespace llvm {
 
-std::unique_ptr<MCObjectTargetWriter>
-createARMWinCOFFObjectWriter(bool Is64Bit) {
-  return llvm::make_unique<ARMWinCOFFObjectWriter>(Is64Bit);
+std::unique_ptr<MCObjectWriter>
+createARMWinCOFFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit) {
+  auto MOTW = llvm::make_unique<ARMWinCOFFObjectWriter>(Is64Bit);
+  return createWinCOFFObjectWriter(std::move(MOTW), OS);
 }
 
 } // end namespace llvm

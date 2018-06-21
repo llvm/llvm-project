@@ -20,8 +20,7 @@ namespace __sanitizer {
 uptr StackTrace::GetNextInstructionPc(uptr pc) {
 #if defined(__mips__)
   return pc + 8;
-#elif defined(__powerpc__) || defined(__sparc__) || defined(__arm__) || \
-    defined(__aarch64__)
+#elif defined(__powerpc__)
   return pc + 4;
 #else
   return pc + 1;
@@ -40,9 +39,6 @@ void BufferedStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
     trace_buffer[cnt] = extra_top_pc;
   top_frame_bp = 0;
 }
-
-// Sparc implemention is in its own file.
-#if !defined(__sparc__)
 
 // In GCC on ARM bp points to saved lr, not fp, so we should check the next
 // cell in stack to be a saved frame pointer. GetCanonicFrame returns the
@@ -109,8 +105,6 @@ void BufferedStackTrace::FastUnwindStack(uptr pc, uptr bp, uptr stack_top,
     frame = GetCanonicFrame((uptr)frame[0], stack_top, bottom);
   }
 }
-
-#endif  // !defined(__sparc__)
 
 void BufferedStackTrace::PopStackFrames(uptr count) {
   CHECK_LT(count, size);

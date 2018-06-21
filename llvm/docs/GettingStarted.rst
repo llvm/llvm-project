@@ -200,7 +200,7 @@ will need about 1-3 GB of space.  A full build of LLVM and Clang will need aroun
 is so large because of all the debugging information and the fact that the
 libraries are statically linked into multiple tools).
 
-If you are space-constrained, you can build only selected tools or only
+If you you are space-constrained, you can build only selected tools or only
 selected targets.  The Release build requires considerably less space.
 
 The LLVM suite *may* compile on other platforms, but it is not guaranteed to do
@@ -324,7 +324,7 @@ However, some Linux distributions and some other or older BSDs sometimes have
 extremely old versions of GCC. These steps attempt to help you upgrade you
 compiler even on such a system. However, if at all possible, we encourage you
 to use a recent version of a distribution with a modern system compiler that
-meets these requirements. Note that it is tempting to install a prior
+meets these requirements. Note that it is tempting to to install a prior
 version of Clang and libc++ to be the host compiler, however libc++ was not
 well tested or set up to build on Linux until relatively recently. As
 a consequence, this guide suggests just using libstdc++ and a modern GCC as the
@@ -912,7 +912,7 @@ where they are built (a Canadian Cross build). To generate build files for
 cross-compiling CMake provides a variable ``CMAKE_TOOLCHAIN_FILE`` which can
 define compiler flags and variables used during the CMake test operations.
 
-The result of such a build is executables that are not runnable on the build
+The result of such a build is executables that are not runnable on on the build
 host but can be executed on the target. As an example the following CMake
 invocation can generate build files targeting iOS. This will work on Mac OS X
 with the latest Xcode:

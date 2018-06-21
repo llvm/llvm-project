@@ -46,7 +46,8 @@ operator==(const UnwindPlan::Row::RegisterLocation &rhs) const {
 }
 
 // This function doesn't copy the dwarf expression bytes; they must remain in
-// allocated memory for the lifespan of this UnwindPlan object.
+// allocated
+// memory for the lifespan of this UnwindPlan object.
 void UnwindPlan::Row::RegisterLocation::SetAtDWARFExpression(
     const uint8_t *opcodes, uint32_t len) {
   m_type = atDWARFExpression;
@@ -55,7 +56,8 @@ void UnwindPlan::Row::RegisterLocation::SetAtDWARFExpression(
 }
 
 // This function doesn't copy the dwarf expression bytes; they must remain in
-// allocated memory for the lifespan of this UnwindPlan object.
+// allocated
+// memory for the lifespan of this UnwindPlan object.
 void UnwindPlan::Row::RegisterLocation::SetIsDWARFExpression(
     const uint8_t *opcodes, uint32_t len) {
   m_type = isDWARFExpression;

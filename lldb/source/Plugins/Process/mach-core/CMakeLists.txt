@@ -1,3 +1,5 @@
+include_directories(../Utility)
+
 add_lldb_library(lldbPluginProcessMachCore PLUGIN
   ProcessMachCore.cpp
   ThreadMachCore.cpp

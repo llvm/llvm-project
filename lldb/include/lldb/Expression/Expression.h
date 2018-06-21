@@ -20,22 +20,25 @@
 // Project includes
 
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
+
+#include "llvm/ADT/SmallVector.h"
 
 namespace lldb_private {
 
 class RecordingMemoryManager;
 
 //----------------------------------------------------------------------
-/// @class Expression Expression.h "lldb/Expression/Expression.h" Encapsulates
-/// a single expression for use in lldb
+/// @class Expression Expression.h "lldb/Expression/Expression.h"
+/// @brief Encapsulates a single expression for use in lldb
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
-/// and as a backend for the expr command.  Expression encapsulates the
-/// objects needed to parse and interpret or JIT an expression.  It uses the
-/// expression parser appropriate to the language of the expression to produce
-/// LLVM IR from the expression.
+/// and as a backend for the expr command.  Expression encapsulates
+/// the objects needed to parse and interpret or JIT an expression.  It
+/// uses the expression parser appropriate to the language of the expression
+/// to produce LLVM IR from the expression.
 //----------------------------------------------------------------------
 class Expression {
 public:
@@ -58,19 +61,28 @@ public:
 
   //------------------------------------------------------------------
   /// Return the function name that should be used for executing the
-  /// expression.  Text() should contain the definition of this function.
+  /// expression.  Text() should contain the definition of this
+  /// function.
   //------------------------------------------------------------------
   virtual const char *FunctionName() = 0;
 
   //------------------------------------------------------------------
-  /// Return the language that should be used when parsing.  To use the
-  /// default, return eLanguageTypeUnknown.
+  /// Return the language that should be used when parsing.  To use
+  /// the default, return eLanguageTypeUnknown.
   //------------------------------------------------------------------
   virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
 
   //------------------------------------------------------------------
-  /// Return the desired result type of the function, or eResultTypeAny if
-  /// indifferent.
+  /// Return the object that the parser should use when registering external
+  /// values (assuming it doesn't use a ClangExpressionDeclMap).  May be
+  /// NULL if there is a ClangExpressionDeclMap or everything should be
+  /// self-contained.
+  //------------------------------------------------------------------
+  virtual Materializer *GetMaterializer() { return NULL; }
+
+  //------------------------------------------------------------------
+  /// Return the desired result type of the function, or
+  /// eResultTypeAny if indifferent.
   //------------------------------------------------------------------
   virtual ResultType DesiredResultType() { return eResultTypeAny; }
 
@@ -79,12 +91,14 @@ public:
   //------------------------------------------------------------------
 
   //------------------------------------------------------------------
-  /// Return true if validation code should be inserted into the expression.
+  /// Return true if validation code should be inserted into the
+  /// expression.
   //------------------------------------------------------------------
   virtual bool NeedsValidation() = 0;
 
   //------------------------------------------------------------------
-  /// Return true if external variables in the expression should be resolved.
+  /// Return true if external variables in the expression should be
+  /// resolved.
   //------------------------------------------------------------------
   virtual bool NeedsVariableResolution() = 0;
 
@@ -106,6 +120,17 @@ public:
   //------------------------------------------------------------------
   virtual void DidFinishExecuting() {}
 
+  struct SwiftGenericInfo {
+    struct Binding {
+      const char *name;
+      CompilerType type;
+    };
+    llvm::SmallVector<Binding, 3> function_bindings;
+    llvm::SmallVector<Binding, 3> class_bindings;
+  };
+
+  const SwiftGenericInfo &GetSwiftGenericInfo() { return m_swift_generic_info; }
+
   virtual ExpressionTypeSystemHelper *GetTypeSystemHelper() { return nullptr; }
 
 protected:
@@ -119,6 +144,7 @@ protected:
   lldb::addr_t m_jit_end_addr;   ///< The address of the JITted function within
                                  ///the JIT allocation.  LLDB_INVALID_ADDRESS if
                                  ///invalid.
+  SwiftGenericInfo m_swift_generic_info;
 };
 
 } // namespace lldb_private

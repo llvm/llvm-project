@@ -145,18 +145,3 @@ int usepointerreference() {
   return s.x; // expected-warning{{Undefined or garbage value returned to caller}}
               // expected-note@-1{{Undefined or garbage value returned to caller}}
 }
-
-void *has_no_argument_and_returns_null(void) {
-  return 0;
-}
-
-void rdar40335545() {
-    int local; // expected-note{{}}
-    void (*takes_int_ptr_argument)(int *) = (void (*)(int*))has_no_argument_and_returns_null;
-
-    takes_int_ptr_argument(&local); // no-crash
-
-    int useLocal = local; //expected-warning{{}}
-                          //expected-note@-1{{}}
-    (void)useLocal;
-}

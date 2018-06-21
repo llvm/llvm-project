@@ -14,7 +14,6 @@
 ; RUN:   -r %t1.bc,_dead_func,pl \
 ; RUN:   -r %t1.bc,_baz,l \
 ; RUN:   -r %t1.bc,_boo,l \
-; RUN:   -r %t1.bc,_live_available_externally_func,l \
 ; RUN:   -r %t2.bc,_baz,pl \
 ; RUN:   -r %t2.bc,_boo,pl \
 ; RUN:   -r %t2.bc,_dead_func,l \
@@ -24,12 +23,10 @@
 ; RUN: llvm-nm %t.out.1 | FileCheck %s --check-prefix=CHECK2-NM
 
 ; RUN: llvm-bcanalyzer -dump %t.out.index.bc | FileCheck %s --check-prefix=COMBINED
-; Live, NotEligibleForImport, dso_local, Internal
-; COMBINED-DAG: <COMBINED {{.*}} op2=119
-; Live, dso_local, Internal
-; COMBINED-DAG: <COMBINED {{.*}} op2=103
-; Live, Local, AvailableExternally
-; COMBINED-DAG: <COMBINED {{.*}} op2=97
+; Live, NotEligibleForImport, Internal
+; COMBINED-DAG: <COMBINED {{.*}} op2=55
+; Live, Internal
+; COMBINED-DAG: <COMBINED {{.*}} op2=39
 ; Live, Local, External
 ; COMBINED-DAG: <COMBINED {{.*}} op2=96
 ; COMBINED-DAG: <COMBINED {{.*}} op2=96
@@ -51,9 +48,9 @@
 ; LTO2-NOT: available_externally {{.*}} @baz()
 ; LTO2: @llvm.global_ctors =
 ; LTO2: define internal void @_GLOBAL__I_a()
-; LTO2: define internal void @bar() {
+; LTO2: define internal dso_local void @bar() {
 ; LTO2: define internal void @bar_internal()
-; LTO2-NOT: @dead_func()
+; LTO2: define internal dso_local void @dead_func() {
 ; LTO2-NOT: available_externally {{.*}} @baz()
 
 ; Make sure we didn't internalize @boo, which is reachable via
@@ -82,7 +79,6 @@
 ; RUN:   -r %t1.bc,_dead_func,pl \
 ; RUN:   -r %t1.bc,_baz,l \
 ; RUN:   -r %t1.bc,_boo,l \
-; RUN:   -r %t1.bc,_live_available_externally_func,l \
 ; RUN:   -r %t3.bc,_baz,pl \
 ; RUN:   -r %t3.bc,_boo,pl \
 ; RUN:   -r %t3.bc,_dead_func,l \
@@ -128,13 +124,8 @@ define void @dead_func() {
     ret void
 }
 
-define available_externally void @live_available_externally_func() {
-    ret void
-}
-
 define void @main() {
     call void @bar()
     call void @bar_internal()
-    call void @live_available_externally_func()
     ret void
 }

@@ -499,10 +499,10 @@ namespace dr42 { // dr42: yes
 
 // dr43: na
 
-namespace dr44 { // dr44: sup 727
+namespace dr44 { // dr44: yes
   struct A {
     template<int> void f();
-    template<> void f<0>();
+    template<> void f<0>(); // expected-error {{explicit specialization of 'f' in class scope}}
   };
 }
 
@@ -911,8 +911,9 @@ namespace dr80 { // dr80: yes
     static int B; // expected-error {{same name as its class}}
   };
   struct C {
-    int C; // expected-error {{same name as its class}}
-    C();
+    int C; // expected-note {{hidden by}}
+    // FIXME: These diagnostics aren't very good.
+    C(); // expected-error {{must use 'struct' tag to refer to}} expected-error {{expected member name}}
   };
   struct D {
     D();

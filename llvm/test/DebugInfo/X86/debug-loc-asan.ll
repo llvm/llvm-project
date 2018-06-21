@@ -1,5 +1,5 @@
-; RUN: llc -fast-isel-sink-local-values -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -fast-isel-sink-local-values  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
+; RUN: llc -O0 -mtriple=x86_64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
 
 ; Verify that we have correct debug info for local variables in code
@@ -14,8 +14,8 @@
 ; The address of the (potentially now malloc'ed) alloca ends up
 ; in rdi, after which it is spilled to the stack. We record the
 ; spill OFFSET on the stack for checking the debug info below.
-; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [$rcx+0]
-; CHECK: movq %rcx, [[OFFSET:[0-9]+]](%rsp)
+; CHECK: #DEBUG_VALUE: bar:y <- [DW_OP_deref] [%rdi+0]
+; CHECK: movq %rdi, [[OFFSET:[0-9]+]](%rsp)
 ; CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]
 ; CHECK-NEXT: #DEBUG_VALUE: bar:y <- [DW_OP_plus_uconst [[OFFSET]], DW_OP_deref, DW_OP_deref]
 ; This location should be valid until the end of the function.
@@ -26,13 +26,13 @@
 ; CHECK: .Ldebug_loc{{[0-9]+}}:
 ; We expect two location ranges for the variable.
 
-; First, its address is stored in %rcx:
+; First, its address is stored in %rdi:
 ; CHECK:      .quad .Lfunc_begin0-.Lfunc_begin0
 ; CHECK-NEXT: .quad [[START_LABEL]]-.Lfunc_begin0
-; CHECK: DW_OP_breg2
+; CHECK: DW_OP_breg5
 ; DWARF:       DW_TAG_formal_parameter
 ; DWARF:         DW_AT_location
-; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg2 RCX+0, DW_OP_deref
+; DWARF-NEXT:      [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0, DW_OP_deref
 
 ; Then it's addressed via %rsp:
 ; CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
@@ -177,7 +177,7 @@ attributes #1 = { nounwind readnone }
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (209308)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "test.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
-!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, retainedNodes: !2)
+!4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "test.cc", directory: "/llvm_cmake_gcc")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}

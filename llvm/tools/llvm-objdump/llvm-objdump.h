@@ -56,7 +56,6 @@ extern cl::opt<bool> ObjcMetaData;
 extern cl::opt<std::string> DisSymName;
 extern cl::opt<bool> NonVerbose;
 extern cl::opt<bool> Relocations;
-extern cl::opt<bool> DynamicRelocations;
 extern cl::opt<bool> SectionHeaders;
 extern cl::opt<bool> SectionContents;
 extern cl::opt<bool> SymbolTable;
@@ -89,7 +88,6 @@ void printLazyBindTable(object::ObjectFile *o);
 void printWeakBindTable(object::ObjectFile *o);
 void printRawClangAST(const object::ObjectFile *o);
 void PrintRelocations(const object::ObjectFile *o);
-void PrintDynamicRelocations(const object::ObjectFile *o);
 void PrintSectionHeaders(const object::ObjectFile *o);
 void PrintSectionContents(const object::ObjectFile *o);
 void PrintSymbolTable(const object::ObjectFile *o, StringRef ArchiveName,

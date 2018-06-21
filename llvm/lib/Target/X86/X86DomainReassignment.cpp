@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Printable.h"
 #include <bitset>
 
 using namespace llvm;
@@ -263,6 +262,25 @@ public:
   }
 };
 
+/// An Instruction Converter which completely deletes an instruction.
+/// For example, IMPLICIT_DEF instructions can be deleted when converting from
+/// GPR to mask.
+class InstrDeleter : public InstrConverterBase {
+public:
+  InstrDeleter(unsigned SrcOpcode) : InstrConverterBase(SrcOpcode) {}
+
+  bool convertInstr(MachineInstr *MI, const TargetInstrInfo *TII,
+                    MachineRegisterInfo *MRI) const override {
+    assert(isLegal(MI, TII) && "Cannot convert instruction");
+    return true;
+  }
+
+  double getExtraCost(const MachineInstr *MI,
+                      MachineRegisterInfo *MRI) const override {
+    return 0;
+  }
+};
+
 // Key type to be used by the Instruction Converters map.
 // A converter is identified by <destination domain, source opcode>
 typedef std::pair<int, unsigned> InstrConverterBaseKeyTy;
@@ -292,12 +310,8 @@ private:
   /// Domains which this closure can legally be reassigned to.
   std::bitset<NumDomains> LegalDstDomains;
 
-  /// An ID to uniquely identify this closure, even when it gets
-  /// moved around
-  unsigned ID;
-
 public:
-  Closure(unsigned ID, std::initializer_list<RegDomain> LegalDstDomainList) : ID(ID) {
+  Closure(std::initializer_list<RegDomain> LegalDstDomainList) {
     for (RegDomain D : LegalDstDomainList)
       LegalDstDomains.set(D);
   }
@@ -333,27 +347,6 @@ public:
     return Instrs;
   }
 
-  LLVM_DUMP_METHOD void dump(const MachineRegisterInfo *MRI) const {
-    dbgs() << "Registers: ";
-    bool First = true;
-    for (unsigned Reg : Edges) {
-      if (!First)
-        dbgs() << ", ";
-      First = false;
-      dbgs() << printReg(Reg, MRI->getTargetRegisterInfo(), 0, MRI);
-    }
-    dbgs() << "\n" << "Instructions:";
-    for (MachineInstr *MI : Instrs) {
-      dbgs() << "\n  ";
-      MI->print(dbgs());
-    }
-    dbgs() << "\n";
-  }
-
-  unsigned getID() const {
-    return ID;
-  }
-
 };
 
 class X86DomainReassignment : public MachineFunctionPass {
@@ -365,7 +358,7 @@ class X86DomainReassignment : public MachineFunctionPass {
   DenseSet<unsigned> EnclosedEdges;
 
   /// All instructions that are included in some closure.
-  DenseMap<MachineInstr *, unsigned> EnclosedInstrs;
+  DenseMap<MachineInstr *, Closure *> EnclosedInstrs;
 
 public:
   static char ID;
@@ -442,14 +435,14 @@ void X86DomainReassignment::visitRegister(Closure &C, unsigned Reg,
 void X86DomainReassignment::encloseInstr(Closure &C, MachineInstr *MI) {
   auto I = EnclosedInstrs.find(MI);
   if (I != EnclosedInstrs.end()) {
-    if (I->second != C.getID())
+    if (I->second != &C)
       // Instruction already belongs to another closure, avoid conflicts between
       // closure and mark this closure as illegal.
       C.setAllIllegal();
     return;
   }
 
-  EnclosedInstrs[MI] = C.getID();
+  EnclosedInstrs[MI] = &C;
   C.addInstruction(MI);
 
   // Mark closure as illegal for reassignment to domains, if there is no
@@ -594,7 +587,7 @@ void X86DomainReassignment::initConverters() {
       new InstrIgnore(TargetOpcode::PHI);
 
   Converters[{MaskDomain, TargetOpcode::IMPLICIT_DEF}] =
-      new InstrIgnore(TargetOpcode::IMPLICIT_DEF);
+      new InstrDeleter(TargetOpcode::IMPLICIT_DEF);
 
   Converters[{MaskDomain, TargetOpcode::INSERT_SUBREG}] =
       new InstrReplaceWithCopy(TargetOpcode::INSERT_SUBREG, 2);
@@ -708,9 +701,8 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   if (DisableX86DomainReassignment)
     return false;
 
-  LLVM_DEBUG(
-      dbgs() << "***** Machine Function before Domain Reassignment *****\n");
-  LLVM_DEBUG(MF.print(dbgs()));
+  DEBUG(dbgs() << "***** Machine Function before Domain Reassignment *****\n");
+  DEBUG(MF.print(dbgs()));
 
   STI = &MF.getSubtarget<X86Subtarget>();
   // GPR->K is the only transformation currently supported, bail out early if no
@@ -731,7 +723,6 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   std::vector<Closure> Closures;
 
   // Go over all virtual registers and calculate a closure.
-  unsigned ClosureID = 0;
   for (unsigned Idx = 0; Idx < MRI->getNumVirtRegs(); ++Idx) {
     unsigned Reg = TargetRegisterInfo::index2VirtReg(Idx);
 
@@ -744,7 +735,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       continue;
 
     // Calculate closure starting with Reg.
-    Closure C(ClosureID++, {MaskDomain});
+    Closure C({MaskDomain});
     buildClosure(C, Reg);
 
     // Collect all closures that can potentially be converted.
@@ -752,20 +743,18 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
       Closures.push_back(std::move(C));
   }
 
-  for (Closure &C : Closures) {
-    LLVM_DEBUG(C.dump(MRI));
+  for (Closure &C : Closures)
     if (isReassignmentProfitable(C, MaskDomain)) {
       reassign(C, MaskDomain);
       ++NumClosuresConverted;
       Changed = true;
     }
-  }
 
-  DeleteContainerSeconds(Converters);
+  for (auto I : Converters)
+    delete I.second;
 
-  LLVM_DEBUG(
-      dbgs() << "***** Machine Function after Domain Reassignment *****\n");
-  LLVM_DEBUG(MF.print(dbgs()));
+  DEBUG(dbgs() << "***** Machine Function after Domain Reassignment *****\n");
+  DEBUG(MF.print(dbgs()));
 
   return Changed;
 }

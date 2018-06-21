@@ -1,4 +1,4 @@
-//===--- PathDiagnosticConsumers.h - Path Diagnostic Clients ------*- C++ -*-===//
+//===--- PathDiagnosticClients.h - Path Diagnostic Clients ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

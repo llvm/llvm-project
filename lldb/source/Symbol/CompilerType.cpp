@@ -14,6 +14,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -25,6 +26,8 @@
 
 #include <iterator>
 #include <mutex>
+
+#include "swift/AST/Type.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -41,6 +44,11 @@ CompilerType::CompilerType(clang::ASTContext *ast, clang::QualType qual_type)
     assert(m_type_system != nullptr);
 #endif
 }
+
+CompilerType::CompilerType(swift::ASTContext *ast_context,
+                           swift::Type qual_type)
+    : m_type(qual_type.getPointer()),
+      m_type_system(SwiftASTContext::GetSwiftASTContext(ast_context)) {}
 
 CompilerType::~CompilerType() {}
 
@@ -226,11 +234,11 @@ bool CompilerType::IsPolymorphicClass() const {
 }
 
 bool CompilerType::IsPossibleDynamicType(CompilerType *dynamic_pointee_type,
-                                         bool check_cplusplus,
-                                         bool check_objc) const {
+                                         bool check_cplusplus, bool check_objc,
+                                         bool check_swift) const {
   if (IsValid())
-    return m_type_system->IsPossibleDynamicType(m_type, dynamic_pointee_type,
-                                                check_cplusplus, check_objc);
+    return m_type_system->IsPossibleDynamicType(
+        m_type, dynamic_pointee_type, check_cplusplus, check_objc, check_swift);
   return false;
 }
 
@@ -312,7 +320,26 @@ ConstString CompilerType::GetTypeName() const {
   return ConstString("<invalid>");
 }
 
-ConstString CompilerType::GetDisplayTypeName() const { return GetTypeName(); }
+ConstString CompilerType::GetDisplayTypeName() const {
+  if (IsValid()) {
+    return m_type_system->GetDisplayTypeName(m_type);
+  }
+  return ConstString();
+}
+
+ConstString CompilerType::GetTypeSymbolName() const {
+  if (IsValid()) {
+    return m_type_system->GetTypeSymbolName(m_type);
+  }
+  return ConstString();
+}
+
+ConstString CompilerType::GetMangledTypeName() const {
+  if (IsValid()) {
+    return m_type_system->GetMangledTypeName(m_type);
+  }
+  return ConstString();
+}
 
 uint32_t CompilerType::GetTypeInfo(
     CompilerType *pointee_or_element_compiler_type) const {
@@ -375,6 +402,12 @@ CompilerType CompilerType::GetArrayType(uint64_t size) const {
 CompilerType CompilerType::GetCanonicalType() const {
   if (IsValid())
     return m_type_system->GetCanonicalType(m_type);
+  return CompilerType();
+}
+
+CompilerType CompilerType::GetInstanceType() const {
+  if (IsValid())
+    return m_type_system->GetInstanceType(m_type);
   return CompilerType();
 }
 
@@ -490,6 +523,20 @@ CompilerType CompilerType::GetTypedefedType() const {
     return CompilerType();
 }
 
+CompilerType CompilerType::GetUnboundType() const {
+  if (IsValid())
+    return m_type_system->GetUnboundType(m_type);
+  return CompilerType();
+}
+
+// CompilerType
+// CompilerType::RemoveFastQualifiers () const
+//{
+//    if (IsValid())
+//        return m_type_system->RemoveFastQualifiers(m_type);
+//    return CompilerType();
+//}
+
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 //----------------------------------------------------------------------
@@ -514,6 +561,14 @@ uint64_t CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
 uint64_t CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   return (GetBitSize(exe_scope) + 7) / 8;
 }
+
+uint64_t CompilerType::GetByteStride() const {
+  if (IsValid())
+    return m_type_system->GetByteStride(m_type);
+  return 0;
+}
+
+uint64_t CompilerType::GetAlignedBitSize() const { return 0; }
 
 size_t CompilerType::GetTypeBitAlign() const {
   if (IsValid())
@@ -638,8 +693,8 @@ CompilerType CompilerType::GetChildCompilerTypeAtIndex(
 }
 
 // Look for a child member (doesn't include base classes, but it does include
-// their members) in the type hierarchy. Returns an index path into
-// "clang_type" on how to reach the appropriate member.
+// their members) in the type hierarchy. Returns an index path into "clang_type"
+// on how to reach the appropriate member.
 //
 //    class A
 //    {
@@ -662,13 +717,16 @@ CompilerType CompilerType::GetChildCompilerTypeAtIndex(
 // "m_b" in it:
 //
 // With omit_empty_base_classes == false we would get an integer array back
-// with: { 1,  1 } The first index 1 is the child index for "class A" within
-// class C The second index 1 is the child index for "m_b" within class A
+// with:
+// { 1,  1 }
+// The first index 1 is the child index for "class A" within class C
+// The second index 1 is the child index for "m_b" within class A
 //
-// With omit_empty_base_classes == true we would get an integer array back
-// with: { 0,  1 } The first index 0 is the child index for "class A" within
-// class C (since class B doesn't have any members it doesn't count) The second
-// index 1 is the child index for "m_b" within class A
+// With omit_empty_base_classes == true we would get an integer array back with:
+// { 0,  1 }
+// The first index 0 is the child index for "class A" within class C (since
+// class B doesn't have any members it doesn't count)
+// The second index 1 is the child index for "m_b" within class A
 
 size_t CompilerType::GetIndexOfChildMemberWithName(
     const char *name, bool omit_empty_base_classes,
@@ -696,6 +754,19 @@ TemplateArgumentKind CompilerType::GetTemplateArgumentKind(size_t idx) const {
 CompilerType CompilerType::GetTypeTemplateArgument(size_t idx) const {
   if (IsValid()) {
     return m_type_system->GetTypeTemplateArgument(m_type, idx);
+  }
+  return CompilerType();
+}
+
+GenericKind CompilerType::GetGenericArgumentKind(size_t idx) const {
+  if (IsValid())
+    return m_type_system->GetGenericArgumentKind(m_type, idx);
+  return eNullGenericKindType;
+}
+
+CompilerType CompilerType::GetGenericArgumentType(size_t idx) const {
+  if (IsValid()) {
+    return m_type_system->GetGenericArgumentType(m_type, idx);
   }
   return CompilerType();
 }
@@ -770,12 +841,13 @@ bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
                                  lldb::offset_t byte_offset, size_t byte_size,
                                  uint32_t bitfield_bit_size,
                                  uint32_t bitfield_bit_offset,
-                                 ExecutionContextScope *exe_scope) {
+                                 ExecutionContextScope *exe_scope,
+                                 bool is_base_class) {
   if (!IsValid())
     return false;
-  return m_type_system->DumpTypeValue(m_type, s, format, data, byte_offset,
-                                      byte_size, bitfield_bit_size,
-                                      bitfield_bit_offset, exe_scope);
+  return m_type_system->DumpTypeValue(
+      m_type, s, format, data, byte_offset, byte_size, bitfield_bit_size,
+      bitfield_bit_offset, exe_scope, is_base_class);
 }
 
 void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
@@ -805,7 +877,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   if (!IsValid())
     return false;
 
-  if (IsAggregateType()) {
+  if (0 == (GetTypeInfo() & eTypeHasValue)) {
     return false; // Aggregate types don't have scalar values
   } else {
     uint64_t count = 0;
@@ -984,8 +1056,8 @@ bool CompilerType::ReadFromMemory(lldb_private::ExecutionContext *exe_ctx,
   if (!IsValid())
     return false;
 
-  // Can't convert a file address to anything valid without more context (which
-  // Module it came from)
+  // Can't convert a file address to anything valid without more
+  // context (which Module it came from)
   if (address_type == eAddressTypeFile)
     return false;
 
@@ -1026,8 +1098,8 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
   if (!IsValid())
     return false;
 
-  // Can't convert a file address to anything valid without more context (which
-  // Module it came from)
+  // Can't convert a file address to anything valid without more
+  // context (which Module it came from)
   if (address_type == eAddressTypeFile)
     return false;
 

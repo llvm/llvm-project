@@ -6,5 +6,6 @@ def buildDsym(
         architecture=None,
         compiler=None,
         dictionary=None,
+        clean=True,
         testdir=None):
     return False

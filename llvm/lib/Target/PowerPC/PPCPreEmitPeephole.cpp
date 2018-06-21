@@ -67,8 +67,8 @@ namespace {
           if (TII->convertToImmediateForm(MI, &DefMIToErase)) {
             Changed = true;
             NumRRConvertedInPreEmit++;
-            LLVM_DEBUG(dbgs() << "Converted instruction to imm form: ");
-            LLVM_DEBUG(MI.dump());
+            DEBUG(dbgs() << "Converted instruction to imm form: ");
+            DEBUG(MI.dump());
             if (DefMIToErase) {
               InstrsToErase.push_back(DefMIToErase);
             }
@@ -76,8 +76,8 @@ namespace {
         }
       }
       for (MachineInstr *MI : InstrsToErase) {
-        LLVM_DEBUG(dbgs() << "PPC pre-emit peephole: erasing instruction: ");
-        LLVM_DEBUG(MI->dump());
+        DEBUG(dbgs() << "PPC pre-emit peephole: erasing instruction: ");
+        DEBUG(MI->dump());
         MI->eraseFromParent();
         NumRemovedInPreEmit++;
       }

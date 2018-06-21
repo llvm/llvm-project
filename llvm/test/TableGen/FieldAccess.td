@@ -1,19 +1,5 @@
-// RUN: llvm-tblgen %s | FileCheck %s
+// RUN: llvm-tblgen %s
 // XFAIL: vg_leak
-
-// CHECK: --- Defs ---
-
-// CHECK: def a {
-// CHECK:   string blu = "";
-// CHECK: }
-
-// CHECK: def b {
-// CHECK:   string blu = "";
-// CHECK: }
-
-// CHECK: def c {
-// CHECK:   string blu = "";
-// CHECK: }
 
 class Bla<string t>
 {
@@ -26,5 +12,5 @@ class Bli<Bla t>
 }
 
 def a : Bli<Bla<"">>;
-def b : Bla<!cast<Bla>(a.bla).blu>;
-def c : Bla<a.bla.blu>;
+def b : Bla<!cast<Bla>(a.bla).blu>; // works
+def c : Bla<a.bla.blu>; // doesn't work: Cannot access field 'blu' of value 'a.bla'

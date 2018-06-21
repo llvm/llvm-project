@@ -21,13 +21,12 @@ class X86Reg<string n, bits<16> Enc, list<Register> subregs = []> : Register<n> 
 
 // Subregister indices.
 let Namespace = "X86" in {
-  def sub_8bit     : SubRegIndex<8>;
-  def sub_8bit_hi  : SubRegIndex<8, 8>;
-  def sub_16bit    : SubRegIndex<16>;
-  def sub_16bit_hi : SubRegIndex<16, 16>;
-  def sub_32bit    : SubRegIndex<32>;
-  def sub_xmm      : SubRegIndex<128>;
-  def sub_ymm      : SubRegIndex<256>;
+  def sub_8bit    : SubRegIndex<8>;
+  def sub_8bit_hi : SubRegIndex<8, 8>;
+  def sub_16bit   : SubRegIndex<16>;
+  def sub_32bit   : SubRegIndex<32>;
+  def sub_xmm     : SubRegIndex<128>;
+  def sub_ymm     : SubRegIndex<256>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -89,18 +88,6 @@ def SP : X86Reg<"sp", 4, [SPL]>;
 }
 def IP : X86Reg<"ip", 0>;
 
-let isArtificial = 1 in {
-  def HAX : X86Reg<"hax", -1>;
-  def HDX : X86Reg<"hdx", -3>;
-  def HCX : X86Reg<"hcx", -2>;
-  def HBX : X86Reg<"hbx", -4>;
-  def HSI : X86Reg<"hsi", -7>;
-  def HDI : X86Reg<"hdi", -8>;
-  def HBP : X86Reg<"hbp", -6>;
-  def HSP : X86Reg<"hsp", -5>;
-  def HIP : X86Reg<"hip", -1>;
-}
-
 // X86-64 only, requires REX.
 let SubRegIndices = [sub_8bit], CostPerUse = 1 in {
 def R8W  : X86Reg<"r8w",   8, [R8B]>;
@@ -114,20 +101,19 @@ def R15W : X86Reg<"r15w", 15, [R15B]>;
 }
 
 // 32-bit registers
-let SubRegIndices = [sub_16bit, sub_16bit_hi], CoveredBySubRegs = 1 in {
-def EAX : X86Reg<"eax", 0, [AX, HAX]>, DwarfRegNum<[-2, 0, 0]>;
-def EDX : X86Reg<"edx", 2, [DX, HDX]>, DwarfRegNum<[-2, 2, 2]>;
-def ECX : X86Reg<"ecx", 1, [CX, HCX]>, DwarfRegNum<[-2, 1, 1]>;
-def EBX : X86Reg<"ebx", 3, [BX, HBX]>, DwarfRegNum<[-2, 3, 3]>;
-def ESI : X86Reg<"esi", 6, [SI, HSI]>, DwarfRegNum<[-2, 6, 6]>;
-def EDI : X86Reg<"edi", 7, [DI, HDI]>, DwarfRegNum<[-2, 7, 7]>;
-def EBP : X86Reg<"ebp", 5, [BP, HBP]>, DwarfRegNum<[-2, 4, 5]>;
-def ESP : X86Reg<"esp", 4, [SP, HSP]>, DwarfRegNum<[-2, 5, 4]>;
-def EIP : X86Reg<"eip", 0, [IP, HIP]>, DwarfRegNum<[-2, 8, 8]>;
-}
+let SubRegIndices = [sub_16bit] in {
+def EAX : X86Reg<"eax", 0, [AX]>, DwarfRegNum<[-2, 0, 0]>;
+def EDX : X86Reg<"edx", 2, [DX]>, DwarfRegNum<[-2, 2, 2]>;
+def ECX : X86Reg<"ecx", 1, [CX]>, DwarfRegNum<[-2, 1, 1]>;
+def EBX : X86Reg<"ebx", 3, [BX]>, DwarfRegNum<[-2, 3, 3]>;
+def ESI : X86Reg<"esi", 6, [SI]>, DwarfRegNum<[-2, 6, 6]>;
+def EDI : X86Reg<"edi", 7, [DI]>, DwarfRegNum<[-2, 7, 7]>;
+def EBP : X86Reg<"ebp", 5, [BP]>, DwarfRegNum<[-2, 4, 5]>;
+def ESP : X86Reg<"esp", 4, [SP]>, DwarfRegNum<[-2, 5, 4]>;
+def EIP : X86Reg<"eip", 0, [IP]>, DwarfRegNum<[-2, 8, 8]>;
 
 // X86-64 only, requires REX
-let SubRegIndices = [sub_16bit], CostPerUse = 1 in {
+let CostPerUse = 1 in {
 def R8D  : X86Reg<"r8d",   8, [R8W]>;
 def R9D  : X86Reg<"r9d",   9, [R9W]>;
 def R10D : X86Reg<"r10d", 10, [R10W]>;
@@ -136,7 +122,7 @@ def R12D : X86Reg<"r12d", 12, [R12W]>;
 def R13D : X86Reg<"r13d", 13, [R13W]>;
 def R14D : X86Reg<"r14d", 14, [R14W]>;
 def R15D : X86Reg<"r15d", 15, [R15W]>;
-}
+}}
 
 // 64-bit registers, X86-64 only
 let SubRegIndices = [sub_32bit] in {
@@ -265,18 +251,8 @@ def ST7 : X86Reg<"st(7)", 7>, DwarfRegNum<[40, 19, 18]>;
 // Floating-point status word
 def FPSW : X86Reg<"fpsw", 0>;
 
-// Status flags register.
-//
-// Note that some flags that are commonly thought of as part of the status
-// flags register are modeled separately. Typically this is due to instructions
-// reading and updating those flags independently of all the others. We don't
-// want to create false dependencies between these instructions and so we use
-// a separate register to model them.
+// Status flags register
 def EFLAGS : X86Reg<"flags", 0>;
-
-// The direction flag.
-def DF : X86Reg<"dirflag", 0>;
-
 
 // Segment registers
 def CS : X86Reg<"cs", 1>;
@@ -365,10 +341,6 @@ def GR16 : RegisterClass<"X86", [i16], 16,
                          (add AX, CX, DX, SI, DI, BX, BP, SP,
                               R8W, R9W, R10W, R11W, R14W, R15W, R12W, R13W)>;
 
-let isAllocatable = 0 in
-def GRH16 : RegisterClass<"X86", [i16], 16,
-                          (add HAX, HCX, HDX, HSI, HDI, HBX, HBP, HSP, HIP)>;
-
 def GR32 : RegisterClass<"X86", [i32], 32,
                          (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP,
                               R8D, R9D, R10D, R11D, R14D, R15D, R12D, R13D)>;
@@ -427,6 +399,11 @@ def GR32_NOREX : RegisterClass<"X86", [i32], 32,
 // GR64_NOREX - GR64 registers which do not require a REX prefix.
 def GR64_NOREX : RegisterClass<"X86", [i64], 64,
                             (add RAX, RCX, RDX, RSI, RDI, RBX, RBP, RSP, RIP)>;
+
+// GR32_NOAX - GR32 registers except EAX. Used by AddRegFrm of XCHG32 in 64-bit
+// mode to prevent encoding using the 0x90 NOP encoding. xchg %eax, %eax needs
+// to clear upper 32-bits of RAX so is not a NOP.
+def GR32_NOAX : RegisterClass<"X86", [i32], 32, (sub GR32, EAX)>;
 
 // GR32_NOSP - GR32 registers except ESP.
 def GR32_NOSP : RegisterClass<"X86", [i32], 32, (sub GR32, ESP)>;
@@ -517,10 +494,6 @@ def CCR : RegisterClass<"X86", [i32], 32, (add EFLAGS)> {
   let isAllocatable = 0;
 }
 def FPCCR : RegisterClass<"X86", [i16], 16, (add FPSW)> {
-  let CopyCost = -1;  // Don't allow copying of status registers.
-  let isAllocatable = 0;
-}
-def DFCCR : RegisterClass<"X86", [i32], 32, (add DF)> {
   let CopyCost = -1;  // Don't allow copying of status registers.
   let isAllocatable = 0;
 }

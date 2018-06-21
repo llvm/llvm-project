@@ -33,9 +33,7 @@ class FormattedBytes;
 
 namespace sys {
 namespace fs {
-enum FileAccess : unsigned;
 enum OpenFlags : unsigned;
-enum CreationDisposition : unsigned;
 } // end namespace fs
 } // end namespace sys
 
@@ -244,9 +242,6 @@ public:
   /// indent - Insert 'NumSpaces' spaces.
   raw_ostream &indent(unsigned NumSpaces);
 
-  /// write_zeros - Insert 'NumZeros' nulls.
-  raw_ostream &write_zeros(unsigned NumZeros);
-
   /// Changes the foreground color of text that will be output from this point
   /// forward.
   /// @param Color ANSI color to use, the special SAVEDCOLOR can be used to
@@ -298,6 +293,9 @@ private:
   /// \invariant { Size > 0 }
   virtual void write_impl(const char *Ptr, size_t Size) = 0;
 
+  // An out of line virtual method to provide a home for the class vtable.
+  virtual void handle();
+
   /// Return the current position within the stream, not counting the bytes
   /// currently in the buffer.
   virtual uint64_t current_pos() const = 0;
@@ -331,8 +329,6 @@ private:
   /// Copy data into the buffer. Size must not be greater than the number of
   /// unused bytes in the buffer.
   void copy_to_buffer(const char *Ptr, size_t Size);
-
-  virtual void anchor();
 };
 
 /// An abstract base class for streams implementations that also support a
@@ -340,7 +336,6 @@ private:
 /// but needs to patch in a header that needs to know the output size.
 class raw_pwrite_stream : public raw_ostream {
   virtual void pwrite_impl(const char *Ptr, size_t Size, uint64_t Offset) = 0;
-  void anchor() override;
 
 public:
   explicit raw_pwrite_stream(bool Unbuffered = false)
@@ -388,8 +383,6 @@ class raw_fd_ostream : public raw_pwrite_stream {
   /// Set the flag indicating that an output error has been encountered.
   void error_detected(std::error_code EC) { this->EC = EC; }
 
-  void anchor() override;
-
 public:
   /// Open the specified file for writing. If an error occurs, information
   /// about the error is put into EC, and the stream should be immediately
@@ -399,15 +392,7 @@ public:
   /// As a special case, if Filename is "-", then the stream will use
   /// STDOUT_FILENO instead of opening a file. This will not close the stdout
   /// descriptor.
-  raw_fd_ostream(StringRef Filename, std::error_code &EC);
   raw_fd_ostream(StringRef Filename, std::error_code &EC,
-                 sys::fs::CreationDisposition Disp);
-  raw_fd_ostream(StringRef Filename, std::error_code &EC,
-                 sys::fs::FileAccess Access);
-  raw_fd_ostream(StringRef Filename, std::error_code &EC,
-                 sys::fs::OpenFlags Flags);
-  raw_fd_ostream(StringRef Filename, std::error_code &EC,
-                 sys::fs::CreationDisposition Disp, sys::fs::FileAccess Access,
                  sys::fs::OpenFlags Flags);
 
   /// FD is the file descriptor that this writes to.  If ShouldClose is true,

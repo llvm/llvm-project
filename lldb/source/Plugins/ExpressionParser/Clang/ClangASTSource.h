@@ -25,13 +25,14 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class ClangASTSource ClangASTSource.h "lldb/Expression/ClangASTSource.h"
-/// Provider for named objects defined in the debug info for Clang
+/// @brief Provider for named objects defined in the debug info for Clang
 ///
-/// As Clang parses an expression, it may encounter names that are not defined
-/// inside the expression, including variables, functions, and types.  Clang
-/// knows the name it is looking for, but nothing else. The ExternalSemaSource
-/// class provides Decls (VarDecl, FunDecl, TypeDecl) to Clang for these
-/// names, consulting the ClangExpressionDeclMap to do the actual lookups.
+/// As Clang parses an expression, it may encounter names that are not
+/// defined inside the expression, including variables, functions, and
+/// types.  Clang knows the name it is looking for, but nothing else.
+/// The ExternalSemaSource class provides Decls (VarDecl, FunDecl, TypeDecl)
+/// to Clang for these names, consulting the ClangExpressionDeclMap to do
+/// the actual lookups.
 //----------------------------------------------------------------------
 class ClangASTSource : public ClangExternalASTSourceCommon,
                        public ClangASTImporter::MapCompleter {
@@ -77,8 +78,8 @@ public:
   //------------------------------------------------------------------
   /// Look up all Decls that match a particular name.  Only handles
   /// Identifiers and DeclContexts that are either NamespaceDecls or
-  /// TranslationUnitDecls.  Calls SetExternalVisibleDeclsForName with the
-  /// result.
+  /// TranslationUnitDecls.  Calls SetExternalVisibleDeclsForName with
+  /// the result.
   ///
   /// The work for this function is done by
   /// void FindExternalVisibleDecls (NameSearchContext &);
@@ -172,8 +173,8 @@ public:
 
   //------------------------------------------------------------------
   /// Called on entering a translation unit.  Tells Clang by calling
-  /// setHasExternalVisibleStorage() and setHasExternalLexicalStorage() that
-  /// this object has something to say about undefined names.
+  /// setHasExternalVisibleStorage() and setHasExternalLexicalStorage()
+  /// that this object has something to say about undefined names.
   ///
   /// @param[in] ASTConsumer
   ///     Unused.
@@ -185,8 +186,8 @@ public:
   //
 
   //------------------------------------------------------------------
-  /// Look up the modules containing a given namespace and put the appropriate
-  /// entries in the namespace map.
+  /// Look up the modules containing a given namespace and put the
+  /// appropriate entries in the namespace map.
   ///
   /// @param[in] namespace_map
   ///     The map to be completed.
@@ -230,10 +231,11 @@ public:
 
   //----------------------------------------------------------------------
   /// @class ClangASTSourceProxy ClangASTSource.h
-  /// "lldb/Expression/ClangASTSource.h" Proxy for ClangASTSource
+  /// "lldb/Expression/ClangASTSource.h"
+  /// @brief Proxy for ClangASTSource
   ///
-  /// Clang AST contexts like to own their AST sources, so this is a state-
-  /// free proxy object.
+  /// Clang AST contexts like to own their AST sources, so this is a
+  /// state-free proxy object.
   //----------------------------------------------------------------------
   class ClangASTSourceProxy : public ClangExternalASTSourceCommon {
   public:
@@ -296,8 +298,8 @@ public:
 
 protected:
   //------------------------------------------------------------------
-  /// Look for the complete version of an Objective-C interface, and return it
-  /// if found.
+  /// Look for the complete version of an Objective-C interface, and
+  /// return it if found.
   ///
   /// @param[in] interface_decl
   ///     An ObjCInterfaceDecl that may not be the complete one.
@@ -310,8 +312,8 @@ protected:
   GetCompleteObjCInterface(const clang::ObjCInterfaceDecl *interface_decl);
 
   //------------------------------------------------------------------
-  /// Find all entities matching a given name in a given module, using a
-  /// NameSearchContext to make Decls for them.
+  /// Find all entities matching a given name in a given module,
+  /// using a NameSearchContext to make Decls for them.
   ///
   /// @param[in] context
   ///     The NameSearchContext that can construct Decls for this name.
@@ -472,9 +474,8 @@ protected:
 };
 
 //----------------------------------------------------------------------
-/// @class NameSearchContext ClangASTSource.h
-/// "lldb/Expression/ClangASTSource.h" Container for all objects relevant to a
-/// single name lookup
+/// @class NameSearchContext ClangASTSource.h "lldb/Expression/ClangASTSource.h"
+/// @brief Container for all objects relevant to a single name lookup
 ///
 /// LLDB needs to create Decls for entities it finds.  This class communicates
 /// what name is being searched for and provides helper functions to construct
@@ -531,8 +532,8 @@ struct NameSearchContext {
   }
 
   //------------------------------------------------------------------
-  /// Create a VarDecl with the name being searched for and the provided type
-  /// and register it in the right places.
+  /// Create a VarDecl with the name being searched for and the provided
+  /// type and register it in the right places.
   ///
   /// @param[in] type
   ///     The opaque QualType for the VarDecl being registered.
@@ -540,8 +541,8 @@ struct NameSearchContext {
   clang::NamedDecl *AddVarDecl(const CompilerType &type);
 
   //------------------------------------------------------------------
-  /// Create a FunDecl with the name being searched for and the provided type
-  /// and register it in the right places.
+  /// Create a FunDecl with the name being searched for and the provided
+  /// type and register it in the right places.
   ///
   /// @param[in] type
   ///     The opaque QualType for the FunDecl being registered.
@@ -552,14 +553,15 @@ struct NameSearchContext {
   clang::NamedDecl *AddFunDecl(const CompilerType &type, bool extern_c = false);
 
   //------------------------------------------------------------------
-  /// Create a FunDecl with the name being searched for and generic type (i.e.
-  /// intptr_t NAME_GOES_HERE(...)) and register it in the right places.
+  /// Create a FunDecl with the name being searched for and generic
+  /// type (i.e. intptr_t NAME_GOES_HERE(...)) and register it in the
+  /// right places.
   //------------------------------------------------------------------
   clang::NamedDecl *AddGenericFunDecl();
 
   //------------------------------------------------------------------
-  /// Create a TypeDecl with the name being searched for and the provided type
-  /// and register it in the right places.
+  /// Create a TypeDecl with the name being searched for and the provided
+  /// type and register it in the right places.
   ///
   /// @param[in] compiler_type
   ///     The opaque QualType for the TypeDecl being registered.
@@ -567,8 +569,8 @@ struct NameSearchContext {
   clang::NamedDecl *AddTypeDecl(const CompilerType &compiler_type);
 
   //------------------------------------------------------------------
-  /// Add Decls from the provided DeclContextLookupResult to the list of
-  /// results.
+  /// Add Decls from the provided DeclContextLookupResult to the list
+  /// of results.
   ///
   /// @param[in] result
   ///     The DeclContextLookupResult, usually returned as the result

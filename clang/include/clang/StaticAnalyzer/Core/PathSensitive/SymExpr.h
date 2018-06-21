@@ -1,4 +1,4 @@
-//===- SymExpr.h - Management of Symbolic Values ----------------*- C++ -*-===//
+//== SymExpr.h - Management of Symbolic Values ------------------*- C++ -*--==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,17 +15,16 @@
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SYMEXPR_H
 
 #include "clang/AST/Type.h"
-#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include <cassert>
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace ento {
 
 class MemRegion;
 
-/// Symbolic value. These values used to capture symbolic execution of
+/// \brief Symbolic value. These values used to capture symbolic execution of
 /// the program.
 class SymExpr : public llvm::FoldingSetNode {
   virtual void anchor();
@@ -50,7 +49,7 @@ protected:
   }
 
 public:
-  virtual ~SymExpr() = default;
+  virtual ~SymExpr() {}
 
   Kind getKind() const { return K; }
 
@@ -61,18 +60,17 @@ public:
   virtual QualType getType() const = 0;
   virtual void Profile(llvm::FoldingSetNodeID &profile) = 0;
 
-  /// Iterator over symbols that the current symbol depends on.
+  /// \brief Iterator over symbols that the current symbol depends on.
   ///
   /// For SymbolData, it's the symbol itself; for expressions, it's the
   /// expression symbol and all the operands in it. Note, SymbolDerived is
   /// treated as SymbolData - the iterator will NOT visit the parent region.
   class symbol_iterator {
     SmallVector<const SymExpr *, 5> itr;
-
     void expand();
 
   public:
-    symbol_iterator() = default;
+    symbol_iterator() {}
     symbol_iterator(const SymExpr *SE);
 
     symbol_iterator &operator++();
@@ -87,7 +85,7 @@ public:
 
   unsigned computeComplexity() const;
 
-  /// Find the region from which this symbol originates.
+  /// \brief Find the region from which this symbol originates.
   ///
   /// Whenever the symbol was constructed to denote an unknown value of
   /// a certain memory region, return this region. This method
@@ -106,16 +104,15 @@ inline raw_ostream &operator<<(raw_ostream &os,
   return os;
 }
 
-using SymbolRef = const SymExpr *;
-using SymbolRefSmallVectorTy = SmallVector<SymbolRef, 2>;
-using SymbolID = unsigned;
+typedef const SymExpr *SymbolRef;
+typedef SmallVector<SymbolRef, 2> SymbolRefSmallVectorTy;
 
-/// A symbol representing data which can be stored in a memory location
+typedef unsigned SymbolID;
+/// \brief A symbol representing data which can be stored in a memory location
 /// (region).
 class SymbolData : public SymExpr {
-  const SymbolID Sym;
-
   void anchor() override;
+  const SymbolID Sym;
 
 protected:
   SymbolData(Kind k, SymbolID sym) : SymExpr(k), Sym(sym) {
@@ -123,7 +120,7 @@ protected:
   }
 
 public:
-  ~SymbolData() override = default;
+  ~SymbolData() override {}
 
   SymbolID getSymbolID() const { return Sym; }
 
@@ -137,4 +134,4 @@ public:
 } // namespace ento
 } // namespace clang
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SYMEXPR_H
+#endif

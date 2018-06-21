@@ -18,6 +18,7 @@ import time
 # Third-party modules
 from six import StringIO as SixStringIO
 import six
+from lldbsuite.support import seven
 
 # LLDB modules
 import lldb
@@ -343,8 +344,7 @@ def run_break_set_by_file_and_line(
 
     If extra_options is not None, then we append it to the breakpoint set command.
 
-    If num_expected_locations is -1, we check that we got AT LEAST one location. If num_expected_locations is -2, we don't
-    check the actual number at all. Otherwise, we check that num_expected_locations equals the number of locations.
+    If num_expected_locations is -1 we check that we got AT LEAST one location, otherwise we check that num_expected_locations equals the number of locations.
 
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number."""
 
@@ -564,7 +564,7 @@ def check_breakpoint_result(
     if num_locations == -1:
         test.assertTrue(out_num_locations > 0,
                         "Expecting one or more locations, got none.")
-    elif num_locations != -2:
+    else:
         test.assertTrue(
             num_locations == out_num_locations,
             "Expecting %d locations, got %d." %
@@ -576,7 +576,7 @@ def check_breakpoint_result(
         if 'file' in break_results:
             out_file_name = break_results['file']
         test.assertTrue(
-            file_name.endswith(out_file_name),
+            file_name == out_file_name,
             "Breakpoint file name '%s' doesn't match resultant name '%s'." %
             (file_name,
              out_file_name))
@@ -735,45 +735,11 @@ def get_crashed_threads(test, process):
             threads.append(thread)
     return threads
 
-# Helper functions for run_to_{source,name}_breakpoint:
-
-def run_to_breakpoint_make_target(test, exe_name, in_cwd):
-    if in_cwd:
-        exe = test.getBuildArtifact(exe_name)
-    
-    # Create the target
-    target = test.dbg.CreateTarget(exe)
-    test.assertTrue(target, "Target: %s is not valid."%(exe_name))
-    return target
-
-def run_to_breakpoint_do_run(test, target, bkpt, launch_info):
-
-    # Launch the process, and do not stop at the entry point.
-    if not launch_info:
-        launch_info = lldb.SBLaunchInfo(None)
-        launch_info.SetWorkingDirectory(test.get_process_working_directory())
-
-    error = lldb.SBError()
-    process = target.Launch(launch_info, error)
-
-    test.assertTrue(process, 
-                    "Could not create a valid process for %s: %s"%(target.GetExecutable().GetFilename(), 
-                    error.GetCString()))
-
-    # Frame #0 should be at our breakpoint.
-    threads = get_threads_stopped_at_breakpoint(
-                process, bkpt)
-
-    test.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
-    thread = threads[0]
-    return (target, process, thread, bkpt)
-
-def run_to_name_breakpoint (test, bkpt_name, launch_info = None, 
-                            exe_name = "a.out",
-                            bkpt_module = None,
-                            in_cwd = True):
+def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
+                             launch_info = None, exe_name = "a.out",
+                             in_cwd = True):
     """Start up a target, using exe_name as the executable, and run it to
-       a breakpoint set by name on bkpt_name restricted to bkpt_module.
+       a breakpoint set by source regex bkpt_pattern.
 
        If you want to pass in launch arguments or environment
        variables, you can optionally pass in an SBLaunchInfo.  If you
@@ -783,44 +749,43 @@ def run_to_name_breakpoint (test, bkpt_name, launch_info = None,
        And if your executable isn't in the CWD, pass in the absolute
        path to the executable in exe_name, and set in_cwd to False.
 
-       If you need to restrict the breakpoint to a particular module,
-       pass the module name (a string not a FileSpec) in bkpt_module.  If
-       nothing is passed in setting will be unrestricted.
-
        If the target isn't valid, the breakpoint isn't found, or hit, the
        function will cause a testsuite failure.
 
        If successful it returns a tuple with the target process and
-       thread that hit the breakpoint, and the breakpoint that we set
-       for you.
+       thread that hit the breakpoint.
     """
 
-    target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
+    if in_cwd:
+        exe = test.getBuildArtifact(exe_name)
+    
+    # Create the target
+    target = test.dbg.CreateTarget(exe)
+    test.assertTrue(target, "Target: %s is not valid."%(exe_name))
 
-    breakpoint = target.BreakpointCreateByName(bkpt_name, bkpt_module)
-
-
-    test.assertTrue(breakpoint.GetNumLocations() > 0,
-                    "No locations found for name breakpoint: '%s'."%(bkpt_name))
-    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
-
-def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
-                             launch_info = None, exe_name = "a.out",
-                             bkpt_module = None,
-                             in_cwd = True):
-    """Start up a target, using exe_name as the executable, and run it to
-       a breakpoint set by source regex bkpt_pattern.
-
-       The rest of the behavior is the same as run_to_name_breakpoint.
-    """
-
-    target = run_to_breakpoint_make_target(test, exe_name, in_cwd)
     # Set the breakpoints
     breakpoint = target.BreakpointCreateBySourceRegex(
-            bkpt_pattern, source_spec, bkpt_module)
+            bkpt_pattern, source_spec)
     test.assertTrue(breakpoint.GetNumLocations() > 0, 
                     'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'%(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
-    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info)
+
+    # Launch the process, and do not stop at the entry point.
+    if not launch_info:
+        launch_info = lldb.SBLaunchInfo(None)
+        launch_info.SetWorkingDirectory(test.get_process_working_directory())
+
+    error = lldb.SBError()
+    process = target.Launch(launch_info, error)
+
+    test.assertTrue(process, "Could not create a valid process for %s: %s"%(exe_name, error.GetCString()))
+
+    # Frame #0 should be at our breakpoint.
+    threads = get_threads_stopped_at_breakpoint(
+                process, breakpoint)
+
+    test.assertTrue(len(threads) == 1, "Expected 1 thread to stop at breakpoint, %d did."%(len(threads)))
+    thread = threads[0]
+    return (target, process, thread, breakpoint)
 
 def continue_to_breakpoint(process, bkpt):
     """ Continues the process, if it stops, returns the threads stopped at bkpt; otherwise, returns None"""
@@ -1238,6 +1203,72 @@ class RecursiveDecentFormatter(BasicFormatter):
 
         return output.getvalue()
 
+
+def check_variable(
+        test,
+        valobj,
+        use_dynamic=False,
+        summary=None,
+        value=None,
+        typename=None,
+        num_children=None,
+        use_synthetic=True):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
+    if use_dynamic:
+        valobj = valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
+        test.assertTrue(
+            valobj.IsValid(),
+            "dynamic value of %s is not valid" %
+            (valobj.GetName() if valobj else "<unknown>"))
+        test.assertTrue(
+            valobj.IsDynamic(),
+            "dynamic value of %s is not dynamic" %
+            (valobj.GetName() if valobj else "<unknown>"))
+    if use_synthetic:
+        valobj.SetPreferSyntheticValue(True)
+    if summary:
+        test.assertTrue(
+            valobj.GetSummary() == summary,
+            "expected summary: '%s' - actual summary: '%s'" %
+            (summary,
+             valobj.GetSummary() if valobj else "<unknown>"))
+    if value:
+        test.assertTrue(
+            valobj.GetValue() == value, "expected value: '%s' - actual value: '%s'" %
+            (value, valobj.GetValue() if valobj else "<unknown>"))
+    if typename:
+        test.assertTrue(
+            valobj.GetTypeName() == typename,
+            "expected typename: '%s' - actual typename: '%s'" %
+            (typename,
+             valobj.GetTypeName() if valobj else "<unknown>"))
+    if num_children:
+        test.assertTrue(
+            valobj.GetNumChildren() == num_children,
+            "expected num children: '%s' - actual num children: '%s'" %
+            (num_children,
+             valobj.GetNumChildren() if valobj else "<unknown>"))
+
+
+def check_children(test, valobj, thecallable):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
+    i = 0
+    while i < valobj.GetNumChildren():
+        child = valobj.GetChildAtIndex(i)
+        test.assertTrue(
+            thecallable(
+                child,
+                i),
+            "child %d failed the test" %
+            (i))
+        i = i + 1
+
 # ===========================================================
 # Utility functions for path manipulation on remote platforms
 # ===========================================================
@@ -1351,3 +1382,11 @@ def wait_for_file_on_target(testcase, file_path, max_attempts=6):
             (file_path, max_attempts))
 
     return read_file_on_target(testcase, file_path)
+
+def execute_command(command):
+    #print('%% %s' % (command))
+    (exit_status, output) = seven.get_command_status_output(command)
+    # if output:
+    #    print(output)
+    #print('status = %u' % (exit_status))
+    return exit_status

@@ -32,7 +32,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/OrderedInstructions.h"
 #include <algorithm>
 #define DEBUG_TYPE "predicateinfo"
@@ -118,7 +118,7 @@ static bool valueComesBefore(OrderedInstructions &OI, const Value *A,
     return false;
   if (ArgA && ArgB)
     return ArgA->getArgNo() < ArgB->getArgNo();
-  return OI.dfsBefore(cast<Instruction>(A), cast<Instruction>(B));
+  return OI.dominates(cast<Instruction>(A), cast<Instruction>(B));
 }
 
 // This compares ValueDFS structures, creating OrderedBasicBlocks where
@@ -553,11 +553,10 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
   auto Comparator = [&](const Value *A, const Value *B) {
     return valueComesBefore(OI, A, B);
   };
-  llvm::sort(OpsToRename.begin(), OpsToRename.end(), Comparator);
+  std::sort(OpsToRename.begin(), OpsToRename.end(), Comparator);
   ValueDFS_Compare Compare(OI);
   // Compute liveness, and rename in O(uses) per Op.
   for (auto *Op : OpsToRename) {
-    LLVM_DEBUG(dbgs() << "Visiting " << *Op << "\n");
     unsigned Counter = 0;
     SmallVector<ValueDFS, 16> OrderedUses;
     const auto &ValueInfo = getValueInfo(Op);
@@ -626,15 +625,15 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
       // we want to.
       bool PossibleCopy = VD.PInfo != nullptr;
       if (RenameStack.empty()) {
-        LLVM_DEBUG(dbgs() << "Rename Stack is empty\n");
+        DEBUG(dbgs() << "Rename Stack is empty\n");
       } else {
-        LLVM_DEBUG(dbgs() << "Rename Stack Top DFS numbers are ("
-                          << RenameStack.back().DFSIn << ","
-                          << RenameStack.back().DFSOut << ")\n");
+        DEBUG(dbgs() << "Rename Stack Top DFS numbers are ("
+                     << RenameStack.back().DFSIn << ","
+                     << RenameStack.back().DFSOut << ")\n");
       }
 
-      LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
-                        << VD.DFSOut << ")\n");
+      DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
+                   << VD.DFSOut << ")\n");
 
       bool ShouldPush = (VD.Def || PossibleCopy);
       bool OutOfScope = !stackIsInScope(RenameStack, VD);
@@ -653,7 +652,7 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
       if (VD.Def || PossibleCopy)
         continue;
       if (!DebugCounter::shouldExecute(RenameCounter)) {
-        LLVM_DEBUG(dbgs() << "Skipping execution due to debug counter\n");
+        DEBUG(dbgs() << "Skipping execution due to debug counter\n");
         continue;
       }
       ValueDFS &Result = RenameStack.back();
@@ -664,9 +663,8 @@ void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
       if (!Result.Def)
         Result.Def = materializeStack(Counter, RenameStack, Op);
 
-      LLVM_DEBUG(dbgs() << "Found replacement " << *Result.Def << " for "
-                        << *VD.U->get() << " in " << *(VD.U->getUser())
-                        << "\n");
+      DEBUG(dbgs() << "Found replacement " << *Result.Def << " for "
+                   << *VD.U->get() << " in " << *(VD.U->getUser()) << "\n");
       assert(DT.dominates(cast<Instruction>(Result.Def), *VD.U) &&
              "Predicateinfo def should have dominated this use");
       VD.U->set(Result.Def);
@@ -742,7 +740,7 @@ PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-/// An assembly annotator class to print PredicateInfo information in
+/// \brief An assembly annotator class to print PredicateInfo information in
 /// comments.
 class PredicateInfoAnnotatedWriter : public AssemblyAnnotationWriter {
   friend class PredicateInfo;

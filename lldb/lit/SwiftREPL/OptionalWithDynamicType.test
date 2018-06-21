@@ -1,0 +1,32 @@
+// Test that we print the dynamic type of the object contained within an
+// optional.
+
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+
+import Foundation
+
+@objc class MyClass : NSObject {
+  let x: String = "MyClass"
+}
+
+let a = MyClass()
+// CHECK: a: MyClass = {
+// CHECK:   ObjectiveC.NSObject
+// CHECK:   x = "MyClass"
+
+let b = a as NSObject
+// CHECK: b: MyClass = {
+// CHECK:   ObjectiveC.NSObject
+// CHECK:   x = "MyClass"
+
+let c = a as MyClass?
+// CHECK: c: MyClass? = {{.*}} {
+// CHECK:   ObjectiveC.NSObject
+// CHECK:   x = "MyClass"
+
+let d = a as NSObject?
+// CHECK: d: NSObject? = {{.*}} {
+// CHECK:   ObjectiveC.NSObject
+// CHECK:   x = "MyClass"

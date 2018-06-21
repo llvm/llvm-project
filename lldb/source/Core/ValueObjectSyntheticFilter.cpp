@@ -171,9 +171,10 @@ bool ValueObjectSynthetic::UpdateValue() {
     m_children_byindex.Clear();
     m_name_toindex.Clear();
     // usually, an object's value can change but this does not alter its
-    // children count for a synthetic VO that might indeed happen, so we need
-    // to tell the upper echelons that they need to come back to us asking for
-    // children
+    // children count
+    // for a synthetic VO that might indeed happen, so we need to tell the upper
+    // echelons
+    // that they need to come back to us asking for children
     m_children_count_valid = false;
     m_synthetic_children_cache.Clear();
     m_synthetic_children_count = UINT32_MAX;
@@ -311,7 +312,7 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetNonSyntheticValue() {
 void ValueObjectSynthetic::CopyValueData(ValueObject *source) {
   m_value = (source->UpdateValueIfNeeded(), source->GetValue());
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+  m_error = GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
 }
 
 bool ValueObjectSynthetic::CanProvideValue() {

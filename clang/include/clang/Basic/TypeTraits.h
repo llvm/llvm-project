@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines enumerations for the type traits support.
+/// \brief Defines enumerations for the type traits support.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +17,7 @@
 
 namespace clang {
 
-  /// Names for traits that operate specifically on types.
+  /// \brief Names for traits that operate specifically on types.
   enum TypeTrait {
     UTT_HasNothrowAssign,
     UTT_HasNothrowMoveAssign,
@@ -80,20 +80,19 @@ namespace clang {
     BTT_IsAssignable,
     BTT_IsNothrowAssignable,
     BTT_IsTriviallyAssignable,
-    BTT_ReferenceBindsToTemporary,
-    BTT_Last = BTT_ReferenceBindsToTemporary,
+    BTT_Last = BTT_IsTriviallyAssignable,
     TT_IsConstructible,
     TT_IsNothrowConstructible,
     TT_IsTriviallyConstructible
   };
 
-  /// Names for the array type traits.
+  /// \brief Names for the array type traits.
   enum ArrayTypeTrait {
     ATT_ArrayRank,
     ATT_ArrayExtent
   };
 
-  /// Names for the "expression or type" traits.
+  /// \brief Names for the "expression or type" traits.
   enum UnaryExprOrTypeTrait {
     UETT_SizeOf,
     UETT_AlignOf,

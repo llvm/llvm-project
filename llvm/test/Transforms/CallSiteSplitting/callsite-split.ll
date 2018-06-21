@@ -7,10 +7,10 @@ target triple = "aarch64-linaro-linux-gnueabi"
 %struct.bitmap = type { i32, %struct.bitmap* }
 
 ;CHECK-LABEL: @caller
-;CHECK-LABEL: Top.split:
-;CHECK: call void @callee(%struct.bitmap* null, %struct.bitmap* null, %struct.bitmap* %b_elt, i1 false)
 ;CHECK-LABEL: NextCond:
 ;CHECK: br {{.*}} label %callee.exit
+;CHECK-LABEL: CallSiteBB.predBB1.split:
+;CHECK: call void @callee(%struct.bitmap* null, %struct.bitmap* null, %struct.bitmap* %b_elt, i1 false)
 ;CHECK-LABEL: callee.exit:
 ;CHECK: call void @dummy2(%struct.bitmap* %a_elt)
 
@@ -69,12 +69,12 @@ declare void @dummy1(%struct.bitmap*, %struct.bitmap*, %struct.bitmap*, %struct.
 
 
 ;CHECK-LABEL: @caller2
-;CHECK-LABEL: Top.split:
-;CHECK: call void @dummy4()
-;CHECK-LABEL: NextCond.split:
+;CHECK-LABEL: CallSiteBB.predBB1.split:
 ;CHECK: call void @dummy3()
+;CHECK-LABEL: CallSiteBB.predBB2.split:
+;CHECK: call void @dummy4()
 ;CheCK-LABEL: CallSiteBB:
-;CHECK: %phi.call = phi i1 [ true, %NextCond.split ], [ false, %Top.split ]
+;CHECK: %phi.call = phi i1 [ true, %CallSiteBB.predBB1.split ], [ false, %CallSiteBB.predBB2.split ]
 ;CHECK: call void @foo(i1 %phi.call)
 define void @caller2(i1 %c, %struct.bitmap* %a_elt, %struct.bitmap* %b_elt, %struct.bitmap* %c_elt) {
 entry:

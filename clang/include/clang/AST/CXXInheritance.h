@@ -35,7 +35,7 @@ namespace clang {
 class ASTContext;
 class NamedDecl;
   
-/// Represents an element in a path from a derived class to a
+/// \brief Represents an element in a path from a derived class to a
 /// base class. 
 /// 
 /// Each step in the path references the link from a
@@ -43,15 +43,15 @@ class NamedDecl;
 /// base "number" that identifies which base subobject of the
 /// original derived class we are referencing.
 struct CXXBasePathElement {
-  /// The base specifier that states the link from a derived
+  /// \brief The base specifier that states the link from a derived
   /// class to a base class, which will be followed by this base
   /// path element.
   const CXXBaseSpecifier *Base;
   
-  /// The record decl of the class that the base is a base of.
+  /// \brief The record decl of the class that the base is a base of.
   const CXXRecordDecl *Class;
   
-  /// Identifies which base class subobject (of type
+  /// \brief Identifies which base class subobject (of type
   /// \c Base->getType()) this base path element refers to. 
   ///
   /// This value is only valid if \c !Base->isVirtual(), because there
@@ -60,7 +60,7 @@ struct CXXBasePathElement {
   int SubobjectNumber;
 };
 
-/// Represents a path from a specific derived class
+/// \brief Represents a path from a specific derived class
 /// (which is not represented as part of the path) to a particular
 /// (direct or indirect) base class subobject.
 ///
@@ -70,14 +70,14 @@ struct CXXBasePathElement {
 /// subobject is being used.
 class CXXBasePath : public SmallVector<CXXBasePathElement, 4> {
 public:
-  /// The access along this inheritance path.  This is only
+  /// \brief The access along this inheritance path.  This is only
   /// calculated when recording paths.  AS_none is a special value
   /// used to indicate a path which permits no legal access.
   AccessSpecifier Access = AS_public;
 
   CXXBasePath() = default;
 
-  /// The set of declarations found inside this base class
+  /// \brief The set of declarations found inside this base class
   /// subobject.
   DeclContext::lookup_result Decls;
 
@@ -119,7 +119,7 @@ public:
 class CXXBasePaths {
   friend class CXXRecordDecl;
 
-  /// The type from which this search originated.
+  /// \brief The type from which this search originated.
   CXXRecordDecl *Origin = nullptr;
   
   /// Paths - The actual set of paths that can be taken from the
@@ -160,7 +160,7 @@ class CXXBasePaths {
   /// DetectedVirtual - The base class that is virtual.
   const RecordType *DetectedVirtual = nullptr;
   
-  /// Array of the declarations that have been found. This
+  /// \brief Array of the declarations that have been found. This
   /// array is constructed only if needed, e.g., to iterate over the
   /// results within LookupResult.
   std::unique_ptr<NamedDecl *[]> DeclsFound;
@@ -196,53 +196,53 @@ public:
 
   decl_range found_decls();
   
-  /// Determine whether the path from the most-derived type to the
+  /// \brief Determine whether the path from the most-derived type to the
   /// given base type is ambiguous (i.e., it refers to multiple subobjects of
   /// the same base type).
   bool isAmbiguous(CanQualType BaseType);
   
-  /// Whether we are finding multiple paths to detect ambiguities.
+  /// \brief Whether we are finding multiple paths to detect ambiguities.
   bool isFindingAmbiguities() const { return FindAmbiguities; }
   
-  /// Whether we are recording paths.
+  /// \brief Whether we are recording paths.
   bool isRecordingPaths() const { return RecordPaths; }
   
-  /// Specify whether we should be recording paths or not.
+  /// \brief Specify whether we should be recording paths or not.
   void setRecordingPaths(bool RP) { RecordPaths = RP; }
   
-  /// Whether we are detecting virtual bases.
+  /// \brief Whether we are detecting virtual bases.
   bool isDetectingVirtual() const { return DetectVirtual; }
   
-  /// The virtual base discovered on the path (if we are merely
+  /// \brief The virtual base discovered on the path (if we are merely
   /// detecting virtuals).
   const RecordType* getDetectedVirtual() const {
     return DetectedVirtual;
   }
 
-  /// Retrieve the type from which this base-paths search
+  /// \brief Retrieve the type from which this base-paths search
   /// began
   CXXRecordDecl *getOrigin() const { return Origin; }
   void setOrigin(CXXRecordDecl *Rec) { Origin = Rec; }
   
-  /// Clear the base-paths results.
+  /// \brief Clear the base-paths results.
   void clear();
   
-  /// Swap this data structure's contents with another CXXBasePaths 
+  /// \brief Swap this data structure's contents with another CXXBasePaths 
   /// object.
   void swap(CXXBasePaths &Other);
 };
 
-/// Uniquely identifies a virtual method within a class
+/// \brief Uniquely identifies a virtual method within a class
 /// hierarchy by the method itself and a class subobject number.
 struct UniqueVirtualMethod {
-  /// The overriding virtual method.
+  /// \brief The overriding virtual method.
   CXXMethodDecl *Method = nullptr;
 
-  /// The subobject in which the overriding virtual method
+  /// \brief The subobject in which the overriding virtual method
   /// resides.
   unsigned Subobject = 0;
 
-  /// The virtual base class subobject of which this overridden
+  /// \brief The virtual base class subobject of which this overridden
   /// virtual method is a part. Note that this records the closest
   /// derived virtual base class subobject.
   const CXXRecordDecl *InVirtualSubobject = nullptr;
@@ -266,7 +266,7 @@ struct UniqueVirtualMethod {
   }
 };
 
-/// The set of methods that override a given virtual method in
+/// \brief The set of methods that override a given virtual method in
 /// each subobject where it occurs.
 ///
 /// The first part of the pair is the subobject in which the
@@ -310,7 +310,7 @@ public:
   void replaceAll(UniqueVirtualMethod Overriding);
 };
 
-/// A mapping from each virtual member function to its set of
+/// \brief A mapping from each virtual member function to its set of
 /// final overriders.
 ///
 /// Within a class hierarchy for a given derived class, each virtual
@@ -364,7 +364,7 @@ public:
 class CXXFinalOverriderMap
   : public llvm::MapVector<const CXXMethodDecl *, OverridingMethods> {};
 
-/// A set of all the primary bases for a class.
+/// \brief A set of all the primary bases for a class.
 class CXXIndirectPrimaryBaseSet
   : public llvm::SmallSet<const CXXRecordDecl*, 32> {};
 

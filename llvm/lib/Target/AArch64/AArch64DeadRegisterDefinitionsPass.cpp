@@ -136,21 +136,18 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
       // We need to skip this instruction because while it appears to have a
       // dead def it uses a frame index which might expand into a multi
       // instruction sequence during EPI.
-      LLVM_DEBUG(dbgs() << "    Ignoring, operand is frame index\n");
+      DEBUG(dbgs() << "    Ignoring, operand is frame index\n");
       continue;
     }
     if (MI.definesRegister(AArch64::XZR) || MI.definesRegister(AArch64::WZR)) {
       // It is not allowed to write to the same register (not even the zero
       // register) twice in a single instruction.
-      LLVM_DEBUG(
-          dbgs()
-          << "    Ignoring, XZR or WZR already used by the instruction\n");
+      DEBUG(dbgs() << "    Ignoring, XZR or WZR already used by the instruction\n");
       continue;
     }
 
     if (shouldSkip(MI, MF)) {
-      LLVM_DEBUG(dbgs() << "    Ignoring, Atomic instruction with acquire "
-                           "semantics using WZR/XZR\n");
+      DEBUG(dbgs() << "    Ignoring, Atomic instruction with acquire semantics using WZR/XZR\n");
       continue;
     }
 
@@ -166,30 +163,30 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
           (!MO.isDead() && !MRI->use_nodbg_empty(Reg)))
         continue;
       assert(!MO.isImplicit() && "Unexpected implicit def!");
-      LLVM_DEBUG(dbgs() << "  Dead def operand #" << I << " in:\n    ";
-                 MI.print(dbgs()));
+      DEBUG(dbgs() << "  Dead def operand #" << I << " in:\n    ";
+            MI.print(dbgs()));
       // Be careful not to change the register if it's a tied operand.
       if (MI.isRegTiedToUseOperand(I)) {
-        LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
+        DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
         continue;
       }
       const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
       unsigned NewReg;
       if (RC == nullptr) {
-        LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
+        DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
         continue;
       } else if (RC->contains(AArch64::WZR))
         NewReg = AArch64::WZR;
       else if (RC->contains(AArch64::XZR))
         NewReg = AArch64::XZR;
       else {
-        LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
+        DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
         continue;
       }
-      LLVM_DEBUG(dbgs() << "    Replacing with zero register. New:\n      ");
+      DEBUG(dbgs() << "    Replacing with zero register. New:\n      ");
       MO.setReg(NewReg);
       MO.setIsDead();
-      LLVM_DEBUG(MI.print(dbgs()));
+      DEBUG(MI.print(dbgs()));
       ++NumDeadDefsReplaced;
       Changed = true;
       // Only replace one dead register, see check for zero register above.
@@ -207,7 +204,7 @@ bool AArch64DeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
-  LLVM_DEBUG(dbgs() << "***** AArch64DeadRegisterDefinitions *****\n");
+  DEBUG(dbgs() << "***** AArch64DeadRegisterDefinitions *****\n");
   Changed = false;
   for (auto &MBB : MF)
     processMachineBasicBlock(MBB);

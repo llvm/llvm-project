@@ -274,13 +274,14 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int StackSize = MF.getFrameInfo().getStackSize();
 
   #ifndef NDEBUG
-  LLVM_DEBUG(errs() << "\nFunction         : " << MF.getName() << "\n");
-  LLVM_DEBUG(errs() << "<--------->\n");
-  LLVM_DEBUG(MI.print(errs()));
-  LLVM_DEBUG(errs() << "FrameIndex         : " << FrameIndex << "\n");
-  LLVM_DEBUG(errs() << "FrameOffset        : " << Offset << "\n");
-  LLVM_DEBUG(errs() << "StackSize          : " << StackSize << "\n");
-#endif
+  DEBUG(errs() << "\nFunction         : " 
+        << MF.getName() << "\n");
+  DEBUG(errs() << "<--------->\n");
+  DEBUG(MI.print(errs()));
+  DEBUG(errs() << "FrameIndex         : " << FrameIndex << "\n");
+  DEBUG(errs() << "FrameOffset        : " << Offset << "\n");
+  DEBUG(errs() << "StackSize          : " << StackSize << "\n");
+  #endif
 
   Offset += StackSize;
 
@@ -298,8 +299,7 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
   
   assert(Offset%4 == 0 && "Misaligned stack offset");
-  LLVM_DEBUG(errs() << "Offset             : " << Offset << "\n"
-                    << "<--------->\n");
+  DEBUG(errs() << "Offset             : " << Offset << "\n" << "<--------->\n");
   Offset/=4;
   
   unsigned Reg = MI.getOperand(0).getReg();

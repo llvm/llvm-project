@@ -82,7 +82,7 @@ class Decl;
 //        | link                +-----+                  |
 //        +-->-------------------------------------------+
 
-/// Provides common interface for the Decls that can be redeclared.
+/// \brief Provides common interface for the Decls that can be redeclared.
 template<typename decl_type>
 class Redeclarable {
 protected:
@@ -176,7 +176,7 @@ protected:
     return DeclLink(DeclLink::LatestLink, Ctx);
   }
 
-  /// Points to the next redeclaration in the chain.
+  /// \brief Points to the next redeclaration in the chain.
   ///
   /// If NextIsPrevious() is true, this is a link to the previous declaration
   /// of this same Decl. If NextIsLatest() is true, this is the first
@@ -203,7 +203,7 @@ public:
       : RedeclLink(LatestDeclLink(Ctx)),
         First(static_cast<decl_type *>(this)) {}
 
-  /// Return the previous declaration of this declaration or NULL if this
+  /// \brief Return the previous declaration of this declaration or NULL if this
   /// is the first declaration.
   decl_type *getPreviousDecl() {
     if (RedeclLink.NextIsPrevious())
@@ -215,32 +215,32 @@ public:
                  static_cast<const decl_type*>(this))->getPreviousDecl();
   }
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   decl_type *getFirstDecl() { return First; }
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   const decl_type *getFirstDecl() const { return First; }
 
-  /// True if this is the first declaration in its redeclaration chain.
+  /// \brief True if this is the first declaration in its redeclaration chain.
   bool isFirstDecl() const { return RedeclLink.NextIsLatest(); }
 
-  /// Returns the most recent (re)declaration of this declaration.
+  /// \brief Returns the most recent (re)declaration of this declaration.
   decl_type *getMostRecentDecl() {
     return getFirstDecl()->getNextRedeclaration();
   }
 
-  /// Returns the most recent (re)declaration of this declaration.
+  /// \brief Returns the most recent (re)declaration of this declaration.
   const decl_type *getMostRecentDecl() const {
     return getFirstDecl()->getNextRedeclaration();
   }
 
-  /// Set the previous declaration. If PrevDecl is NULL, set this as the
+  /// \brief Set the previous declaration. If PrevDecl is NULL, set this as the
   /// first and only declaration.
   void setPreviousDecl(decl_type *PrevDecl);
 
-  /// Iterates through all the redeclarations of the same decl.
+  /// \brief Iterates through all the redeclarations of the same decl.
   class redecl_iterator {
     /// Current - The current declaration.
     decl_type *Current = nullptr;
@@ -294,7 +294,7 @@ public:
 
   using redecl_range = llvm::iterator_range<redecl_iterator>;
 
-  /// Returns an iterator range for all the redeclarations of the same
+  /// \brief Returns an iterator range for all the redeclarations of the same
   /// decl. It will iterate at least once (when this decl is the only one).
   redecl_range redecls() const {
     return redecl_range(redecl_iterator(const_cast<decl_type *>(
@@ -306,11 +306,11 @@ public:
   redecl_iterator redecls_end() const { return redecls().end(); }
 };
 
-/// Get the primary declaration for a declaration from an AST file. That
+/// \brief Get the primary declaration for a declaration from an AST file. That
 /// will be the first-loaded declaration.
 Decl *getPrimaryMergedDecl(Decl *D);
 
-/// Provides common interface for the Decls that cannot be redeclared,
+/// \brief Provides common interface for the Decls that cannot be redeclared,
 /// but can be merged if the same declaration is brought in from multiple
 /// modules.
 template<typename decl_type>
@@ -318,25 +318,25 @@ class Mergeable {
 public:
   Mergeable() = default;
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   decl_type *getFirstDecl() {
-    auto *D = static_cast<decl_type *>(this);
+    decl_type *D = static_cast<decl_type*>(this);
     if (!D->isFromASTFile())
       return D;
     return cast<decl_type>(getPrimaryMergedDecl(const_cast<decl_type*>(D)));
   }
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   const decl_type *getFirstDecl() const {
-    const auto *D = static_cast<const decl_type *>(this);
+    const decl_type *D = static_cast<const decl_type*>(this);
     if (!D->isFromASTFile())
       return D;
     return cast<decl_type>(getPrimaryMergedDecl(const_cast<decl_type*>(D)));
   }
 
-  /// Returns true if this is the first declaration.
+  /// \brief Returns true if this is the first declaration.
   bool isFirstDecl() const { return getFirstDecl() == this; }
 };
 

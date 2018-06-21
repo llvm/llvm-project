@@ -335,33 +335,6 @@ namespace AArch64PRFM {
   #include "AArch64GenSystemOperands.inc"
 }
 
-namespace AArch64SVEPRFM {
-  struct SVEPRFM : SysAlias {
-    using SysAlias::SysAlias;
-  };
-#define GET_SVEPRFM_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64SVEPredPattern {
-  struct SVEPREDPAT {
-    const char *Name;
-    uint16_t Encoding;
-  };
-#define GET_SVEPREDPAT_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
-namespace AArch64ExactFPImm {
-  struct ExactFPImm {
-    const char *Name;
-    int Enum;
-    const char *Repr;
-  };
-#define GET_EXACTFPIMM_DECL
-#include "AArch64GenSystemOperands.inc"
-}
-
 namespace AArch64PState {
   struct PState : SysAlias{
     using SysAlias::SysAlias;

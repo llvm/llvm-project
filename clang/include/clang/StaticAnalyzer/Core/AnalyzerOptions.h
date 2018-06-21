@@ -1,4 +1,4 @@
-//===- AnalyzerOptions.h - Analysis Engine Options --------------*- C++ -*-===//
+//===--- AnalyzerOptions.h - Analysis Engine Options ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,18 +19,18 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace clang {
+class ASTConsumer;
+class DiagnosticsEngine;
+class Preprocessor;
+class LangOptions;
 
 namespace ento {
-
 class CheckerBase;
-
-} // namespace ento
+}
 
 /// Analysis - Set of available source code analyses.
 enum Analyses {
@@ -76,7 +76,7 @@ enum AnalysisInliningMode {
 NumInliningModes
 };
 
-/// Describes the different kinds of C++ member functions which can be
+/// \brief Describes the different kinds of C++ member functions which can be
 /// considered for inlining by the analyzer.
 ///
 /// These options are cumulative; enabling one kind of member function will
@@ -100,7 +100,7 @@ enum CXXInlineableMemberKind {
   CIMK_Destructors
 };
 
-/// Describes the different modes of inter-procedural analysis.
+/// \brief Describes the different modes of inter-procedural analysis.
 enum IPAKind {
   IPAK_NotSet = 0,
 
@@ -123,20 +123,20 @@ enum IPAKind {
 
 class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
 public:
-  using ConfigTable = llvm::StringMap<std::string>;
+  typedef llvm::StringMap<std::string> ConfigTable;
 
   static std::vector<StringRef>
   getRegisteredCheckers(bool IncludeExperimental = false);
 
-  /// Pair of checker name and enable/disable.
-  std::vector<std::pair<std::string, bool>> CheckersControlList;
+  /// \brief Pair of checker name and enable/disable.
+  std::vector<std::pair<std::string, bool> > CheckersControlList;
   
-  /// A key-value table of use-specified configuration values.
+  /// \brief A key-value table of use-specified configuration values.
   ConfigTable Config;
-  AnalysisStores AnalysisStoreOpt = RegionStoreModel;
-  AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
-  AnalysisDiagClients AnalysisDiagOpt = PD_HTML;
-  AnalysisPurgeMode AnalysisPurgeOpt = PurgeStmt;
+  AnalysisStores AnalysisStoreOpt;
+  AnalysisConstraints AnalysisConstraintsOpt;
+  AnalysisDiagClients AnalysisDiagOpt;
+  AnalysisPurgeMode AnalysisPurgeOpt;
   
   std::string AnalyzeSpecificFunction;
 
@@ -144,10 +144,11 @@ public:
   /// generated report.
   std::string FullCompilerInvocation;
   
-  /// The maximum number of times the analyzer visits a block.
+  /// \brief The maximum number of times the analyzer visits a block.
   unsigned maxBlockVisitOnPath;
   
-  /// Disable all analyzer checks.
+  
+  /// \brief Disable all analyzer checks.
   ///
   /// This flag allows one to disable analyzer checks on the code processed by
   /// the given analysis consumer. Note, the code will get parsed and the
@@ -160,7 +161,7 @@ public:
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
 
-  /// The flag regulates if we should eagerly assume evaluations of
+  /// \brief The flag regulates if we should eagerly assume evaluations of
   /// conditionals, thus, bifurcating the path.
   ///
   /// This flag indicates how the engine should handle expressions such as: 'x =
@@ -177,16 +178,15 @@ public:
   unsigned UnoptimizedCFG : 1;
   unsigned PrintStats : 1;
   
-  /// Do not re-analyze paths leading to exhausted nodes with a different
+  /// \brief Do not re-analyze paths leading to exhausted nodes with a different
   /// strategy. We get better code coverage when retry is enabled.
   unsigned NoRetryExhausted : 1;
   
-  /// The inlining stack depth limit.
-  // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
-  unsigned InlineMaxStackDepth = 5;
+  /// \brief The inlining stack depth limit.
+  unsigned InlineMaxStackDepth;
   
-  /// The mode of function selection used during inlining.
-  AnalysisInliningMode InliningMode = NoRedundancy;
+  /// \brief The mode of function selection used during inlining.
+  AnalysisInliningMode InliningMode;
 
   enum class ExplorationStrategyKind {
     DFS,
@@ -198,15 +198,14 @@ public:
   };
 
 private:
-  ExplorationStrategyKind ExplorationStrategy = ExplorationStrategyKind::NotSet;
 
-  /// Describes the kinds for high-level analyzer mode.
+  ExplorationStrategyKind ExplorationStrategy;
+
+  /// \brief Describes the kinds for high-level analyzer mode.
   enum UserModeKind {
     UMK_NotSet = 0,
-
     /// Perform shallow but fast analyzes.
     UMK_Shallow = 1,
-
     /// Perform deep analyzes.
     UMK_Deep = 2
   };
@@ -214,10 +213,10 @@ private:
   /// Controls the high-level analyzer mode, which influences the default 
   /// settings for some of the lower-level config options (such as IPAMode).
   /// \sa getUserMode
-  UserModeKind UserMode = UMK_NotSet;
+  UserModeKind UserMode;
 
   /// Controls the mode of inter-procedural analysis.
-  IPAKind IPAMode = IPAK_NotSet;
+  IPAKind IPAMode;
 
   /// Controls which C++ member functions will be considered for inlining.
   CXXInlineableMemberKind CXXMemberInliningMode;
@@ -240,9 +239,6 @@ private:
   /// \sa mayInlineCXXStandardLibrary
   Optional<bool> InlineCXXStandardLibrary;
   
-  /// \sa includeScopesInCFG
-  Optional<bool> IncludeScopesInCFG;
-
   /// \sa mayInlineTemplateFunctions
   Optional<bool> InlineTemplateFunctions;
 
@@ -280,9 +276,6 @@ private:
   /// \sa shouldSuppressFromCXXStandardLibrary
   Optional<bool> SuppressFromCXXStandardLibrary;
 
-  /// \sa shouldCrosscheckWithZ3
-  Optional<bool> CrosscheckWithZ3;
-
   /// \sa reportIssuesInMainSourceFile
   Optional<bool> ReportIssuesInMainSourceFile;
 
@@ -314,9 +307,6 @@ private:
 
   /// \sa shouldDisplayNotesAsEvents
   Optional<bool> DisplayNotesAsEvents;
-
-  /// \sa shouldAggressivelySimplifyRelationalComparison
-  Optional<bool> AggressiveRelationalComparisonSimplification;
 
   /// \sa getCTUDir
   Optional<StringRef> CTUDir;
@@ -355,15 +345,6 @@ private:
                              bool SearchInParents = false);
 
 public:
-  AnalyzerOptions()
-      : DisableAllChecks(false), ShowCheckerHelp(false),
-        ShowEnabledCheckerList(false), AnalyzeAll(false),
-        AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
-        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
-        visualizeExplodedGraphWithGraphViz(false),
-        visualizeExplodedGraphWithUbiGraph(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), CXXMemberInliningMode() {}
-
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.
   ///
@@ -373,7 +354,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// depending on search mode).
+  /// dependening on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
@@ -391,7 +372,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// depending on search mode).
+  /// dependening on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
@@ -408,7 +389,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// depending on search mode).
+  /// dependening on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
@@ -425,7 +406,7 @@ public:
   /// specified.
   /// @param [in] C The optional checker parameter that can be used to restrict
   /// the search to the options of this particular checker (and its parents
-  /// depending on search mode).
+  /// dependening on search mode).
   /// @param [in] SearchInParents If set to true and the searched option was not
   /// specified for the given checker the options for the parent packages will
   /// be searched as well. The inner packages take precedence over the outer
@@ -434,14 +415,14 @@ public:
                               const ento::CheckerBase *C = nullptr,
                               bool SearchInParents = false);
 
-  /// Retrieves and sets the UserMode. This is a high-level option,
+  /// \brief Retrieves and sets the UserMode. This is a high-level option,
   /// which is used to set other low-level options. It is not accessible
   /// outside of AnalyzerOptions.
   UserModeKind getUserMode();
 
   ExplorationStrategyKind getExplorationStrategy();
 
-  /// Returns the inter-procedural analysis mode.
+  /// \brief Returns the inter-procedural analysis mode.
   IPAKind getIPAMode();
 
   /// Returns the option controlling which C++ member functions will be
@@ -489,12 +470,6 @@ public:
   /// This is controlled by the 'cfg-rich-constructors' config options,
   /// which accepts the values "true" and "false".
   bool includeRichConstructorsInCFG();
-
-  /// Returns whether or not scope information should be included in the CFG.
-  ///
-  /// This is controlled by the 'cfg-scope-info' config option, which accepts
-  /// the values "true" and "false".
-  bool includeScopesInCFG();
 
   /// Returns whether or not C++ standard library functions may be considered
   /// for inlining.
@@ -577,13 +552,6 @@ public:
   /// This is controlled by the 'suppress-c++-stdlib' config option,
   /// which accepts the values "true" and "false".
   bool shouldSuppressFromCXXStandardLibrary();
-
-  /// Returns whether bug reports should be crosschecked with the Z3
-  /// constraint manager backend.
-  ///
-  /// This is controlled by the 'crosscheck-with-z3' config option,
-  /// which accepts the values "true" and "false".
-  bool shouldCrosscheckWithZ3();
 
   /// Returns whether or not the diagnostic report should be always reported
   /// in the main source file and not the headers.
@@ -679,20 +647,6 @@ public:
   /// to false when unset.
   bool shouldDisplayNotesAsEvents();
 
-  /// Returns true if SValBuilder should rearrange comparisons of symbolic
-  /// expressions which consist of a sum of a symbol and a concrete integer
-  /// into the format where symbols are on the left-hand side and the integer
-  /// is on the right. This is only done if both symbols and both concrete
-  /// integers are signed, greater than or equal to the quarter of the minimum
-  /// value of the type and less than or equal to the quarter of the maximum
-  /// value of that type.
-  ///
-  /// A + n <REL> B + m becomes A - B <REL> m - n, where A and B symbolic,
-  /// n and m are integers. <REL> is any of '==', '!=', '<', '<=', '>' or '>='.
-  /// The rearrangement also happens with '-' instead of '+' on either or both
-  /// side and also if any or both integers are missing.
-  bool shouldAggressivelySimplifyRelationalComparison();
-
   /// Returns the directory containing the CTU related files.
   StringRef getCTUDir();
 
@@ -703,10 +657,38 @@ public:
   /// This is an experimental feature to inline functions from another
   /// translation units.
   bool naiveCTUEnabled();
+
+public:
+  AnalyzerOptions() :
+    AnalysisStoreOpt(RegionStoreModel),
+    AnalysisConstraintsOpt(RangeConstraintsModel),
+    AnalysisDiagOpt(PD_HTML),
+    AnalysisPurgeOpt(PurgeStmt),
+    DisableAllChecks(0),
+    ShowCheckerHelp(0),
+    ShowEnabledCheckerList(0),
+    AnalyzeAll(0),
+    AnalyzerDisplayProgress(0),
+    AnalyzeNestedBlocks(0),
+    eagerlyAssumeBinOpBifurcation(0),
+    TrimGraph(0),
+    visualizeExplodedGraphWithGraphViz(0),
+    visualizeExplodedGraphWithUbiGraph(0),
+    UnoptimizedCFG(0),
+    PrintStats(0),
+    NoRetryExhausted(0),
+    // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
+    InlineMaxStackDepth(5),
+    InliningMode(NoRedundancy),
+    ExplorationStrategy(ExplorationStrategyKind::NotSet),
+    UserMode(UMK_NotSet),
+    IPAMode(IPAK_NotSet),
+    CXXMemberInliningMode() {}
+
 };
   
-using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
+typedef IntrusiveRefCntPtr<AnalyzerOptions> AnalyzerOptionsRef;
   
-} // namespace clang
+}
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H
+#endif

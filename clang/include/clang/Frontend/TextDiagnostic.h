@@ -20,7 +20,7 @@
 
 namespace clang {
 
-/// Class to encapsulate the logic for formatting and printing a textual
+/// \brief Class to encapsulate the logic for formatting and printing a textual
 /// diagnostic message.
 ///
 /// This class provides an interface for building and emitting a textual
@@ -42,7 +42,7 @@ public:
 
   ~TextDiagnostic() override;
 
-  /// Print the diagonstic level to a raw_ostream.
+  /// \brief Print the diagonstic level to a raw_ostream.
   ///
   /// This is a static helper that handles colorizing the level and formatting
   /// it into an arbitrary output stream. This is used internally by the
@@ -54,7 +54,7 @@ public:
                                    bool ShowColors,
                                    bool CLFallbackMode = false);
 
-  /// Pretty-print a diagnostic message to a raw_ostream.
+  /// \brief Pretty-print a diagnostic message to a raw_ostream.
   ///
   /// This is a static helper to handle the line wrapping, colorizing, and
   /// rendering of a diagnostic message to a particular ostream. It is

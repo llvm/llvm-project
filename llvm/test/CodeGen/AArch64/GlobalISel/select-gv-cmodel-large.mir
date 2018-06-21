@@ -24,8 +24,7 @@ regBankSelected: true
 stack:
   - { id: 0, name: retval, type: default, offset: 0, size: 4, alignment: 4,
       stack-id: 0, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '',
-      debug-info-location: '' }
+      di-variable: '', di-expression: '', di-location: '' }
 constants:
 body:             |
   bb.1:
@@ -40,12 +39,12 @@ body:             |
     ; CHECK: [[MOVKXi4:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi3]], target-flags(aarch64-g2, aarch64-nc) @foo2, 32
     ; CHECK: [[MOVKXi5:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi4]], target-flags(aarch64-g3) @foo2, 48
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[MOVKXi5]]
-    ; CHECK: STRWui $wzr, %stack.0.retval, 0 :: (store 4 into %ir.retval)
+    ; CHECK: STRWui %wzr, %stack.0.retval, 0 :: (store 4 into %ir.retval)
     ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo1, i64 0, i64 0)`)
     ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY1]], 0 :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo2, i64 0, i64 0)`)
     ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRWui]], [[LDRWui1]]
-    ; CHECK: $w0 = COPY [[ADDWrr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK: %w0 = COPY [[ADDWrr]]
+    ; CHECK: RET_ReallyLR implicit %w0
     %1:gpr(s32) = G_CONSTANT i32 0
     %4:gpr(p0) = G_GLOBAL_VALUE @foo1
     %3:gpr(p0) = COPY %4(p0)
@@ -56,7 +55,7 @@ body:             |
     %2:gpr(s32) = G_LOAD %3(p0) :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo1, i64 0, i64 0)`)
     %5:gpr(s32) = G_LOAD %6(p0) :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo2, i64 0, i64 0)`)
     %8:gpr(s32) = G_ADD %2, %5
-    $w0 = COPY %8(s32)
-    RET_ReallyLR implicit $w0
+    %w0 = COPY %8(s32)
+    RET_ReallyLR implicit %w0
 
 ...

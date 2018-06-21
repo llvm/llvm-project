@@ -66,8 +66,8 @@ public:
   //    {
   //    }
   //
-  // Then you can use the llvm casting on any "TypeSystem *" to get an instance
-  // of your subclass.
+  // Then you can use the llvm casting on any "TypeSystem *" to get an
+  // instance of your subclass.
   //----------------------------------------------------------------------
   enum LLVMCastKind {
     eKindClang,
@@ -91,10 +91,15 @@ public:
                                            Module *module);
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Target *target,
+                                           const char *compiler_options);
+
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Target *target);
 
   // Free up any resources associated with this TypeSystem.  Done before
-  // removing all the TypeSystems from the TypeSystemMap.
+  // removing
+  // all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
   virtual DWARFASTParser *GetDWARFParser() { return nullptr; }
@@ -186,7 +191,8 @@ public:
 
   virtual bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                                      CompilerType *target_type, // Can pass NULL
-                                     bool check_cplusplus, bool check_objc) = 0;
+                                     bool check_cplusplus, bool check_objc,
+                                     bool check_swift) = 0;
 
   virtual bool IsPointerType(lldb::opaque_compiler_type_t type,
                              CompilerType *pointee_type) = 0;
@@ -197,6 +203,17 @@ public:
 
   // TypeSystems can support more than one language
   virtual bool SupportsLanguage(lldb::LanguageType language) = 0;
+
+  //----------------------------------------------------------------------
+  // Check if the current module or target that was used to create this
+  // type system is compatible with the TypeSystem plug-in.
+  //
+  // Sometimes as languages are being developed the language can change
+  // and the version of the runtime information in a module is out of date
+  // with this type system. For such cases, languages can check and return
+  // an error.
+  //----------------------------------------------------------------------
+  virtual Status IsCompatible();
 
   //----------------------------------------------------------------------
   // Type Completion
@@ -215,6 +232,18 @@ public:
   //----------------------------------------------------------------------
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
+
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type);
+
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  virtual ConstString GetTypeSymbolName(lldb::opaque_compiler_type_t type);
+
+  // Defaults to GetTypeName(type).  Override if your language desires
+  // specialized behavior.
+  virtual ConstString GetMangledTypeName(lldb::opaque_compiler_type_t type);
 
   virtual uint32_t
   GetTypeInfo(lldb::opaque_compiler_type_t type,
@@ -237,8 +266,11 @@ public:
 
   virtual CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) = 0;
+
   // Returns -1 if this isn't a function of if the function doesn't have a
-  // prototype Returns a value >= 0 if there is a prototype.
+  // prototype
+  // Returns a value >= 0 if there is a prototype.
   virtual int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) = 0;
 
   virtual CompilerType
@@ -279,6 +311,8 @@ public:
 
   virtual uint64_t GetBitSize(lldb::opaque_compiler_type_t type,
                               ExecutionContextScope *exe_scope) = 0;
+
+  virtual uint64_t GetByteStride(lldb::opaque_compiler_type_t type) = 0;
 
   virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                                      uint64_t &count) = 0;
@@ -330,8 +364,8 @@ public:
       bool &child_is_base_class, bool &child_is_deref_of_parent,
       ValueObject *valobj, uint64_t &language_flags) = 0;
 
-  // Lookup a child given a name. This function will match base class names and
-  // member member names in "clang_type" only, not descendants.
+  // Lookup a child given a name. This function will match base class names
+  // and member member names in "clang_type" only, not descendants.
   virtual uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                                            const char *name,
                                            bool omit_empty_base_classes) = 0;
@@ -356,6 +390,9 @@ public:
   virtual llvm::Optional<CompilerType::IntegralTemplateArgument>
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx);
 
+  virtual lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx);
+  virtual CompilerType GetGenericArgumentType(void *type, size_t idx);
+
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------
@@ -373,7 +410,8 @@ public:
                              lldb::offset_t data_offset, size_t data_byte_size,
                              uint32_t bitfield_bit_size,
                              uint32_t bitfield_bit_offset,
-                             ExecutionContextScope *exe_scope) = 0;
+                             ExecutionContextScope *exe_scope,
+                             bool is_base_class) = 0;
 
   virtual void
   DumpTypeDescription(lldb::opaque_compiler_type_t type) = 0; // Dump to stdout
@@ -393,8 +431,8 @@ public:
                            lldb::offset_t data_offset,
                            size_t data_byte_size) = 0;
 
-  // Converts "s" to a floating point value and place resulting floating point
-  // bytes in the "dst" buffer.
+  // Converts "s" to a floating point value and place resulting floating
+  // point bytes in the "dst" buffer.
   virtual size_t ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
                                            const char *s, uint8_t *dst,
                                            size_t dst_size) = 0;
@@ -432,6 +470,8 @@ public:
 
   // If the current object represents a typedef type, get the underlying type
   virtual CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsVectorType(lldb::opaque_compiler_type_t type,
                             CompilerType *element_type, uint64_t *size) = 0;
@@ -479,17 +519,23 @@ public:
   virtual LazyBool ShouldPrintAsOneLiner(void *type, ValueObject *valobj);
 
   // Type systems can have types that are placeholder types, which are meant to
-  // indicate the presence of a type, but offer no actual information about
-  // said types, and leave the burden of actually figuring type information out
-  // to dynamic type resolution. For instance a language with a generics
-  // system, can use placeholder types to indicate "type argument goes here",
-  // without promising uniqueness of the placeholder, nor attaching any
-  // actually idenfiable information to said placeholder. This API allows type
-  // systems to tell LLDB when such a type has been encountered In response,
-  // the debugger can react by not using this type as a cache entry in any
-  // type-specific way For instance, LLDB will currently not cache any
-  // formatters that are discovered on such a type as attributable to the
-  // meaningless type itself, instead preferring to use the dynamic type
+  // indicate
+  // the presence of a type, but offer no actual information about said types,
+  // and leave
+  // the burden of actually figuring type information out to dynamic type
+  // resolution. For instance
+  // a language with a generics system, can use placeholder types to indicate
+  // "type argument goes here",
+  // without promising uniqueness of the placeholder, nor attaching any actually
+  // idenfiable information
+  // to said placeholder. This API allows type systems to tell LLDB when such a
+  // type has been encountered
+  // In response, the debugger can react by not using this type as a cache entry
+  // in any type-specific way
+  // For instance, LLDB will currently not cache any formatters that are
+  // discovered on such a type as
+  // attributable to the meaningless type itself, instead preferring to use the
+  // dynamic type
   virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
 
 protected:
@@ -500,21 +546,29 @@ protected:
 class TypeSystemMap {
 public:
   TypeSystemMap();
+  TypeSystemMap(const TypeSystemMap &rhs);
   ~TypeSystemMap();
+
+  // Clear calls Finalize on all the TypeSystems managed by this map, and then
+  // empties the map.
+  void operator=(const TypeSystemMap &rhs);
 
   // Clear calls Finalize on all the TypeSystems managed by this map, and then
   // empties the map.
   void Clear();
 
-  // Iterate through all of the type systems that are created. Return true from
-  // callback to keep iterating, false to stop iterating.
+  // Iterate through all of the type systems that are created. Return true
+  // from callback to keep iterating, false to stop iterating.
   void ForEach(std::function<bool(TypeSystem *)> const &callback);
 
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language,
                                        Module *module, bool can_create);
 
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language,
-                                       Target *target, bool can_create);
+                                       Target *target, bool can_create,
+                                       const char *compiler_options);
+
+  void RemoveTypeSystemsForLanguage(lldb::LanguageType language);
 
 protected:
   // This function does not take the map mutex, and should only be called from

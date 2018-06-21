@@ -1,0 +1,13 @@
+// Test that type lookup chooses the right language.
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+// no Swift info, ObjC
+:type lookup NSArchiver
+// CHECK: @interface NSArchiver
+
+// Swift info, no ObjC
+import Foundation
+:type lookup NSArchiver
+// CHECK: class NSArchiver

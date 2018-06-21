@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements the wasm-specific dumper for llvm-objdump.
+/// \brief This file implements the wasm-specific dumper for llvm-objdump.
 ///
 //===----------------------------------------------------------------------===//
 

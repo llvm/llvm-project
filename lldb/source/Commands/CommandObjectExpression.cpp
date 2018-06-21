@@ -10,8 +10,14 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "swift/AST/Identifier.h"
+#include "swift/AST/Module.h"
+#include "swift/IDE/REPLCodeCompletion.h"
+#include "swift/IDE/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 // Project includes
 #include "CommandObjectExpression.h"
@@ -27,7 +33,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
@@ -61,7 +67,7 @@ static OptionDefinition g_expression_options[] = {
                                                                                                                                                                                   "and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
   {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",              'l', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeLanguage,             "Specifies the Language to use when parsing the expression.  If not set the target.language "
                                                                                                                                                                                   "setting is used." },
-  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",          'X', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeLanguage,             "If true, simple fix-it hints will be automatically applied to the expression." },
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",          'X', OptionParser::eRequiredArgument, nullptr, nullptr,                      0, eArgTypeBoolean,              "If true, simple fix-it hints will be automatically applied to the expression." },
   {LLDB_OPT_SET_1,                  false, "description-verbosity", 'v', OptionParser::eOptionalArgument, nullptr, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity, "How verbose should the output of this expression be, if the object description is asked for."},
   {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "top-level",             'p', OptionParser::eNoArgument,       nullptr, nullptr,                      0, eArgTypeNone,                 "Interpret the expression as a complete translation unit, without injecting it into the local "
                                                                                                                                                                                   "context.  Allows declaration of persistent, top-level entities without a $ prefix."},
@@ -89,7 +95,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   case 'a': {
     bool success;
     bool result;
-    result = OptionArgParser::ToBoolean(option_arg, true, &success);
+    result = Args::StringToBoolean(option_arg, true, &success);
     if (!success)
       error.SetErrorStringWithFormat(
           "invalid all-threads value setting: \"%s\"",
@@ -100,7 +106,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'i': {
     bool success;
-    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
     if (success)
       ignore_breakpoints = tmp_value;
     else
@@ -112,7 +118,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'j': {
     bool success;
-    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
     if (success)
       allow_jit = tmp_value;
     else
@@ -132,7 +138,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'u': {
     bool success;
-    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
     if (success)
       unwind_on_error = tmp_value;
     else
@@ -147,8 +153,8 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
       m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityFull;
       break;
     }
-    m_verbosity = (LanguageRuntimeDescriptionDisplayVerbosity)
-        OptionArgParser::ToOptionEnum(
+    m_verbosity =
+        (LanguageRuntimeDescriptionDisplayVerbosity)Args::StringToOptionEnum(
             option_arg, GetDefinitions()[option_idx].enum_values, 0, error);
     if (!error.Success())
       error.SetErrorStringWithFormat(
@@ -168,7 +174,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   case 'X': {
     bool success;
-    bool tmp_value = OptionArgParser::ToBoolean(option_arg, true, &success);
+    bool tmp_value = Args::StringToBoolean(option_arg, true, &success);
     if (success)
       auto_apply_fixits = tmp_value ? eLazyBoolYes : eLazyBoolNo;
     else
@@ -203,6 +209,9 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   try_all_threads = true;
   timeout = 0;
   debug = false;
+#ifdef LLDB_CONFIGURATION_DEBUG
+  playground = false;
+#endif
   language = eLanguageTypeUnknown;
   m_verbosity = eLanguageRuntimeDescriptionDisplayVerbosityCompact;
   auto_apply_fixits = eLazyBoolCalculate;
@@ -224,8 +233,13 @@ CommandObjectExpression::CommandObjectExpression(
           "", eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_option_group(), m_format_options(eFormatDefault),
-      m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,
-                    true),
+      m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into Swift REPL",
+                    false, true),
+#ifdef LLDB_CONFIGURATION_DEBUG
+      m_playground_option(LLDB_OPT_SET_1, false, "playground", 'z',
+                          "Execute the expresssion as a playground expression",
+                          false, true),
+#endif
       m_command_options(), m_expr_line_count(0), m_expr_lines() {
   SetHelpLong(
       R"(
@@ -300,6 +314,9 @@ Examples:
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL,
                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2);
   m_option_group.Append(&m_repl_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_3);
+#ifdef LLDB_CONFIGURATION_DEBUG
+  m_option_group.Append(&m_playground_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+#endif
   m_option_group.Finalize();
 }
 
@@ -322,9 +339,9 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
                                                  Stream *output_stream,
                                                  Stream *error_stream,
                                                  CommandReturnObject *result) {
-  // Don't use m_exe_ctx as this might be called asynchronously after the
-  // command object DoExecute has finished when doing multi-line expression
-  // that use an input reader...
+  // Don't use m_exe_ctx as this might be called asynchronously
+  // after the command object DoExecute has finished when doing
+  // multi-line expression that use an input reader...
   ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
 
   Target *target = exe_ctx.GetTargetPtr();
@@ -345,7 +362,15 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
     options.SetUseDynamic(m_varobj_options.use_dynamic);
     options.SetTryAllThreads(m_command_options.try_all_threads);
     options.SetDebug(m_command_options.debug);
-    options.SetLanguage(m_command_options.language);
+#ifdef LLDB_CONFIGURATION_DEBUG
+    options.SetPlaygroundTransformEnabled(m_command_options.playground);
+#endif
+
+    // If the language was not specified in the expression command,
+    // set it to the language in the target's properties if
+    // specified, else default to the language for the frame.
+    if (m_command_options.language != eLanguageTypeUnknown)
+      options.SetLanguage(m_command_options.language);
     options.SetExecutionPolicy(
         m_command_options.allow_jit
             ? EvaluateExpressionOptions::default_execution_policy
@@ -363,8 +388,8 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
     if (m_command_options.top_level)
       options.SetExecutionPolicy(eExecutionPolicyTopLevel);
 
-    // If there is any chance we are going to stop and want to see what went
-    // wrong with our expression, we should generate debug info
+    // If there is any chance we are going to stop and want to see
+    // what went wrong with our expression, we should generate debug info
     if (!m_command_options.ignore_breakpoints ||
         !m_command_options.unwind_on_error)
       options.SetGenerateDebugInfo(true);
@@ -380,7 +405,7 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
     // We only tell you about the FixIt if we applied it.  The compiler errors
     // will suggest the FixIt if it parsed.
     if (error_stream && !m_fixed_expression.empty() &&
-        target->GetEnableNotifyAboutFixIts()) {
+        (m_fixed_expression != expr) && target->GetEnableNotifyAboutFixIts()) {
       if (success == eExpressionCompleted)
         error_stream->Printf(
             "  Fix-it applied, fixed expression was: \n    %s\n",
@@ -390,8 +415,20 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
     if (result_valobj_sp) {
       Format format = m_format_options.GetFormat();
 
-      if (result_valobj_sp->GetError().Success()) {
-        if (format != eFormatVoid) {
+      const Status &expr_error = result_valobj_sp->GetError();
+      if (expr_error.Success()) {
+        bool treat_as_void = (format == eFormatVoid);
+        // if we are asked to suppress void, check if this is the empty tuple
+        // type, and if so suppress it
+        if (!treat_as_void && !m_interpreter.GetDebugger().GetNotifyVoid()) {
+          const CompilerType &expr_type(result_valobj_sp->GetCompilerType());
+          Flags expr_type_flags(expr_type.GetTypeInfo());
+          if (expr_type_flags.AllSet(eTypeIsSwift | eTypeIsTuple)) {
+            treat_as_void = (expr_type.GetNumFields() == 0);
+          }
+        }
+
+        if (!treat_as_void) {
           if (format != eFormatDefault)
             result_valobj_sp->SetFormat(format);
 
@@ -426,8 +463,22 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
 
           if (result)
             result->SetStatus(eReturnStatusSuccessFinishResult);
+        } else if (expr_error.GetError() == lldb::eExpressionStoppedForDebug) {
+          const char *error_cstr = expr_error.AsCString();
+          if (error_cstr && error_cstr[0]) {
+            const size_t error_cstr_len = strlen(error_cstr);
+            const bool ends_with_newline =
+                error_cstr[error_cstr_len - 1] == '\n';
+            error_stream->Write(error_cstr, error_cstr_len);
+            if (!ends_with_newline)
+              error_stream->EOL();
+          } else {
+            error_stream->PutCString("error: unknown error\n");
+          }
+          if (result)
+            result->SetStatus(eReturnStatusSuccessFinishNoResult);
         } else {
-          const char *error_cstr = result_valobj_sp->GetError().AsCString();
+          const char *error_cstr = expr_error.AsCString();
           if (error_cstr && error_cstr[0]) {
             const size_t error_cstr_len = strlen(error_cstr);
             const bool ends_with_newline =
@@ -475,8 +526,9 @@ bool CommandObjectExpression::IOHandlerIsInputComplete(IOHandler &io_handler,
   // An empty lines is used to indicate the end of input
   const size_t num_lines = lines.GetSize();
   if (num_lines > 0 && lines[num_lines - 1].empty()) {
-    // Remove the last empty line from "lines" so it doesn't appear in our
-    // resulting input and return true to indicate we are done getting lines
+    // Remove the last empty line from "lines" so it doesn't appear
+    // in our resulting input and return true to indicate we are done
+    // getting lines
     lines.PopBack();
     return true;
   }
@@ -487,12 +539,32 @@ void CommandObjectExpression::GetMultilineExpression() {
   m_expr_lines.clear();
   m_expr_line_count = 0;
 
+  // If we didn't set the language, make sure we get the Swift language right
+  // if we are stopped in a swift compile unit. This will help us use the
+  // correct input reader name so our C/C++/ObjC expression history will be
+  // separate from the Swift expression history
+  if (m_command_options.language == eLanguageTypeUnknown) {
+    StackFrame *frame = m_exe_ctx.GetFramePtr();
+    if (frame) {
+      SymbolContext sym_ctx =
+          frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
+      if (sym_ctx.comp_unit &&
+          sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypeSwift)
+        m_command_options.language = lldb::eLanguageTypeSwift;
+    }
+  }
+
   Debugger &debugger = GetCommandInterpreter().GetDebugger();
   bool color_prompt = debugger.GetUseColor();
   const bool multiple_lines = true; // Get multiple lines
+
+  const char *input_reader_name =
+      m_command_options.language == lldb::eLanguageTypeSwift ? "lldb-swift"
+                                                             : "lldb-expr";
+
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::Expression,
-                            "lldb-expr", // Name of input reader for history
+                            input_reader_name, // Name of input reader for history
                             llvm::StringRef(), // No prompt
                             llvm::StringRef(), // Continuation prompt
                             multiple_lines, color_prompt,
@@ -550,9 +622,19 @@ bool CommandObjectExpression::DoExecute(const char *command,
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
+#ifdef LLDB_CONFIGURATION_DEBUG
+      m_command_options.playground =
+          m_playground_option.GetOptionValue().GetCurrentValue();
+#endif
 
       if (m_repl_option.GetOptionValue().GetCurrentValue()) {
         Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+
+        // If we weren't passed in a target, let's see if the dummy target can
+        // make a REPL:
+        if (!target)
+          target = GetDummyTarget();
+
         if (target) {
           // Drop into REPL
           m_expr_lines.clear();
@@ -561,16 +643,19 @@ bool CommandObjectExpression::DoExecute(const char *command,
           Debugger &debugger = target->GetDebugger();
 
           // Check if the LLDB command interpreter is sitting on top of a REPL
-          // that launched it...
+          // that
+          // launched it...
           if (debugger.CheckTopIOHandlerTypes(
                   IOHandler::Type::CommandInterpreter, IOHandler::Type::REPL)) {
             // the LLDB command interpreter is sitting on top of a REPL that
-            // launched it, so just say the command interpreter is done and
-            // fall back to the existing REPL
+            // launched it,
+            // so just say the command interpreter is done and fall back to the
+            // existing REPL
             m_interpreter.GetIOHandler(false)->SetIsDone(true);
           } else {
             // We are launching the REPL on top of the current LLDB command
-            // interpreter, so just push one
+            // interpreter,
+            // so just push one
             bool initialize = false;
             Status repl_error;
             REPLSP repl_sp(target->GetREPL(
@@ -638,12 +723,14 @@ bool CommandObjectExpression::DoExecute(const char *command,
       }
       history.AppendString(fixed_command);
     }
-    // Increment statistics to record this expression evaluation success.
+    // Increment statistics to record this expression evaluation
+    // success.
     target->IncrementStats(StatisticKind::ExpressionSuccessful);
     return true;
   }
 
-  // Increment statistics to record this expression evaluation failure.
+  // Increment statistics to record this expression evaluation
+  // failure.
   target->IncrementStats(StatisticKind::ExpressionFailure);
   result.SetStatus(eReturnStatusFailed);
   return false;

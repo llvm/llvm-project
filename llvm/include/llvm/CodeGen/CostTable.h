@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Cost tables and simple lookup functions
+/// \brief Cost tables and simple lookup functions
 ///
 //===----------------------------------------------------------------------===//
 
@@ -17,7 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/CodeGen/MachineValueType.h"
 
 namespace llvm {
 

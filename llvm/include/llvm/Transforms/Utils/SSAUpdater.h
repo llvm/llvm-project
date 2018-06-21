@@ -30,7 +30,7 @@ class Type;
 class Use;
 class Value;
 
-/// Helper class for SSA formation on a set of values defined in
+/// \brief Helper class for SSA formation on a set of values defined in
 /// multiple blocks.
 ///
 /// This is used when code duplication or another unstructured
@@ -62,25 +62,25 @@ public:
   SSAUpdater &operator=(const SSAUpdater &) = delete;
   ~SSAUpdater();
 
-  /// Reset this object to get ready for a new set of SSA updates with
+  /// \brief Reset this object to get ready for a new set of SSA updates with
   /// type 'Ty'.
   ///
   /// PHI nodes get a name based on 'Name'.
   void Initialize(Type *Ty, StringRef Name);
 
-  /// Indicate that a rewritten value is available in the specified block
+  /// \brief Indicate that a rewritten value is available in the specified block
   /// with the specified value.
   void AddAvailableValue(BasicBlock *BB, Value *V);
 
-  /// Return true if the SSAUpdater already has a value for the specified
+  /// \brief Return true if the SSAUpdater already has a value for the specified
   /// block.
   bool HasValueForBlock(BasicBlock *BB) const;
 
-  /// Construct SSA form, materializing a value that is live at the end
+  /// \brief Construct SSA form, materializing a value that is live at the end
   /// of the specified block.
   Value *GetValueAtEndOfBlock(BasicBlock *BB);
 
-  /// Construct SSA form, materializing a value that is live in the
+  /// \brief Construct SSA form, materializing a value that is live in the
   /// middle of the specified block.
   ///
   /// \c GetValueInMiddleOfBlock is the same as \c GetValueAtEndOfBlock except
@@ -102,7 +102,7 @@ public:
   /// merge the appropriate values, and this value isn't live out of the block.
   Value *GetValueInMiddleOfBlock(BasicBlock *BB);
 
-  /// Rewrite a use of the symbolic value.
+  /// \brief Rewrite a use of the symbolic value.
   ///
   /// This handles PHI nodes, which use their value in the corresponding
   /// predecessor. Note that this will not work if the use is supposed to be
@@ -111,7 +111,7 @@ public:
   /// be below it.
   void RewriteUse(Use &U);
 
-  /// Rewrite a use like \c RewriteUse but handling in-block definitions.
+  /// \brief Rewrite a use like \c RewriteUse but handling in-block definitions.
   ///
   /// This version of the method can rewrite uses in the same block as
   /// a definition, because it assumes that all uses of a value are below any
@@ -122,7 +122,7 @@ private:
   Value *GetValueAtEndOfBlockInternal(BasicBlock *BB);
 };
 
-/// Helper class for promoting a collection of loads and stores into SSA
+/// \brief Helper class for promoting a collection of loads and stores into SSA
 /// Form using the SSAUpdater.
 ///
 /// This handles complexities that SSAUpdater doesn't, such as multiple loads
@@ -139,32 +139,32 @@ public:
                        SSAUpdater &S, StringRef Name = StringRef());
   virtual ~LoadAndStorePromoter() = default;
 
-  /// This does the promotion.
+  /// \brief This does the promotion.
   ///
   /// Insts is a list of loads and stores to promote, and Name is the basename
   /// for the PHIs to insert. After this is complete, the loads and stores are
   /// removed from the code.
   void run(const SmallVectorImpl<Instruction *> &Insts) const;
 
-  /// Return true if the specified instruction is in the Inst list.
+  /// \brief Return true if the specified instruction is in the Inst list.
   ///
   /// The Insts list is the one passed into the constructor. Clients should
   /// implement this with a more efficient version if possible.
   virtual bool isInstInList(Instruction *I,
                             const SmallVectorImpl<Instruction *> &Insts) const;
 
-  /// This hook is invoked after all the stores are found and inserted as
+  /// \brief This hook is invoked after all the stores are found and inserted as
   /// available values.
   virtual void doExtraRewritesBeforeFinalDeletion() const {}
 
-  /// Clients can choose to implement this to get notified right before
+  /// \brief Clients can choose to implement this to get notified right before
   /// a load is RAUW'd another value.
   virtual void replaceLoadWithValue(LoadInst *LI, Value *V) const {}
 
-  /// Called before each instruction is deleted.
+  /// \brief Called before each instruction is deleted.
   virtual void instructionDeleted(Instruction *I) const {}
 
-  /// Called to update debug info associated with the instruction.
+  /// \brief Called to update debug info associated with the instruction.
   virtual void updateDebugInfo(Instruction *I) const {}
 };
 

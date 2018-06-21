@@ -273,7 +273,7 @@ def AllocSizeDocs : Documentation {
   let Content = [{
 The ``alloc_size`` attribute can be placed on functions that return pointers in
 order to hint to the compiler how many bytes of memory will be available at the
-returned pointer. ``alloc_size`` takes one or two arguments.
+returned poiner. ``alloc_size`` takes one or two arguments.
 
 - ``alloc_size(N)`` implies that argument number N equals the number of
   available bytes at the returned pointer.
@@ -311,7 +311,7 @@ def AllocAlignDocs : Documentation {
   let Content = [{
 Use ``__attribute__((alloc_align(<alignment>))`` on a function
 declaration to specify that the return value of the function (which must be a
-pointer type) is at least as aligned as the value of the indicated parameter. The
+pointer type) is at least as aligned as the value of the indicated parameter. The 
 parameter is given by its index in the list of formal parameters; the first
 parameter has index 1 unless the function is a C++ non-static member function,
 in which case the first parameter has index 2 to account for the implicit ``this``
@@ -330,7 +330,7 @@ parameter.
   void *Foo::b(void *v, size_t align) __attribute__((alloc_align(3)));
 
 Note that this attribute merely informs the compiler that a function always
-returns a sufficiently aligned pointer. It does not cause the compiler to
+returns a sufficiently aligned pointer. It does not cause the compiler to 
 emit code to enforce that alignment.  The behavior is undefined if the returned
 poitner is not sufficiently aligned.
   }];
@@ -913,10 +913,10 @@ in the metadata name for that object. The `objc_runtime_name`
 attribute allows annotated interfaces or protocols to use the
 specified string argument in the object's metadata name instead of the
 default name.
-
+        
 **Usage**: ``__attribute__((objc_runtime_name("MyLocalName")))``.  This attribute
 can only be placed before an @protocol or @interface declaration:
-
+        
 .. code-block:: objc
 
   __attribute__((objc_runtime_name("MyLocalName")))
@@ -1474,25 +1474,6 @@ for the function.
 Example "subtarget features" from the x86 backend include: "mmx", "sse", "sse4.2",
 "avx", "xop" and largely correspond to the machine specific options handled by
 the front end.
-
-Additionally, this attribute supports function multiversioning for ELF based
-x86/x86-64 targets, which can be used to create multiple implementations of the
-same function that will be resolved at runtime based on the priority of their
-``target`` attribute strings. A function is considered a multiversioned function
-if either two declarations of the function have different ``target`` attribute
-strings, or if it has a ``target`` attribute string of ``default``.  For
-example:
-
-  .. code-block:: c++
-
-    __attribute__((target("arch=atom")))
-    void foo() {} // will be called on 'atom' processors.
-    __attribute__((target("default")))
-    void foo() {} // will be called on any other processors.
-
-All multiversioned functions must contain a ``default`` (fallback)
-implementation, otherwise usages of the function are considered invalid.
-Additionally, a function may not become multiversioned after its first use.
 }];
 }
 
@@ -1804,14 +1785,13 @@ This attribute accepts a single parameter that must be one of the following:
 def NoSanitizeDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-Use the ``no_sanitize`` attribute on a function or a global variable
-declaration to specify that a particular instrumentation or set of
-instrumentations should not be applied. The attribute takes a list of
-string literals, which have the same meaning as values accepted by the
-``-fno-sanitize=`` flag. For example,
-``__attribute__((no_sanitize("address", "thread")))`` specifies that
-AddressSanitizer and ThreadSanitizer should not be applied to the
-function or variable.
+Use the ``no_sanitize`` attribute on a function declaration to specify
+that a particular instrumentation or set of instrumentations should not be
+applied to that function. The attribute takes a list of string literals,
+which have the same meaning as values accepted by the ``-fno-sanitize=``
+flag. For example, ``__attribute__((no_sanitize("address", "thread")))``
+specifies that AddressSanitizer and ThreadSanitizer should not be applied
+to the function.
 
 See :ref:`Controlling Code Generation <controlling-code-generation>` for a
 full list of supported sanitizer flags.
@@ -1826,9 +1806,9 @@ def NoSanitizeAddressDocs : Documentation {
   let Content = [{
 .. _langext-address_sanitizer:
 
-Use ``__attribute__((no_sanitize_address))`` on a function or a global
-variable declaration to specify that address safety instrumentation
-(e.g. AddressSanitizer) should not be applied.
+Use ``__attribute__((no_sanitize_address))`` on a function declaration to
+specify that address safety instrumentation (e.g. AddressSanitizer) should
+not be applied to that function.
   }];
 }
 
@@ -2278,11 +2258,11 @@ Attribute ``trivial_abi`` has no effect in the following cases:
 
 - The class directly declares a virtual base or virtual methods.
 - The class has a base class that is non-trivial for the purposes of calls.
-- The class has a non-static data member whose type is non-trivial for the purposes of calls, which includes:
-
-  - classes that are non-trivial for the purposes of calls
-  - __weak-qualified types in Objective-C++
-  - arrays of any of the above
+- The class has a non-static data member whose type is non-trivial for the
+purposes of calls, which includes:
+ - classes that are non-trivial for the purposes of calls
+ - __weak-qualified types in Objective-C++
+ - arrays of any of the above
   }];
 }
 
@@ -2627,7 +2607,7 @@ The ``_Nullable`` nullability qualifier indicates that a value of the ``_Nullabl
 
     int fetch_or_zero(int * _Nullable ptr);
 
-a caller of ``fetch_or_zero`` can provide null.
+a caller of ``fetch_or_zero`` can provide null. 
   }];
 }
 
@@ -2724,6 +2704,65 @@ where clause is one of the following:
   }];
 }
 
+def SwiftDocs : DocumentationCategory<"Controlling Swift Import"> {
+  let Content = [{
+Clang supports additional attributes for controlling how APIs are imported into Swift.
+  }];
+}
+
+def NSErrorDomainDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``ns_error_domain`` attribute indicates a global constant representing the error domain.
+  }];
+}
+
+def SwiftBridgeDocs : Documentation {
+  let Category = SwiftDocs;
+  let Content = [{
+The ``swift_bridge`` attribute indicates that the type to which the attribute appertains is bridged to the named Swift type. 
+  }];
+}
+
+def SwiftObjCMembersDocs : Documentation {
+  let Category = SwiftDocs;
+  let Content = [{
+The ``swift_objc_members`` attribute maps to the Swift ``@objcMembers`` attribute, which indicates that Swift members of this class, its subclasses, and all of the extensions thereof, will implicitly be exposed back to Objective-C.
+  }];
+}
+
+def SwiftErrorDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_error";
+  let Content = [{
+The ``swift_error`` attribute controls whether a particular function (or Objective-C method) is imported into Swift as a throwing function, and if so, the dynamic convention it uses.
+
+All of these conventions except ``none`` require the function to have an error parameter.  Currently, the error parameter is always the last parameter of type ``NSError**`` or ``CFErrorRef*``.  Swift will remove the error parameter from the imported API, and dynamically will always pass a valid address initialized to a null pointer.
+
+* ``swift_error(none)`` means that the function should not be imported as throwing.  The error parameter and result type will be left alone.
+
+* ``swift_error(null_result)`` means that calls to the function should be considered to have thrown if they return a null value.  The return type must be a pointer type, and it will be imported into Swift with a non-optional type.  This is the default error convention for Objective-C methods that return pointers.
+
+* ``swift_error(zero_result)`` means that calls to the function should be considered to have thrown if they return a zero result.  The return type must be an integral type.  If the return type would have been imported as ``Bool``, it is instead imported as ``Void``.  This is the default error convention for Objective-C methods that return a type that would be imported as ``Bool``.
+
+* ``swift_error(nonzero_result)`` means that calls to the function should be considered to have thrown if they return a non-zero result.  The return type must be an integral type.  If the return type would have been imported as ``Bool``, it is instead imported as ``Void``.
+
+* ``swift_error(nonnull_error)`` means that calls to the function should be considered to have thrown if they leave a non-null error in the error parameter.  The return type is left unmodified.
+
+}];
+}
+
+def SwiftNewtypeDocs : Documentation {
+  let Category = SwiftDocs;
+  let Heading = "swift_newtype";
+  let Content = [{
+The ``swift_newtype`` attribute indicates that the typedef to which the attribute appertains is imported as a new Swift type of the typedef's name.
+* ``swift_newtype(struct)`` means that a Swift struct will be created for this typedef.
+* ``swift_newtype(enum)`` means that a Swift enum will be created for this typedef.
+  }];
+}
+
+
 def OMPDeclareTargetDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare target";
@@ -2739,28 +2778,6 @@ The syntax of the declare target directive is as follows:
     declarations-definition-seq
     #pragma omp end declare target new-line
   }];
-}
-
-def NoStackProtectorDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-Clang supports the ``__attribute__((no_stack_protector))`` attribute which disables
-the stack protector on the specified function. This attribute is useful for
-selectively disabling the stack protector on some functions when building with
-``-fstack-protector`` compiler option.
-
-For example, it disables the stack protector for the function ``foo`` but function
-``bar`` will still be built with the stack protector with the ``-fstack-protector``
-option.
-
-.. code-block:: c
-
-    int __attribute__((no_stack_protector))
-    foo (int x); // stack protection will be disabled for foo.
-
-    int bar(int y); // bar can be built with the stack protector.
-
-    }];
 }
 
 def NotTailCalledDocs : Documentation {
@@ -2821,7 +2838,7 @@ def NoThrowDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
 Clang supports the GNU style ``__attribute__((nothrow))`` and Microsoft style
-``__declspec(nothrow)`` attribute as an equivalent of `noexcept` on function
+``__declspec(nothrow)`` attribute as an equivilent of `noexcept` on function
 declarations. This attribute informs the compiler that the annotated function
 does not throw an exception. This prevents exception-unwinding. This attribute
 is particularly useful on functions in the C Standard Library that are
@@ -2884,7 +2901,7 @@ Use this attribute to indicate that the specified function has no
 caller-saved registers. That is, all registers are callee-saved except for
 registers used for passing parameters to the function or returning parameters
 from the function.
-The compiler saves and restores any modified registers that were not used for
+The compiler saves and restores any modified registers that were not used for 
 passing or returning arguments to the function.
 
 The user can call functions specified with the 'no_caller_saved_registers'
@@ -2934,24 +2951,6 @@ jumps from i386 arch code).
     }
 
   }];
-}
-
-def AnyX86NoCfCheckDocs : Documentation{
-  let Category = DocCatFunction;
-  let Content = [{
-Jump Oriented Programming attacks rely on tampering with addresses used by
-indirect call / jmp, e.g. redirect control-flow to non-programmer
-intended bytes in the binary.
-X86 Supports Indirect Branch Tracking (IBT) as part of Control-Flow
-Enforcement Technology (CET). IBT instruments ENDBR instructions used to
-specify valid targets of indirect call / jmp.
-The ``nocf_check`` attribute has two roles:
-1. Appertains to a function - do not add ENDBR instruction at the
-    beginning of the function.
-2. Appertains to a function pointer - do not track the target
-    function of this pointer (by adding nocf_check prefix to the
-    indirect-call instruction).
-}];
 }
 
 def SwiftCallDocs : Documentation {
@@ -3133,7 +3132,7 @@ the ability to distinguish between different versions of the same entity but
 with different ABI versions supported. For example, a newer version of a class
 could have a different set of data members and thus have a different size. Using
 the ``abi_tag`` attribute, it is possible to have different mangled names for
-a global variable of the class type. Therefore, the old code could keep using
+a global variable of the class type. Therefor, the old code could keep using
 the old manged name and the new code will use the new mangled name with tags.
   }];
 }
@@ -3314,14 +3313,4 @@ For more information see
 `gcc documentation <https://gcc.gnu.org/onlinedocs/gcc-7.2.0/gcc/Microsoft-Windows-Variable-Attributes.html>`_
 or `msvc documentation <https://docs.microsoft.com/pl-pl/cpp/cpp/selectany>`_.
 }];
-}
-
-def ArtificialDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``artificial`` attribute can be applied to an inline function. If such a
-function is inlined, the attribute indicates that debuggers should associate
-the resulting instructions with the call site, rather than with the
-corresponding line within the inlined callee.
-  }];
 }

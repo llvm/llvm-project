@@ -45,13 +45,10 @@ function(llvm_create_cross_target_internal target_name toolchain buildtype)
 
   add_custom_command(OUTPUT ${LLVM_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
-        -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_SOURCE_DIR}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE
         -DLLVM_TARGETS_TO_BUILD="${targets_to_build_arg}"
         -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="${experimental_targets_to_build_arg}"
-        -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}"
-        -DLLVM_TARGET_ARCH="${LLVM_TARGET_ARCH}"
         ${build_type_flags} ${linker_flag} ${external_clang_dir}
     WORKING_DIRECTORY ${LLVM_${target_name}_BUILD}
     DEPENDS CREATE_LLVM_${target_name}

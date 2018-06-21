@@ -1,4 +1,4 @@
-//===- FunctionSummary.cpp - Stores summaries of functions. ---------------===//
+//== FunctionSummary.cpp - Stores summaries of functions. ----------*- C++ -*-//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,20 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
-
 using namespace clang;
 using namespace ento;
 
 unsigned FunctionSummariesTy::getTotalNumBasicBlocks() {
   unsigned Total = 0;
-  for (const auto &I : Map)
-    Total += I.second.TotalBasicBlocks;
+  for (MapTy::iterator I = Map.begin(), E = Map.end(); I != E; ++I) {
+    Total += I->second.TotalBasicBlocks;
+  }
   return Total;
 }
 
 unsigned FunctionSummariesTy::getTotalNumVisitedBasicBlocks() {
   unsigned Total = 0;
-  for (const auto &I : Map)
-    Total += I.second.VisitedBasicBlocks.count();
+  for (MapTy::iterator I = Map.begin(), E = Map.end(); I != E; ++I) {
+    Total += I->second.VisitedBasicBlocks.count();
+  }
   return Total;
 }

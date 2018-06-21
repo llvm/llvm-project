@@ -22,6 +22,8 @@ public:
 
 // This part is for ascii assembly output
 class Nios2TargetAsmStreamer : public Nios2TargetStreamer {
+  formatted_raw_ostream &OS;
+
 public:
   Nios2TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 };

@@ -79,7 +79,8 @@ namespace PR17596 {
     IntOrString vv;
     vv.i = 5;
     uu = vv;
-    clang_analyzer_eval(uu.i == 5); // expected-warning{{TRUE}}
+    // FIXME: Should be true.
+    clang_analyzer_eval(uu.i == 5); // expected-warning{{UNKNOWN}}
   }
 
   void testInvalidation() {
@@ -105,20 +106,3 @@ namespace PR17596 {
     clang_analyzer_eval(uu.s[0] == 'a'); // expected-warning{{UNKNOWN}}
   }
 }
-
-namespace assume_union_contents {
-union U {
-  int x;
-};
-
-U get();
-
-void test() {
-  U u = get();
-  int y = 0;
-  if (u.x)
-    y = 1;
-  if (u.x)
-    y = 1 / y; // no-warning
-}
-} // end namespace assume_union_contents

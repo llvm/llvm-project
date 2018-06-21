@@ -181,7 +181,7 @@ TEST(DenseSetCustomTest, ReserveTest) {
     EXPECT_EQ(MemorySize, Set.getMemorySize());
     // Check that move was called the expected number of times
     EXPECT_EQ(Size, CountCopyAndMove::Move);
-    // Check that no copy occurred
+    // Check that no copy occured
     EXPECT_EQ(0, CountCopyAndMove::Copy);
   }
 }

@@ -7,12 +7,5 @@ int foo(void) {
   return 0;
 }
 
-int __attribute__((no_instrument_function)) no_instrument(void) {
-  return foo();
-}
-
-//CHECK: attributes #0 = { {{.*}}"fentry-call"="true"{{.*}} }
-//CHECK: attributes #1 = { {{.*}} }
-//CHECK-NOT: attributes #1 = { {{.*}}"fentry-call"="true"{{.*}} }
-//NOPG-NOT: attributes #0 = { {{.*}}"fentry-call"{{.*}} }
-//NOPG-NOT: attributes #1 = { {{.*}}"fentry-call"{{.*}} }
+//CHECK: attributes #{{[0-9]+}} = { {{.*}}"fentry-call"="true"{{.*}} }
+//NOPG-NOT: attributes #{{[0-9]+}} = { {{.*}}"fentry-call"{{.*}} }

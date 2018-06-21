@@ -23,7 +23,7 @@ class LibCxxAtomicTestCase(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    @skipIf(compiler=["gcc"])
+    @skipIf(compiler="gcc")
     @add_test_categories(["libc++"])
     def test(self):
         """Test that std::atomic as defined by libc++ is correctly printed by LLDB"""

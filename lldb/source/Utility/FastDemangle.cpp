@@ -25,7 +25,7 @@
 
 namespace {
 
-/// Represents the collection of qualifiers on a type
+/// @brief Represents the collection of qualifiers on a type
 
 enum Qualifiers {
   QualifierNone = 0,
@@ -37,7 +37,7 @@ enum Qualifiers {
   QualifierPointer = 32
 };
 
-/// Categorizes the recognized operators
+/// @brief Categorizes the recognized operators
 
 enum class OperatorKind {
   Unary,
@@ -50,23 +50,23 @@ enum class OperatorKind {
   NoMatch
 };
 
-/// Represents one of the recognized two-character operator abbreviations used
-/// when parsing operators as names and expressions
+/// @brief Represents one of the recognized two-character operator
+/// abbreviations used when parsing operators as names and expressions
 
 struct Operator {
   const char *name;
   OperatorKind kind;
 };
 
-/// Represents a range of characters in the output buffer, typically for use
-/// with RewriteRange()
+/// @brief Represents a range of characters in the output buffer, typically for
+/// use with RewriteRange()
 
 struct BufferRange {
   int offset;
   int length;
 };
 
-/// Transient state required while parsing a name
+/// @brief Transient state required while parsing a name
 
 struct NameState {
   bool parse_function_params;
@@ -75,13 +75,12 @@ struct NameState {
   BufferRange last_name_range;
 };
 
-/// LLDB's fast C++ demangler
+/// @brief LLDB's fast C++ demangler
 ///
 /// This is an incomplete implementation designed to speed up the demangling
 /// process that is often a bottleneck when LLDB stops a process for the first
 /// time.  Where the implementation doesn't know how to demangle a symbol it
-/// fails gracefully to allow the caller to fall back to the existing
-/// demangler.
+/// fails gracefully to allow the caller to fall back to the existing demangler.
 ///
 /// Over time the full mangling spec should be supported without compromising
 /// performance for the most common cases.
@@ -92,7 +91,7 @@ public:
   // Public API
   //----------------------------------------------------
 
-  /// Create a SymbolDemangler
+  /// @brief Create a SymbolDemangler
   ///
   /// The newly created demangler allocates and owns scratch memory sufficient
   /// for demangling typical symbols.  Additional memory will be allocated if
@@ -108,18 +107,18 @@ public:
     m_owns_m_rewrite_ranges = true;
   }
 
-  /// Create a SymbolDemangler that uses provided scratch memory
+  /// @brief Create a SymbolDemangler that uses provided scratch memory
   ///
   /// The provided memory is not owned by the demangler.  It will be
-  /// overwritten during calls to GetDemangledCopy() but can be used for other
-  /// purposes between calls.  The provided memory will not be freed when this
-  /// instance is destroyed.
+  /// overwritten during calls to GetDemangledCopy() but can be used for
+  /// other purposes between calls.  The provided memory will not be freed
+  /// when this instance is destroyed.
   ///
   /// If demangling a symbol requires additional space it will be allocated
   /// and managed by the demangler instance.
   ///
-  /// @param storage_ptr Valid pointer to at least storage_size bytes of space
-  /// that the SymbolDemangler can use during demangling
+  /// @param storage_ptr Valid pointer to at least storage_size bytes of
+  /// space that the SymbolDemangler can use during demangling
   ///
   /// @param storage_size Number of bytes of space available scratch memory
   /// referenced by storage_ptr
@@ -139,8 +138,8 @@ public:
     m_owns_buffer = false;
   }
 
-  /// Destroys the SymbolDemangler and deallocates any scratch memory that it
-  /// owns
+  /// @brief Destroys the SymbolDemangler and deallocates any scratch
+  /// memory that it owns
 
   ~SymbolDemangler() {
     if (m_owns_buffer)
@@ -154,11 +153,11 @@ public:
   int highwater_buffer = 0;
 #endif
 
-  /// Parses the provided mangled name and returns a newly allocated
+  /// @brief Parses the provided mangled name and returns a newly allocated
   /// demangling
   ///
-  /// @param mangled_name Valid null-terminated C++ mangled name following the
-  /// Itanium C++ ABI mangling specification as implemented by Clang
+  /// @param mangled_name Valid null-terminated C++ mangled name following
+  /// the Itanium C++ ABI mangling specification as implemented by Clang
   ///
   /// @result Newly allocated null-terminated demangled name when demangling
   /// is successful, and nullptr when demangling fails.  The caller is
@@ -201,7 +200,8 @@ private:
     if (growth > 1 << 20)
       growth = 1 << 20;
 
-    // ... but never grow by less than requested, or 1K, whichever is greater
+    // ... but never grow by less than requested,
+    // or 1K, whichever is greater
     if (min_growth < 1024)
       min_growth = 1024;
     if (growth < min_growth)
@@ -282,8 +282,9 @@ private:
       if (index == m_rewrite_ranges_size)
         break;
 
-      // Affected ranges are either shuffled forward when after the insertion
-      // but before the source, or backward when inside the source
+      // Affected ranges are either shuffled forward when after the
+      // insertion but before the source, or backward when inside the
+      // source
       int candidate_offset = m_rewrite_ranges[index].offset;
       if (candidate_offset >= insertion_point_cookie) {
         if (candidate_offset < source_range.offset) {
@@ -401,7 +402,8 @@ private:
   //----------------------------------------------------
   // Rewrite methods
   //
-  // Write another copy of content already present earlier in the output buffer
+  // Write another copy of content already present
+  // earlier in the output buffer
   //----------------------------------------------------
 
   void RewriteRange(BufferRange range) {
@@ -434,11 +436,11 @@ private:
   //----------------------------------------------------
   // TryParse methods
   //
-  // Provide information with return values instead of writing to the output
-  // buffer
+  // Provide information with return values instead of
+  // writing to the output buffer
   //
-  // Values indicating failure guarantee that the pre- call m_read_ptr is
-  // unchanged
+  // Values indicating failure guarantee that the pre-
+  // call m_read_ptr is unchanged
   //----------------------------------------------------
 
   int TryParseNumber() {
@@ -818,8 +820,8 @@ private:
   }
 
   // <CV-qualifiers> ::= [r] [V] [K]
-  // <ref-qualifier> ::= R                   # & ref-qualifier <ref-qualifier>
-  // ::= O                   # && ref-qualifier
+  // <ref-qualifier> ::= R                   # & ref-qualifier
+  // <ref-qualifier> ::= O                   # && ref-qualifier
 
   int TryParseQualifiers(bool allow_cv, bool allow_ro) {
     int qualifiers = QualifierNone;
@@ -888,10 +890,11 @@ private:
   //----------------------------------------------------
   // Parse methods
   //
-  // Consume input starting from m_read_ptr and produce buffered output at
-  // m_write_ptr
+  // Consume input starting from m_read_ptr and produce
+  // buffered output at m_write_ptr
   //
-  // Failures return false and may leave m_read_ptr in an indeterminate state
+  // Failures return false and may leave m_read_ptr in an
+  // indeterminate state
   //----------------------------------------------------
 
   bool Parse(char character) {
@@ -929,14 +932,17 @@ private:
 
   // <substitution> ::= S <seq-id> _
   //                ::= S_
-  // <substitution> ::= Sa # ::std::allocator <substitution> ::= Sb #
-  // ::std::basic_string <substitution> ::= Ss # ::std::basic_string < char,
+  // <substitution> ::= Sa # ::std::allocator
+  // <substitution> ::= Sb # ::std::basic_string
+  // <substitution> ::= Ss # ::std::basic_string < char,
   //                                               ::std::char_traits<char>,
   //                                               ::std::allocator<char> >
   // <substitution> ::= Si # ::std::basic_istream<char,  std::char_traits<char>
-  // > <substitution> ::= So # ::std::basic_ostream<char,
-  // std::char_traits<char> > <substitution> ::= Sd #
-  // ::std::basic_iostream<char, std::char_traits<char> >
+  // >
+  // <substitution> ::= So # ::std::basic_ostream<char,  std::char_traits<char>
+  // >
+  // <substitution> ::= Sd # ::std::basic_iostream<char, std::char_traits<char>
+  // >
 
   bool ParseSubstitution() {
     const char *substitution;
@@ -961,8 +967,7 @@ private:
       break;
     default:
       // A failed attempt to parse a number will return -1 which turns out to be
-      // perfect here as S_ is the first substitution, S0_ the next and so
-      // forth
+      // perfect here as S_ is the first substitution, S0_ the next and so forth
       int substitution_index = TryParseBase36Number();
       if (*m_read_ptr++ != '_') {
 #ifdef DEBUG_FAILURES
@@ -979,17 +984,17 @@ private:
 
   // <function-type> ::= F [Y] <bare-function-type> [<ref-qualifier>] E
   //
-  // <bare-function-type> ::= <signature type>+      # types are possible
-  // return type, then parameter types
+  // <bare-function-type> ::= <signature type>+      # types are possible return
+  // type, then parameter types
 
   bool ParseFunctionType(int inner_qualifiers = QualifierNone) {
 #ifdef DEBUG_FAILURES
     printf("*** Function types not supported\n");
 #endif
     // TODO: first steps toward an implementation follow, but they're far
-    // from complete.  Function types tend to bracket other types eg: int (*)()
-    // when used as the type for "name" becomes int (*name)(). This makes
-    // substitution et al ... interesting.
+    // from complete.  Function types tend to bracket other types eg:
+    // int (*)() when used as the type for "name" becomes int (*name)().
+    // This makes substitution et al ... interesting.
     return false;
 
 #if 0  // TODO
@@ -1149,8 +1154,8 @@ private:
     if (!Parse('_'))
       return false;
 
-    // When no number is present we get -1, which is convenient since T_ is the
-    // zeroth element T0_ is element 1, and so on
+    // When no number is present we get -1, which is convenient since
+    // T_ is the zeroth element T0_ is element 1, and so on
     return RewriteTemplateArg(count + 1);
   }
 
@@ -1188,13 +1193,13 @@ private:
   //        ::= G <type>        # imaginary (C 2000)
   //        ::= Dp <type>       # pack expansion (C++0x)
   //        ::= U <source-name> <type>  # vendor extended type qualifier
-  // extension := U <objc-name> <objc-type>  # objc-type<identifier> extension
-  // := <vector-type> # <vector-type> starts with Dv
+  // extension := U <objc-name> <objc-type>  # objc-type<identifier>
+  // extension := <vector-type> # <vector-type> starts with Dv
 
   // <objc-name> ::= <k0 number> objcproto <k1 number> <identifier>  # k0 = 9 +
-  // <number of digits in k1> + k1 <objc-type> := <source-name>  #
-  // PU<11+>objcproto 11objc_object<source-name> 11objc_object -> id<source-
-  // name>
+  // <number of digits in k1> + k1
+  // <objc-type> := <source-name>  # PU<11+>objcproto 11objc_object<source-name>
+  // 11objc_object -> id<source-name>
 
   bool ParseType() {
 #ifdef DEBUG_FAILURES
@@ -1471,8 +1476,8 @@ private:
   //                    ::= <unnamed-type-name>
 
   bool ParseUnqualifiedName(NameState &name_state) {
-    // Note that these are detected directly in ParseNestedName for performance
-    // rather than switching on the same options twice
+    // Note that these are detected directly in ParseNestedName for
+    // performance rather than switching on the same options twice
     char next = *m_read_ptr;
     switch (next) {
     case 'C':
@@ -1938,8 +1943,7 @@ private:
         break;
       }
 
-      // Record a substitution candidate for all prefixes, but not the full
-      // name
+      // Record a substitution candidate for all prefixes, but not the full name
       if (suppress_substitution)
         suppress_substitution = false;
       else
@@ -2243,9 +2247,9 @@ private:
     if (next == 'E' || next == '\0' || next == '.')
       return true;
 
-    // Clang has a bad habit of making unique manglings by just sticking
-    // numbers on the end of a symbol, which is ambiguous with malformed source
-    // name manglings
+    // Clang has a bad habit of making unique manglings by just sticking numbers
+    // on the end of a symbol,
+    // which is ambiguous with malformed source name manglings
     const char *before_clang_uniquing_test = m_read_ptr;
     if (TryParseNumber()) {
       if (*m_read_ptr == '\0')

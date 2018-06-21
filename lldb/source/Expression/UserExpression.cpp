@@ -179,8 +179,9 @@ lldb::ExpressionResults UserExpression::Evaluate(
     execution_policy = eExecutionPolicyNever;
 
   // We need to set the expression execution thread here, turns out parse can
-  // call functions in the process of looking up symbols, which will escape the
-  // context set by exe_ctx passed to Execute.
+  // call functions in the process of
+  // looking up symbols, which will escape the context set by exe_ctx passed to
+  // Execute.
   lldb::ThreadSP thread_sp = exe_ctx.GetThreadSP();
   ThreadList::ExpressionExecutionThreadPusher execution_thread_pusher(
       thread_sp);
@@ -197,9 +198,19 @@ lldb::ExpressionResults UserExpression::Evaluate(
   else
     full_prefix = option_prefix;
 
-  // If the language was not specified in the expression command, set it to the
-  // language in the target's properties if specified, else default to the
-  // langage for the frame.
+  // If the language was not specified in the expression command,
+  // set it to the language in the target's properties if
+  // specified, else default to the langage for the frame.
+  if (language == lldb::eLanguageTypeUnknown) {
+    if (target->GetLanguage() != lldb::eLanguageTypeUnknown)
+      language = target->GetLanguage();
+    else if (StackFrame *frame = exe_ctx.GetFramePtr())
+      language = frame->GetLanguage();
+  }
+
+  // If the language was not specified in the expression command,
+  // set it to the language in the target's properties if
+  // specified, else default to the langage for the frame.
   if (language == lldb::eLanguageTypeUnknown) {
     if (target->GetLanguage() != lldb::eLanguageTypeUnknown)
       language = target->GetLanguage();
@@ -233,9 +244,9 @@ lldb::ExpressionResults UserExpression::Evaluate(
 
   DiagnosticManager diagnostic_manager;
 
-  bool parse_success =
-      user_expression_sp->Parse(diagnostic_manager, exe_ctx, execution_policy,
-                                keep_expression_in_memory, generate_debug_info);
+  bool parse_success = user_expression_sp->Parse(
+      diagnostic_manager, exe_ctx, execution_policy, keep_expression_in_memory,
+      generate_debug_info, 0);
 
   // Calculate the fixed expression always, since we need it for errors.
   std::string tmp_fixed_expression;
@@ -258,7 +269,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
       DiagnosticManager fixed_diagnostic_manager;
       parse_success = fixed_expression_sp->Parse(
           fixed_diagnostic_manager, exe_ctx, execution_policy,
-          keep_expression_in_memory, generate_debug_info);
+          keep_expression_in_memory, generate_debug_info, 0);
       if (parse_success) {
         diagnostic_manager.Clear();
         user_expression_sp = fixed_expression_sp;
@@ -380,8 +391,13 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
   if (options.GetResultIsInternal() && result_var && target) {
-    target->GetPersistentExpressionStateForLanguage(m_language)
-        ->RemovePersistentVariable(result_var);
+    if (m_language == lldb::eLanguageTypeSwift) {
+      if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
+        target->GetSwiftPersistentExpressionState(*exe_scope)
+          ->RemovePersistentVariable(result_var);
+    } else
+      target->GetPersistentExpressionStateForLanguage(m_language)
+          ->RemovePersistentVariable(result_var);
   }
   return expr_result;
 }

@@ -27,8 +27,10 @@ void test_transcribed_availability() {
   f9(0);
 }
 
-__attribute__((availability(ios,introduced=9_0,deprecated=9_0,message="" ))) // expected-warning 2{{availability does not match previous declaration}}
-__attribute__((availability(ios,introduced=7_0)))                            // expected-note 2{{previous attribute is here}}
+__attribute__((availability(ios,introduced=9_0,deprecated=9_0,message="" ))) // expected-note{{previous attribute is here}} \
+  // expected-note{{previous attribute is here}}
+__attribute__((availability(ios,introduced=7_0))) // expected-warning{{availability does not match previous declaration}} \
+  // expected-warning{{availability does not match previous declaration}}
 void f10(int);
 
 // Test tvOS specific attributes.
@@ -51,7 +53,7 @@ void test_tvos() {
   f3_tvos(0);
   f4_tvos(0); // expected-error{{'f4_tvos' is unavailable: obsoleted in tvOS 3.0}}
   // We get no warning here because any explicit 'tvos' availability causes
-  // the ios availability to not implicitly become 'tvos' availability.  Otherwise we'd get
+  // the ios availablity to not implicitly become 'tvos' availability.  Otherwise we'd get
   // a deprecated warning.
   f5_tvos(0); // no-warning
   f5_attr_reversed_tvos(0); // no-warning

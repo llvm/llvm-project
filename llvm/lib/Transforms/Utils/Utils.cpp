@@ -12,10 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils.h"
 #include "llvm-c/Initialization.h"
-#include "llvm-c/Transforms/Utils.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
 
@@ -46,12 +43,3 @@ void llvm::initializeTransformUtils(PassRegistry &Registry) {
 void LLVMInitializeTransformUtils(LLVMPassRegistryRef R) {
   initializeTransformUtils(*unwrap(R));
 }
-
-void LLVMAddLowerSwitchPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createLowerSwitchPass());
-}
-
-void LLVMAddPromoteMemoryToRegisterPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createPromoteMemoryToRegisterPass());
-}
-

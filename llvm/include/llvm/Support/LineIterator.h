@@ -18,7 +18,7 @@ namespace llvm {
 
 class MemoryBuffer;
 
-/// A forward iterator which reads text lines from a buffer.
+/// \brief A forward iterator which reads text lines from a buffer.
 ///
 /// This class provides a forward iterator interface for reading one line at
 /// a time from a buffer. When default constructed the iterator will be the
@@ -39,23 +39,23 @@ class line_iterator
   StringRef CurrentLine;
 
 public:
-  /// Default construct an "end" iterator.
+  /// \brief Default construct an "end" iterator.
   line_iterator() : Buffer(nullptr) {}
 
-  /// Construct a new iterator around some memory buffer.
+  /// \brief Construct a new iterator around some memory buffer.
   explicit line_iterator(const MemoryBuffer &Buffer, bool SkipBlanks = true,
                          char CommentMarker = '\0');
 
-  /// Return true if we've reached EOF or are an "end" iterator.
+  /// \brief Return true if we've reached EOF or are an "end" iterator.
   bool is_at_eof() const { return !Buffer; }
 
-  /// Return true if we're an "end" iterator or have reached EOF.
+  /// \brief Return true if we're an "end" iterator or have reached EOF.
   bool is_at_end() const { return is_at_eof(); }
 
-  /// Return the current line number. May return any number at EOF.
+  /// \brief Return the current line number. May return any number at EOF.
   int64_t line_number() const { return LineNumber; }
 
-  /// Advance to the next (non-empty, non-comment) line.
+  /// \brief Advance to the next (non-empty, non-comment) line.
   line_iterator &operator++() {
     advance();
     return *this;
@@ -66,7 +66,7 @@ public:
     return tmp;
   }
 
-  /// Get the current line as a \c StringRef.
+  /// \brief Get the current line as a \c StringRef.
   StringRef operator*() const { return CurrentLine; }
   const StringRef *operator->() const { return &CurrentLine; }
 
@@ -80,7 +80,7 @@ public:
   }
 
 private:
-  /// Advance the iterator to the next line.
+  /// \brief Advance the iterator to the next line.
   void advance();
 };
 }

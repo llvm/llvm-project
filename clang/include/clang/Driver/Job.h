@@ -1,4 +1,4 @@
-//===- Job.h - Commands to Execute ------------------------------*- C++ -*-===//
+//===--- Job.h - Commands to Execute ----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,22 +12,21 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Option/Option.h"
 #include <memory>
-#include <string>
-#include <utility>
-#include <vector>
+
+namespace llvm {
+  class raw_ostream;
+}
 
 namespace clang {
 namespace driver {
-
 class Action;
-class InputInfo;
+class Command;
 class Tool;
+class InputInfo;
 
 // Re-export this as clang::driver::ArgStringList.
 using llvm::opt::ArgStringList;
@@ -35,9 +34,11 @@ using llvm::opt::ArgStringList;
 struct CrashReportInfo {
   StringRef Filename;
   StringRef VFSPath;
+  StringRef IndexStorePath;
 
-  CrashReportInfo(StringRef Filename, StringRef VFSPath)
-      : Filename(Filename), VFSPath(VFSPath) {}
+  CrashReportInfo(StringRef Filename, StringRef VFSPath,
+                  StringRef IndexStorePath)
+      : Filename(Filename), VFSPath(VFSPath), IndexStorePath(IndexStorePath) {}
 };
 
 /// Command - An executable path/name and argument vector to
@@ -61,7 +62,7 @@ class Command {
 
   /// Response file name, if this command is set to use one, or nullptr
   /// otherwise
-  const char *ResponseFile = nullptr;
+  const char *ResponseFile;
 
   /// The input file list in case we need to emit a file list instead of a
   /// proper response file
@@ -93,7 +94,7 @@ public:
   // FIXME: This really shouldn't be copyable, but is currently copied in some
   // error handling in Driver::generateCompilationDiagnostics.
   Command(const Command &) = default;
-  virtual ~Command() = default;
+  virtual ~Command() {}
 
   virtual void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
                      CrashReportInfo *CrashInfo = nullptr) const;
@@ -116,7 +117,7 @@ public:
     InputFileList = std::move(List);
   }
 
-  /// Sets the environment to be used by the new process.
+  /// \brief Sets the environment to be used by the new process.
   /// \param NewEnvironment An array of environment variables.
   /// \remark If the environment remains unset, then the environment
   ///         from the parent process will be used.
@@ -166,10 +167,10 @@ public:
 /// JobList - A sequence of jobs to perform.
 class JobList {
 public:
-  using list_type = SmallVector<std::unique_ptr<Command>, 4>;
-  using size_type = list_type::size_type;
-  using iterator = llvm::pointee_iterator<list_type::iterator>;
-  using const_iterator = llvm::pointee_iterator<list_type::const_iterator>;
+  typedef SmallVector<std::unique_ptr<Command>, 4> list_type;
+  typedef list_type::size_type size_type;
+  typedef llvm::pointee_iterator<list_type::iterator> iterator;
+  typedef llvm::pointee_iterator<list_type::const_iterator> const_iterator;
 
 private:
   list_type Jobs;
@@ -194,7 +195,7 @@ public:
   const_iterator end() const { return Jobs.end(); }
 };
 
-} // namespace driver
-} // namespace clang
+} // end namespace driver
+} // end namespace clang
 
-#endif // LLVM_CLANG_DRIVER_JOB_H
+#endif

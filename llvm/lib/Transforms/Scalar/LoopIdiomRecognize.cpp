@@ -37,6 +37,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -56,7 +57,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -87,8 +87,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
 #include <cassert>
@@ -310,9 +310,9 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   SmallVector<BasicBlock *, 8> ExitBlocks;
   CurLoop->getUniqueExitBlocks(ExitBlocks);
 
-  LLVM_DEBUG(dbgs() << "loop-idiom Scanning: F["
-                    << CurLoop->getHeader()->getParent()->getName()
-                    << "] Loop %" << CurLoop->getHeader()->getName() << "\n");
+  DEBUG(dbgs() << "loop-idiom Scanning: F["
+               << CurLoop->getHeader()->getParent()->getName() << "] Loop %"
+               << CurLoop->getHeader()->getName() << "\n");
 
   bool MadeChange = false;
 
@@ -756,8 +756,8 @@ bool LoopIdiomRecognize::processLoopMemSet(MemSetInst *MSI,
   MSIs.insert(MSI);
   bool NegStride = SizeInBytes == -Stride;
   return processLoopStridedStore(Pointer, (unsigned)SizeInBytes,
-                                 MSI->getDestAlignment(), SplatValue, MSI, MSIs,
-                                 Ev, BECount, NegStride, /*IsLoopMemset=*/true);
+                                 MSI->getAlignment(), SplatValue, MSI, MSIs, Ev,
+                                 BECount, NegStride, /*IsLoopMemset=*/true);
 }
 
 /// mayLoopAccessLocation - Return true if the specified loop might access the
@@ -936,9 +936,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     NewCall = Builder.CreateCall(MSP, {BasePtr, PatternPtr, NumBytes});
   }
 
-  LLVM_DEBUG(dbgs() << "  Formed memset: " << *NewCall << "\n"
-                    << "    from store to: " << *Ev << " at: " << *TheStore
-                    << "\n");
+  DEBUG(dbgs() << "  Formed memset: " << *NewCall << "\n"
+               << "    from store to: " << *Ev << " at: " << *TheStore << "\n");
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
   // Okay, the memset has been formed.  Zap the original store and anything that
@@ -1038,17 +1037,16 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   Value *NumBytes =
       Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
 
+  unsigned Align = std::min(SI->getAlignment(), LI->getAlignment());
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
-  //  If the load or store are atomic, then they must necessarily be unordered
+  //  If the load or store are atomic, then they must neccessarily be unordered
   //  by previous checks.
   if (!SI->isAtomic() && !LI->isAtomic())
-    NewCall = Builder.CreateMemCpy(StoreBasePtr, SI->getAlignment(),
-                                   LoadBasePtr, LI->getAlignment(), NumBytes);
+    NewCall = Builder.CreateMemCpy(StoreBasePtr, LoadBasePtr, NumBytes, Align);
   else {
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
-    unsigned Align = std::min(SI->getAlignment(), LI->getAlignment());
     if (Align < StoreSize)
       return false;
 
@@ -1068,10 +1066,9 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   }
   NewCall->setDebugLoc(SI->getDebugLoc());
 
-  LLVM_DEBUG(dbgs() << "  Formed memcpy: " << *NewCall << "\n"
-                    << "    from load ptr=" << *LoadEv << " at: " << *LI << "\n"
-                    << "    from store ptr=" << *StoreEv << " at: " << *SI
-                    << "\n");
+  DEBUG(dbgs() << "  Formed memcpy: " << *NewCall << "\n"
+               << "    from load ptr=" << *LoadEv << " at: " << *LI << "\n"
+               << "    from store ptr=" << *StoreEv << " at: " << *SI << "\n");
 
   // Okay, the memcpy has been formed.  Zap the original store and anything that
   // feeds into it.
@@ -1087,9 +1084,9 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
                                                    bool IsLoopMemset) {
   if (ApplyCodeSizeHeuristics && CurLoop->getNumBlocks() > 1) {
     if (!CurLoop->getParentLoop() && (!IsMemset || !IsLoopMemset)) {
-      LLVM_DEBUG(dbgs() << "  " << CurLoop->getHeader()->getParent()->getName()
-                        << " : LIR " << (IsMemset ? "Memset" : "Memcpy")
-                        << " avoided: multi-block top-level loop\n");
+      DEBUG(dbgs() << "  " << CurLoop->getHeader()->getParent()->getName()
+                   << " : LIR " << (IsMemset ? "Memset" : "Memcpy")
+                   << " avoided: multi-block top-level loop\n");
       return true;
     }
   }
@@ -1198,13 +1195,14 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
       VarX1 = DefX2->getOperand(0);
       SubOneOp = dyn_cast<BinaryOperator>(DefX2->getOperand(1));
     }
-    if (!SubOneOp || SubOneOp->getOperand(0) != VarX1)
+    if (!SubOneOp)
       return false;
 
-    ConstantInt *Dec = dyn_cast<ConstantInt>(SubOneOp->getOperand(1));
+    Instruction *SubInst = cast<Instruction>(SubOneOp);
+    ConstantInt *Dec = dyn_cast<ConstantInt>(SubInst->getOperand(1));
     if (!Dec ||
-        !((SubOneOp->getOpcode() == Instruction::Sub && Dec->isOne()) ||
-          (SubOneOp->getOpcode() == Instruction::Add &&
+        !((SubInst->getOpcode() == Instruction::Sub && Dec->isOne()) ||
+          (SubInst->getOpcode() == Instruction::Add &&
            Dec->isMinusOne()))) {
       return false;
     }
@@ -1316,7 +1314,6 @@ static bool detectCTLZIdiom(Loop *CurLoop, PHINode *&PhiX,
     return false;
 
   // step 2: detect instructions corresponding to "x.next = x >> 1"
-  // TODO: Support loops that use LShr.
   if (!DefX || DefX->getOpcode() != Instruction::AShr)
     return false;
   ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1));
@@ -1375,13 +1372,13 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
 
   bool IsCntPhiUsedOutsideLoop = false;
   for (User *U : CntPhi->users())
-    if (!CurLoop->contains(cast<Instruction>(U))) {
+    if (!CurLoop->contains(dyn_cast<Instruction>(U))) {
       IsCntPhiUsedOutsideLoop = true;
       break;
     }
   bool IsCntInstUsedOutsideLoop = false;
   for (User *U : CntInst->users())
-    if (!CurLoop->contains(cast<Instruction>(U))) {
+    if (!CurLoop->contains(dyn_cast<Instruction>(U))) {
       IsCntInstUsedOutsideLoop = true;
       break;
     }
@@ -1398,13 +1395,6 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
   // parent function RunOnLoop.
   BasicBlock *PH = CurLoop->getLoopPreheader();
   Value *InitX = PhiX->getIncomingValueForBlock(PH);
-
-  // Make sure the initial value can't be negative otherwise the ashr in the
-  // loop might never reach zero which would make the loop infinite.
-  // TODO: Support loops that use lshr and wouldn't need this check.
-  if (!isKnownNonNegative(InitX, *DL))
-    return false;
-
   // If we check X != 0 before entering the loop we don't need a zero
   // check in CTLZ intrinsic, but only if Cnt Phi is not used outside of the
   // loop (if it is used we count CTLZ(X >> 1)).
@@ -1425,9 +1415,10 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
   //  %inc = add nsw %i.0, 1
   //  br i1 %tobool
 
-  const Value *Args[] =
-      {InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
-                        : ConstantInt::getFalse(InitX->getContext())};
+  IRBuilder<> Builder(PH->getTerminator());
+  SmallVector<const Value *, 2> Ops =
+      {InitX, ZeroCheck ? Builder.getTrue() : Builder.getFalse()};
+  ArrayRef<const Value *> Args(Ops);
   if (CurLoop->getHeader()->size() != 6 &&
       TTI->getIntrinsicCost(Intrinsic::ctlz, InitX->getType(), Args) >
           TargetTransformInfo::TCC_Basic)
@@ -1470,7 +1461,7 @@ bool LoopIdiomRecognize::recognizePopcount() {
   if (!EntryBI || EntryBI->isConditional())
     return false;
 
-  // It should have a precondition block where the generated popcount intrinsic
+  // It should have a precondition block where the generated popcount instrinsic
   // function can be inserted.
   auto *PreCondBB = PH->getSinglePredecessor();
   if (!PreCondBB)
@@ -1549,7 +1540,7 @@ static CallInst *createCTLZIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
 void LoopIdiomRecognize::transformLoopToCountable(
     BasicBlock *Preheader, Instruction *CntInst, PHINode *CntPhi, Value *InitX,
     const DebugLoc DL, bool ZeroCheck, bool IsCntPhiUsedOutsideLoop) {
-  BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
+  BranchInst *PreheaderBr = dyn_cast<BranchInst>(Preheader->getTerminator());
 
   // Step 1: Insert the CTLZ instruction at the end of the preheader block
   //   Count = BitWidth - CTLZ(InitX);
@@ -1597,7 +1588,7 @@ void LoopIdiomRecognize::transformLoopToCountable(
   //   ...
   //   Br: loop if (Dec != 0)
   BasicBlock *Body = *(CurLoop->block_begin());
-  auto *LbBr = cast<BranchInst>(Body->getTerminator());
+  auto *LbBr = dyn_cast<BranchInst>(Body->getTerminator());
   ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
   Type *Ty = Count->getType();
 
@@ -1634,7 +1625,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
                                                  Instruction *CntInst,
                                                  PHINode *CntPhi, Value *Var) {
   BasicBlock *PreHead = CurLoop->getLoopPreheader();
-  auto *PreCondBr = cast<BranchInst>(PreCondBB->getTerminator());
+  auto *PreCondBr = dyn_cast<BranchInst>(PreCondBB->getTerminator());
   const DebugLoc DL = CntInst->getDebugLoc();
 
   // Assuming before transformation, the loop is following:
@@ -1684,7 +1675,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   }
 
   // Step 3: Note that the population count is exactly the trip count of the
-  // loop in question, which enable us to convert the loop from noncountable
+  // loop in question, which enable us to to convert the loop from noncountable
   // loop into a countable one. The benefit is twofold:
   //
   //  - If the loop only counts population, the entire loop becomes dead after
@@ -1705,7 +1696,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   //     do { cnt++; x &= x-1; t--) } while (t > 0);
   BasicBlock *Body = *(CurLoop->block_begin());
   {
-    auto *LbBr = cast<BranchInst>(Body->getTerminator());
+    auto *LbBr = dyn_cast<BranchInst>(Body->getTerminator());
     ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
     Type *Ty = TripCnt->getType();
 

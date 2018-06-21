@@ -15,8 +15,9 @@ class SharedLibStrippedTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://28182015")
     def test_expr(self):
-        """Test that types work when defined in a shared library and forwa/d-declared in the main executable"""
+        """Test that types work when defined in a shared library and forward-declared in the main executable"""
         if "clang" in self.getCompiler() and "3.4" in self.getCompilerVersion():
             self.skipTest(
                 "llvm.org/pr16214 -- clang emits partial DWARF for structures referenced via typedef")
@@ -34,7 +35,7 @@ class SharedLibStrippedTestCase(TestBase):
                 "other_element = 3"])
 
     @expectedFailureAll(oslist=["windows"])
-    @unittest2.expectedFailure("llvm.org/PR36712")
+    @unittest2.expectedFailure("rdar://problem/10381325")
     def test_frame_variable(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         self.build()

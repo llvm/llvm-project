@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lanai.h"
+#include "LanaiAluCode.h"
 #include "MCTargetDesc/LanaiBaseInfo.h"
 #include "MCTargetDesc/LanaiFixupKinds.h"
 #include "MCTargetDesc/LanaiMCExpr.h"

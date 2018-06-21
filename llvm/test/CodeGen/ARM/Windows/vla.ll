@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=thumbv7-windows-itanium -mcpu=cortex-a9 -code-model=large -o - %s \
 ; RUN:  | FileCheck %s -check-prefix CHECK-LARGE-CODE
 ; RUN: llc -mtriple=thumbv7-windows-msvc -mcpu=cortex-a9 -o - %s \
-; RUN:  | FileCheck %s -check-prefix CHECK-SMALL-CODE
+; RUN:  | FileCheck %s -check-prefix CHECK-MSVC
 
 define arm_aapcs_vfpcc i8 @function(i32 %sz, i32 %idx) {
 entry:
@@ -26,3 +26,6 @@ entry:
 ; CHECK-LARGE-CODE:   movt  [[IP]], :upper16:__chkstk
 ; CHECK-LARGE-CODE:   blx   [[IP]]
 ; CHECK-LARGE-CODE:   sub.w sp, sp, r4
+
+; CHECK-MSVC-NOT: __chkstk
+

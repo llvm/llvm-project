@@ -49,7 +49,7 @@
 namespace llvm {
   class HexagonTargetMachine;
 
-  /// Creates a Hexagon-specific Target Transformation Info pass.
+  /// \brief Creates a Hexagon-specific Target Transformation Info pass.
   ImmutablePass *createHexagonTargetTransformInfoPass(const HexagonTargetMachine *TM);
 } // end namespace llvm;
 

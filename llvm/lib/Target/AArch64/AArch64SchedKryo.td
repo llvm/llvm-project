@@ -29,9 +29,6 @@ def KryoModel : SchedMachineModel {
   let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = [HasSVE];
-
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
 }
 
 //===----------------------------------------------------------------------===//

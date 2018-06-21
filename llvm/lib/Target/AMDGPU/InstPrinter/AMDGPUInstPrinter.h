@@ -84,8 +84,6 @@ private:
                  raw_ostream &O);
   void printLWE(const MCInst *MI, unsigned OpNo,
                 const MCSubtargetInfo &STI, raw_ostream &O);
-  void printD16(const MCInst *MI, unsigned OpNo,
-                const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpCompr(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpVM(const MCInst *MI, unsigned OpNo,
@@ -98,8 +96,6 @@ private:
   void printRegOperand(unsigned RegNo, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
-  void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                      raw_ostream &O);
   void printImmediate16(uint32_t Imm, const MCSubtargetInfo &STI,
                         raw_ostream &O);
   void printImmediateV216(uint32_t Imm, const MCSubtargetInfo &STI,

@@ -27,24 +27,23 @@ XRAY_FLAG(uptr, xray_page_size_override, 0,
 XRAY_FLAG(bool, xray_naive_log, false,
           "DEPRECATED: Use xray_mode=xray-basic instead.")
 XRAY_FLAG(int, xray_naive_log_func_duration_threshold_us, 5,
-          "DEPRECATED: use the environment variable XRAY_BASIC_OPTIONS and set "
-          "func_duration_threshold_us instead.")
+          "Naive logging will try to skip functions that execute for fewer "
+          "microseconds than this threshold.")
 XRAY_FLAG(int, xray_naive_log_max_stack_depth, 64,
-          "DEPRECATED: use the environment variable XRAY_BASIC_OPTIONS and set "
-          "max_stack_depth instead.")
+          "Naive logging will keep track of at most this deep a call stack, "
+          "any more and the recordings will be droppped.")
 XRAY_FLAG(int, xray_naive_log_thread_buffer_size, 1024,
-          "DEPRECATED: use the environment variable XRAY_BASIC_OPTIONS and set "
-          "thread_buffer_size instead.")
+          "The number of entries to keep on a per-thread buffer.")
 
 // FDR (Flight Data Recorder) Mode logging options.
 XRAY_FLAG(bool, xray_fdr_log, false,
           "DEPRECATED: Use xray_mode=xray-fdr instead.")
 XRAY_FLAG(int, xray_fdr_log_func_duration_threshold_us, 5,
-          "DEPRECATED: use the environment variable XRAY_FDR_OPTIONS and set "
-          "func_duration_threshold_us instead.")
+          "FDR logging will try to skip functions that execute for fewer "
+          "microseconds than this threshold.")
 XRAY_FLAG(int, xray_fdr_log_grace_period_us, 0,
-          "DEPRECATED: use the environment variable XRAY_FDR_OPTIONS and set "
-          "grace_period_ms instead.")
+          "DEPRECATED: use xray_fdr_log_grace_period_ms instead.")
 XRAY_FLAG(int, xray_fdr_log_grace_period_ms, 100,
-          "DEPRECATED: use the environment variable XRAY_FDR_OPTIONS and set "
-          "grace_period_ms instead.")
+          "FDR logging will wait this much time in microseconds before "
+          "actually flushing the log; this gives a chance for threads to "
+          "notice that the log has been finalized and clean up.")

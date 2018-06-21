@@ -510,7 +510,7 @@ public:
     return getConversionSpecifier().consumesDataArgument();
   }
 
-  /// Returns the builtin type that a data argument
+  /// \brief Returns the builtin type that a data argument
   /// paired with this format specifier should have.  This method
   /// will return null if the format specifier does not have
   /// a matching data argument or the matching argument matches

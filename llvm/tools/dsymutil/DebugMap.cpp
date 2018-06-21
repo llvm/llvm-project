@@ -22,7 +22,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -63,7 +62,7 @@ void DebugMapObject::print(raw_ostream &OS) const {
   Entries.reserve(Symbols.getNumItems());
   for (const auto &Sym : make_range(Symbols.begin(), Symbols.end()))
     Entries.push_back(std::make_pair(Sym.getKey(), Sym.getValue()));
-  llvm::sort(
+  std::sort(
       Entries.begin(), Entries.end(),
       [](const Entry &LHS, const Entry &RHS) { return LHS.first < RHS.first; });
   for (const auto &Sym : Entries) {
@@ -242,13 +241,13 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   sys::path::append(Path, Filename);
   auto ErrOrObjectFiles = BinHolder.GetObjectFiles(Path);
   if (auto EC = ErrOrObjectFiles.getError()) {
-    WithColor::warning() << "Unable to open " << Path << " " << EC.message()
-                         << '\n';
+    errs() << "warning: Unable to open " << Path << " " << EC.message() << '\n';
   } else if (auto ErrOrObjectFile = BinHolder.Get(Ctxt.BinaryTriple)) {
-    // Rewrite the object file symbol addresses in the debug map. The YAML
-    // input is mainly used to test dsymutil without requiring binaries
-    // checked-in. If we generate the object files during the test, we can't
-    // hard-code the symbols addresses, so look them up here and rewrite them.
+    // Rewrite the object file symbol addresses in the debug map. The
+    // YAML input is mainly used to test llvm-dsymutil without
+    // requiring binaries checked-in. If we generate the object files
+    // during the test, we can't hardcode the symbols addresses, so
+    // look them up here and rewrite them.
     for (const auto &Sym : ErrOrObjectFile->symbols()) {
       uint64_t Address = Sym.getValue();
       Expected<StringRef> Name = Sym.getName();
@@ -278,4 +277,5 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
 }
 
 } // end namespace yaml
+
 } // end namespace llvm

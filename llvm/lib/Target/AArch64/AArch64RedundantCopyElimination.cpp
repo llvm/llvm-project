@@ -55,7 +55,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -73,10 +72,10 @@ class AArch64RedundantCopyElimination : public MachineFunctionPass {
 
   // DomBBClobberedRegs is used when computing known values in the dominating
   // BB.
-  LiveRegUnits DomBBClobberedRegs, DomBBUsedRegs;
+  BitVector DomBBClobberedRegs;
 
   // OptBBClobberedRegs is used when optimizing away redundant copies/moves.
-  LiveRegUnits OptBBClobberedRegs, OptBBUsedRegs;
+  BitVector OptBBClobberedRegs;
 
 public:
   static char ID;
@@ -109,6 +108,28 @@ char AArch64RedundantCopyElimination::ID = 0;
 
 INITIALIZE_PASS(AArch64RedundantCopyElimination, "aarch64-copyelim",
                 "AArch64 redundant copy elimination pass", false, false)
+
+/// Remember what registers the specified instruction modifies.
+static void trackRegDefs(const MachineInstr &MI, BitVector &ClobberedRegs,
+                         const TargetRegisterInfo *TRI) {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (MO.isRegMask()) {
+      ClobberedRegs.setBitsNotInMask(MO.getRegMask());
+      continue;
+    }
+
+    if (!MO.isReg())
+      continue;
+    unsigned Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    if (!MO.isDef())
+      continue;
+
+    for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
+      ClobberedRegs.set(*AI);
+  }
+}
 
 /// It's possible to determine the value of a register based on a dominating
 /// condition.  To do so, this function checks to see if the basic block \p MBB
@@ -161,8 +182,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
 
   // Registers clobbered in PredMBB between CondBr instruction and current
   // instruction being checked in loop.
-  DomBBClobberedRegs.clear();
-  DomBBUsedRegs.clear();
+  DomBBClobberedRegs.reset();
 
   // Find compare instruction that sets NZCV used by CondBr.
   MachineBasicBlock::reverse_iterator RIt = CondBr.getReverseIterator();
@@ -192,7 +212,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
       // register of the compare is not modified (including a self-clobbering
       // compare) between the compare and conditional branch we known the value
       // of the 1st source operand.
-      if (PredI.getOperand(2).isImm() && DomBBClobberedRegs.available(SrcReg) &&
+      if (PredI.getOperand(2).isImm() && !DomBBClobberedRegs[SrcReg] &&
           SrcReg != DstReg) {
         // We've found the instruction that sets NZCV.
         int32_t KnownImm = PredI.getOperand(2).getImm();
@@ -212,7 +232,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
 
       // The destination register must not be modified between the NZCV setting
       // instruction and the conditional branch.
-      if (!DomBBClobberedRegs.available(DstReg))
+      if (DomBBClobberedRegs[DstReg])
         return Res;
 
       FirstUse = PredI;
@@ -256,7 +276,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
 
       // The destination register of the NZCV setting instruction must not be
       // modified before the conditional branch.
-      if (!DomBBClobberedRegs.available(DstReg))
+      if (DomBBClobberedRegs[DstReg])
         return false;
 
       // We've found the instruction that sets NZCV whose DstReg == 0.
@@ -270,9 +290,8 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
     if (PredI.definesRegister(AArch64::NZCV))
       return false;
 
-    // Track clobbered and used registers.
-    LiveRegUnits::accumulateUsedDefed(PredI, DomBBClobberedRegs, DomBBUsedRegs,
-                                      TRI);
+    // Track clobbered registers.
+    trackRegDefs(PredI, DomBBClobberedRegs, TRI);
   }
   return false;
 }
@@ -311,9 +330,8 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
     if (!knownRegValInBlock(*Itr, MBB, KnownRegs, FirstUse))
       continue;
 
-    // Reset the clobbered and used register units.
-    OptBBClobberedRegs.clear();
-    OptBBUsedRegs.clear();
+    // Reset the clobber list.
+    OptBBClobberedRegs.reset();
 
     // Look backward in PredMBB for COPYs from the known reg to find other
     // registers that are known to be a constant value.
@@ -325,12 +343,11 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
         MCPhysReg CopyDstReg = PredI->getOperand(0).getReg();
         MCPhysReg CopySrcReg = PredI->getOperand(1).getReg();
         for (auto &KnownReg : KnownRegs) {
-          if (!OptBBClobberedRegs.available(KnownReg.Reg))
+          if (OptBBClobberedRegs[KnownReg.Reg])
             continue;
           // If we have X = COPY Y, and Y is known to be zero, then now X is
           // known to be zero.
-          if (CopySrcReg == KnownReg.Reg &&
-              OptBBClobberedRegs.available(CopyDstReg)) {
+          if (CopySrcReg == KnownReg.Reg && !OptBBClobberedRegs[CopyDstReg]) {
             KnownRegs.push_back(RegImm(CopyDstReg, KnownReg.Imm));
             if (SeenFirstUse)
               FirstUse = PredI;
@@ -338,8 +355,7 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
           }
           // If we have X = COPY Y, and X is known to be zero, then now Y is
           // known to be zero.
-          if (CopyDstReg == KnownReg.Reg &&
-              OptBBClobberedRegs.available(CopySrcReg)) {
+          if (CopyDstReg == KnownReg.Reg && !OptBBClobberedRegs[CopySrcReg]) {
             KnownRegs.push_back(RegImm(CopySrcReg, KnownReg.Imm));
             if (SeenFirstUse)
               FirstUse = PredI;
@@ -352,11 +368,10 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
       if (PredI == PredMBB->begin())
         break;
 
-      LiveRegUnits::accumulateUsedDefed(*PredI, OptBBClobberedRegs,
-                                        OptBBUsedRegs, TRI);
+      trackRegDefs(*PredI, OptBBClobberedRegs, TRI);
       // Stop if all of the known-zero regs have been clobbered.
       if (all_of(KnownRegs, [&](RegImm KnownReg) {
-            return !OptBBClobberedRegs.available(KnownReg.Reg);
+            return OptBBClobberedRegs[KnownReg.Reg];
           }))
         break;
     }
@@ -412,9 +427,9 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
           }
 
           if (IsCopy)
-            LLVM_DEBUG(dbgs() << "Remove redundant Copy : " << *MI);
+            DEBUG(dbgs() << "Remove redundant Copy : " << *MI);
           else
-            LLVM_DEBUG(dbgs() << "Remove redundant Move : " << *MI);
+            DEBUG(dbgs() << "Remove redundant Move : " << *MI);
 
           MI->eraseFromParent();
           Changed = true;
@@ -458,8 +473,8 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
 
   // Clear kills in the range where changes were made.  This is conservative,
   // but should be okay since kill markers are being phased out.
-  LLVM_DEBUG(dbgs() << "Clearing kill flags.\n\tFirstUse: " << *FirstUse
-                    << "\tLastChange: " << *LastChange);
+  DEBUG(dbgs() << "Clearing kill flags.\n\tFirstUse: " << *FirstUse
+               << "\tLastChange: " << *LastChange);
   for (MachineInstr &MMI : make_range(FirstUse, PredMBB->end()))
     MMI.clearKillInfo();
   for (MachineInstr &MMI : make_range(MBB->begin(), LastChange))
@@ -475,12 +490,10 @@ bool AArch64RedundantCopyElimination::runOnMachineFunction(
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
 
-  // Resize the clobbered and used register unit trackers.  We do this once per
+  // Resize the clobber register bitfield trackers.  We do this once per
   // function.
-  DomBBClobberedRegs.init(*TRI);
-  DomBBUsedRegs.init(*TRI);
-  OptBBClobberedRegs.init(*TRI);
-  OptBBUsedRegs.init(*TRI);
+  DomBBClobberedRegs.resize(TRI->getNumRegs());
+  OptBBClobberedRegs.resize(TRI->getNumRegs());
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)

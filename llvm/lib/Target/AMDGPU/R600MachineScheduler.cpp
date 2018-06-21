@@ -8,14 +8,13 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// R600 Machine Scheduler interface
+/// \brief R600 Machine Scheduler interface
 //
 //===----------------------------------------------------------------------===//
 
 #include "R600MachineScheduler.h"
 #include "AMDGPUSubtarget.h"
 #include "R600InstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
@@ -79,7 +78,7 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
       AllowSwitchFromAlu = true;
     } else {
       unsigned NeededWF = 62.5f / ALUFetchRationEstimate;
-      LLVM_DEBUG(dbgs() << NeededWF << " approx. Wavefronts Required\n");
+      DEBUG( dbgs() << NeededWF << " approx. Wavefronts Required\n" );
       // We assume the local GPR requirements to be "dominated" by the requirement
       // of the TEX clause (which consumes 128 bits regs) ; ALU inst before and
       // after TEX are indeed likely to consume or generate values from/for the
@@ -125,24 +124,26 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
       NextInstKind = IDOther;
   }
 
-  LLVM_DEBUG(if (SU) {
-    dbgs() << " ** Pick node **\n";
-    SU->dump(DAG);
-  } else {
-    dbgs() << "NO NODE \n";
-    for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
-      const SUnit &S = DAG->SUnits[i];
-      if (!S.isScheduled)
-        S.dump(DAG);
-    }
-  });
+  DEBUG(
+      if (SU) {
+        dbgs() << " ** Pick node **\n";
+        SU->dump(DAG);
+      } else {
+        dbgs() << "NO NODE \n";
+        for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
+          const SUnit &S = DAG->SUnits[i];
+          if (!S.isScheduled)
+            S.dump(DAG);
+        }
+      }
+  );
 
   return SU;
 }
 
 void R600SchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   if (NextInstKind != CurInstKind) {
-    LLVM_DEBUG(dbgs() << "Instruction Type Switch\n");
+    DEBUG(dbgs() << "Instruction Type Switch\n");
     if (NextInstKind != IDAlu)
       OccupedSlotsMask |= 31;
     CurEmitted = 0;
@@ -171,7 +172,8 @@ void R600SchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
     ++CurEmitted;
   }
 
-  LLVM_DEBUG(dbgs() << CurEmitted << " Instructions Emitted in this clause\n");
+
+  DEBUG(dbgs() << CurEmitted << " Instructions Emitted in this clause\n");
 
   if (CurInstKind != IDFetch) {
     MoveUnits(Pending[IDFetch], Available[IDFetch]);
@@ -188,11 +190,11 @@ isPhysicalRegCopy(MachineInstr *MI) {
 }
 
 void R600SchedStrategy::releaseTopNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Top Releasing "; SU->dump(DAG););
+  DEBUG(dbgs() << "Top Releasing ";SU->dump(DAG););
 }
 
 void R600SchedStrategy::releaseBottomNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Bottom Releasing "; SU->dump(DAG););
+  DEBUG(dbgs() << "Bottom Releasing ";SU->dump(DAG););
   if (isPhysicalRegCopy(SU->getInstr())) {
     PhysicalRegCopy.push_back(SU);
     return;
@@ -343,7 +345,7 @@ void R600SchedStrategy::LoadAlu() {
 }
 
 void R600SchedStrategy::PrepareNextSlot() {
-  LLVM_DEBUG(dbgs() << "New Slot\n");
+  DEBUG(dbgs() << "New Slot\n");
   assert (OccupedSlotsMask && "Slot wasn't filled");
   OccupedSlotsMask = 0;
 //  if (HwGen == R600Subtarget::NORTHERN_ISLANDS)
@@ -459,7 +461,7 @@ SUnit* R600SchedStrategy::pickOther(int QID) {
   }
   if (!AQ.empty()) {
     SU = AQ.back();
-    AQ.pop_back();
+    AQ.resize(AQ.size() - 1);
   }
   return SU;
 }

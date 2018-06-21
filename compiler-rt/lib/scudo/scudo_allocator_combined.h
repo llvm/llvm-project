@@ -49,6 +49,12 @@ class ScudoCombinedAllocator {
     Secondary.Deallocate(&Stats, Ptr);
   }
 
+  uptr getActuallyAllocatedSize(void *Ptr, uptr ClassId) {
+    if (ClassId)
+      return PrimaryAllocator::ClassIdToSize(ClassId);
+    return Secondary.GetActuallyAllocatedSize(Ptr);
+  }
+
   void initCache(AllocatorCache *Cache) {
     Cache->Init(&Stats);
   }
@@ -59,11 +65,6 @@ class ScudoCombinedAllocator {
 
   void getStats(AllocatorStatCounters StatType) const {
     Stats.Get(StatType);
-  }
-
-  void printStats() {
-    Primary.PrintStats();
-    Secondary.PrintStats();
   }
 
  private:

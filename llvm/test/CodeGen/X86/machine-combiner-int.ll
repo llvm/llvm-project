@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -machine-combiner-verify-pattern-order=true | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after machine-combiner -machine-combiner-verify-pattern-order=true -o - | FileCheck %s --check-prefix=DEAD
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after machine-combiner -o - | FileCheck %s --check-prefix=DEAD
 
 ; Verify that integer multiplies are reassociated. The first multiply in 
 ; each test should be independent of the result of the preceding add (lea).
@@ -34,8 +34,8 @@ define i32 @reassociate_muls_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-NEXT:    retq
 
 ; DEAD:       ADD32rr
-; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead $eflags
-; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead $eflags
+; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead %eflags
+; DEAD-NEXT:  IMUL32rr{{.*}}implicit-def dead %eflags
 
   %t0 = add i32 %x0, %x1
   %t1 = mul i32 %x2, %t0

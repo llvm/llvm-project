@@ -1,15 +1,18 @@
 // RUN: %clang_cc1 -fms-extensions -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fms-extensions -fdelayed-template-parsing -fsyntax-only -verify %s
 
-// expected-no-diagnostics
 class A {
 public:
   template<class U> A(U p) {}
-  template<> A(int p) {}
+  template<> A(int p) {
+    // expected-warning@-1 {{explicit specialization of 'A' within class scope is a Microsoft extension}}
+  }
 
   template<class U> void f(U p) {}
 
-  template<> void f(int p) {}
+  template<> void f(int p) {
+    // expected-warning@-1 {{explicit specialization of 'f' within class scope is a Microsoft extension}}
+  }
 
   void f(int p) {}
 };
@@ -25,11 +28,14 @@ void test1() {
 template<class T> class B {
 public:
   template<class U> B(U p) {}
-  template<> B(int p) {}
+  template<> B(int p) {
+    // expected-warning@-1 {{explicit specialization of 'B<T>' within class scope is a Microsoft extension}}
+  }
 
   template<class U> void f(U p) { T y = 9; }
 
   template<> void f(int p) {
+    // expected-warning@-1 {{explicit specialization of 'f' within class scope is a Microsoft extension}}
     T a = 3;
   }
 
@@ -50,7 +56,9 @@ namespace PR12709 {
 
     template<bool b> void specialized_member_template() {}
 
-    template<> void specialized_member_template<false>() {}
+    template<> void specialized_member_template<false>() {
+      // expected-warning@-1 {{explicit specialization of 'specialized_member_template' within class scope is a Microsoft extension}}
+    }
   };
 
   void f() { TemplateClass<int> t; }
@@ -59,8 +67,8 @@ namespace PR12709 {
 namespace Duplicates {
   template<typename T> struct A {
     template<typename U> void f();
-    template<> void f<int>() {}
-    template<> void f<T>() {}
+    template<> void f<int>() {} // expected-warning {{Microsoft extension}}
+    template<> void f<T>() {} // expected-warning {{Microsoft extension}}
   };
 
   // FIXME: We should diagnose the duplicate explicit specialization definitions
@@ -73,6 +81,6 @@ struct S {
   template <int>
   int f(int = 0);
   template <>
-  int f<0>(int);
+  int f<0>(int); // expected-warning {{Microsoft extension}}
 };
 }

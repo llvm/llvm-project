@@ -23,13 +23,13 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Interpreter/Args.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
@@ -149,8 +149,8 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
       return matches.GetSize();
     }
 
-    // If there was no trailing slash, then we're done as soon as we resolve
-    // the expression to the correct directory.  Otherwise we need to continue
+    // If there was no trailing slash, then we're done as soon as we resolve the
+    // expression to the correct directory.  Otherwise we need to continue
     // looking for matches within that directory.
     if (FirstSep == llvm::StringRef::npos) {
       // Make sure it ends with a separator.
@@ -164,12 +164,6 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
     // search in the fully resolved directory, but CompletionBuffer keeps the
     // unmodified form that the user typed.
     Storage = Resolved;
-    llvm::StringRef RemainderDir = path::parent_path(Remainder.str());
-    if (!RemainderDir.empty()) {
-      // Append the remaining path to the resolved directory.
-      Storage.append(path::get_separator());
-      Storage.append(RemainderDir);
-    }
     SearchDir = Storage;
   } else {
     SearchDir = path::parent_path(CompletionBuffer);

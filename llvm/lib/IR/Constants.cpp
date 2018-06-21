@@ -202,58 +202,6 @@ bool Constant::isNotMinSignedValue() const {
   return false;
 }
 
-bool Constant::isFiniteNonZeroFP() const {
-  if (auto *CFP = dyn_cast<ConstantFP>(this))
-    return CFP->getValueAPF().isFiniteNonZero();
-  if (!getType()->isVectorTy())
-    return false;
-  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
-    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
-    if (!CFP || !CFP->getValueAPF().isFiniteNonZero())
-      return false;
-  }
-  return true;
-}
-
-bool Constant::isNormalFP() const {
-  if (auto *CFP = dyn_cast<ConstantFP>(this))
-    return CFP->getValueAPF().isNormal();
-  if (!getType()->isVectorTy())
-    return false;
-  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
-    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
-    if (!CFP || !CFP->getValueAPF().isNormal())
-      return false;
-  }
-  return true;
-}
-
-bool Constant::hasExactInverseFP() const {
-  if (auto *CFP = dyn_cast<ConstantFP>(this))
-    return CFP->getValueAPF().getExactInverse(nullptr);
-  if (!getType()->isVectorTy())
-    return false;
-  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
-    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
-    if (!CFP || !CFP->getValueAPF().getExactInverse(nullptr))
-      return false;
-  }
-  return true;
-}
-
-bool Constant::isNaN() const {
-  if (auto *CFP = dyn_cast<ConstantFP>(this))
-    return CFP->isNaN();
-  if (!getType()->isVectorTy())
-    return false;
-  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i) {
-    auto *CFP = dyn_cast_or_null<ConstantFP>(this->getAggregateElement(i));
-    if (!CFP || !CFP->isNaN())
-      return false;
-  }
-  return true;
-}
-
 /// Constructor to create a '0' constant of arbitrary type.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {
@@ -687,17 +635,6 @@ Constant *ConstantFP::get(Type *Ty, double V) {
   return C;
 }
 
-Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
-  ConstantFP *C = get(Ty->getContext(), V);
-  assert(C->getType() == Ty->getScalarType() &&
-         "ConstantFP type doesn't match the type implied by its value!");
-
-  // For vectors, broadcast the value.
-  if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getNumElements(), C);
-
-  return C;
-}
 
 Constant *ConstantFP::get(Type *Ty, StringRef Str) {
   LLVMContext &Context = Ty->getContext();
@@ -2450,6 +2387,40 @@ void ConstantDataSequential::destroyConstantImpl() {
   // If we were part of a list, make sure that we don't delete the list that is
   // still owned by the uniquing map.
   Next = nullptr;
+}
+
+/// get() constructors - Return a constant with array type with an element
+/// count and element type matching the ArrayRef passed in.  Note that this
+/// can return a ConstantAggregateZero object.
+Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint8_t> Elts) {
+  Type *Ty = ArrayType::get(Type::getInt8Ty(Context), Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
+}
+Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint16_t> Elts){
+  Type *Ty = ArrayType::get(Type::getInt16Ty(Context), Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
+}
+Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint32_t> Elts){
+  Type *Ty = ArrayType::get(Type::getInt32Ty(Context), Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
+}
+Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint64_t> Elts){
+  Type *Ty = ArrayType::get(Type::getInt64Ty(Context), Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
+}
+Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<float> Elts) {
+  Type *Ty = ArrayType::get(Type::getFloatTy(Context), Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
+}
+Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<double> Elts) {
+  Type *Ty = ArrayType::get(Type::getDoubleTy(Context), Elts.size());
+  const char *Data = reinterpret_cast<const char *>(Elts.data());
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 
 /// getFP() constructors - Return a constant with array type with an element

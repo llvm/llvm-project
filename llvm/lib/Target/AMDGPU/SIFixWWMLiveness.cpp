@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Computations in WWM can overwrite values in inactive channels for
+/// \brief Computations in WWM can overwrite values in inactive channels for
 /// variables that the register allocator thinks are dead. This pass adds fake
 /// uses of those variables to WWM instructions to make sure that they aren't
 /// overwritten.
@@ -55,7 +55,6 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"

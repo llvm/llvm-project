@@ -3,18 +3,6 @@ macro(add_host_subdirectory group)
   source_group(${group} FILES ${ARGN})
 endmacro()
 
-# Removes all module flags from the current CMAKE_CXX_FLAGS. Used for
-# the Objective-C++ code in lldb which we don't want to build with modules.
-# Reasons for this are that modules with Objective-C++ would require that
-# all LLVM/Clang modules are Objective-C++ compatible (which they are likely
-# not) and we would have rebuild a second set of modules just for the few
-# Objective-C++ files in lldb (which slows down the build process).
-macro(remove_module_flags)
-  string(REGEX REPLACE "-fmodules-cache-path=[^ ]+" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  string(REGEX REPLACE "-fmodules" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  string(REGEX REPLACE "-fcxx-modules" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endmacro()
-
 add_host_subdirectory(common
   common/File.cpp
   common/FileCache.cpp
@@ -51,6 +39,11 @@ add_host_subdirectory(common
   common/UDPSocket.cpp
   )
 
+# Keep track of whether we want to provide a define for the
+# Python's architecture-specific lib path (i.e. where a
+# Python lldb module would go).
+set (get_python_libdir 0)
+
 if (NOT LLDB_DISABLE_LIBEDIT)
   add_host_subdirectory(common
     common/Editline.cpp
@@ -60,6 +53,10 @@ endif()
 add_host_subdirectory(posix
   posix/ConnectionFileDescriptorPosix.cpp
   )
+
+if(NOT LLDB_DISABLE_PYTHON)
+  list(APPEND LLDB_PLUGINS lldbPluginScriptInterpreterPython)
+endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_host_subdirectory(windows
@@ -77,6 +74,11 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/Windows.cpp
     )
 else()
+  if (NOT LLDB_DISABLE_PYTHON)
+    # We'll grab the arch-specific python libdir on POSIX systems.
+    set (get_python_libdir 1)
+  endif()
+
   add_host_subdirectory(posix
     posix/DomainSocket.cpp
     posix/FileSystem.cpp
@@ -90,9 +92,10 @@ else()
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})
-    add_subdirectory(macosx/objcxx)
-    set(LLDBObjCLibs lldbHostMacOSXObjCXX)
-    add_host_subdirectory(maqcosx
+    add_host_subdirectory(macosx
+      macosx/Host.mm
+      macosx/HostInfoMacOSX.mm
+      macosx/HostThreadMacOSX.mm
       macosx/Symbols.cpp
       macosx/cfcpp/CFCBundle.cpp
       macosx/cfcpp/CFCData.cpp
@@ -141,6 +144,19 @@ else()
   endif()
 endif()
 
+if (${get_python_libdir})
+  # Call a python script to gather the arch-specific libdir for
+  # modules like the lldb module.
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../../scripts/get_relative_lib_dir.py
+    RESULT_VARIABLE get_libdir_status
+    OUTPUT_VARIABLE relative_libdir
+    )
+  if (get_libdir_status EQUAL 0)
+    add_definitions(-DLLDB_PYTHON_RELATIVE_LIBDIR="${relative_libdir}")
+  endif()
+endif()
+
 set(EXTRA_LIBS)
 if (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
   list(APPEND EXTRA_LIBS kvm)
@@ -161,16 +177,16 @@ endif()
 
 add_lldb_library(lldbHost
   ${HOST_SOURCES}
-
+  
   LINK_LIBS
     lldbCore
+    lldbInterpreter
     lldbSymbol
     lldbTarget
     lldbUtility
+    ${LLDB_PLUGINS}
     ${EXTRA_LIBS}
-    ${LLDBObjCLibs}
-
+  
   LINK_COMPONENTS
-    Object
     Support
   )

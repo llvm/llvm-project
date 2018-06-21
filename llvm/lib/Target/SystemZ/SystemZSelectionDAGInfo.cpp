@@ -145,7 +145,7 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
 // deciding whether to use a loop or straight-line code.
 static SDValue emitCLC(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                        SDValue Src1, SDValue Src2, uint64_t Size) {
-  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
+  SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
   EVT PtrVT = Src1.getValueType();
   // A two-CLC sequence is a clear win over a loop, not least because it
   // needs only one branch.  A three-CLC sequence needs the same number
@@ -167,9 +167,9 @@ static SDValue emitCLC(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
 // less than zero if CC == 1 and greater than zero if CC >= 2.
 // The sequence starts with IPM, which puts CC into bits 29 and 28
 // of an integer and clears bits 30 and 31.
-static SDValue addIPMSequence(const SDLoc &DL, SDValue CCReg,
+static SDValue addIPMSequence(const SDLoc &DL, SDValue Glue,
                               SelectionDAG &DAG) {
-  SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, CCReg);
+  SDValue IPM = DAG.getNode(SystemZISD::IPM, DL, MVT::i32, Glue);
   SDValue SRL = DAG.getNode(ISD::SRL, DL, MVT::i32, IPM,
                             DAG.getConstant(SystemZ::IPM_CC, DL, MVT::i32));
   SDValue ROTL = DAG.getNode(ISD::ROTL, DL, MVT::i32, SRL,
@@ -184,9 +184,9 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemcmp(
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size)) {
     uint64_t Bytes = CSize->getZExtValue();
     assert(Bytes > 0 && "Caller should have handled 0-size case");
-    SDValue CCReg = emitCLC(DAG, DL, Chain, Src1, Src2, Bytes);
-    Chain = CCReg.getValue(1);
-    return std::make_pair(addIPMSequence(DL, CCReg, DAG), Chain);
+    Chain = emitCLC(DAG, DL, Chain, Src1, Src2, Bytes);
+    SDValue Glue = Chain.getValue(1);
+    return std::make_pair(addIPMSequence(DL, Glue, DAG), Chain);
   }
   return std::make_pair(SDValue(), SDValue());
 }
@@ -196,7 +196,7 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemchr(
     SDValue Char, SDValue Length, MachinePointerInfo SrcPtrInfo) const {
   // Use SRST to find the character.  End is its address on success.
   EVT PtrVT = Src.getValueType();
-  SDVTList VTs = DAG.getVTList(PtrVT, MVT::i32, MVT::Other);
+  SDVTList VTs = DAG.getVTList(PtrVT, MVT::Other, MVT::Glue);
   Length = DAG.getZExtOrTrunc(Length, DL, PtrVT);
   Char = DAG.getZExtOrTrunc(Char, DL, MVT::i32);
   Char = DAG.getNode(ISD::AND, DL, MVT::i32, Char,
@@ -204,16 +204,17 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemchr(
   SDValue Limit = DAG.getNode(ISD::ADD, DL, PtrVT, Src, Length);
   SDValue End = DAG.getNode(SystemZISD::SEARCH_STRING, DL, VTs, Chain,
                             Limit, Src, Char);
-  SDValue CCReg = End.getValue(1);
-  Chain = End.getValue(2);
+  Chain = End.getValue(1);
+  SDValue Glue = End.getValue(2);
 
   // Now select between End and null, depending on whether the character
   // was found.
   SDValue Ops[] = {End, DAG.getConstant(0, DL, PtrVT),
                    DAG.getConstant(SystemZ::CCMASK_SRST, DL, MVT::i32),
                    DAG.getConstant(SystemZ::CCMASK_SRST_FOUND, DL, MVT::i32),
-                   CCReg};
-  End = DAG.getNode(SystemZISD::SELECT_CCMASK, DL, PtrVT, Ops);
+                   Glue};
+  VTs = DAG.getVTList(PtrVT, MVT::Glue);
+  End = DAG.getNode(SystemZISD::SELECT_CCMASK, DL, VTs, Ops);
   return std::make_pair(End, Chain);
 }
 
@@ -231,12 +232,12 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcmp(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src1,
     SDValue Src2, MachinePointerInfo Op1PtrInfo,
     MachinePointerInfo Op2PtrInfo) const {
-  SDVTList VTs = DAG.getVTList(Src1.getValueType(), MVT::i32, MVT::Other);
+  SDVTList VTs = DAG.getVTList(Src1.getValueType(), MVT::Other, MVT::Glue);
   SDValue Unused = DAG.getNode(SystemZISD::STRCMP, DL, VTs, Chain, Src1, Src2,
                                DAG.getConstant(0, DL, MVT::i32));
-  SDValue CCReg = Unused.getValue(1);
-  Chain = Unused.getValue(2);
-  return std::make_pair(addIPMSequence(DL, CCReg, DAG), Chain);
+  Chain = Unused.getValue(1);
+  SDValue Glue = Chain.getValue(2);
+  return std::make_pair(addIPMSequence(DL, Glue, DAG), Chain);
 }
 
 // Search from Src for a null character, stopping once Src reaches Limit.
@@ -249,10 +250,10 @@ static std::pair<SDValue, SDValue> getBoundedStrlen(SelectionDAG &DAG,
                                                     SDValue Chain, SDValue Src,
                                                     SDValue Limit) {
   EVT PtrVT = Src.getValueType();
-  SDVTList VTs = DAG.getVTList(PtrVT, MVT::i32, MVT::Other);
+  SDVTList VTs = DAG.getVTList(PtrVT, MVT::Other, MVT::Glue);
   SDValue End = DAG.getNode(SystemZISD::SEARCH_STRING, DL, VTs, Chain,
                             Limit, Src, DAG.getConstant(0, DL, MVT::i32));
-  Chain = End.getValue(2);
+  Chain = End.getValue(1);
   SDValue Len = DAG.getNode(ISD::SUB, DL, PtrVT, End, Src);
   return std::make_pair(Len, Chain);
 }

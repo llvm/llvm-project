@@ -705,3 +705,4 @@ void ARMAttributeParser::Parse(ArrayRef<uint8_t> Section, bool isLittle) {
   }
 }
 }
+

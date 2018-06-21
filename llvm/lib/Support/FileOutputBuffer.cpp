@@ -82,11 +82,9 @@ public:
   size_t getBufferSize() const override { return Buffer.size(); }
 
   Error commit() override {
-    using namespace sys::fs;
     int FD;
     std::error_code EC;
-    if (auto EC =
-            openFileForWrite(FinalPath, FD, CD_CreateAlways, OF_None, Mode))
+    if (auto EC = openFileForWrite(FinalPath, FD, fs::F_None, Mode))
       return errorCodeToError(EC);
     raw_fd_ostream OS(FD, /*shouldClose=*/true, /*unbuffered=*/true);
     OS << StringRef((const char *)Buffer.base(), Buffer.size());
@@ -117,7 +115,7 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
     return FileOrErr.takeError();
   fs::TempFile File = std::move(*FileOrErr);
 
-#ifndef _WIN32
+#ifndef LLVM_ON_WIN32
   // On Windows, CreateFileMapping (the mmap function on Windows)
   // automatically extends the underlying file. We don't need to
   // extend the file beforehand. _chsize (ftruncate on Windows) is

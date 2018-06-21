@@ -171,11 +171,12 @@ private:
 VariableSP FindGlobalVariable(TargetSP target, llvm::Twine name) {
   ConstString fullname(name.str());
   VariableList variable_list;
+  const bool append = true;
   if (!target) {
     return nullptr;
   }
-  const uint32_t match_count =
-      target->GetImages().FindGlobalVariables(fullname, 1, variable_list);
+  const uint32_t match_count = target->GetImages().FindGlobalVariables(
+      fullname, append, 1, variable_list);
   if (match_count == 1) {
     return variable_list.GetVariableAtIndex(0);
   }
@@ -208,7 +209,7 @@ bool GoUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                              ExecutionContext &exe_ctx,
                              lldb_private::ExecutionPolicy execution_policy,
                              bool keep_result_in_memory,
-                             bool generate_debug_info) {
+                             bool generate_debug_info, uint32_t line_offset) {
   InstallContext(exe_ctx);
   m_interpreter.reset(new GoInterpreter(exe_ctx, GetUserText()));
   if (m_interpreter->Parse())
@@ -400,7 +401,8 @@ ValueObjectSP GoUserExpression::GoInterpreter::VisitIdent(const GoASTIdent *e) {
         val = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);
       else {
         // When a variable is on the heap instead of the stack, go records a
-        // variable '&x' instead of 'x'.
+        // variable
+        // '&x' instead of 'x'.
         var_sp = var_list_sp->FindVariable(ConstString("&" + varname));
         if (var_sp) {
           val = m_frame->GetValueObjectForFrameVariable(var_sp, m_use_dynamic);

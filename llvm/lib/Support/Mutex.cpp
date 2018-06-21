@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Mutex.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Config/config.h"
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system
@@ -47,7 +47,10 @@ MutexImpl::MutexImpl( bool recursive)
 {
   // Declare the pthread_mutex data structures
   pthread_mutex_t* mutex =
-    static_cast<pthread_mutex_t*>(safe_malloc(sizeof(pthread_mutex_t)));
+    static_cast<pthread_mutex_t*>(malloc(sizeof(pthread_mutex_t)));
+
+  if (mutex == nullptr)
+    report_bad_alloc_error("Mutex allocation failed");
 
   pthread_mutexattr_t attr;
 
@@ -116,9 +119,9 @@ MutexImpl::tryacquire()
 
 #elif defined(LLVM_ON_UNIX)
 #include "Unix/Mutex.inc"
-#elif defined( _WIN32)
+#elif defined( LLVM_ON_WIN32)
 #include "Windows/Mutex.inc"
 #else
-#warning Neither LLVM_ON_UNIX nor _WIN32 was set in Support/Mutex.cpp
+#warning Neither LLVM_ON_UNIX nor LLVM_ON_WIN32 was set in Support/Mutex.cpp
 #endif
 #endif

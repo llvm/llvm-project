@@ -23,34 +23,31 @@
 using namespace llvm;
 
 bool llvm::parseAssemblyInto(MemoryBufferRef F, Module &M, SMDiagnostic &Err,
-                             SlotMapping *Slots, bool UpgradeDebugInfo,
-                             StringRef DataLayoutString) {
+                             SlotMapping *Slots, bool UpgradeDebugInfo) {
   SourceMgr SM;
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(F);
   SM.AddNewSourceBuffer(std::move(Buf), SMLoc());
 
-  return LLParser(F.getBuffer(), SM, Err, &M, Slots, UpgradeDebugInfo,
-                  DataLayoutString)
-      .Run();
+  return LLParser(F.getBuffer(), SM, Err, &M, Slots, UpgradeDebugInfo).Run();
 }
 
 std::unique_ptr<Module>
 llvm::parseAssembly(MemoryBufferRef F, SMDiagnostic &Err, LLVMContext &Context,
-                    SlotMapping *Slots, bool UpgradeDebugInfo,
-                    StringRef DataLayoutString) {
+                    SlotMapping *Slots, bool UpgradeDebugInfo) {
   std::unique_ptr<Module> M =
       make_unique<Module>(F.getBufferIdentifier(), Context);
 
-  if (parseAssemblyInto(F, *M, Err, Slots, UpgradeDebugInfo, DataLayoutString))
+  if (parseAssemblyInto(F, *M, Err, Slots, UpgradeDebugInfo))
     return nullptr;
 
   return M;
 }
 
-std::unique_ptr<Module>
-llvm::parseAssemblyFile(StringRef Filename, SMDiagnostic &Err,
-                        LLVMContext &Context, SlotMapping *Slots,
-                        bool UpgradeDebugInfo, StringRef DataLayoutString) {
+std::unique_ptr<Module> llvm::parseAssemblyFile(StringRef Filename,
+                                                SMDiagnostic &Err,
+                                                LLVMContext &Context,
+                                                SlotMapping *Slots,
+                                                bool UpgradeDebugInfo) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = FileOrErr.getError()) {
@@ -60,16 +57,16 @@ llvm::parseAssemblyFile(StringRef Filename, SMDiagnostic &Err,
   }
 
   return parseAssembly(FileOrErr.get()->getMemBufferRef(), Err, Context, Slots,
-                       UpgradeDebugInfo, DataLayoutString);
+                       UpgradeDebugInfo);
 }
 
-std::unique_ptr<Module>
-llvm::parseAssemblyString(StringRef AsmString, SMDiagnostic &Err,
-                          LLVMContext &Context, SlotMapping *Slots,
-                          bool UpgradeDebugInfo, StringRef DataLayoutString) {
+std::unique_ptr<Module> llvm::parseAssemblyString(StringRef AsmString,
+                                                  SMDiagnostic &Err,
+                                                  LLVMContext &Context,
+                                                  SlotMapping *Slots,
+                                                  bool UpgradeDebugInfo) {
   MemoryBufferRef F(AsmString, "<string>");
-  return parseAssembly(F, Err, Context, Slots, UpgradeDebugInfo,
-                       DataLayoutString);
+  return parseAssembly(F, Err, Context, Slots, UpgradeDebugInfo);
 }
 
 Constant *llvm::parseConstantValue(StringRef Asm, SMDiagnostic &Err,

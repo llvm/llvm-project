@@ -75,9 +75,10 @@ namespace {
 
 class PPCAsmBackend : public MCAsmBackend {
   const Target &TheTarget;
+  bool IsLittleEndian;
 public:
-  PPCAsmBackend(const Target &T, support::endianness Endian)
-      : MCAsmBackend(Endian), TheTarget(T) {}
+  PPCAsmBackend(const Target &T, bool isLittle) : MCAsmBackend(), TheTarget(T),
+    IsLittleEndian(isLittle) {}
 
   unsigned getNumFixupKinds() const override {
     return PPC::NumTargetFixupKinds;
@@ -110,15 +111,12 @@ public:
 
     assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
            "Invalid kind!");
-    return (Endian == support::little
-                ? InfosLE
-                : InfosBE)[Kind - FirstTargetFixupKind];
+    return (IsLittleEndian? InfosLE : InfosBE)[Kind - FirstTargetFixupKind];
   }
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t Value, bool IsResolved) const override {
     Value = adjustFixupValue(Fixup.getKind(), Value);
     if (!Value) return;           // Doesn't change encoding.
 
@@ -129,7 +127,7 @@ public:
     // from the fixup value. The Value has been "split up" into the appropriate
     // bitfields above.
     for (unsigned i = 0; i != NumBytes; ++i) {
-      unsigned Idx = Endian == support::little ? i : (NumBytes - 1 - i);
+      unsigned Idx = IsLittleEndian ? i : (NumBytes - 1 - i);
       Data[Offset + i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
     }
   }
@@ -158,8 +156,7 @@ public:
     }
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
+  bool mayNeedRelaxation(const MCInst &Inst) const override {
     // FIXME.
     return false;
   }
@@ -178,12 +175,12 @@ public:
     llvm_unreachable("relaxInstruction() unimplemented");
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
+  bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override {
     uint64_t NumNops = Count / 4;
     for (uint64_t i = 0; i != NumNops; ++i)
-      support::endian::write<uint32_t>(OS, 0x60000000, Endian);
+      OW->write32(0x60000000);
 
-    OS.write_zeros(Count % 4);
+    OW->WriteZeros(Count % 4);
 
     return true;
   }
@@ -194,6 +191,10 @@ public:
     assert(Name == "ppc32" && "Unknown target name!");
     return 4;
   }
+
+  bool isLittleEndian() const {
+    return IsLittleEndian;
+  }
 };
 } // end anonymous namespace
 
@@ -202,12 +203,13 @@ public:
 namespace {
   class DarwinPPCAsmBackend : public PPCAsmBackend {
   public:
-    DarwinPPCAsmBackend(const Target &T) : PPCAsmBackend(T, support::big) { }
+    DarwinPPCAsmBackend(const Target &T) : PPCAsmBackend(T, false) { }
 
-    std::unique_ptr<MCObjectTargetWriter>
-    createObjectTargetWriter() const override {
+    std::unique_ptr<MCObjectWriter>
+    createObjectWriter(raw_pwrite_stream &OS) const override {
       bool is64 = getPointerSize() == 8;
       return createPPCMachObjectWriter(
+          OS,
           /*Is64Bit=*/is64,
           (is64 ? MachO::CPU_TYPE_POWERPC64 : MachO::CPU_TYPE_POWERPC),
           MachO::CPU_SUBTYPE_POWERPC_ALL);
@@ -217,14 +219,13 @@ namespace {
   class ELFPPCAsmBackend : public PPCAsmBackend {
     uint8_t OSABI;
   public:
-    ELFPPCAsmBackend(const Target &T, support::endianness Endian,
-                     uint8_t OSABI)
-        : PPCAsmBackend(T, Endian), OSABI(OSABI) {}
+    ELFPPCAsmBackend(const Target &T, bool IsLittleEndian, uint8_t OSABI) :
+      PPCAsmBackend(T, IsLittleEndian), OSABI(OSABI) { }
 
-    std::unique_ptr<MCObjectTargetWriter>
-    createObjectTargetWriter() const override {
+    std::unique_ptr<MCObjectWriter>
+    createObjectWriter(raw_pwrite_stream &OS) const override {
       bool is64 = getPointerSize() == 8;
-      return createPPCELFObjectWriter(is64, OSABI);
+      return createPPCELFObjectWriter(OS, is64, isLittleEndian(), OSABI);
     }
   };
 
@@ -240,6 +241,5 @@ MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   bool IsLittleEndian = TT.getArch() == Triple::ppc64le;
-  return new ELFPPCAsmBackend(
-      T, IsLittleEndian ? support::little : support::big, OSABI);
+  return new ELFPPCAsmBackend(T, IsLittleEndian, OSABI);
 }

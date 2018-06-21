@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
-#include <immintrin.h>
+#include <x86intrin.h>
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse-intrinsics-fast-isel.ll
 
@@ -508,6 +508,14 @@ __m128 test_mm_rcp_ps(__m128 x) {
 __m128 test_mm_rcp_ss(__m128 x) {
   // CHECK-LABEL: test_mm_rcp_ss
   // CHECK: call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> {{.*}})
+  // CHECK: extractelement <4 x float> {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: extractelement <4 x float> {{.*}}, i32 1
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 1
+  // CHECK: extractelement <4 x float> {{.*}}, i32 2
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 2
+  // CHECK: extractelement <4 x float> {{.*}}, i32 3
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
   return _mm_rcp_ss(x);
 }
 
@@ -520,6 +528,14 @@ __m128 test_mm_rsqrt_ps(__m128 x) {
 __m128 test_mm_rsqrt_ss(__m128 x) {
   // CHECK-LABEL: test_mm_rsqrt_ss
   // CHECK: call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> {{.*}})
+  // CHECK: extractelement <4 x float> {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: extractelement <4 x float> {{.*}}, i32 1
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 1
+  // CHECK: extractelement <4 x float> {{.*}}, i32 2
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 2
+  // CHECK: extractelement <4 x float> {{.*}}, i32 3
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
   return _mm_rsqrt_ss(x);
 }
 
@@ -639,15 +655,21 @@ __m128 test_mm_shuffle_ps(__m128 A, __m128 B) {
 
 __m128 test_mm_sqrt_ps(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ps
-  // CHECK: call <4 x float> @llvm.sqrt.v4f32(<4 x float> {{.*}})
+  // CHECK: call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> {{.*}})
   return _mm_sqrt_ps(x);
 }
 
 __m128 test_sqrt_ss(__m128 x) {
   // CHECK: define {{.*}} @test_sqrt_ss
-  // CHECK: extractelement <4 x float> {{.*}}, i64 0
-  // CHECK: call float @llvm.sqrt.f32(float {{.*}})
-  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i64 0
+  // CHECK: call <4 x float> @llvm.x86.sse.sqrt.ss
+  // CHECK: extractelement <4 x float> {{.*}}, i32 0
+  // CHECK: insertelement <4 x float> undef, float {{.*}}, i32 0
+  // CHECK: extractelement <4 x float> {{.*}}, i32 1
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 1
+  // CHECK: extractelement <4 x float> {{.*}}, i32 2
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 2
+  // CHECK: extractelement <4 x float> {{.*}}, i32 3
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 3
   return _mm_sqrt_ss(x);
 }
 

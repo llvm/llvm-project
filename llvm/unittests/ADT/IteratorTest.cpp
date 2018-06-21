@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/iterator.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
@@ -197,33 +196,6 @@ TEST(FilterIteratorTest, InputIterator) {
   EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual);
 }
 
-TEST(FilterIteratorTest, ReverseFilterRange) {
-  auto IsOdd = [](int N) { return N % 2 == 1; };
-  int A[] = {0, 1, 2, 3, 4, 5, 6};
-
-  // Check basic reversal.
-  auto Range = reverse(make_filter_range(A, IsOdd));
-  SmallVector<int, 3> Actual(Range.begin(), Range.end());
-  EXPECT_EQ((SmallVector<int, 3>{5, 3, 1}), Actual);
-
-  // Check that the reverse of the reverse is the original.
-  auto Range2 = reverse(reverse(make_filter_range(A, IsOdd)));
-  SmallVector<int, 3> Actual2(Range2.begin(), Range2.end());
-  EXPECT_EQ((SmallVector<int, 3>{1, 3, 5}), Actual2);
-
-  // Check empty ranges.
-  auto Range3 = reverse(make_filter_range(ArrayRef<int>(), IsOdd));
-  SmallVector<int, 0> Actual3(Range3.begin(), Range3.end());
-  EXPECT_EQ((SmallVector<int, 0>{}), Actual3);
-
-  // Check that we don't skip the first element, provided it isn't filtered
-  // away.
-  auto IsEven = [](int N) { return N % 2 == 0; };
-  auto Range4 = reverse(make_filter_range(A, IsEven));
-  SmallVector<int, 4> Actual4(Range4.begin(), Range4.end());
-  EXPECT_EQ((SmallVector<int, 4>{6, 4, 2, 0}), Actual4);
-}
-
 TEST(PointerIterator, Basic) {
   int A[] = {1, 2, 3, 4};
   pointer_iterator<int *> Begin(std::begin(A)), End(std::end(A));
@@ -363,14 +335,6 @@ TEST(ZipIteratorTest, Reverse) {
 
   // Ensure that in-place mutation works.
   EXPECT_TRUE(all_of(ascending, [](unsigned n) { return (n & 0x01) == 0; }));
-}
-
-TEST(RangeTest, Distance) {
-  std::vector<int> v1;
-  std::vector<int> v2{1, 2, 3};
-
-  EXPECT_EQ(std::distance(v1.begin(), v1.end()), size(v1));
-  EXPECT_EQ(std::distance(v2.begin(), v2.end()), size(v2));
 }
 
 } // anonymous namespace

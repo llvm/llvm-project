@@ -14,14 +14,14 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 SymbolFileDWARFDwo::SymbolFileDWARFDwo(ObjectFileSP objfile,
-                                       DWARFUnit *dwarf_cu)
+                                       DWARFCompileUnit *dwarf_cu)
     : SymbolFileDWARF(objfile.get()), m_obj_file_sp(objfile),
       m_base_dwarf_cu(dwarf_cu) {
   SetID(((lldb::user_id_t)dwarf_cu->GetOffset()) << 32);
@@ -52,7 +52,7 @@ void SymbolFileDWARFDwo::LoadSectionData(lldb::SectionType sect_type,
 }
 
 lldb::CompUnitSP
-SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu,
+SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
                                      uint32_t cu_idx) {
   assert(GetCompileUnit() == dwarf_cu && "SymbolFileDWARFDwo::ParseCompileUnit "
                                          "called with incompatible compile "
@@ -60,7 +60,7 @@ SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu,
   return GetBaseSymbolFile()->ParseCompileUnit(m_base_dwarf_cu, UINT32_MAX);
 }
 
-DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
+DWARFCompileUnit *SymbolFileDWARFDwo::GetCompileUnit() {
   // A clang module is found via a skeleton CU, but is not a proper DWO.
   // Clang modules have a .debug_info section instead of the *_dwo variant.
   if (auto *section_list = m_obj_file->GetSectionList(false))
@@ -76,7 +76,7 @@ DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
     return nullptr;
 }
 
-DWARFUnit *
+DWARFCompileUnit *
 SymbolFileDWARFDwo::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   return GetCompileUnit();
 }
@@ -122,7 +122,7 @@ lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);
 }
 
-DWARFUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
+DWARFCompileUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
   return m_base_dwarf_cu;
 }
 

@@ -1,6 +1,7 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc < %s
 ; REQUIRES: asserts
 
+target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 target triple = "hexagon-unknown--elf"
 
 ; Function Attrs: nounwind readnone

@@ -45,7 +45,7 @@ class SROALegacyPass;
 
 } // end namespace sroa
 
-/// An optimization pass providing Scalar Replacement of Aggregates.
+/// \brief An optimization pass providing Scalar Replacement of Aggregates.
 ///
 /// This pass takes allocations which can be completely analyzed (that is, they
 /// don't escape) and tries to turn them into scalar SSA values. There are
@@ -68,7 +68,7 @@ class SROA : public PassInfoMixin<SROA> {
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
 
-  /// Worklist of alloca instructions to simplify.
+  /// \brief Worklist of alloca instructions to simplify.
   ///
   /// Each alloca in the function is added to this. Each new alloca formed gets
   /// added to it as well to recursively simplify unless that alloca can be
@@ -77,12 +77,12 @@ class SROA : public PassInfoMixin<SROA> {
   /// already present to ensure it is re-visited.
   SetVector<AllocaInst *, SmallVector<AllocaInst *, 16>> Worklist;
 
-  /// A collection of instructions to delete.
+  /// \brief A collection of instructions to delete.
   /// We try to batch deletions to simplify code and make things a bit more
   /// efficient.
   SetVector<Instruction *, SmallVector<Instruction *, 8>> DeadInsts;
 
-  /// Post-promotion worklist.
+  /// \brief Post-promotion worklist.
   ///
   /// Sometimes we discover an alloca which has a high probability of becoming
   /// viable for SROA after a round of promotion takes place. In those cases,
@@ -92,17 +92,17 @@ class SROA : public PassInfoMixin<SROA> {
   /// the event they are deleted.
   SetVector<AllocaInst *, SmallVector<AllocaInst *, 16>> PostPromotionWorklist;
 
-  /// A collection of alloca instructions we can directly promote.
+  /// \brief A collection of alloca instructions we can directly promote.
   std::vector<AllocaInst *> PromotableAllocas;
 
-  /// A worklist of PHIs to speculate prior to promoting allocas.
+  /// \brief A worklist of PHIs to speculate prior to promoting allocas.
   ///
   /// All of these PHIs have been checked for the safety of speculation and by
   /// being speculated will allow promoting allocas currently in the promotable
   /// queue.
   SetVector<PHINode *, SmallVector<PHINode *, 2>> SpeculatablePHIs;
 
-  /// A worklist of select instructions to speculate prior to promoting
+  /// \brief A worklist of select instructions to speculate prior to promoting
   /// allocas.
   ///
   /// All of these select instructions have been checked for the safety of
@@ -113,7 +113,7 @@ class SROA : public PassInfoMixin<SROA> {
 public:
   SROA() = default;
 
-  /// Run the pass over the function.
+  /// \brief Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:

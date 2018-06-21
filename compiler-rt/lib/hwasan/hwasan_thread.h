@@ -52,8 +52,6 @@ class HwasanThread {
 
   HwasanThreadLocalMallocStorage &malloc_storage() { return malloc_storage_; }
 
-  tag_t GenerateRandomTag();
-
   int destructor_iterations_;
 
  private:
@@ -71,9 +69,6 @@ class HwasanThread {
   unsigned in_signal_handler_;
   unsigned in_symbolizer_;
   unsigned in_interceptor_scope_;
-
-  u32 random_state_;
-  u32 random_buffer_;
 
   HwasanThreadLocalMallocStorage malloc_storage_;
 };

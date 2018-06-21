@@ -24,7 +24,6 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/OptionValueLanguage.h"
@@ -330,7 +329,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = OptionArgParser::ToBoolean(option_arg, true, &success);
+        m_cascade = Args::StringToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_arg.str().c_str());
@@ -572,7 +571,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = OptionArgParser::ToBoolean(option_value, true, &success);
+        m_cascade = Args::StringToBoolean(option_value, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_value.str().c_str());
@@ -1253,7 +1252,7 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 'C':
-    m_flags.SetCascades(OptionArgParser::ToBoolean(option_arg, true, &success));
+    m_flags.SetCascades(Args::StringToBoolean(option_arg, true, &success));
     if (!success)
       error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                      option_arg.str().c_str());
@@ -1421,8 +1420,8 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
     return result.Succeeded();
   }
 
-  // if I am here, script_format must point to something good, so I can add
-  // that as a script summary to all interested parties
+  // if I am here, script_format must point to something good, so I can add that
+  // as a script summary to all interested parties
 
   Status error;
 
@@ -2521,7 +2520,7 @@ private:
 
       switch (short_option) {
       case 'C':
-        m_cascade = OptionArgParser::ToBoolean(option_arg, true, &success);
+        m_cascade = Args::StringToBoolean(option_arg, true, &success);
         if (!success)
           error.SetErrorStringWithFormat("invalid value for cascade: %s",
                                          option_arg.str().c_str());
@@ -2757,8 +2756,9 @@ static OptionDefinition g_type_lookup_options[] = {
 class CommandObjectTypeLookup : public CommandObjectRaw {
 protected:
   // this function is allowed to do a more aggressive job at guessing languages
-  // than the expression parser is comfortable with - so leave the original
-  // call alone and add one that is specific to type lookup
+  // than the expression parser
+  // is comfortable with - so leave the original call alone and add one that is
+  // specific to type lookup
   lldb::LanguageType GuessLanguage(StackFrame *frame) {
     lldb::LanguageType lang_type = lldb::eLanguageTypeUnknown;
 
@@ -2848,7 +2848,8 @@ public:
     StreamString stream;
     // FIXME: hardcoding languages is not good
     lldb::LanguageType languages[] = {eLanguageTypeObjC,
-                                      eLanguageTypeC_plus_plus};
+                                      eLanguageTypeC_plus_plus,
+                                      eLanguageTypeSwift};
 
     for (const auto lang_type : languages) {
       if (auto language = Language::FindPlugin(lang_type)) {
@@ -2928,13 +2929,15 @@ public:
       // FIXME: hardcoding languages is not good
       languages.push_back(Language::FindPlugin(eLanguageTypeObjC));
       languages.push_back(Language::FindPlugin(eLanguageTypeC_plus_plus));
+      languages.push_back(Language::FindPlugin(eLanguageTypeSwift));
     } else {
       languages.push_back(Language::FindPlugin(m_command_options.m_language));
     }
 
     // This is not the most efficient way to do this, but we support very few
-    // languages so the cost of the sort is going to be dwarfed by the actual
-    // lookup anyway
+    // languages
+    // so the cost of the sort is going to be dwarfed by the actual lookup
+    // anyway
     if (StackFrame *frame = m_exe_ctx.GetFramePtr()) {
       guessed_language = GuessLanguage(frame);
       if (guessed_language != eLanguageTypeUnknown) {

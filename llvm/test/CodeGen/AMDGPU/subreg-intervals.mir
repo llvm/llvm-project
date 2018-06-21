@@ -31,7 +31,7 @@ registers:
   - { id: 0, class: sreg_64 }
 body: |
   bb.0:
-    S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
+    S_CBRANCH_VCCNZ %bb.1, implicit undef %vcc
     S_BRANCH %bb.2
 
   bb.1:

@@ -48,7 +48,6 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -73,6 +72,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -570,7 +570,7 @@ private:
   // The ides is inspired from:
   // "Partial Redundancy Elimination in SSA Form"
   // ROBERT KENNEDY, SUN CHAN, SHIN-MING LIU, RAYMOND LO, PENG TU and FRED CHOW
-  // They use similar idea in the forward graph to find fully redundant and
+  // They use similar idea in the forward graph to to find fully redundant and
   // partially redundant expressions, here it is used in the inverse graph to
   // find fully anticipable instructions at merge point (post-dominator in
   // the inverse CFG).
@@ -578,7 +578,7 @@ private:
 
   // Returns true when the values are flowing out to each edge.
   bool valueAnticipable(CHIArgs C, TerminatorInst *TI) const {
-    if (TI->getNumSuccessors() > (unsigned)size(C))
+    if (TI->getNumSuccessors() > (unsigned)std::distance(C.begin(), C.end()))
       return false; // Not enough args in this CHI.
 
     for (auto CHI : C) {
@@ -622,7 +622,7 @@ private:
       // Iterate in reverse order to keep lower ranked values on the top.
       for (std::pair<VNType, Instruction *> &VI : reverse(it1->second)) {
         // Get the value of instruction I
-        LLVM_DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
+        DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
         RenameStack[VI.first].push_back(VI.second);
       }
     }
@@ -636,7 +636,7 @@ private:
       if (P == CHIBBs.end()) {
         continue;
       }
-      LLVM_DEBUG(dbgs() << "\nLooking at CHIs in: " << Pred->getName(););
+      DEBUG(dbgs() << "\nLooking at CHIs in: " << Pred->getName(););
       // A CHI is found (BB -> Pred is an edge in the CFG)
       // Pop the stack until Top(V) = Ve.
       auto &VCHI = P->second;
@@ -651,9 +651,9 @@ private:
               DT->properlyDominates(Pred, si->second.back()->getParent())) {
             C.Dest = BB;                     // Assign the edge
             C.I = si->second.pop_back_val(); // Assign the argument
-            LLVM_DEBUG(dbgs()
-                       << "\nCHI Inserted in BB: " << C.Dest->getName() << *C.I
-                       << ", VN: " << C.VN.first << ", " << C.VN.second);
+            DEBUG(dbgs() << "\nCHI Inserted in BB: " << C.Dest->getName()
+                         << *C.I << ", VN: " << C.VN.first << ", "
+                         << C.VN.second);
           }
           // Move to next CHI of a different value
           It = std::find_if(It, VCHI.end(),
@@ -748,11 +748,11 @@ private:
     // TODO: Remove fully-redundant expressions.
     // Get instruction from the Map, assume that all the Instructions
     // with same VNs have same rank (this is an approximation).
-    llvm::sort(Ranks.begin(), Ranks.end(),
-               [this, &Map](const VNType &r1, const VNType &r2) {
-                 return (rank(*Map.lookup(r1).begin()) <
-                         rank(*Map.lookup(r2).begin()));
-               });
+    std::sort(Ranks.begin(), Ranks.end(),
+              [this, &Map](const VNType &r1, const VNType &r2) {
+                return (rank(*Map.lookup(r1).begin()) <
+                        rank(*Map.lookup(r2).begin()));
+              });
 
     // - Sort VNs according to their rank, and start with lowest ranked VN
     // - Take a VN and for each instruction with same VN
@@ -798,8 +798,8 @@ private:
            // Ignore spurious PDFs.
           if (DT->properlyDominates(IDFB, V[i]->getParent())) {
             OutValue[IDFB].push_back(C);
-            LLVM_DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
-                              << ", for Insn: " << *V[i]);
+            DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
+                         << ", for Insn: " << *V[i]);
           }
         }
       }
@@ -1200,7 +1200,6 @@ INITIALIZE_PASS_BEGIN(GVNHoistLegacyPass, "gvn-hoist",
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(GVNHoistLegacyPass, "gvn-hoist",
                     "Early GVN Hoisting of Expressions", false, false)

@@ -53,9 +53,7 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void addLibCxxIncludePaths(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
+  std::string findLibCxxIncludePath() const override;
 
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
 

@@ -13,9 +13,9 @@ foo:
         .bundle_lock align_to_end
 # CHECK:            1:  nopw %cs:(%eax,%eax)
 # CHECK:            10: nopw %cs:(%eax,%eax)
-# CHECK-RELAX:      1a: nop
+# CHECK-RELAX:      1f: nop
 # CHECK-RELAX:      20: nopw %cs:(%eax,%eax)
-# CHECK-RELAX:      2a: nopw %cs:(%eax,%eax)
+# CHECK-RELAX:      2f: nopw %cs:(%eax,%eax)
 # CHECK-OPT:        1b: calll -4
 # CHECK-RELAX:      3b: calll -4
         calll   bar # 5 bytes

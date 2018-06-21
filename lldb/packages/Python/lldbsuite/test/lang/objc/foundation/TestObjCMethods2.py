@@ -159,6 +159,8 @@ class FoundationTestCase2(TestBase):
         self.runCmd("process continue")
 
     @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
+    @expectedFailureAll(oslist=["macosx"], debug_info=["gmodules"],
+                        bugnumber="rdar://28983234")
     def test_runtime_types(self):
         """Test commands that require runtime types"""
         self.build()

@@ -62,7 +62,7 @@ enum LinkMode {
   LinkModeStatic = 2,
 };
 
-/// Traverse a single component adding to the topological ordering in
+/// \brief Traverse a single component adding to the topological ordering in
 /// \arg RequiredLibs.
 ///
 /// \param Name - The component to traverse.
@@ -129,7 +129,7 @@ static void VisitComponent(const std::string &Name,
   }
 }
 
-/// Compute the list of required libraries for a given list of
+/// \brief Compute the list of required libraries for a given list of
 /// components, in an order suitable for passing to a linker (that is, libraries
 /// appear prior to their dependencies).
 ///
@@ -223,7 +223,7 @@ Typical components:\n\
   exit(1);
 }
 
-/// Compute the path to the main executable.
+/// \brief Compute the path to the main executable.
 std::string GetExecutablePath(const char *Argv0) {
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
@@ -231,7 +231,7 @@ std::string GetExecutablePath(const char *Argv0) {
   return llvm::sys::fs::getMainExecutable(Argv0, P);
 }
 
-/// Expand the semi-colon delimited LLVM_DYLIB_COMPONENTS into
+/// \brief Expand the semi-colon delimited LLVM_DYLIB_COMPONENTS into
 /// the full list of components.
 std::vector<std::string> GetAllDyLibComponents(const bool IsInDevelopmentTree,
                                                const bool GetComponentNames,
@@ -522,7 +522,7 @@ int main(int argc, char **argv) {
             if (DyLibExists && !sys::fs::exists(path)) {
               Components =
                   GetAllDyLibComponents(IsInDevelopmentTree, true, DirSep);
-              llvm::sort(Components.begin(), Components.end());
+              std::sort(Components.begin(), Components.end());
               break;
             }
           }

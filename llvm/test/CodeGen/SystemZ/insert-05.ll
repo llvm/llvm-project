@@ -214,8 +214,8 @@ define i64 @f18(i32 %a) {
 ; The truncation here isn't free; we need an explicit zero extension.
 define i64 @f19(i32 %a) {
 ; CHECK-LABEL: f19:
-; CHECK: llgcr %r2, %r2
-; CHECK: oihl %r2, 1
+; CHECK: llcr %r2, %r2
+; CHECK: iihf %r2, 1
 ; CHECK: br %r14
   %trunc = trunc i32 %a to i8
   %ext = zext i8 %trunc to i64

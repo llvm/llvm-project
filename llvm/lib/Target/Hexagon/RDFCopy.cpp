@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -104,7 +103,7 @@ bool CopyPropagation::run() {
 
   if (trace()) {
     dbgs() << "Copies:\n";
-    for (NodeId I : Copies) {
+    for (auto I : Copies) {
       dbgs() << "Instr: " << *DFG.addr<StmtNode*>(I).Addr->getCode();
       dbgs() << "   eq: {";
       for (auto J : CopyMap[I])
@@ -131,7 +130,7 @@ bool CopyPropagation::run() {
     return 0;
   };
 
-  for (NodeId C : Copies) {
+  for (auto C : Copies) {
 #ifndef NDEBUG
     if (HasLimit && CpCount >= CpLimit)
       break;

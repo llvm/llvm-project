@@ -32,9 +32,6 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix DISABLED
 
-; RUN: llc -mtriple=aarch64-- -fast-isel=0 -global-isel=false \
-; RUN: -debug-pass=Structure %s -o /dev/null 2>&1 | FileCheck %s --check-prefix DISABLED
-
 ; ENABLED:       IRTranslator
 ; ENABLED-NEXT:  Legalizer
 ; ENABLED-NEXT:  RegBankSelect

@@ -5,7 +5,8 @@ A() -> A<int>;
 A(int) -> A<char>;
 
 static constexpr inline const volatile A a = {}; // ok, specifiers are permitted
-A b;
+// FIXME: There isn't really a good reason to reject this.
+A b; // expected-error {{requires an initializer}}
 A c [[]] {};
 
 A d = {}, e = {};
@@ -15,5 +16,3 @@ struct B {
   static A a; // expected-error {{requires an initializer}}
 };
 extern A x; // expected-error {{requires an initializer}}
-static A y;
-
