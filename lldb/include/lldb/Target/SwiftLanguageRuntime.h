@@ -131,11 +131,11 @@ public:
   class MetadataPromise {
     friend class SwiftLanguageRuntime;
 
-    MetadataPromise(swift::ASTContext *, SwiftLanguageRuntime *, lldb::addr_t);
+    MetadataPromise(SwiftASTContext &, SwiftLanguageRuntime &, lldb::addr_t);
 
-    swift::ASTContext *m_swift_ast;
-    std::unique_ptr<swift::remoteAST::RemoteASTContext> m_remote_ast;
-    SwiftLanguageRuntime *m_swift_runtime;
+    swift::ASTContext &m_swift_ast;
+    swift::remoteAST::RemoteASTContext &m_remote_ast;
+    SwiftLanguageRuntime &m_swift_runtime;
     lldb::addr_t m_metadata_location;
     llvm::Optional<swift::MetadataKind> m_metadata_kind;
     llvm::Optional<CompilerType> m_compiler_type;
