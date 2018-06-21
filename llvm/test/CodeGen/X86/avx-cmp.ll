@@ -26,12 +26,15 @@ declare void @scale() nounwind
 define void @render() nounwind {
 ; CHECK-LABEL: render:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB2_6
 ; CHECK-NEXT:  # %bb.1: # %for.cond5.preheader
 ; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    movb $1, %bpl
 ; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB2_5: # %if.then
@@ -43,8 +46,8 @@ define void @render() nounwind {
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond5
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    je .LBB2_2
+; CHECK-NEXT:    testb %bpl, %bpl
+; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  # %bb.4: # %for.body33
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    vucomisd {{\.LCPI.*}}, %xmm0
@@ -52,7 +55,9 @@ define void @render() nounwind {
 ; CHECK-NEXT:    jp .LBB2_5
 ; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:  .LBB2_6: # %for.end52
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 entry:
   br i1 undef, label %for.cond5, label %for.end52

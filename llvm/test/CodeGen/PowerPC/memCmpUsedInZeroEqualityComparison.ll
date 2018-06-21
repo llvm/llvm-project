@@ -160,7 +160,7 @@ define signext i32 @zeroEqualityTest05() {
 ; Validate with memcmp()?:
 define signext i32 @equalityFoldTwoConstants() {
 ; CHECK-LABEL: equalityFoldTwoConstants:
-; CHECK:       # %bb.0: # %endblock
+; CHECK:       # %bb.0: # %loadbb
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* bitcast ([15 x i32]* @zeroEqualityTest04.buffer1 to i8*), i8* bitcast ([15 x i32]* @zeroEqualityTest04.buffer2 to i8*), i64 16)

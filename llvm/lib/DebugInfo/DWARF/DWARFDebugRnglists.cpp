@@ -208,6 +208,8 @@ DWARFAddressRangesVector DWARFDebugRnglist::getAbsoluteRanges(
 
 Error DWARFDebugRnglist::extract(DWARFDataExtractor Data, uint32_t HeaderOffset,
                                  uint32_t End, uint32_t *OffsetPtr) {
+  if (*OffsetPtr < HeaderOffset || *OffsetPtr >= End)
+    return createError("invalid range list offset 0x%" PRIx32, *OffsetPtr);
   Entries.clear();
   while (*OffsetPtr < End) {
     RangeListEntry Entry{0, 0, 0, 0, 0};
@@ -351,7 +353,7 @@ uint32_t DWARFDebugRnglistTable::length() const {
   return HeaderData.Length + sizeof(uint32_t);
 }
 
-Optional<DWARFDebugRnglist>
+Expected<DWARFDebugRnglist>
 DWARFDebugRnglistTable::findRangeList(DWARFDataExtractor Data,
                                       uint32_t Offset) {
   auto Entry = Ranges.find(Offset);
@@ -362,10 +364,8 @@ DWARFDebugRnglistTable::findRangeList(DWARFDataExtractor Data,
   DWARFDebugRnglist RngList;
   uint32_t End = HeaderOffset + length();
   uint32_t StartingOffset = Offset;
-  if (Error E = RngList.extract(Data, HeaderOffset, End, &Offset)) {
-    llvm::consumeError(std::move(E));
-    return None;
-  }
+  if (Error E = RngList.extract(Data, HeaderOffset, End, &Offset))
+    return std::move(E);
   Ranges[StartingOffset] = RngList;
   return RngList;
 }

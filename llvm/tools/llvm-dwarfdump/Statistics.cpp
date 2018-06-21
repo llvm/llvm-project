@@ -34,8 +34,14 @@ struct GlobalStats {
 
 /// Extract the low pc from a Die.
 static uint64_t getLowPC(DWARFDie Die) {
-  if (Die.getAddressRanges().size())
-    return Die.getAddressRanges()[0].LowPC;
+  auto RangesOrError = Die.getAddressRanges();
+  DWARFAddressRangesVector Ranges;
+  if (RangesOrError)
+    Ranges = RangesOrError.get();
+  else
+    llvm::consumeError(RangesOrError.takeError());
+  if (Ranges.size())
+    return Ranges[0].LowPC;
   return dwarf::toAddress(Die.find(dwarf::DW_AT_low_pc), 0);
 }
 
@@ -137,7 +143,13 @@ static void collectStatsRecursive(DWARFDie Die, std::string Prefix,
     }
 
     // PC Ranges.
-    auto Ranges = Die.getAddressRanges();
+    auto RangesOrError = Die.getAddressRanges();
+    if (!RangesOrError) {
+      llvm::consumeError(RangesOrError.takeError());
+      return;
+    }
+       
+    auto Ranges = RangesOrError.get();
     uint64_t BytesInThisScope = 0;
     for (auto Range : Ranges)
       BytesInThisScope += Range.HighPC - Range.LowPC;

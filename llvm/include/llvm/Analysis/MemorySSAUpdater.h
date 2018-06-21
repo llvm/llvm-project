@@ -138,6 +138,17 @@ public:
   /// on the MemoryAccess for that store/load.
   void removeMemoryAccess(MemoryAccess *);
 
+  /// Remove MemoryAccess for a given instruction, if a MemoryAccess exists.
+  /// This should be called when an instruction (load/store) is deleted from
+  /// the program.
+  void removeMemoryAccess(const Instruction *I) {
+    if (MemoryAccess *MA = MSSA->getMemoryAccess(I))
+      removeMemoryAccess(MA);
+  }
+
+  /// Get handle on MemorySSA.
+  MemorySSA* getMemorySSA() const { return MSSA; }
+
 private:
   // Move What before Where in the MemorySSA IR.
   template <class WhereType>

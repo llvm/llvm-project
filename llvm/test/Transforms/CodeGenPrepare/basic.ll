@@ -13,7 +13,7 @@ entry:
   %1 = icmp ugt i64 %0, 3
   br i1 %1, label %T, label %trap
 
-; CHECK: T:
+; CHECK: entry:
 ; CHECK-NOT: br label %
 
 trap:                                             ; preds = %0, %entry

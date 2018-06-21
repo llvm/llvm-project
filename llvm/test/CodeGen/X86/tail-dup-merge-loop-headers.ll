@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
 ; CHECK: # %inner_loop_latch
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
-; CHECK: # %inner_loop_test
+; CHECK: # %inner_loop_top
 ; CHECK-NOT: # %{{[a-zA-Z_]+}}
 ; CHECK: # %exit
 define void @tail_dup_merge_loops(i32 %a, i8* %b, i8* %c) local_unnamed_addr #0 {
