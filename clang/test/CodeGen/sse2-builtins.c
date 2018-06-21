@@ -613,14 +613,14 @@ __m128d test_mm_div_sd(__m128d A, __m128d B) {
 // Lowering to pextrw requires optimization.
 int test_mm_extract_epi16(__m128i A) {
   // CHECK-LABEL: test_mm_extract_epi16
-  // CHECK: extractelement <8 x i16> %{{.*}}, i32 1
+  // CHECK: extractelement <8 x i16> %{{.*}}, {{i32|i64}} 1
   // CHECK: zext i16 %{{.*}} to i32
   return _mm_extract_epi16(A, 1);
 }
 
 __m128i test_mm_insert_epi16(__m128i A, int B) {
   // CHECK-LABEL: test_mm_insert_epi16
-  // CHECK: insertelement <8 x i16> %{{.*}}, i32 0
+  // CHECK: insertelement <8 x i16> %{{.*}}, {{i32|i64}} 0
   return _mm_insert_epi16(A, B, 0);
 }
 

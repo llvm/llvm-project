@@ -35,18 +35,18 @@ void test2() {
 #endif
 
 void test3() {
-  __builtin_arm_dsb(16); // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_arm_dmb(17); // expected-error {{argument should be a value from 0 to 15}}
-  __builtin_arm_isb(18); // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_arm_dsb(16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_dmb(17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_isb(18); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void test4() {
-  __builtin_arm_prefetch(0, 2, 0); // expected-error {{argument should be a value from 0 to 1}}
-  __builtin_arm_prefetch(0, 0, 2); // expected-error {{argument should be a value from 0 to 1}}
+  __builtin_arm_prefetch(0, 2, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_prefetch(0, 0, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void test5() {
-  __builtin_arm_dbg(16); // expected-error {{argument should be a value from 0 to 15}}
+  __builtin_arm_dbg(16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void test6(int a, int b, int c) {
@@ -168,14 +168,14 @@ void test_9_4_1_width_specified_saturation(int a, int b) {
   s = __builtin_arm_ssat(8, 2);
   s = __builtin_arm_ssat(a, 1);
   s = __builtin_arm_ssat(a, 32);
-  s = __builtin_arm_ssat(a, 0);   // expected-error {{argument should be a value from 1 to 32}}
-  s = __builtin_arm_ssat(a, 33);  // expected-error {{argument should be a value from 1 to 32}}
+  s = __builtin_arm_ssat(a, 0);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  s = __builtin_arm_ssat(a, 33);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
   s = __builtin_arm_ssat(a, b);   // expected-error {{argument to '__builtin_arm_ssat' must be a constant integer}}
 
   u = __builtin_arm_usat(8, 2);
   u = __builtin_arm_usat(a, 0);
   u = __builtin_arm_usat(a, 31);
-  u = __builtin_arm_usat(a, 32);  // expected-error {{argument should be a value from 0 to 31}}
+  u = __builtin_arm_usat(a, 32);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
   u = __builtin_arm_usat(a, b);   // expected-error {{argument to '__builtin_arm_usat' must be a constant integer}}
 }
 
@@ -215,12 +215,12 @@ void test_9_5_4_parallel_16bit_saturation(int16x2_t a) {
 
   s = __builtin_arm_ssat16(a, 1);
   s = __builtin_arm_ssat16(a, 16);
-  s = __builtin_arm_ssat16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  s = __builtin_arm_ssat16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  s = __builtin_arm_ssat16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  s = __builtin_arm_ssat16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   u = __builtin_arm_usat16(a, 0);
   u = __builtin_arm_usat16(a, 15);
-  u = __builtin_arm_usat16(a, 16); // expected-error {{argument should be a value from 0 to 15}}
+  u = __builtin_arm_usat16(a, 16); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void test_9_5_5_packing_and_unpacking(int16x2_t a, int8x4_t b, uint16x2_t c, uint8x4_t d) {
@@ -327,11 +327,11 @@ void test_VFP(float f, double d) {
 
   fr = __builtin_arm_vcvtr_f(f, 0);
   fr = __builtin_arm_vcvtr_f(f, 1);
-  fr = __builtin_arm_vcvtr_f(f, -1); // expected-error {{argument should be a value from 0 to 1}}
-  fr = __builtin_arm_vcvtr_f(f, 2);  // expected-error {{argument should be a value from 0 to 1}}
+  fr = __builtin_arm_vcvtr_f(f, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  fr = __builtin_arm_vcvtr_f(f, 2);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   dr = __builtin_arm_vcvtr_f(d, 0);
   dr = __builtin_arm_vcvtr_f(d, 1);
-  dr = __builtin_arm_vcvtr_f(d, -1); // expected-error {{argument should be a value from 0 to 1}}
-  dr = __builtin_arm_vcvtr_f(d, 2);  // expected-error {{argument should be a value from 0 to 1}}
+  dr = __builtin_arm_vcvtr_f(d, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  dr = __builtin_arm_vcvtr_f(d, 2);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }

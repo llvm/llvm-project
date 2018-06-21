@@ -2937,7 +2937,12 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     i = 4; l = 0; u = 255;
     break;
   }
-  return SemaBuiltinConstantArgRange(TheCall, i, l, u);
+
+  // Note that we don't force a hard error on the range check here, allowing
+  // template-generated or macro-generated dead code to potentially have out-of-
+  // range values. These need to code generate, but don't need to necessarily
+  // make any sense. We use a warning that defaults to an error.
+  return SemaBuiltinConstantArgRange(TheCall, i, l, u, /*RangeIsError*/ false);
 }
 
 /// Given a FunctionDecl's FormatAttr, attempts to populate the FomatStringInfo
@@ -5005,7 +5010,7 @@ bool Sema::SemaBuiltinConstantArg(CallExpr *TheCall, int ArgNum,
 /// SemaBuiltinConstantArgRange - Handle a check if argument ArgNum of CallExpr
 /// TheCall is a constant expression in the range [Low, High].
 bool Sema::SemaBuiltinConstantArgRange(CallExpr *TheCall, int ArgNum,
-                                       int Low, int High) {
+                                       int Low, int High, bool RangeIsError) {
   llvm::APSInt Result;
 
   // We can't check the value of a dependent argument.
@@ -5017,9 +5022,18 @@ bool Sema::SemaBuiltinConstantArgRange(CallExpr *TheCall, int ArgNum,
   if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
     return true;
 
-  if (Result.getSExtValue() < Low || Result.getSExtValue() > High)
-    return Diag(TheCall->getLocStart(), diag::err_argument_invalid_range)
-      << Low << High << Arg->getSourceRange();
+  if (Result.getSExtValue() < Low || Result.getSExtValue() > High) {
+    if (RangeIsError)
+      return Diag(TheCall->getLocStart(), diag::err_argument_invalid_range)
+             << Result.toString(10) << Low << High << Arg->getSourceRange();
+    else
+      // Defer the warning until we know if the code will be emitted so that
+      // dead code can ignore this.
+      DiagRuntimeBehavior(TheCall->getLocStart(), TheCall,
+                            PDiag(diag::warn_argument_invalid_range)
+                                << Result.toString(10) << Low << High
+                                << Arg->getSourceRange());
+  }
 
   return false;
 }

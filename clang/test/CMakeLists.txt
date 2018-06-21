@@ -55,6 +55,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  hmaptool
   )
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
