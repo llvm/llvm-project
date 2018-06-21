@@ -126,11 +126,11 @@ static Constant *getLogBase2(Type *Ty, Constant *C) {
 }
 
 Instruction *InstCombiner::visitMul(BinaryOperator &I) {
-  bool Changed = SimplifyAssociativeOrCommutative(I);
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifyMulInst(Op0, Op1, SQ.getWithInstruction(&I)))
+  if (Value *V = SimplifyMulInst(I.getOperand(0), I.getOperand(1),
+                                 SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
+  bool Changed = SimplifyAssociativeOrCommutative(I);
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -138,6 +138,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   // X * -1 == 0 - X
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (match(Op1, m_AllOnes())) {
     BinaryOperator *BO = BinaryOperator::CreateNeg(Op0, I.getName());
     if (I.hasNoSignedWrap())
@@ -406,12 +407,12 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
 }
 
 Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
-  bool Changed = SimplifyAssociativeOrCommutative(I);
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifyFMulInst(Op0, Op1, I.getFastMathFlags(),
+  if (Value *V = SimplifyFMulInst(I.getOperand(0), I.getOperand(1),
+                                  I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
+  bool Changed = SimplifyAssociativeOrCommutative(I);
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -419,6 +420,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     return FoldedMul;
 
   // X * -1.0 --> -X
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (match(Op1, m_SpecificFP(-1.0)))
     return BinaryOperator::CreateFNegFMF(Op0, &I);
 
@@ -936,8 +938,8 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
 }
 
 Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifyUDivInst(Op0, Op1, SQ.getWithInstruction(&I)))
+  if (Value *V = SimplifyUDivInst(I.getOperand(0), I.getOperand(1),
+                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldShuffledBinop(I))
@@ -948,6 +950,7 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
     return Common;
 
   // (x lshr C1) udiv C2 --> x udiv (C2 << C1)
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   {
     Value *X;
     const APInt *C1, *C2;
@@ -1004,8 +1007,8 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
 }
 
 Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifySDivInst(Op0, Op1, SQ.getWithInstruction(&I)))
+  if (Value *V = SimplifySDivInst(I.getOperand(0), I.getOperand(1),
+                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldShuffledBinop(I))
@@ -1015,6 +1018,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
   if (Instruction *Common = commonIDivTransforms(I))
     return Common;
 
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
     // sdiv X, -1 == -X
@@ -1147,8 +1151,8 @@ static Instruction *foldFDivConstantDividend(BinaryOperator &I) {
 }
 
 Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifyFDivInst(Op0, Op1, I.getFastMathFlags(),
+  if (Value *V = SimplifyFDivInst(I.getOperand(0), I.getOperand(1),
+                                  I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
@@ -1161,6 +1165,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
   if (Instruction *R = foldFDivConstantDividend(I))
     return R;
 
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (isa<Constant>(Op0))
     if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
       if (Instruction *R = FoldOpIntoSelect(I, SI))
@@ -1276,8 +1281,8 @@ Instruction *InstCombiner::commonIRemTransforms(BinaryOperator &I) {
 }
 
 Instruction *InstCombiner::visitURem(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifyURemInst(Op0, Op1, SQ.getWithInstruction(&I)))
+  if (Value *V = SimplifyURemInst(I.getOperand(0), I.getOperand(1),
+                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldShuffledBinop(I))
@@ -1290,6 +1295,7 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
     return NarrowRem;
 
   // X urem Y -> X and Y-1, where Y is a power of 2,
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
     Constant *N1 = Constant::getAllOnesValue(I.getType());
     Value *Add = Builder.CreateAdd(Op1, N1);
@@ -1314,8 +1320,8 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
 }
 
 Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifySRemInst(Op0, Op1, SQ.getWithInstruction(&I)))
+  if (Value *V = SimplifySRemInst(I.getOperand(0), I.getOperand(1),
+                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *X = foldShuffledBinop(I))
@@ -1325,6 +1331,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   if (Instruction *Common = commonIRemTransforms(I))
     return Common;
 
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   {
     const APInt *Y;
     // X % -Y -> X % Y
@@ -1386,8 +1393,8 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
 }
 
 Instruction *InstCombiner::visitFRem(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  if (Value *V = SimplifyFRemInst(Op0, Op1, I.getFastMathFlags(),
+  if (Value *V = SimplifyFRemInst(I.getOperand(0), I.getOperand(1),
+                                  I.getFastMathFlags(),
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 

@@ -10,8 +10,8 @@ target triple = "amdgcn--amdpal"
 
 define dllexport amdgpu_ps <2 x float> @_amdgpu_ps_main(i32 inreg, i32 inreg, i32 inreg, i32 inreg, <2 x float>, <2 x float>, <2 x float>, <3 x float>, <2 x float>, <2 x float>, <2 x float>, float, float, float, float, float, i32, i32, i32, i32) local_unnamed_addr {
 .entry:
-  %res = call <2 x float> @llvm.amdgcn.image.sample.l.v2f32.v4f32.v8i32(<4 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 3, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %res = call <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32 3, float undef, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   ret <2 x float> %res
 }
 
-declare <2 x float> @llvm.amdgcn.image.sample.l.v2f32.v4f32.v8i32(<4 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1)
+declare <2 x float> @llvm.amdgcn.image.sample.1d.v2f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)

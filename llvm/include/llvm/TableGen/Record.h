@@ -1596,17 +1596,6 @@ public:
 
 raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
-struct MultiClass {
-  Record Rec;  // Placeholder for template args and Name.
-  using RecordVector = std::vector<std::unique_ptr<Record>>;
-  RecordVector DefPrototypes;
-
-  void dump() const;
-
-  MultiClass(StringRef Name, SMLoc Loc, RecordKeeper &Records) :
-    Rec(Name, Loc, Records) {}
-};
-
 class RecordKeeper {
   friend class RecordRecTy;
   using RecordMap = std::map<std::string, std::unique_ptr<Record>>;
@@ -1775,11 +1764,6 @@ struct LessRecordRegister {
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const RecordKeeper &RK);
-
-/// Return an Init with a qualifier prefix referring
-/// to CurRec's name.
-Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass,
-                  Init *Name, StringRef Scoper);
 
 //===----------------------------------------------------------------------===//
 //  Resolvers

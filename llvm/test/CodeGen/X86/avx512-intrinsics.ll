@@ -951,11 +951,15 @@ define void @test_mask_store_ss(i8* %ptr, <4 x float> %data, i8 %mask) {
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    vmovss %xmm0, (%rdi) {%k1}
 ; CHECK-NEXT:    retq
- call void @llvm.x86.avx512.mask.store.ss(i8* %ptr, <4 x float> %data, i8 %mask)
- ret void
+  %1 = and i8 %mask, 1
+  %2 = bitcast i8* %ptr to <4 x float>*
+  %3 = bitcast i8 %1 to <8 x i1>
+  %extract = shufflevector <8 x i1> %3, <8 x i1> %3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %data, <4 x float>* %2, i32 1, <4 x i1> %extract)
+  ret void
 }
+declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>) #1
 
-declare void @llvm.x86.avx512.mask.store.ss(i8*, <4 x float>, i8 )
 
 declare <16 x float> @llvm.x86.avx512.sub.ps.512(<16 x float>, <16 x float>, i32)
 declare <16 x float> @llvm.x86.avx512.mul.ps.512(<16 x float>, <16 x float>, i32)

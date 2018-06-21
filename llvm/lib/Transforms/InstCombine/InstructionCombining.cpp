@@ -1417,23 +1417,17 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
       }
     }
     if (MayChange) {
+      Constant *NewC = ConstantVector::get(NewVecC);
       // With integer div/rem instructions, it is not safe to use a vector with
       // undef elements because the entire instruction can be folded to undef.
-      // So replace undef elements with '1' because that can never induce
-      // undefined behavior. All other binop opcodes are always safe to
-      // speculate, and therefore, it is fine to include undef elements for
-      // unused lanes (and using undefs may help optimization).
-      if (Inst.isIntDivRem()) {
-        assert(C->getType()->getScalarType()->isIntegerTy() &&
-               "Not expecting FP opcodes/operands/constants here");
-        for (unsigned i = 0; i < VWidth; ++i)
-          if (isa<UndefValue>(NewVecC[i]))
-            NewVecC[i] = ConstantInt::get(NewVecC[i]->getType(), 1);
-      }
-
+      // All other binop opcodes are always safe to speculate, and therefore, it
+      // is fine to include undef elements for unused lanes (and using undefs
+      // may help optimization).
+      if (Inst.isIntDivRem())
+        NewC = getSafeVectorConstantForIntDivRem(NewC);
+      
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
       // Op(C, shuffle(V1, Mask)) -> shuffle(Op(NewC, V1), Mask)
-      Constant *NewC = ConstantVector::get(NewVecC);
       Value *NewLHS = isa<Constant>(LHS) ? NewC : V1;
       Value *NewRHS = isa<Constant>(LHS) ? V1 : NewC;
       return createBinOpShuffle(NewLHS, NewRHS, Mask);

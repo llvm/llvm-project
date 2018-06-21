@@ -26,6 +26,8 @@
 
 namespace exegesis {
 
+class ExegesisTarget;
+
 // An object to initialize LLVM and prepare objects needed to run the
 // measurements.
 class LLVMState {
@@ -35,31 +37,27 @@ public:
   LLVMState(const std::string &Triple,
             const std::string &CpuName); // For tests.
 
-  llvm::StringRef getTriple() const { return TheTriple; }
-  llvm::StringRef getCpuName() const { return CpuName; }
-  llvm::StringRef getFeatures() const { return Features; }
-
-  const llvm::MCInstrInfo &getInstrInfo() const { return *InstrInfo; }
-
-  const llvm::MCRegisterInfo &getRegInfo() const { return *RegInfo; }
-
-  const llvm::MCSubtargetInfo &getSubtargetInfo() const {
-    return *SubtargetInfo;
-  }
-
+  const llvm::TargetMachine &getTargetMachine() const { return *TargetMachine; }
   std::unique_ptr<llvm::LLVMTargetMachine> createTargetMachine() const;
+
+  const ExegesisTarget *getExegesisTarget() const { return TheExegesisTarget; }
 
   bool canAssemble(const llvm::MCInst &mc_inst) const;
 
+  // For convenience:
+  const llvm::MCInstrInfo &getInstrInfo() const {
+    return *TargetMachine->getMCInstrInfo();
+  }
+  const llvm::MCRegisterInfo &getRegInfo() const {
+    return *TargetMachine->getMCRegisterInfo();
+  }
+  const llvm::MCSubtargetInfo &getSubtargetInfo() const {
+    return *TargetMachine->getMCSubtargetInfo();
+  }
+
 private:
-  std::string TheTriple;
-  std::string CpuName;
-  std::string Features;
-  const llvm::Target *TheTarget = nullptr;
-  std::unique_ptr<const llvm::MCSubtargetInfo> SubtargetInfo;
-  std::unique_ptr<const llvm::MCInstrInfo> InstrInfo;
-  std::unique_ptr<const llvm::MCRegisterInfo> RegInfo;
-  std::unique_ptr<const llvm::MCAsmInfo> AsmInfo;
+  const ExegesisTarget *TheExegesisTarget = nullptr;
+  std::unique_ptr<const llvm::TargetMachine> TargetMachine;
 };
 
 } // namespace exegesis

@@ -159,61 +159,7 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
                            const MCInstrDesc &MCDesc,
                            const MCSchedClassDesc &SCDesc,
                            const MCSubtargetInfo &STI) {
-  // This algorithm currently works under the strong (and potentially incorrect)
-  // assumption that information related to register def/uses can be obtained
-  // from MCInstrDesc.
-  //
-  // However class MCInstrDesc is used to describe MachineInstr objects and not
-  // MCInst objects. To be more specific, MCInstrDesc objects are opcode
-  // descriptors that are automatically generated via tablegen based on the
-  // instruction set information available from the target .td files.  That
-  // means, the number of (explicit) definitions according to MCInstrDesc always
-  // matches the cardinality of the `(outs)` set in tablegen.
-  //
-  // By constructions, definitions must appear first in the operand sequence of
-  // a MachineInstr. Also, the (outs) sequence is preserved (example: the first
-  // element in the outs set is the first operand in the corresponding
-  // MachineInstr).  That's the reason why MCInstrDesc only needs to declare the
-  // total number of register definitions, and not where those definitions are
-  // in the machine operand sequence.
-  //
-  // Unfortunately, it is not safe to use the information from MCInstrDesc to
-  // also describe MCInst objects. An MCInst object can be obtained from a
-  // MachineInstr through a lowering step which may restructure the operand
-  // sequence (and even remove or introduce new operands). So, there is a high
-  // risk that the lowering step breaks the assumptions that register
-  // definitions are always at the beginning of the machine operand sequence.
-  //
-  // This is a fundamental problem, and it is still an open problem. Essentially
-  // we have to find a way to correlate def/use operands of a MachineInstr to
-  // operands of an MCInst. Otherwise, we cannot correctly reconstruct data
-  // dependencies, nor we can correctly interpret the scheduling model, which
-  // heavily uses machine operand indices to define processor read-advance
-  // information, and to identify processor write resources.  Essentially, we
-  // either need something like a MCInstrDesc, but for MCInst, or a way
-  // to map MCInst operands back to MachineInstr operands.
-  //
-  // Unfortunately, we don't have that information now. So, this prototype
-  // currently work under the strong assumption that we can always safely trust
-  // the content of an MCInstrDesc.  For example, we can query a MCInstrDesc to
-  // obtain the number of explicit and implicit register defintions.  We also
-  // assume that register definitions always come first in the operand sequence.
-  // This last assumption usually makes sense for MachineInstr, where register
-  // definitions always appear at the beginning of the operands sequence. In
-  // reality, these assumptions could be broken by the lowering step, which can
-  // decide to lay out operands in a different order than the original order of
-  // operand as specified by the MachineInstr.
-  //
-  // Things get even more complicated in the presence of "optional" register
-  // definitions. For MachineInstr, optional register definitions are always at
-  // the end of the operand sequence. Some ARM instructions that may update the
-  // status flags specify that register as a optional operand.  Since we don't
-  // have operand descriptors for MCInst, we assume for now that the optional
-  // definition is always the last operand of a MCInst.  Again, this assumption
-  // may be okay for most targets. However, there is no guarantee that targets
-  // would respect that.
-  //
-  // In conclusion: these are for now the strong assumptions made by the tool:
+  // These are for now the (strong) assumptions made by this algorithm:
   //  * The number of explicit and implicit register definitions in a MCInst
   //    matches the number of explicit and implicit definitions according to
   //    the opcode descriptor (MCInstrDesc).
@@ -227,8 +173,6 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
   // like x86. This is mainly because the vast majority of instructions is
   // expanded to MCInst using a straightforward lowering logic that preserves
   // the ordering of the operands.
-  //
-  // In the longer term, we need to find a proper solution for this issue.
   unsigned NumExplicitDefs = MCDesc.getNumDefs();
   unsigned NumImplicitDefs = MCDesc.getNumImplicitDefs();
   unsigned NumWriteLatencyEntries = SCDesc.NumWriteLatencyEntries;

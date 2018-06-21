@@ -34,6 +34,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -89,11 +90,13 @@ inline const Value *GetUnderlyingObjCPtr(const Value *V,
 /// A wrapper for GetUnderlyingObjCPtr used for results memoization.
 inline const Value *
 GetUnderlyingObjCPtrCached(const Value *V, const DataLayout &DL,
-                           DenseMap<const Value *, const Value *> &Cache) {
+                           DenseMap<const Value *, WeakTrackingVH> &Cache) {
   if (auto InCache = Cache.lookup(V))
     return InCache;
 
-  return Cache[V] = GetUnderlyingObjCPtr(V, DL);
+  const Value *Computed = GetUnderlyingObjCPtr(V, DL);
+  Cache[V] = const_cast<Value *>(Computed);
+  return Computed;
 }
 
 /// The RCIdentity root of a value \p V is a dominating value U for which

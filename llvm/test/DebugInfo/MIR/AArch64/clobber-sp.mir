@@ -149,7 +149,7 @@ body:             |
     STURWi killed $w0, $fp, -4 :: (store 4 into %stack.0.x.addr)
     DBG_VALUE debug-use $w1, debug-use _, !20, !22, debug-location !28
     STRWui killed $w1, $sp, 2, debug-location !30 :: (store 4 into %stack.1)
-    DBG_VALUE $sp, 0, !20, !36, debug-location !28
+    DBG_VALUE debug-use $sp, 0, !20, !36, debug-location !28
     BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $d0, implicit killed $d1, implicit killed $d2, implicit killed $d3, implicit-def $sp, debug-location !30
     $w0 = LDRWui $sp, 2, debug-location !33 :: (load 4 from %stack.1)
     CBZW killed $w0, %bb.2.if.end, debug-location !33

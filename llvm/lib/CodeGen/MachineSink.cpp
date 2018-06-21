@@ -753,6 +753,37 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
          MBP.LHS.getReg() == BaseReg;
 }
 
+/// Sink an instruction and its associated debug instructions.
+static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
+                        MachineBasicBlock::iterator InsertPos) {
+  // Collect matching debug values.
+  SmallVector<MachineInstr *, 2> DbgValuesToSink;
+  collectDebugValues(MI, DbgValuesToSink);
+
+  // If we cannot find a location to use (merge with), then we erase the debug
+  // location to prevent debug-info driven tools from potentially reporting
+  // wrong location information.
+  if (!SuccToSinkTo.empty() && InsertPos != SuccToSinkTo.end())
+    MI.setDebugLoc(DILocation::getMergedLocation(MI.getDebugLoc(),
+                                                 InsertPos->getDebugLoc()));
+  else
+    MI.setDebugLoc(DebugLoc());
+
+  // Move the instruction.
+  MachineBasicBlock *ParentBlock = MI.getParent();
+  SuccToSinkTo.splice(InsertPos, ParentBlock, MI,
+                      ++MachineBasicBlock::iterator(MI));
+
+  // Move previously adjacent debug value instructions to the insert position.
+  for (SmallVectorImpl<MachineInstr *>::iterator DBI = DbgValuesToSink.begin(),
+                                                 DBE = DbgValuesToSink.end();
+       DBI != DBE; ++DBI) {
+    MachineInstr *DbgMI = *DBI;
+    SuccToSinkTo.splice(InsertPos, ParentBlock, DbgMI,
+                        ++MachineBasicBlock::iterator(DbgMI));
+  }
+}
+
 /// SinkInstruction - Determine whether it is safe to sink the specified machine
 /// instruction out of its current block into a successor.
 bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
@@ -866,30 +897,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   while (InsertPos != SuccToSinkTo->end() && InsertPos->isPHI())
     ++InsertPos;
 
-  // collect matching debug values.
-  SmallVector<MachineInstr *, 2> DbgValuesToSink;
-  collectDebugValues(MI, DbgValuesToSink);
-
-  // Merge or erase debug location to ensure consistent stepping in profilers
-  // and debuggers.
-  if (!SuccToSinkTo->empty() && InsertPos != SuccToSinkTo->end())
-    MI.setDebugLoc(DILocation::getMergedLocation(MI.getDebugLoc(),
-                                                 InsertPos->getDebugLoc()));
-  else
-    MI.setDebugLoc(DebugLoc());
-
-
-  // Move the instruction.
-  SuccToSinkTo->splice(InsertPos, ParentBlock, MI,
-                       ++MachineBasicBlock::iterator(MI));
-
-  // Move previously adjacent debug value instructions to the insert position.
-  for (SmallVectorImpl<MachineInstr *>::iterator DBI = DbgValuesToSink.begin(),
-         DBE = DbgValuesToSink.end(); DBI != DBE; ++DBI) {
-    MachineInstr *DbgMI = *DBI;
-    SuccToSinkTo->splice(InsertPos, ParentBlock,  DbgMI,
-                         ++MachineBasicBlock::iterator(DbgMI));
-  }
+  performSink(MI, *SuccToSinkTo, InsertPos);
 
   // Conservatively, clear any kill flags, since it's possible that they are no
   // longer correct.
@@ -1118,6 +1126,9 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     MachineInstr *MI = &*I;
     ++I;
 
+    if (MI->isDebugInstr())
+      continue;
+
     // Do not move any instruction across function call.
     if (MI->isCall())
       return false;
@@ -1158,7 +1169,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     // block.
     clearKillFlags(MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
     MachineBasicBlock::iterator InsertPos = SuccBB->getFirstNonPHI();
-    SuccBB->splice(InsertPos, &CurBB, MI);
+    performSink(*MI, *SuccBB, InsertPos);
     updateLiveIn(MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
 
     Changed = true;

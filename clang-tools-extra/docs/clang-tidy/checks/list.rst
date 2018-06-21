@@ -93,8 +93,8 @@ Clang-Tidy Checks
    cppcoreguidelines-pro-type-vararg
    cppcoreguidelines-slicing
    cppcoreguidelines-special-member-functions
-   fuchsia-header-anon-namespaces (redirects to google-build-namespaces) <fuchsia-header-anon-namespaces>
    fuchsia-default-arguments
+   fuchsia-header-anon-namespaces (redirects to google-build-namespaces) <fuchsia-header-anon-namespaces>
    fuchsia-multiple-inheritance
    fuchsia-overloaded-operator
    fuchsia-restrict-system-includes
@@ -113,7 +113,6 @@ Clang-Tidy Checks
    google-readability-casting
    google-readability-function-size (redirects to readability-function-size) <google-readability-function-size>
    google-readability-namespace-comments (redirects to llvm-namespace-comment) <google-readability-namespace-comments>
-   google-readability-redundant-smartptr-get (redirects to readability-redundant-smartptr-get) <google-readability-redundant-smartptr-get>
    google-readability-todo
    google-runtime-int
    google-runtime-operator

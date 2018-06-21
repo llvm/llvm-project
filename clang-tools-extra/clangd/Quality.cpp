@@ -235,7 +235,7 @@ float FileProximityMatcher::uriProximity(StringRef SymbolURI) const {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const FileProximityMatcher &M) {
   OS << formatv("File proximity matcher: ");
-  OS << formatv("ProximityPaths{{0}}", llvm::join(M.ProximityPaths.begin(),
+  OS << formatv("ProximityPaths[{0}]", llvm::join(M.ProximityPaths.begin(),
                                                   M.ProximityPaths.end(), ","));
   return OS;
 }
@@ -326,9 +326,9 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
   OS << formatv("\tForbidden: {0}\n", S.Forbidden);
   OS << formatv("\tSymbol URI: {0}\n", S.SymbolURI);
   if (S.FileProximityMatch) {
-    OS << formatv("\tIndex proximity: {0}\n",
-                  S.FileProximityMatch->uriProximity(S.SymbolURI))
-       << " (" << *S.FileProximityMatch << ")\n";
+    OS << "\tIndex proximity: "
+       << S.FileProximityMatch->uriProximity(S.SymbolURI) << " ("
+       << *S.FileProximityMatch << ")\n";
   }
   OS << formatv("\tSema proximity: {0}\n", S.SemaProximityScore);
   OS << formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));

@@ -456,7 +456,7 @@ lldb_private::UUID CommunicationKDP::GetUUID() {
   if (uuid_str.size() < 32)
     return uuid;
 
-  if (uuid.SetFromCString(uuid_str.c_str()) == 0) {
+  if (uuid.SetFromStringRef(uuid_str) == 0) {
     UUID invalid_uuid;
     return invalid_uuid;
   }

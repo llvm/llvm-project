@@ -40,6 +40,7 @@ void lld::wasm::markLive() {
   auto Enqueue = [&](Symbol *Sym) {
     if (!Sym || Sym->isLive())
       return;
+    LLVM_DEBUG(dbgs() << "markLive: " << Sym->getName() << "\n");
     Sym->markLive();
     if (Sym->SignatureMismatch)
       error("function signature mismatch: " + Sym->getName());
@@ -52,9 +53,9 @@ void lld::wasm::markLive() {
     Enqueue(Symtab->find(Config->Entry));
   Enqueue(WasmSym::CallCtors);
 
-  // By default we export all non-hidden, so they are gc roots too
+  // We export all defined, non-hidden symbols so they are all gc roots too
   for (Symbol *Sym : Symtab->getSymbols())
-    if (!Sym->isHidden())
+    if (Sym->isDefined() && !Sym->isHidden())
       Enqueue(Sym);
 
   // The ctor functions are all used in the synthetic __wasm_call_ctors
