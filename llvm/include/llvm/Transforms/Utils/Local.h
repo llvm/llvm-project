@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOCAL_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -332,6 +333,18 @@ void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 /// dbg.value intrinsics referring to \p I by rewriting its effect into a
 /// DIExpression.
 void salvageDebugInfo(Instruction &I);
+
+/// Assuming the value \p From is going to be deleted, insert replacement
+/// dbg.value intrinsics for each debug user of \p From. The newly-inserted
+/// dbg.values refer to \p To instead of \p From. Each replacement dbg.value
+/// has the same location and variable as the debug user it replaces, has a
+/// DIExpression determined by the result of \p RewriteExpr applied to an old
+/// debug user of \p From, and is placed before \p InsertBefore. If
+/// \p RewriteExpr returns nullptr, no replacement for the specified debug
+/// user is emitted.
+void insertReplacementDbgValues(
+    Value &From, Value &To, Instruction &InsertBefore,
+    function_ref<DIExpression *(DbgInfoIntrinsic &OldDII)> RewriteExpr);
 
 /// Remove all instructions from a basic block other than it's terminator
 /// and any present EH pad instructions.

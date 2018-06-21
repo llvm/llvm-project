@@ -44,12 +44,12 @@ int align_SsF = __alignof(signed short _Fract);
 int align_SF  = __alignof(signed _Fract);
 int align_SlF = __alignof(signed long _Fract);
 
-// CHECK-NEXT: @size_SsF  = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @size_SF   = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @size_SlF  = {{.*}}global i{{[0-9]+}} 8
-// CHECK-NEXT: @align_SsF = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @align_SF  = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @align_SlF = {{.*}}global i{{[0-9]+}} 8
+// CHECK-NEXT: @size_SsF  = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @size_SF   = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @size_SlF  = {{.*}}global i{{[0-9]+}} 4
+// CHECK-NEXT: @align_SsF = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @align_SF  = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @align_SlF = {{.*}}global i{{[0-9]+}} 4
 
 /* Primary unsigned _Fract */
 
@@ -60,12 +60,12 @@ int align_UsF = __alignof(unsigned short _Fract);
 int align_UF  = __alignof(unsigned _Fract);
 int align_UlF = __alignof(unsigned long _Fract);
 
-// CHECK-NEXT: @size_UsF  = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @size_UF   = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @size_UlF  = {{.*}}global i{{[0-9]+}} 8
-// CHECK-NEXT: @align_UsF = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @align_UF  = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @align_UlF = {{.*}}global i{{[0-9]+}} 8
+// CHECK-NEXT: @size_UsF  = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @size_UF   = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @size_UlF  = {{.*}}global i{{[0-9]+}} 4
+// CHECK-NEXT: @align_UsF = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @align_UF  = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @align_UlF = {{.*}}global i{{[0-9]+}} 4
 
 /* Aliased _Accum */
 
@@ -92,12 +92,12 @@ int align_sF = __alignof(short _Fract);
 int align_F  = __alignof(_Fract);
 int align_lF = __alignof(long _Fract);
 
-// CHECK-NEXT: @size_sF   = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @size_F    = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @size_lF   = {{.*}}global i{{[0-9]+}} 8
-// CHECK-NEXT: @align_sF  = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @align_F   = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @align_lF  = {{.*}}global i{{[0-9]+}} 8
+// CHECK-NEXT: @size_sF   = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @size_F    = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @size_lF   = {{.*}}global i{{[0-9]+}} 4
+// CHECK-NEXT: @align_sF  = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @align_F   = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @align_lF  = {{.*}}global i{{[0-9]+}} 4
 
 /* Saturated signed _Accum */
 
@@ -140,12 +140,12 @@ int align_SatSsF = __alignof(_Sat signed short _Fract);
 int align_SatSF  = __alignof(_Sat signed _Fract);
 int align_SatSlF = __alignof(_Sat signed long _Fract);
 
-// CHECK-NEXT: @size_SatSsF  = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @size_SatSF   = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @size_SatSlF  = {{.*}}global i{{[0-9]+}} 8
-// CHECK-NEXT: @align_SatSsF = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @align_SatSF  = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @align_SatSlF = {{.*}}global i{{[0-9]+}} 8
+// CHECK-NEXT: @size_SatSsF  = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @size_SatSF   = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @size_SatSlF  = {{.*}}global i{{[0-9]+}} 4
+// CHECK-NEXT: @align_SatSsF = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @align_SatSF  = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @align_SatSlF = {{.*}}global i{{[0-9]+}} 4
 
 /* Saturated unsigned _Fract */
 
@@ -156,12 +156,12 @@ int align_SatUsF = __alignof(_Sat unsigned short _Fract);
 int align_SatUF  = __alignof(_Sat unsigned _Fract);
 int align_SatUlF = __alignof(_Sat unsigned long _Fract);
 
-// CHECK-NEXT: @size_SatUsF  = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @size_SatUF   = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @size_SatUlF  = {{.*}}global i{{[0-9]+}} 8
-// CHECK-NEXT: @align_SatUsF = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @align_SatUF  = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @align_SatUlF = {{.*}}global i{{[0-9]+}} 8
+// CHECK-NEXT: @size_SatUsF  = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @size_SatUF   = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @size_SatUlF  = {{.*}}global i{{[0-9]+}} 4
+// CHECK-NEXT: @align_SatUsF = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @align_SatUF  = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @align_SatUlF = {{.*}}global i{{[0-9]+}} 4
 
 /* Aliased saturated signed _Accum */
 
@@ -188,9 +188,9 @@ int align_SatsF = __alignof(_Sat short _Fract);
 int align_SatF  = __alignof(_Sat _Fract);
 int align_SatlF = __alignof(_Sat long _Fract);
 
-// CHECK-NEXT: @size_SatsF   = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @size_SatF    = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @size_SatlF   = {{.*}}global i{{[0-9]+}} 8
-// CHECK-NEXT: @align_SatsF  = {{.*}}global i{{[0-9]+}} 2
-// CHECK-NEXT: @align_SatF   = {{.*}}global i{{[0-9]+}} 4
-// CHECK-NEXT: @align_SatlF  = {{.*}}global i{{[0-9]+}} 8
+// CHECK-NEXT: @size_SatsF   = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @size_SatF    = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @size_SatlF   = {{.*}}global i{{[0-9]+}} 4
+// CHECK-NEXT: @align_SatsF  = {{.*}}global i{{[0-9]+}} 1
+// CHECK-NEXT: @align_SatF   = {{.*}}global i{{[0-9]+}} 2
+// CHECK-NEXT: @align_SatlF  = {{.*}}global i{{[0-9]+}} 4

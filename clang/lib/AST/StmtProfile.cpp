@@ -1007,6 +1007,12 @@ void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   ID.AddInteger(S->getType()->castAs<BuiltinType>()->getKind());
 }
 
+void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {
+  VisitExpr(S);
+  S->getValue().Profile(ID);
+  ID.AddInteger(S->getType()->castAs<BuiltinType>()->getKind());
+}
+
 void StmtProfiler::VisitCharacterLiteral(const CharacterLiteral *S) {
   VisitExpr(S);
   ID.AddInteger(S->getKind());

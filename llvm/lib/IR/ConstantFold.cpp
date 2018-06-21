@@ -1227,9 +1227,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode,
       Constant *RHS = ConstantExpr::getExtractElement(C2, ExtractIdx);
 
       // If any element of a divisor vector is zero, the whole op is undef.
-      if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
-           Opcode == Instruction::SRem || Opcode == Instruction::URem) &&
-          RHS->isNullValue())
+      if (Instruction::isIntDivRem(Opcode) && RHS->isNullValue())
         return UndefValue::get(VTy);
 
       Result.push_back(ConstantExpr::get(Opcode, LHS, RHS));

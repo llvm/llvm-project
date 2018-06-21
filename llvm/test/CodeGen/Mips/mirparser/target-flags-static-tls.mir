@@ -157,7 +157,7 @@ body:             |
     %0 = ADDu killed %8, killed %14
     %15 = LUi64 target-flags(mips-tprel-hi) @__tls_guard
     %16 = DADDiu killed %15, target-flags(mips-tprel-lo) @__tls_guard
-    %17 = RDHWR64 $hwr29
+    %17 = RDHWR64 $hwr29, 0
     $v1_64 = COPY %17
     %18 = COPY $v1_64
     %19 = DADDu %18, killed %16
@@ -170,7 +170,7 @@ body:             |
 
     %32 = LUi64 target-flags(mips-tprel-hi) @k
     %33 = DADDiu killed %32, target-flags(mips-tprel-lo) @k
-    %34 = RDHWR64 $hwr29
+    %34 = RDHWR64 $hwr29, 0
     $v1_64 = COPY %34
     %35 = COPY $v1_64
     %36 = DADDu %35, killed %33
@@ -182,7 +182,7 @@ body:             |
 
     %21 = LUi64 target-flags(mips-tprel-hi) @__tls_guard
     %22 = DADDiu killed %21, target-flags(mips-tprel-lo) @__tls_guard
-    %23 = RDHWR64 $hwr29
+    %23 = RDHWR64 $hwr29, 0
     $v1_64 = COPY %23
     %24 = COPY $v1_64
     %25 = DADDu %24, killed %22
@@ -222,7 +222,7 @@ body:             |
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
 
   bb.5._ZTW1j.exit:
-    %44 = RDHWR64 $hwr29
+    %44 = RDHWR64 $hwr29, 0
     $v1_64 = COPY %44
     %45 = LD %43, target-flags(mips-gottprel) @j :: (load 8)
     %46 = COPY $v1_64

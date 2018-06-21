@@ -7874,6 +7874,23 @@ unsigned X86::getCMovFromCond(CondCode CC, unsigned RegBytes,
   }
 }
 
+/// Get the VPCMP immediate for the given condition.
+unsigned X86::getVPCMPImmForCond(ISD::CondCode CC) {
+  switch (CC) {
+  default: llvm_unreachable("Unexpected SETCC condition");
+  case ISD::SETNE:  return 4;
+  case ISD::SETEQ:  return 0;
+  case ISD::SETULT:
+  case ISD::SETLT: return 1;
+  case ISD::SETUGT:
+  case ISD::SETGT: return 6;
+  case ISD::SETUGE:
+  case ISD::SETGE: return 5;
+  case ISD::SETULE:
+  case ISD::SETLE: return 2;
+  }
+}
+
 /// Get the VPCMP immediate if the opcodes are swapped.
 unsigned X86::getSwappedVPCMPImm(unsigned Imm) {
   switch (Imm) {

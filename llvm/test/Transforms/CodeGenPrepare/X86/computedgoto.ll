@@ -168,7 +168,7 @@ exit:
 ; the block it terminates.
 define void @loop(i64* nocapture readonly %p) {
 ; CHECK-LABEL: @loop(
-; CHECK-NEXT:  bb0.clone:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[DOTSPLIT]]

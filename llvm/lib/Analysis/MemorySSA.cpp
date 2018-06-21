@@ -1746,8 +1746,12 @@ void MemorySSA::verifyDefUses(Function &F) const {
       assert(Phi->getNumOperands() == static_cast<unsigned>(std::distance(
                                           pred_begin(&B), pred_end(&B))) &&
              "Incomplete MemoryPhi Node");
-      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+      for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
         verifyUseInDefs(Phi->getIncomingValue(I), Phi);
+        assert(find(predecessors(&B), Phi->getIncomingBlock(I)) !=
+                   pred_end(&B) &&
+               "Incoming phi block not a block predecessor");
+      }
     }
 
     for (Instruction &I : B) {

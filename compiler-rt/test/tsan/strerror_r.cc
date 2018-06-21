@@ -1,6 +1,8 @@
 // RUN: %clangxx_tsan -O1 -DTEST_ERROR=ERANGE %s -o %t && %run %t 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-SYS %s
 // RUN: %clangxx_tsan -O1 -DTEST_ERROR=-1 %s -o %t && not %run %t 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-USER %s
 // UNSUPPORTED: darwin
+// This test provokes a data race under FreeBSD
+// XFAIL: freebsd
 
 #include "test.h"
 

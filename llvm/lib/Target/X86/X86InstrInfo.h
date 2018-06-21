@@ -18,6 +18,7 @@
 #include "X86InstrFMA3Info.h"
 #include "X86RegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 #define GET_INSTRINFO_HEADER
@@ -95,6 +96,9 @@ CondCode getCondFromCMovOpc(unsigned Opc);
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.
 CondCode GetOppositeBranchCondition(CondCode CC);
+
+/// Get the VPCMP immediate for the given condition.
+unsigned getVPCMPImmForCond(ISD::CondCode CC);
 
 /// Get the VPCMP immediate if the opcodes are swapped.
 unsigned getSwappedVPCMPImm(unsigned Imm);

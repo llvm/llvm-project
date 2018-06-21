@@ -226,6 +226,11 @@ def : InstAlias<"fsflags $rd, $rs",   (CSRRW  GPR:$rd, 0x001, GPR:$rs)>;
 def : InstAlias<"fsflags $rs",        (CSRRW       X0, 0x001, GPR:$rs), 2>;
 def : InstAlias<"fsflagsi $rd, $imm", (CSRRWI GPR:$rd, 0x001, uimm5:$imm)>;
 def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, 0x001, uimm5:$imm), 2>;
+
+// fmv.w.x and fmv.x.w were previously known as fmv.s.x and fmv.x.s. Both
+// spellings should be supported by standard tools.
+def : MnemonicAlias<"fmv.s.x", "fmv.w.x">;
+def : MnemonicAlias<"fmv.x.s", "fmv.x.w">;
 } // Predicates = [HasStdExtF]
 
 //===----------------------------------------------------------------------===//

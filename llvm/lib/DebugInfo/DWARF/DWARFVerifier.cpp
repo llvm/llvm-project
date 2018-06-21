@@ -324,8 +324,15 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   if (!Die.isValid())
     return NumErrors;
 
-  DWARFAddressRangesVector Ranges = Die.getAddressRanges();
+  auto RangesOrError = Die.getAddressRanges();
+  if (!RangesOrError) {
+    // FIXME: Report the error.
+    ++NumErrors;
+    llvm::consumeError(RangesOrError.takeError());
+    return NumErrors;
+  }
 
+  DWARFAddressRangesVector Ranges = RangesOrError.get();
   // Build RI for this DIE and check that ranges within this DIE do not
   // overlap.
   DieRangeInfo RI(Die);

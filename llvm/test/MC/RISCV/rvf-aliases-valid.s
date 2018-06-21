@@ -87,6 +87,13 @@ fsflagsi x14, 0x1d
 # CHECK-ALIAS: fsflagsi 28
 fsflagsi 0x1c
 
+# CHECK-INST: fmv.x.w a2, fs7
+# CHECK-ALIAS: fmv.x.w a2, fs7
+fmv.x.s a2, fs7
+# CHECK-INST: fmv.w.x ft1, a6
+# CHECK-ALIAS: fmv.w.x ft1, a6
+fmv.s.x ft1, a6
+
 ##===----------------------------------------------------------------------===##
 ## Aliases which omit the rounding mode.
 ##===----------------------------------------------------------------------===##

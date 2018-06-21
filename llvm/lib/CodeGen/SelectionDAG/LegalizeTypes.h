@@ -186,7 +186,8 @@ public:
       TableId NewId = getTableId(SDValue(New, i));
       TableId OldId = getTableId(SDValue(Old, i));
 
-      ReplacedValues[OldId] = NewId;
+      if (OldId != NewId)
+        ReplacedValues[OldId] = NewId;
 
       // Delete Node from tables.
       ValueToIdMap.erase(SDValue(Old, i));

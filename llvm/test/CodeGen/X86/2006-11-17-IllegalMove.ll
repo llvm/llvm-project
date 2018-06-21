@@ -6,9 +6,9 @@ define void @handle_vector_size_attribute() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl 0, %eax
 ; CHECK-NEXT:    decl %eax
-; CHECK-NEXT:    cmpl $2, %eax
-; CHECK-NEXT:    jae .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %cond_next129
+; CHECK-NEXT:    cmpl $1, %eax
+; CHECK-NEXT:    ja .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %bb77
 ; CHECK-NEXT:    movb 0, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax def $ax

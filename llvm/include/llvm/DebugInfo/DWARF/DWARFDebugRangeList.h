@@ -71,7 +71,7 @@ public:
 
   void clear();
   void dump(raw_ostream &OS) const;
-  bool extract(const DWARFDataExtractor &data, uint32_t *offset_ptr);
+  Error extract(const DWARFDataExtractor &data, uint32_t *offset_ptr);
   const std::vector<RangeListEntry> &getEntries() { return Entries; }
 
   /// getAbsoluteRanges - Returns absolute address ranges defined by this range

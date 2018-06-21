@@ -1947,6 +1947,9 @@ public:
     return getQualifiedType(type.getUnqualifiedType(), Qs);
   }
 
+  unsigned char getFixedPointScale(QualType Ty) const;
+  unsigned char getFixedPointIBits(QualType Ty) const;
+
   DeclarationNameInfo getNameForTemplate(TemplateName Name,
                                          SourceLocation NameLoc) const;
 

@@ -3440,16 +3440,6 @@ static void handleAlignedAttr(Sema &S, Decl *D, const AttributeList &AL) {
   if (!AL.isPackExpansion() && S.DiagnoseUnexpandedParameterPack(E))
     return;
 
-  if (E->isValueDependent()) {
-    if (const auto *TND = dyn_cast<TypedefNameDecl>(D)) {
-      if (!TND->getUnderlyingType()->isDependentType()) {
-        S.Diag(AL.getLoc(), diag::err_alignment_dependent_typedef_name)
-            << E->getSourceRange();
-        return;
-      }
-    }
-  }
-
   S.AddAlignedAttr(AL.getRange(), D, E, AL.getAttributeSpellingListIndex(),
                    AL.isPackExpansion());
 }
@@ -3496,7 +3486,18 @@ void Sema::AddAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E,
     }
   }
 
-  if (E->isTypeDependent() || E->isValueDependent()) {
+  if (E->isValueDependent()) {
+    // We can't support a dependent alignment on a non-dependent type,
+    // because we have no way to model that a type is "alignment-dependent"
+    // but not dependent in any other way.
+    if (const auto *TND = dyn_cast<TypedefNameDecl>(D)) {
+      if (!TND->getUnderlyingType()->isDependentType()) {
+        Diag(AttrLoc, diag::err_alignment_dependent_typedef_name)
+            << E->getSourceRange();
+        return;
+      }
+    }
+
     // Save dependent expressions in the AST to be instantiated.
     AlignedAttr *AA = ::new (Context) AlignedAttr(TmpAttr);
     AA->setPackExpansion(IsPackExpansion);

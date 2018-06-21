@@ -30,8 +30,7 @@ class ScopedAllocatorErrorReport {
   ~ScopedAllocatorErrorReport() {
     Printf("%s", d.Default());
     stack->Print();
-    // TODO(alekseyshl): Define SanitizerToolOptionsEnvVarName and use it there.
-    PrintHintAllocatorCannotReturnNull("");
+    PrintHintAllocatorCannotReturnNull();
     ReportErrorSummary(error_summary, stack);
   }
 
