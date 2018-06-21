@@ -106,17 +106,11 @@ body:             |
 # CHECK-LABEL: name: foobar
 
 # CHECK-LABEL: bb.1:
-## After solving https://bugs.llvm.org/show_bug.cgi?id=36579 we expect to get a
-##   DBG_VALUE debug-use $noreg
-## here.
-# CHECK-NOT:    DBG_VALUE
+# CHECK:        DBG_VALUE debug-use $noreg
 
 # CHECK-LABEL: bb.2:
-## After solving https://bugs.llvm.org/show_bug.cgi?id=36579 we expect to get a
-##   DBG_VALUE debug-use $noreg
-## here.
-# CHECK-NOT:    DBG_VALUE
-# CHECK:        dead renamable $rcx = IMPLICIT_DEF
+# CHECK:        DBG_VALUE debug-use $noreg
+# CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF

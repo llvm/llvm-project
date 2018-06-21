@@ -99,79 +99,32 @@ namespace llvm {
 
 namespace AMDGPU {
 
-LLVM_READNONE
-static inline Channels indexToChannel(unsigned Channel) {
-  switch (Channel) {
-  case 1:
-    return AMDGPU::Channels_1;
-  case 2:
-    return AMDGPU::Channels_2;
-  case 3:
-    return AMDGPU::Channels_3;
-  case 4:
-    return AMDGPU::Channels_4;
-  default:
-    llvm_unreachable("invalid MIMG channel");
-  }
+struct MIMGInfo {
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
+  uint8_t MIMGEncoding;
+  uint8_t VDataDwords;
+  uint8_t VAddrDwords;
+};
+
+#define GET_MIMGBaseOpcodesTable_IMPL
+#define GET_MIMGDimInfoTable_IMPL
+#define GET_MIMGInfoTable_IMPL
+#include "AMDGPUGenSearchableTables.inc"
+
+int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
+                  unsigned VDataDwords, unsigned VAddrDwords) {
+  const MIMGInfo *Info = getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding,
+                                             VDataDwords, VAddrDwords);
+  return Info ? Info->Opcode : -1;
 }
 
-
-// FIXME: Need to handle d16 images correctly.
-static unsigned rcToChannels(unsigned RCID) {
-  switch (RCID) {
-  case AMDGPU::VGPR_32RegClassID:
-    return 1;
-  case AMDGPU::VReg_64RegClassID:
-    return 2;
-  case AMDGPU::VReg_96RegClassID:
-    return 3;
-  case AMDGPU::VReg_128RegClassID:
-    return 4;
-  default:
-    llvm_unreachable("invalid MIMG register class");
-  }
-}
-
-int getMaskedMIMGOp(const MCInstrInfo &MII, unsigned Opc, unsigned NewChannels) {
-  AMDGPU::Channels Channel = AMDGPU::indexToChannel(NewChannels);
-  unsigned OrigChannels = rcToChannels(MII.get(Opc).OpInfo[0].RegClass);
-  if (NewChannels == OrigChannels)
-    return Opc;
-
-  switch (OrigChannels) {
-  case 1:
-    return AMDGPU::getMaskedMIMGOp1(Opc, Channel);
-  case 2:
-    return AMDGPU::getMaskedMIMGOp2(Opc, Channel);
-  case 3:
-    return AMDGPU::getMaskedMIMGOp3(Opc, Channel);
-  case 4:
-    return AMDGPU::getMaskedMIMGOp4(Opc, Channel);
-  default:
-    llvm_unreachable("invalid MIMG channel");
-  }
-}
-
-int getMaskedMIMGAtomicOp(const MCInstrInfo &MII, unsigned Opc, unsigned NewChannels) {
-  assert(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst) != -1);
-  assert(NewChannels == 1 || NewChannels == 2 || NewChannels == 4);
-
-  unsigned OrigChannels = rcToChannels(MII.get(Opc).OpInfo[0].RegClass);
-  assert(OrigChannels == 1 || OrigChannels == 2 || OrigChannels == 4);
-
-  if (NewChannels == OrigChannels) return Opc;
-
-  if (OrigChannels <= 2 && NewChannels <= 2) {
-    // This is an ordinary atomic (not an atomic_cmpswap)
-    return (OrigChannels == 1)?
-      AMDGPU::getMIMGAtomicOp1(Opc) : AMDGPU::getMIMGAtomicOp2(Opc);
-  } else if (OrigChannels >= 2 && NewChannels >= 2) {
-    // This is an atomic_cmpswap
-    return (OrigChannels == 2)?
-      AMDGPU::getMIMGAtomicOp1(Opc) : AMDGPU::getMIMGAtomicOp2(Opc);
-  } else { // invalid OrigChannels/NewChannels value
-    return -1;
-  }
+int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
+  const MIMGInfo *OrigInfo = getMIMGInfo(Opc);
+  const MIMGInfo *NewInfo =
+      getMIMGOpcodeHelper(OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding,
+                          NewChannels, OrigInfo->VAddrDwords);
+  return NewInfo ? NewInfo->Opcode : -1;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
@@ -951,15 +904,15 @@ namespace {
 struct SourceOfDivergence {
   unsigned Intr;
 };
-const SourceOfDivergence *lookupSourceOfDivergenceByIntr(unsigned Intr);
+const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
-#define GET_SOURCEOFDIVERGENCE_IMPL
+#define GET_SourcesOfDivergence_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
-  return lookupSourceOfDivergenceByIntr(IntrID);
+  return lookupSourceOfDivergence(IntrID);
 }
 } // namespace AMDGPU
 } // namespace llvm

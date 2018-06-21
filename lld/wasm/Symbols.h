@@ -105,7 +105,7 @@ protected:
   uint32_t Flags;
   InputFile *File;
   uint32_t OutputSymbolIndex = INVALID_INDEX;
-  bool Referenced = false;
+  bool Referenced;
 };
 
 class FunctionSymbol : public Symbol {

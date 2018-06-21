@@ -714,11 +714,6 @@ def warn_mmap_redundant_export_as : Warning<
 def err_mmap_submodule_export_as : Error<
   "only top-level modules can be re-exported as public">;
 
-def warn_quoted_include_in_framework_header : Warning<
-  "double-quoted include \"%0\" in framework header, "
-  "expected angle-bracketed instead"
-  >, InGroup<FrameworkHdrQuotedInclude>, DefaultIgnore;
-
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
   "import of module '%1'">, InGroup<AutoImport>, DefaultIgnore;

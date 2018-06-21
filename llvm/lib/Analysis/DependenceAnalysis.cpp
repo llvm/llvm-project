@@ -108,8 +108,8 @@ STATISTIC(BanerjeeIndependence, "Banerjee independence");
 STATISTIC(BanerjeeSuccesses, "Banerjee successes");
 
 static cl::opt<bool>
-Delinearize("da-delinearize", cl::init(false), cl::Hidden, cl::ZeroOrMore,
-            cl::desc("Try to delinearize array references."));
+    Delinearize("da-delinearize", cl::init(true), cl::Hidden, cl::ZeroOrMore,
+                cl::desc("Try to delinearize array references."));
 
 //===----------------------------------------------------------------------===//
 // basics
@@ -994,6 +994,38 @@ bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
   }
 }
 
+/// Compare to see if S is less than Size, using isKnownNegative(S - max(Size, 1))
+/// with some extra checking if S is an AddRec and we can prove less-than using
+/// the loop bounds.
+bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
+  // First unify to the same type
+  auto *SType = dyn_cast<IntegerType>(S->getType());
+  auto *SizeType = dyn_cast<IntegerType>(Size->getType());
+  if (!SType || !SizeType)
+    return false;
+  Type *MaxType =
+      (SType->getBitWidth() >= SizeType->getBitWidth()) ? SType : SizeType;
+  S = SE->getTruncateOrZeroExtend(S, MaxType);
+  Size = SE->getTruncateOrZeroExtend(Size, MaxType);
+
+  // Special check for addrecs using BE taken count
+  const SCEV *Bound = SE->getMinusSCEV(S, Size);
+  if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Bound)) {
+    if (AddRec->isAffine()) {
+      const SCEV *BECount = SE->getBackedgeTakenCount(AddRec->getLoop());
+      if (!isa<SCEVCouldNotCompute>(BECount)) {
+        const SCEV *Limit = AddRec->evaluateAtIteration(BECount, *SE);
+        if (SE->isKnownNegative(Limit))
+          return true;
+      }
+    }
+  }
+
+  // Check using normal isKnownNegative
+  const SCEV *LimitedBound =
+      SE->getMinusSCEV(S, SE->getSMaxExpr(Size, SE->getOne(Size->getType())));
+  return SE->isKnownNegative(LimitedBound);
+}
 
 // All subscripts are all the same type.
 // Loop bound may be smaller (e.g., a char).
@@ -3253,6 +3285,26 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
 
   int size = SrcSubscripts.size();
 
+  // Statically check that the array bounds are in-range. The first subscript we
+  // don't have a size for and it cannot overflow into another subscript, so is
+  // always safe. The others need to be 0 <= subscript[i] < bound, for both src
+  // and dst.
+  // FIXME: It may be better to record these sizes and add them as constraints
+  // to the dependency checks.
+  for (int i = 1; i < size; ++i) {
+    if (!SE->isKnownNonNegative(SrcSubscripts[i]))
+      return false;
+
+    if (!isKnownLessThan(SrcSubscripts[i], Sizes[i - 1]))
+      return false;
+
+    if (!SE->isKnownNonNegative(DstSubscripts[i]))
+      return false;
+
+    if (!isKnownLessThan(DstSubscripts[i], Sizes[i - 1]))
+      return false;
+  }
+
   LLVM_DEBUG({
     dbgs() << "\nSrcSubscripts: ";
     for (int i = 0; i < size; i++)
@@ -3271,13 +3323,6 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
     Pair[i].Src = SrcSubscripts[i];
     Pair[i].Dst = DstSubscripts[i];
     unifySubscriptType(&Pair[i]);
-
-    // FIXME: we should record the bounds SrcSizes[i] and DstSizes[i] that the
-    // delinearization has found, and add these constraints to the dependence
-    // check to avoid memory accesses overflow from one dimension into another.
-    // This is related to the problem of determining the existence of data
-    // dependences in array accesses using a different number of subscripts: in
-    // C one can access an array A[100][100]; as A[0][9999], *A[9999], etc.
   }
 
   return true;

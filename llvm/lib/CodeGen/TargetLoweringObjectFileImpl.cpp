@@ -352,7 +352,8 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
       /*EntrySize=*/0, Group, UniqueID, AssociatedSymbol);
   // Make sure that we did not get some other section with incompatible sh_link.
   // This should not be possible due to UniqueID code above.
-  assert(Section->getAssociatedSymbol() == AssociatedSymbol);
+  assert(Section->getAssociatedSymbol() == AssociatedSymbol &&
+         "Associated symbol mismatch between sections");
   return Section;
 }
 

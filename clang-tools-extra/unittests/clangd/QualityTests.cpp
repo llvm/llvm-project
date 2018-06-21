@@ -97,13 +97,13 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "main"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0) << "Decl in current file";
+  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f) << "Decl in current file";
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "header"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 0.6) << "Decl from header";
+  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 0.6f) << "Decl from header";
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "header_main"), 42));
-  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0)
+  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
       << "Current file and header";
 
   Relevance = {};
@@ -186,7 +186,7 @@ std::string joinPaths(llvm::ArrayRef<StringRef> Parts) {
       llvm::join(Parts.begin(), Parts.end(), llvm::sys::path::get_separator()));
 }
 
-static constexpr float ProximityBase = 0.7;
+static constexpr float ProximityBase = 0.7f;
 
 // Calculates a proximity score for an index symbol with declaration file
 // SymPath with the given URI scheme.

@@ -33,7 +33,7 @@ body: |
   bb.1:
     successors: %bb.2
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit $exec
+    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:

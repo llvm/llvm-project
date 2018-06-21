@@ -110,6 +110,24 @@ static void checkConcrete(Record &R) {
   }
 }
 
+/// Return an Init with a qualifier prefix referring
+/// to CurRec's name.
+static Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass,
+                        Init *Name, StringRef Scoper) {
+  Init *NewName =
+      BinOpInit::getStrConcat(CurRec.getNameInit(), StringInit::get(Scoper));
+  NewName = BinOpInit::getStrConcat(NewName, Name);
+  if (CurMultiClass && Scoper != "::") {
+    Init *Prefix = BinOpInit::getStrConcat(CurMultiClass->Rec.getNameInit(),
+                                           StringInit::get("::"));
+    NewName = BinOpInit::getStrConcat(Prefix, NewName);
+  }
+
+  if (BinOpInit *BinOp = dyn_cast<BinOpInit>(NewName))
+    NewName = BinOp->Fold(&CurRec);
+  return NewName;
+}
+
 /// Return the qualified version of the implicit 'NAME' template argument.
 static Init *QualifiedNameOfImplicitName(Record &Rec,
                                          MultiClass *MC = nullptr) {
@@ -271,6 +289,18 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   return false;
 }
 
+bool TGParser::AddSubClass(RecordsEntry &Entry, SubClassReference &SubClass) {
+  if (Entry.Rec)
+    return AddSubClass(Entry.Rec.get(), SubClass);
+
+  for (auto &E : Entry.Loop->Entries) {
+    if (AddSubClass(E, SubClass))
+      return true;
+  }
+
+  return false;
+}
+
 /// AddSubMultiClass - Add SubMultiClass as a subclass to
 /// CurMC, resolving its template args as SubMultiClass's
 /// template arguments.
@@ -285,7 +315,7 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
 
   // Prepare the mapping of template argument name to value, filling in default
   // values if necessary.
-  SmallVector<std::pair<Init *, Init *>, 8> TemplateArgs;
+  SubstStack TemplateArgs;
   for (unsigned i = 0, e = SMCTArgs.size(); i != e; ++i) {
     if (i < SubMultiClass.TemplateArgs.size()) {
       TemplateArgs.emplace_back(SMCTArgs[i], SubMultiClass.TemplateArgs[i]);
@@ -307,85 +337,105 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
       VarInit::get(QualifiedNameOfImplicitName(CurMC), StringRecTy::get()));
 
   // Add all of the defs in the subclass into the current multiclass.
-  for (const std::unique_ptr<Record> &Rec : SMC->DefPrototypes) {
-    auto NewDef = make_unique<Record>(*Rec);
-
-    MapResolver R(NewDef.get());
-    for (const auto &TArg : TemplateArgs)
-      R.set(TArg.first, TArg.second);
-    NewDef->resolveReferences(R);
-
-    CurMC->DefPrototypes.push_back(std::move(NewDef));
-  }
-
-  return false;
+  return resolve(SMC->Entries, TemplateArgs, false, &CurMC->Entries);
 }
 
-/// Add a record that results from 'def' or 'defm', after template arguments
-/// and the external let stack have been resolved.
-///
-/// Apply foreach loops, resolve internal variable references, and add to the
-/// current multi class or the global record keeper as appropriate.
-bool TGParser::addDef(std::unique_ptr<Record> Rec) {
-  IterSet IterVals;
+/// Add a record or foreach loop to the current context (global record keeper,
+/// current inner-most foreach loop, or multiclass).
+bool TGParser::addEntry(RecordsEntry E) {
+  assert(!E.Rec || !E.Loop);
 
-  if (Loops.empty())
-    return addDefOne(std::move(Rec), IterVals);
-
-  return addDefForeach(Rec.get(), IterVals);
-}
-
-/// Recursive helper function for addDef/addDefOne to resolve references to
-/// foreach variables.
-bool TGParser::addDefForeach(Record *Rec, IterSet &IterVals) {
-  if (IterVals.size() != Loops.size()) {
-    assert(IterVals.size() < Loops.size());
-    ForeachLoop &CurLoop = Loops[IterVals.size()];
-    ListInit *List = CurLoop.ListValue;
-
-    // Process each value.
-    for (unsigned i = 0; i < List->size(); ++i) {
-      IterVals.push_back(IterRecord(CurLoop.IterVar, List->getElement(i)));
-      if (addDefForeach(Rec, IterVals))
-        return true;
-      IterVals.pop_back();
-    }
+  if (!Loops.empty()) {
+    Loops.back()->Entries.push_back(std::move(E));
     return false;
   }
 
-  // This is the bottom of the recursion. We have all of the iterator values
-  // for this point in the iteration space.  Instantiate a new record to
-  // reflect this combination of values.
-  auto IterRec = make_unique<Record>(*Rec);
-  return addDefOne(std::move(IterRec), IterVals);
-}
-
-/// After resolving foreach loops, add the record as a prototype to the
-/// current multiclass, or resolve fully and add to the record keeper.
-bool TGParser::addDefOne(std::unique_ptr<Record> Rec, IterSet &IterVals) {
-  MapResolver R(Rec.get());
-
-  for (IterRecord &IR : IterVals)
-    R.set(IR.IterVar->getNameInit(), IR.IterValue);
-
-  Rec->resolveReferences(R);
+  if (E.Loop) {
+    SubstStack Stack;
+    return resolve(*E.Loop, Stack, CurMultiClass == nullptr,
+                   CurMultiClass ? &CurMultiClass->Entries : nullptr);
+  }
 
   if (CurMultiClass) {
-    if (!Rec->isAnonymous()) {
-      for (const auto &Proto : CurMultiClass->DefPrototypes) {
-        if (Proto->getNameInit() == Rec->getNameInit()) {
-          PrintError(Rec->getLoc(),
-                    Twine("def '") + Rec->getNameInitAsString() +
-                        "' already defined in this multiclass!");
-          PrintNote(Proto->getLoc(), "location of previous definition");
-          return true;
-        }
-      }
-    }
-    CurMultiClass->DefPrototypes.emplace_back(std::move(Rec));
+    CurMultiClass->Entries.push_back(std::move(E));
     return false;
   }
 
+  return addDefOne(std::move(E.Rec));
+}
+
+/// Resolve the entries in \p Loop, going over inner loops recursively
+/// and making the given subsitutions of (name, value) pairs.
+///
+/// The resulting records are stored in \p Dest if non-null. Otherwise, they
+/// are added to the global record keeper.
+bool TGParser::resolve(const ForeachLoop &Loop, SubstStack &Substs,
+                       bool Final, std::vector<RecordsEntry> *Dest,
+                       SMLoc *Loc) {
+  MapResolver R;
+  for (const auto &S : Substs)
+    R.set(S.first, S.second);
+  Init *List = Loop.ListValue->resolveReferences(R);
+  auto LI = dyn_cast<ListInit>(List);
+  if (!LI) {
+    if (!Final) {
+      Dest->emplace_back(make_unique<ForeachLoop>(Loop.Loc, Loop.IterVar,
+                                                  List));
+      return resolve(Loop.Entries, Substs, Final, &Dest->back().Loop->Entries,
+                     Loc);
+    }
+
+    PrintError(Loop.Loc, Twine("attempting to loop over '") +
+                              List->getAsString() + "', expected a list");
+    return true;
+  }
+
+  bool Error = false;
+  for (auto Elt : *LI) {
+    Substs.emplace_back(Loop.IterVar->getNameInit(), Elt);
+    Error = resolve(Loop.Entries, Substs, Final, Dest);
+    Substs.pop_back();
+    if (Error)
+      break;
+  }
+  return Error;
+}
+
+/// Resolve the entries in \p Source, going over loops recursively and
+/// making the given substitutions of (name, value) pairs.
+///
+/// The resulting records are stored in \p Dest if non-null. Otherwise, they
+/// are added to the global record keeper.
+bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
+                       SubstStack &Substs, bool Final,
+                       std::vector<RecordsEntry> *Dest, SMLoc *Loc) {
+  bool Error = false;
+  for (auto &E : Source) {
+    if (E.Loop) {
+      Error = resolve(*E.Loop, Substs, Final, Dest);
+    } else {
+      auto Rec = make_unique<Record>(*E.Rec);
+      if (Loc)
+        Rec->appendLoc(*Loc);
+
+      MapResolver R(Rec.get());
+      for (const auto &S : Substs)
+        R.set(S.first, S.second);
+      Rec->resolveReferences(R);
+
+      if (Dest)
+        Dest->push_back(std::move(Rec));
+      else
+        Error = addDefOne(std::move(Rec));
+    }
+    if (Error)
+      break;
+  }
+  return Error;
+}
+
+/// Resolve the record fully and add it to the record keeper.
+bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   if (Record *Prev = Records.getDef(Rec->getNameInitAsString())) {
     if (!Rec->isAnonymous()) {
       PrintError(Rec->getLoc(),
@@ -804,7 +854,7 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
 
   // If this is in a foreach loop, make sure it's not a loop iterator
   for (const auto &L : Loops) {
-    VarInit *IterVar = dyn_cast<VarInit>(L.IterVar);
+    VarInit *IterVar = dyn_cast<VarInit>(L->IterVar);
     if (IterVar && IterVar->getNameInit() == Name)
       return IterVar;
   }
@@ -1158,7 +1208,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
 
     Init *LHS = StringInit::get(Lex.getCurStrVal());
 
-    if (CurRec->getValue(LHS)) {
+    if (CurRec && CurRec->getValue(LHS)) {
       TokError((Twine("iteration variable '") + LHS->getAsString() +
                 "' already defined")
                    .str());
@@ -1217,9 +1267,18 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       return nullptr;
     }
 
-    CurRec->addValue(RecordVal(LHS, InEltType, false));
-    Init *RHS = ParseValue(CurRec, OutEltType);
-    CurRec->removeValue(LHS);
+    // We need to create a temporary record to provide a scope for the iteration
+    // variable while parsing top-level foreach's.
+    std::unique_ptr<Record> ParseRecTmp;
+    Record *ParseRec = CurRec;
+    if (!ParseRec) {
+      ParseRecTmp = make_unique<Record>(".parse", ArrayRef<SMLoc>{}, Records);
+      ParseRec = ParseRecTmp.get();
+    }
+
+    ParseRec->addValue(RecordVal(LHS, InEltType, false));
+    Init *RHS = ParseValue(ParseRec, OutEltType);
+    ParseRec->removeValue(LHS);
     if (!RHS)
       return nullptr;
 
@@ -1441,7 +1500,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     }
 
     Init *A = StringInit::get(Lex.getCurStrVal());
-    if (CurRec->getValue(A)) {
+    if (CurRec && CurRec->getValue(A)) {
       TokError((Twine("left !foldl variable '") + A->getAsString() +
                 "' already defined")
                    .str());
@@ -1459,7 +1518,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     }
 
     Init *B = StringInit::get(Lex.getCurStrVal());
-    if (CurRec->getValue(B)) {
+    if (CurRec && CurRec->getValue(B)) {
       TokError((Twine("right !foldl variable '") + B->getAsString() +
                 "' already defined")
                    .str());
@@ -1472,11 +1531,20 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     }
     Lex.Lex(); // eat the ','
 
-    CurRec->addValue(RecordVal(A, Start->getType(), false));
-    CurRec->addValue(RecordVal(B, ListType->getElementType(), false));
-    Init *ExprUntyped = ParseValue(CurRec);
-    CurRec->removeValue(A);
-    CurRec->removeValue(B);
+    // We need to create a temporary record to provide a scope for the iteration
+    // variable while parsing top-level foreach's.
+    std::unique_ptr<Record> ParseRecTmp;
+    Record *ParseRec = CurRec;
+    if (!ParseRec) {
+      ParseRecTmp = make_unique<Record>(".parse", ArrayRef<SMLoc>{}, Records);
+      ParseRec = ParseRecTmp.get();
+    }
+
+    ParseRec->addValue(RecordVal(A, Start->getType(), false));
+    ParseRec->addValue(RecordVal(B, ListType->getElementType(), false));
+    Init *ExprUntyped = ParseValue(ParseRec);
+    ParseRec->removeValue(A);
+    ParseRec->removeValue(B);
     if (!ExprUntyped)
       return nullptr;
 
@@ -2191,7 +2259,7 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
 ///  ForeachDeclaration ::= ID '=' RangePiece
 ///  ForeachDeclaration ::= ID '=' Value
 ///
-VarInit *TGParser::ParseForeachDeclaration(ListInit *&ForeachListValue) {
+VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
   if (Lex.getCode() != tgtok::Id) {
     TokError("Expected identifier in foreach declaration");
     return nullptr;
@@ -2231,9 +2299,10 @@ VarInit *TGParser::ParseForeachDeclaration(ListInit *&ForeachListValue) {
   default: {
     SMLoc ValueLoc = Lex.getLoc();
     Init *I = ParseValue(nullptr);
-    if (!isa<ListInit>(I)) {
+    TypedInit *TI = dyn_cast<TypedInit>(I);
+    if (!TI || !isa<ListRecTy>(TI->getType())) {
       std::string Type;
-      if (TypedInit *TI = dyn_cast<TypedInit>(I))
+      if (TI)
         Type = (Twine("' of type '") + TI->getType()->getAsString()).str();
       Error(ValueLoc, "expected a list, got '" + I->getAsString() + Type + "'");
       if (CurMultiClass)
@@ -2241,8 +2310,8 @@ VarInit *TGParser::ParseForeachDeclaration(ListInit *&ForeachListValue) {
                       "resolved at this time");
       return nullptr;
     }
-    ForeachListValue = dyn_cast<ListInit>(I);
-    IterType = ForeachListValue->getElementType();
+    ForeachListValue = I;
+    IterType = cast<ListRecTy>(TI->getType())->getElementType();
     break;
   }
   }
@@ -2390,6 +2459,18 @@ bool TGParser::ApplyLetStack(Record *CurRec) {
   return false;
 }
 
+bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
+  if (Entry.Rec)
+    return ApplyLetStack(Entry.Rec.get());
+
+  for (auto &E : Entry.Loop->Entries) {
+    if (ApplyLetStack(E))
+      return true;
+  }
+
+  return false;
+}
+
 /// ParseObjectBody - Parse the body of a def or class.  This consists of an
 /// optional ClassList followed by a Body.  CurRec is the current def or class
 /// that is being parsed.
@@ -2451,7 +2532,7 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
   if (ParseObjectBody(CurRec.get()))
     return true;
 
-  return addDef(std::move(CurRec));
+  return addEntry(std::move(CurRec));
 }
 
 /// ParseDefset - Parse a defset statement.
@@ -2508,12 +2589,13 @@ bool TGParser::ParseDefset() {
 ///   Foreach ::= FOREACH Declaration IN Object
 ///
 bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
+  SMLoc Loc = Lex.getLoc();
   assert(Lex.getCode() == tgtok::Foreach && "Unknown tok");
   Lex.Lex();  // Eat the 'for' token.
 
   // Make a temporary object to record items associated with the for
   // loop.
-  ListInit *ListValue = nullptr;
+  Init *ListValue = nullptr;
   VarInit *IterName = ParseForeachDeclaration(ListValue);
   if (!IterName)
     return TokError("expected declaration in for");
@@ -2523,7 +2605,7 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
   Lex.Lex();  // Eat the in
 
   // Create a loop object and remember it.
-  Loops.push_back(ForeachLoop(IterName, ListValue));
+  Loops.push_back(llvm::make_unique<ForeachLoop>(Loc, IterName, ListValue));
 
   if (Lex.getCode() != tgtok::l_brace) {
     // FOREACH Declaration IN Object
@@ -2545,10 +2627,11 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     Lex.Lex();  // Eat the }
   }
 
-  // We've processed everything in this loop.
+  // Resolve the loop or store it for later resolution.
+  std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
   Loops.pop_back();
 
-  return false;
+  return addEntry(std::move(Loop));
 }
 
 /// ParseClass - Parse a tblgen class definition.
@@ -2795,7 +2878,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     return TokError("expected ':' after defm identifier");
 
   // Keep track of the new generated record definitions.
-  SmallVector<std::unique_ptr<Record>, 8> NewRecDefs;
+  std::vector<RecordsEntry> NewEntries;
 
   // This record also inherits from a regular class (non-multiclass)?
   bool InheritFromClass = false;
@@ -2822,10 +2905,10 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
       return Error(SubClassLoc,
                    "more template args specified than multiclass expects");
 
-    SmallVector<std::pair<Init *, Init *>, 8> TemplateArgs;
+    SubstStack Substs;
     for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
       if (i < TemplateVals.size()) {
-        TemplateArgs.emplace_back(TArgs[i], TemplateVals[i]);
+        Substs.emplace_back(TArgs[i], TemplateVals[i]);
       } else {
         Init *Default = MC->Rec.getValue(TArgs[i])->getValue();
         if (!Default->isComplete()) {
@@ -2835,24 +2918,15 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
                            ") of multiclass '" + MC->Rec.getNameInitAsString() +
                            "'");
         }
-        TemplateArgs.emplace_back(TArgs[i], Default);
+        Substs.emplace_back(TArgs[i], Default);
       }
     }
 
-    TemplateArgs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
+    Substs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
 
-    // Loop over all the def's in the multiclass, instantiating each one.
-    for (const std::unique_ptr<Record> &DefProto : MC->DefPrototypes) {
-      auto CurRec = make_unique<Record>(*DefProto);
-      CurRec->appendLoc(SubClassLoc);
-
-      MapResolver R(CurRec.get());
-      for (const auto &TArg : TemplateArgs)
-        R.set(TArg.first, TArg.second);
-      CurRec->resolveReferences(R);
-
-      NewRecDefs.emplace_back(std::move(CurRec));
-    }
+    if (resolve(MC->Entries, Substs, CurMultiClass == nullptr, &NewEntries,
+                &SubClassLoc))
+      return true;
 
     if (Lex.getCode() != tgtok::comma) break;
     Lex.Lex(); // eat ','.
@@ -2882,9 +2956,9 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 
       // Get the expanded definition prototypes and teach them about
       // the record values the current class to inherit has
-      for (const auto &CurRec : NewRecDefs) {
+      for (auto &E : NewEntries) {
         // Add it.
-        if (AddSubClass(CurRec.get(), SubClass))
+        if (AddSubClass(E, SubClass))
           return true;
       }
 
@@ -2894,11 +2968,11 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     }
   }
 
-  for (auto &CurRec : NewRecDefs) {
-    if (ApplyLetStack(CurRec.get()))
+  for (auto &E : NewEntries) {
+    if (ApplyLetStack(E))
       return true;
 
-    addDef(std::move(CurRec));
+    addEntry(std::move(E));
   }
 
   if (Lex.getCode() != tgtok::semi)
@@ -2961,3 +3035,31 @@ bool TGParser::ParseFile() {
 
   return TokError("Unexpected input at top level");
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void RecordsEntry::dump() const {
+  if (Loop)
+    Loop->dump();
+  if (Rec)
+    Rec->dump();
+}
+
+LLVM_DUMP_METHOD void ForeachLoop::dump() const {
+  errs() << "foreach " << IterVar->getAsString() << " = "
+         << ListValue->getAsString() << " in {\n";
+
+  for (const auto &E : Entries)
+    E.dump();
+
+  errs() << "}\n";
+}
+
+LLVM_DUMP_METHOD void MultiClass::dump() const {
+  errs() << "Record:\n";
+  Rec.dump();
+
+  errs() << "Defs:\n";
+  for (const auto &E : Entries)
+    E.dump();
+}
+#endif

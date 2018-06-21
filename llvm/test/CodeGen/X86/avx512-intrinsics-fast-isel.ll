@@ -8697,6 +8697,366 @@ entry:
   ret float %vecext.i
 }
 
+define <8 x double> @test_mm512_mask_max_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_mask_max_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_max_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__W
+  ret <8 x double> %2
+}
+
+define <8 x double> @test_mm512_maskz_max_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_maskz_max_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_max_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
+  ret <8 x double> %2
+}
+
+define <16 x float> @test_mm512_mask_max_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_mask_max_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vmaxps %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_max_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxps %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.max.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__W
+  ret <16 x float> %2
+}
+
+define <8 x double> @test_mm512_mask_max_round_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_mask_max_round_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_max_round_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxpd %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__W
+  ret <8 x double> %2
+}
+
+declare <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double>, <8 x double>, i32)
+
+define <8 x double> @test_mm512_maskz_max_round_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_maskz_max_round_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_max_round_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
+  ret <8 x double> %2
+}
+
+define <8 x double> @test_mm512_max_round_pd(<8 x double> %__A, <8 x double> %__B) {
+; CHECK-LABEL: test_mm512_max_round_pd:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  ret <8 x double> %0
+}
+
+define <16 x float> @test_mm512_maskz_max_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_maskz_max_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vmaxps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_max_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.max.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
+  ret <16 x float> %2
+}
+
+define <16 x float> @test_mm512_mask_max_round_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_mask_max_round_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vmaxps %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_max_round_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxps %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.max.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__W
+  ret <16 x float> %2
+}
+
+declare <16 x float> @llvm.x86.avx512.max.ps.512(<16 x float>, <16 x float>, i32)
+
+define <16 x float> @test_mm512_maskz_max_round_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_maskz_max_round_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vmaxps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_max_round_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vmaxps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.max.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
+  ret <16 x float> %2
+}
+
+define <16 x float> @test_mm512_max_round_ps(<16 x float> %__A, <16 x float> %__B) {
+; CHECK-LABEL: test_mm512_max_round_ps:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.max.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  ret <16 x float> %0
+}
+
+define <8 x double> @test_mm512_mask_min_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_mask_min_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_min_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.min.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__W
+  ret <8 x double> %2
+}
+
+define <8 x double> @test_mm512_maskz_min_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_maskz_min_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vminpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_min_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.min.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
+  ret <8 x double> %2
+}
+
+define <8 x double> @test_mm512_mask_min_round_pd(<8 x double> %__W, i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_mask_min_round_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_min_round_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminpd %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.min.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> %__W
+  ret <8 x double> %2
+}
+
+declare <8 x double> @llvm.x86.avx512.min.pd.512(<8 x double>, <8 x double>, i32)
+
+define <8 x double> @test_mm512_maskz_min_round_pd(i8 zeroext %__U, <8 x double> %__A, <8 x double> %__B) {
+; X86-LABEL: test_mm512_maskz_min_round_pd:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vminpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_min_round_pd:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.min.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x double> %0, <8 x double> zeroinitializer
+  ret <8 x double> %2
+}
+
+define <8 x double> @test_mm512_min_round_pd(<8 x double> %__A, <8 x double> %__B) {
+; CHECK-LABEL: test_mm512_min_round_pd:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vminpd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <8 x double> @llvm.x86.avx512.min.pd.512(<8 x double> %__A, <8 x double> %__B, i32 4)
+  ret <8 x double> %0
+}
+
+define <16 x float> @test_mm512_mask_min_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_mask_min_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vminps %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_min_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminps %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.min.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__W
+  ret <16 x float> %2
+}
+
+define <16 x float> @test_mm512_maskz_min_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_maskz_min_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vminps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_min_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.min.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
+  ret <16 x float> %2
+}
+
+define <16 x float> @test_mm512_mask_min_round_ps(<16 x float> %__W, i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_mask_min_round_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vminps %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_min_round_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminps %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.min.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> %__W
+  ret <16 x float> %2
+}
+
+declare <16 x float> @llvm.x86.avx512.min.ps.512(<16 x float>, <16 x float>, i32)
+
+define <16 x float> @test_mm512_maskz_min_round_ps(i16 zeroext %__U, <16 x float> %__A, <16 x float> %__B) {
+; X86-LABEL: test_mm512_maskz_min_round_ps:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vminps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_min_round_ps:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vminps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.min.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  %1 = bitcast i16 %__U to <16 x i1>
+  %2 = select <16 x i1> %1, <16 x float> %0, <16 x float> zeroinitializer
+  ret <16 x float> %2
+}
+
+define <16 x float> @test_mm512_min_round_ps(<16 x float> %__A, <16 x float> %__B) {
+; CHECK-LABEL: test_mm512_min_round_ps:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vminps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <16 x float> @llvm.x86.avx512.min.ps.512(<16 x float> %__A, <16 x float> %__B, i32 4)
+  ret <16 x float> %0
+}
+
 declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>) #9
 declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>) #9
 declare float @llvm.fma.f32(float, float, float) #9

@@ -34,14 +34,9 @@ main_body:
   %j.f.i4 = bitcast i32 %j.i2 to float
   %p1.i5 = call float @llvm.amdgcn.interp.p1(float %i.f.i3, i32 1, i32 0, i32 %arg5) #1
   %p2.i6 = call float @llvm.amdgcn.interp.p2(float %p1.i5, float %j.f.i4, i32 1, i32 0, i32 %arg5) #1
-  %tmp27 = bitcast float %p2.i to i32
-  %tmp28 = bitcast float %p2.i6 to i32
-  %tmp29 = insertelement <2 x i32> undef, i32 %tmp27, i32 0
-  %tmp30 = insertelement <2 x i32> %tmp29, i32 %tmp28, i32 1
   %tmp22.bc = bitcast <32 x i8> %tmp22 to <8 x i32>
   %tmp24.bc = bitcast <16 x i8> %tmp24 to <4 x i32>
-  %tmp30.bc = bitcast <2 x i32> %tmp30 to <2 x float>
-  %tmp31 = call <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> %tmp30.bc, <8 x i32> %tmp22.bc, <4 x i32> %tmp24.bc, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false)
+  %tmp31 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %p2.i, float %p2.i6, <8 x i32> %tmp22.bc, <4 x i32> %tmp24.bc, i1 0, i32 0, i32 0)
 
   %tmp32 = extractelement <4 x float> %tmp31, i32 0
   %tmp33 = extractelement <4 x float> %tmp31, i32 1
@@ -57,7 +52,7 @@ declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #1
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #1
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
-declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #2
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

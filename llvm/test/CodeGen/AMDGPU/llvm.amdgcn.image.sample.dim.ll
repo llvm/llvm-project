@@ -1,3 +1,4 @@
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}sample_1d:
@@ -398,6 +399,95 @@ define amdgpu_ps <4 x float> @sample_1d_glc_slc(<8 x i32> inreg %rsrc, <4 x i32>
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 3)
   ret <4 x float> %v
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_0:
+; GCN: image_sample v0, v0, s[0:7], s[8:11] dmask:0x1{{$}}
+define amdgpu_ps float @adjust_writemask_sample_0(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %elt0 = extractelement <4 x float> %r, i32 0
+  ret float %elt0
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_01
+; GCN: image_sample v[0:1], v0, s[0:7], s[8:11] dmask:0x3{{$}}
+define amdgpu_ps <2 x float> @adjust_writemask_sample_01(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x float> %out
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_012
+; GCN: image_sample v[0:2], v0, s[0:7], s[8:11] dmask:0x7{{$}}
+define amdgpu_ps <3 x float> @adjust_writemask_sample_012(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x float> %out
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_12
+; GCN: image_sample v[0:1], v0, s[0:7], s[8:11] dmask:0x6{{$}}
+define amdgpu_ps <2 x float> @adjust_writemask_sample_12(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 2>
+  ret <2 x float> %out
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_03
+; GCN: image_sample v[0:1], v0, s[0:7], s[8:11] dmask:0x9{{$}}
+define amdgpu_ps <2 x float> @adjust_writemask_sample_03(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 3>
+  ret <2 x float> %out
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_13
+; GCN: image_sample v[0:1], v0, s[0:7], s[8:11] dmask:0xa{{$}}
+define amdgpu_ps <2 x float> @adjust_writemask_sample_13(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 3>
+  ret <2 x float> %out
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_123
+; GCN: image_sample v[0:2], v0, s[0:7], s[8:11] dmask:0xe{{$}}
+define amdgpu_ps <3 x float> @adjust_writemask_sample_123(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <3 x i32> <i32 1, i32 2, i32 3>
+  ret <3 x float> %out
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_none_enabled
+; GCN-NOT: image
+define amdgpu_ps <4 x float> @adjust_writemask_sample_none_enabled(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 0, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  ret <4 x float> %r
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_123_to_12
+; GCN: image_sample v[0:1], v0, s[0:7], s[8:11] dmask:0x6{{$}}
+define amdgpu_ps <2 x float> @adjust_writemask_sample_123_to_12(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 14, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x float> %out
+}
+
+; GCN-LABEL: {{^}}adjust_writemask_sample_013_to_13
+; GCN: image_sample v[0:1], v0, s[0:7], s[8:11] dmask:0xa{{$}}
+define amdgpu_ps <2 x float> @adjust_writemask_sample_013_to_13(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s) {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 11, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
+  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 2>
+  ret <2 x float> %out
 }
 
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1

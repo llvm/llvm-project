@@ -204,7 +204,7 @@ define amdgpu_vs i32 @load_i32_hifffffff0(i32 addrspace(6)* inreg %p) #4 {
 ; GCN: v_readfirstlane_b32
 ; GCN-NEXT: v_readfirstlane_b32
 ; SI: s_nop
-; GCN-NEXT: s_load_dwordx8
+; GCN: s_load_dwordx8
 ; GCN-NEXT: s_load_dwordx4
 ; GCN: image_sample
 define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @load_sampler([0 x <4 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), [0 x <8 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), [0 x <4 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), [0 x <8 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #5 {
@@ -219,7 +219,7 @@ main_body:
   %29 = bitcast [0 x <8 x i32>] addrspace(6)* %1 to [0 x <4 x i32>] addrspace(6)*
   %30 = getelementptr [0 x <4 x i32>], [0 x <4 x i32>] addrspace(6)* %29, i32 0, i32 %28, !amdgpu.uniform !0
   %31 = load <4 x i32>, <4 x i32> addrspace(6)* %30, align 16, !invariant.load !0
-  %32 = call nsz <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> zeroinitializer, <8 x i32> %26, <4 x i32> %31, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #8
+  %32 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %31, i1 0, i32 0, i32 0) #8
   %33 = extractelement <4 x float> %32, i32 0
   %34 = extractelement <4 x float> %32, i32 1
   %35 = extractelement <4 x float> %32, i32 2
@@ -238,7 +238,7 @@ main_body:
 ; GCN: v_readfirstlane_b32
 ; GCN-NEXT: v_readfirstlane_b32
 ; SI: s_nop
-; GCN-NEXT: s_load_dwordx8
+; GCN: s_load_dwordx8
 ; GCN-NEXT: s_load_dwordx4
 ; GCN: image_sample
 define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @load_sampler_nouniform([0 x <4 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), [0 x <8 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), [0 x <4 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), [0 x <8 x i32>] addrspace(6)* inreg noalias dereferenceable(18446744073709551615), float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #5 {
@@ -253,7 +253,7 @@ main_body:
   %29 = bitcast [0 x <8 x i32>] addrspace(6)* %1 to [0 x <4 x i32>] addrspace(6)*
   %30 = getelementptr [0 x <4 x i32>], [0 x <4 x i32>] addrspace(6)* %29, i32 0, i32 %28
   %31 = load <4 x i32>, <4 x i32> addrspace(6)* %30, align 16, !invariant.load !0
-  %32 = call nsz <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float> zeroinitializer, <8 x i32> %26, <4 x i32> %31, i32 15, i1 false, i1 false, i1 false, i1 false, i1 false) #8
+  %32 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %31, i1 0, i32 0, i32 0) #8
   %33 = extractelement <4 x float> %32, i32 0
   %34 = extractelement <4 x float> %32, i32 1
   %35 = extractelement <4 x float> %32, i32 2
@@ -272,7 +272,7 @@ main_body:
 declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32) #6
 
 ; Function Attrs: nounwind readonly
-declare <4 x float> @llvm.amdgcn.image.sample.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #7
+declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #7
 
 
 !0 = !{}

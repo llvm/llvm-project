@@ -753,7 +753,6 @@ endif()
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
   add_subdirectory(utils/ClangVisualizers)
 endif()
-add_subdirectory(utils/hmaptool)
 
 configure_file(
   ${CLANG_SOURCE_DIR}/include/clang/Config/config.h.cmake

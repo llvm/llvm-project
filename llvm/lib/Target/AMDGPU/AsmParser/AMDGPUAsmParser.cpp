@@ -1098,14 +1098,7 @@ public:
 
   AMDGPUOperand::Ptr defaultGLC() const;
   AMDGPUOperand::Ptr defaultSLC() const;
-  AMDGPUOperand::Ptr defaultTFE() const;
 
-  AMDGPUOperand::Ptr defaultD16() const;
-  AMDGPUOperand::Ptr defaultDMask() const;
-  AMDGPUOperand::Ptr defaultUNorm() const;
-  AMDGPUOperand::Ptr defaultDA() const;
-  AMDGPUOperand::Ptr defaultR128() const;
-  AMDGPUOperand::Ptr defaultLWE() const;
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
   AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
@@ -2301,10 +2294,6 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
     return true;
 
-  // Gather4 instructions do not need validation: dst size is hardcoded.
-  if (Desc.TSFlags & SIInstrFlags::Gather4)
-    return true;
-
   int VDataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdata);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dmask);
   int TFEIdx   = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::tfe);
@@ -2319,9 +2308,12 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst) {
   if (DMask == 0)
     DMask = 1;
 
-  unsigned DataSize = countPopulation(DMask);
-  if ((Desc.TSFlags & SIInstrFlags::D16) != 0 && hasPackedD16()) {
-    DataSize = (DataSize + 1) / 2;
+  unsigned DataSize =
+    (Desc.TSFlags & SIInstrFlags::Gather4) ? 4 : countPopulation(DMask);
+  if (hasPackedD16()) {
+    int D16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::d16);
+    if (D16Idx >= 0 && Inst.getOperand(D16Idx).getImm())
+      DataSize = (DataSize + 1) / 2;
   }
 
   return (VDataSize / 4) == DataSize + TFESize;
@@ -2389,10 +2381,14 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
 
   if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
     return true;
-  if ((Desc.TSFlags & SIInstrFlags::D16) == 0)
-    return true;
 
-  return !isCI() && !isSI();
+  int D16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::d16);
+  if (D16Idx >= 0 && Inst.getOperand(D16Idx).getImm()) {
+    if (isCI() || isSI())
+      return false;
+  }
+
+  return true;
 }
 
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
@@ -4108,10 +4104,6 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSLC() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTySLC);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultTFE() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyTFE);
-}
-
 void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
                                const OperandVector &Operands,
                                bool IsAtomic,
@@ -4261,30 +4253,11 @@ void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyLWE);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDA);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyD16);
 }
 
 void AMDGPUAsmParser::cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands) {
   cvtMIMG(Inst, Operands, true);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDMask() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDMask);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultUNorm() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyUNorm);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultDA() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDA);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultR128() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyR128);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultLWE() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyLWE);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4389,6 +4362,7 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"da",      AMDGPUOperand::ImmTyDA,    true, nullptr},
   {"r128",    AMDGPUOperand::ImmTyR128,  true, nullptr},
   {"lwe",     AMDGPUOperand::ImmTyLWE,   true, nullptr},
+  {"d16",     AMDGPUOperand::ImmTyD16,   true, nullptr},
   {"dmask",   AMDGPUOperand::ImmTyDMask, false, nullptr},
   {"row_mask",   AMDGPUOperand::ImmTyDppRowMask, false, nullptr},
   {"bank_mask",  AMDGPUOperand::ImmTyDppBankMask, false, nullptr},
@@ -5094,8 +5068,6 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isLDS() ? Match_Success : Match_InvalidOperand;
   case MCK_glc:
     return Operand.isGLC() ? Match_Success : Match_InvalidOperand;
-  case MCK_d16:
-    return Operand.isD16() ? Match_Success : Match_InvalidOperand;
   case MCK_idxen:
     return Operand.isIdxen() ? Match_Success : Match_InvalidOperand;
   case MCK_offen:

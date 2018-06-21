@@ -37,6 +37,12 @@ class MCSubtargetInfo;
 class Triple;
 
 namespace AMDGPU {
+
+#define GET_MIMGBaseOpcode_DECL
+#define GET_MIMGDim_DECL
+#define GET_MIMGEncoding_DECL
+#include "AMDGPUGenSearchableTables.inc"
+
 namespace IsaInfo {
 
 enum {
@@ -157,13 +163,39 @@ unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 
-LLVM_READONLY
-int getMaskedMIMGOp(const MCInstrInfo &MII,
-                    unsigned Opc, unsigned NewChannels);
+struct MIMGBaseOpcodeInfo {
+  MIMGBaseOpcode BaseOpcode;
+  bool Store;
+  bool Atomic;
+  bool AtomicX2;
+  bool Sampler;
+
+  uint8_t NumExtraArgs;
+  bool Gradients;
+  bool Coordinates;
+  bool LodOrClampOrMip;
+  bool HasD16;
+};
 
 LLVM_READONLY
-int getMaskedMIMGAtomicOp(const MCInstrInfo &MII,
-                          unsigned Opc, unsigned NewChannels);
+const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
+
+struct MIMGDimInfo {
+  MIMGDim Dim;
+  uint8_t NumCoords;
+  uint8_t NumGradients;
+  bool DA;
+};
+
+LLVM_READONLY
+const MIMGDimInfo *getMIMGDimInfo(unsigned Dim);
+
+LLVM_READONLY
+int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
+                  unsigned VDataDwords, unsigned VAddrDwords);
+
+LLVM_READONLY
+int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
 
 LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);

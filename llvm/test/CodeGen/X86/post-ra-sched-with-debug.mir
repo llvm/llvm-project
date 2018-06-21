@@ -288,7 +288,7 @@ body:             |
     $rcx = LEA64r $rbp, 1, $noreg, -20, $noreg
     DBG_VALUE debug-use $rcx, debug-use $noreg, !46, !17, debug-location !48
     DBG_VALUE debug-use $rcx, debug-use $noreg, !39, !17, debug-location !44
-    DBG_VALUE $rbp, -20, !29, !17, debug-location !36
+    DBG_VALUE debug-use $rbp, -20, !29, !17, debug-location !36
     $rcx = CMOVNE64rr killed $rcx, killed $rdx, implicit killed $eflags
     $rcx = OR64rr killed $rcx, killed $rsi, implicit-def dead $eflags
     $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load 4, align 8)

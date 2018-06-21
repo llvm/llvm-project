@@ -305,11 +305,11 @@ body:             |
 
 # GCN-LABEL: {{^}}name: image_clause{{$}}
 # GCN:      early-clobber %4:vreg_128, early-clobber %3:vreg_128, early-clobber %5:vreg_128 = BUNDLE %0, undef %2:sreg_128, %1, implicit $exec {
-# GCN-NEXT:   %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT:   %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT:   %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: }
-# GCN-NEXT: IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
 ---
 name:            image_clause
@@ -325,17 +325,17 @@ body:             |
   bb.0:
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
-    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
-    IMAGE_STORE_V4_V2 %4, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
-    IMAGE_STORE_V4_V2 %5, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
+    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    IMAGE_STORE_V4_V2 %4, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    IMAGE_STORE_V4_V2 %5, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 ...
 
 # GCN-LABEL: {{^}}name: mixed_clause{{$}}
 # GCN:      dead early-clobber %4:vreg_128, dead early-clobber %3:vreg_128, dead early-clobber %5:vgpr_32 = BUNDLE %0, %2, %1, implicit $exec {
-# GCN-NEXT:   dead %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   dead %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT:   dead %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
 # GCN-NEXT:   dead %5:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %0, %2, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: }
@@ -355,7 +355,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
     %2 = IMPLICIT_DEF
-    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, %2, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, 0, implicit $exec
     %5:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 %0, %2, 0, 0, 0, 0, 0, implicit $exec
 ...

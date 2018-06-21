@@ -58,7 +58,7 @@ def is_supported_on_platform(category, platform, compiler_path):
         return platform in ["darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]
     elif category == "gmodules":
         # First, check to see if the platform can even support gmodules.
-        if platform not in ["linux", "freebsd", "darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
+        if platform not in ["freebsd", "darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
             return False
         return gmodules.is_compiler_clang_with_gmodules(compiler_path)
     return True

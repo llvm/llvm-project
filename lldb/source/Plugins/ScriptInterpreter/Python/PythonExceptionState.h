@@ -10,8 +10,6 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONEXCEPTIONSTATE_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONEXCEPTIONSTATE_H
 
-#ifndef LLDB_DISABLE_PYTHON
-
 #include "PythonDataObjects.h"
 
 namespace lldb_private {
@@ -51,7 +49,5 @@ private:
   PythonObject m_traceback;
 };
 }
-
-#endif
 
 #endif

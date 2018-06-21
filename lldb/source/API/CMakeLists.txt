@@ -108,11 +108,6 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
     PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
 endif ()
 
-target_link_libraries(liblldb PRIVATE
-  lldbPluginScriptInterpreterNone
-  lldbPluginScriptInterpreterPython
-  )
-
 set_target_properties(liblldb
   PROPERTIES
   VERSION ${LLDB_VERSION}

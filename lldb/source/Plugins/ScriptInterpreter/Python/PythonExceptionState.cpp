@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_DISABLE_PYTHON
-
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
@@ -166,5 +164,3 @@ std::string PythonExceptionState::ReadBacktrace() const {
 
   return retval;
 }
-
-#endif

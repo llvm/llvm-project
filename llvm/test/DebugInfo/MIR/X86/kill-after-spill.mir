@@ -277,9 +277,9 @@ body:             |
     DBG_VALUE debug-use $edi, debug-use $noreg, !36, !DIExpression(), debug-location !57
     DBG_VALUE debug-use $esi, debug-use $noreg, !37, !DIExpression(), debug-location !58
     $ebx = MOV32rr $esi
-    DBG_VALUE $ebx, debug-use $noreg, !37, !DIExpression(), debug-location !58
+    DBG_VALUE debug-use $ebx, debug-use $noreg, !37, !DIExpression(), debug-location !58
     $r15d = MOV32rr $edi
-    DBG_VALUE $r15d, debug-use $noreg, !36, !DIExpression(), debug-location !57
+    DBG_VALUE debug-use $r15d, debug-use $noreg, !36, !DIExpression(), debug-location !57
     renamable $r14 = MOV64ri -9223372036854775808
     $edi = MOV32rr $ebx
     CALL64pcrel32 @func1, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax

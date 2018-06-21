@@ -10,8 +10,6 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 
-#ifndef LLDB_DISABLE_PYTHON
-
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
@@ -470,5 +468,3 @@ public:
 } // namespace lldb_private
 
 #endif
-
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H

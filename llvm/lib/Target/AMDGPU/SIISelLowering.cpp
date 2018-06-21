@@ -649,7 +649,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
-          AMDGPU::lookupRsrcIntrinsicByIntr(IntrID)) {
+          AMDGPU::lookupRsrcIntrinsic(IntrID)) {
     AttributeList Attr = Intrinsic::getAttributes(CI.getContext(),
                                                   (Intrinsic::ID)IntrID);
     if (Attr.hasFnAttribute(Attribute::ReadNone))
@@ -3519,163 +3519,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
-static unsigned getImageOpcode(unsigned IID) {
-  switch (IID) {
-  case Intrinsic::amdgcn_image_load:
-    return AMDGPUISD::IMAGE_LOAD;
-  case Intrinsic::amdgcn_image_load_mip:
-    return AMDGPUISD::IMAGE_LOAD_MIP;
-
-  // Basic sample.
-  case Intrinsic::amdgcn_image_sample:
-    return AMDGPUISD::IMAGE_SAMPLE;
-  case Intrinsic::amdgcn_image_sample_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_CL;
-  case Intrinsic::amdgcn_image_sample_d:
-    return AMDGPUISD::IMAGE_SAMPLE_D;
-  case Intrinsic::amdgcn_image_sample_d_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_D_CL;
-  case Intrinsic::amdgcn_image_sample_l:
-    return AMDGPUISD::IMAGE_SAMPLE_L;
-  case Intrinsic::amdgcn_image_sample_b:
-    return AMDGPUISD::IMAGE_SAMPLE_B;
-  case Intrinsic::amdgcn_image_sample_b_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_B_CL;
-  case Intrinsic::amdgcn_image_sample_lz:
-    return AMDGPUISD::IMAGE_SAMPLE_LZ;
-  case Intrinsic::amdgcn_image_sample_cd:
-    return AMDGPUISD::IMAGE_SAMPLE_CD;
-  case Intrinsic::amdgcn_image_sample_cd_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_CD_CL;
-
-  // Sample with comparison.
-  case Intrinsic::amdgcn_image_sample_c:
-    return AMDGPUISD::IMAGE_SAMPLE_C;
-  case Intrinsic::amdgcn_image_sample_c_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_C_CL;
-  case Intrinsic::amdgcn_image_sample_c_d:
-    return AMDGPUISD::IMAGE_SAMPLE_C_D;
-  case Intrinsic::amdgcn_image_sample_c_d_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_C_D_CL;
-  case Intrinsic::amdgcn_image_sample_c_l:
-    return AMDGPUISD::IMAGE_SAMPLE_C_L;
-  case Intrinsic::amdgcn_image_sample_c_b:
-    return AMDGPUISD::IMAGE_SAMPLE_C_B;
-  case Intrinsic::amdgcn_image_sample_c_b_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_C_B_CL;
-  case Intrinsic::amdgcn_image_sample_c_lz:
-    return AMDGPUISD::IMAGE_SAMPLE_C_LZ;
-  case Intrinsic::amdgcn_image_sample_c_cd:
-    return AMDGPUISD::IMAGE_SAMPLE_C_CD;
-  case Intrinsic::amdgcn_image_sample_c_cd_cl:
-    return AMDGPUISD::IMAGE_SAMPLE_C_CD_CL;
-
-  // Sample with offsets.
-  case Intrinsic::amdgcn_image_sample_o:
-    return AMDGPUISD::IMAGE_SAMPLE_O;
-  case Intrinsic::amdgcn_image_sample_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_CL_O;
-  case Intrinsic::amdgcn_image_sample_d_o:
-    return AMDGPUISD::IMAGE_SAMPLE_D_O;
-  case Intrinsic::amdgcn_image_sample_d_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_D_CL_O;
-  case Intrinsic::amdgcn_image_sample_l_o:
-    return AMDGPUISD::IMAGE_SAMPLE_L_O;
-  case Intrinsic::amdgcn_image_sample_b_o:
-    return AMDGPUISD::IMAGE_SAMPLE_B_O;
-  case Intrinsic::amdgcn_image_sample_b_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_B_CL_O;
-  case Intrinsic::amdgcn_image_sample_lz_o:
-    return AMDGPUISD::IMAGE_SAMPLE_LZ_O;
-  case Intrinsic::amdgcn_image_sample_cd_o:
-    return AMDGPUISD::IMAGE_SAMPLE_CD_O;
-  case Intrinsic::amdgcn_image_sample_cd_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_CD_CL_O;
-
-  // Sample with comparison and offsets.
-  case Intrinsic::amdgcn_image_sample_c_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_O;
-  case Intrinsic::amdgcn_image_sample_c_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_CL_O;
-  case Intrinsic::amdgcn_image_sample_c_d_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_D_O;
-  case Intrinsic::amdgcn_image_sample_c_d_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_D_CL_O;
-  case Intrinsic::amdgcn_image_sample_c_l_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_L_O;
-  case Intrinsic::amdgcn_image_sample_c_b_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_B_O;
-  case Intrinsic::amdgcn_image_sample_c_b_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_B_CL_O;
-  case Intrinsic::amdgcn_image_sample_c_lz_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_LZ_O;
-  case Intrinsic::amdgcn_image_sample_c_cd_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_CD_O;
-  case Intrinsic::amdgcn_image_sample_c_cd_cl_o:
-    return AMDGPUISD::IMAGE_SAMPLE_C_CD_CL_O;
-
-  // Basic gather4.
-  case Intrinsic::amdgcn_image_gather4:
-    return AMDGPUISD::IMAGE_GATHER4;
-  case Intrinsic::amdgcn_image_gather4_cl:
-    return AMDGPUISD::IMAGE_GATHER4_CL;
-  case Intrinsic::amdgcn_image_gather4_l:
-    return AMDGPUISD::IMAGE_GATHER4_L;
-  case Intrinsic::amdgcn_image_gather4_b:
-    return AMDGPUISD::IMAGE_GATHER4_B;
-  case Intrinsic::amdgcn_image_gather4_b_cl:
-    return AMDGPUISD::IMAGE_GATHER4_B_CL;
-  case Intrinsic::amdgcn_image_gather4_lz:
-    return AMDGPUISD::IMAGE_GATHER4_LZ;
-
-  // Gather4 with comparison.
-  case Intrinsic::amdgcn_image_gather4_c:
-    return AMDGPUISD::IMAGE_GATHER4_C;
-  case Intrinsic::amdgcn_image_gather4_c_cl:
-    return AMDGPUISD::IMAGE_GATHER4_C_CL;
-  case Intrinsic::amdgcn_image_gather4_c_l:
-    return AMDGPUISD::IMAGE_GATHER4_C_L;
-  case Intrinsic::amdgcn_image_gather4_c_b:
-    return AMDGPUISD::IMAGE_GATHER4_C_B;
-  case Intrinsic::amdgcn_image_gather4_c_b_cl:
-    return AMDGPUISD::IMAGE_GATHER4_C_B_CL;
-  case Intrinsic::amdgcn_image_gather4_c_lz:
-    return AMDGPUISD::IMAGE_GATHER4_C_LZ;
-
-  // Gather4 with offsets.
-  case Intrinsic::amdgcn_image_gather4_o:
-    return AMDGPUISD::IMAGE_GATHER4_O;
-  case Intrinsic::amdgcn_image_gather4_cl_o:
-    return AMDGPUISD::IMAGE_GATHER4_CL_O;
-  case Intrinsic::amdgcn_image_gather4_l_o:
-    return AMDGPUISD::IMAGE_GATHER4_L_O;
-  case Intrinsic::amdgcn_image_gather4_b_o:
-    return AMDGPUISD::IMAGE_GATHER4_B_O;
-  case Intrinsic::amdgcn_image_gather4_b_cl_o:
-    return AMDGPUISD::IMAGE_GATHER4_B_CL_O;
-  case Intrinsic::amdgcn_image_gather4_lz_o:
-    return AMDGPUISD::IMAGE_GATHER4_LZ_O;
-
-  // Gather4 with comparison and offsets.
-  case Intrinsic::amdgcn_image_gather4_c_o:
-    return AMDGPUISD::IMAGE_GATHER4_C_O;
-  case Intrinsic::amdgcn_image_gather4_c_cl_o:
-    return AMDGPUISD::IMAGE_GATHER4_C_CL_O;
-  case Intrinsic::amdgcn_image_gather4_c_l_o:
-    return AMDGPUISD::IMAGE_GATHER4_C_L_O;
-  case Intrinsic::amdgcn_image_gather4_c_b_o:
-    return AMDGPUISD::IMAGE_GATHER4_C_B_O;
-  case Intrinsic::amdgcn_image_gather4_c_b_cl_o:
-    return AMDGPUISD::IMAGE_GATHER4_C_B_CL_O;
-  case Intrinsic::amdgcn_image_gather4_c_lz_o:
-    return AMDGPUISD::IMAGE_GATHER4_C_LZ_O;
-
-  default:
-    break;
-  }
-  return 0;
-}
-
 static SDValue adjustLoadValueTypeImpl(SDValue Result, EVT LoadVT,
                                        const SDLoc &DL,
                                        SelectionDAG &DAG, bool Unpacked) {
@@ -4516,6 +4359,245 @@ static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getUNDEF(VT);
 }
 
+static SDValue getBuildDwordsVector(SelectionDAG &DAG, SDLoc DL,
+                                    ArrayRef<SDValue> Elts) {
+  assert(!Elts.empty());
+  MVT Type;
+  unsigned NumElts;
+
+  if (Elts.size() == 1) {
+    Type = MVT::f32;
+    NumElts = 1;
+  } else if (Elts.size() == 2) {
+    Type = MVT::v2f32;
+    NumElts = 2;
+  } else if (Elts.size() <= 4) {
+    Type = MVT::v4f32;
+    NumElts = 4;
+  } else if (Elts.size() <= 8) {
+    Type = MVT::v8f32;
+    NumElts = 8;
+  } else {
+    assert(Elts.size() <= 16);
+    Type = MVT::v16f32;
+    NumElts = 16;
+  }
+
+  SmallVector<SDValue, 16> VecElts(NumElts);
+  for (unsigned i = 0; i < Elts.size(); ++i) {
+    SDValue Elt = Elts[i];
+    if (Elt.getValueType() != MVT::f32)
+      Elt = DAG.getBitcast(MVT::f32, Elt);
+    VecElts[i] = Elt;
+  }
+  for (unsigned i = Elts.size(); i < NumElts; ++i)
+    VecElts[i] = DAG.getUNDEF(MVT::f32);
+
+  if (NumElts == 1)
+    return VecElts[0];
+  return DAG.getBuildVector(Type, DL, VecElts);
+}
+
+static bool parseCachePolicy(SDValue CachePolicy, SelectionDAG &DAG,
+                             SDValue *GLC, SDValue *SLC) {
+  auto CachePolicyConst = dyn_cast<ConstantSDNode>(CachePolicy.getNode());
+  if (!CachePolicyConst)
+    return false;
+
+  uint64_t Value = CachePolicyConst->getZExtValue();
+  SDLoc DL(CachePolicy);
+  if (GLC) {
+    *GLC = DAG.getTargetConstant((Value & 0x1) ? 1 : 0, DL, MVT::i32);
+    Value &= ~(uint64_t)0x1;
+  }
+  if (SLC) {
+    *SLC = DAG.getTargetConstant((Value & 0x2) ? 1 : 0, DL, MVT::i32);
+    Value &= ~(uint64_t)0x2;
+  }
+
+  return Value == 0;
+}
+
+SDValue SITargetLowering::lowerImage(SDValue Op,
+                                     const AMDGPU::ImageDimIntrinsicInfo *Intr,
+                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+      AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
+  const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
+
+  SmallVector<EVT, 2> ResultTypes(Op->value_begin(), Op->value_end());
+  bool IsD16 = false;
+  SDValue VData;
+  int NumVDataDwords;
+  unsigned AddrIdx; // Index of first address argument
+  unsigned DMask;
+
+  if (BaseOpcode->Atomic) {
+    VData = Op.getOperand(2);
+
+    bool Is64Bit = VData.getValueType() == MVT::i64;
+    if (BaseOpcode->AtomicX2) {
+      SDValue VData2 = Op.getOperand(3);
+      VData = DAG.getBuildVector(Is64Bit ? MVT::v2i64 : MVT::v2i32, DL,
+                                 {VData, VData2});
+      if (Is64Bit)
+        VData = DAG.getBitcast(MVT::v4i32, VData);
+
+      ResultTypes[0] = Is64Bit ? MVT::v2i64 : MVT::v2i32;
+      DMask = Is64Bit ? 0xf : 0x3;
+      NumVDataDwords = Is64Bit ? 4 : 2;
+      AddrIdx = 4;
+    } else {
+      DMask = Is64Bit ? 0x3 : 0x1;
+      NumVDataDwords = Is64Bit ? 2 : 1;
+      AddrIdx = 3;
+    }
+  } else {
+    unsigned DMaskIdx;
+
+    if (BaseOpcode->Store) {
+      VData = Op.getOperand(2);
+
+      MVT StoreVT = VData.getSimpleValueType();
+      if (StoreVT.getScalarType() == MVT::f16) {
+        if (Subtarget->getGeneration() < SISubtarget::VOLCANIC_ISLANDS ||
+            !BaseOpcode->HasD16)
+          return Op; // D16 is unsupported for this instruction
+
+        IsD16 = true;
+        VData = handleD16VData(VData, DAG);
+      }
+
+      NumVDataDwords = (VData.getValueType().getSizeInBits() + 31) / 32;
+      DMaskIdx = 3;
+    } else {
+      MVT LoadVT = Op.getSimpleValueType();
+      if (LoadVT.getScalarType() == MVT::f16) {
+        if (Subtarget->getGeneration() < SISubtarget::VOLCANIC_ISLANDS ||
+            !BaseOpcode->HasD16)
+          return Op; // D16 is unsupported for this instruction
+
+        IsD16 = true;
+        if (LoadVT.isVector() && Subtarget->hasUnpackedD16VMem())
+          ResultTypes[0] = (LoadVT == MVT::v2f16) ? MVT::v2i32 : MVT::v4i32;
+      }
+
+      NumVDataDwords = (ResultTypes[0].getSizeInBits() + 31) / 32;
+      DMaskIdx = isa<MemSDNode>(Op) ? 2 : 1;
+    }
+
+    auto DMaskConst = dyn_cast<ConstantSDNode>(Op.getOperand(DMaskIdx));
+    if (!DMaskConst)
+      return Op;
+
+    AddrIdx = DMaskIdx + 1;
+    DMask = DMaskConst->getZExtValue();
+    if (!DMask && !BaseOpcode->Store) {
+      // Eliminate no-op loads. Stores with dmask == 0 are *not* no-op: they
+      // store the channels' default values.
+      SDValue Undef = DAG.getUNDEF(Op.getValueType());
+      if (isa<MemSDNode>(Op))
+        return DAG.getMergeValues({Undef, Op.getOperand(0)}, DL);
+      return Undef;
+    }
+  }
+
+  unsigned NumVAddrs = BaseOpcode->NumExtraArgs +
+                       (BaseOpcode->Gradients ? DimInfo->NumGradients : 0) +
+                       (BaseOpcode->Coordinates ? DimInfo->NumCoords : 0) +
+                       (BaseOpcode->LodOrClampOrMip ? 1 : 0);
+  SmallVector<SDValue, 4> VAddrs;
+  for (unsigned i = 0; i < NumVAddrs; ++i)
+    VAddrs.push_back(Op.getOperand(AddrIdx + i));
+  SDValue VAddr = getBuildDwordsVector(DAG, DL, VAddrs);
+
+  SDValue True = DAG.getTargetConstant(1, DL, MVT::i1);
+  SDValue False = DAG.getTargetConstant(0, DL, MVT::i1);
+  unsigned CtrlIdx; // Index of texfailctrl argument
+  SDValue Unorm;
+  if (!BaseOpcode->Sampler) {
+    Unorm = True;
+    CtrlIdx = AddrIdx + NumVAddrs + 1;
+  } else {
+    auto UnormConst =
+        dyn_cast<ConstantSDNode>(Op.getOperand(AddrIdx + NumVAddrs + 2));
+    if (!UnormConst)
+      return Op;
+
+    Unorm = UnormConst->getZExtValue() ? True : False;
+    CtrlIdx = AddrIdx + NumVAddrs + 3;
+  }
+
+  SDValue TexFail = Op.getOperand(CtrlIdx);
+  auto TexFailConst = dyn_cast<ConstantSDNode>(TexFail.getNode());
+  if (!TexFailConst || TexFailConst->getZExtValue() != 0)
+    return Op;
+
+  SDValue GLC;
+  SDValue SLC;
+  if (BaseOpcode->Atomic) {
+    GLC = True; // TODO no-return optimization
+    if (!parseCachePolicy(Op.getOperand(CtrlIdx + 1), DAG, nullptr, &SLC))
+      return Op;
+  } else {
+    if (!parseCachePolicy(Op.getOperand(CtrlIdx + 1), DAG, &GLC, &SLC))
+      return Op;
+  }
+
+  SmallVector<SDValue, 14> Ops;
+  if (BaseOpcode->Store || BaseOpcode->Atomic)
+    Ops.push_back(VData); // vdata
+  Ops.push_back(VAddr);
+  Ops.push_back(Op.getOperand(AddrIdx + NumVAddrs)); // rsrc
+  if (BaseOpcode->Sampler)
+    Ops.push_back(Op.getOperand(AddrIdx + NumVAddrs + 1)); // sampler
+  Ops.push_back(DAG.getTargetConstant(DMask, DL, MVT::i32));
+  Ops.push_back(Unorm);
+  Ops.push_back(GLC);
+  Ops.push_back(SLC);
+  Ops.push_back(False); // r128
+  Ops.push_back(False); // tfe
+  Ops.push_back(False); // lwe
+  Ops.push_back(DimInfo->DA ? True : False);
+  if (BaseOpcode->HasD16)
+    Ops.push_back(IsD16 ? True : False);
+  if (isa<MemSDNode>(Op))
+    Ops.push_back(Op.getOperand(0)); // chain
+
+  int NumVAddrDwords = VAddr.getValueType().getSizeInBits() / 32;
+  int Opcode = -1;
+
+  if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
+    Opcode = AMDGPU::getMIMGOpcode(Intr->BaseOpcode, AMDGPU::MIMGEncGfx8,
+                                   NumVDataDwords, NumVAddrDwords);
+  if (Opcode == -1)
+    Opcode = AMDGPU::getMIMGOpcode(Intr->BaseOpcode, AMDGPU::MIMGEncGfx6,
+                                   NumVDataDwords, NumVAddrDwords);
+  assert(Opcode != -1);
+
+  MachineSDNode *NewNode = DAG.getMachineNode(Opcode, DL, ResultTypes, Ops);
+  if (auto MemOp = dyn_cast<MemSDNode>(Op)) {
+    MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(1);
+    *MemRefs = MemOp->getMemOperand();
+    NewNode->setMemRefs(MemRefs, MemRefs + 1);
+  }
+
+  if (BaseOpcode->AtomicX2) {
+    SmallVector<SDValue, 1> Elt;
+    DAG.ExtractVectorElements(SDValue(NewNode, 0), Elt, 0, 1);
+    return DAG.getMergeValues({Elt[0], SDValue(NewNode, 1)}, DL);
+  } else if (IsD16 && !BaseOpcode->Store) {
+    MVT LoadVT = Op.getSimpleValueType();
+    SDValue Adjusted = adjustLoadValueTypeImpl(
+        SDValue(NewNode, 0), LoadVT, DL, DAG, Subtarget->hasUnpackedD16VMem());
+    return DAG.getMergeValues({Adjusted, SDValue(NewNode, 1)}, DL);
+  }
+
+  return SDValue(NewNode, 0);
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -4842,17 +4924,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return SDValue(DAG.getMachineNode(AMDGPU::WWM, DL, Src.getValueType(), Src),
                    0);
   }
-  case Intrinsic::amdgcn_image_getlod:
-  case Intrinsic::amdgcn_image_getresinfo: {
-    unsigned Idx = (IntrinsicID == Intrinsic::amdgcn_image_getresinfo) ? 3 : 4;
-
-    // Replace dmask with everything disabled with undef.
-    const ConstantSDNode *DMask = dyn_cast<ConstantSDNode>(Op.getOperand(Idx));
-    if (!DMask || DMask->isNullValue())
-      return DAG.getUNDEF(Op.getValueType());
-    return SDValue();
-  }
   default:
+    if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
+            AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
+      return lowerImage(Op, ImageDimIntr, DAG);
+
     return Op;
   }
 }
@@ -5026,123 +5102,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
   }
 
-  case Intrinsic::amdgcn_image_load:
-  case Intrinsic::amdgcn_image_load_mip: {
-    EVT VT = Op.getValueType();
-    if (Subtarget->hasUnpackedD16VMem() &&
-        VT.isVector() && VT.getScalarSizeInBits() == 16) {
-      return adjustLoadValueType(getImageOpcode(IntrID), cast<MemSDNode>(Op),
-                                 DAG);
-    }
-
-    return SDValue();
-  }
-
-  // Basic sample.
-  case Intrinsic::amdgcn_image_sample:
-  case Intrinsic::amdgcn_image_sample_cl:
-  case Intrinsic::amdgcn_image_sample_d:
-  case Intrinsic::amdgcn_image_sample_d_cl:
-  case Intrinsic::amdgcn_image_sample_l:
-  case Intrinsic::amdgcn_image_sample_b:
-  case Intrinsic::amdgcn_image_sample_b_cl:
-  case Intrinsic::amdgcn_image_sample_lz:
-  case Intrinsic::amdgcn_image_sample_cd:
-  case Intrinsic::amdgcn_image_sample_cd_cl:
-
-  // Sample with comparison.
-  case Intrinsic::amdgcn_image_sample_c:
-  case Intrinsic::amdgcn_image_sample_c_cl:
-  case Intrinsic::amdgcn_image_sample_c_d:
-  case Intrinsic::amdgcn_image_sample_c_d_cl:
-  case Intrinsic::amdgcn_image_sample_c_l:
-  case Intrinsic::amdgcn_image_sample_c_b:
-  case Intrinsic::amdgcn_image_sample_c_b_cl:
-  case Intrinsic::amdgcn_image_sample_c_lz:
-  case Intrinsic::amdgcn_image_sample_c_cd:
-  case Intrinsic::amdgcn_image_sample_c_cd_cl:
-
-  // Sample with offsets.
-  case Intrinsic::amdgcn_image_sample_o:
-  case Intrinsic::amdgcn_image_sample_cl_o:
-  case Intrinsic::amdgcn_image_sample_d_o:
-  case Intrinsic::amdgcn_image_sample_d_cl_o:
-  case Intrinsic::amdgcn_image_sample_l_o:
-  case Intrinsic::amdgcn_image_sample_b_o:
-  case Intrinsic::amdgcn_image_sample_b_cl_o:
-  case Intrinsic::amdgcn_image_sample_lz_o:
-  case Intrinsic::amdgcn_image_sample_cd_o:
-  case Intrinsic::amdgcn_image_sample_cd_cl_o:
-
-  // Sample with comparison and offsets.
-  case Intrinsic::amdgcn_image_sample_c_o:
-  case Intrinsic::amdgcn_image_sample_c_cl_o:
-  case Intrinsic::amdgcn_image_sample_c_d_o:
-  case Intrinsic::amdgcn_image_sample_c_d_cl_o:
-  case Intrinsic::amdgcn_image_sample_c_l_o:
-  case Intrinsic::amdgcn_image_sample_c_b_o:
-  case Intrinsic::amdgcn_image_sample_c_b_cl_o:
-  case Intrinsic::amdgcn_image_sample_c_lz_o:
-  case Intrinsic::amdgcn_image_sample_c_cd_o:
-  case Intrinsic::amdgcn_image_sample_c_cd_cl_o:
-
-    // Basic gather4
-  case Intrinsic::amdgcn_image_gather4:
-  case Intrinsic::amdgcn_image_gather4_cl:
-  case Intrinsic::amdgcn_image_gather4_l:
-  case Intrinsic::amdgcn_image_gather4_b:
-  case Intrinsic::amdgcn_image_gather4_b_cl:
-  case Intrinsic::amdgcn_image_gather4_lz:
-
-  // Gather4 with comparison
-  case Intrinsic::amdgcn_image_gather4_c:
-  case Intrinsic::amdgcn_image_gather4_c_cl:
-  case Intrinsic::amdgcn_image_gather4_c_l:
-  case Intrinsic::amdgcn_image_gather4_c_b:
-  case Intrinsic::amdgcn_image_gather4_c_b_cl:
-  case Intrinsic::amdgcn_image_gather4_c_lz:
-
-  // Gather4 with offsets
-  case Intrinsic::amdgcn_image_gather4_o:
-  case Intrinsic::amdgcn_image_gather4_cl_o:
-  case Intrinsic::amdgcn_image_gather4_l_o:
-  case Intrinsic::amdgcn_image_gather4_b_o:
-  case Intrinsic::amdgcn_image_gather4_b_cl_o:
-  case Intrinsic::amdgcn_image_gather4_lz_o:
-
-  // Gather4 with comparison and offsets
-  case Intrinsic::amdgcn_image_gather4_c_o:
-  case Intrinsic::amdgcn_image_gather4_c_cl_o:
-  case Intrinsic::amdgcn_image_gather4_c_l_o:
-  case Intrinsic::amdgcn_image_gather4_c_b_o:
-  case Intrinsic::amdgcn_image_gather4_c_b_cl_o:
-  case Intrinsic::amdgcn_image_gather4_c_lz_o: {
-    // Replace dmask with everything disabled with undef.
-    const ConstantSDNode *DMask = dyn_cast<ConstantSDNode>(Op.getOperand(5));
-    if (!DMask || DMask->isNullValue()) {
-      SDValue Undef = DAG.getUNDEF(Op.getValueType());
-      return DAG.getMergeValues({ Undef, Op.getOperand(0) }, SDLoc(Op));
-    }
-
-    if (Subtarget->hasUnpackedD16VMem() &&
-        Op.getValueType().isVector() &&
-        Op.getValueType().getScalarSizeInBits() == 16) {
-      return adjustLoadValueType(getImageOpcode(IntrID), cast<MemSDNode>(Op),
-                                 DAG);
-    }
-
-    return SDValue();
-  }
   default:
-    if (Subtarget->hasUnpackedD16VMem() &&
-        Op.getValueType().isVector() &&
-        Op.getValueType().getScalarSizeInBits() == 16) {
-      if (const AMDGPU::D16ImageDimIntrinsic *D16ImageDimIntr =
-            AMDGPU::lookupD16ImageDimIntrinsicByIntr(IntrID)) {
-        return adjustLoadValueType(D16ImageDimIntr->D16HelperIntr,
-                                   cast<MemSDNode>(Op), DAG, true);
-      }
-    }
+    if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
+            AMDGPU::getImageDimIntrinsicInfo(IntrID))
+      return lowerImage(Op, ImageDimIntr, DAG);
 
     return SDValue();
   }
@@ -5362,55 +5325,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
                                    M->getMemoryVT(), M->getMemOperand());
   }
-  case Intrinsic::amdgcn_image_store:
-  case Intrinsic::amdgcn_image_store_mip: {
-    SDValue VData = Op.getOperand(2);
-    EVT VT = VData.getValueType();
-    if (Subtarget->hasUnpackedD16VMem() &&
-        VT.isVector() && VT.getScalarSizeInBits() == 16) {
-      SDValue Chain = Op.getOperand(0);
-
-      VData = handleD16VData(VData, DAG);
-      SDValue Ops[] = {
-        Chain, // Chain
-        VData, // vdata
-        Op.getOperand(3), // vaddr
-        Op.getOperand(4), // rsrc
-        Op.getOperand(5), // dmask
-        Op.getOperand(6), // glc
-        Op.getOperand(7), // slc
-        Op.getOperand(8), // lwe
-        Op.getOperand(9)  // da
-      };
-      unsigned Opc = (IntrinsicID == Intrinsic::amdgcn_image_store) ?
-        AMDGPUISD::IMAGE_STORE : AMDGPUISD::IMAGE_STORE_MIP;
-      MemSDNode *M = cast<MemSDNode>(Op);
-      return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
-                                     M->getMemoryVT(), M->getMemOperand());
-    }
-
-    return SDValue();
-  }
   default: {
-    const AMDGPU::D16ImageDimIntrinsic *D16ImageDimIntr =
-        AMDGPU::lookupD16ImageDimIntrinsicByIntr(IntrinsicID);
-    if (D16ImageDimIntr) {
-      SDValue VData = Op.getOperand(2);
-      EVT StoreVT = VData.getValueType();
-      if (Subtarget->hasUnpackedD16VMem() &&
-          StoreVT.isVector() &&
-          StoreVT.getScalarSizeInBits() == 16) {
-        SmallVector<SDValue, 12> Ops(Op.getNode()->op_values());
-
-        Ops[1] = DAG.getConstant(D16ImageDimIntr->D16HelperIntr, DL, MVT::i32);
-        Ops[2] = handleD16VData(VData, DAG);
-
-        MemSDNode *M = cast<MemSDNode>(Op);
-        return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL, Op->getVTList(),
-                                       Ops, M->getMemoryVT(),
-                                       M->getMemOperand());
-      }
-    }
+    if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
+            AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
+      return lowerImage(Op, ImageDimIntr, DAG);
 
     return Op;
   }
@@ -7762,9 +7680,16 @@ static unsigned SubIdx2Lane(unsigned Idx) {
 /// Adjust the writemask of MIMG instructions
 SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
                                           SelectionDAG &DAG) const {
+  unsigned Opcode = Node->getMachineOpcode();
+
+  // Subtract 1 because the vdata output is not a MachineSDNode operand.
+  int D16Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::d16) - 1;
+  if (D16Idx >= 0 && Node->getConstantOperandVal(D16Idx))
+    return Node; // not implemented for D16
+
   SDNode *Users[4] = { nullptr };
   unsigned Lane = 0;
-  unsigned DmaskIdx = (Node->getNumOperands() - Node->getNumValues() == 9) ? 2 : 3;
+  unsigned DmaskIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::dmask) - 1;
   unsigned OldDmask = Node->getConstantOperandVal(DmaskIdx);
   unsigned NewDmask = 0;
   bool HasChain = Node->getNumValues() > 1;
@@ -7814,9 +7739,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   unsigned BitsSet = countPopulation(NewDmask);
 
-  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-  int NewOpcode = AMDGPU::getMaskedMIMGOp(*TII,
-                                          Node->getMachineOpcode(), BitsSet);
+  int NewOpcode = AMDGPU::getMaskedMIMGOp(Node->getMachineOpcode(), BitsSet);
   assert(NewOpcode != -1 &&
          NewOpcode != static_cast<int>(Node->getMachineOpcode()) &&
          "failed to find equivalent MIMG op");
@@ -7936,7 +7859,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   unsigned Opcode = Node->getMachineOpcode();
 
   if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
-      !TII->isGather4(Opcode) && !TII->isD16(Opcode)) {
+      !TII->isGather4(Opcode)) {
     return adjustWritemask(Node, DAG);
   }
 

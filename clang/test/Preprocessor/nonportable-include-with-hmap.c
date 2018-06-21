@@ -1,7 +1,5 @@
-// RUN: rm -f %t.hmap
-// RUN: hmaptool write %S/Inputs/nonportable-hmaps/foo.hmap.json %t.hmap
 // RUN: %clang_cc1 -Eonly                        \
-// RUN:   -I%t.hmap \
+// RUN:   -I%S/Inputs/nonportable-hmaps/foo.hmap \
 // RUN:   -I%S/Inputs/nonportable-hmaps          \
 // RUN:   %s -verify
 //

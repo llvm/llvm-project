@@ -382,7 +382,6 @@ bool ELFAsmParser::ParseDirectivePopSection(StringRef, SMLoc) {
   return false;
 }
 
-// FIXME: This is a work in progress.
 bool ELFAsmParser::ParseDirectiveSection(StringRef, SMLoc loc) {
   return ParseSectionArguments(/*IsPush=*/false, loc);
 }
