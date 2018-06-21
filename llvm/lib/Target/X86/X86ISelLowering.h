@@ -345,7 +345,6 @@ namespace llvm {
       /// Vector comparison generating mask bits for fp and
       /// integer signed and unsigned data types.
       CMPM,
-      CMPMU,
       // Vector comparison with rounding mode for FP values
       CMPM_RND,
 

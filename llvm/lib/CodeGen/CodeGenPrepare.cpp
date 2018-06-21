@@ -516,8 +516,16 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 bool CodeGenPrepare::eliminateFallThrough(Function &F) {
   bool Changed = false;
   // Scan all of the blocks in the function, except for the entry block.
-  for (Function::iterator I = std::next(F.begin()), E = F.end(); I != E;) {
-    BasicBlock *BB = &*I++;
+  // Use a temporary array to avoid iterator being invalidated when
+  // deleting blocks.
+  SmallVector<WeakTrackingVH, 16> Blocks;
+  for (auto &Block : llvm::make_range(std::next(F.begin()), F.end()))
+    Blocks.push_back(&Block);
+
+  for (auto &Block : Blocks) {
+    auto *BB = cast_or_null<BasicBlock>(Block);
+    if (!BB)
+      continue;
     // If the destination block has a single pred, then this is a trivial
     // edge, just collapse it.
     BasicBlock *SinglePred = BB->getSinglePredecessor();
@@ -528,17 +536,10 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
     BranchInst *Term = dyn_cast<BranchInst>(SinglePred->getTerminator());
     if (Term && !Term->isConditional()) {
       Changed = true;
-      LLVM_DEBUG(dbgs() << "To merge:\n" << *SinglePred << "\n\n\n");
-      // Remember if SinglePred was the entry block of the function.
-      // If so, we will need to move BB back to the entry position.
-      bool isEntry = SinglePred == &SinglePred->getParent()->getEntryBlock();
-      MergeBasicBlockIntoOnlyPred(BB, nullptr);
+      LLVM_DEBUG(dbgs() << "To merge:\n" << *BB << "\n\n\n");
 
-      if (isEntry && BB != &BB->getParent()->getEntryBlock())
-        BB->moveBefore(&BB->getParent()->getEntryBlock());
-
-      // We have erased a block. Update the iterator.
-      I = BB->getIterator();
+      // Merge BB into SinglePred and delete it.
+      MergeBlockIntoPredecessor(BB);
     }
   }
   return Changed;
@@ -591,9 +592,17 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   }
 
   bool MadeChange = false;
+  // Copy blocks into a temporary array to avoid iterator invalidation issues
+  // as we remove them.
   // Note that this intentionally skips the entry block.
-  for (Function::iterator I = std::next(F.begin()), E = F.end(); I != E;) {
-    BasicBlock *BB = &*I++;
+  SmallVector<WeakTrackingVH, 16> Blocks;
+  for (auto &Block : llvm::make_range(std::next(F.begin()), F.end()))
+    Blocks.push_back(&Block);
+
+  for (auto &Block : Blocks) {
+    BasicBlock *BB = cast_or_null<BasicBlock>(Block);
+    if (!BB)
+      continue;
     BasicBlock *DestBB = findDestBlockOfMergeableEmptyBlock(BB);
     if (!DestBB ||
         !isMergingEmptyBlockProfitable(BB, DestBB, Preheaders.count(BB)))
@@ -762,15 +771,13 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
   // just collapse it.
   if (BasicBlock *SinglePred = DestBB->getSinglePredecessor()) {
     if (SinglePred != DestBB) {
-      // Remember if SinglePred was the entry block of the function.  If so, we
-      // will need to move BB back to the entry position.
-      bool isEntry = SinglePred == &SinglePred->getParent()->getEntryBlock();
-      MergeBasicBlockIntoOnlyPred(DestBB, nullptr);
-
-      if (isEntry && BB != &BB->getParent()->getEntryBlock())
-        BB->moveBefore(&BB->getParent()->getEntryBlock());
-
-      LLVM_DEBUG(dbgs() << "AFTER:\n" << *DestBB << "\n\n\n");
+      assert(SinglePred == BB &&
+             "Single predecessor not the same as predecessor");
+      // Merge DestBB into SinglePred/BB and delete it.
+      MergeBlockIntoPredecessor(DestBB);
+      // Note: BB(=SinglePred) will not be deleted on this path.
+      // DestBB(=its single successor) is the one that was deleted.
+      LLVM_DEBUG(dbgs() << "AFTER:\n" << *SinglePred << "\n\n\n");
       return;
     }
   }

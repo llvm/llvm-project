@@ -1313,7 +1313,7 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
       ICmpInst::isUnsigned(UnsignedPred))
     ;
   else if (match(UnsignedICmp,
-                 m_ICmp(UnsignedPred, m_Value(Y), m_Specific(X))) &&
+                 m_ICmp(UnsignedPred, m_Specific(Y), m_Value(X))) &&
            ICmpInst::isUnsigned(UnsignedPred))
     UnsignedPred = ICmpInst::getSwappedPredicate(UnsignedPred);
   else

@@ -6,22 +6,22 @@
 define void @t_run_test() {
 ; CHECK-LABEL: @t_run_test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[LOOP_PH:%.*]]
-; CHECK:       loop.ph:
-; CHECK-NEXT:    br label [[LOOP_BODY:%.*]]
-; CHECK:       loop.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[LOOP_PH]] ], [ [[INC:%.*]], [[LOOP_BODY]] ]
+; CHECK-NEXT:    br label %[[LOOP_PH:.*]]
+; CHECK:       [[LOOP_PH]]:
+; CHECK-NEXT:    br label %[[LOOP_BODY:.*]]
+; CHECK:       [[LOOP_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[LOOP_PH]] ], [ [[INC:%.*]], %[[LOOP_BODY]] ]
 ; CHECK-NEXT:    [[INC]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], 10
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_BODY]], label [[EXIT:%.*]]
-; CHECK:       exit:
-; CHECK-NEXT:    br label [[LOOP_BODY2:%.*]]
-; CHECK:       loop.body2:
-; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[EXIT]] ], [ [[INC2:%.*]], [[LOOP_BODY2]] ]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_BODY2:.*]]
+; CHECK:       [[LOOP_BODY2]]:
+; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, %[[EXIT]] ], [ [[INC2:%.*]], %[[LOOP_BODY2]] ]
 ; CHECK-NEXT:    [[INC2]] = add i32 [[IV2]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[INC2]], 10
-; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_BODY2]], label [[EXIT2:%.*]]
-; CHECK:       exit2:
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[LOOP_BODY2]], label %[[EXIT2:.*]]
+; CHECK:       [[EXIT2]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

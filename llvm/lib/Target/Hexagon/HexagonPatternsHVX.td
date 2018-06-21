@@ -414,7 +414,7 @@ class HvxSel_pat<InstHexagon MI, PatFrag RegPred>
   : Pat<(select I1:$Pu, RegPred:$Vs, RegPred:$Vt),
         (MI I1:$Pu, RegPred:$Vs, RegPred:$Vt)>;
 
-let Predicates = [HasV60T,UseHVX] in {
+let Predicates = [UseHVX] in {
   def: HvxSel_pat<PS_vselect, HVI8>;
   def: HvxSel_pat<PS_vselect, HVI16>;
   def: HvxSel_pat<PS_vselect, HVI32>;

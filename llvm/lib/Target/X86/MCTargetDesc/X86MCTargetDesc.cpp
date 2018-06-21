@@ -14,7 +14,9 @@
 #include "X86MCTargetDesc.h"
 #include "InstPrinter/X86ATTInstPrinter.h"
 #include "InstPrinter/X86IntelInstPrinter.h"
+#include "X86BaseInfo.h"
 #include "X86MCAsmInfo.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -293,8 +295,79 @@ static MCRelocationInfo *createX86MCRelocationInfo(const Triple &TheTriple,
   return llvm::createMCRelocationInfo(TheTriple, Ctx);
 }
 
+namespace llvm {
+namespace X86_MC {
+
+class X86MCInstrAnalysis : public MCInstrAnalysis {
+  X86MCInstrAnalysis(const X86MCInstrAnalysis &) = delete;
+  X86MCInstrAnalysis &operator=(const X86MCInstrAnalysis &) = delete;
+  virtual ~X86MCInstrAnalysis() = default;
+
+public:
+  X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
+
+  bool clearsSuperRegisters(const MCRegisterInfo &MRI, const MCInst &Inst,
+                            APInt &Mask) const override;
+};
+
+bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
+                                              const MCInst &Inst,
+                                              APInt &Mask) const {
+  const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+  unsigned NumDefs = Desc.getNumDefs();
+  unsigned NumImplicitDefs = Desc.getNumImplicitDefs();
+  assert(Mask.getBitWidth() == NumDefs + NumImplicitDefs &&
+         "Unexpected number of bits in the mask!");
+
+  bool HasVEX = (Desc.TSFlags & X86II::EncodingMask) == X86II::VEX;
+  bool HasEVEX = (Desc.TSFlags & X86II::EncodingMask) == X86II::EVEX;
+  bool HasXOP = (Desc.TSFlags & X86II::EncodingMask) == X86II::XOP;
+
+  const MCRegisterClass &GR32RC = MRI.getRegClass(X86::GR32RegClassID);
+  const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
+  const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
+
+  auto ClearsSuperReg = [=](unsigned RegID) {
+    // On X86-64, a general purpose integer register is viewed as a 64-bit
+    // register internal to the processor.
+    // An update to the lower 32 bits of a 64 bit integer register is
+    // architecturally defined to zero extend the upper 32 bits.
+    if (GR32RC.contains(RegID))
+      return true;
+
+    // Early exit if this instruction has no vex/evex/xop prefix.
+    if (!HasEVEX && !HasVEX && !HasXOP)
+      return false;
+
+    // All VEX and EVEX encoded instructions are defined to zero the high bits
+    // of the destination register up to VLMAX (i.e. the maximum vector register
+    // width pertaining to the instruction).
+    // We assume the same behavior for XOP instructions too.
+    return VR128XRC.contains(RegID) || VR256XRC.contains(RegID);
+  };
+
+  Mask.clearAllBits();
+  for (unsigned I = 0, E = NumDefs; I < E; ++I) {
+    const MCOperand &Op = Inst.getOperand(I);
+    if (ClearsSuperReg(Op.getReg()))
+      Mask.setBit(I);
+  }
+
+  for (unsigned I = 0, E = NumImplicitDefs; I < E; ++I) {
+    const MCPhysReg Reg = Desc.getImplicitDefs()[I];
+    if (ClearsSuperReg(Reg))
+      Mask.setBit(NumDefs + I);
+  }
+
+  return Mask.getBoolValue();
+}
+
+} // end of namespace X86_MC
+
+} // end of namespace llvm
+
 static MCInstrAnalysis *createX86MCInstrAnalysis(const MCInstrInfo *Info) {
-  return new MCInstrAnalysis(Info);
+  return new X86_MC::X86MCInstrAnalysis(Info);
 }
 
 // Force static initialization.

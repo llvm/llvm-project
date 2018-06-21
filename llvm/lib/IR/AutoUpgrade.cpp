@@ -225,14 +225,6 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.cvtw2mask.") || // Added in 7.0
       Name.startswith("avx512.cvtd2mask.") || // Added in 7.0
       Name.startswith("avx512.cvtq2mask.") || // Added in 7.0
-      Name == "avx512.mask.max.pd.128" || // Added in 5.0
-      Name == "avx512.mask.max.pd.256" || // Added in 5.0
-      Name == "avx512.mask.max.ps.128" || // Added in 5.0
-      Name == "avx512.mask.max.ps.256" || // Added in 5.0
-      Name == "avx512.mask.min.pd.128" || // Added in 5.0
-      Name == "avx512.mask.min.pd.256" || // Added in 5.0
-      Name == "avx512.mask.min.ps.128" || // Added in 5.0
-      Name == "avx512.mask.min.ps.256" || // Added in 5.0
       Name.startswith("avx512.mask.vpermilvar.") || // Added in 4.0
       Name.startswith("avx512.mask.psll.d") || // Added in 4.0
       Name.startswith("avx512.mask.psll.q") || // Added in 4.0
@@ -274,10 +266,12 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.dbpsadbw.") || // Added in 7.0
       Name.startswith("avx512.mask.vpshld.") || // Added in 7.0
       Name.startswith("avx512.mask.vpshrd.") || // Added in 7.0
-      Name.startswith("avx512.mask.add.p") || // Added in 7.0
-      Name.startswith("avx512.mask.sub.p") || // Added in 7.0
-      Name.startswith("avx512.mask.mul.p") || // Added in 7.0
-      Name.startswith("avx512.mask.div.p") || // Added in 7.0
+      Name.startswith("avx512.mask.add.p") || // Added in 7.0. 128/256 in 4.0
+      Name.startswith("avx512.mask.sub.p") || // Added in 7.0. 128/256 in 4.0
+      Name.startswith("avx512.mask.mul.p") || // Added in 7.0. 128/256 in 4.0
+      Name.startswith("avx512.mask.div.p") || // Added in 7.0. 128/256 in 4.0
+      Name.startswith("avx512.mask.max.p") || // Added in 7.0. 128/256 in 5.0
+      Name.startswith("avx512.mask.min.p") || // Added in 7.0. 128/256 in 5.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -2381,6 +2375,32 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       } else {
         Rep = Builder.CreateFSub(CI->getArgOperand(0), CI->getArgOperand(1));
       }
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.max.p") &&
+               Name.drop_front(18) == ".512") {
+      Intrinsic::ID IID;
+      if (Name[17] == 's')
+        IID = Intrinsic::x86_avx512_max_ps_512;
+      else
+        IID = Intrinsic::x86_avx512_max_pd_512;
+
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
+                               { CI->getArgOperand(0), CI->getArgOperand(1),
+                                 CI->getArgOperand(4) });
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.min.p") &&
+               Name.drop_front(18) == ".512") {
+      Intrinsic::ID IID;
+      if (Name[17] == 's')
+        IID = Intrinsic::x86_avx512_min_ps_512;
+      else
+        IID = Intrinsic::x86_avx512_min_pd_512;
+
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
+                               { CI->getArgOperand(0), CI->getArgOperand(1),
+                                 CI->getArgOperand(4) });
       Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                           CI->getArgOperand(2));
     } else if (IsX86 && Name.startswith("avx512.mask.lzcnt.")) {

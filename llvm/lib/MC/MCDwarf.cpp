@@ -389,8 +389,8 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
                                     : dwarf::DW_FORM_string);
   MCOS->EmitULEB128IntValue(MCDwarfDirs.size() + 1);
   // Try not to emit an empty compilation directory.
-  const StringRef &CompDir =
-      CompilationDir.empty() ? CtxCompilationDir : CompilationDir;
+  const StringRef CompDir =
+      CompilationDir.empty() ? CtxCompilationDir : StringRef(CompilationDir);
   if (LineStr) {
     // Record path strings, emit references here.
     LineStr->emitRef(MCOS, CompDir);

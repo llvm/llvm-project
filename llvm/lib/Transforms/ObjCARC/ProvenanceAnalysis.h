@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/IR/ValueHandle.h"
 #include <utility>
 
 namespace llvm {
@@ -56,7 +57,7 @@ class ProvenanceAnalysis {
 
   CachedResultsTy CachedResults;
 
-  DenseMap<const Value *, const Value *> UnderlyingObjCPtrCache;
+  DenseMap<const Value *, WeakTrackingVH> UnderlyingObjCPtrCache;
 
   bool relatedCheck(const Value *A, const Value *B, const DataLayout &DL);
   bool relatedSelect(const SelectInst *A, const Value *B);

@@ -566,6 +566,9 @@ def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
 let Predicates = [HasPerfMon] in
 def : Pat<(readcyclecounter), (MRS 0xdce8)>;
 
+// FPCR register
+def : Pat<(i64 (int_aarch64_get_fpcr)), (MRS 0xda20)>;
+
 // Generic system instructions
 def SYSxt  : SystemXtI<0, "sys">;
 def SYSLxt : SystemLXtI<1, "sysl">;

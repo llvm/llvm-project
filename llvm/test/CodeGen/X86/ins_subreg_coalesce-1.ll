@@ -3,7 +3,7 @@
 
 define fastcc i32 @t() nounwind  {
 ; CHECK-LABEL: t:
-; CHECK:       # %bb.0: # %walkExprTree.exit
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl 0, %eax
 ; CHECK-NEXT:    orl $2, %eax
 ; CHECK-NEXT:    movw %ax, 0

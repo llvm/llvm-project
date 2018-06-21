@@ -27,11 +27,12 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
@@ -55,11 +56,8 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
     if (!Pred || !Pred->getSingleSuccessor() || LI.getLoopFor(Pred) != &L)
       continue;
 
-    // Pred is going to disappear, so we need to update the loop info.
-    if (L.getHeader() == Pred)
-      L.moveToHeader(Succ);
-    LI.removeBlock(Pred);
-    MergeBasicBlockIntoOnlyPred(Succ, &DT);
+    // Merge Succ into Pred and delete it.
+    MergeBlockIntoPredecessor(Succ, &DT, &LI);
 
     SE.forgetLoop(&L);
     Changed = true;

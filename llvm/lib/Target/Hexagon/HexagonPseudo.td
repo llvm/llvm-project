@@ -406,42 +406,42 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
 }
 
 // Vector store pseudos
-let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+let Predicates = [HasV60,UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayStore = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
 class STrivv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
 def PS_vstorerw_ai: STrivv_template<HvxWR, V6_vS32b_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vstorerw_nt_ai: STrivv_template<HvxWR, V6_vS32b_nt_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vstorerwu_ai: STrivv_template<HvxWR, V6_vS32Ub_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 let isPseudo = 1, isCodeGenOnly = 1, mayStore = 1, hasSideEffects = 0 in
 def PS_vstorerq_ai: Pseudo<(outs),
       (ins IntRegs:$Rs, s32_0Imm:$Off, HvxQR:$Qt), "", []>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 // Vector load pseudos
-let Predicates = [HasV60T, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
+let Predicates = [HasV60, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayLoad = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
 class LDrivv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
 def PS_vloadrw_ai: LDrivv_template<HvxWR, V6_vL32b_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vloadrw_nt_ai: LDrivv_template<HvxWR, V6_vL32b_nt_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_vloadrwu_ai: LDrivv_template<HvxWR, V6_vL32Ub_ai>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 let isPseudo = 1, isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in
 def PS_vloadrq_ai: Pseudo<(outs HvxQR:$Qd),
       (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
@@ -450,10 +450,10 @@ class VSELInst<dag outs, dag ins, InstHexagon rootInst>
 
 def PS_vselect: VSELInst<(outs HvxVR:$dst),
       (ins PredRegs:$src1, HvxVR:$src2, HvxVR:$src3), V6_vcmov>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 def PS_wselect: VSELInst<(outs HvxWR:$dst),
       (ins PredRegs:$src1, HvxWR:$src2, HvxWR:$src3), V6_vccombine>,
-      Requires<[HasV60T,UseHVX]>;
+      Requires<[HasV60,UseHVX]>;
 
 let hasSideEffects = 0, isReMaterializable = 1, isPseudo = 1,
     isCodeGenOnly = 1 in {

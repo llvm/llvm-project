@@ -20,6 +20,8 @@
 namespace exegesis {
 namespace {
 
+using testing::AnyOf;
+using testing::ElementsAre;
 using testing::HasSubstr;
 using testing::Not;
 using testing::SizeIs;
@@ -119,8 +121,8 @@ TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
   const InstructionInstance &II = Proto.Snippet[0];
   EXPECT_THAT(II.getOpcode(), Opcode);
   ASSERT_THAT(II.VariableValues, SizeIs(2));
-  EXPECT_THAT(II.VariableValues[0], IsReg());
-  EXPECT_THAT(II.VariableValues[1], IsInvalid());
+  EXPECT_THAT(II.VariableValues, AnyOf(ElementsAre(IsReg(), IsInvalid()),
+                                       ElementsAre(IsInvalid(), IsReg())));
   EXPECT_THAT(Proto.Snippet[1].getOpcode(), Not(Opcode));
   // TODO: check that the two instructions alias each other.
 }

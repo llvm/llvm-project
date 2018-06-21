@@ -59,12 +59,12 @@
 
 ; GCN-LABEL: {{^}}reduced_nested_loop_conditions:
 
-; GCN: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-NEXT: s_cbranch_scc1
+; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
+; GCN-NEXT: s_cbranch_scc0
 
 ; FIXME: Should fold to unconditional branch?
 ; GCN: ; implicit-def
-; GCN: s_cbranch_vccz
+; GCN: s_cbranch_vccnz
 
 ; GCN: ds_read_b32
 

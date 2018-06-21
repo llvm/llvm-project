@@ -371,11 +371,12 @@ public:
     return DataExtractor(StringSection, false, 0);
   }
 
-  /// extractRangeList - extracts the range list referenced by this compile
-  /// unit from .debug_ranges section. Returns true on success.
-  /// Requires that compile unit is already extracted.
-  bool extractRangeList(uint32_t RangeListOffset,
-                        DWARFDebugRangeList &RangeList) const;
+  /// Extract the range list referenced by this compile unit from the
+  /// .debug_ranges section. If the extraction is unsuccessful, an error
+  /// is returned. Successful extraction requires that the compile unit
+  /// has already been extracted.
+  Error extractRangeList(uint32_t RangeListOffset,
+                         DWARFDebugRangeList &RangeList) const;
   void clear();
 
   const Optional<StrOffsetsContributionDescriptor> &
@@ -450,12 +451,12 @@ public:
 
   /// Return a vector of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
-  DWARFAddressRangesVector findRnglistFromOffset(uint32_t Offset);
+  Expected<DWARFAddressRangesVector> findRnglistFromOffset(uint32_t Offset);
 
   /// Return a vector of address ranges retrieved from an encoded range
   /// list whose offset is found via a table lookup given an index (DWARF v5
   /// and later).
-  DWARFAddressRangesVector findRnglistFromIndex(uint32_t Index);
+  Expected<DWARFAddressRangesVector> findRnglistFromIndex(uint32_t Index);
 
   /// Return a rangelist's offset based on an index. The index designates
   /// an entry in the rangelist table's offset array and is supplied by

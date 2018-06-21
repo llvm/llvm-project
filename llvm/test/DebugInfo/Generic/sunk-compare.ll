@@ -8,7 +8,7 @@
 ; We check that the compare instruction retains its debug loc after 
 ; it is sunk into other.bb by the codegen prepare pass.
 ; 
-; CHECK:       other.bb:
+; CHECK:       entry:
 ; CHECK-NEXT:  icmp{{.*}}%x, 0, !dbg ![[MDHANDLE:[0-9]*]]
 ; CHECK:       ![[MDHANDLE]] = !DILocation(line: 2
 ;

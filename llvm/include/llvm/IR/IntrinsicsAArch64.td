@@ -584,6 +584,14 @@ def int_aarch64_neon_tbx3 : AdvSIMD_Tbx3_Intrinsic;
 def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 
 let TargetPrefix = "aarch64" in {
+  class FPCR_Get_Intrinsic
+    : Intrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
+}
+
+// FPCR
+def int_aarch64_get_fpcr : FPCR_Get_Intrinsic;
+
+let TargetPrefix = "aarch64" in {
   class Crypto_AES_DataKey_Intrinsic
     : Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_v16i8_ty], [IntrNoMem]>;
 

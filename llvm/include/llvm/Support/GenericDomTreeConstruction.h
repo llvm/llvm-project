@@ -82,8 +82,8 @@ struct SemiNCAInfo {
     // Note that these children are from the future relative to what the
     // DominatorTree knows about -- using them to gets us some snapshot of the
     // CFG from the past (relative to the state of the CFG).
-    DenseMap<NodePtr, SmallDenseSet<NodePtrAndKind, 4>> FutureSuccessors;
-    DenseMap<NodePtr, SmallDenseSet<NodePtrAndKind, 4>> FuturePredecessors;
+    DenseMap<NodePtr, SmallVector<NodePtrAndKind, 4>> FutureSuccessors;
+    DenseMap<NodePtr, SmallVector<NodePtrAndKind, 4>> FuturePredecessors;
     // Remembers if the whole tree was recalculated at some point during the
     // current batch update.
     bool IsRecalculated = false;
@@ -1176,8 +1176,8 @@ struct SemiNCAInfo {
     // predecessors. Note that these sets will only decrease size over time, as
     // the next CFG snapshots slowly approach the actual (current) CFG.
     for (UpdateT &U : BUI.Updates) {
-      BUI.FutureSuccessors[U.getFrom()].insert({U.getTo(), U.getKind()});
-      BUI.FuturePredecessors[U.getTo()].insert({U.getFrom(), U.getKind()});
+      BUI.FutureSuccessors[U.getFrom()].push_back({U.getTo(), U.getKind()});
+      BUI.FuturePredecessors[U.getTo()].push_back({U.getFrom(), U.getKind()});
     }
 
     LLVM_DEBUG(dbgs() << "About to apply " << NumLegalized << " updates\n");
@@ -1265,13 +1265,18 @@ struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "Applying update: " << CurrentUpdate << "\n");
 
     // Move to the next snapshot of the CFG by removing the reverse-applied
-    // current update.
+    // current update. Since updates are performed in the same order they are
+    // legalized it's sufficient to pop the last item here.
     auto &FS = BUI.FutureSuccessors[CurrentUpdate.getFrom()];
-    FS.erase({CurrentUpdate.getTo(), CurrentUpdate.getKind()});
+    assert(FS.back().getPointer() == CurrentUpdate.getTo() &&
+           FS.back().getInt() == CurrentUpdate.getKind());
+    FS.pop_back();
     if (FS.empty()) BUI.FutureSuccessors.erase(CurrentUpdate.getFrom());
 
     auto &FP = BUI.FuturePredecessors[CurrentUpdate.getTo()];
-    FP.erase({CurrentUpdate.getFrom(), CurrentUpdate.getKind()});
+    assert(FP.back().getPointer() == CurrentUpdate.getFrom() &&
+           FP.back().getInt() == CurrentUpdate.getKind());
+    FP.pop_back();
     if (FP.empty()) BUI.FuturePredecessors.erase(CurrentUpdate.getTo());
 
     if (CurrentUpdate.getKind() == UpdateKind::Insert)

@@ -36,6 +36,13 @@ fabs.d f1, f2
 # CHECK-ALIAS: fneg.d ft2, ft3
 fneg.d f2, f3
 
+# CHECK-INST: flt.d tp, ft6, ft5
+# CHECK-ALIAS: flt.d tp, ft6, ft5
+fgt.d x4, f5, f6
+# CHECK-INST: fle.d t2, fs1, fs0
+# CHECK-ALIAS: fle.d t2, fs1, fs0
+fge.d x7, f8, f9
+
 ##===----------------------------------------------------------------------===##
 ## Aliases which omit the rounding mode.
 ##===----------------------------------------------------------------------===##

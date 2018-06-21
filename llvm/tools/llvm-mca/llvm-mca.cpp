@@ -388,6 +388,9 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
 
+  std::unique_ptr<MCInstrAnalysis> MCIA(
+      TheTarget->createMCInstrAnalysis(MCII.get()));
+
   if (!MCPU.compare("native"))
     MCPU = llvm::sys::getHostCPUName();
 
@@ -457,7 +460,7 @@ int main(int argc, char **argv) {
     Width = DispatchWidth;
 
   // Create an instruction builder.
-  mca::InstrBuilder IB(*STI, *MCII);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, *MCIA);
 
   // Number each region in the sequence.
   unsigned RegionIdx = 0;
