@@ -1463,8 +1463,9 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     return false;
   address.SetRawAddress(class_metadata_ptr);
 
-  SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-      in_value.GetCompilerType().GetTypeSystem());
+  // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
+  // use the scratch context where such operations are legal and safe.
+  SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
