@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import gc
 import os
 import tempfile
@@ -19,15 +20,15 @@ from .util import get_tu
 kInputsDir = os.path.join(os.path.dirname(__file__), 'INPUTS')
 
 
+@contextmanager
 def save_tu(tu):
     """Convenience API to save a TranslationUnit to a file.
 
     Returns the filename it was saved to.
     """
-    _, path = tempfile.mkstemp()
-    tu.save(path)
-
-    return path
+    with tempfile.NamedTemporaryFile() as t:
+        tu.save(t.name)
+        yield t.name
 
 
 class TestTranslationUnit(unittest.TestCase):
@@ -125,10 +126,9 @@ int SOME_DEFINE;
 
         tu = get_tu('int foo();')
 
-        path = save_tu(tu)
-        self.assertTrue(os.path.exists(path))
-        self.assertGreater(os.path.getsize(path), 0)
-        os.unlink(path)
+        with save_tu(tu) as path:
+            self.assertTrue(os.path.exists(path))
+            self.assertGreater(os.path.getsize(path), 0)
 
     def test_save_translation_errors(self):
         """Ensure that saving to an invalid directory raises."""
@@ -149,21 +149,18 @@ int SOME_DEFINE;
 
         tu = get_tu('int foo();')
         self.assertEqual(len(tu.diagnostics), 0)
-        path = save_tu(tu)
+        with save_tu(tu) as path:
+            self.assertTrue(os.path.exists(path))
+            self.assertGreater(os.path.getsize(path), 0)
 
-        self.assertTrue(os.path.exists(path))
-        self.assertGreater(os.path.getsize(path), 0)
+            tu2 = TranslationUnit.from_ast_file(filename=path)
+            self.assertEqual(len(tu2.diagnostics), 0)
 
-        tu2 = TranslationUnit.from_ast_file(filename=path)
-        self.assertEqual(len(tu2.diagnostics), 0)
+            foo = get_cursor(tu2, 'foo')
+            self.assertIsNotNone(foo)
 
-        foo = get_cursor(tu2, 'foo')
-        self.assertIsNotNone(foo)
-
-        # Just in case there is an open file descriptor somewhere.
-        del tu2
-
-        os.unlink(path)
+            # Just in case there is an open file descriptor somewhere.
+            del tu2
 
     def test_index_parse(self):
         path = os.path.join(kInputsDir, 'hello.cpp')
