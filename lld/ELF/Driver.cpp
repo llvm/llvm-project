@@ -784,6 +784,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZCopyreloc = getZFlag(Args, "copyreloc", "nocopyreloc", true);
   Config->ZExecstack = getZFlag(Args, "execstack", "noexecstack", false);
   Config->ZHazardplt = hasZOption(Args, "hazardplt");
+  Config->ZInitfirst = hasZOption(Args, "initfirst");
   Config->ZKeepTextSectionPrefix = getZFlag(
       Args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   Config->ZNodelete = hasZOption(Args, "nodelete");
@@ -1303,8 +1304,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->scanVersionScript();
 
   // Create wrapped symbols for -wrap option.
-  for (auto *Arg : Args.filtered(OPT_wrap))
-    Symtab->addSymbolWrap<ELFT>(Arg->getValue());
+  std::vector<std::string> Wraps = Args.getAllArgValues(OPT_wrap);
+  llvm::sort(Wraps.begin(), Wraps.end());
+  Wraps.erase(std::unique(Wraps.begin(), Wraps.end()), Wraps.end());
+  for (StringRef Name : Wraps)
+    Symtab->addSymbolWrap<ELFT>(Name);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.

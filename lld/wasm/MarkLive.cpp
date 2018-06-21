@@ -34,16 +34,16 @@ using namespace lld;
 using namespace lld::wasm;
 
 void lld::wasm::markLive() {
-  if (!Config->GcSections)
-    return;
-
   LLVM_DEBUG(dbgs() << "markLive\n");
   SmallVector<InputChunk *, 256> Q;
 
   auto Enqueue = [&](Symbol *Sym) {
     if (!Sym || Sym->isLive())
       return;
+    LLVM_DEBUG(dbgs() << "markLive: " << Sym->getName() << "\n");
     Sym->markLive();
+    if (Sym->SignatureMismatch)
+      error("function signature mismatch: " + Sym->getName());
     if (InputChunk *Chunk = Sym->getChunk())
       Q.push_back(Chunk);
   };
@@ -53,9 +53,9 @@ void lld::wasm::markLive() {
     Enqueue(Symtab->find(Config->Entry));
   Enqueue(WasmSym::CallCtors);
 
-  // By default we export all non-hidden, so they are gc roots too
+  // We export all defined, non-hidden symbols so they are all gc roots too
   for (Symbol *Sym : Symtab->getSymbols())
-    if (!Sym->isHidden())
+    if (Sym->isDefined() && !Sym->isHidden())
       Enqueue(Sym);
 
   // The ctor functions are all used in the synthetic __wasm_call_ctors

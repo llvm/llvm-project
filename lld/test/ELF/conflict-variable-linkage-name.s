@@ -1,24 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: llvm-dwarfdump %t.o | FileCheck -check-prefix=INPUT %s
 # RUN: not ld.lld %t.o %t.o -o %t 2>&1 | FileCheck %s
-
-# INPUT:      DW_TAG_variable
-# INPUT-NEXT:   DW_AT_name            ("bar")
-# INPUT-NEXT:   DW_AT_type            (0x0000003d "int")
-# INPUT-NEXT:   DW_AT_external        (true)
-# INPUT-NEXT:   DW_AT_decl_file       ("/path{{/|\\}}1.cpp")
-# INPUT-NEXT:   DW_AT_decl_line       (2)
-# INPUT-NEXT:   DW_AT_location        (DW_OP_addr 0x0)
-# INPUT-NEXT:   DW_AT_linkage_name    ("_ZN1A3barE")
-# INPUT:      DW_TAG_variable
-# INPUT-NEXT:   DW_AT_name            ("bar")
-# INPUT-NEXT:   DW_AT_type            (0x0000003d "int")
-# INPUT-NEXT:   DW_AT_external        (true)
-# INPUT-NEXT:   DW_AT_decl_file       ("/path{{/|\\}}1.cpp")
-# INPUT-NEXT:   DW_AT_decl_line       (6)
-# INPUT-NEXT:   DW_AT_location        (DW_OP_addr 0x0)
-# INPUT-NEXT:   DW_AT_linkage_name    ("_ZN1Z3barE")
 
 ## Check we can report the locations of 2 different "bar" variables.
 # CHECK:      duplicate symbol: A::bar

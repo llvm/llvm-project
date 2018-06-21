@@ -114,9 +114,9 @@ private:
   size_t findBoundary(size_t Begin, size_t End);
 
   void forEachClassRange(size_t Begin, size_t End,
-                         std::function<void(size_t, size_t)> Fn);
+                         llvm::function_ref<void(size_t, size_t)> Fn);
 
-  void forEachClass(std::function<void(size_t, size_t)> Fn);
+  void forEachClass(llvm::function_ref<void(size_t, size_t)> Fn);
 
   std::vector<InputSection *> Sections;
 
@@ -385,7 +385,7 @@ template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t Begin, size_t End) {
 // This function calls Fn on every group within [Begin, End).
 template <class ELFT>
 void ICF<ELFT>::forEachClassRange(size_t Begin, size_t End,
-                                  std::function<void(size_t, size_t)> Fn) {
+                                  llvm::function_ref<void(size_t, size_t)> Fn) {
   while (Begin < End) {
     size_t Mid = findBoundary(Begin, End);
     Fn(Begin, Mid);
@@ -395,7 +395,7 @@ void ICF<ELFT>::forEachClassRange(size_t Begin, size_t End,
 
 // Call Fn on each equivalence class.
 template <class ELFT>
-void ICF<ELFT>::forEachClass(std::function<void(size_t, size_t)> Fn) {
+void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> Fn) {
   // If threading is disabled or the number of sections are
   // too small to use threading, call Fn sequentially.
   if (!ThreadsEnabled || Sections.size() < 1024) {
@@ -444,7 +444,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values to partition sections.
   parallelForEach(Sections, [&](InputSection *S) {
     // Set MSB to 1 to avoid collisions with non-hash IDs.
-    S->Class[0] = getHash<ELFT>(S) | (1 << 31);
+    S->Class[0] = getHash<ELFT>(S) | (1U << 31);
   });
 
   // From now on, sections in Sections vector are ordered so that sections

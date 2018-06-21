@@ -848,17 +848,22 @@ template <class ELFT> void MipsGotSection::build() {
     }
   }
 
-  // Merge GOTs. Try to join as much as possible GOTs but do not
-  // exceed maximum GOT size. In case of overflow create new GOT
-  // and continue merging.
+  // Merge GOTs. Try to join as much as possible GOTs but do not exceed
+  // maximum GOT size. At first, try to fill the primary GOT because
+  // the primary GOT can be accessed in the most effective way. If it
+  // is not possible, try to fill the last GOT in the list, and finally
+  // create a new GOT if both attempts failed.
   for (FileGot &SrcGot : Gots) {
-    FileGot &DstGot = MergedGots.back();
     InputFile *File = SrcGot.File;
-    if (!tryMergeGots(DstGot, SrcGot, &DstGot == PrimGot)) {
-      MergedGots.emplace_back();
-      std::swap(MergedGots.back(), SrcGot);
+    if (tryMergeGots(MergedGots.front(), SrcGot, true)) {
+      File->MipsGotIndex = 0;
+    } else {
+      if (!tryMergeGots(MergedGots.back(), SrcGot, false)) {
+        MergedGots.emplace_back();
+        std::swap(MergedGots.back(), SrcGot);
+      }
+      File->MipsGotIndex = MergedGots.size() - 1;
     }
-    File->MipsGotIndex = MergedGots.size() - 1;
   }
   std::swap(Gots, MergedGots);
 
@@ -1239,6 +1244,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   uint32_t DtFlags1 = 0;
   if (Config->Bsymbolic)
     DtFlags |= DF_SYMBOLIC;
+  if (Config->ZInitfirst)
+    DtFlags1 |= DF_1_INITFIRST;
   if (Config->ZNodelete)
     DtFlags1 |= DF_1_NODELETE;
   if (Config->ZNodlopen)
