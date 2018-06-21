@@ -36,25 +36,20 @@ class Backend;
 //
 // This class is responsible for the dispatch stage, in which instructions are
 // dispatched in groups to the Scheduler.  An instruction can be dispatched if
-// functional units are available.
-// To be more specific, an instruction can be dispatched to the Scheduler if:
-//  1) There are enough entries in the reorder buffer (implemented by class
-//     RetireControlUnit) to accommodate all opcodes.
+// the following conditions are met:
+//  1) There are enough entries in the reorder buffer (see class
+//     RetireControlUnit) to write the opcodes associated with the instruction.
 //  2) There are enough temporaries to rename output register operands.
 //  3) There are enough entries available in the used buffered resource(s).
 //
 // The number of micro opcodes that can be dispatched in one cycle is limited by
 // the value of field 'DispatchWidth'. A "dynamic dispatch stall" occurs when
-// processor resources are not available (i.e. at least one of the
-// aforementioned checks fails). Dispatch stall events are counted during the
-// entire execution of the code, and displayed by the performance report when
-// flag '-verbose' is specified.
+// processor resources are not available. Dispatch stall events are counted
+// during the entire execution of the code, and displayed by the performance
+// report when flag '-dispatch-stats' is specified.
 //
-// If the number of micro opcodes of an instruction is bigger than
-// DispatchWidth, then it can only be dispatched at the beginning of one cycle.
-// The DispatchStage will still have to wait for a number of cycles (depending
-// on the DispatchWidth and the number of micro opcodes) before it can serve
-// other instructions.
+// If the number of micro opcodes exceedes DispatchWidth, then the instruction
+// is dispatched in multiple cycles.
 class DispatchStage : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;

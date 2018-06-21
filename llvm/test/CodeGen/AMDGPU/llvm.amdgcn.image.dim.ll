@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN %s
 
 ; GCN-LABEL: {{^}}load_1d:
 ; GCN: image_load v[0:3], v0, s[0:7] dmask:0xf unorm{{$}}
@@ -370,6 +370,46 @@ main_body:
   ret void
 }
 
+; GCN-LABEL: {{^}}getresinfo_dmask0:
+; GCN-NOT: image
+; GCN: ; return to shader part epilog
+define amdgpu_ps <4 x float> @getresinfo_dmask0(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %mip) #0 {
+main_body:
+  %r = call <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32 0, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
+  ret <4 x float> %r
+}
+
+; Ideally, the register allocator would avoid the wait here
+;
+; GCN-LABEL: {{^}}image_store_wait:
+; GCN: image_store v[0:3], v4, s[0:7] dmask:0xf unorm
+; SI: s_waitcnt expcnt(0)
+; GCN: image_load v[0:3], v4, s[8:15] dmask:0xf unorm
+; GCN: s_waitcnt vmcnt(0)
+; GCN: image_store v[0:3], v4, s[16:23] dmask:0xf unorm
+define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %arg1, <8 x i32> inreg %arg2, <4 x float> %arg3, i32 %arg4) #0 {
+main_body:
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %arg3, i32 15, i32 %arg4, <8 x i32> %arg, i32 0, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %arg4, <8 x i32> %arg1, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %data, i32 15, i32 %arg4, <8 x i32> %arg2, i32 0, i32 0)
+  ret void
+}
+
+; SI won't merge ds memory operations, because of the signed offset bug, so
+; we only have check lines for VI.
+; VI-LABEL: image_load_mmo
+; VI: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
+; VI: ds_write2_b32 v{{[0-9]+}}, [[ZERO]], [[ZERO]] offset1:4
+define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, float addrspace(3)* %lds, <2 x i32> %c) #0 {
+  store float 0.000000e+00, float addrspace(3)* %lds
+  %c0 = extractelement <2 x i32> %c, i32 0
+  %c1 = extractelement <2 x i32> %c, i32 1
+  %tex = call float @llvm.amdgcn.image.load.2d.f32.i32(i32 15, i32 %c0, i32 %c1, <8 x i32> %rsrc, i32 0, i32 0)
+  %tmp2 = getelementptr float, float addrspace(3)* %lds, i32 4
+  store float 0.000000e+00, float addrspace(3)* %tmp2
+  ret float %tex
+}
+
 declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.image.load.3d.v4f32.i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #1
@@ -412,6 +452,7 @@ declare <4 x float> @llvm.amdgcn.image.getresinfo.2dmsaa.v4f32.i32(i32, i32, <8 
 declare <4 x float> @llvm.amdgcn.image.getresinfo.2darraymsaa.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #2
 
 declare float @llvm.amdgcn.image.load.1d.f32.i32(i32, i32, <8 x i32>, i32, i32) #1
+declare float @llvm.amdgcn.image.load.2d.f32.i32(i32, i32, i32, <8 x i32>, i32, i32) #1
 declare <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32, i32, <8 x i32>, i32, i32) #1
 declare void @llvm.amdgcn.image.store.1d.f32.i32(float, i32, i32, <8 x i32>, i32, i32) #0
 declare void @llvm.amdgcn.image.store.1d.v2f32.i32(<2 x float>, i32, i32, <8 x i32>, i32, i32) #0

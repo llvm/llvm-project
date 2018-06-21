@@ -212,6 +212,23 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
   }
 }
 
+/// Integer division/remainder require special handling to avoid undefined
+/// behavior. If a constant vector has undef elements, replace those undefs with
+/// '1' because that's always safe to execute.
+static inline Constant *getSafeVectorConstantForIntDivRem(Constant *In) {
+  assert(In->getType()->isVectorTy() && "Not expecting scalars here");
+  assert(In->getType()->getVectorElementType()->isIntegerTy() &&
+         "Not expecting FP opcodes/operands/constants here");
+
+  unsigned NumElts = In->getType()->getVectorNumElements();
+  SmallVector<Constant *, 16> Out(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    Constant *C = In->getAggregateElement(i);
+    Out[i] = isa<UndefValue>(C) ? ConstantInt::get(C->getType(), 1) : C;
+  }
+  return ConstantVector::get(Out);
+}
+
 /// The core instruction combiner logic.
 ///
 /// This class provides both the logic to recursively visit instructions and
@@ -705,6 +722,10 @@ private:
   /// Tries to simplify operands to an integer instruction based on its
   /// demanded bits.
   bool SimplifyDemandedInstructionBits(Instruction &Inst);
+
+  Value *simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
+                                               APInt DemandedElts,
+                                               int DmaskIdx = -1);
 
   Value *SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                     APInt &UndefElts, unsigned Depth = 0);

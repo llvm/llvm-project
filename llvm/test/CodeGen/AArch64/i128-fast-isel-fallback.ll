@@ -10,7 +10,7 @@ define void @test1() {
 ; registers that make up the i128 pair
 
 ; CHECK:  mov  x0, xzr
-; CHECK:  mov  x1, xzr 
+; CHECK:  mov  x1, x0
 ; CHECK:  bl  _test2
 
 }

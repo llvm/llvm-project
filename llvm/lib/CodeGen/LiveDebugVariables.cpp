@@ -224,7 +224,12 @@ public:
     return L1;
   }
 
-  /// getLocationNo - Return the location number that matches Loc.
+  /// Return the location number that matches Loc.
+  ///
+  /// For undef values we always return location number UndefLocNo without
+  /// inserting anything in locations. Since locations is a vector and the
+  /// location number is the position in the vector and UndefLocNo is ~0,
+  /// we would need a very big vector to put the value at the right position.
   unsigned getLocationNo(const MachineOperand &LocMO) {
     if (LocMO.isReg()) {
       if (LocMO.getReg() == 0)
@@ -761,13 +766,6 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     // function).
   }
 
-  // Erase all the undefs.
-  for (LocMap::iterator I = locInts.begin(); I.valid();)
-    if (I.value().isUndef())
-      I.erase();
-    else
-      ++I;
-
   // The computed intervals may extend beyond the range of the debug
   // location's lexical scope. In this case, splitting of an interval
   // can result in an interval outside of the scope being created,
@@ -990,7 +988,9 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
                         << LocMapI.stop() << ")\n");
       LocMapI.erase();
     } else {
-      if (v.locNo() > OldLocNo)
+      // Undef values always have location number UndefLocNo, so don't change
+      // locNo in that case. See getLocationNo().
+      if (!v.isUndef() && v.locNo() > OldLocNo)
         LocMapI.setValueUnchecked(v.changeLocNo(v.locNo() - 1));
       ++LocMapI;
     }
@@ -1099,6 +1099,10 @@ void UserValue::rewriteLocations(VirtRegMap &VRM, const TargetRegisterInfo &TRI,
   // physical register.
   for (LocMap::iterator I = locInts.begin(); I.valid(); ++I) {
     DbgValueLocation Loc = I.value();
+    // Undef values don't exist in locations (and thus not in LocNoMap either)
+    // so skip over them. See getLocationNo().
+    if (Loc.isUndef())
+      continue;
     unsigned NewLocNo = LocNoMap[Loc.locNo()];
     I.setValueUnchecked(Loc.changeLocNo(NewLocNo));
     I.setStart(I.start());
@@ -1163,7 +1167,15 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
   // Only search within the current MBB.
   StopIdx = (MBBEndIdx < StopIdx) ? MBBEndIdx : StopIdx;
   MachineBasicBlock::iterator I = findInsertLocation(MBB, StartIdx, LIS);
-  MachineOperand &MO = locations[Loc.locNo()];
+  // Undef values don't exist in locations so create new "noreg" register MOs
+  // for them. See getLocationNo().
+  MachineOperand MO = !Loc.isUndef() ?
+    locations[Loc.locNo()] :
+    MachineOperand::CreateReg(/* Reg */ 0, /* isDef */ false, /* isImp */ false,
+                              /* isKill */ false, /* isDead */ false,
+                              /* isUndef */ false, /* isEarlyClobber */ false,
+                              /* SubReg */ 0, /* isDebug */ true);
+
   ++NumInsertedDebugValues;
 
   assert(cast<DILocalVariable>(Variable)
@@ -1184,14 +1196,8 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
   assert((!Spilled || MO.isFI()) && "a spilled location must be a frame index");
 
   do {
-    MachineInstrBuilder MIB =
-      BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE))
-          .add(MO);
-    if (IsIndirect)
-      MIB.addImm(0U);
-    else
-      MIB.addReg(0U, RegState::Debug);
-    MIB.addMetadata(Variable).addMetadata(Expr);
+    BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE),
+            IsIndirect, MO, Variable, Expr);
 
     // Continue and insert DBG_VALUES after every redefinition of register
     // associated with the debug value within the range

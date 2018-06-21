@@ -3362,9 +3362,11 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
       memcpy(SourceBuf, SourceString.data(), SourceString.size());
       Source = StringRef(SourceBuf, SourceString.size());
     }
-    if (FileNumber == 0)
+    if (FileNumber == 0) {
+      if (Ctx.getDwarfVersion() < 5)
+        return Warning(DirectiveLoc, "file 0 not supported prior to DWARF-5");
       getStreamer().emitDwarfFile0Directive(Directory, Filename, CKMem, Source);
-    else {
+    } else {
       Expected<unsigned> FileNumOrErr = getStreamer().tryEmitDwarfFileDirective(
           FileNumber, Directory, Filename, CKMem, Source);
       if (!FileNumOrErr)

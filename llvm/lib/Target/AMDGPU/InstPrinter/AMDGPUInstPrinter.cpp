@@ -217,6 +217,11 @@ void AMDGPUInstPrinter::printLWE(const MCInst *MI, unsigned OpNo,
   printNamedBit(MI, OpNo, O, "lwe");
 }
 
+void AMDGPUInstPrinter::printD16(const MCInst *MI, unsigned OpNo,
+                                 const MCSubtargetInfo &STI, raw_ostream &O) {
+  printNamedBit(MI, OpNo, O, "d16");
+}
+
 void AMDGPUInstPrinter::printExpCompr(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {

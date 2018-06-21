@@ -6,9 +6,7 @@
 
 define <4 x i32> @add(<4 x i32> %v0) {
 ; CHECK-LABEL: @add(
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[V0:%.*]], <i32 1, i32 undef, i32 3, i32 undef>
-; CHECK-NEXT:    [[T2:%.*]] = add <4 x i32> [[V0]], <i32 undef, i32 6, i32 undef, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = add <4 x i32> [[V0:%.*]], <i32 1, i32 6, i32 3, i32 8>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = add <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
@@ -21,9 +19,7 @@ define <4 x i32> @add(<4 x i32> %v0) {
 
 define <4 x i32> @sub(<4 x i32> %v0) {
 ; CHECK-LABEL: @sub(
-; CHECK-NEXT:    [[T1:%.*]] = sub <4 x i32> <i32 1, i32 2, i32 3, i32 undef>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = sub <4 x i32> <i32 undef, i32 undef, i32 undef, i32 8>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = sub <4 x i32> <i32 1, i32 2, i32 3, i32 8>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = sub <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0
@@ -37,9 +33,7 @@ define <4 x i32> @sub(<4 x i32> %v0) {
 
 define <4 x i32> @mul(<4 x i32> %v0) {
 ; CHECK-LABEL: @mul(
-; CHECK-NEXT:    [[T1:%.*]] = mul <4 x i32> [[V0:%.*]], <i32 undef, i32 undef, i32 3, i32 undef>
-; CHECK-NEXT:    [[T2:%.*]] = mul <4 x i32> [[V0]], <i32 undef, i32 6, i32 undef, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = mul <4 x i32> [[V0:%.*]], <i32 undef, i32 6, i32 3, i32 8>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = mul <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
@@ -52,9 +46,7 @@ define <4 x i32> @mul(<4 x i32> %v0) {
 
 define <4 x i32> @shl(<4 x i32> %v0) {
 ; CHECK-LABEL: @shl(
-; CHECK-NEXT:    [[T1:%.*]] = shl nuw <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = shl nuw <4 x i32> [[V0]], <i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 undef, i32 5, i32 2, i32 undef>
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw <4 x i32> [[V0:%.*]], <i32 undef, i32 6, i32 3, i32 undef>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = shl nuw <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
@@ -67,9 +59,7 @@ define <4 x i32> @shl(<4 x i32> %v0) {
 
 define <4 x i32> @lshr(<4 x i32> %v0) {
 ; CHECK-LABEL: @lshr(
-; CHECK-NEXT:    [[T1:%.*]] = lshr exact <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = lshr <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = lshr <4 x i32> <i32 5, i32 6, i32 3, i32 8>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = lshr exact <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0
@@ -82,9 +72,7 @@ define <4 x i32> @lshr(<4 x i32> %v0) {
 
 define <3 x i32> @ashr(<3 x i32> %v0) {
 ; CHECK-LABEL: @ashr(
-; CHECK-NEXT:    [[T1:%.*]] = ashr <3 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[T2:%.*]] = ashr <3 x i32> [[V0]], <i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <3 x i32> [[T1]], <3 x i32> [[T2]], <3 x i32> <i32 3, i32 1, i32 2>
+; CHECK-NEXT:    [[T3:%.*]] = ashr <3 x i32> [[V0:%.*]], <i32 4, i32 2, i32 3>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
   %t1 = ashr <3 x i32> %v0, <i32 1, i32 2, i32 3>
@@ -95,9 +83,7 @@ define <3 x i32> @ashr(<3 x i32> %v0) {
 
 define <3 x i42> @and(<3 x i42> %v0) {
 ; CHECK-LABEL: @and(
-; CHECK-NEXT:    [[T1:%.*]] = and <3 x i42> [[V0:%.*]], <i42 1, i42 undef, i42 undef>
-; CHECK-NEXT:    [[T2:%.*]] = and <3 x i42> [[V0]], <i42 undef, i42 5, i42 undef>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <3 x i42> [[T1]], <3 x i42> [[T2]], <3 x i32> <i32 0, i32 4, i32 undef>
+; CHECK-NEXT:    [[T3:%.*]] = and <3 x i42> [[V0:%.*]], <i42 1, i42 5, i42 undef>
 ; CHECK-NEXT:    ret <3 x i42> [[T3]]
 ;
   %t1 = and <3 x i42> %v0, <i42 1, i42 2, i42 3>
@@ -113,8 +99,7 @@ declare void @use_v4i32(<4 x i32>)
 define <4 x i32> @or(<4 x i32> %v0) {
 ; CHECK-LABEL: @or(
 ; CHECK-NEXT:    [[T1:%.*]] = or <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = or <4 x i32> [[V0]], <i32 5, i32 6, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = or <4 x i32> [[V0]], <i32 5, i32 6, i32 3, i32 4>
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -127,9 +112,8 @@ define <4 x i32> @or(<4 x i32> %v0) {
 
 define <4 x i32> @xor(<4 x i32> %v0) {
 ; CHECK-LABEL: @xor(
-; CHECK-NEXT:    [[T1:%.*]] = xor <4 x i32> [[V0:%.*]], <i32 1, i32 undef, i32 3, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = xor <4 x i32> [[V0]], <i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[T2:%.*]] = xor <4 x i32> [[V0:%.*]], <i32 5, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[T3:%.*]] = xor <4 x i32> [[V0]], <i32 1, i32 6, i32 3, i32 4>
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T2]])
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -144,7 +128,7 @@ define <4 x i32> @udiv(<4 x i32> %v0) {
 ; CHECK-LABEL: @udiv(
 ; CHECK-NEXT:    [[T1:%.*]] = udiv <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = udiv <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = udiv <4 x i32> <i32 1, i32 2, i32 3, i32 8>, [[V0]]
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T2]])
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
@@ -161,9 +145,7 @@ define <4 x i32> @udiv(<4 x i32> %v0) {
 
 define <4 x i32> @sdiv(<4 x i32> %v0) {
 ; CHECK-LABEL: @sdiv(
-; CHECK-NEXT:    [[T1:%.*]] = sdiv <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = sdiv <4 x i32> [[V0]], <i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 undef, i32 1, i32 6, i32 undef>
+; CHECK-NEXT:    [[T3:%.*]] = sdiv <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 7, i32 1>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = sdiv <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
@@ -174,9 +156,7 @@ define <4 x i32> @sdiv(<4 x i32> %v0) {
 
 define <4 x i32> @urem(<4 x i32> %v0) {
 ; CHECK-LABEL: @urem(
-; CHECK-NEXT:    [[T1:%.*]] = urem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = urem <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
+; CHECK-NEXT:    [[T3:%.*]] = urem <4 x i32> <i32 1, i32 2, i32 7, i32 1>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = urem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0
@@ -187,9 +167,7 @@ define <4 x i32> @urem(<4 x i32> %v0) {
 
 define <4 x i32> @srem(<4 x i32> %v0) {
 ; CHECK-LABEL: @srem(
-; CHECK-NEXT:    [[T1:%.*]] = srem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = srem <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = srem <4 x i32> <i32 1, i32 2, i32 7, i32 4>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = srem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0
@@ -202,9 +180,7 @@ define <4 x i32> @srem(<4 x i32> %v0) {
 
 define <4 x float> @fadd(<4 x float> %v0) {
 ; CHECK-LABEL: @fadd(
-; CHECK-NEXT:    [[T1:%.*]] = fadd <4 x float> [[V0:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>
-; CHECK-NEXT:    [[T2:%.*]] = fadd <4 x float> [[V0]], <float 5.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x float> [[T1]], <4 x float> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = fadd <4 x float> [[V0:%.*]], <float 1.000000e+00, float 2.000000e+00, float 7.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
   %t1 = fadd <4 x float> %v0, <float 1.0, float 2.0, float 3.0, float 4.0>
@@ -215,9 +191,7 @@ define <4 x float> @fadd(<4 x float> %v0) {
 
 define <4 x double> @fsub(<4 x double> %v0) {
 ; CHECK-LABEL: @fsub(
-; CHECK-NEXT:    [[T1:%.*]] = fsub <4 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fsub <4 x double> <double 5.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x double> [[T1]], <4 x double> [[T2]], <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = fsub <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[T3]]
 ;
   %t1 = fsub <4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, %v0
@@ -230,9 +204,7 @@ define <4 x double> @fsub(<4 x double> %v0) {
 
 define <4 x float> @fmul(<4 x float> %v0) {
 ; CHECK-LABEL: @fmul(
-; CHECK-NEXT:    [[T1:%.*]] = fmul nnan ninf <4 x float> [[V0:%.*]], <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>
-; CHECK-NEXT:    [[T2:%.*]] = fmul nnan ninf <4 x float> [[V0]], <float 5.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x float> [[T1]], <4 x float> [[T2]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = fmul nnan ninf <4 x float> [[V0:%.*]], <float 1.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
   %t1 = fmul nnan ninf <4 x float> %v0, <float 1.0, float 2.0, float 3.0, float 4.0>
@@ -243,9 +215,7 @@ define <4 x float> @fmul(<4 x float> %v0) {
 
 define <4 x double> @fdiv(<4 x double> %v0) {
 ; CHECK-LABEL: @fdiv(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv nnan arcp <4 x double> <double 5.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x double> [[T1]], <4 x double> [[T2]], <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = fdiv nnan arcp <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[T3]]
 ;
   %t1 = fdiv fast <4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, %v0

@@ -75,10 +75,9 @@ define amdgpu_kernel void @insertelement_v3f32_3(<3 x float> addrspace(1)* %out,
 
 ; GCN-LABEL: {{^}}insertelement_to_sgpr:
 ; GCN-NOT: v_readfirstlane
-define amdgpu_ps <4 x float> @insertelement_to_sgpr() nounwind {
-  %tmp = load <4 x i32>, <4 x i32> addrspace(2)* undef
-  %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
-  %tmp2 = call <4 x float> @llvm.amdgcn.image.gather4.lz.v4f32.v2f32.v8i32(<2 x float> undef, <8 x i32> undef, <4 x i32> undef, i32 1, i1 false, i1 false, i1 false, i1 false, i1 true)
+define amdgpu_ps <4 x float> @insertelement_to_sgpr(<4 x i32> inreg %samp) nounwind {
+  %tmp1 = insertelement <4 x i32> %samp, i32 0, i32 0
+  %tmp2 = call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 1, float undef, float undef, <8 x i32> undef, <4 x i32> %tmp1, i1 0, i32 0, i32 0)
   ret <4 x float> %tmp2
 }
 
@@ -474,7 +473,7 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)
   ret void
 }
 
-declare <4 x float> @llvm.amdgcn.image.gather4.lz.v4f32.v2f32.v8i32(<2 x float>, <8 x i32>, <4 x i32>, i32, i1, i1, i1, i1, i1) #1
+declare <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

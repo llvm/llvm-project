@@ -385,6 +385,11 @@ int main (int argc, const char * argv[])
 	    [newMutableDictionary setObject:@"foo" forKey:@"bar19"];
 	    [newMutableDictionary setObject:@"foo" forKey:@"bar20"];
 
+	    id cfKeys[2] = { @"foo", @"bar", @"baz", @"quux" };
+	    id cfValues[2] = { @"foo", @"bar", @"baz", @"quux" };
+	    NSDictionary *nsDictionary = CFBridgingRelease(CFDictionaryCreate(nil, (void *)cfKeys, (void *)cfValues, 2, nil, nil));
+	    CFDictionaryRef cfDictionaryRef = CFDictionaryCreate(nil, (void *)cfKeys, (void *)cfValues, 3, nil, nil);
+
 	    NSAttributedString* attrString = [[NSAttributedString alloc] initWithString:@"hello world from foo" attributes:newDictionary];
 	    [attrString isEqual:nil];
 	    NSAttributedString* mutableAttrString = [[NSMutableAttributedString alloc] initWithString:@"hello world from foo" attributes:newDictionary];

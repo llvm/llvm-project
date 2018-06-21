@@ -161,10 +161,9 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
 
   case 'A':
     if (execution_context) {
-      auto target_sp =
-          execution_context ? execution_context->GetTargetSP() : TargetSP();
-      auto platform_sp = target_sp ? target_sp->GetPlatform() : PlatformSP();
-      arch = Platform::GetAugmentedArchSpec(platform_sp.get(), option_arg);
+      const auto &target_sp = execution_context->GetTargetSP();
+      auto platform_ptr = target_sp ? target_sp->GetPlatform().get() : nullptr;
+      arch = Platform::GetAugmentedArchSpec(platform_ptr, option_arg);
     }
     break;
 

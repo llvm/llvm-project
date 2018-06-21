@@ -40,6 +40,8 @@ public:
 
   AMDGPUTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
+  virtual void EmitDirectiveAMDGCNTarget(StringRef Target) = 0;
+
   virtual void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                                  uint32_t Minor) = 0;
 
@@ -65,14 +67,19 @@ public:
   virtual bool EmitPALMetadata(const AMDGPU::PALMD::Metadata &PALMetadata) = 0;
 
   virtual void EmitAmdhsaKernelDescriptor(
-      StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor) = 0;
+      const MCSubtargetInfo &STI, StringRef KernelName,
+      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
+      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
+      bool ReserveXNACK) = 0;
 };
 
 class AMDGPUTargetAsmStreamer final : public AMDGPUTargetStreamer {
   formatted_raw_ostream &OS;
 public:
   AMDGPUTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
+
+  void EmitDirectiveAMDGCNTarget(StringRef Target) override;
+
   void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                          uint32_t Minor) override;
 
@@ -94,8 +101,10 @@ public:
   bool EmitPALMetadata(const AMDGPU::PALMD::Metadata &PALMetadata) override;
 
   void EmitAmdhsaKernelDescriptor(
-      StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor) override;
+      const MCSubtargetInfo &STI, StringRef KernelName,
+      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
+      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
+      bool ReserveXNACK) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -109,6 +118,8 @@ public:
 
   MCELFStreamer &getStreamer();
 
+  void EmitDirectiveAMDGCNTarget(StringRef Target) override;
+
   void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                          uint32_t Minor) override;
 
@@ -130,8 +141,10 @@ public:
   bool EmitPALMetadata(const AMDGPU::PALMD::Metadata &PALMetadata) override;
 
   void EmitAmdhsaKernelDescriptor(
-      StringRef KernelName,
-      const amdhsa::kernel_descriptor_t &KernelDescriptor) override;
+      const MCSubtargetInfo &STI, StringRef KernelName,
+      const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
+      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
+      bool ReserveXNACK) override;
 };
 
 }

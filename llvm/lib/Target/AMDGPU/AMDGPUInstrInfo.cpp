@@ -28,10 +28,9 @@ using namespace llvm;
 
 namespace llvm {
 namespace AMDGPU {
-#define GET_RSRCINTRINSIC_IMPL
-#include "AMDGPUGenSearchableTables.inc"
-
-#define GET_D16IMAGEDIMINTRINSIC_IMPL
+#define GET_D16ImageDimIntrinsics_IMPL
+#define GET_ImageDimIntrinsicTable_IMPL
+#define GET_RsrcIntrinsics_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 }
 }
@@ -109,8 +108,7 @@ int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
   // Adjust the encoding family to GFX80 for D16 buffer instructions when the
   // subtarget has UnpackedD16VMem feature.
   // TODO: remove this when we discard GFX80 encoding.
-  if (ST.hasUnpackedD16VMem() && (get(Opcode).TSFlags & SIInstrFlags::D16)
-                              && !(get(Opcode).TSFlags & SIInstrFlags::MIMG))
+  if (ST.hasUnpackedD16VMem() && (get(Opcode).TSFlags & SIInstrFlags::D16Buf))
     Gen = SIEncodingFamily::GFX80;
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
