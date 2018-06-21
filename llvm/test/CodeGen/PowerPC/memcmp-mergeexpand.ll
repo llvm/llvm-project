@@ -7,7 +7,7 @@
 
 define zeroext i1 @opeq1(
 ; PPC64LE-LABEL: opeq1:
-; PPC64LE:       # %bb.0: # %opeq1.exit
+; PPC64LE:       # %bb.0: # %entry
 ; PPC64LE-NEXT:    ld 3, 0(3)
 ; PPC64LE-NEXT:    ld 4, 0(4)
 ; PPC64LE-NEXT:    xor 3, 3, 4

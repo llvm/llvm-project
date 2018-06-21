@@ -207,7 +207,7 @@ public:
   ///
   /// \returns a address range vector that might be empty if no address range
   /// information is available.
-  DWARFAddressRangesVector getAddressRanges() const;
+  Expected<DWARFAddressRangesVector> getAddressRanges() const;
 
   /// Get all address ranges for any DW_TAG_subprogram DIEs in this DIE or any
   /// of its children.

@@ -686,7 +686,7 @@ define void @crash() nounwind alwaysinline {
 ; X32-NEXT:  ## %bb.2: ## %ret
 ; X32-NEXT:    retl
 ; X32-NEXT:    .p2align 4, 0x90
-; X32-NEXT:  LBB33_1: ## %footer349VF
+; X32-NEXT:  LBB33_1: ## %footer329VF
 ; X32-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X32-NEXT:    jmp LBB33_1
 ;
@@ -698,7 +698,7 @@ define void @crash() nounwind alwaysinline {
 ; X64-NEXT:  ## %bb.2: ## %ret
 ; X64-NEXT:    retq
 ; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  LBB33_1: ## %footer349VF
+; X64-NEXT:  LBB33_1: ## %footer329VF
 ; X64-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    jmp LBB33_1
 WGLoopsEntry:

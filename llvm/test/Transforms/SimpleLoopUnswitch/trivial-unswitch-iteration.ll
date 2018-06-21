@@ -13,7 +13,7 @@ entry:
 ; CHECK-NEXT:    br i1 %{{.*}}, label %entry.split.split, label %loop_exit
 ;
 ; CHECK:       entry.split.split:
-; CHECK-NEXT:    br label %do_something
+; CHECK-NEXT:    br label %loop_begin
 
 loop_begin:
   br i1 %cond1, label %continue, label %loop_exit ; first trivial condition
@@ -27,9 +27,9 @@ continue:
 do_something:
   call void @some_func() noreturn nounwind
   br label %loop_begin
-; CHECK:       do_something:
+; CHECK:       loop_begin:
 ; CHECK-NEXT:    call
-; CHECK-NEXT:    br label %do_something
+; CHECK-NEXT:    br label %loop_begin
 
 loop_exit:
   ret i32 0

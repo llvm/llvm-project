@@ -80,6 +80,39 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                           Context.getTrivialTypeSourceInfo(Type, NameLoc));
 }
 
+ParsedType Sema::getConstructorName(IdentifierInfo &II,
+                                    SourceLocation NameLoc,
+                                    Scope *S, CXXScopeSpec &SS) {
+  CXXRecordDecl *CurClass = getCurrentClass(S, &SS);
+  assert(CurClass && &II == CurClass->getIdentifier() &&
+         "not a constructor name");
+
+  if (SS.isNotEmpty() && RequireCompleteDeclContext(SS, CurClass))
+    return ParsedType();
+
+  // Find the injected-class-name declaration. Note that we make no attempt to
+  // diagnose cases where the injected-class-name is shadowed: the only
+  // declaration that can validly shadow the injected-class-name is a
+  // non-static data member, and if the class contains both a non-static data
+  // member and a constructor then it is ill-formed (we check that in
+  // CheckCompletedCXXClass).
+  CXXRecordDecl *InjectedClassName = nullptr;
+  for (NamedDecl *ND : CurClass->lookup(&II)) {
+    auto *RD = dyn_cast<CXXRecordDecl>(ND);
+    if (RD && RD->isInjectedClassName()) {
+      InjectedClassName = RD;
+      break;
+    }
+  }
+  assert(InjectedClassName && "couldn't find injected class name");
+
+  QualType T = Context.getTypeDeclType(InjectedClassName);
+  DiagnoseUseOfDecl(InjectedClassName, NameLoc);
+  MarkAnyDeclReferenced(NameLoc, InjectedClassName, /*OdrUse=*/false);
+
+  return ParsedType::make(T);
+}
+
 ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
                                    IdentifierInfo &II,
                                    SourceLocation NameLoc,

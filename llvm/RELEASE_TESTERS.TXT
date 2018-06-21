@@ -45,8 +45,3 @@ N: Diana Picus
 E: diana.picus@linaro.org
 T: ARM, AArch64
 O: Linux
-
-N: Simon Dardis
-E: simon.dardis@mips.com
-T: MIPS
-O: Linux

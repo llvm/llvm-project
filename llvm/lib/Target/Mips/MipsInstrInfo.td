@@ -3016,33 +3016,34 @@ multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
               (Addiu GPROpnd:$hi, tglobaltlsaddr:$lo)>;
 }
 
-defm : MipsHiLoRelocs<LUi, ADDiu, ZERO, GPR32Opnd>;
-
-def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi tglobaladdr:$in)>;
-def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>;
-
-// gp_rel relocs
-def : MipsPat<(add GPR32:$gp, (MipsGPRel tglobaladdr:$in)),
-              (ADDiu GPR32:$gp, tglobaladdr:$in)>, ABI_NOT_N64;
-def : MipsPat<(add GPR32:$gp, (MipsGPRel tconstpool:$in)),
-              (ADDiu GPR32:$gp, tconstpool:$in)>, ABI_NOT_N64;
-
-// wrapper_pic
-class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:
-      MipsPat<(MipsWrapper RC:$gp, node:$in),
-              (ADDiuOp RC:$gp, node:$in)>;
-
-def : WrapperPat<tglobaladdr, ADDiu, GPR32>;
-def : WrapperPat<tconstpool, ADDiu, GPR32>;
-def : WrapperPat<texternalsym, ADDiu, GPR32>;
-def : WrapperPat<tblockaddress, ADDiu, GPR32>;
-def : WrapperPat<tjumptable, ADDiu, GPR32>;
-def : WrapperPat<tglobaltlsaddr, ADDiu, GPR32>;
-
 let AdditionalPredicates = [NotInMicroMips] in {
-// Mips does not have "not", so we expand our way
-def : MipsPat<(not GPR32:$in),
-              (NOR GPR32Opnd:$in, ZERO)>;
+  defm : MipsHiLoRelocs<LUi, ADDiu, ZERO, GPR32Opnd>, ISA_MIPS1;
+
+  def : MipsPat<(MipsGotHi tglobaladdr:$in), (LUi tglobaladdr:$in)>, ISA_MIPS1;
+  def : MipsPat<(MipsGotHi texternalsym:$in), (LUi texternalsym:$in)>,
+        ISA_MIPS1;
+
+  // gp_rel relocs
+  def : MipsPat<(add GPR32:$gp, (MipsGPRel tglobaladdr:$in)),
+                (ADDiu GPR32:$gp, tglobaladdr:$in)>, ISA_MIPS1, ABI_NOT_N64;
+  def : MipsPat<(add GPR32:$gp, (MipsGPRel tconstpool:$in)),
+                (ADDiu GPR32:$gp, tconstpool:$in)>, ISA_MIPS1, ABI_NOT_N64;
+
+  // wrapper_pic
+  class WrapperPat<SDNode node, Instruction ADDiuOp, RegisterClass RC>:
+        MipsPat<(MipsWrapper RC:$gp, node:$in),
+                (ADDiuOp RC:$gp, node:$in)>;
+
+  def : WrapperPat<tglobaladdr, ADDiu, GPR32>, ISA_MIPS1;
+  def : WrapperPat<tconstpool, ADDiu, GPR32>, ISA_MIPS1;
+  def : WrapperPat<texternalsym, ADDiu, GPR32>, ISA_MIPS1;
+  def : WrapperPat<tblockaddress, ADDiu, GPR32>, ISA_MIPS1;
+  def : WrapperPat<tjumptable, ADDiu, GPR32>, ISA_MIPS1;
+  def : WrapperPat<tglobaltlsaddr, ADDiu, GPR32>, ISA_MIPS1;
+
+  // Mips does not have "not", so we expand our way
+  def : MipsPat<(not GPR32:$in),
+                (NOR GPR32Opnd:$in, ZERO)>, ISA_MIPS1;
 }
 
 // extended loads

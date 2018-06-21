@@ -97,7 +97,7 @@ public:
   Error extract(DWARFDataExtractor Data, uint32_t *OffsetPtr);
   /// Look up a rangelist based on a given offset. Extract it and enter it into
   /// the ranges map if necessary.
-  Optional<DWARFDebugRnglist> findRangeList(DWARFDataExtractor Data,
+  Expected<DWARFDebugRnglist> findRangeList(DWARFDataExtractor Data,
                                             uint32_t Offset);
   uint32_t getHeaderOffset() const { return HeaderOffset; }
   uint8_t getAddrSize() const { return HeaderData.AddrSize; }

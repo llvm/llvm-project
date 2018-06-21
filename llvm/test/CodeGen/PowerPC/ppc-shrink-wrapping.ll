@@ -169,7 +169,7 @@ declare i32 @something(...)
 ; CHECK-NEXT: bne 0, .[[LOOP]]
 ;
 ; Next BB
-; CHECK: %for.end
+; CHECK: %for.exit
 ; CHECK: mtlr {{[0-9]+}}
 ; CHECK-NEXT: blr
 define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {

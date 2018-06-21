@@ -34,9 +34,6 @@ using namespace lld;
 using namespace lld::wasm;
 
 void lld::wasm::markLive() {
-  if (!Config->GcSections)
-    return;
-
   LLVM_DEBUG(dbgs() << "markLive\n");
   SmallVector<InputChunk *, 256> Q;
 
@@ -44,6 +41,8 @@ void lld::wasm::markLive() {
     if (!Sym || Sym->isLive())
       return;
     Sym->markLive();
+    if (Sym->SignatureMismatch)
+      error("function signature mismatch: " + Sym->getName());
     if (InputChunk *Chunk = Sym->getChunk())
       Q.push_back(Chunk);
   };

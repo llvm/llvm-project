@@ -3503,7 +3503,11 @@ void DwarfLinker::patchRangesForUnit(const CompileUnit &Unit,
   for (const auto &RangeAttribute : Unit.getRangesAttributes()) {
     uint32_t Offset = RangeAttribute.get();
     RangeAttribute.set(Streamer->getRangesSectionSize());
-    RangeList.extract(RangeExtractor, &Offset);
+    if (Error E = RangeList.extract(RangeExtractor, &Offset)) {
+      llvm::consumeError(std::move(E));
+      reportWarning("invalid range list ignored.", DMO);
+      RangeList.clear();
+    }
     const auto &Entries = RangeList.getEntries();
     if (!Entries.empty()) {
       const DWARFDebugRangeList::RangeListEntry &First = Entries.front();

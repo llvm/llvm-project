@@ -43,7 +43,7 @@ entry:
 
 define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-LABEL: pr26232:
-; AVX:       # %bb.0: # %for_loop599.preheader
+; AVX:       # %bb.0: # %allocas
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX-NEXT:    .p2align 4, 0x90
@@ -64,7 +64,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-NEXT:    retq
 ;
 ; KNL-32-LABEL: pr26232:
-; KNL-32:       # %bb.0: # %for_loop599.preheader
+; KNL-32:       # %bb.0: # %allocas
 ; KNL-32-NEXT:    pushl %esi
 ; KNL-32-NEXT:    .cfi_def_cfa_offset 8
 ; KNL-32-NEXT:    .cfi_offset %esi, -8
