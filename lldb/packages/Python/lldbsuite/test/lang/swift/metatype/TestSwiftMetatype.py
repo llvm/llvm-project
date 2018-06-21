@@ -65,9 +65,6 @@ class TestSwiftMetatype(TestBase):
 
         var_s = self.frame.FindVariable("s")
         var_c = self.frame.FindVariable("c")
-        # Enrico, there is no k var in the .swift file, and there is
-        # no check on the k below.  Commenting out for you to resolve.
-        # var_k = self.frame.FindVariable("k")
         var_f = self.frame.FindVariable("f")
         var_t = self.frame.FindVariable("t")
         var_p = self.frame.FindVariable("p")
