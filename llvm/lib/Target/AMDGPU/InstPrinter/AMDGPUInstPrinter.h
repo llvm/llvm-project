@@ -84,6 +84,8 @@ private:
                  raw_ostream &O);
   void printLWE(const MCInst *MI, unsigned OpNo,
                 const MCSubtargetInfo &STI, raw_ostream &O);
+  void printD16(const MCInst *MI, unsigned OpNo,
+                const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpCompr(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpVM(const MCInst *MI, unsigned OpNo,

@@ -77,12 +77,12 @@ static cl::opt<int>
 /// which have the exact same opcode and finds all inputs which are loop
 /// invariant. For some operations these can be re-associated and unswitched out
 /// of the loop entirely.
-static SmallVector<Value *, 4>
+static TinyPtrVector<Value *>
 collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
                                          LoopInfo &LI) {
-  SmallVector<Value *, 4> Invariants;
   assert(!L.isLoopInvariant(&Root) &&
          "Only need to walk the graph if root itself is not invariant.");
+  TinyPtrVector<Value *> Invariants;
 
   // Build a worklist and recurse through operators collecting invariants.
   SmallVector<Instruction *, 4> Worklist;
@@ -148,6 +148,26 @@ static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
       return false;
   }
   llvm_unreachable("Basic blocks should never be empty!");
+}
+
+/// Insert code to test a set of loop invariant values, and conditionally branch
+/// on them.
+static void buildPartialUnswitchConditionalBranch(BasicBlock &BB,
+                                                  ArrayRef<Value *> Invariants,
+                                                  bool Direction,
+                                                  BasicBlock &UnswitchedSucc,
+                                                  BasicBlock &NormalSucc) {
+  IRBuilder<> IRB(&BB);
+  Value *Cond = Invariants.front();
+  for (Value *Invariant :
+       make_range(std::next(Invariants.begin()), Invariants.end()))
+    if (Direction)
+      Cond = IRB.CreateOr(Cond, Invariant);
+    else
+      Cond = IRB.CreateAnd(Cond, Invariant);
+
+  IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
+                   Direction ? &NormalSucc : &UnswitchedSucc);
 }
 
 /// Rewrite the PHI nodes in an unswitched loop exit basic block.
@@ -239,7 +259,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   LLVM_DEBUG(dbgs() << "  Trying to unswitch branch: " << BI << "\n");
 
   // The loop invariant values that we want to unswitch.
-  SmallVector<Value *, 4> Invariants;
+  TinyPtrVector<Value *> Invariants;
 
   // When true, we're fully unswitching the branch rather than just unswitching
   // some input conditions to the branch.
@@ -336,8 +356,6 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   } else {
     // Only unswitching a subset of inputs to the condition, so we will need to
     // build a new branch that merges the invariant inputs.
-    IRBuilder<> IRB(OldPH);
-    Value *Cond = Invariants.front();
     if (ExitDirection)
       assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
                  Instruction::Or &&
@@ -346,17 +364,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
       assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
                  Instruction::And &&
              "Must have an `and` of `i1`s for the condition!");
-    for (Value *Invariant :
-         make_range(std::next(Invariants.begin()), Invariants.end()))
-      if (ExitDirection)
-        Cond = IRB.CreateOr(Cond, Invariant);
-      else
-        Cond = IRB.CreateAnd(Cond, Invariant);
-
-    BasicBlock *Succs[2];
-    Succs[LoopExitSuccIdx] = UnswitchedBB;
-    Succs[1 - LoopExitSuccIdx] = NewPH;
-    IRB.CreateCondBr(Cond, Succs[0], Succs[1]);
+    buildPartialUnswitchConditionalBranch(*OldPH, Invariants, ExitDirection,
+                                          *UnswitchedBB, *NewPH);
   }
 
   // Rewrite the relevant PHI nodes.
@@ -1584,16 +1593,38 @@ void visitDomSubTree(DominatorTree &DT, BasicBlock *BB, CallableT Callable) {
 /// Once unswitching has been performed it runs the provided callback to report
 /// the new loops and no-longer valid loops to the caller.
 static bool unswitchInvariantBranch(
-    Loop &L, BranchInst &BI, DominatorTree &DT, LoopInfo &LI,
-    AssumptionCache &AC,
+    Loop &L, BranchInst &BI, ArrayRef<Value *> Invariants, DominatorTree &DT,
+    LoopInfo &LI, AssumptionCache &AC,
     function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB) {
-  assert(BI.isConditional() && "Can only unswitch a conditional branch!");
-  assert(L.isLoopInvariant(BI.getCondition()) &&
-         "Can only unswitch an invariant branch condition!");
-
-  // Constant and BBs tracking the cloned and continuing successor.
-  const int ClonedSucc = 0;
   auto *ParentBB = BI.getParent();
+
+  // We can only unswitch conditional branches with an invariant condition or
+  // combining invariant conditions with an instruction.
+  assert(BI.isConditional() && "Can only unswitch a conditional branch!");
+  bool FullUnswitch = BI.getCondition() == Invariants[0];
+  if (FullUnswitch)
+    assert(Invariants.size() == 1 &&
+           "Cannot have other invariants with full unswitching!");
+  else
+    assert(isa<Instruction>(BI.getCondition()) &&
+           "Partial unswitching requires an instruction as the condition!");
+
+  // Constant and BBs tracking the cloned and continuing successor. When we are
+  // unswitching the entire condition, this can just be trivially chosen to
+  // unswitch towards `true`. However, when we are unswitching a set of
+  // invariants combined with `and` or `or`, the combining operation determines
+  // the best direction to unswitch: we want to unswitch the direction that will
+  // collapse the branch.
+  bool Direction = true;
+  int ClonedSucc = 0;
+  if (!FullUnswitch) {
+    if (cast<Instruction>(BI.getCondition())->getOpcode() != Instruction::Or) {
+      assert(cast<Instruction>(BI.getCondition())->getOpcode() == Instruction::And &&
+        "Only `or` and `and` instructions can combine invariants being unswitched.");
+      Direction = false;
+      ClonedSucc = 1;
+    }
+  }
   auto *UnswitchedSuccBB = BI.getSuccessor(ClonedSucc);
   auto *ContinueSuccBB = BI.getSuccessor(1 - ClonedSucc);
 
@@ -1651,15 +1682,17 @@ static bool unswitchInvariantBranch(
       return true;
     });
   }
-  // Similarly, if the edge we *are* cloning in the unswitch (the unswitched
-  // edge) dominates its target, we will end up with dead nodes in the original
-  // loop and its exits that will need to be deleted. Here, we just retain that
-  // the property holds and will compute the deleted set later.
+  // If we are doing full unswitching, then similarly to the above, the edge we
+  // *are* cloning in the unswitch (the unswitched edge) dominates its target,
+  // we will end up with dead nodes in the original loop and its exits that will
+  // need to be deleted. Here, we just retain that the property holds and will
+  // compute the deleted set later.
   bool DeleteUnswitchedSucc =
-      UnswitchedSuccBB->getUniquePredecessor() ||
-      llvm::all_of(predecessors(UnswitchedSuccBB), [&](BasicBlock *PredBB) {
-        return PredBB == ParentBB || DT.dominates(UnswitchedSuccBB, PredBB);
-      });
+      FullUnswitch &&
+      (UnswitchedSuccBB->getUniquePredecessor() ||
+       llvm::all_of(predecessors(UnswitchedSuccBB), [&](BasicBlock *PredBB) {
+         return PredBB == ParentBB || DT.dominates(UnswitchedSuccBB, PredBB);
+       }));
 
   // Split the preheader, so that we know that there is a safe place to insert
   // the conditional branch. We will change the preheader to have a conditional
@@ -1680,19 +1713,32 @@ static bool unswitchInvariantBranch(
       L, LoopPH, SplitBB, ExitBlocks, ParentBB, UnswitchedSuccBB,
       ContinueSuccBB, SkippedLoopAndExitBlocks, VMap, DTUpdates, AC, DT, LI);
 
-  // Remove the parent as a predecessor of the unswitched successor.
-  UnswitchedSuccBB->removePredecessor(ParentBB, /*DontDeleteUselessPHIs*/ true);
-
-  // Now splice the branch from the original loop and use it to select between
-  // the two loops.
+  // The stitching of the branched code back together depends on whether we're
+  // doing full unswitching or not with the exception that we always want to
+  // nuke the initial terminator placed in the split block.
   SplitBB->getTerminator()->eraseFromParent();
-  SplitBB->getInstList().splice(SplitBB->end(), ParentBB->getInstList(), BI);
-  BI.setSuccessor(ClonedSucc, ClonedPH);
-  BI.setSuccessor(1 - ClonedSucc, LoopPH);
+  if (FullUnswitch) {
+    // Remove the parent as a predecessor of the
+    // unswitched successor.
+    UnswitchedSuccBB->removePredecessor(ParentBB,
+                                        /*DontDeleteUselessPHIs*/ true);
+    DTUpdates.push_back({DominatorTree::Delete, ParentBB, UnswitchedSuccBB});
 
-  // Create a new unconditional branch to the continuing block (as opposed to
-  // the one cloned).
-  BranchInst::Create(ContinueSuccBB, ParentBB);
+    // Now splice the branch from the original loop and use it to select between
+    // the two loops.
+    SplitBB->getInstList().splice(SplitBB->end(), ParentBB->getInstList(), BI);
+    BI.setSuccessor(ClonedSucc, ClonedPH);
+    BI.setSuccessor(1 - ClonedSucc, LoopPH);
+
+    // Create a new unconditional branch to the continuing block (as opposed to
+    // the one cloned).
+    BranchInst::Create(ContinueSuccBB, ParentBB);
+  } else {
+    // When doing a partial unswitch, we have to do a bit more work to build up
+    // the branch in the split block.
+    buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
+                                          *ClonedPH, *LoopPH);
+  }
 
   // Before we update the dominator tree, collect the dead blocks if we're going
   // to end up deleting the unswitched successor.
@@ -1717,10 +1763,9 @@ static bool unswitchInvariantBranch(
     }
   }
 
-  // Add the remaining edges to our updates and apply them to get an up-to-date
+  // Add the remaining edge to our updates and apply them to get an up-to-date
   // dominator tree. Note that this will cause the dead blocks above to be
   // unreachable and no longer in the dominator tree.
-  DTUpdates.push_back({DominatorTree::Delete, ParentBB, UnswitchedSuccBB});
   DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
   DT.applyUpdates(DTUpdates);
 
@@ -1744,6 +1789,32 @@ static bool unswitchInvariantBranch(
   // FIXME: Remove this when the bugs stop showing up and rely on existing
   // verification steps.
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+
+  // Now we want to replace all the uses of the invariants within both the
+  // original and cloned blocks. We do this here so that we can use the now
+  // updated dominator tree to identify which side the users are on.
+  ConstantInt *UnswitchedReplacement =
+      Direction ? ConstantInt::getTrue(BI.getContext())
+                : ConstantInt::getFalse(BI.getContext());
+  ConstantInt *ContinueReplacement =
+      Direction ? ConstantInt::getFalse(BI.getContext())
+                : ConstantInt::getTrue(BI.getContext());
+  for (Value *Invariant : Invariants)
+    for (auto UI = Invariant->use_begin(), UE = Invariant->use_end();
+         UI != UE;) {
+      // Grab the use and walk past it so we can clobber it in the use list.
+      Use *U = &*UI++;
+      Instruction *UserI = dyn_cast<Instruction>(U->getUser());
+      if (!UserI)
+        continue;
+
+      // Replace it with the 'continue' side if in the main loop body, and the
+      // unswitched if in the cloned blocks.
+      if (DT.dominates(LoopPH, UserI->getParent()))
+        U->set(ContinueReplacement);
+      else if (DT.dominates(ClonedPH, UserI->getParent()))
+        U->set(UnswitchedReplacement);
+    }
 
   // We can change which blocks are exit blocks of all the cloned sibling
   // loops, the current loop, and any parent loops which shared exit blocks
@@ -1854,47 +1925,41 @@ computeDomSubtreeCost(DomTreeNode &N,
   return Cost;
 }
 
-/// Unswitch control flow predicated on loop invariant conditions.
-///
-/// This first hoists all branches or switches which are trivial (IE, do not
-/// require duplicating any part of the loop) out of the loop body. It then
-/// looks at other loop invariant control flows and tries to unswitch those as
-/// well by cloning the loop if the result is small enough.
-static bool
-unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
-             TargetTransformInfo &TTI, bool NonTrivial,
-             function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB) {
-  assert(L.isRecursivelyLCSSAForm(DT, LI) &&
-         "Loops must be in LCSSA form before unswitching.");
+static bool unswitchBestCondition(
+    Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
+    TargetTransformInfo &TTI,
+    function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB) {
+  // Collect all invariant conditions within this loop (as opposed to an inner
+  // loop which would be handled when visiting that inner loop).
+  SmallVector<std::pair<TerminatorInst *, TinyPtrVector<Value *>>, 4>
+      UnswitchCandidates;
+  for (auto *BB : L.blocks()) {
+    if (LI.getLoopFor(BB) != &L)
+      continue;
 
-  // Must be in loop simplified form: we need a preheader and dedicated exits.
-  if (!L.isLoopSimplifyForm())
-    return false;
+    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    // FIXME: Handle switches here!
+    if (!BI || !BI->isConditional() || isa<Constant>(BI->getCondition()) ||
+        BI->getSuccessor(0) == BI->getSuccessor(1))
+      continue;
 
-  // Try trivial unswitch first before loop over other basic blocks in the loop.
-  if (unswitchAllTrivialConditions(L, DT, LI)) {
-    // If we unswitched successfully we will want to clean up the loop before
-    // processing it further so just mark it as unswitched and return.
-    UnswitchCB(/*CurrentLoopValid*/ true, {});
-    return true;
+    if (L.isLoopInvariant(BI->getCondition())) {
+      UnswitchCandidates.push_back({BI, {BI->getCondition()}});
+      continue;
+    }
+
+    Instruction &CondI = *cast<Instruction>(BI->getCondition());
+    if (CondI.getOpcode() != Instruction::And &&
+      CondI.getOpcode() != Instruction::Or)
+      continue;
+
+    TinyPtrVector<Value *> Invariants =
+        collectHomogenousInstGraphLoopInvariants(L, CondI, LI);
+    if (Invariants.empty())
+      continue;
+
+    UnswitchCandidates.push_back({BI, std::move(Invariants)});
   }
-
-  // If we're not doing non-trivial unswitching, we're done. We both accept
-  // a parameter but also check a local flag that can be used for testing
-  // a debugging.
-  if (!NonTrivial && !EnableNonTrivialUnswitch)
-    return false;
-
-  // Collect all remaining invariant branch conditions within this loop (as
-  // opposed to an inner loop which would be handled when visiting that inner
-  // loop).
-  SmallVector<TerminatorInst *, 4> UnswitchCandidates;
-  for (auto *BB : L.blocks())
-    if (LI.getLoopFor(BB) == &L)
-      if (auto *BI = dyn_cast<BranchInst>(BB->getTerminator()))
-        if (BI->isConditional() && L.isLoopInvariant(BI->getCondition()) &&
-            BI->getSuccessor(0) != BI->getSuccessor(1))
-          UnswitchCandidates.push_back(BI);
 
   // If we didn't find any candidates, we're done.
   if (UnswitchCandidates.empty())
@@ -1968,8 +2033,8 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   SmallDenseMap<DomTreeNode *, int, 4> DTCostMap;
   // Given a terminator which might be unswitched, computes the non-duplicated
   // cost for that terminator.
-  auto ComputeUnswitchedCost = [&](TerminatorInst *TI) {
-    BasicBlock &BB = *TI->getParent();
+  auto ComputeUnswitchedCost = [&](TerminatorInst &TI, bool FullUnswitch) {
+    BasicBlock &BB = *TI.getParent();
     SmallPtrSet<BasicBlock *, 4> Visited;
 
     int Cost = LoopCost;
@@ -1977,6 +2042,26 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
       // Don't count successors more than once.
       if (!Visited.insert(SuccBB).second)
         continue;
+
+      // If this is a partial unswitch candidate, then it must be a conditional
+      // branch with a condition of either `or` or `and`. In that case, one of
+      // the successors is necessarily duplicated, so don't even try to remove
+      // its cost.
+      if (!FullUnswitch) {
+        auto &BI = cast<BranchInst>(TI);
+        if (cast<Instruction>(BI.getCondition())->getOpcode() ==
+            Instruction::And) {
+          if (SuccBB == BI.getSuccessor(1))
+            continue;
+        } else {
+          assert(cast<Instruction>(BI.getCondition())->getOpcode() ==
+                     Instruction::Or &&
+                 "Only `and` and `or` conditions can result in a partial "
+                 "unswitch!");
+          if (SuccBB == BI.getSuccessor(0))
+            continue;
+        }
+      }
 
       // This successor's domtree will not need to be duplicated after
       // unswitching if the edge to the successor dominates it (and thus the
@@ -2001,13 +2086,20 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   };
   TerminatorInst *BestUnswitchTI = nullptr;
   int BestUnswitchCost;
-  for (TerminatorInst *CandidateTI : UnswitchCandidates) {
-    int CandidateCost = ComputeUnswitchedCost(CandidateTI);
+  ArrayRef<Value *> BestUnswitchInvariants;
+  for (auto &TerminatorAndInvariants : UnswitchCandidates) {
+    TerminatorInst &TI = *TerminatorAndInvariants.first;
+    ArrayRef<Value *> Invariants = TerminatorAndInvariants.second;
+    BranchInst *BI = dyn_cast<BranchInst>(&TI);
+    int CandidateCost =
+        ComputeUnswitchedCost(TI, /*FullUnswitch*/ Invariants.size() == 1 && BI &&
+                                      Invariants[0] == BI->getCondition());
     LLVM_DEBUG(dbgs() << "  Computed cost of " << CandidateCost
-                      << " for unswitch candidate: " << *CandidateTI << "\n");
+                      << " for unswitch candidate: " << TI << "\n");
     if (!BestUnswitchTI || CandidateCost < BestUnswitchCost) {
-      BestUnswitchTI = CandidateTI;
+      BestUnswitchTI = &TI;
       BestUnswitchCost = CandidateCost;
+      BestUnswitchInvariants = Invariants;
     }
   }
 
@@ -2017,11 +2109,64 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
     return false;
   }
 
+  auto *UnswitchBI = dyn_cast<BranchInst>(BestUnswitchTI);
+  if (!UnswitchBI) {
+    // FIXME: Add support for unswitching a switch here!
+    LLVM_DEBUG(dbgs() << "Cannot unswitch anything but a branch!\n");
+    return false;
+  }
+
   LLVM_DEBUG(dbgs() << "  Trying to unswitch non-trivial (cost = "
-                    << BestUnswitchCost << ") branch: " << *BestUnswitchTI
-                    << "\n");
-  return unswitchInvariantBranch(L, cast<BranchInst>(*BestUnswitchTI), DT, LI,
+                    << BestUnswitchCost << ") branch: " << *UnswitchBI << "\n");
+  return unswitchInvariantBranch(L, *UnswitchBI, BestUnswitchInvariants, DT, LI,
                                  AC, UnswitchCB);
+}
+
+/// Unswitch control flow predicated on loop invariant conditions.
+///
+/// This first hoists all branches or switches which are trivial (IE, do not
+/// require duplicating any part of the loop) out of the loop body. It then
+/// looks at other loop invariant control flows and tries to unswitch those as
+/// well by cloning the loop if the result is small enough.
+static bool
+unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
+             TargetTransformInfo &TTI, bool NonTrivial,
+             function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB) {
+  assert(L.isRecursivelyLCSSAForm(DT, LI) &&
+         "Loops must be in LCSSA form before unswitching.");
+  bool Changed = false;
+
+  // Must be in loop simplified form: we need a preheader and dedicated exits.
+  if (!L.isLoopSimplifyForm())
+    return false;
+
+  // Try trivial unswitch first before loop over other basic blocks in the loop.
+  if (unswitchAllTrivialConditions(L, DT, LI)) {
+    // If we unswitched successfully we will want to clean up the loop before
+    // processing it further so just mark it as unswitched and return.
+    UnswitchCB(/*CurrentLoopValid*/ true, {});
+    return true;
+  }
+
+  // If we're not doing non-trivial unswitching, we're done. We both accept
+  // a parameter but also check a local flag that can be used for testing
+  // a debugging.
+  if (!NonTrivial && !EnableNonTrivialUnswitch)
+    return false;
+
+  // For non-trivial unswitching, because it often creates new loops, we rely on
+  // the pass manager to iterate on the loops rather than trying to immediately
+  // reach a fixed point. There is no substantial advantage to iterating
+  // internally, and if any of the new loops are simplified enough to contain
+  // trivial unswitching we want to prefer those.
+
+  // Try to unswitch the best invariant condition. We prefer this full unswitch to
+  // a partial unswitch when possible below the threshold.
+  if (unswitchBestCondition(L, DT, LI, AC, TTI, UnswitchCB))
+    return true;
+
+  // No other opportunities to unswitch.
+  return Changed;
 }
 
 PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,

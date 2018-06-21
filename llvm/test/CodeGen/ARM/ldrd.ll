@@ -207,5 +207,57 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: bitcast_ptr_ldr
+; CHECK-NOT: ldrd
+define i32 @bitcast_ptr_ldr(i16* %In) {
+entry:
+  %0 = bitcast i16* %In to i32*
+  %in.addr.0 = getelementptr inbounds i32, i32* %0, i32 0
+  %in.addr.1 = getelementptr inbounds i32, i32* %0, i32 1
+  %1 = load i32, i32* %in.addr.0, align 2
+  %2 = load i32, i32* %in.addr.1, align 2
+  %mul = mul i32 %1, %2
+  ret i32 %mul
+}
+
+; CHECK-LABEL: bitcast_gep_ldr
+; CHECK-NOT: ldrd
+define i32 @bitcast_gep_ldr(i16* %In) {
+entry:
+  %in.addr.0 = getelementptr inbounds i16, i16* %In, i32 0
+  %in.addr.1 = getelementptr inbounds i16, i16* %In, i32 2
+  %cast.0 = bitcast i16* %in.addr.0 to i32*
+  %cast.1 = bitcast i16* %in.addr.1 to i32*
+  %0 = load i32, i32* %cast.0, align 2
+  %1 = load i32, i32* %cast.1, align 2
+  %mul = mul i32 %0, %1
+  ret i32 %mul
+}
+
+; CHECK-LABEL: bitcast_ptr_str
+; CHECK-NOT: strd
+define void @bitcast_ptr_str(i32 %arg0, i32 %arg1, i16* %out) {
+entry:
+  %0 = bitcast i16* %out to i32*
+  %out.addr.0 = getelementptr inbounds i32, i32* %0, i32 0
+  %out.addr.1 = getelementptr inbounds i32, i32* %0, i32 1
+  store i32 %arg0, i32* %out.addr.0, align 2
+  store i32 %arg1, i32* %out.addr.1, align 2
+  ret void
+}
+
+; CHECK-LABEL: bitcast_gep_str
+; CHECK-NOT: strd
+define void @bitcast_gep_str(i32 %arg0, i32 %arg1, i16* %out) {
+entry:
+  %out.addr.0 = getelementptr inbounds i16, i16* %out, i32 0
+  %out.addr.1 = getelementptr inbounds i16, i16* %out, i32 2
+  %cast.0 = bitcast i16* %out.addr.0 to i32*
+  %cast.1 = bitcast i16* %out.addr.1 to i32*
+  store i32 %arg0, i32* %cast.0, align 2
+  store i32 %arg1, i32* %cast.1, align 2
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind

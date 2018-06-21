@@ -6363,63 +6363,61 @@ bool Sema::diagnoseArgIndependentDiagnoseIfAttrs(const NamedDecl *ND,
 /// the overload candidate set.
 void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
                                  ArrayRef<Expr *> Args,
-                                 OverloadCandidateSet& CandidateSet,
+                                 OverloadCandidateSet &CandidateSet,
                                  TemplateArgumentListInfo *ExplicitTemplateArgs,
                                  bool SuppressUserConversions,
                                  bool PartialOverloading,
                                  bool FirstArgumentIsBase) {
   for (UnresolvedSetIterator F = Fns.begin(), E = Fns.end(); F != E; ++F) {
     NamedDecl *D = F.getDecl()->getUnderlyingDecl();
-    if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-      ArrayRef<Expr *> FunctionArgs = Args;
-      if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic()) {
-        QualType ObjectType;
-        Expr::Classification ObjectClassification;
-        if (Args.size() > 0) {
-          if (Expr *E = Args[0]) {
-            // Use the explicit base to restrict the lookup:
-            ObjectType = E->getType();
-            ObjectClassification = E->Classify(Context);
-          } // .. else there is an implit base.
-          FunctionArgs = Args.slice(1);
-        }
-        AddMethodCandidate(cast<CXXMethodDecl>(FD), F.getPair(),
-                           cast<CXXMethodDecl>(FD)->getParent(), ObjectType,
-                           ObjectClassification, FunctionArgs, CandidateSet,
-                           SuppressUserConversions, PartialOverloading);
-      } else {
-        // Slice the first argument (which is the base) when we access
-        // static method as non-static
-        if (Args.size() > 0 && (!Args[0] || (FirstArgumentIsBase && isa<CXXMethodDecl>(FD) &&
-                                             !isa<CXXConstructorDecl>(FD)))) {
-          assert(cast<CXXMethodDecl>(FD)->isStatic());
-          FunctionArgs = Args.slice(1);
-        }
-        AddOverloadCandidate(FD, F.getPair(), FunctionArgs, CandidateSet,
-                             SuppressUserConversions, PartialOverloading);
-      }
-    } else {
-      FunctionTemplateDecl *FunTmpl = cast<FunctionTemplateDecl>(D);
-      if (isa<CXXMethodDecl>(FunTmpl->getTemplatedDecl()) &&
-          !cast<CXXMethodDecl>(FunTmpl->getTemplatedDecl())->isStatic()) {
-        QualType ObjectType;
-        Expr::Classification ObjectClassification;
+    ArrayRef<Expr *> FunctionArgs = Args;
+
+    FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(D);
+    FunctionDecl *FD =
+        FunTmpl ? FunTmpl->getTemplatedDecl() : cast<FunctionDecl>(D);
+
+    if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic()) {
+      QualType ObjectType;
+      Expr::Classification ObjectClassification;
+      if (Args.size() > 0) {
         if (Expr *E = Args[0]) {
           // Use the explicit base to restrict the lookup:
           ObjectType = E->getType();
           ObjectClassification = E->Classify(Context);
-        } // .. else there is an implit base.
+        } // .. else there is an implicit base.
+        FunctionArgs = Args.slice(1);
+      }
+      if (FunTmpl) {
         AddMethodTemplateCandidate(
             FunTmpl, F.getPair(),
             cast<CXXRecordDecl>(FunTmpl->getDeclContext()),
             ExplicitTemplateArgs, ObjectType, ObjectClassification,
-            Args.slice(1), CandidateSet, SuppressUserConversions,
+            FunctionArgs, CandidateSet, SuppressUserConversions,
             PartialOverloading);
       } else {
-        AddTemplateOverloadCandidate(FunTmpl, F.getPair(),
-                                     ExplicitTemplateArgs, Args,
-                                     CandidateSet, SuppressUserConversions,
-                                     PartialOverloading);
+        AddMethodCandidate(cast<CXXMethodDecl>(FD), F.getPair(),
+                           cast<CXXMethodDecl>(FD)->getParent(), ObjectType,
+                           ObjectClassification, FunctionArgs, CandidateSet,
+                           SuppressUserConversions, PartialOverloading);
+      }
+    } else {
+      // This branch handles both standalone functions and static methods.
+
+      // Slice the first argument (which is the base) when we access
+      // static method as non-static.
+      if (Args.size() > 0 &&
+          (!Args[0] || (FirstArgumentIsBase && isa<CXXMethodDecl>(FD) &&
+                        !isa<CXXConstructorDecl>(FD)))) {
+        assert(cast<CXXMethodDecl>(FD)->isStatic());
+        FunctionArgs = Args.slice(1);
+      }
+      if (FunTmpl) {
+        AddTemplateOverloadCandidate(
+            FunTmpl, F.getPair(), ExplicitTemplateArgs, FunctionArgs,
+            CandidateSet, SuppressUserConversions, PartialOverloading);
+      } else {
+        AddOverloadCandidate(FD, F.getPair(), FunctionArgs, CandidateSet,
+                             SuppressUserConversions, PartialOverloading);
       }
     }
   }

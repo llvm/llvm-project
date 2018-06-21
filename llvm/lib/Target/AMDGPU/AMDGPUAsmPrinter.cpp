@@ -237,7 +237,14 @@ void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
   SmallString<128> KernelName;
   getNameWithPrefix(KernelName, &MF->getFunction());
   getTargetStreamer()->EmitAmdhsaKernelDescriptor(
-      KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo));
+      *getSTI(), KernelName, getAmdhsaKernelDescriptor(*MF, CurrentProgramInfo),
+      CurrentProgramInfo.NumVGPRsForWavesPerEU,
+      CurrentProgramInfo.NumSGPRsForWavesPerEU -
+          IsaInfo::getNumExtraSGPRs(getSTI()->getFeatureBits(),
+                                    CurrentProgramInfo.VCCUsed,
+                                    CurrentProgramInfo.FlatUsed),
+      CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed,
+      hasXNACK(*getSTI()));
 
   Streamer.PopSection();
 }
@@ -360,18 +367,6 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
   }
-  if (MFI.hasGridWorkgroupCountX()) {
-    KernelCodeProperties |=
-        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X;
-  }
-  if (MFI.hasGridWorkgroupCountY()) {
-    KernelCodeProperties |=
-        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y;
-  }
-  if (MFI.hasGridWorkgroupCountZ()) {
-    KernelCodeProperties |=
-        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z;
-  }
 
   return KernelCodeProperties;
 }
@@ -480,13 +475,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       Twine(CurrentProgramInfo.NumVGPRsForWavesPerEU), false);
 
     OutStreamer->emitRawComment(
-      " ReservedVGPRFirst: " + Twine(CurrentProgramInfo.ReservedVGPRFirst),
-      false);
-    OutStreamer->emitRawComment(
-      " ReservedVGPRCount: " + Twine(CurrentProgramInfo.ReservedVGPRCount),
-      false);
-
-    OutStreamer->emitRawComment(
       " WaveLimiterHint : " + Twine(MFI->needsWaveLimiter()), false);
 
     if (MF.getSubtarget<SISubtarget>().debuggerEmitPrologue()) {
@@ -571,30 +559,10 @@ static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
   return false;
 }
 
-static unsigned getNumExtraSGPRs(const SISubtarget &ST,
-                                 bool VCCUsed,
-                                 bool FlatScrUsed) {
-  unsigned ExtraSGPRs = 0;
-  if (VCCUsed)
-    ExtraSGPRs = 2;
-
-  if (ST.getGeneration() < SISubtarget::VOLCANIC_ISLANDS) {
-    if (FlatScrUsed)
-      ExtraSGPRs = 4;
-  } else {
-    if (ST.isXNACKEnabled())
-      ExtraSGPRs = 4;
-
-    if (FlatScrUsed)
-      ExtraSGPRs = 6;
-  }
-
-  return ExtraSGPRs;
-}
-
 int32_t AMDGPUAsmPrinter::SIFunctionResourceInfo::getTotalNumSGPRs(
   const SISubtarget &ST) const {
-  return NumExplicitSGPR + getNumExtraSGPRs(ST, UsesVCC, UsesFlatScratch);
+  return NumExplicitSGPR + IsaInfo::getNumExtraSGPRs(ST.getFeatureBits(),
+                                                     UsesVCC, UsesFlatScratch);
 }
 
 AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
@@ -789,8 +757,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           // conservative guesses.
 
           // 48 SGPRs - vcc, - flat_scr, -xnack
-          int MaxSGPRGuess = 47 - getNumExtraSGPRs(ST, true,
-                                                   ST.hasFlatAddressSpace());
+          int MaxSGPRGuess =
+              47 - IsaInfo::getNumExtraSGPRs(ST.getFeatureBits(), true,
+                                             ST.hasFlatAddressSpace());
           MaxSGPR = std::max(MaxSGPR, MaxSGPRGuess);
           MaxVGPR = std::max(MaxVGPR, 23);
 
@@ -850,10 +819,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   const SIInstrInfo *TII = STM.getInstrInfo();
   const SIRegisterInfo *RI = &TII->getRegisterInfo();
 
-  unsigned ExtraSGPRs = getNumExtraSGPRs(STM,
-                                         ProgInfo.VCCUsed,
-                                         ProgInfo.FlatUsed);
-  unsigned ExtraVGPRs = STM.getReservedNumVGPRs(MF);
+  // TODO(scott.linder): The calculations related to SGPR/VGPR blocks are
+  // duplicated in part in AMDGPUAsmParser::calculateGPRBlocks, and could be
+  // unified.
+  unsigned ExtraSGPRs = IsaInfo::getNumExtraSGPRs(
+      STM.getFeatureBits(), ProgInfo.VCCUsed, ProgInfo.FlatUsed);
 
   // Check the addressable register limit before we add ExtraSGPRs.
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
@@ -874,7 +844,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Account for extra SGPRs and VGPRs reserved for debugger use.
   ProgInfo.NumSGPR += ExtraSGPRs;
-  ProgInfo.NumVGPR += ExtraVGPRs;
 
   // Ensure there are enough SGPRs and VGPRs for wave dispatch, where wave
   // dispatch registers are function args.
@@ -935,19 +904,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     Ctx.diagnose(Diag);
   }
 
-  // SGPRBlocks is actual number of SGPR blocks minus 1.
-  ProgInfo.SGPRBlocks = alignTo(ProgInfo.NumSGPRsForWavesPerEU,
-                                STM.getSGPREncodingGranule());
-  ProgInfo.SGPRBlocks = ProgInfo.SGPRBlocks / STM.getSGPREncodingGranule() - 1;
-
-  // VGPRBlocks is actual number of VGPR blocks minus 1.
-  ProgInfo.VGPRBlocks = alignTo(ProgInfo.NumVGPRsForWavesPerEU,
-                                STM.getVGPREncodingGranule());
-  ProgInfo.VGPRBlocks = ProgInfo.VGPRBlocks / STM.getVGPREncodingGranule() - 1;
-
-  // Record first reserved VGPR and number of reserved VGPRs.
-  ProgInfo.ReservedVGPRFirst = STM.debuggerReserveRegs() ? ProgInfo.NumVGPR : 0;
-  ProgInfo.ReservedVGPRCount = STM.getReservedNumVGPRs(MF);
+  ProgInfo.SGPRBlocks = IsaInfo::getNumSGPRBlocks(
+      STM.getFeatureBits(), ProgInfo.NumSGPRsForWavesPerEU);
+  ProgInfo.VGPRBlocks = IsaInfo::getNumVGPRBlocks(
+      STM.getFeatureBits(), ProgInfo.NumVGPRsForWavesPerEU);
 
   // Update DebuggerWavefrontPrivateSegmentOffsetSGPR and
   // DebuggerPrivateSegmentBufferSGPR fields if "amdgpu-debugger-emit-prologue"
@@ -1207,21 +1167,6 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   if (MFI->hasFlatScratchInit())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
 
-  if (MFI->hasGridWorkgroupCountX()) {
-    Out.code_properties |=
-      AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_X;
-  }
-
-  if (MFI->hasGridWorkgroupCountY()) {
-    Out.code_properties |=
-      AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Y;
-  }
-
-  if (MFI->hasGridWorkgroupCountZ()) {
-    Out.code_properties |=
-      AMD_CODE_PROPERTY_ENABLE_SGPR_GRID_WORKGROUP_COUNT_Z;
-  }
-
   if (MFI->hasDispatchPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
@@ -1238,8 +1183,6 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   Out.workitem_vgpr_count = CurrentProgramInfo.NumVGPR;
   Out.workitem_private_segment_byte_size = CurrentProgramInfo.ScratchSize;
   Out.workgroup_group_segment_byte_size = CurrentProgramInfo.LDSSize;
-  Out.reserved_vgpr_first = CurrentProgramInfo.ReservedVGPRFirst;
-  Out.reserved_vgpr_count = CurrentProgramInfo.ReservedVGPRCount;
 
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
@@ -1290,8 +1233,6 @@ AMDGPU::HSAMD::Kernel::DebugProps::Metadata AMDGPUAsmPrinter::getHSADebugProps(
 
   HSADebugProps.mDebuggerABIVersion.push_back(1);
   HSADebugProps.mDebuggerABIVersion.push_back(0);
-  HSADebugProps.mReservedNumVGPRs = ProgramInfo.ReservedVGPRCount;
-  HSADebugProps.mReservedFirstVGPR = ProgramInfo.ReservedVGPRFirst;
 
   if (STM.debuggerEmitPrologue()) {
     HSADebugProps.mPrivateSegmentBufferSGPR =

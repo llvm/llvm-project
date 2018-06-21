@@ -93,7 +93,7 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
   ModuleCache mc;
   ModuleSpec module_spec;
   module_spec.GetFileSpec() = GetDummyRemotePath();
-  module_spec.GetUUID().SetFromCString(module_uuid, uuid_bytes);
+  module_spec.GetUUID().SetFromStringRef(module_uuid, uuid_bytes);
   module_spec.SetObjectSize(module_size);
   ModuleSP module_sp;
   bool did_create;

@@ -28,7 +28,6 @@ define zeroext i8 @fullGtU(i32 %i1, i32 %i2) {
 ; Next BB
 ; CHECK: ldrb [[LOADEDVAL3:w[0-9]+]], {{\[}}[[BLOCKBASE1]], #2]
 ; CHECK-NEXT: ldrb [[LOADEDVAL4:w[0-9]+]], {{\[}}[[BLOCKBASE2]], #2]
-; CHECK-NEXT: mov w0, wzr
 ; CHECK-NEXT: cmp [[LOADEDVAL3]], [[LOADEDVAL4]]
 entry:
   %idxprom = sext i32 %i1 to i64

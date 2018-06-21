@@ -194,8 +194,8 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 8
     CFI_INSTRUCTION offset $esi, -8
     $esi = MOV32rm $esp, 1, _, 8, _ :: (load 4 from %fixed-stack.2)
-    DBG_VALUE $esp, 0, !26, !10, debug-location !25
-    DBG_VALUE $esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
+    DBG_VALUE debug-use $esp, 0, !26, !10, debug-location !25
+    DBG_VALUE debug-use $esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
     CALLpcrel32 @getString, csr_32, implicit $esp, implicit-def $esp, implicit-def $eax, debug-location !29
     $ecx = MOV32rm $eax, 1, _, 0, _, debug-location !29 :: (dereferenceable load 4 from %ir.1)
     $edx = MOV32rm $eax, 1, _, 4, _, debug-location !29 :: (dereferenceable load 4 from %ir.1 + 4)

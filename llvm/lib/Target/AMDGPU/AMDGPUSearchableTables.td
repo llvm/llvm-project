@@ -7,35 +7,40 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/TableGen/SearchableTable.td"
-
 //===----------------------------------------------------------------------===//
 // Resource intrinsics table.
 //===----------------------------------------------------------------------===//
 
-class RsrcIntrinsic<AMDGPURsrcIntrinsic intr> : SearchableTable {
-  let SearchableFields = ["Intr"];
-  let EnumNameField = ?;
-
+class RsrcIntrinsic<AMDGPURsrcIntrinsic intr> {
   Intrinsic Intr = !cast<Intrinsic>(intr);
   bits<8> RsrcArg = intr.RsrcArg;
   bit IsImage = intr.IsImage;
 }
 
+def RsrcIntrinsics : GenericTable {
+  let FilterClass = "RsrcIntrinsic";
+  let Fields = ["Intr", "RsrcArg", "IsImage"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupRsrcIntrinsic";
+}
+
 foreach intr = !listconcat(AMDGPUBufferIntrinsics,
-                           AMDGPUImageIntrinsics,
                            AMDGPUImageDimIntrinsics,
-                           AMDGPUImageDimGatherIntrinsics,
-                           AMDGPUImageDimGetResInfoIntrinsics,
                            AMDGPUImageDimAtomicIntrinsics) in {
   def : RsrcIntrinsic<!cast<AMDGPURsrcIntrinsic>(intr)>;
 }
 
-class SourceOfDivergence<Intrinsic intr> : SearchableTable {
-  let SearchableFields = ["Intr"];
-  let EnumNameField = ?;
-
+class SourceOfDivergence<Intrinsic intr> {
   Intrinsic Intr = intr;
+}
+
+def SourcesOfDivergence : GenericTable {
+  let FilterClass = "SourceOfDivergence";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupSourceOfDivergence";
 }
 
 def : SourceOfDivergence<int_amdgcn_workitem_id_x>;
@@ -54,19 +59,6 @@ def : SourceOfDivergence<int_amdgcn_atomic_dec>;
 def : SourceOfDivergence<int_amdgcn_ds_fadd>;
 def : SourceOfDivergence<int_amdgcn_ds_fmin>;
 def : SourceOfDivergence<int_amdgcn_ds_fmax>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_swap>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_add>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_sub>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_smin>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_umin>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_smax>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_umax>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_and>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_or>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_xor>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_inc>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_dec>;
-def : SourceOfDivergence<int_amdgcn_image_atomic_cmpswap>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_swap>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_add>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_sub>;
@@ -83,17 +75,3 @@ def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
-
-class D16ImageDimIntrinsic<AMDGPUImageDimIntrinsic intr> : SearchableTable {
-  let SearchableFields = ["Intr"];
-  let EnumNameField = ?;
-
-  Intrinsic Intr = intr;
-  code D16HelperIntr =
-      !cast<code>("AMDGPUIntrinsic::SI_image_d16helper_" # intr.P.OpMod # intr.P.Dim.Name);
-}
-
-foreach intr = !listconcat(AMDGPUImageDimIntrinsics,
-                           AMDGPUImageDimGatherIntrinsics) in {
-  def : D16ImageDimIntrinsic<intr>;
-}

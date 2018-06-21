@@ -356,20 +356,19 @@ image_gather4 v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x8
 // GCN: image_gather4 v[5:8], v[1:4], s[8:15], s[12:15] dmask:0x8 ; encoding: [0x00,0x08,0x00,0xf1,0x01,0x05,0x62,0x00]
 
 image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 d16
-// NOSICI:   error: instruction not supported on this GPU
+// NOSICI:   error: d16 modifier is not supported on this GPU
 // GFX8_0:   image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 d16 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x80]
-// NOGFX8_1: error: instruction not supported on this GPU
-// NOGFX9:   error: instruction not supported on this GPU
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe
 
 image_gather4 v[5:6], v1, s[8:15], s[12:15] dmask:0x1 d16
 // NOSICI:   error: d16 modifier is not supported on this GPU
-// NOGFX8_0: error: instruction not supported on this GPU
+// NOGFX8_0: error: image data size does not match dmask and tfe
 // GFX8_1:   image_gather4 v[5:6], v1, s[8:15], s[12:15] dmask:0x1 d16 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x80]
 // GFX9:     image_gather4 v[5:6], v1, s[8:15], s[12:15] dmask:0x1 d16 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x80]
 
-// FIXME: d16 is handled as an optional modifier, should it be corrected?
 image_gather4 v[5:6], v1, s[8:15], s[12:15] dmask:0x1
-// NOSICI:   error: d16 modifier is not supported on this GPU
-// NOGFX8_0: error: instruction not supported on this GPU
-// GFX8_1:   image_gather4 v[5:6], v1, s[8:15], s[12:15] dmask:0x1 d16 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x80]
-// GFX9:     image_gather4 v[5:6], v1, s[8:15], s[12:15] dmask:0x1 d16 ; encoding: [0x00,0x01,0x00,0xf1,0x01,0x05,0x62,0x80]
+// NOSICI:   error: image data size does not match dmask and tfe
+// NOGFX8_0: error: image data size does not match dmask and tfe
+// NOGFX8_1: error: image data size does not match dmask and tfe
+// NOGFX9:   error: image data size does not match dmask and tfe

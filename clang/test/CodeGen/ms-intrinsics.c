@@ -29,6 +29,89 @@ void test__stosb(unsigned char *Dest, unsigned char Data, size_t Count) {
 // CHECK-X64:   ret void
 // CHECK-X64: }
 
+void test__movsb(unsigned char *Dest, unsigned char *Src, size_t Count) {
+  return __movsb(Dest, Src, Count);
+}
+// CHECK-I386-LABEL: define{{.*}} void @test__movsb
+// CHECK-I386:   call { i8*, i8*, i32 } asm sideeffect "rep movsb", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i8* %Dest, i8* %Src, i32 %Count)
+// CHECK-I386:   ret void
+// CHECK-I386: }
+
+// CHECK-X64-LABEL: define{{.*}} void @test__movsb
+// CHECK-X64:   call { i8*, i8*, i64 } asm sideeffect "rep movsb", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i8* %Dest, i8* %Src, i64 %Count)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+
+void test__stosw(unsigned short *Dest, unsigned short Data, size_t Count) {
+  return __stosw(Dest, Data, Count);
+}
+// CHECK-I386-LABEL: define{{.*}} void @test__stosw
+// CHECK-I386:   call { i16*, i32 } asm sideeffect "rep stosw", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i16 %Data, i16* %Dest, i32 %Count)
+// CHECK-I386:   ret void
+// CHECK-I386: }
+
+// CHECK-X64-LABEL: define{{.*}} void @test__stosw
+// CHECK-X64:   call { i16*, i64 } asm sideeffect "rep stosw", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i16 %Data, i16* %Dest, i64 %Count)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+
+void test__movsw(unsigned short *Dest, unsigned short *Src, size_t Count) {
+  return __movsw(Dest, Src, Count);
+}
+// CHECK-I386-LABEL: define{{.*}} void @test__movsw
+// CHECK-I386:   call { i16*, i16*, i32 } asm sideeffect "rep movsw", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i16* %Dest, i16* %Src, i32 %Count)
+// CHECK-I386:   ret void
+// CHECK-I386: }
+
+// CHECK-X64-LABEL: define{{.*}} void @test__movsw
+// CHECK-X64:   call { i16*, i16*, i64 } asm sideeffect "rep movsw", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i16* %Dest, i16* %Src, i64 %Count)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+
+void test__stosd(unsigned long *Dest, unsigned long Data, size_t Count) {
+  return __stosd(Dest, Data, Count);
+}
+// CHECK-I386-LABEL: define{{.*}} void @test__stosd
+// CHECK-I386:   call { i32*, i32 } asm sideeffect "rep stosl", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i32 %Data, i32* %Dest, i32 %Count)
+// CHECK-I386:   ret void
+// CHECK-I386: }
+
+// CHECK-X64-LABEL: define{{.*}} void @test__stosd
+// CHECK-X64:   call { i32*, i64 } asm sideeffect "rep stosl", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i32 %Data, i32* %Dest, i64 %Count)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+
+void test__movsd(unsigned long *Dest, unsigned long *Src, size_t Count) {
+  return __movsd(Dest, Src, Count);
+}
+// CHECK-I386-LABEL: define{{.*}} void @test__movsd
+// CHECK-I386:   call { i32*, i32*, i32 } asm sideeffect "rep movsl", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %Dest, i32* %Src, i32 %Count)
+// CHECK-I386:   ret void
+// CHECK-I386: }
+
+// CHECK-X64-LABEL: define{{.*}} void @test__movsd
+// CHECK-X64:   call { i32*, i32*, i64 } asm sideeffect "rep movsl", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %Dest, i32* %Src, i64 %Count)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+
+#ifdef __x86_64__
+void test__stosq(unsigned __int64 *Dest, unsigned __int64 Data, size_t Count) {
+  return __stosq(Dest, Data, Count);
+}
+// CHECK-X64-LABEL: define{{.*}} void @test__stosq
+// CHECK-X64:   call { i64*, i64 } asm sideeffect "rep stosq", "={di},={cx},{ax},0,1,~{memory},~{dirflag},~{fpsr},~{flags}"(i64 %Data, i64* %Dest, i64 %Count)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+
+void test__movsq(unsigned __int64 *Dest, unsigned __int64 *Src, size_t Count) {
+  return __movsq(Dest, Src, Count);
+}
+// CHECK-X64-LABEL: define{{.*}} void @test__movsq
+// CHECK-X64:   call { i64*, i64*, i64 } asm sideeffect "rep movsq", "={di},={si},={cx},0,1,2,~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %Dest, i64* %Src, i64 %Count)
+// CHECK-X64:   ret void
+// CHECK-X64: }
+#endif
+
 void test__ud2(void) {
   __ud2();
 }

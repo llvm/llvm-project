@@ -155,9 +155,6 @@ private:
   bool KernargSegmentPtr : 1;
   bool DispatchID : 1;
   bool FlatScratchInit : 1;
-  bool GridWorkgroupCountX : 1;
-  bool GridWorkgroupCountY : 1;
-  bool GridWorkgroupCountZ : 1;
 
   // Feature bits required for inputs passed in system SGPRs.
   bool WorkGroupIDX : 1; // Always initialized.
@@ -334,18 +331,6 @@ public:
 
   bool hasFlatScratchInit() const {
     return FlatScratchInit;
-  }
-
-  bool hasGridWorkgroupCountX() const {
-    return GridWorkgroupCountX;
-  }
-
-  bool hasGridWorkgroupCountY() const {
-    return GridWorkgroupCountY;
-  }
-
-  bool hasGridWorkgroupCountZ() const {
-    return GridWorkgroupCountZ;
   }
 
   bool hasWorkGroupIDX() const {

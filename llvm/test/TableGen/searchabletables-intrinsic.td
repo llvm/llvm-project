@@ -53,19 +53,20 @@ class Table<Intrinsic intr, int payload> : SearchableTable {
 }
 
 // CHECK-LABEL: TablesList[] = {
-// CHECK-DAG: { Intrinsic::abc, 0x0},
-// CHECK-DAG: { Intrinsic::xyz, 0x1},
-// CHECK-DAG: { Intrinsic::gtarget_def, 0x10},
-// CHECK-DAG: { Intrinsic::gtarget_defg, 0x11},
-// CHECK-DAG: { Intrinsic::gtarget_uvw, 0x12},
-// CHECK-DAG: { Intrinsic::ftarget_ghi, 0x20},
-// CHECK-DAG: { Intrinsic::ftarget_ghi_x, 0x21},
-// CHECK-DAG: { Intrinsic::ftarget_rst, 0x22},
+// CHECK-DAG: { Intrinsic::abc, 0x0 },
+// CHECK-DAG: { Intrinsic::xyz, 0x1 },
+// CHECK-DAG: { Intrinsic::gtarget_def, 0x10 },
+// CHECK-DAG: { Intrinsic::gtarget_defg, 0x11 },
+// CHECK-DAG: { Intrinsic::gtarget_uvw, 0x12 },
+// CHECK-DAG: { Intrinsic::ftarget_ghi, 0x20 },
+// CHECK-DAG: { Intrinsic::ftarget_ghi_x, 0x21 },
+// CHECK-DAG: { Intrinsic::ftarget_rst, 0x22 },
 
 // Check that the index is in the correct order, consistent with the ordering
 // of enums: alphabetically, but target intrinsics after generic intrinsics
 //
-// CHECK-LABEL: TablesByIntr[] = {
+// CHECK-LABEL: lookupTableByIntr(unsigned Intr) {
+// CHECK: Index[] = {
 // CHECK-NEXT: Intrinsic::abc
 // CHECK-NEXT: Intrinsic::xyz
 // CHECK-NEXT: Intrinsic::ftarget_ghi

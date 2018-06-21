@@ -96,12 +96,12 @@ void RegisterFile::allocatePhysRegs(IndexPlusCostPairTy Entry,
   unsigned Cost = Entry.second;
   if (RegisterFileIndex) {
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
-    RMT.NumUsedMappings += Cost;
+    RMT.NumUsedPhysRegs += Cost;
     UsedPhysRegs[RegisterFileIndex] += Cost;
   }
 
   // Now update the default register mapping tracker.
-  RegisterFiles[0].NumUsedMappings += Cost;
+  RegisterFiles[0].NumUsedPhysRegs += Cost;
   UsedPhysRegs[0] += Cost;
 }
 
@@ -111,12 +111,12 @@ void RegisterFile::freePhysRegs(IndexPlusCostPairTy Entry,
   unsigned Cost = Entry.second;
   if (RegisterFileIndex) {
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
-    RMT.NumUsedMappings -= Cost;
+    RMT.NumUsedPhysRegs -= Cost;
     FreedPhysRegs[RegisterFileIndex] += Cost;
   }
 
   // Now update the default register mapping tracker.
-  RegisterFiles[0].NumUsedMappings -= Cost;
+  RegisterFiles[0].NumUsedPhysRegs -= Cost;
   FreedPhysRegs[0] += Cost;
 }
 
@@ -215,13 +215,13 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
       continue;
 
     const RegisterMappingTracker &RMT = RegisterFiles[I];
-    if (!RMT.TotalMappings) {
+    if (!RMT.NumPhysRegs) {
       // The register file has an unbounded number of microarchitectural
       // registers.
       continue;
     }
 
-    if (RMT.TotalMappings < NumRegs) {
+    if (RMT.NumPhysRegs < NumRegs) {
       // The current register file is too small. This may occur if the number of
       // microarchitectural registers in register file #0 was changed by the
       // users via flag -reg-file-size. Alternatively, the scheduling model
@@ -230,7 +230,7 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
           "Not enough microarchitectural registers in the register file");
     }
 
-    if (RMT.TotalMappings < (RMT.NumUsedMappings + NumRegs))
+    if (RMT.NumPhysRegs < (RMT.NumUsedPhysRegs + NumRegs))
       Response |= (1U << I);
   }
 
@@ -252,8 +252,8 @@ void RegisterFile::dump() const {
   for (unsigned I = 0, E = getNumRegisterFiles(); I < E; ++I) {
     dbgs() << "Register File #" << I;
     const RegisterMappingTracker &RMT = RegisterFiles[I];
-    dbgs() << "\n  TotalMappings:        " << RMT.TotalMappings
-           << "\n  NumUsedMappings:      " << RMT.NumUsedMappings << '\n';
+    dbgs() << "\n  TotalMappings:        " << RMT.NumPhysRegs
+           << "\n  NumUsedMappings:      " << RMT.NumUsedPhysRegs << '\n';
   }
 }
 #endif

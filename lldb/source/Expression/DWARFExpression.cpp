@@ -15,6 +15,7 @@
 // C++ Includes
 #include <vector>
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/Value.h"
@@ -1452,6 +1453,33 @@ bool DWARFExpression::Evaluate(
         stack.back().GetScalar() = ptr;
         stack.back().ClearContext();
       } break;
+      case Value::eValueTypeFileAddress: {
+        auto file_addr = stack.back().GetScalar().ULongLong(
+            LLDB_INVALID_ADDRESS);
+        if (!module_sp) {
+          if (error_ptr)
+            error_ptr->SetErrorStringWithFormat(
+                "need module to resolve file address for DW_OP_deref");
+          return false;
+        }
+        Address so_addr;
+        if (!module_sp->ResolveFileAddress(file_addr, so_addr)) {
+          if (error_ptr)
+            error_ptr->SetErrorStringWithFormat(
+                "failed to resolve file address in module");
+          return false;
+        }
+        addr_t load_Addr = so_addr.GetLoadAddress(exe_ctx->GetTargetPtr());
+        if (load_Addr == LLDB_INVALID_ADDRESS) {
+          if (error_ptr)
+            error_ptr->SetErrorStringWithFormat(
+                "failed to resolve load address");
+          return false;
+        }
+        stack.back().GetScalar() = load_Addr;
+        stack.back().SetValueType(Value::eValueTypeLoadAddress);
+        // Fall through to load address code below...
+      } LLVM_FALLTHROUGH;
       case Value::eValueTypeLoadAddress:
         if (exe_ctx) {
           if (process) {

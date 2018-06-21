@@ -164,7 +164,7 @@ body:             |
     DBG_VALUE debug-use $a0, debug-use $noreg, !12, !DIExpression(), debug-location !17
     $s0 = OR $a0, $zero
     DBG_VALUE debug-use $s0, debug-use $noreg, !12, !DIExpression(), debug-location !17
-    DBG_VALUE $sp, 0, !13, !DIExpression(DW_OP_plus_uconst, 20), debug-location !19
+    DBG_VALUE debug-use $sp, 0, !13, !DIExpression(DW_OP_plus_uconst, 20), debug-location !19
     JAL @set_cond, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit-def $sp, debug-location !20 {
       renamable $a1 = LEA_ADDiu $sp, 20
     }

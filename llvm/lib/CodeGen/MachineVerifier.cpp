@@ -1204,6 +1204,10 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           return;
         }
       }
+      if (MI->isDebugValue() && MO->isUse() && !MO->isDebug()) {
+        report("Use-reg is not IsDebug in a DBG_VALUE", MO, MONum);
+        return;
+      }
     } else {
       // Virtual register.
       const TargetRegisterClass *RC = MRI->getRegClassOrNull(Reg);

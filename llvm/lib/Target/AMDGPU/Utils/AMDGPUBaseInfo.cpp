@@ -99,79 +99,32 @@ namespace llvm {
 
 namespace AMDGPU {
 
-LLVM_READNONE
-static inline Channels indexToChannel(unsigned Channel) {
-  switch (Channel) {
-  case 1:
-    return AMDGPU::Channels_1;
-  case 2:
-    return AMDGPU::Channels_2;
-  case 3:
-    return AMDGPU::Channels_3;
-  case 4:
-    return AMDGPU::Channels_4;
-  default:
-    llvm_unreachable("invalid MIMG channel");
-  }
+struct MIMGInfo {
+  uint16_t Opcode;
+  uint16_t BaseOpcode;
+  uint8_t MIMGEncoding;
+  uint8_t VDataDwords;
+  uint8_t VAddrDwords;
+};
+
+#define GET_MIMGBaseOpcodesTable_IMPL
+#define GET_MIMGDimInfoTable_IMPL
+#define GET_MIMGInfoTable_IMPL
+#include "AMDGPUGenSearchableTables.inc"
+
+int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
+                  unsigned VDataDwords, unsigned VAddrDwords) {
+  const MIMGInfo *Info = getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding,
+                                             VDataDwords, VAddrDwords);
+  return Info ? Info->Opcode : -1;
 }
 
-
-// FIXME: Need to handle d16 images correctly.
-static unsigned rcToChannels(unsigned RCID) {
-  switch (RCID) {
-  case AMDGPU::VGPR_32RegClassID:
-    return 1;
-  case AMDGPU::VReg_64RegClassID:
-    return 2;
-  case AMDGPU::VReg_96RegClassID:
-    return 3;
-  case AMDGPU::VReg_128RegClassID:
-    return 4;
-  default:
-    llvm_unreachable("invalid MIMG register class");
-  }
-}
-
-int getMaskedMIMGOp(const MCInstrInfo &MII, unsigned Opc, unsigned NewChannels) {
-  AMDGPU::Channels Channel = AMDGPU::indexToChannel(NewChannels);
-  unsigned OrigChannels = rcToChannels(MII.get(Opc).OpInfo[0].RegClass);
-  if (NewChannels == OrigChannels)
-    return Opc;
-
-  switch (OrigChannels) {
-  case 1:
-    return AMDGPU::getMaskedMIMGOp1(Opc, Channel);
-  case 2:
-    return AMDGPU::getMaskedMIMGOp2(Opc, Channel);
-  case 3:
-    return AMDGPU::getMaskedMIMGOp3(Opc, Channel);
-  case 4:
-    return AMDGPU::getMaskedMIMGOp4(Opc, Channel);
-  default:
-    llvm_unreachable("invalid MIMG channel");
-  }
-}
-
-int getMaskedMIMGAtomicOp(const MCInstrInfo &MII, unsigned Opc, unsigned NewChannels) {
-  assert(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst) != -1);
-  assert(NewChannels == 1 || NewChannels == 2 || NewChannels == 4);
-
-  unsigned OrigChannels = rcToChannels(MII.get(Opc).OpInfo[0].RegClass);
-  assert(OrigChannels == 1 || OrigChannels == 2 || OrigChannels == 4);
-
-  if (NewChannels == OrigChannels) return Opc;
-
-  if (OrigChannels <= 2 && NewChannels <= 2) {
-    // This is an ordinary atomic (not an atomic_cmpswap)
-    return (OrigChannels == 1)?
-      AMDGPU::getMIMGAtomicOp1(Opc) : AMDGPU::getMIMGAtomicOp2(Opc);
-  } else if (OrigChannels >= 2 && NewChannels >= 2) {
-    // This is an atomic_cmpswap
-    return (OrigChannels == 2)?
-      AMDGPU::getMIMGAtomicOp1(Opc) : AMDGPU::getMIMGAtomicOp2(Opc);
-  } else { // invalid OrigChannels/NewChannels value
-    return -1;
-  }
+int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
+  const MIMGInfo *OrigInfo = getMIMGInfo(Opc);
+  const MIMGInfo *NewInfo =
+      getMIMGOpcodeHelper(OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding,
+                          NewChannels, OrigInfo->VAddrDwords);
+  return NewInfo ? NewInfo->Opcode : -1;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
@@ -245,6 +198,10 @@ void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
          << ISAVersion.Major
          << ISAVersion.Minor
          << ISAVersion.Stepping;
+
+  if (hasXNACK(*STI))
+    Stream << "+xnack";
+
   Stream.flush();
 }
 
@@ -381,6 +338,39 @@ unsigned getMaxNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU,
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
+                          bool FlatScrUsed, bool XNACKUsed) {
+  unsigned ExtraSGPRs = 0;
+  if (VCCUsed)
+    ExtraSGPRs = 2;
+
+  IsaVersion Version = getIsaVersion(Features);
+  if (Version.Major < 8) {
+    if (FlatScrUsed)
+      ExtraSGPRs = 4;
+  } else {
+    if (XNACKUsed)
+      ExtraSGPRs = 4;
+
+    if (FlatScrUsed)
+      ExtraSGPRs = 6;
+  }
+
+  return ExtraSGPRs;
+}
+
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
+                          bool FlatScrUsed) {
+  return getNumExtraSGPRs(Features, VCCUsed, FlatScrUsed,
+                          Features[AMDGPU::FeatureXNACK]);
+}
+
+unsigned getNumSGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs) {
+  NumSGPRs = alignTo(std::max(1u, NumSGPRs), getSGPREncodingGranule(Features));
+  // SGPRBlocks is actual number of SGPR blocks minus 1.
+  return NumSGPRs / getSGPREncodingGranule(Features) - 1;
+}
+
 unsigned getVGPRAllocGranule(const FeatureBitset &Features) {
   return 4;
 }
@@ -417,6 +407,12 @@ unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
+unsigned getNumVGPRBlocks(const FeatureBitset &Features, unsigned NumVGPRs) {
+  NumVGPRs = alignTo(std::max(1u, NumVGPRs), getVGPREncodingGranule(Features));
+  // VGPRBlocks is actual number of VGPR blocks minus 1.
+  return NumVGPRs / getVGPREncodingGranule(Features) - 1;
+}
+
 } // end namespace IsaInfo
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
@@ -444,6 +440,21 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   Header.kernarg_segment_alignment = 4;
   Header.group_segment_alignment = 4;
   Header.private_segment_alignment = 4;
+}
+
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor() {
+  amdhsa::kernel_descriptor_t KD;
+  memset(&KD, 0, sizeof(KD));
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
+                  amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP, 1);
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE, 1);
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
+                  amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
+  return KD;
 }
 
 bool isGroupSegment(const GlobalValue *GV) {
@@ -951,15 +962,15 @@ namespace {
 struct SourceOfDivergence {
   unsigned Intr;
 };
-const SourceOfDivergence *lookupSourceOfDivergenceByIntr(unsigned Intr);
+const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
-#define GET_SOURCEOFDIVERGENCE_IMPL
+#define GET_SourcesOfDivergence_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
-  return lookupSourceOfDivergenceByIntr(IntrID);
+  return lookupSourceOfDivergence(IntrID);
 }
 } // namespace AMDGPU
 } // namespace llvm

@@ -396,9 +396,9 @@ define fastcc double @no_pairwise_reduction4double(<4 x double> %rdx, double %f1
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %r
 ;
 ; AVX1-LABEL: 'no_pairwise_reduction4double'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf = shufflevector <4 x double> %rdx, <4 x double> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf = shufflevector <4 x double> %rdx, <4 x double> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bin.rdx = fadd <4 x double> %rdx, %rdx.shuf
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf7 = shufflevector <4 x double> %bin.rdx, <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf7 = shufflevector <4 x double> %bin.rdx, <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bin.rdx8 = fadd <4 x double> %bin.rdx, %rdx.shuf7
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r = extractelement <4 x double> %bin.rdx8, i32 0
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %r
@@ -582,9 +582,9 @@ define fastcc i64 @no_pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r
 ;
 ; AVX1-LABEL: 'no_pairwise_reduction4i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bin.rdx = add <4 x i64> %rdx, %rdx.shuf
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf7 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf7 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bin.rdx8 = add <4 x i64> %bin.rdx, %rdx.shuf7
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r
@@ -841,11 +841,11 @@ define fastcc double @pairwise_reduction4double(<4 x double> %rdx, double %f1) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %r
 ;
 ; AVX1-LABEL: 'pairwise_reduction4double'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.0.0 = shufflevector <4 x double> %rdx, <4 x double> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.0.1 = shufflevector <4 x double> %rdx, <4 x double> undef, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.0 = shufflevector <4 x double> %rdx, <4 x double> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.1 = shufflevector <4 x double> %rdx, <4 x double> undef, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bin.rdx = fadd <4 x double> %rdx.shuf.0.0, %rdx.shuf.0.1
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %rdx.shuf.1.0 = shufflevector <4 x double> %bin.rdx, <4 x double> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.1.1 = shufflevector <4 x double> %bin.rdx, <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.1.1 = shufflevector <4 x double> %bin.rdx, <4 x double> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bin.rdx8 = fadd <4 x double> %rdx.shuf.1.0, %rdx.shuf.1.1
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %r = extractelement <4 x double> %bin.rdx8, i32 0
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret double %r
@@ -1072,11 +1072,11 @@ define fastcc i64 @pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r
 ;
 ; AVX1-LABEL: 'pairwise_reduction4i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.0.0 = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.0.1 = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.0 = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.0.1 = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 3, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bin.rdx = add <4 x i64> %rdx.shuf.0.0, %rdx.shuf.0.1
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %rdx.shuf.1.0 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %rdx.shuf.1.1 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %rdx.shuf.1.1 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bin.rdx8 = add <4 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %r

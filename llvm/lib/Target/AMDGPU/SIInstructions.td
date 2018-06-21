@@ -292,14 +292,21 @@ def SI_ELSE_BREAK : CFPseudoInstSI <
   let isReMaterializable = 1;
 }
 
-let Uses = [EXEC], Defs = [EXEC,VCC] in {
+let Uses = [EXEC] in {
 
 multiclass PseudoInstKill <dag ins> {
+  // Even though this pseudo can usually be expanded without an SCC def, we
+  // conservatively assume that it has an SCC def, both because it is sometimes
+  // required in degenerate cases (when V_CMPX cannot be used due to constant
+  // bus limitations) and because it allows us to avoid having to track SCC
+  // liveness across basic blocks.
+  let Defs = [EXEC,VCC,SCC] in
   def _PSEUDO : PseudoInstSI <(outs), ins> {
     let isConvergent = 1;
     let usesCustomInserter = 1;
   }
 
+  let Defs = [EXEC,VCC,SCC] in
   def _TERMINATOR : SPseudoInstSI <(outs), ins> {
     let isTerminator = 1;
   }
@@ -308,6 +315,7 @@ multiclass PseudoInstKill <dag ins> {
 defm SI_KILL_I1 : PseudoInstKill <(ins SSrc_b64:$src, i1imm:$killvalue)>;
 defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
 
+let Defs = [EXEC,VCC] in
 def SI_ILLEGAL_COPY : SPseudoInstSI <
   (outs unknown:$dst), (ins unknown:$src),
   [], " ; illegal copy $src to $dst">;
@@ -445,7 +453,7 @@ def ADJCALLSTACKDOWN : SPseudoInstSI<
   let usesCustomInserter = 1;
 }
 
-let Defs = [M0, EXEC],
+let Defs = [M0, EXEC, SCC],
   UseNamedOperandTable = 1 in {
 
 class SI_INDIRECT_SRC<RegisterClass rc> : VPseudoInstSI <

@@ -34,6 +34,7 @@ if(APPLE)
   list(APPEND TSAN_UNITTEST_CFLAGS ${DARWIN_osx_CFLAGS})
 
   set(LINK_FLAGS "-lc++")
+  list(APPEND LINK_FLAGS ${DARWIN_osx_LINK_FLAGS})
   add_weak_symbols("ubsan" LINK_FLAGS)
   add_weak_symbols("sanitizer_common" LINK_FLAGS)
 else()

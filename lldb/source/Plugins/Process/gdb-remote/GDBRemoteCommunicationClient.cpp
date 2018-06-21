@@ -3541,7 +3541,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string uuid;
       extractor.GetHexByteString(uuid);
-      module_spec.GetUUID().SetFromCString(uuid.c_str(), uuid.size() / 2);
+      module_spec.GetUUID().SetFromStringRef(uuid, uuid.size() / 2);
     } else if (name == "triple") {
       StringExtractor extractor(value);
       std::string triple;

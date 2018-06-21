@@ -124,7 +124,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     EnableXNACK(false),
     TrapHandler(false),
     DebuggerInsertNops(false),
-    DebuggerReserveRegs(false),
     DebuggerEmitPrologue(false),
 
     EnableHugePrivateBuffer(false),
@@ -550,10 +549,6 @@ unsigned SISubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
     unsigned Requested = AMDGPU::getIntegerAttribute(
       F, "amdgpu-num-vgpr", MaxNumVGPRs);
 
-    // Make sure requested value does not violate subtarget's specifications.
-    if (Requested && Requested <= getReservedNumVGPRs(MF))
-      Requested = 0;
-
     // Make sure requested value is compatible with values implied by
     // default/requested minimum/maximum number of waves per execution unit.
     if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
@@ -566,7 +561,7 @@ unsigned SISubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
       MaxNumVGPRs = Requested;
   }
 
-  return MaxNumVGPRs - getReservedNumVGPRs(MF);
+  return MaxNumVGPRs;
 }
 
 namespace {

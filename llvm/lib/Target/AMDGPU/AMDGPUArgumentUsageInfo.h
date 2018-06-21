@@ -111,9 +111,6 @@ struct AMDGPUFunctionArgInfo {
   ArgDescriptor DispatchID;
   ArgDescriptor FlatScratchInit;
   ArgDescriptor PrivateSegmentSize;
-  ArgDescriptor GridWorkGroupCountX;
-  ArgDescriptor GridWorkGroupCountY;
-  ArgDescriptor GridWorkGroupCountZ;
 
   // System SGPRs in kernels.
   ArgDescriptor WorkGroupIDX;
