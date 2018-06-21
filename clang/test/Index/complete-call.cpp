@@ -112,6 +112,33 @@ struct Bar2 : public Bar {
   }
 };
 
+struct BarTemplates {
+  static void foo_1() {}
+  void foo_1(float) {}
+  static void foo_1(int) {}
+
+  template<class T1, class T2>
+  static void foo_1(T1 a, T2 b) { a + b; }
+
+  template<class T1, class T2>
+  void foo_1(T1 a, T2 b, float c) { a + b + c; }
+
+  template<class T1, class T2>
+  static void foo_1(T2 a, int b, T1 c)  { a + b + c; }
+};
+
+void testTemplates() {
+  BarTemplates::foo_1();
+  BarTemplates b;
+  b.foo_1();
+}
+
+struct Bar2Template : public BarTemplates {
+  Bar2Template() {
+    BarTemplates::foo_1();
+  }
+};
+
 // RUN: c-index-test -code-completion-at=%s:47:9 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
 // CHECK-CC1: Completion contexts:
@@ -863,4 +890,27 @@ struct Bar2 : public Bar {
 // CHECK-CC62-NEXT: Class name
 // CHECK-CC62-NEXT: Nested name specifier
 // CHECK-CC62-NEXT: Objective-C interface
+
+// RUN: c-index-test -code-completion-at=%s:131:23 %s | FileCheck -check-prefix=CHECK-CC63 %s
+// CHECK-CC63: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
+// CHECK-CC63: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter float}{RightParen )} (1)
+// CHECK-CC63: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter int}{RightParen )} (1)
+// CHECK-CC63: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T1 a}{Comma , }{Placeholder T2 b}{RightParen )} (1)
+// CHECK-CC63: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T1 a}{Comma , }{Placeholder T2 b}{Comma , }{Placeholder float c}{RightParen )} (1)
+// CHECK-CC63: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T2 a}{Comma , }{Placeholder int b}{Comma , }{Placeholder T1 c}{RightParen )} (1)
+
+// RUN: c-index-test -code-completion-at=%s:133:11 %s | FileCheck -check-prefix=CHECK-CC64 %s
+// CHECK-CC64: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
+// CHECK-CC64: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter float}{RightParen )} (1)
+// CHECK-CC64: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter int}{RightParen )} (1)
+// CHECK-CC64: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T1 a}{Comma , }{Placeholder T2 b}{RightParen )} (1)
+// CHECK-CC64: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T2 a}{Comma , }{Placeholder int b}{Comma , }{Placeholder T1 c}{RightParen )} (1)
+
+// RUN: c-index-test -code-completion-at=%s:138:25 %s | FileCheck -check-prefix=CHECK-CC65 %s
+// CHECK-CC65: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{RightParen )} (1)
+// CHECK-CC65: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter float}{RightParen )} (1)
+// CHECK-CC65: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter int}{RightParen )} (1)
+// CHECK-CC65: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T1 a}{Comma , }{Placeholder T2 b}{RightParen )} (1)
+// CHECK-CC65: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T1 a}{Comma , }{Placeholder T2 b}{Comma , }{Placeholder float c}{RightParen )} (1)
+// CHECK-CC65: OverloadCandidate:{ResultType void}{Text foo_1}{LeftParen (}{CurrentParameter T2 a}{Comma , }{Placeholder int b}{Comma , }{Placeholder T1 c}{RightParen )} (1)
 

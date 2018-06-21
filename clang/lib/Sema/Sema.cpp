@@ -651,6 +651,8 @@ void Sema::getUndefinedButUsed(
           !isExternalWithNoLinkageType(FD) &&
           !FD->getMostRecentDecl()->isInlined())
         continue;
+      if (FD->getBuiltinID())
+        continue;
     } else {
       auto *VD = cast<VarDecl>(ND);
       if (VD->hasDefinition() != VarDecl::DeclarationOnly)

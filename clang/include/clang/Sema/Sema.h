@@ -5025,6 +5025,8 @@ public:
                                           SourceLocation NameLoc,
                                           IdentifierInfo &Name);
 
+  ParsedType getConstructorName(IdentifierInfo &II, SourceLocation NameLoc,
+                                Scope *S, CXXScopeSpec &SS);
   ParsedType getDestructorName(SourceLocation TildeLoc,
                                IdentifierInfo &II, SourceLocation NameLoc,
                                Scope *S, CXXScopeSpec &SS,
@@ -5745,6 +5747,7 @@ public:
   //===--------------------------------------------------------------------===//
   // C++ Classes
   //
+  CXXRecordDecl *getCurrentClass(Scope *S, const CXXScopeSpec *SS);
   bool isCurrentClassName(const IdentifierInfo &II, Scope *S,
                           const CXXScopeSpec *SS = nullptr);
   bool isCurrentClassNameTypo(IdentifierInfo *&II, const CXXScopeSpec *SS);

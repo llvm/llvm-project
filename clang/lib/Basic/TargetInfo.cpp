@@ -40,12 +40,24 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   IntWidth = IntAlign = 32;
   LongWidth = LongAlign = 32;
   LongLongWidth = LongLongAlign = 64;
+
+  // Fixed point default bit widths
   ShortAccumWidth = ShortAccumAlign = 16;
   AccumWidth = AccumAlign = 32;
   LongAccumWidth = LongAccumAlign = 64;
-  ShortFractWidth = ShortFractAlign = 16;
-  FractWidth = FractAlign = 32;
-  LongFractWidth = LongFractAlign = 64;
+  ShortFractWidth = ShortFractAlign = 8;
+  FractWidth = FractAlign = 16;
+  LongFractWidth = LongFractAlign = 32;
+
+  // Fixed point default integral and fractional bit sizes
+  // We give the _Accum 1 fewer fractional bits than their corresponding _Fract
+  // types by default to have the same number of fractional bits between _Accum
+  // and _Fract types.
+  SameFBits = false;
+  ShortAccumScale = 7;
+  AccumScale = 15;
+  LongAccumScale = 31;
+
   SuitableAlign = 64;
   DefaultAlignForAttributeAligned = 128;
   MinGlobalAlign = 0;
@@ -362,6 +374,11 @@ void TargetInfo::adjust(LangOptions &Opts) {
 
   if (Opts.NewAlignOverride)
     NewAlign = Opts.NewAlignOverride * getCharWidth();
+
+  // Each unsigned fixed point type has the same number of fractional bits as
+  // its corresponding signed type.
+  SameFBits |= Opts.SameFBits;
+  CheckFixedPointBits();
 }
 
 bool TargetInfo::initFeatureMap(
@@ -715,4 +732,64 @@ bool TargetInfo::validateInputConstraint(
   }
 
   return true;
+}
+
+void TargetInfo::CheckFixedPointBits() const {
+  // Check that the number of fractional and integral bits (and maybe sign) can
+  // fit into the bits given for a fixed point type.
+  assert(ShortAccumScale + getShortAccumIBits() + 1 <= ShortAccumWidth);
+  assert(AccumScale + getAccumIBits() + 1 <= AccumWidth);
+  assert(LongAccumScale + getLongAccumIBits() + 1 <= LongAccumWidth);
+  assert(getUnsignedShortAccumScale() + getUnsignedShortAccumIBits() <=
+         ShortAccumWidth);
+  assert(getUnsignedAccumScale() + getUnsignedAccumIBits() <= AccumWidth);
+  assert(getUnsignedLongAccumScale() + getUnsignedLongAccumIBits() <=
+         LongAccumWidth);
+
+  assert(getShortFractScale() + 1 <= ShortFractWidth);
+  assert(getFractScale() + 1 <= FractWidth);
+  assert(getLongFractScale() + 1 <= LongFractWidth);
+  assert(getUnsignedShortFractScale() <= ShortFractWidth);
+  assert(getUnsignedFractScale() <= FractWidth);
+  assert(getUnsignedLongFractScale() <= LongFractWidth);
+
+  // Each unsigned fract type has either the same number of fractional bits
+  // as, or one more fractional bit than, its corresponding signed fract type.
+  assert(getShortFractScale() == getUnsignedShortFractScale() ||
+         getShortFractScale() == getUnsignedShortFractScale() - 1);
+  assert(getFractScale() == getUnsignedFractScale() ||
+         getFractScale() == getUnsignedFractScale() - 1);
+  assert(getLongFractScale() == getUnsignedLongFractScale() ||
+         getLongFractScale() == getUnsignedLongFractScale() - 1);
+
+  // When arranged in order of increasing rank (see 6.3.1.3a), the number of
+  // fractional bits is nondecreasing for each of the following sets of
+  // fixed-point types:
+  // - signed fract types
+  // - unsigned fract types
+  // - signed accum types
+  // - unsigned accum types.
+  assert(getLongFractScale() >= getFractScale() &&
+         getFractScale() >= getShortFractScale());
+  assert(getUnsignedLongFractScale() >= getUnsignedFractScale() &&
+         getUnsignedFractScale() >= getUnsignedShortFractScale());
+  assert(LongAccumScale >= AccumScale && AccumScale >= ShortAccumScale);
+  assert(getUnsignedLongAccumScale() >= getUnsignedAccumScale() &&
+         getUnsignedAccumScale() >= getUnsignedShortAccumScale());
+
+  // When arranged in order of increasing rank (see 6.3.1.3a), the number of
+  // integral bits is nondecreasing for each of the following sets of
+  // fixed-point types:
+  // - signed accum types
+  // - unsigned accum types
+  assert(getLongAccumIBits() >= getAccumIBits() &&
+         getAccumIBits() >= getShortAccumIBits());
+  assert(getUnsignedLongAccumIBits() >= getUnsignedAccumIBits() &&
+         getUnsignedAccumIBits() >= getUnsignedShortAccumIBits());
+
+  // Each signed accum type has at least as many integral bits as its
+  // corresponding unsigned accum type.
+  assert(getShortAccumIBits() >= getUnsignedShortAccumIBits());
+  assert(getAccumIBits() >= getUnsignedAccumIBits());
+  assert(getLongAccumIBits() >= getUnsignedLongAccumIBits());
 }

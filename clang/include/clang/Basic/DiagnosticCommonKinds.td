@@ -168,6 +168,8 @@ def ext_clang_enable_if : Extension<"'enable_if' is a clang extension">,
                           InGroup<GccCompat>;
 def ext_clang_diagnose_if : Extension<"'diagnose_if' is a clang extension">,
                             InGroup<GccCompat>;
+def err_too_large_for_fixed_point : Error<
+  "this value is too large for this fixed point type">;
 def err_fixed_point_not_enabled : Error<"compile with "
   "'-ffixed-point' to enable fixed point types">;
 

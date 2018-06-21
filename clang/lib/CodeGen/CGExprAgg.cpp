@@ -684,12 +684,12 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       CGF.EmitDynamicCast(LV.getAddress(), cast<CXXDynamicCastExpr>(E));
     else
       CGF.CGM.ErrorUnsupported(E, "non-simple lvalue dynamic_cast");
-    
+
     if (!Dest.isIgnored())
       CGF.CGM.ErrorUnsupported(E, "lvalue dynamic_cast with a destination");
     break;
   }
-      
+
   case CK_ToUnion: {
     // Evaluate even if the destination is ignored.
     if (Dest.isIgnored()) {
