@@ -1140,6 +1140,54 @@ static bool isShuffleExtractingFromLHS(ShuffleVectorInst &SVI,
   return true;
 }
 
+static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
+  // Folds under here require the equivalent of a vector select.
+  if (!Shuf.isSelect())
+    return nullptr;
+
+  BinaryOperator *B0, *B1;
+  if (!match(Shuf.getOperand(0), m_BinOp(B0)) ||
+      !match(Shuf.getOperand(1), m_BinOp(B1)))
+    return nullptr;
+
+  // TODO: There are potential folds where the opcodes do not match (mul+shl).
+  if (B0->getOpcode() != B1->getOpcode())
+    return nullptr;
+
+  // TODO: Fold the case with different variable operands (requires creating a
+  // new shuffle and checking number of uses).
+  Value *X;
+  Constant *C0, *C1;
+  if (!match(B0, m_c_BinOp(m_Value(X), m_Constant(C0))) ||
+      !match(B1, m_c_BinOp(m_Specific(X), m_Constant(C1))))
+    return nullptr;
+
+  // If all operands are constants, let constant folding remove the binops.
+  if (isa<Constant>(X))
+    return nullptr;
+
+  // Remove a binop and the shuffle by rearranging the constant:
+  // shuffle (op X, C0), (op X, C1), M --> op X, C'
+  // shuffle (op C0, X), (op C1, X), M --> op C', X
+  Constant *NewC = ConstantExpr::getShuffleVector(C0, C1, Shuf.getMask());
+
+  // If the shuffle mask contains undef elements, then the new constant
+  // vector will have undefs in those lanes. This could cause the entire
+  // binop to be undef.
+  if (B0->isIntDivRem())
+    NewC = getSafeVectorConstantForIntDivRem(NewC);
+
+  BinaryOperator::BinaryOps Opc = B0->getOpcode();
+  bool Op0IsConst = isa<Constant>(B0->getOperand(0));
+  Instruction *NewBO = Op0IsConst ? BinaryOperator::Create(Opc, NewC, X) :
+                                    BinaryOperator::Create(Opc, X, NewC);
+
+  // Flags are intersected from the 2 source binops.
+  NewBO->copyIRFlags(B0);
+  NewBO->andIRFlags(B1);
+  return NewBO;
+}
+
 Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -1149,6 +1197,9 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   if (auto *V = SimplifyShuffleVectorInst(
           LHS, RHS, SVI.getMask(), SVI.getType(), SQ.getWithInstruction(&SVI)))
     return replaceInstUsesWith(SVI, V);
+
+  if (Instruction *I = foldSelectShuffles(SVI))
+    return I;
 
   bool MadeChange = false;
   unsigned VWidth = SVI.getType()->getVectorNumElements();

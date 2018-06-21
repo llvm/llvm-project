@@ -1901,8 +1901,19 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     return SDValue();
 
   // Bail out if any constants are opaque because we can't constant fold those.
+  // The exception is "and" and "or" with either 0 or -1 in which case we can
+  // propagate non constant operands into select. I.e.:
+  // and (select Cond, 0, -1), X --> select Cond, 0, X
+  // or X, (select Cond, -1, 0) --> select Cond, -1, X
+  bool CanFoldNonConst = (BinOpcode == ISD::AND || BinOpcode == ISD::OR) &&
+                         (isNullConstantOrNullSplatConstant(CT) ||
+                          isAllOnesConstantOrAllOnesSplatConstant(CT)) &&
+                         (isNullConstantOrNullSplatConstant(CF) ||
+                          isAllOnesConstantOrAllOnesSplatConstant(CF));
+
   SDValue CBO = BO->getOperand(SelOpNo ^ 1);
-  if (!isConstantOrConstantVector(CBO, true) &&
+  if (!CanFoldNonConst &&
+      !isConstantOrConstantVector(CBO, true) &&
       !isConstantFPBuildVectorOrConstantFP(CBO))
     return SDValue();
 
@@ -1923,14 +1934,14 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   SDLoc DL(Sel);
   SDValue NewCT = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CT)
                           : DAG.getNode(BinOpcode, DL, VT, CT, CBO);
-  if (!NewCT.isUndef() &&
+  if (!CanFoldNonConst && !NewCT.isUndef() &&
       !isConstantOrConstantVector(NewCT, true) &&
       !isConstantFPBuildVectorOrConstantFP(NewCT))
     return SDValue();
 
   SDValue NewCF = SelOpNo ? DAG.getNode(BinOpcode, DL, VT, CBO, CF)
                           : DAG.getNode(BinOpcode, DL, VT, CF, CBO);
-  if (!NewCF.isUndef() &&
+  if (!CanFoldNonConst && !NewCF.isUndef() &&
       !isConstantOrConstantVector(NewCF, true) &&
       !isConstantFPBuildVectorOrConstantFP(NewCF))
     return SDValue();

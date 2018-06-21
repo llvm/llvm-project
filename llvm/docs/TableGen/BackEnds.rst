@@ -221,6 +221,22 @@ OptParserDefs
 
 **Purpose**: Print enum values for a class.
 
+SearchableTables
+----------------
+
+**Purpose**: Generate custom searchable tables.
+
+**Output**: Enums, global tables and lookup helper functions.
+
+**Usage**: This backend allows generating free-form, target-specific tables
+from TableGen records. The ARM and AArch64 targets use this backend to generate
+tables of system registers; the AMDGPU target uses it to generate meta-data
+about complex image and memory buffer instructions.
+
+More documentation is available in ``include/llvm/TableGen/SearchableTable.td``,
+which also contains the definitions of TableGen classes which must be
+instantiated in order to define the enums and tables emitted by this backend.
+
 CTags
 -----
 

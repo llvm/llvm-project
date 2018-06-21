@@ -63,8 +63,9 @@ BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
                         unsigned Opcode, unsigned NumRepetitions) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = getMode();
-  InstrBenchmark.CpuName = State.getCpuName();
-  InstrBenchmark.LLVMTriple = State.getTriple();
+  InstrBenchmark.CpuName = State.getTargetMachine().getTargetCPU();
+  InstrBenchmark.LLVMTriple =
+      State.getTargetMachine().getTargetTriple().normalize();
   InstrBenchmark.NumRepetitions = NumRepetitions;
   InstrBenchmark.Info = Configuration.Info;
 
@@ -90,25 +91,31 @@ BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
   // that the inside instructions are repeated.
   constexpr const int kMinInstructionsForSnippet = 16;
   {
-    auto EF = createExecutableFunction(
+    auto ObjectFilePath = writeObjectFile(
         GenerateInstructions(kMinInstructionsForSnippet));
-    if (llvm::Error E = EF.takeError()) {
+    if (llvm::Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = llvm::toString(std::move(E));
       return InstrBenchmark;
     }
-    const auto FnBytes = EF->getFunctionBytes();
+    const ExecutableFunction EF(State.createTargetMachine(),
+                              getObjectFromFile(*ObjectFilePath));
+    const auto FnBytes = EF.getFunctionBytes();
     InstrBenchmark.AssembledSnippet.assign(FnBytes.begin(), FnBytes.end());
   }
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  auto EF = createExecutableFunction(
+  auto ObjectFilePath = writeObjectFile(
       GenerateInstructions(InstrBenchmark.NumRepetitions));
-  if (llvm::Error E = EF.takeError()) {
+  if (llvm::Error E = ObjectFilePath.takeError()) {
     InstrBenchmark.Error = llvm::toString(std::move(E));
     return InstrBenchmark;
   }
-  InstrBenchmark.Measurements = runMeasurements(*EF, NumRepetitions);
+  llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
+               << *ObjectFilePath << "\n";
+  const ExecutableFunction EF(State.createTargetMachine(),
+                            getObjectFromFile(*ObjectFilePath));
+  InstrBenchmark.Measurements = runMeasurements(EF, NumRepetitions);
 
   return InstrBenchmark;
 }
@@ -136,22 +143,7 @@ BenchmarkRunner::writeObjectFile(llvm::ArrayRef<llvm::MCInst> Code) const {
     return std::move(E);
   llvm::raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   assembleToStream(State.createTargetMachine(), Code, OFS);
-  llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
-               << ResultPath << "\n";
   return ResultPath.str();
-}
-
-llvm::Expected<ExecutableFunction> BenchmarkRunner::createExecutableFunction(
-    llvm::ArrayRef<llvm::MCInst> Code) const {
-  auto ExpectedObjectPath = writeObjectFile(Code);
-  if (llvm::Error E = ExpectedObjectPath.takeError()) {
-    return std::move(E);
-  }
-
-  // FIXME: Check if TargetMachine or ExecutionEngine can be reused instead of
-  // creating one everytime.
-  return ExecutableFunction(State.createTargetMachine(),
-                            getObjectFromFile(*ExpectedObjectPath));
 }
 
 } // namespace exegesis

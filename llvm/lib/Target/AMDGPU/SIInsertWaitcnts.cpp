@@ -1868,6 +1868,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   BlockVisitedSet.clear();
   VCCZBugHandledSet.clear();
   LoopWaitcntDataMap.clear();
+  BlockWaitcntProcessedSet.clear();
 
   // Walk over the blocks in reverse post-dominator order, inserting
   // s_waitcnt where needed.

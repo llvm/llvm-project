@@ -1,6 +1,5 @@
-; RUN: opt < %s -analyze -basicaa -da -da-delinearize | FileCheck %s -check-prefix=DELIN
+; RUN: opt < %s -analyze -basicaa -da | FileCheck %s -check-prefix=DELIN
 
-; ModuleID = 'GCD.bc'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.6.0"
 
@@ -228,10 +227,10 @@ entry:
   br label %for.cond1.preheader
 
 ; DELIN-LABEL: gcd4
-; DELIN: da analyze - none!
+; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
-; DELIN: da analyze - none!
+; DELIN: da analyze - input [* *]!
 ; DELIN: da analyze - confused!
 ; DELIN: da analyze - none!
 
@@ -290,10 +289,10 @@ entry:
   br label %for.cond1.preheader
 
 ; DELIN-LABEL: gcd5
-; DELIN: da analyze - none!
-; DELIN: da analyze - flow [> *]!
+; DELIN: da analyze - output [* *]!
+; DELIN: da analyze - flow [<> *]!
 ; DELIN: da analyze - confused!
-; DELIN: da analyze - none!
+; DELIN: da analyze - input [* *]!
 ; DELIN: da analyze - confused!
 ; DELIN: da analyze - none!
 
@@ -353,10 +352,10 @@ entry:
   br i1 %cmp4, label %for.cond1.preheader.preheader, label %for.end12
 
 ; DELIN-LABEL: gcd6
-; DELIN: da analyze - none!
+; DELIN: da analyze - output [* *]!
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - confused!
-; DELIN: da analyze - none!
+; DELIN: da analyze - input [* *]!
 ; DELIN: da analyze - confused!
 ; DELIN: da analyze - output [* *]!
 

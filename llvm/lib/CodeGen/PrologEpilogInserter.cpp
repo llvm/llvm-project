@@ -1074,6 +1074,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         int64_t Offset =
             TFI->getFrameIndexReference(MF, MI.getOperand(0).getIndex(), Reg);
         MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
+        MI.getOperand(0).setIsDebug();
         auto *DIExpr = DIExpression::prepend(MI.getDebugExpression(),
                                              DIExpression::NoDeref, Offset);
         MI.getOperand(3).setMetadata(DIExpr);

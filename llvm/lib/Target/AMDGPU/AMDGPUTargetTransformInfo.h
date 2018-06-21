@@ -85,7 +85,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
     AMDGPU::FeatureDebuggerEmitPrologue,
     AMDGPU::FeatureDebuggerInsertNops,
-    AMDGPU::FeatureDebuggerReserveRegs,
 
     // Property of the kernel/environment which can't actually differ.
     AMDGPU::FeatureSGPRInitBug,

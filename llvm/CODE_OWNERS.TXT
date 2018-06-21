@@ -9,6 +9,10 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 (S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
 (D) fields.
 
+N: Simon Atanasyan
+E: simon@atanasyan.com
+D: MIPS Backend (lib/Target/Mips/*)
+
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
@@ -63,10 +67,6 @@ D: llgo, libLTO (lib/LTO/* tools/lto/*), LLVM Bitcode (lib/Bitcode/* include/llv
 N: Quentin Colombet
 E: quentin.colombet@gmail.com
 D: Loop Strength Reduction, Register allocators
-
-N: Simon Dardis
-E: simon.dardis@mips.com
-D: MIPS Backend (lib/Target/Mips/*)
 
 N: Andrea Di Biagio
 E: andrea.dibiagio@sony.com

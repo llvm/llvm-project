@@ -84,6 +84,11 @@ protected:
   /// directive for emitting thread local BSS Symbols.  Default is false.
   bool HasMachoTBSSDirective = false;
 
+  /// True if this is a non-GNU COFF target. The COFF port of the GNU linker
+  /// doesn't handle associative comdats in the way that we would like to use
+  /// them.
+  bool HasCOFFAssociativeComdats = false;
+
   /// This is the maximum possible length of an instruction, which is needed to
   /// compute the size of an inline asm.  Defaults to 4.
   unsigned MaxInstLength = 4;
@@ -463,6 +468,7 @@ public:
 
   bool hasMachoZeroFillDirective() const { return HasMachoZeroFillDirective; }
   bool hasMachoTBSSDirective() const { return HasMachoTBSSDirective; }
+  bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   unsigned getMaxInstLength() const { return MaxInstLength; }
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }

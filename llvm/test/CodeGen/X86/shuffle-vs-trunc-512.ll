@@ -945,8 +945,7 @@ define <4 x double> @PR34175(<32 x i16>* %p) {
 define <16 x i8> @trunc_v8i64_to_v8i8_return_v16i8(<8 x i64> %vec) nounwind {
 ; AVX512-LABEL: trunc_v8i64_to_v8i8_return_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovqw %zmm0, %xmm0
-; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %truncated = trunc <8 x i64> %vec to <8 x i8>

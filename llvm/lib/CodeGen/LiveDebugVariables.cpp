@@ -1196,14 +1196,8 @@ void UserValue::insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
   assert((!Spilled || MO.isFI()) && "a spilled location must be a frame index");
 
   do {
-    MachineInstrBuilder MIB =
-      BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE))
-          .add(MO);
-    if (IsIndirect)
-      MIB.addImm(0U);
-    else
-      MIB.addReg(0U, RegState::Debug);
-    MIB.addMetadata(Variable).addMetadata(Expr);
+    BuildMI(*MBB, I, getDebugLoc(), TII.get(TargetOpcode::DBG_VALUE),
+            IsIndirect, MO, Variable, Expr);
 
     // Continue and insert DBG_VALUES after every redefinition of register
     // associated with the debug value within the range

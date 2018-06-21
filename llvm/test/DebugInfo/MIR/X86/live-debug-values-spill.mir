@@ -421,11 +421,11 @@ body:             |
     liveins: $r14d, $r15d, $rbp
   
     $rdi = LEA64r $rbp, 1, _, -44, _
-    DBG_VALUE $rbp, -44, !35, !38, debug-location !60
+    DBG_VALUE debug-use $rbp, -44, !35, !38, debug-location !60
     $rsi = LEA64r $rbp, 1, _, -60, _
-    DBG_VALUE $rbp, -60, !36, !38, debug-location !63
+    DBG_VALUE debug-use $rbp, -60, !36, !38, debug-location !63
     $rdx = LEA64r $rbp, 1, _, -64, _
-    DBG_VALUE $rbp, -64, !37, !38, debug-location !78
+    DBG_VALUE debug-use $rbp, -64, !37, !38, debug-location !78
     CALL64pcrel32 @set, csr_64, implicit $rsp, implicit $rdi, implicit $rsi, implicit $rdx, implicit-def $rsp, debug-location !79
     $eax = MOV32rm $rbp, 1, _, -44, _, debug-location !81 :: (dereferenceable load 4 from %ir.inte, !tbaa !47)
     DBG_VALUE debug-use $eax, debug-use _, !35, !38, debug-location !60

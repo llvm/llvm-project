@@ -696,7 +696,7 @@ Additional note records can be present.
   Specifies extensible metadata associated with the code objects executed on HSA
   [HSA]_ compatible runtimes such as AMD's ROCm [AMD-ROCm]_. It is required when
   the target triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`). See
-  :ref:`amdgpu-amdhsa-hsa-code-object-metadata` for the syntax of the code
+  :ref:`amdgpu-amdhsa-code-object-metadata` for the syntax of the code
   object metadata string.
 
 .. _amdgpu-symbols:
@@ -954,7 +954,7 @@ AMDHSA
 This section provides code conventions used when the target triple OS is
 ``amdhsa`` (see :ref:`amdgpu-target-triples`).
 
-.. _amdgpu-amdhsa-hsa-code-object-metadata:
+.. _amdgpu-amdhsa-code-object-target-identification:
 
 Code Object Target Identification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -983,6 +983,8 @@ Where:
 For example:
 
   ``"amdgcn-amd-amdhsa--gfx902+xnack"``
+
+.. _amdgpu-amdhsa-code-object-metadata:
 
 Code Object Metadata
 ~~~~~~~~~~~~~~~~~~~~
@@ -1465,7 +1467,7 @@ CPU host program, or from an HSA kernel executing on a GPU.
    such as grid and work-group size, together with information from the code
    object about the kernel, such as segment sizes. The ROCm runtime queries on
    the kernel symbol can be used to obtain the code object values which are
-   recorded in the :ref:`amdgpu-amdhsa-hsa-code-object-metadata`.
+   recorded in the :ref:`amdgpu-amdhsa-code-object-metadata`.
 7. CP executes micro-code and is responsible for detecting and setting up the
    GPU to execute the wavefronts of a kernel dispatch.
 8. CP ensures that when the a wavefront starts executing the kernel machine
@@ -1599,7 +1601,8 @@ that implements the kernel.
 Kernel Descriptor for GFX6-GFX9
 +++++++++++++++++++++++++++++++
 
-CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
+CP microcode requires the Kernel descriptor to be allocated on 64 byte
+alignment.
 
   .. table:: Kernel Descriptor for GFX6-GFX9
      :name: amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table
@@ -1667,15 +1670,8 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      453     1 bit   ENABLE_SGPR_FLAT_SCRATCH_INIT   *see above*
      454     1 bit   ENABLE_SGPR_PRIVATE_SEGMENT     *see above*
                      _SIZE
-     455     1 bit   ENABLE_SGPR_GRID_WORKGROUP      Not implemented in CP and
-                     _COUNT_X                        should always be 0.
-     456     1 bit   ENABLE_SGPR_GRID_WORKGROUP      Not implemented in CP and
-                     _COUNT_Y                        should always be 0.
-     457     1 bit   ENABLE_SGPR_GRID_WORKGROUP      Not implemented in CP and
-                     _COUNT_Z                        should always be 0.
-     463:458 6 bits                                  Reserved, must be 0.
-     511:464 6                                       Reserved, must be 0.
-             bytes
+     455     1 bit                                   Reserved, must be 0.
+     511:456 8 bytes                                 Reserved, must be 0.
      512     **Total size 64 bytes.**
      ======= ====================================================================
 
@@ -1687,42 +1683,86 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     5:0     6 bits  GRANULATED_WORKITEM_VGPR_COUNT  Number of vector registers
-                                                     used by each work-item,
+     5:0     6 bits  GRANULATED_WORKITEM_VGPR_COUNT  Number of vector register
+                                                     blocks used by each work-item;
                                                      granularity is device
                                                      specific:
 
                                                      GFX6-GFX9
-                                                       - max_vgpr 1..256
-                                                       - roundup((max_vgpg + 1)
-                                                         / 4) - 1
+                                                       - vgprs_used 0..256
+                                                       - max(0, ceil(vgprs_used / 4) - 1)
+
+                                                     Where vgprs_used is defined
+                                                     as the highest VGPR number
+                                                     explicitly referenced plus
+                                                     one.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.VGPRS``.
-     9:6     4 bits  GRANULATED_WAVEFRONT_SGPR_COUNT Number of scalar registers
-                                                     used by a wavefront,
+
+                                                     The
+                                                     :ref:`amdgpu-assembler`
+                                                     calculates this
+                                                     automatically for the
+                                                     selected processor from
+                                                     values provided to the
+                                                     `.amdhsa_kernel` directive
+                                                     by the
+                                                     `.amdhsa_next_free_vgpr`
+                                                     nested directive (see
+                                                     :ref:`amdhsa-kernel-directives-table`).
+     9:6     4 bits  GRANULATED_WAVEFRONT_SGPR_COUNT Number of scalar register
+                                                     blocks used by a wavefront;
                                                      granularity is device
                                                      specific:
 
                                                      GFX6-GFX8
-                                                       - max_sgpr 1..112
-                                                       - roundup((max_sgpg + 1)
-                                                         / 8) - 1
+                                                       - sgprs_used 0..112
+                                                       - max(0, ceil(sgprs_used / 8) - 1)
                                                      GFX9
-                                                       - max_sgpr 1..112
-                                                       - roundup((max_sgpg + 1)
-                                                         / 16) - 1
+                                                       - sgprs_used 0..112
+                                                       - 2 * max(0, ceil(sgprs_used / 16) - 1)
 
-                                                     Includes the special SGPRs
-                                                     for VCC, Flat Scratch (for
-                                                     GFX7 onwards) and XNACK
-                                                     (for GFX8 onwards). It does
-                                                     not include the 16 SGPR
-                                                     added if a trap handler is
+                                                     Where sgprs_used is
+                                                     defined as the highest
+                                                     SGPR number explicitly
+                                                     referenced plus one, plus
+                                                     a target-specific number
+                                                     of additional special
+                                                     SGPRs for VCC,
+                                                     FLAT_SCRATCH (GFX7+) and
+                                                     XNACK_MASK (GFX8+), and
+                                                     any additional
+                                                     target-specific
+                                                     limitations. It does not
+                                                     include the 16 SGPRs added
+                                                     if a trap handler is
                                                      enabled.
+
+                                                     The target-specific
+                                                     limitations and special
+                                                     SGPR layout are defined in
+                                                     the hardware
+                                                     documentation, which can
+                                                     be found in the
+                                                     :ref:`amdgpu-processors`
+                                                     table.
 
                                                      Used by CP to set up
                                                      ``COMPUTE_PGM_RSRC1.SGPRS``.
+
+                                                     The
+                                                     :ref:`amdgpu-assembler`
+                                                     calculates this
+                                                     automatically for the
+                                                     selected processor from
+                                                     values provided to the
+                                                     `.amdhsa_kernel` directive
+                                                     by the
+                                                     `.amdhsa_next_free_sgpr`
+                                                     and `.amdhsa_reserve_*`
+                                                     nested directives (see
+                                                     :ref:`amdhsa-kernel-directives-table`).
      11:10   2 bits  PRIORITY                        Must be 0.
 
                                                      Start executing wavefront
@@ -4001,7 +4041,7 @@ When the language is OpenCL the following differences occur:
    arguments for the AMDHSA OS (see
    :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
 3. Additional metadata is generated
-   (see :ref:`amdgpu-amdhsa-hsa-code-object-metadata`).
+   (see :ref:`amdgpu-amdhsa-code-object-metadata`).
 
   .. table:: OpenCL kernel implicit arguments appended for AMDHSA OS
      :name: opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table
@@ -4028,6 +4068,8 @@ HCC
 When the language is HCC the following differences occur:
 
 1. The HSA memory model is used (see :ref:`amdgpu-amdhsa-memory-model`).
+
+.. _amdgpu-assembler:
 
 Assembler
 ---------
@@ -4261,97 +4303,208 @@ VOP_SDWA examples:
 
 For full list of supported instructions, refer to "Vector ALU instructions".
 
-HSA Code Object Directives
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Predefined Symbols
+~~~~~~~~~~~~~~~~~~
 
-AMDGPU ABI defines auxiliary data in output code object. In assembly source,
-one can specify them with assembler directives.
+The AMDGPU assembler defines and updates some symbols automatically. These
+symbols do not affect code generation.
 
-.hsa_code_object_version major, minor
-+++++++++++++++++++++++++++++++++++++
+.amdgcn.gfx_generation_number
++++++++++++++++++++++++++++++
 
-*major* and *minor* are integers that specify the version of the HSA code
-object that will be generated by the assembler.
+Set to the GFX generation number of the target being assembled for. For
+example, when assembling for a "GFX9" target this will be set to the integer
+value "9". The possible GFX generation numbers are presented in
+:ref:`amdgpu-processors`.
 
-.hsa_code_object_isa [major, minor, stepping, vendor, arch]
-+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.amdgcn.next_free_vgpr
+++++++++++++++++++++++
 
+Set to zero before assembly begins. At each instruction, if the current value
+of this symbol is less than or equal to the maximum VGPR number explicitly
+referenced within that instruction then the symbol value is updated to equal
+that VGPR number plus one.
 
-*major*, *minor*, and *stepping* are all integers that describe the instruction
-set architecture (ISA) version of the assembly program.
+May be used to set the `.amdhsa_next_free_vpgr` directive in
+:ref:`amdhsa-kernel-directives-table`.
 
-*vendor* and *arch* are quoted strings.  *vendor* should always be equal to
-"AMD" and *arch* should always be equal to "AMDGPU".
+May be set at any time, e.g. manually set to zero at the start of each kernel.
 
-By default, the assembler will derive the ISA version, *vendor*, and *arch*
-from the value of the -mcpu option that is passed to the assembler.
+.amdgcn.next_free_sgpr
+++++++++++++++++++++++
 
-.amdgpu_hsa_kernel (name)
-+++++++++++++++++++++++++
+Set to zero before assembly begins. At each instruction, if the current value
+of this symbol is less than or equal the maximum SGPR number explicitly
+referenced within that instruction then the symbol value is updated to equal
+that SGPR number plus one.
 
-This directives specifies that the symbol with given name is a kernel entry point
-(label) and the object should contain corresponding symbol of type STT_AMDGPU_HSA_KERNEL.
+May be used to set the `.amdhsa_next_free_spgr` directive in
+:ref:`amdhsa-kernel-directives-table`.
 
-.amd_kernel_code_t
-++++++++++++++++++
+May be set at any time, e.g. manually set to zero at the start of each kernel.
 
-This directive marks the beginning of a list of key / value pairs that are used
-to specify the amd_kernel_code_t object that will be emitted by the assembler.
-The list must be terminated by the *.end_amd_kernel_code_t* directive.  For
-any amd_kernel_code_t values that are unspecified a default value will be
-used.  The default value for all keys is 0, with the following exceptions:
+Code Object Directives
+~~~~~~~~~~~~~~~~~~~~~~
 
-- *kernel_code_version_major* defaults to 1.
-- *machine_kind* defaults to 1.
-- *machine_version_major*, *machine_version_minor*, and
-  *machine_version_stepping* are derived from the value of the -mcpu option
-  that is passed to the assembler.
-- *kernel_code_entry_byte_offset* defaults to 256.
-- *wavefront_size* defaults to 6.
-- *kernarg_segment_alignment*, *group_segment_alignment*, and
-  *private_segment_alignment* default to 4. Note that alignments are specified
-  as a power of two, so a value of **n** means an alignment of 2^ **n**.
+Directives which begin with ``.amdgcn`` are valid for all ``amdgcn``
+architecture processors, and are not OS-specific. Directives which begin with
+``.amdhsa`` are specific to ``amdgcn`` architecture processors when the
+``amdhsa`` OS is specified. See :ref:`amdgpu-target-triples` and
+:ref:`amdgpu-processors`.
 
-The *.amd_kernel_code_t* directive must be placed immediately after the
-function label and before any instructions.
+.amdgcn_target <target>
++++++++++++++++++++++++
 
-For a full list of amd_kernel_code_t keys, refer to AMDGPU ABI document,
-comments in lib/Target/AMDGPU/AmdKernelCodeT.h and test/CodeGen/AMDGPU/hsa.s.
+Optional directive which declares the target supported by the containing
+assembler source file. Valid values are described in
+:ref:`amdgpu-amdhsa-code-object-target-identification`. Used by the assembler
+to validate command-line options such as ``-triple``, ``-mcpu``, and those
+which specify target features.
 
-Here is an example of a minimal amd_kernel_code_t specification:
+.amdhsa_kernel <name>
++++++++++++++++++++++
 
-.. code-block:: none
+Creates a correctly aligned AMDHSA kernel descriptor and a symbol,
+``<name>.kd``, in the current location of the current section. Only valid when
+the OS is ``amdhsa``. ``<name>`` must be a symbol that labels the first
+instruction to execute, and does not need to be previously defined.
 
-   .hsa_code_object_version 1,0
-   .hsa_code_object_isa
+Marks the beginning of a list of directives used to generate the bytes of a
+kernel descriptor, as described in :ref:`amdgpu-amdhsa-kernel-descriptor`.
+Directives which may appear in this list are described in
+:ref:`amdhsa-kernel-directives-table`. Directives may appear in any order, must
+be valid for the target being assembled for, and cannot be repeated. Directives
+support the range of values specified by the field they reference in
+:ref:`amdgpu-amdhsa-kernel-descriptor`. If a directive is not specified, it is
+assumed to have its default value, unless it is marked as "Required", in which
+case it is an error to omit the directive. This list of directives is
+terminated by an ``.end_amdhsa_kernel`` directive.
 
-   .hsatext
-   .globl  hello_world
-   .p2align 8
-   .amdgpu_hsa_kernel hello_world
+  .. table:: AMDHSA Kernel Assembler Directives
+     :name: amdhsa-kernel-directives-table
 
-   hello_world:
+     ======================================================== ================ ============ ===================
+     Directive                                                Default          Supported On Description
+     ======================================================== ================ ============ ===================
+     ``.amdhsa_group_segment_fixed_size``                     0                GFX6-GFX9    Controls GROUP_SEGMENT_FIXED_SIZE in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_private_segment_fixed_size``                   0                GFX6-GFX9    Controls PRIVATE_SEGMENT_FIXED_SIZE in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_user_sgpr_private_segment_buffer``             0                GFX6-GFX9    Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_user_sgpr_dispatch_ptr``                       0                GFX6-GFX9    Controls ENABLE_SGPR_DISPATCH_PTR in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_user_sgpr_queue_ptr``                          0                GFX6-GFX9    Controls ENABLE_SGPR_QUEUE_PTR in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_user_sgpr_kernarg_segment_ptr``                0                GFX6-GFX9    Controls ENABLE_SGPR_KERNARG_SEGMENT_PTR in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_user_sgpr_dispatch_id``                        0                GFX6-GFX9    Controls ENABLE_SGPR_DISPATCH_ID in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_user_sgpr_flat_scratch_init``                  0                GFX6-GFX9    Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_user_sgpr_private_segment_size``               0                GFX6-GFX9    Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
+                                                                                            :ref:`amdgpu-amdhsa-kernel-descriptor-gfx6-gfx9-table`.
+     ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                GFX6-GFX9    Controls ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_system_sgpr_workgroup_id_x``                   1                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_ID_X in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_system_sgpr_workgroup_id_y``                   0                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_ID_Y in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_system_sgpr_workgroup_id_z``                   0                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_ID_Z in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_system_sgpr_workgroup_info``                   0                GFX6-GFX9    Controls ENABLE_SGPR_WORKGROUP_INFO in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_system_vgpr_workitem_id``                      0                GFX6-GFX9    Controls ENABLE_VGPR_WORKITEM_ID in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+                                                                                            Possible values are defined in
+                                                                                            :ref:`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`.
+     ``.amdhsa_next_free_vgpr``                               Required         GFX6-GFX9    Maximum VGPR number explicitly referenced, plus one.
+                                                                                            Used to calculate GRANULATED_WORKITEM_VGPR_COUNT in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+     ``.amdhsa_next_free_sgpr``                               Required         GFX6-GFX9    Maximum SGPR number explicitly referenced, plus one.
+                                                                                            Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+     ``.amdhsa_reserve_vcc``                                  1                GFX6-GFX9    Whether the kernel may use the special VCC SGPR.
+                                                                                            Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+     ``.amdhsa_reserve_flat_scratch``                         1                GFX7-GFX9    Whether the kernel may use flat instructions to access
+                                                                                            scratch memory. Used to calculate
+                                                                                            GRANULATED_WAVEFRONT_SGPR_COUNT in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+     ``.amdhsa_reserve_xnack_mask``                           Target           GFX8-GFX9    Whether the kernel may trigger XNACK replay.
+                                                              Feature                       Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
+                                                              Specific                      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+                                                              (+xnack)
+     ``.amdhsa_float_round_mode_32``                          0                GFX6-GFX9    Controls FLOAT_ROUND_MODE_32 in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+                                                                                            Possible values are defined in
+                                                                                            :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
+     ``.amdhsa_float_round_mode_16_64``                       0                GFX6-GFX9    Controls FLOAT_ROUND_MODE_16_64 in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+                                                                                            Possible values are defined in
+                                                                                            :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
+     ``.amdhsa_float_denorm_mode_32``                         0                GFX6-GFX9    Controls FLOAT_DENORM_MODE_32 in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+                                                                                            Possible values are defined in
+                                                                                            :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
+     ``.amdhsa_float_denorm_mode_16_64``                      3                GFX6-GFX9    Controls FLOAT_DENORM_MODE_16_64 in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+                                                                                            Possible values are defined in
+                                                                                            :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
+     ``.amdhsa_dx10_clamp``                                   1                GFX6-GFX9    Controls ENABLE_DX10_CLAMP in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+     ``.amdhsa_ieee_mode``                                    1                GFX6-GFX9    Controls ENABLE_IEEE_MODE in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+     ``.amdhsa_fp16_overflow``                                0                GFX9         Controls FP16_OVFL in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx9-table`.
+     ``.amdhsa_exception_fp_ieee_invalid_op``                 0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_exception_fp_denorm_src``                      0                GFX6-GFX9    Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_exception_fp_ieee_div_zero``                   0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_exception_fp_ieee_overflow``                   0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_exception_fp_ieee_underflow``                  0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_exception_fp_ieee_inexact``                    0                GFX6-GFX9    Controls ENABLE_EXCEPTION_IEEE_754_FP_INEXACT in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ``.amdhsa_exception_int_div_zero``                       0                GFX6-GFX9    Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
+                                                                                            :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
+     ======================================================== ================ ============ ===================
 
-      .amd_kernel_code_t
-         enable_sgpr_kernarg_segment_ptr = 1
-         is_ptr64 = 1
-         compute_pgm_rsrc1_vgprs = 0
-         compute_pgm_rsrc1_sgprs = 0
-         compute_pgm_rsrc2_user_sgpr = 2
-         kernarg_segment_byte_size = 8
-         wavefront_sgpr_count = 2
-         workitem_vgpr_count = 3
-     .end_amd_kernel_code_t
+Example HSA Source Code
+~~~~~~~~~~~~~~~~~~~~~~~
 
-     s_load_dwordx2 s[0:1], s[0:1] 0x0
-     v_mov_b32 v0, 3.14159
-     s_waitcnt lgkmcnt(0)
-     v_mov_b32 v1, s0
-     v_mov_b32 v2, s1
-     flat_store_dword v[1:2], v0
-     s_endpgm
-   .Lfunc_end0:
-        .size   hello_world, .Lfunc_end0-hello_world
+Here is an example of a minimal assembly source file, defining one HSA kernel:
+
+.. code-block:: nasm
+
+  .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
+
+  .text
+  .globl hello_world
+  .p2align 8
+  .type hello_world,@function
+  hello_world:
+    s_load_dwordx2 s[0:1], s[0:1] 0x0
+    v_mov_b32 v0, 3.14159
+    s_waitcnt lgkmcnt(0)
+    v_mov_b32 v1, s0
+    v_mov_b32 v2, s1
+    flat_store_dword v[1:2], v0
+    s_endpgm
+  .Lfunc_end0:
+    .size   hello_world, .Lfunc_end0-hello_world
+
+  .rodata
+  .p2align 6
+  .amdhsa_kernel hello_world
+    .amdhsa_user_sgpr_kernarg_segment_ptr 1
+    .amdhsa_next_free_vgpr .amdgcn.next_free_vgpr
+    .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
+  .end_amdhsa_kernel
+
 
 Additional Documentation
 ========================
