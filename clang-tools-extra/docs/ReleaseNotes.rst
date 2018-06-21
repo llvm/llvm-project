@@ -193,6 +193,10 @@ Improvements to clang-tidy
   <clang-tidy/checks/cppcoreguidelines-avoid-goto>`
   added.
 
+- Removed the `google-readability-redundant-smartptr-get` alias of the
+  :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability-redundant-smartptr-get>` check.
+
 - The 'misc-forwarding-reference-overload' check was renamed to :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone-forwarding-reference-overload>`
 
