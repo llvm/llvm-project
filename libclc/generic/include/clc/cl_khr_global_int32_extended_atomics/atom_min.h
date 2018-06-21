@@ -1,2 +1,3 @@
-_CLC_OVERLOAD _CLC_DECL int atom_min(global int *p, int val);
-_CLC_OVERLOAD _CLC_DECL unsigned int atom_min(global unsigned int *p, unsigned int val);
+#define __CLC_FUNCTION atom_min
+#define __CLC_ADDRESS_SPACE global
+#include <clc/atom_decl_int32.inc>

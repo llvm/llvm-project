@@ -1,5 +1,4 @@
-//===-- PythonDataObjects.cpp ------------------------------------*- C++
-//-*-===//
+//===-- PythonDataObjects.cpp -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

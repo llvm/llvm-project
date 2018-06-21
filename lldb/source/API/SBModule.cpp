@@ -144,7 +144,7 @@ const uint8_t *SBModule::GetUUIDBytes() const {
   const uint8_t *uuid_bytes = NULL;
   ModuleSP module_sp(GetSP());
   if (module_sp)
-    uuid_bytes = (const uint8_t *)module_sp->GetUUID().GetBytes();
+    uuid_bytes = module_sp->GetUUID().GetBytes().data();
 
   if (log) {
     if (uuid_bytes) {

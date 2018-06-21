@@ -1472,7 +1472,7 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
       module_spec.GetFileSpec().SetFile(path, false, FileSpec::Style::native);
 
     if (uuid_cstr)
-      module_spec.GetUUID().SetFromCString(uuid_cstr);
+      module_spec.GetUUID().SetFromStringRef(uuid_cstr);
 
     if (triple)
       module_spec.GetArchitecture() = Platform::GetAugmentedArchSpec(
