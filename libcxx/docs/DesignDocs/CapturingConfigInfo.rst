@@ -46,7 +46,7 @@ we do NOTHING.
 
 Otherwise we create a custom installation rule that modifies the installed __config
 header. The rule first generates a dummy "__config_site" header containing the required
-#defines. The contents of the dummy header are then prependend to the installed
+#defines. The contents of the dummy header are then prepended to the installed
 __config header. By manually prepending the files we avoid the cost of an
 extra #include and we allow the __config header to be ignorant of the extra
 configuration all together. An example "__config" header generated when

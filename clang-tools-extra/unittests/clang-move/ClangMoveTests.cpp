@@ -24,10 +24,6 @@ namespace clang {
 namespace move {
 namespace {
 
-const char TestHeaderName[] = "foo.h";
-
-const char TestCCName[] = "foo.cc";
-
 const char TestHeader[] = "namespace a {\n"
                           "class C1; // test\n"
                           "template <typename T> class C2;\n"
@@ -196,6 +192,15 @@ const char ExpectedNewCC[] = "namespace a {\n"
                              "} // namespace b\n"
                              "} // namespace a\n";
 
+#ifdef _WIN32
+const char WorkingDir[] = "C:\\test";
+#else
+const char WorkingDir[] = "/test";
+#endif
+
+const char TestHeaderName[] = "foo.h";
+const char TestCCName[] = "foo.cc";
+
 std::map<std::string, std::string>
 runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
                    const char *const Header = TestHeader,
@@ -203,9 +208,9 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
                    DeclarationReporter *const Reporter = nullptr) {
   clang::RewriterTestContext Context;
 
+  Context.InMemoryFileSystem->setCurrentWorkingDirectory(WorkingDir);
+
   std::map<llvm::StringRef, clang::FileID> FileToFileID;
-  std::vector<std::pair<std::string, std::string>> FileToSourceText = {
-      {TestHeaderName, Header}, {TestCCName, CC}};
 
   auto CreateFiles = [&Context, &FileToFileID](llvm::StringRef Name,
                                                llvm::StringRef Code) {
@@ -215,25 +220,21 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
   };
   CreateFiles(Spec.NewCC, "");
   CreateFiles(Spec.NewHeader, "");
-  CreateFiles(Spec.OldHeader, Header);
-  CreateFiles(Spec.OldCC, CC);
+  CreateFiles(TestHeaderName, Header);
+  CreateFiles(TestCCName, CC);
 
   std::map<std::string, tooling::Replacements> FileToReplacements;
-  llvm::SmallString<128> InitialDirectory;
-  std::error_code EC = llvm::sys::fs::current_path(InitialDirectory);
-  assert(!EC);
-  (void)EC;
-  ClangMoveContext MoveContext = {Spec, FileToReplacements,
-                                  InitialDirectory.str(), "LLVM",
+  ClangMoveContext MoveContext = {Spec, FileToReplacements, WorkingDir, "LLVM",
                                   Reporter != nullptr};
 
   auto Factory = llvm::make_unique<clang::move::ClangMoveActionFactory>(
       &MoveContext, Reporter);
 
+ // std::string IncludeArg = Twine("-I" + WorkingDir;
   tooling::runToolOnCodeWithArgs(
-      Factory->create(), CC, {"-std=c++11", "-fparse-all-comments"},
-      TestCCName, "clang-move", std::make_shared<PCHContainerOperations>(),
-      FileToSourceText);
+      Factory->create(), CC, Context.InMemoryFileSystem,
+      {"-std=c++11", "-fparse-all-comments", "-I."}, TestCCName, "clang-move",
+      std::make_shared<PCHContainerOperations>());
   formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm");
   // The Key is file name, value is the new code after moving the class.
   std::map<std::string, std::string> Results;
@@ -291,6 +292,32 @@ TEST(ClangMove, MoveNonExistClass) {
   Spec.NewCC = "new_foo.cc";
   auto Results = runClangMoveOnCode(Spec);
   EXPECT_EQ(0u, Results.size());
+}
+
+TEST(ClangMove, HeaderIncludeSelf) {
+  move::MoveDefinitionSpec Spec;
+  Spec.Names = {std::string("Foo")};
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+
+  const char TestHeader[] = "#ifndef FOO_H\n"
+                            "#define FOO_H\n"
+                            "#include \"foo.h\"\n"
+                            "class Foo {};\n"
+                            "#endif\n";
+  const char TestCode[] = "#include \"foo.h\"";
+  const char ExpectedNewHeader[] = "#ifndef FOO_H\n"
+                                   "#define FOO_H\n"
+                                   "#include \"new_foo.h\"\n"
+                                   "class Foo {};\n"
+                                   "#endif\n";
+  const char ExpectedNewCC[] = "#include \"new_foo.h\"";
+  auto Results = runClangMoveOnCode(Spec, TestHeader, TestCode);
+  EXPECT_EQ("", Results[Spec.OldHeader]);
+  EXPECT_EQ(ExpectedNewHeader, Results[Spec.NewHeader]);
+  EXPECT_EQ(ExpectedNewCC, Results[Spec.NewCC]);
 }
 
 TEST(ClangMove, MoveAll) {
@@ -365,6 +392,26 @@ TEST(ClangMove, DontMoveAll) {
   }
 }
 
+TEST(ClangMove, IgnoreMacroSymbolsAndMoveAll) {
+  const char TestCode[] = "#include \"foo.h\"";
+  std::vector<std::string> TestHeaders = {
+    "#define DEFINE_Foo int Foo = 1;\nDEFINE_Foo;\nclass Bar {};\n",
+    "#define DEFINE(x) int var_##x = 1;\nDEFINE(foo);\nclass Bar {};\n",
+  };
+  move::MoveDefinitionSpec Spec;
+  Spec.Names.push_back("Bar");
+  Spec.OldHeader = "foo.h";
+  Spec.OldCC = "foo.cc";
+  Spec.NewHeader = "new_foo.h";
+  Spec.NewCC = "new_foo.cc";
+
+  for (const auto& Header : TestHeaders) {
+    auto Results = runClangMoveOnCode(Spec, Header.c_str(), TestCode);
+    EXPECT_EQ("", Results[Spec.OldHeader]);
+    EXPECT_EQ(Header, Results[Spec.NewHeader]);
+  }
+}
+
 TEST(ClangMove, MacroInFunction) {
   const char TestHeader[] = "#define INT int\n"
                             "class A {\npublic:\n  int f();\n};\n"
@@ -385,12 +432,16 @@ TEST(ClangMove, MacroInFunction) {
 
 TEST(ClangMove, DefinitionInMacro) {
   const char TestHeader[] = "#define DEF(CLASS) void CLASS##_::f() {}\n"
-                            "class A_ {\nvoid f();\n};\n"
+                            "#define DEF2(CLASS, ...) void CLASS##_::f2() {}\n"
+                            "class A_ {\nvoid f();\nvoid f2();\n};\n"
                             "class B {};\n";
   const char TestCode[] = "#include \"foo.h\"\n"
-                          "DEF(A)\n";
+                          "DEF(A)\n\n"
+                          "DEF2(A,\n"
+                          "     123)\n";
   const char ExpectedNewCode[] = "#include \"new_foo.h\"\n\n"
-                                 "DEF(A)\n";
+                                 "DEF(A)\n\n"
+                                 "DEF2(A, 123)\n";
   move::MoveDefinitionSpec Spec;
   Spec.Names.push_back("A_");
   Spec.OldHeader = "foo.h";
@@ -544,7 +595,9 @@ TEST(ClangMove, DumpDecls) {
                             "extern int kGlobalInt;\n"
                             "extern const char* const kGlobalStr;\n"
                             "} // namespace b\n"
-                            "} // namespace a\n";
+                            "} // namespace a\n"
+                            "#define DEFINE_FOO class Foo {};\n"
+                            "DEFINE_FOO\n";
   const char TestCode[] = "#include \"foo.h\"\n";
   move::MoveDefinitionSpec Spec;
   Spec.Names.push_back("B");

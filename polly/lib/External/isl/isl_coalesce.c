@@ -196,6 +196,82 @@ struct isl_coalesce_info {
 	int *ineq;
 };
 
+/* Is there any (half of an) equality constraint in the description
+ * of the basic map represented by "info" that
+ * has position "status" with respect to the other basic map?
+ */
+static int any_eq(struct isl_coalesce_info *info, int status)
+{
+	unsigned n_eq;
+
+	n_eq = isl_basic_map_n_equality(info->bmap);
+	return any(info->eq, 2 * n_eq, status);
+}
+
+/* Is there any inequality constraint in the description
+ * of the basic map represented by "info" that
+ * has position "status" with respect to the other basic map?
+ */
+static int any_ineq(struct isl_coalesce_info *info, int status)
+{
+	unsigned n_ineq;
+
+	n_ineq = isl_basic_map_n_inequality(info->bmap);
+	return any(info->ineq, n_ineq, status);
+}
+
+/* Return the position of the first half on an equality constraint
+ * in the description of the basic map represented by "info" that
+ * has position "status" with respect to the other basic map.
+ * The returned value is twice the position of the equality constraint
+ * plus zero for the negative half and plus one for the positive half.
+ * Return -1 if there is no such entry.
+ */
+static int find_eq(struct isl_coalesce_info *info, int status)
+{
+	unsigned n_eq;
+
+	n_eq = isl_basic_map_n_equality(info->bmap);
+	return find(info->eq, 2 * n_eq, status);
+}
+
+/* Return the position of the first inequality constraint in the description
+ * of the basic map represented by "info" that
+ * has position "status" with respect to the other basic map.
+ * Return -1 if there is no such entry.
+ */
+static int find_ineq(struct isl_coalesce_info *info, int status)
+{
+	unsigned n_ineq;
+
+	n_ineq = isl_basic_map_n_inequality(info->bmap);
+	return find(info->ineq, n_ineq, status);
+}
+
+/* Return the number of (halves of) equality constraints in the description
+ * of the basic map represented by "info" that
+ * have position "status" with respect to the other basic map.
+ */
+static int count_eq(struct isl_coalesce_info *info, int status)
+{
+	unsigned n_eq;
+
+	n_eq = isl_basic_map_n_equality(info->bmap);
+	return count(info->eq, 2 * n_eq, status);
+}
+
+/* Return the number of inequality constraints in the description
+ * of the basic map represented by "info" that
+ * have position "status" with respect to the other basic map.
+ */
+static int count_ineq(struct isl_coalesce_info *info, int status)
+{
+	unsigned n_ineq;
+
+	n_ineq = isl_basic_map_n_inequality(info->bmap);
+	return count(info->ineq, n_ineq, status);
+}
+
 /* Are all non-redundant constraints of the basic map represented by "info"
  * either valid or cut constraints with respect to the other basic map?
  */
@@ -654,7 +730,7 @@ static enum isl_change is_adj_ineq_extension(int i, int j,
 	if (isl_tab_extend_cons(info[i].tab, 1 + info[j].bmap->n_ineq) < 0)
 		return isl_change_error;
 
-	k = find(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_INEQ);
+	k = find_ineq(&info[i], STATUS_ADJ_INEQ);
 	if (k < 0)
 		isl_die(isl_basic_map_get_ctx(info[i].bmap), isl_error_internal,
 			"info[i].ineq should have exactly one STATUS_ADJ_INEQ",
@@ -732,16 +808,14 @@ static enum isl_change check_adj_ineq(int i, int j,
 	int count_i, count_j;
 	int cut_i, cut_j;
 
-	count_i = count(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_INEQ);
-	count_j = count(info[j].ineq, info[j].bmap->n_ineq, STATUS_ADJ_INEQ);
+	count_i = count_ineq(&info[i], STATUS_ADJ_INEQ);
+	count_j = count_ineq(&info[j], STATUS_ADJ_INEQ);
 
 	if (count_i != 1 && count_j != 1)
 		return isl_change_none;
 
-	cut_i = any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_CUT) ||
-		any(info[i].ineq, info[i].bmap->n_ineq, STATUS_CUT);
-	cut_j = any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_CUT) ||
-		any(info[j].ineq, info[j].bmap->n_ineq, STATUS_CUT);
+	cut_i = any_eq(&info[i], STATUS_CUT) || any_ineq(&info[i], STATUS_CUT);
+	cut_j = any_eq(&info[j], STATUS_CUT) || any_ineq(&info[j], STATUS_CUT);
 
 	if (!cut_i && !cut_j && count_i == 1 && count_j == 1)
 		return fuse(i, j, info, NULL, 0, 0);
@@ -1712,8 +1786,7 @@ static enum isl_change can_wrap_in_set(int i, int j,
 	    ISL_F_ISSET(info[j].bmap, ISL_BASIC_MAP_RATIONAL))
 		return isl_change_none;
 
-	n = count(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_CUT);
-	n += count(info[i].ineq, info[i].bmap->n_ineq, STATUS_CUT);
+	n = count_eq(&info[i], STATUS_CUT) + count_ineq(&info[i], STATUS_CUT);
 	if (n == 0)
 		return isl_change_none;
 
@@ -1825,9 +1898,9 @@ static enum isl_change check_single_adj_eq(int i, int j,
 	isl_ctx *ctx;
 	isl_bool try_relax;
 
-	n_cut = count(info[i].ineq, info[i].bmap->n_ineq, STATUS_CUT);
+	n_cut = count_ineq(&info[i], STATUS_CUT);
 
-	k = find(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_EQ);
+	k = find_ineq(&info[i], STATUS_ADJ_EQ);
 
 	if (n_cut > 0) {
 		ctx = isl_basic_map_get_ctx(info[i].bmap);
@@ -1855,7 +1928,7 @@ static enum isl_change check_single_adj_eq(int i, int j,
 }
 
 /* At least one of the basic maps has an equality that is adjacent
- * to inequality.  Make sure that only one of the basic maps has
+ * to an inequality.  Make sure that only one of the basic maps has
  * such an equality and that the other basic map has exactly one
  * inequality adjacent to an equality.
  * If the other basic map does not have such an inequality, then
@@ -1867,30 +1940,61 @@ static enum isl_change check_single_adj_eq(int i, int j,
 static enum isl_change check_adj_eq(int i, int j,
 	struct isl_coalesce_info *info)
 {
-	if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_INEQ) &&
-	    any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_ADJ_INEQ))
+	if (any_eq(&info[i], STATUS_ADJ_INEQ) &&
+	    any_eq(&info[j], STATUS_ADJ_INEQ))
 		/* ADJ EQ TOO MANY */
 		return isl_change_none;
 
-	if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_INEQ))
+	if (any_eq(&info[i], STATUS_ADJ_INEQ))
 		return check_adj_eq(j, i, info);
 
 	/* j has an equality adjacent to an inequality in i */
 
-	if (count(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_EQ) != 1) {
+	if (count_ineq(&info[i], STATUS_ADJ_EQ) != 1) {
 		if (all_valid_or_cut(&info[i]))
 			return can_wrap_in_set(i, j, info);
 		return isl_change_none;
 	}
-	if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_CUT))
+	if (any_eq(&info[i], STATUS_CUT))
 		return isl_change_none;
-	if (any(info[j].ineq, info[j].bmap->n_ineq, STATUS_ADJ_EQ) ||
-	    any(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_INEQ) ||
-	    any(info[j].ineq, info[j].bmap->n_ineq, STATUS_ADJ_INEQ))
+	if (any_ineq(&info[j], STATUS_ADJ_EQ) ||
+	    any_ineq(&info[i], STATUS_ADJ_INEQ) ||
+	    any_ineq(&info[j], STATUS_ADJ_INEQ))
 		/* ADJ EQ TOO MANY */
 		return isl_change_none;
 
 	return check_single_adj_eq(i, j, info);
+}
+
+/* Disjunct "j" lies on a hyperplane that is adjacent to disjunct "i".
+ * In particular, disjunct "i" has an inequality constraint that is adjacent
+ * to a (combination of) equality constraint(s) of disjunct "j",
+ * but disjunct "j" has no explicit equality constraint adjacent
+ * to an inequality constraint of disjunct "i".
+ *
+ * Disjunct "i" is already known not to have any equality constraints
+ * that are adjacent to an equality or inequality constraint.
+ * Check that, other than the inequality constraint mentioned above,
+ * all other constraints of disjunct "i" are valid for disjunct "j".
+ * If so, try and wrap in disjunct "j".
+ */
+static enum isl_change check_ineq_adj_eq(int i, int j,
+	struct isl_coalesce_info *info)
+{
+	int k;
+
+	if (any_eq(&info[i], STATUS_CUT))
+		return isl_change_none;
+	if (any_ineq(&info[i], STATUS_CUT))
+		return isl_change_none;
+	if (any_ineq(&info[i], STATUS_ADJ_INEQ))
+		return isl_change_none;
+	if (count_ineq(&info[i], STATUS_ADJ_EQ) != 1)
+		return isl_change_none;
+
+	k = find_ineq(&info[i], STATUS_ADJ_EQ);
+
+	return can_wrap_in_facet(i, j, k, info, 0);
 }
 
 /* The two basic maps lie on adjacent hyperplanes.  In particular,
@@ -1925,10 +2029,10 @@ static enum isl_change check_eq_adj_eq(int i, int j,
 	struct isl_vec *bound = NULL;
 	unsigned total = isl_basic_map_total_dim(info[i].bmap);
 
-	if (count(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_EQ) != 1)
+	if (count_eq(&info[i], STATUS_ADJ_EQ) != 1)
 		detect_equalities = 1;
 
-	k = find(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_EQ);
+	k = find_eq(&info[i], STATUS_ADJ_EQ);
 
 	set_i = set_from_updated_bmap(info[i].bmap, info[i].tab);
 	set_j = set_from_updated_bmap(info[j].bmap, info[j].tab);
@@ -2134,7 +2238,7 @@ static enum isl_change separating_equality(int i, int j,
  *		=> the pair can be replaced by the basic map containing
  *		   the inequality, with the inequality relaxed.
  *
- *	6. there is a single adjacent pair of an inequality and an equality,
+ *	6. there is a single inequality adjacent to an equality,
  *	   the other constraints of the basic map containing the inequality are
  *	   "valid".  Moreover, the facets corresponding to both
  *	   the inequality and the equality can be wrapped around their
@@ -2168,34 +2272,34 @@ static enum isl_change coalesce_local_pair_reuse(int i, int j,
 	set_ineq_status_in(&info[i], info[j].tab);
 	if (info[i].bmap->n_ineq && !info[i].ineq)
 		goto error;
-	if (any(info[i].ineq, info[i].bmap->n_ineq, STATUS_ERROR))
+	if (any_ineq(&info[i], STATUS_ERROR))
 		goto error;
-	if (any(info[i].ineq, info[i].bmap->n_ineq, STATUS_SEPARATE))
+	if (any_ineq(&info[i], STATUS_SEPARATE))
 		goto done;
 
 	set_ineq_status_in(&info[j], info[i].tab);
 	if (info[j].bmap->n_ineq && !info[j].ineq)
 		goto error;
-	if (any(info[j].ineq, info[j].bmap->n_ineq, STATUS_ERROR))
+	if (any_ineq(&info[j], STATUS_ERROR))
 		goto error;
-	if (any(info[j].ineq, info[j].bmap->n_ineq, STATUS_SEPARATE))
+	if (any_ineq(&info[j], STATUS_SEPARATE))
 		goto done;
 
 	set_eq_status_in(&info[i], info[j].tab);
 	if (info[i].bmap->n_eq && !info[i].eq)
 		goto error;
-	if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ERROR))
+	if (any_eq(&info[i], STATUS_ERROR))
 		goto error;
 
 	set_eq_status_in(&info[j], info[i].tab);
 	if (info[j].bmap->n_eq && !info[j].eq)
 		goto error;
-	if (any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_ERROR))
+	if (any_eq(&info[j], STATUS_ERROR))
 		goto error;
 
-	if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_SEPARATE))
+	if (any_eq(&info[i], STATUS_SEPARATE))
 		return separating_equality(i, j, info);
-	if (any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_SEPARATE))
+	if (any_eq(&info[j], STATUS_SEPARATE))
 		return separating_equality(j, i, info);
 
 	if (all(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_VALID) &&
@@ -2206,23 +2310,23 @@ static enum isl_change coalesce_local_pair_reuse(int i, int j,
 		   all(info[j].ineq, info[j].bmap->n_ineq, STATUS_VALID)) {
 		drop(&info[i]);
 		change = isl_change_drop_first;
-	} else if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_EQ)) {
+	} else if (any_eq(&info[i], STATUS_ADJ_EQ)) {
 		change = check_eq_adj_eq(i, j, info);
-	} else if (any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_ADJ_EQ)) {
+	} else if (any_eq(&info[j], STATUS_ADJ_EQ)) {
 		change = check_eq_adj_eq(j, i, info);
-	} else if (any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_ADJ_INEQ) ||
-		   any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_ADJ_INEQ)) {
+	} else if (any_eq(&info[i], STATUS_ADJ_INEQ) ||
+		   any_eq(&info[j], STATUS_ADJ_INEQ)) {
 		change = check_adj_eq(i, j, info);
-	} else if (any(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_EQ) ||
-		   any(info[j].ineq, info[j].bmap->n_ineq, STATUS_ADJ_EQ)) {
-		/* Can't happen */
-		/* BAD ADJ INEQ */
-	} else if (any(info[i].ineq, info[i].bmap->n_ineq, STATUS_ADJ_INEQ) ||
-		   any(info[j].ineq, info[j].bmap->n_ineq, STATUS_ADJ_INEQ)) {
+	} else if (any_ineq(&info[i], STATUS_ADJ_EQ)) {
+		change = check_ineq_adj_eq(i, j, info);
+	} else if (any_ineq(&info[j], STATUS_ADJ_EQ)) {
+		change = check_ineq_adj_eq(j, i, info);
+	} else if (any_ineq(&info[i], STATUS_ADJ_INEQ) ||
+		   any_ineq(&info[j], STATUS_ADJ_INEQ)) {
 		change = check_adj_ineq(i, j, info);
 	} else {
-		if (!any(info[i].eq, 2 * info[i].bmap->n_eq, STATUS_CUT) &&
-		    !any(info[j].eq, 2 * info[j].bmap->n_eq, STATUS_CUT))
+		if (!any_eq(&info[i], STATUS_CUT) &&
+		    !any_eq(&info[j], STATUS_CUT))
 			change = check_facets(i, j, info);
 		if (change == isl_change_none)
 			change = check_wrap(i, j, info);
@@ -2289,7 +2393,7 @@ static isl_stat shift_div(struct isl_coalesce_info *info, int div,
  *
  *	c + f + m a = 0
  *
- * The integer division expression is then of the form
+ * The integer division expression is then typically of the form
  *
  *	a = floor((-f - c')/m)
  *
@@ -2307,11 +2411,12 @@ static isl_stat shift_div(struct isl_coalesce_info *info, int div,
  *	a' = (-f - (c mod m))/m = floor((-f)/m)
  *
  * because a' is an integer and 0 <= (c mod m) < m.
- * The constant term of a' can therefore be zeroed out.
+ * The constant term of a' can therefore be zeroed out,
+ * but only if the integer division expression is of the expected form.
  */
 static isl_stat normalize_stride_div(struct isl_coalesce_info *info, int div)
 {
-	isl_bool defined;
+	isl_bool defined, valid;
 	isl_stat r;
 	isl_constraint *c;
 	isl_int shift, stride;
@@ -2324,6 +2429,7 @@ static isl_stat normalize_stride_div(struct isl_coalesce_info *info, int div)
 		return isl_stat_ok;
 	if (!c)
 		return isl_stat_error;
+	valid = isl_constraint_is_div_equality(c, div);
 	isl_int_init(shift);
 	isl_int_init(stride);
 	isl_constraint_get_constant(c, &shift);
@@ -2333,8 +2439,10 @@ static isl_stat normalize_stride_div(struct isl_coalesce_info *info, int div)
 	isl_int_clear(stride);
 	isl_int_clear(shift);
 	isl_constraint_free(c);
-	if (r < 0)
+	if (r < 0 || valid < 0)
 		return isl_stat_error;
+	if (!valid)
+		return isl_stat_ok;
 	info->bmap = isl_basic_map_set_div_expr_constant_num_si_inplace(
 							    info->bmap, div, 0);
 	if (!info->bmap)
@@ -2595,9 +2703,9 @@ static isl_bool same_divs(__isl_keep isl_basic_map *bmap1,
 	total = isl_basic_map_total_dim(bmap1);
 	for (i = 0; i < bmap1->n_div; ++i)
 		if (!isl_seq_eq(bmap1->div[i], bmap2->div[i], 2 + total))
-			return 0;
+			return isl_bool_false;
 
-	return 1;
+	return isl_bool_true;
 }
 
 /* Assuming that "tab" contains the equality constraints and
@@ -2968,20 +3076,21 @@ static enum isl_change coalesce_with_expanded_divs(
 	if (!bmap)
 		goto error;
 
+	info_local.bmap = bmap;
 	info_i->eq = eq_status_in(bmap, info[j].tab);
 	if (bmap->n_eq && !info_i->eq)
 		goto error;
-	if (any(info_i->eq, 2 * bmap->n_eq, STATUS_ERROR))
+	if (any_eq(info_i, STATUS_ERROR))
 		goto error;
-	if (any(info_i->eq, 2 * bmap->n_eq, STATUS_SEPARATE))
+	if (any_eq(info_i, STATUS_SEPARATE))
 		goto done;
 
 	info_i->ineq = ineq_status_in(bmap, NULL, info[j].tab);
 	if (bmap->n_ineq && !info_i->ineq)
 		goto error;
-	if (any(info_i->ineq, bmap->n_ineq, STATUS_ERROR))
+	if (any_ineq(info_i, STATUS_ERROR))
 		goto error;
-	if (any(info_i->ineq, bmap->n_ineq, STATUS_SEPARATE))
+	if (any_ineq(info_i, STATUS_SEPARATE))
 		goto done;
 
 	if (all(info_i->eq, 2 * bmap->n_eq, STATUS_VALID) &&

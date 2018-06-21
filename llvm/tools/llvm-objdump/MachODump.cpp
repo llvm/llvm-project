@@ -6940,12 +6940,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         errs() << "llvm-objdump: " << Filename << ": " << EC.message() << '\n';
         return;
       }
-      Expected<std::unique_ptr<MachOObjectFile>> DbgObjCheck =
-          ObjectFile::createMachOObjectFile(BufOrErr.get()->getMemBufferRef());
-
-      if (DbgObjCheck.takeError())
-        report_error(MachOOF->getFileName(), DbgObjCheck.takeError());
-      DbgObj = DbgObjCheck.get().release();
+      DbgObj =
+          ObjectFile::createMachOObjectFile(BufOrErr.get()->getMemBufferRef())
+              .get()
+              .release();
     }
 
     // Setup the DIContext

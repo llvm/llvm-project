@@ -75,14 +75,14 @@ set_target_properties(PollyCore PROPERTIES FOLDER "Polly")
 # LLVM_POLLY_LINK_INTO_TOOLS=ON, its dependencies like PollyISL are linked as
 # well.
 add_polly_library(Polly $<TARGET_OBJECTS:PollyCore>)
-target_link_libraries(Polly
+target_link_libraries(Polly PUBLIC
   ${ISL_TARGET}
   ${JSONCPP_LIBRARIES}
 )
 
 # Additional dependencies for Polly-ACC.
 if (GPU_CODEGEN)
-  target_link_libraries(Polly PollyPPCG)
+  target_link_libraries(Polly PUBLIC PollyPPCG)
 endif ()
 
 
@@ -100,9 +100,9 @@ if (LLVM_LINK_LLVM_DYLIB)
   # (their LLVM*.a/so and their copies in libLLVM.so)
   # which results in errors when the two instances try to register the same
   # command-line switches.
-  target_link_libraries(Polly LLVM)
+  target_link_libraries(Polly PUBLIC LLVM)
 else ()
-  target_link_libraries(Polly
+  target_link_libraries(Polly PUBLIC
     LLVMSupport
     LLVMCore
     LLVMScalarOpts
@@ -145,9 +145,9 @@ else ()
   # hosts. This is not the case for bugpoint. Use LLVM_POLLY_LINK_INTO_TOOLS=ON
   # instead which will automatically resolve the additional dependencies by
   # Polly.
-  target_link_libraries(LLVMPolly ${ISL_TARGET} ${JSONCPP_LIBRARIES})
+  target_link_libraries(LLVMPolly PUBLIC ${ISL_TARGET} ${JSONCPP_LIBRARIES})
   if (GPU_CODEGEN)
-    target_link_libraries(LLVMPolly PollyPPCG)
+    target_link_libraries(LLVMPolly PUBLIC PollyPPCG)
   endif ()
 
   set_target_properties(LLVMPolly

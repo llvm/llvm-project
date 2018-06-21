@@ -1259,7 +1259,6 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       Preamble.reset();
       PreambleDiagnostics.clear();
       TopLevelDeclsInPreamble.clear();
-      PreambleSrcLocCache.clear();
       PreambleRebuildCounter = 1;
     }
   }
@@ -1307,6 +1306,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       case BuildPreambleError::CouldntCreateTargetInfo:
       case BuildPreambleError::BeginSourceFileFailed:
       case BuildPreambleError::CouldntEmitPCH:
+      case BuildPreambleError::CouldntCreateVFSOverlay:
         // These erros are more likely to repeat, retry after some period.
         PreambleRebuildCounter = DefaultPreambleRebuildInterval;
         return nullptr;
@@ -1408,6 +1408,8 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
   IntrusiveRefCntPtr<vfs::FileSystem> VFS =
       createVFSFromCompilerInvocation(*CI, *Diags);
+  if (!VFS)
+    return nullptr;
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   AST->Invocation = std::move(CI);
@@ -1689,14 +1691,14 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   // Create the AST unit.
   std::unique_ptr<ASTUnit> AST;
   AST.reset(new ASTUnit(false));
-  AST->NumStoredDiagnosticsFromDriver = StoredDiagnostics.size();
-  AST->StoredDiagnostics.swap(StoredDiagnostics);
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
   if (!VFS)
     VFS = vfs::getRealFileSystem();
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
+  if (!VFS)
+    return nullptr;
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->PCMCache = new MemoryBufferCache;
   AST->OnlyLocalDecls = OnlyLocalDecls;
@@ -1706,6 +1708,8 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   AST->IncludeBriefCommentsInCodeCompletion
     = IncludeBriefCommentsInCodeCompletion;
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
+  AST->NumStoredDiagnosticsFromDriver = StoredDiagnostics.size();
+  AST->StoredDiagnostics.swap(StoredDiagnostics);
   AST->Invocation = CI;
   if (ForSerialization)
     AST->WriterData.reset(new ASTWriterData(*AST->PCMCache));

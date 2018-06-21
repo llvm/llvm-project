@@ -10855,12 +10855,8 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
 
   // Does the function use a red zone? If it does, then we can't risk messing
   // with the stack.
-  if (!F.hasFnAttribute(Attribute::NoRedZone)) {
-    // It could have a red zone. If it does, then we don't want to touch it.
-    const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-    if (!X86FI || X86FI->getUsesRedZone())
+  if (!F.hasFnAttribute(Attribute::NoRedZone))
       return false;
-  }
 
   // If we *don't* want to outline from things that could potentially be deduped
   // then return false.
@@ -10872,15 +10868,10 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(MachineFunction &MF,
 }
 
 X86GenInstrInfo::MachineOutlinerInstrType
-X86InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,  unsigned Flags) const {
-  MachineInstr &MI = *MIT;
+X86InstrInfo::getOutliningType(MachineInstr &MI) const {
+
   // Don't allow debug values to impact outlining type.
   if (MI.isDebugValue() || MI.isIndirectDebugValue())
-    return MachineOutlinerInstrType::Invisible;
-
-  // At this point, KILL instructions don't really tell us much so we can go
-  // ahead and skip over them.
-  if (MI.isKill())
     return MachineOutlinerInstrType::Invisible;
 
   // Is this a tail call? If yes, we can outline as a tail call.

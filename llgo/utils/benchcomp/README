@@ -1,0 +1,20 @@
+These are some quick and dirty tools for measuring the performance impact
+of a change to llgo by sampling the results of running the libgo benchmark
+suite. They can be used to calculate the geo-mean and 95% confidence interval
+using the Student's t-test. The benchcomp program massages the output of the
+Go benchmark tools into a form that can be read by the R program analyze.R
+which runs the statistics.
+
+To use, clpatch this into gofrontend:
+https://codereview.appspot.com/103550047/
+
+then run:
+
+make
+make -C workdir/gofrontend_build/libgo-stage1 bench 2>&1 | tee before.out
+# make changes
+make
+make -C workdir/gofrontend_build/libgo-stage1 bench 2>&1 | tee after.out
+utils/benchcomp/benchcomp benchns before.out after.out | R -f utils/benchcomp/analyze.R
+
+The results should be displayed on stdout.

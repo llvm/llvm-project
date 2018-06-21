@@ -7,17 +7,24 @@
 ; CHECK-DAG: 11 polly-detect     - Number of loops in scops (profitable scops only)
 ; CHECK-DAG: 11 polly-detect     - Number of loops in scops
 ; CHECK-DAG: 11 polly-detect     - Number of total loops
-; CHECK-DAG:  5 polly-detect     - Number of scops (profitable scops only)
+; CHECK-DAG:  6 polly-detect     - Number of scops (profitable scops only)
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 4 (profitable scops only)
 ; CHECK-DAG:  2 polly-detect     - Number of scops with maximal loop depth 1 (profitable scops only)
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 3 (profitable scops only)
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 2 (profitable scops only)
-; CHECK-DAG:  5 polly-detect     - Number of scops
+; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 0 (profitable scops only)
+; CHECK-DAG:  6 polly-detect     - Number of scops
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 4
 ; CHECK-DAG:  2 polly-detect     - Number of scops with maximal loop depth 1
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 3
 ; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 2
+; CHECK-DAG:  1 polly-detect     - Number of scops with maximal loop depth 0
 
+;    void foo_0d(float *A) {
+;      if (true)
+;        A[0] += i;
+;    }
+;
 ;    void foo_1d(float *A) {
 ;      for (long i = 0; i < 1024; i++)
 ;        A[i] += i;
@@ -49,6 +56,21 @@
 ;        A[i] += i;
 ;    }
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @foo_0d(float* %A) {
+bb:
+  br label %bb1
+
+bb1:
+  br i1 true, label %exit, label %block
+
+block:
+  store float 42.0, float* %A
+  br label %exit
+
+exit:
+  ret void
+}
 
 define void @foo_1d(float* %A) {
 bb:

@@ -79,12 +79,12 @@ struct CountCopies {
 };
 
 struct CountCopiesAllocV1 {
-  typedef ex::memory_resource* allocator_type;
-  allocator_type alloc;
+  typedef ex::polymorphic_allocator<char> allocator_type;
+  ex::memory_resource *alloc;
   int count;
   CountCopiesAllocV1() : alloc(nullptr), count(0) {}
   CountCopiesAllocV1(std::allocator_arg_t, allocator_type const& a,
-                     CountCopiesAllocV1 const& o) : alloc(a), count(o.count + 1)
+                     CountCopiesAllocV1 const& o) : alloc(a.resource()), count(o.count + 1)
   {}
 
   CountCopiesAllocV1(CountCopiesAllocV1 const& o) : count(o.count + 1) {}
@@ -92,12 +92,12 @@ struct CountCopiesAllocV1 {
 
 
 struct CountCopiesAllocV2 {
-  typedef ex::memory_resource* allocator_type;
-  allocator_type alloc;
+  typedef ex::polymorphic_allocator<char> allocator_type;
+  ex::memory_resource *alloc;
   int count;
   CountCopiesAllocV2() : alloc(nullptr), count(0) {}
   CountCopiesAllocV2(CountCopiesAllocV2 const& o, allocator_type const& a)
-    : alloc(a), count(o.count + 1)
+    : alloc(a.resource()), count(o.count + 1)
   { }
 
   CountCopiesAllocV2(CountCopiesAllocV2 const& o) : count(o.count + 1) {}

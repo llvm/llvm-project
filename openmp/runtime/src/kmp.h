@@ -781,6 +781,11 @@ extern kmp_nested_proc_bind_t __kmp_nested_proc_bind;
 #if KMP_AFFINITY_SUPPORTED
 #define KMP_PLACE_ALL (-1)
 #define KMP_PLACE_UNDEFINED (-2)
+// Is KMP_AFFINITY is being used instead of OMP_PROC_BIND/OMP_PLACES?
+#define KMP_AFFINITY_NON_PROC_BIND                                             \
+  ((__kmp_nested_proc_bind.bind_types[0] == proc_bind_false ||                 \
+    __kmp_nested_proc_bind.bind_types[0] == proc_bind_intel) &&                \
+   (__kmp_affinity_num_masks > 0 || __kmp_affinity_type == affinity_balanced))
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 extern int __kmp_affinity_num_places;
@@ -1444,6 +1449,8 @@ typedef void *(*kmpc_cctor_vec)(void *, void *,
 /* keeps tracked of threadprivate cache allocations for cleanup later */
 typedef struct kmp_cached_addr {
   void **addr; /* address of allocated cache */
+  void ***compiler_cache; /* pointer to compiler's cache */
+  void *data; /* pointer to global data */
   struct kmp_cached_addr *next; /* pointer to next cached address */
 } kmp_cached_addr_t;
 
@@ -2259,8 +2266,16 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMP_45_ENABLED
   kmp_task_team_t *td_task_team;
   kmp_int32 td_size_alloc; // The size of task structure, including shareds etc.
+#if defined(KMP_GOMP_COMPAT)
+  // 4 or 8 byte integers for the loop bounds in GOMP_taskloop
+  kmp_int32 td_size_loop_bounds;
+#endif
 #endif // OMP_45_ENABLED
   kmp_taskdata_t *td_last_tied; // keep tied task for task scheduling constraint
+#if defined(KMP_GOMP_COMPAT) && OMP_45_ENABLED
+  // GOMP sends in a copy function for copy constructors
+  void (*td_copy_func)(void *, void *);
+#endif
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
 #endif
@@ -2788,6 +2803,7 @@ extern char const *__kmp_barrier_pattern_name[bp_last_bar];
 /* Global Locks */
 extern kmp_bootstrap_lock_t __kmp_initz_lock; /* control initialization */
 extern kmp_bootstrap_lock_t __kmp_forkjoin_lock; /* control fork/join access */
+extern kmp_bootstrap_lock_t __kmp_task_team_lock;
 extern kmp_bootstrap_lock_t
     __kmp_exit_lock; /* exit() is not always thread-safe */
 #if KMP_USE_MONITOR
@@ -2884,8 +2900,8 @@ extern int __kmp_zero_bt; /* whether blocktime has been forced to zero */
 #ifdef KMP_DFLT_NTH_CORES
 extern int __kmp_ncores; /* Total number of cores for threads placement */
 #endif
-extern int
-    __kmp_abort_delay; /* Number of millisecs to delay on abort for VTune */
+/* Number of millisecs to delay on abort for Intel(R) VTune(TM) tools */
+extern int __kmp_abort_delay;
 
 extern int __kmp_need_register_atfork_specified;
 extern int
@@ -2976,6 +2992,7 @@ extern kmp_info_t **__kmp_threads; /* Descriptors for the threads */
 /* read/write: lock */
 extern volatile kmp_team_t *__kmp_team_pool;
 extern volatile kmp_info_t *__kmp_thread_pool;
+extern kmp_info_t *__kmp_thread_pool_insert_pt;
 
 // total num threads reachable from some root thread including all root threads
 extern volatile int __kmp_nth;
@@ -3772,6 +3789,8 @@ void kmp_threadprivate_insert_private_data(int gtid, void *pc_addr,
 struct private_common *kmp_threadprivate_insert(int gtid, void *pc_addr,
                                                 void *data_addr,
                                                 size_t pc_size);
+void __kmp_threadprivate_resize_cache(int newCapacity);
+void __kmp_cleanup_threadprivate_caches();
 
 // ompc_, kmpc_ entries moved from omp.h.
 #if KMP_OS_WINDOWS
@@ -3806,6 +3825,18 @@ KMP_EXPORT void KMPC_CONVENTION kmpc_set_stacksize_s(size_t);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_library(int);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_defaults(char const *);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_disp_num_buffers(int);
+
+#if OMP_50_ENABLED
+enum kmp_target_offload_kind {
+  tgt_disabled = 0,
+  tgt_default = 1,
+  tgt_mandatory = 2
+};
+typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
+// Set via OMP_TARGET_OFFLOAD if specified, defaults to tgt_default otherwise
+extern kmp_target_offload_kind_t __kmp_target_offload;
+extern int __kmpc_get_target_offload();
+#endif
 
 #ifdef __cplusplus
 }

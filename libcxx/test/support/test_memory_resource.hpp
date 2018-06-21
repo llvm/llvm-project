@@ -28,7 +28,7 @@
 // because it can't include <experimental/memory_resource>
 template <>
 struct TransformErasedTypeAlloc<std::experimental::erased_type> {
-  using type = std::experimental::pmr::memory_resource*;
+  using type = std::experimental::pmr::polymorphic_allocator<int>;
 };
 
 template <class ProviderT, int = 0>

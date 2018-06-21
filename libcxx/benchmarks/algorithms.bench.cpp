@@ -2,7 +2,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "benchmark/benchmark_api.h"
+#include "benchmark/benchmark.h"
 #include "GenerateInput.hpp"
 
 constexpr std::size_t TestNumInputs = 1024;
@@ -59,4 +59,4 @@ BENCHMARK_CAPTURE(BM_Sort, single_element_strings,
     getDuplicateStringInputs)->Arg(TestNumInputs);
 
 
-BENCHMARK_MAIN()
+BENCHMARK_MAIN();

@@ -305,15 +305,17 @@ void constructor_tests()
         using RetT = decltype(std::not_fn(value));
         static_assert(std::is_move_constructible<RetT>::value, "");
         static_assert(std::is_copy_constructible<RetT>::value, "");
-        static_assert(std::is_move_assignable<RetT>::value, "");
-        static_assert(std::is_copy_assignable<RetT>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_move_assignable<RetT>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(value);
         assert(ret() == false);
         auto ret2 = std::not_fn(value2);
         assert(ret2() == true);
+#if defined(_LIBCPP_VERSION)
         ret = ret2;
         assert(ret() == true);
         assert(ret2() == true);
+#endif // _LIBCPP_VERSION
     }
     {
         using T = MoveAssignableWrapper;
@@ -322,14 +324,16 @@ void constructor_tests()
         using RetT = decltype(std::not_fn(std::move(value)));
         static_assert(std::is_move_constructible<RetT>::value, "");
         static_assert(!std::is_copy_constructible<RetT>::value, "");
-        static_assert(std::is_move_assignable<RetT>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_move_assignable<RetT>::value, "");
         static_assert(!std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(std::move(value));
         assert(ret() == false);
         auto ret2 = std::not_fn(std::move(value2));
         assert(ret2() == true);
+#if defined(_LIBCPP_VERSION)
         ret = std::move(ret2);
         assert(ret() == true);
+#endif // _LIBCPP_VERSION
     }
 }
 
@@ -426,7 +430,7 @@ void throws_in_constructor_test()
     {
         ThrowsOnCopy cp;
         try {
-            std::not_fn(cp);
+            (void)std::not_fn(cp);
             assert(false);
         } catch (int const& value) {
             assert(value == 42);

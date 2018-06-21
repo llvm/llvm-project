@@ -1,11 +1,16 @@
-; RUN: llc -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s 
+; RUN: llc -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=NoODR
 ; RUN: llc -enable-machine-outliner -enable-linkonceodr-outlining -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=ODR
 
 define linkonce_odr void @fish() #0 {
   ; CHECK-LABEL: _fish:
-  ; CHECK-NOT: OUTLINED
-  ; ODR: [[OUTLINED:OUTLINED_FUNCTION_[0-9]+]]
-  ; ODR-NOT: ret
+  ; NoODR:      orr w8, wzr, #0x1
+  ; NoODR-NEXT: stp w8, wzr, [sp, #8]
+  ; NoODR-NEXT: orr w8, wzr, #0x2
+  ; NoODR-NEXT: str w8, [sp, #4]
+  ; NoODR-NEXT: orr w8, wzr, #0x3
+  ; NoODR-NEXT: str w8, [sp], #16
+  ; NoODR-NEXT: ret
+  ; ODR: b l_OUTLINED_FUNCTION_0
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -19,10 +24,8 @@ define linkonce_odr void @fish() #0 {
 
 define void @cat() #0 {
   ; CHECK-LABEL: _cat:
-  ; CHECK: [[OUTLINED:OUTLINED_FUNCTION_[0-9]+]]
-  ; ODR: [[OUTLINED]]
+  ; CHECK: b l_OUTLINED_FUNCTION_0
   ; CHECK-NOT: ret
-  ; ODR-NOT: ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -36,10 +39,8 @@ define void @cat() #0 {
 
 define void @dog() #0 {
   ; CHECK-LABEL: _dog:
-  ; CHECK: [[OUTLINED]]
-  ; ODR: [[OUTLINED]]
+  ; CHECK: b l_OUTLINED_FUNCTION_0
   ; CHECK-NOT: ret
-  ; ODR-NOT: ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -51,9 +52,8 @@ define void @dog() #0 {
   ret void
 }
 
-; ODR: [[OUTLINED]]:
-; CHECK: [[OUTLINED]]:
-; CHECK-DAG: orr w8, wzr, #0x1
+; CHECK-LABEL: l_OUTLINED_FUNCTION_0:
+; CHECK:      orr w8, wzr, #0x1
 ; CHECK-NEXT: stp w8, wzr, [sp, #8]
 ; CHECK-NEXT: orr w8, wzr, #0x2
 ; CHECK-NEXT: str w8, [sp, #4]
@@ -61,4 +61,4 @@ define void @dog() #0 {
 ; CHECK-NEXT: str w8, [sp], #16
 ; CHECK-NEXT: ret
 
-attributes #0 = { noredzone "target-cpu"="cyclone" }
+attributes #0 = { noredzone nounwind ssp uwtable "no-frame-pointer-elim"="false" "target-cpu"="cyclone" }

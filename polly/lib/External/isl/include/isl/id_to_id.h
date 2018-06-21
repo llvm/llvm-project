@@ -1,7 +1,7 @@
 #ifndef ISL_ID_TO_ID_H
 #define ISL_ID_TO_ID_H
 
-#include <isl/id.h>
+#include <isl/id_type.h>
 #include <isl/maybe_id.h>
 
 #define ISL_KEY		isl_id

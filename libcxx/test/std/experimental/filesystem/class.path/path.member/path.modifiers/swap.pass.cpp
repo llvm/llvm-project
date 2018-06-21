@@ -15,7 +15,7 @@
 
 // void swap(path& rhs) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -24,7 +24,6 @@
 #include "count_new.hpp"
 #include "filesystem_test_helper.hpp"
 
-namespace fs = std::experimental::filesystem;
 
 struct SwapTestcase {
   const char* value1;

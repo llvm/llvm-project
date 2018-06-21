@@ -421,8 +421,7 @@ public:
   /// Build the equivalent inputs of a REG_SEQUENCE for the given \p MI
   /// and \p DefIdx.
   /// \p [out] InputRegs of the equivalent REG_SEQUENCE. Each element of
-  /// the list is modeled as <Reg:SubReg, SubIdx>. Operands with the undef
-  /// flag are not added to this list.
+  /// the list is modeled as <Reg:SubReg, SubIdx>.
   /// E.g., REG_SEQUENCE %1:sub1, sub0, %2, sub1 would produce
   /// two elements:
   /// - %1:sub1, sub0
@@ -447,8 +446,7 @@ public:
   /// - %1:sub1, sub0
   ///
   /// \returns true if it is possible to build such an input sequence
-  /// with the pair \p MI, \p DefIdx and the operand has no undef flag set.
-  /// False otherwise.
+  /// with the pair \p MI, \p DefIdx. False otherwise.
   ///
   /// \pre MI.isExtractSubreg() or MI.isExtractSubregLike().
   ///
@@ -467,8 +465,7 @@ public:
   /// - InsertedReg: %1:sub1, sub3
   ///
   /// \returns true if it is possible to build such an input sequence
-  /// with the pair \p MI, \p DefIdx and the operand has no undef flag set.
-  /// False otherwise.
+  /// with the pair \p MI, \p DefIdx. False otherwise.
   ///
   /// \pre MI.isInsertSubreg() or MI.isInsertSubregLike().
   ///
@@ -1569,9 +1566,6 @@ public:
     return false;
   }
 
-  /// Returns true if the target implements the MachineOutliner.
-  virtual bool useMachineOutliner() const { return false; }
-
   /// \brief Describes the number of instructions that it will take to call and
   /// construct a frame for a given outlining candidate.
   struct MachineOutlinerInfo {
@@ -1617,16 +1611,9 @@ public:
   enum MachineOutlinerInstrType { Legal, Illegal, Invisible };
 
   /// Returns how or if \p MI should be outlined.
-  virtual MachineOutlinerInstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const {
+  virtual MachineOutlinerInstrType getOutliningType(MachineInstr &MI) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningType!");
-  }
-
-  /// \brief Returns target-defined flags defining properties of the MBB for
-  /// the outliner.
-  virtual unsigned getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
-    return 0x0;
   }
 
   /// Insert a custom epilogue for outlined functions.

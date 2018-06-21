@@ -40,6 +40,8 @@ char const *const Rs("goink\\\036");
 char const *const Us("goink\\\037");
 char const *const HexNonPrintable("\\\x03");
 char const *const Delete("\\\177");
+char const *const MultibyteSnowman("\xE2\x98\x83");
+// CHECK-FIXES: {{^}}char const *const MultibyteSnowman("\xE2\x98\x83");{{$}}
 
 char const *const TrailingSpace("A line \\with space. \n");
 char const *const TrailingNewLine("A single \\line.\n");

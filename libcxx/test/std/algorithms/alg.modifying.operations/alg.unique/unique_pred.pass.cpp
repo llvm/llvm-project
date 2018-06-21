@@ -12,7 +12,7 @@
 // template<ForwardIterator Iter, EquivalenceRelation<auto, Iter::value_type> Pred>
 //   requires OutputIterator<Iter, RvalueOf<Iter::reference>::type>
 //         && CopyConstructible<Pred>
-//   Iter
+//   constexpr Iter        // constexpr after C++17
 //   unique(Iter first, Iter last, Pred pred);
 
 #include <algorithm>
@@ -21,6 +21,19 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+          int ia[]       = {0, 1, 1, 3, 4};
+    const int expected[] = {0, 1, 3, 4};
+    const size_t N = 4;
+
+    auto it = std::unique(std::begin(ia), std::end(ia), [](int a, int b) {return a == b; });
+    return it == (std::begin(ia) + N)
+        && std::equal(std::begin(ia), it, std::begin(expected), std::end(expected))
+        ;
+    }
+#endif
 
 struct count_equal
 {
@@ -223,5 +236,9 @@ int main()
     test1<bidirectional_iterator<Ptr*> >();
     test1<random_access_iterator<Ptr*> >();
     test1<Ptr*>();
+#endif
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
 #endif
 }

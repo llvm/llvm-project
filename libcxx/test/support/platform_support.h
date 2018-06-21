@@ -54,6 +54,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <codecvt>
+#include <locale>
 #include <string>
 #if defined(_WIN32) || defined(__MINGW32__)
 #include <io.h> // _mktemp_s
@@ -97,6 +99,16 @@ std::string get_temp_file_name()
     return Name;
 #endif
 }
+
+#ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
+inline
+std::wstring get_wide_temp_file_name()
+{
+    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> >().from_bytes(
+        get_temp_file_name());
+}
+#endif // _LIBCPP_HAS_OPEN_WITH_WCHAR
+
 #endif // __CloudABI__
 
 #endif // PLATFORM_SUPPORT_H

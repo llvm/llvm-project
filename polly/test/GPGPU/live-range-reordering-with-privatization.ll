@@ -26,7 +26,7 @@
 ; CODE: # kernel0
 ; CODE-NEXT: for (int c0 = 0; c0 <= (tmp - 32 * b0 - 1) / 1048576; c0 += 1)
 ; CODE-NEXT:   if (tmp >= 32 * b0 + t0 + 1048576 * c0 + 1) {
-; CODE-NEXT:     Stmt_for_body(32 * b0 + t0 + 1048576 * c0);
+; CODE-NEXT:     Stmt_for_body_last(32 * b0 + t0 + 1048576 * c0);
 ; CODE-NEXT:     if (tmp1 >= 4)
 ; CODE-NEXT:       Stmt_if_then(32 * b0 + t0 + 1048576 * c0);
 ; CODE-NEXT:     Stmt_if_end(32 * b0 + t0 + 1048576 * c0);

@@ -14,16 +14,15 @@
 using namespace clang::ast_matchers;
 
 namespace clang {
-namespace ast_matchers {
-AST_MATCHER(VarDecl, isAsm) { return Node.hasAttr<clang::AsmLabelAttr>(); }
-const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
-    fileScopeAsmDecl;
-}
-}
-
-namespace clang {
 namespace tidy {
 namespace hicpp {
+
+namespace {
+AST_MATCHER(VarDecl, isAsm) { return Node.hasAttr<clang::AsmLabelAttr>(); }
+const ast_matchers::internal::VariadicDynCastAllOfMatcher<Decl,
+                                                          FileScopeAsmDecl>
+    fileScopeAsmDecl;
+} // namespace
 
 void NoAssemblerCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(asmStmt().bind("asm-stmt"), this);

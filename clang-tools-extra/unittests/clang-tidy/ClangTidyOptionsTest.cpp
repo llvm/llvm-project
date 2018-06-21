@@ -63,7 +63,6 @@ TEST(ParseConfiguration, ValidConfiguration) {
   EXPECT_TRUE(!!Options);
   EXPECT_EQ("-*,misc-*", *Options->Checks);
   EXPECT_EQ(".*", *Options->HeaderFilterRegex);
-  EXPECT_TRUE(*Options->AnalyzeTemporaryDtors);
   EXPECT_EQ("some.user", *Options->User);
 }
 
@@ -89,7 +88,6 @@ TEST(ParseConfiguration, MergeConfigurations) {
   ClangTidyOptions Options = Options1->mergeWith(*Options2);
   EXPECT_EQ("check1,check2,check3,check4", *Options.Checks);
   EXPECT_EQ("filter2", *Options.HeaderFilterRegex);
-  EXPECT_FALSE(*Options.AnalyzeTemporaryDtors);
   EXPECT_EQ("user2", *Options.User);
   ASSERT_TRUE(Options.ExtraArgs.hasValue());
   EXPECT_EQ("arg1,arg2,arg3,arg4", llvm::join(Options.ExtraArgs->begin(),

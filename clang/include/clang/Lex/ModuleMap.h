@@ -21,7 +21,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -56,14 +55,6 @@ public:
   /// \param IsSystem Whether this is a module map from a system include path.
   virtual void moduleMapFileRead(SourceLocation FileStart,
                                  const FileEntry &File, bool IsSystem) {}
-
-  /// Called when a module map file matches a module lookup
-  ///
-  /// \param File The file itself.
-  /// \param M The module found that matches this module map.
-  /// \param IsSystem Whether this is a module map from a system include path.
-  virtual void moduleMapFoundForModule(const FileEntry &File, const Module *M,
-                                       bool IsSystem) {}
 
   /// \brief Called when a header is added during module map parsing.
   ///
@@ -113,19 +104,7 @@ class ModuleMap {
   /// \brief The number of modules we have created in total.
   unsigned NumCreatedModules = 0;
 
-  /// In case a module has a export_as entry, it might have a pending link
-  /// name to be determined if that module is imported.
-  llvm::StringMap<llvm::StringSet<>> PendingLinkAsModule;
-
 public:
-  /// Use PendingLinkAsModule information to mark top level link names that
-  /// are going to be replaced by export_as aliases.
-  void resolveLinkAsDependencies(Module *Mod);
-
-  /// Make module to use export_as as the link dependency name if enough
-  /// information is available or add it to a pending list otherwise.
-  void addLinkAsDependency(Module *Mod);
-
   /// \brief Flags describing the role of a module header.
   enum ModuleHeaderRole {
     /// \brief This header is normally included in the module.

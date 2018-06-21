@@ -395,10 +395,8 @@ ProgramStateRef CStringChecker::CheckBufferAccess(CheckerContext &C,
 
   // Compute the offset of the last element to be accessed: size-1.
   NonLoc One = svalBuilder.makeIntVal(1, sizeTy).castAs<NonLoc>();
-  SVal Offset = svalBuilder.evalBinOpNN(state, BO_Sub, *Length, One, sizeTy);
-  if (Offset.isUnknown())
-    return nullptr;
-  NonLoc LastOffset = Offset.castAs<NonLoc>();
+  NonLoc LastOffset = svalBuilder
+      .evalBinOpNN(state, BO_Sub, *Length, One, sizeTy).castAs<NonLoc>();
 
   // Check that the first buffer is sufficiently long.
   SVal BufStart = svalBuilder.evalCast(BufVal, PtrTy, FirstBuf->getType());
@@ -864,10 +862,9 @@ bool CStringChecker::IsFirstBufInBound(CheckerContext &C,
 
   // Compute the offset of the last element to be accessed: size-1.
   NonLoc One = svalBuilder.makeIntVal(1, sizeTy).castAs<NonLoc>();
-  SVal Offset = svalBuilder.evalBinOpNN(state, BO_Sub, *Length, One, sizeTy);
-  if (Offset.isUnknown())
-    return true; // cf top comment
-  NonLoc LastOffset = Offset.castAs<NonLoc>();
+  NonLoc LastOffset =
+      svalBuilder.evalBinOpNN(state, BO_Sub, *Length, One, sizeTy)
+          .castAs<NonLoc>();
 
   // Check that the first buffer is sufficiently long.
   SVal BufStart = svalBuilder.evalCast(BufVal, PtrTy, FirstBuf->getType());

@@ -61,6 +61,12 @@ public:
     void swap(stack& c) noexcept(is_nothrow_swappable_v<Container>)
 };
 
+template<class Container>
+  stack(Container) -> stack<typename Container::value_type, Container>;  // C++17
+  
+template<class Container, class Allocator> 
+  stack(Container, Allocator) -> stack<typename Container::value_type, Container>; // C++17
+
 template <class T, class Container>
   bool operator==(const stack<T, Container>& x, const stack<T, Container>& y);
 template <class T, class Container>
@@ -199,7 +205,7 @@ public:
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
 #if _LIBCPP_STD_VER > 14
-        reference emplace(_Args&&... __args)
+        decltype(auto) emplace(_Args&&... __args)
         { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #else
         void      emplace(_Args&&... __args)
@@ -228,6 +234,22 @@ public:
     bool
     operator< (const stack<T1, _C1>& __x, const stack<T1, _C1>& __y);
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _Container,
+         class = typename enable_if<!__is_allocator<_Container>::value, nullptr_t>::type
+>
+stack(_Container)
+    -> stack<typename _Container::value_type, _Container>;
+  
+template<class _Container,
+         class _Alloc,
+         class = typename enable_if<!__is_allocator<_Container>::value, nullptr_t>::type,
+         class = typename enable_if< __is_allocator<_Alloc>::value, nullptr_t>::type
+         > 
+stack(_Container, _Alloc)
+    -> stack<typename _Container::value_type, _Container>;
+#endif
 
 template <class _Tp, class _Container>
 inline _LIBCPP_INLINE_VISIBILITY

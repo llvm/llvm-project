@@ -91,9 +91,9 @@ string(REPLACE ";" " " LIBUNWIND_C_FLAGS "${LIBUNWIND_C_FLAGS}")
 string(REPLACE ";" " " LIBUNWIND_LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}")
 
 set_property(SOURCE ${LIBUNWIND_CXX_SOURCES}
-             APPEND_STRING PROPERTY COMPILE_FLAGS " ${CMAKE_CXX_FLAGS} ${LIBUNWIND_CXX_FLAGS}")
+             APPEND_STRING PROPERTY COMPILE_FLAGS " ${LIBUNWIND_CXX_FLAGS}")
 set_property(SOURCE ${LIBUNWIND_C_SOURCES}
-             APPEND_STRING PROPERTY COMPILE_FLAGS " ${CMAKE_C_FLAGS} ${LIBUNWIND_C_FLAGS}")
+             APPEND_STRING PROPERTY COMPILE_FLAGS " ${LIBUNWIND_C_FLAGS}")
 
 # Add a object library that contains the compiled source files.
 add_library(unwind_objects OBJECT ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
@@ -108,6 +108,9 @@ set(LIBUNWIND_TARGETS)
 # Build the shared library.
 if (LIBUNWIND_ENABLE_SHARED)
   add_library(unwind_shared SHARED $<TARGET_OBJECTS:unwind_objects>)
+  if(COMMAND llvm_setup_rpath)
+    llvm_setup_rpath(unwind_shared)
+  endif()
   target_link_libraries(unwind_shared ${libraries})
   set_target_properties(unwind_shared
                         PROPERTIES

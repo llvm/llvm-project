@@ -1,5 +1,5 @@
-// RUN: echo "static void staticFunctionHeader(int i) {}" > %T/header.h
-// RUN: echo "static void staticFunctionHeader(int  /*i*/) {}" > %T/header-fixed.h
+// RUN: echo "static void staticFunctionHeader(int i) {;}" > %T/header.h
+// RUN: echo "static void staticFunctionHeader(int  /*i*/) {;}" > %T/header-fixed.h
 // RUN: %check_clang_tidy %s misc-unused-parameters %t -- -header-filter='.*' -- -std=c++11 -fno-delayed-template-parsing
 // RUN: diff %T/header.h %T/header-fixed.h
 
@@ -8,29 +8,29 @@
 
 // Basic removal
 // =============
-void a(int i) {}
+void a(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void a(int  /*i*/) {}{{$}}
+// CHECK-FIXES: {{^}}void a(int  /*i*/) {;}{{$}}
 
-void b(int i = 1) {}
+void b(int i = 1) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void b(int  /*i*/ = 1) {}{{$}}
+// CHECK-FIXES: {{^}}void b(int  /*i*/ = 1) {;}{{$}}
 
-void c(int *i) {}
+void c(int *i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void c(int * /*i*/) {}{{$}}
+// CHECK-FIXES: {{^}}void c(int * /*i*/) {;}{{$}}
 
-void d(int i[]) {}
+void d(int i[]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void d(int  /*i*/[]) {}{{$}}
+// CHECK-FIXES: {{^}}void d(int  /*i*/[]) {;}{{$}}
 
-void e(int i[1]) {}
+void e(int i[1]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void e(int  /*i*/[1]) {}{{$}}
+// CHECK-FIXES: {{^}}void e(int  /*i*/[1]) {;}{{$}}
 
-void f(void (*fn)()) {}
+void f(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: parameter 'fn' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void f(void (* /*fn*/)()) {}{{$}}
+// CHECK-FIXES: {{^}}void f(void (* /*fn*/)()) {;}{{$}}
 
 // Unchanged cases
 // ===============
@@ -48,7 +48,7 @@ static bool static_var = useLambda([] (int a) { return a; });
 // ====================================
 static void staticFunctionA(int i);
 // CHECK-FIXES: {{^}}static void staticFunctionA();
-static void staticFunctionA(int i) {}
+static void staticFunctionA(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
 // CHECK-FIXES: {{^}}static void staticFunctionA()
 
@@ -64,25 +64,25 @@ static void staticFunctionD(int i, int j, int k) { (void)i; (void)k; }
 // CHECK-MESSAGES: :[[@LINE-1]]:40: warning
 // CHECK-FIXES: {{^}}static void staticFunctionD(int i, int k)
 
-static void staticFunctionE(int i = 4) {}
+static void staticFunctionE(int i = 4) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
 // CHECK-FIXES: {{^}}static void staticFunctionE()
 
 static void staticFunctionF(int i = 4);
 // CHECK-FIXES: {{^}}static void staticFunctionF();
-static void staticFunctionF(int i) {}
+static void staticFunctionF(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
 // CHECK-FIXES: {{^}}static void staticFunctionF()
 
 static void staticFunctionG(int i[]);
 // CHECK-FIXES: {{^}}static void staticFunctionG();
-static void staticFunctionG(int i[]) {}
+static void staticFunctionG(int i[]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:33: warning
 // CHECK-FIXES: {{^}}static void staticFunctionG()
 
 static void staticFunctionH(void (*fn)());
 // CHECK-FIXES: {{^}}static void staticFunctionH();
-static void staticFunctionH(void (*fn)()) {}
+static void staticFunctionH(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:36: warning
 // CHECK-FIXES: {{^}}static void staticFunctionH()
 
@@ -112,7 +112,7 @@ static void someCallSites() {
 /*
  * FIXME: This fails because the removals overlap and ClangTidy doesn't apply
  *        them.
- * static void bothVarsUnused(int a, int b) {}
+ * static void bothVarsUnused(int a, int b) {;}
  */
 
 // Regression test for long variable names and expressions
@@ -136,18 +136,18 @@ static void someLongNameCallSites() {
 }
 
 class SomeClass {
-  static void f(int i) {}
+  static void f(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning
-// CHECK-FIXES: static void f(int  /*i*/) {}
-  static void g(int i = 1) {}
+// CHECK-FIXES: static void f(int  /*i*/) {;}
+  static void g(int i = 1) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning
-// CHECK-FIXES: static void g(int  /*i*/ = 1) {}
-  static void h(int i[]) {}
+// CHECK-FIXES: static void g(int  /*i*/ = 1) {;}
+  static void h(int i[]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning
-// CHECK-FIXES: static void h(int  /*i*/[]) {}
-  static void s(void (*fn)()) {}
+// CHECK-FIXES: static void h(int  /*i*/[]) {;}
+  static void s(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:24: warning
-// CHECK-FIXES: static void s(void (* /*fn*/)()) {}
+// CHECK-FIXES: static void s(void (* /*fn*/)()) {;}
 };
 
 namespace {
@@ -155,26 +155,26 @@ class C {
 public:
   void f(int i);
 // CHECK-FIXES: void f();
-  void g(int i) {}
+  void g(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning
-// CHECK-FIXES: void g() {}
-  void h(int i) {}
+// CHECK-FIXES: void g() {;}
+  void h(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning
-// CHECK-FIXES: void h(int  /*i*/) {}
-  void s(int i = 1) {}
+// CHECK-FIXES: void h(int  /*i*/) {;}
+  void s(int i = 1) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning
-// CHECK-FIXES: void s(int  /*i*/ = 1) {}
-  void u(int i[]) {}
+// CHECK-FIXES: void s(int  /*i*/ = 1) {;}
+  void u(int i[]) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning
-// CHECK-FIXES: void u(int  /*i*/[]) {}
-  void w(void (*fn)()) {}
+// CHECK-FIXES: void u(int  /*i*/[]) {;}
+  void w(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning
-// CHECK-FIXES: void w(void (* /*fn*/)()) {}
+// CHECK-FIXES: void w(void (* /*fn*/)()) {;}
 };
 
-void C::f(int i) {}
+void C::f(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning
-// CHECK-FIXES: void C::f() {}
+// CHECK-FIXES: void C::f() {;}
 
 template <typename T>
 void useFunction(T t);
@@ -197,9 +197,9 @@ class Base {
 };
 
 class Derived : public Base {
-  void f(int i) override {}
+  void f(int i) override {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning
-// CHECK-FIXES: void f(int  /*i*/) override {}
+// CHECK-FIXES: void f(int  /*i*/) override {;}
 };
 
 } // end namespace
@@ -210,10 +210,10 @@ template <typename T> void someFunctionTemplateOneUnusedParam(T b, T e) { (void)
 // CHECK-MESSAGES: :[[@LINE-1]]:65: warning
 // CHECK-FIXES: {{^}}template <typename T> void someFunctionTemplateOneUnusedParam(T  /*b*/, T e) { (void)e; }
 
-template <typename T> void someFunctionTemplateAllUnusedParams(T b, T e) {}
+template <typename T> void someFunctionTemplateAllUnusedParams(T b, T e) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:66: warning
 // CHECK-MESSAGES: :[[@LINE-2]]:71: warning
-// CHECK-FIXES: {{^}}template <typename T> void someFunctionTemplateAllUnusedParams(T  /*b*/, T  /*e*/) {}
+// CHECK-FIXES: {{^}}template <typename T> void someFunctionTemplateAllUnusedParams(T  /*b*/, T  /*e*/) {;}
 
 static void dontGetConfusedByParametersInFunctionTypes() { void (*F)(int i); }
 
@@ -221,3 +221,6 @@ template <typename T> class Function {};
 static Function<void(int, int i)> dontGetConfusedByFunctionReturnTypes() {
   return Function<void(int, int)>();
 }
+
+// Do not warn on empty function bodies.
+void f(int foo) {}

@@ -22,6 +22,11 @@
 
 #include "test_macros.h"
 
+#if TEST_STD_VER > 14
+#include <string_view>
+#endif
+
+
 template<typename C>
 void test_const_container( const C& c )
 {
@@ -65,7 +70,6 @@ int main()
     std::list<int>   l; l.push_back(2);
     std::array<int, 1> a; a[0] = 3;
     std::initializer_list<int> il = { 4 };
-
     test_container ( v );
     test_container ( l );
     test_container ( a );
@@ -75,6 +79,12 @@ int main()
     test_const_container ( l );
     test_const_container ( a );
     test_const_container ( il );
+
+#if TEST_STD_VER > 14
+    std::string_view sv{"ABC"};
+    test_container ( sv );
+    test_const_container ( sv );
+#endif
 
     static constexpr int arrA [] { 1, 2, 3 };
     test_const_array ( arrA );

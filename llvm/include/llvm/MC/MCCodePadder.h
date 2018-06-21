@@ -28,6 +28,7 @@ typedef SmallVector<const MCPaddingFragment *, 8> MCPFRange;
 
 struct MCCodePaddingContext {
   bool IsPaddingActive;
+  bool IsBasicBlockInsideInnermostLoop;
   bool IsBasicBlockReachableViaFallthrough;
   bool IsBasicBlockReachableViaBranch;
 };

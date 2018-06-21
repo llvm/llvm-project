@@ -5,10 +5,10 @@
 #include <isl/union_map_type.h>
 #include <isl/schedule_type.h>
 #include <isl/aff_type.h>
-#include <isl/band.h>
-#include <isl/space.h>
+#include <isl/space_type.h>
 #include <isl/set_type.h>
 #include <isl/list.h>
+#include <isl/printer_type.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -183,9 +183,6 @@ __isl_give isl_schedule *isl_schedule_expand(__isl_take isl_schedule *schedule,
 	__isl_take isl_union_pw_multi_aff *contraction,
 	__isl_take isl_schedule *expansion);
 
-__isl_give isl_band_list *isl_schedule_get_band_forest(
-	__isl_keep isl_schedule *schedule);
-
 __isl_give isl_schedule *isl_schedule_read_from_file(isl_ctx *ctx, FILE *input);
 __isl_constructor
 __isl_give isl_schedule *isl_schedule_read_from_str(isl_ctx *ctx,
@@ -194,9 +191,6 @@ __isl_give isl_printer *isl_printer_print_schedule(__isl_take isl_printer *p,
 	__isl_keep isl_schedule *schedule);
 void isl_schedule_dump(__isl_keep isl_schedule *schedule);
 __isl_give char *isl_schedule_to_str(__isl_keep isl_schedule *schedule);
-
-int isl_schedule_foreach_band(__isl_keep isl_schedule *sched,
-	int (*fn)(__isl_keep isl_band *band, void *user), void *user);
 
 #if defined(__cplusplus)
 }

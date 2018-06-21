@@ -216,13 +216,15 @@ __isl_give isl_dim_map *isl_dim_map_from_reordering(
 {
 	int i;
 	isl_ctx *ctx;
+	isl_space *space;
 	struct isl_dim_map *dim_map;
 
 	if (!exp)
 		return NULL;
 
-	ctx = isl_space_get_ctx(exp->dim);
-	dim_map = isl_dim_map_alloc(ctx, isl_space_dim(exp->dim, isl_dim_all));
+	ctx = isl_reordering_get_ctx(exp);
+	space = isl_reordering_peek_space(exp);
+	dim_map = isl_dim_map_alloc(ctx, isl_space_dim(space, isl_dim_all));
 	if (!dim_map)
 		return NULL;
 

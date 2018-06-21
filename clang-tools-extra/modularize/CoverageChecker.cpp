@@ -90,7 +90,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange, const FileEntry *File,
                           StringRef SearchPath, StringRef RelativePath,
-                          const Module *Imported) override {
+                          const Module *Imported,
+                          SrcMgr::CharacteristicKind FileType) override {
     Checker.collectUmbrellaHeaderHeader(File->getName());
   }
 

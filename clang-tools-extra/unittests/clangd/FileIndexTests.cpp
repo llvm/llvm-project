@@ -7,10 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangdUnit.h"
+#include "TestFS.h"
+#include "TestTU.h"
 #include "index/FileIndex.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Frontend/Utils.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -76,51 +80,49 @@ TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
 std::vector<std::string> match(const SymbolIndex &I,
                                const FuzzyFindRequest &Req) {
   std::vector<std::string> Matches;
-  auto Ctx = Context::empty();
-  I.fuzzyFind(Ctx, Req, [&](const Symbol &Sym) {
-    Matches.push_back(
-        (Sym.Scope + (Sym.Scope.empty() ? "" : "::") + Sym.Name).str());
+  I.fuzzyFind(Req, [&](const Symbol &Sym) {
+    Matches.push_back((Sym.Scope + Sym.Name).str());
   });
   return Matches;
 }
 
-/// Create an ParsedAST for \p Code. Returns None if \p Code is empty.
-llvm::Optional<ParsedAST> build(std::string Path, llvm::StringRef Code) {
-  Context Ctx = Context::empty();
-  if (Code.empty())
-    return llvm::None;
-  const char *Args[] = {"clang", "-xc++", Path.c_str()};
+// Adds Basename.cpp, which includes Basename.h, which contains Code.
+void update(FileIndex &M, llvm::StringRef Basename, llvm::StringRef Code) {
+  TestTU File;
+  File.Filename = (Basename + ".cpp").str();
+  File.HeaderFilename = (Basename + ".h").str();
+  File.HeaderCode = Code;
+  auto AST = File.build();
+  M.update(File.Filename, &AST.getASTContext(), AST.getPreprocessorPtr());
+}
 
-  auto CI = createInvocationFromCommandLine(Args);
+TEST(FileIndexTest, CustomizedURIScheme) {
+  FileIndex M({"unittest"});
+  update(M, "f", "class string {};");
 
-  auto Buf = llvm::MemoryBuffer::getMemBuffer(Code);
-  auto AST = ParsedAST::Build(Ctx, std::move(CI), nullptr, std::move(Buf),
-                              std::make_shared<PCHContainerOperations>(),
-                              vfs::getRealFileSystem());
-  assert(AST.hasValue());
-  return std::move(*AST);
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  bool SeenSymbol = false;
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+    EXPECT_EQ(Sym.CanonicalDeclaration.FileURI, "unittest:///f.h");
+    SeenSymbol = true;
+  });
+  EXPECT_TRUE(SeenSymbol);
 }
 
 TEST(FileIndexTest, IndexAST) {
   FileIndex M;
-  auto Ctx = Context::empty();
-  M.update(
-      Ctx, "f1",
-      build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
+  update(M, "f1", "namespace ns { void f() {} class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  Req.Scopes = {"ns"};
+  Req.Scopes = {"ns::"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 }
 
 TEST(FileIndexTest, NoLocal) {
   FileIndex M;
-  auto Ctx = Context::empty();
-  M.update(
-      Ctx, "f1",
-      build("f1", "namespace ns { void f() { int local = 0; } class X {}; }")
-          .getPointer());
+  update(M, "f1", "namespace ns { void f() { int local = 0; } class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
@@ -129,52 +131,146 @@ TEST(FileIndexTest, NoLocal) {
 
 TEST(FileIndexTest, IndexMultiASTAndDeduplicate) {
   FileIndex M;
-  auto Ctx = Context::empty();
-  M.update(
-      Ctx, "f1",
-      build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
-  M.update(
-      Ctx, "f2",
-      build("f2", "namespace ns { void ff() {} class X {}; }").getPointer());
+  update(M, "f1", "namespace ns { void f() {} class X {}; }");
+  update(M, "f2", "namespace ns { void ff() {} class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  Req.Scopes = {"ns"};
+  Req.Scopes = {"ns::"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X", "ns::ff"));
 }
 
 TEST(FileIndexTest, RemoveAST) {
   FileIndex M;
-  auto Ctx = Context::empty();
-  M.update(
-      Ctx, "f1",
-      build("f1", "namespace ns { void f() {} class X {}; }").getPointer());
+  update(M, "f1", "namespace ns { void f() {} class X {}; }");
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  Req.Scopes = {"ns"};
+  Req.Scopes = {"ns::"};
   EXPECT_THAT(match(M, Req), UnorderedElementsAre("ns::f", "ns::X"));
 
-  M.update(Ctx, "f1", nullptr);
+  M.update("f1.cpp", nullptr, nullptr);
   EXPECT_THAT(match(M, Req), UnorderedElementsAre());
 }
 
 TEST(FileIndexTest, RemoveNonExisting) {
   FileIndex M;
-  auto Ctx = Context::empty();
-  M.update(Ctx, "no", nullptr);
+  M.update("no.cpp", nullptr, nullptr);
   EXPECT_THAT(match(M, FuzzyFindRequest()), UnorderedElementsAre());
 }
 
 TEST(FileIndexTest, ClassMembers) {
   FileIndex M;
-  auto Ctx = Context::empty();
-  M.update(Ctx, "f1",
-           build("f1", "class X { static int m1; int m2;};").getPointer());
+  update(M, "f1", "class X { static int m1; int m2; static void f(); };");
 
   FuzzyFindRequest Req;
   Req.Query = "";
-  EXPECT_THAT(match(M, Req), UnorderedElementsAre("X", "X::m1", "X::m2"));
+  EXPECT_THAT(match(M, Req),
+              UnorderedElementsAre("X", "X::m1", "X::m2", "X::f"));
+}
+
+TEST(FileIndexTest, NoIncludeCollected) {
+  FileIndex M;
+  update(M, "f", "class string {};");
+
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  bool SeenSymbol = false;
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+    EXPECT_TRUE(Sym.Detail->IncludeHeader.empty());
+    SeenSymbol = true;
+  });
+  EXPECT_TRUE(SeenSymbol);
+}
+
+TEST(FileIndexTest, TemplateParamsInLabel) {
+  auto Source = R"cpp(
+template <class Ty>
+class vector {
+};
+
+template <class Ty, class Arg>
+vector<Ty> make_vector(Arg A) {}
+)cpp";
+
+  FileIndex M;
+  update(M, "f", Source);
+
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  bool SeenVector = false;
+  bool SeenMakeVector = false;
+  M.fuzzyFind(Req, [&](const Symbol &Sym) {
+    if (Sym.Name == "vector") {
+      EXPECT_EQ(Sym.CompletionLabel, "vector<class Ty>");
+      EXPECT_EQ(Sym.CompletionSnippetInsertText, "vector<${1:class Ty}>");
+      EXPECT_EQ(Sym.CompletionPlainInsertText, "vector");
+      SeenVector = true;
+      return;
+    }
+
+    if (Sym.Name == "make_vector") {
+      EXPECT_EQ(Sym.CompletionLabel, "make_vector<class Ty>(Arg A)");
+      EXPECT_EQ(Sym.CompletionSnippetInsertText,
+                "make_vector<${1:class Ty}>(${2:Arg A})");
+      EXPECT_EQ(Sym.CompletionPlainInsertText, "make_vector");
+      SeenMakeVector = true;
+    }
+  });
+  EXPECT_TRUE(SeenVector);
+  EXPECT_TRUE(SeenMakeVector);
+}
+
+TEST(FileIndexTest, RebuildWithPreamble) {
+  auto FooCpp = testPath("foo.cpp");
+  auto FooH = testPath("foo.h");
+  // Preparse ParseInputs.
+  ParseInputs PI;
+  PI.CompileCommand.Directory = testRoot();
+  PI.CompileCommand.Filename = FooCpp;
+  PI.CompileCommand.CommandLine = {"clang", "-xc++", FooCpp};
+
+  llvm::StringMap<std::string> Files;
+  Files[FooCpp] = "";
+  Files[FooH] = R"cpp(
+    namespace ns_in_header {
+      int func_in_header();
+    }
+  )cpp";
+  PI.FS = buildTestFS(std::move(Files));
+
+  PI.Contents = R"cpp(
+    #include "foo.h"
+    namespace ns_in_source {
+      int func_in_source();
+    }
+  )cpp";
+
+  // Rebuild the file.
+  auto CI = buildCompilerInvocation(PI);
+
+  FileIndex Index;
+  bool IndexUpdated = false;
+  buildPreamble(
+      FooCpp, *CI, /*OldPreamble=*/nullptr, tooling::CompileCommand(), PI,
+      std::make_shared<PCHContainerOperations>(), /*StoreInMemory=*/true,
+      [&Index, &IndexUpdated](PathRef FilePath, ASTContext &Ctx,
+                              std::shared_ptr<Preprocessor> PP) {
+        EXPECT_FALSE(IndexUpdated) << "Expected only a single index update";
+        IndexUpdated = true;
+        Index.update(FilePath, &Ctx, std::move(PP));
+      });
+  ASSERT_TRUE(IndexUpdated);
+
+  // Check the index contains symbols from the preamble, but not from the main
+  // file.
+  FuzzyFindRequest Req;
+  Req.Query = "";
+  Req.Scopes = {"", "ns_in_header::"};
+
+  EXPECT_THAT(
+      match(Index, Req),
+      UnorderedElementsAre("ns_in_header", "ns_in_header::func_in_header"));
 }
 
 } // namespace

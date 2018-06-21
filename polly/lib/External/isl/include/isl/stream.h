@@ -14,7 +14,7 @@
 #include <isl/hash.h>
 #include <isl/aff_type.h>
 #include <isl/obj.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/schedule_type.h>
 
 #if defined(__cplusplus)

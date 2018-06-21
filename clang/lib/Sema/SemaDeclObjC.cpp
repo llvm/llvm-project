@@ -342,13 +342,6 @@ void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
   if (!MDecl)
     return;
 
-  QualType ResultType = MDecl->getReturnType();
-  if (!ResultType->isDependentType() && !ResultType->isVoidType() &&
-      !MDecl->isInvalidDecl() &&
-      RequireCompleteType(MDecl->getLocation(), ResultType,
-                          diag::err_func_def_incomplete_result))
-    MDecl->setInvalidDecl();
-
   // Allow all of Sema to see that we are entering a method definition.
   PushDeclContext(FnBodyScope, MDecl);
   PushFunctionScope();
@@ -4787,17 +4780,6 @@ Decl *Sema::ActOnMethodDeclaration(
   if (MethodDefinition &&
       Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
     checkObjCMethodX86VectorTypes(*this, ObjCMethod);
-
-  // + load method cannot have availability attributes. It get called on
-  // startup, so it has to have the availability of the deployment target.
-  if (const auto *attr = ObjCMethod->getAttr<AvailabilityAttr>()) {
-    if (ObjCMethod->isClassMethod() &&
-        ObjCMethod->getSelector().getAsString() == "load") {
-      Diag(attr->getLocation(), diag::warn_availability_on_static_initializer)
-          << 0;
-      ObjCMethod->dropAttr<AvailabilityAttr>();
-    }
-  }
 
   ActOnDocumentableDecl(ObjCMethod);
 

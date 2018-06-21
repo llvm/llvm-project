@@ -8,6 +8,10 @@
 //===---------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclObjC.h"
+#include "clang/AST/RawCommentList.h"
+#include "clang/Basic/SourceManager.h"
 #include <utility>
 
 namespace clang {
@@ -120,7 +124,80 @@ void processSnippetChunks(const CodeCompletionString &CCS,
   }
 }
 
+bool canRequestComment(const ASTContext &Ctx, const NamedDecl &D,
+                       bool CommentsFromHeaders) {
+  if (CommentsFromHeaders)
+    return true;
+  auto &SourceMgr = Ctx.getSourceManager();
+  // Accessing comments for decls from  invalid preamble can lead to crashes.
+  // So we only return comments from the main file when doing code completion.
+  // For indexing, we still read all the comments.
+  // FIXME: find a better fix, e.g. store file contents in the preamble or get
+  // doc comments from the index.
+  auto canRequestForDecl = [&](const NamedDecl &D) -> bool {
+    for (auto *Redecl : D.redecls()) {
+      auto Loc = SourceMgr.getSpellingLoc(Redecl->getLocation());
+      if (!SourceMgr.isWrittenInMainFile(Loc))
+        return false;
+    }
+    return true;
+  };
+  // First, check the decl itself.
+  if (!canRequestForDecl(D))
+    return false;
+  // Completion also returns comments for properties, corresponding to ObjC
+  // methods.
+  const ObjCMethodDecl *M = dyn_cast<ObjCMethodDecl>(&D);
+  const ObjCPropertyDecl *PDecl = M ? M->findPropertyDecl() : nullptr;
+  return !PDecl || canRequestForDecl(*PDecl);
+}
+
+bool LooksLikeDocComment(llvm::StringRef CommentText) {
+  // We don't report comments that only contain "special" chars.
+  // This avoids reporting various delimiters, like:
+  //   =================
+  //   -----------------
+  //   *****************
+  return CommentText.find_first_not_of("/*-= \t\r\n") != llvm::StringRef::npos;
+}
+
 } // namespace
+
+std::string getDocComment(const ASTContext &Ctx,
+                          const CodeCompletionResult &Result,
+                          bool CommentsFromHeaders) {
+  // FIXME: clang's completion also returns documentation for RK_Pattern if they
+  // contain a pattern for ObjC properties. Unfortunately, there is no API to
+  // get this declaration, so we don't show documentation in that case.
+  if (Result.Kind != CodeCompletionResult::RK_Declaration)
+    return "";
+  auto *Decl = Result.getDeclaration();
+  if (!Decl || !canRequestComment(Ctx, *Decl, CommentsFromHeaders))
+    return "";
+  const RawComment *RC = getCompletionComment(Ctx, Decl);
+  if (!RC)
+    return "";
+  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  if (!LooksLikeDocComment(Doc))
+    return "";
+  return Doc;
+}
+
+std::string
+getParameterDocComment(const ASTContext &Ctx,
+                       const CodeCompleteConsumer::OverloadCandidate &Result,
+                       unsigned ArgIndex, bool CommentsFromHeaders) {
+  auto *Func = Result.getFunction();
+  if (!Func || !canRequestComment(Ctx, *Func, CommentsFromHeaders))
+    return "";
+  const RawComment *RC = getParameterComment(Ctx, Result, ArgIndex);
+  if (!RC)
+    return "";
+  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  if (!LooksLikeDocComment(Doc))
+    return "";
+  return Doc;
+}
 
 void getLabelAndInsertText(const CodeCompletionString &CCS, std::string *Label,
                            std::string *InsertText, bool EnableSnippets) {
@@ -128,7 +205,8 @@ void getLabelAndInsertText(const CodeCompletionString &CCS, std::string *Label,
                         : processPlainTextChunks(CCS, Label, InsertText);
 }
 
-std::string getDocumentation(const CodeCompletionString &CCS) {
+std::string formatDocumentation(const CodeCompletionString &CCS,
+                                llvm::StringRef DocComment) {
   // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
   // information in the documentation field.
   std::string Result;
@@ -146,13 +224,13 @@ std::string getDocumentation(const CodeCompletionString &CCS) {
     }
   }
   // Add brief documentation (if there is any).
-  if (CCS.getBriefComment() != nullptr) {
+  if (!DocComment.empty()) {
     if (!Result.empty()) {
       // This means we previously added annotations. Add an extra newline
       // character to make the annotations stand out.
       Result.push_back('\n');
     }
-    Result += CCS.getBriefComment();
+    Result += DocComment;
   }
   return Result;
 }

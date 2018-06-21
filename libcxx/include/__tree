@@ -37,13 +37,8 @@ template <class _Pointer> class __tree_end_node;
 template <class _VoidPtr> class __tree_node_base;
 template <class _Tp, class _VoidPtr> class __tree_node;
 
-#ifndef _LIBCPP_CXX03_LANG
-template <class _Key, class _Value>
-union __value_type;
-#else
 template <class _Key, class _Value>
 struct __value_type;
-#endif
 
 template <class _Key, class _CP, class _Compare,
     bool = is_empty<_Compare>::value && !__libcpp_is_final<_Compare>::value>
@@ -569,10 +564,9 @@ struct __tree_key_value_types {
   static __container_value_type* __get_ptr(__node_value_type& __n) {
     return _VSTD::addressof(__n);
   }
-
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_INLINE_VISIBILITY
-  static  __container_value_type&& __move(__node_value_type& __v) {
+  static __container_value_type&& __move(__node_value_type& __v) {
     return _VSTD::move(__v);
   }
 #endif
@@ -584,14 +578,13 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
   typedef _Tp                                          mapped_type;
   typedef __value_type<_Key, _Tp>                      __node_value_type;
   typedef pair<const _Key, _Tp>                        __container_value_type;
-  typedef pair<_Key, _Tp>                              __nc_value_type;
   typedef __container_value_type                       __map_value_type;
   static const bool __is_map = true;
 
   _LIBCPP_INLINE_VISIBILITY
   static key_type const&
   __get_key(__node_value_type const& __t) {
-    return __t.__cc.first;
+    return __t.__get_value().first;
   }
 
   template <class _Up>
@@ -605,7 +598,7 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
   _LIBCPP_INLINE_VISIBILITY
   static __container_value_type const&
   __get_value(__node_value_type const& __t) {
-    return __t.__cc;
+    return __t.__get_value();
   }
 
   template <class _Up>
@@ -618,13 +611,13 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
 
   _LIBCPP_INLINE_VISIBILITY
   static __container_value_type* __get_ptr(__node_value_type& __n) {
-    return _VSTD::addressof(__n.__cc);
+    return _VSTD::addressof(__n.__get_value());
   }
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_INLINE_VISIBILITY
-  static  __nc_value_type&& __move(__node_value_type& __v) {
-    return _VSTD::move(__v.__nc);
+  static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) {
+    return __v.__move();
   }
 #endif
 };

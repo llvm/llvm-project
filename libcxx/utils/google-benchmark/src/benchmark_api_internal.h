@@ -1,7 +1,7 @@
 #ifndef BENCHMARK_API_INTERNAL_H
 #define BENCHMARK_API_INTERNAL_H
 
-#include "benchmark/benchmark_api.h"
+#include "benchmark/benchmark.h"
 
 #include <cmath>
 #include <iosfwd>
@@ -25,6 +25,7 @@ struct Benchmark::Instance {
   BigO complexity;
   BigOFunc* complexity_lambda;
   UserCounters counters;
+  const std::vector<Statistics>* statistics;
   bool last_benchmark_instance;
   int repetitions;
   double min_time;
@@ -36,13 +37,10 @@ bool FindBenchmarksInternal(const std::string& re,
                             std::vector<Benchmark::Instance>* benchmarks,
                             std::ostream* Err);
 
-namespace {
+bool IsZero(double n);
 
-bool IsZero(double n) {
-  return std::abs(n) < std::numeric_limits<double>::epsilon();
-}
+ConsoleReporter::OutputOptions GetOutputOptions(bool force_no_color = false);
 
-}  // end namespace
 }  // end namespace internal
 }  // end namespace benchmark
 

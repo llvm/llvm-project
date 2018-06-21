@@ -1,15 +1,13 @@
 #ifndef FILESYSTEM_TEST_HELPER_HPP
 #define FILESYSTEM_TEST_HELPER_HPP
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <cassert>
 #include <cstdio> // for printf
 #include <string>
 #include <fstream>
 #include <random>
 #include <chrono>
-
-namespace fs = std::experimental::filesystem;
 
 // static test helpers
 
@@ -399,6 +397,10 @@ void SleepFor(std::chrono::seconds dur) {
     const auto wake_time = Clock::now() + dur;
     while (Clock::now() < wake_time)
         ;
+}
+
+inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
+  return LHS.native() == RHS.native();
 }
 
 #endif /* FILESYSTEM_TEST_HELPER_HPP */

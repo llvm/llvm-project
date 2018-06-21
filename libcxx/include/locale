@@ -768,10 +768,10 @@ __num_get_unsigned_integral(const char* __a, const char* __a_end,
 {
     if (__a != __a_end)
     {
-        if (*__a == '-')
-        {
-            __err = ios_base::failbit;
-            return 0;
+        const bool __negate = *__a == '-';
+        if (__negate && ++__a == __a_end) {
+          __err = ios_base::failbit;
+          return 0;
         }
         typename remove_reference<decltype(errno)>::type __save_errno = errno;
         errno = 0;
@@ -785,13 +785,14 @@ __num_get_unsigned_integral(const char* __a, const char* __a_end,
             __err = ios_base::failbit;
             return 0;
         }
-        else if (__current_errno == ERANGE ||
-                 numeric_limits<_Tp>::max() < __ll)
+        else if (__current_errno == ERANGE || numeric_limits<_Tp>::max() < __ll)
         {
             __err = ios_base::failbit;
             return numeric_limits<_Tp>::max();
         }
-        return static_cast<_Tp>(__ll);
+        _Tp __res = static_cast<_Tp>(__ll);
+        if (__negate) __res = -__res;
+        return __res;
     }
     __err = ios_base::failbit;
     return 0;

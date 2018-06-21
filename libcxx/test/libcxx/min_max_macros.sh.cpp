@@ -237,10 +237,6 @@ TEST_MACROS();
 #if __cplusplus >= 201103L
 #include <experimental/algorithm>
 TEST_MACROS();
-#include <experimental/any>
-TEST_MACROS();
-#include <experimental/chrono>
-TEST_MACROS();
 #include <experimental/deque>
 TEST_MACROS();
 #include <experimental/dynarray>
@@ -259,25 +255,13 @@ TEST_MACROS();
 TEST_MACROS();
 #include <experimental/memory_resource>
 TEST_MACROS();
-#include <experimental/numeric>
-TEST_MACROS();
-#include <experimental/optional>
-TEST_MACROS();
 #include <experimental/propagate_const>
-TEST_MACROS();
-#include <experimental/ratio>
 TEST_MACROS();
 #include <experimental/regex>
 TEST_MACROS();
 #include <experimental/set>
 TEST_MACROS();
 #include <experimental/string>
-TEST_MACROS();
-#include <experimental/string_view>
-TEST_MACROS();
-#include <experimental/system_error>
-TEST_MACROS();
-#include <experimental/tuple>
 TEST_MACROS();
 #include <experimental/type_traits>
 TEST_MACROS();

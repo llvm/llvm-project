@@ -15,7 +15,7 @@
 // void copy_symlink(const path& existing_symlink, const path& new_symlink,
 //                   error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -23,8 +23,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
-namespace fs = std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_copy_symlink_test_suite)
 

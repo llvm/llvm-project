@@ -19,7 +19,7 @@
 // Like sprintf, but when return value >= 0 it returns
 // a pointer to a malloc'd string in *sptr.
 // If return >= 0, use free to delete *sptr.
-int vasprintf( char **sptr, const char *__restrict format, va_list ap )
+int __libcpp_vasprintf( char **sptr, const char *__restrict format, va_list ap )
 {
     *sptr = NULL;
     // Query the count required.

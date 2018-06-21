@@ -180,7 +180,7 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
 
   // Would cause an infinite loop.
   if (!isDimBoundedByConstant(ScatterSet, 0)) {
-    DEBUG(dbgs() << "Abort; dimension is not of fixed size\n");
+    LLVM_DEBUG(dbgs() << "Abort; dimension is not of fixed size\n");
     return nullptr;
   }
 
@@ -191,8 +191,8 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
   auto Counter = isl::pw_aff(isl::local_space(ParamSpace.set_from_params()));
 
   while (!ScatterSet.is_empty()) {
-    DEBUG(dbgs() << "Next counter:\n  " << Counter << "\n");
-    DEBUG(dbgs() << "Remaining scatter set:\n  " << ScatterSet << "\n");
+    LLVM_DEBUG(dbgs() << "Next counter:\n  " << Counter << "\n");
+    LLVM_DEBUG(dbgs() << "Remaining scatter set:\n  " << ScatterSet << "\n");
     auto ThisSet = ScatterSet.project_out(isl::dim::set, 1, Dims - 1);
     auto ThisFirst = ThisSet.lexmin();
     auto ScatterFirst = ThisFirst.add_dims(isl::dim::set, Dims - 1);
@@ -207,10 +207,11 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
     auto RemainingSubSchedule = scheduleProjectOut(SubSchedule, 0, 1);
 
     auto FirstSubScatter = isl::set(FirstSubSchedule.range());
-    DEBUG(dbgs() << "Next step in sequence is:\n  " << FirstSubScatter << "\n");
+    LLVM_DEBUG(dbgs() << "Next step in sequence is:\n  " << FirstSubScatter
+                      << "\n");
 
     if (!isDimBoundedByParameter(FirstSubScatter, 0)) {
-      DEBUG(dbgs() << "Abort; sequence step is not bounded\n");
+      LLVM_DEBUG(dbgs() << "Abort; sequence step is not bounded\n");
       return nullptr;
     }
 
@@ -241,7 +242,8 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
     Counter = Counter.add(PartLen);
   }
 
-  DEBUG(dbgs() << "Sequence-flatten result is:\n  " << NewSchedule << "\n");
+  LLVM_DEBUG(dbgs() << "Sequence-flatten result is:\n  " << NewSchedule
+                    << "\n");
   return NewSchedule;
 }
 
@@ -268,19 +270,19 @@ isl::union_map tryFlattenLoop(isl::union_map Schedule) {
   SubExtent = SubExtent.project_out(isl::dim::set, 1, SubDims - 1);
 
   if (!isDimBoundedByConstant(SubExtent, 0)) {
-    DEBUG(dbgs() << "Abort; dimension not bounded by constant\n");
+    LLVM_DEBUG(dbgs() << "Abort; dimension not bounded by constant\n");
     return nullptr;
   }
 
   auto Min = SubExtent.dim_min(0);
-  DEBUG(dbgs() << "Min bound:\n  " << Min << "\n");
+  LLVM_DEBUG(dbgs() << "Min bound:\n  " << Min << "\n");
   auto MinVal = getConstant(Min, false, true);
   auto Max = SubExtent.dim_max(0);
-  DEBUG(dbgs() << "Max bound:\n  " << Max << "\n");
+  LLVM_DEBUG(dbgs() << "Max bound:\n  " << Max << "\n");
   auto MaxVal = getConstant(Max, true, false);
 
   if (!MinVal || !MaxVal || MinVal.is_nan() || MaxVal.is_nan()) {
-    DEBUG(dbgs() << "Abort; dimension bounds could not be determined\n");
+    LLVM_DEBUG(dbgs() << "Abort; dimension bounds could not be determined\n");
     return nullptr;
   }
 
@@ -298,14 +300,15 @@ isl::union_map tryFlattenLoop(isl::union_map Schedule) {
   auto IndexMap = isl::union_map(Index);
 
   auto Result = IndexMap.flat_range_product(RemainingSubSchedule);
-  DEBUG(dbgs() << "Loop-flatten result is:\n  " << Result << "\n");
+  LLVM_DEBUG(dbgs() << "Loop-flatten result is:\n  " << Result << "\n");
   return Result;
 }
 } // anonymous namespace
 
 isl::union_map polly::flattenSchedule(isl::union_map Schedule) {
   auto Dims = scheduleScatterDims(Schedule);
-  DEBUG(dbgs() << "Recursive schedule to process:\n  " << Schedule << "\n");
+  LLVM_DEBUG(dbgs() << "Recursive schedule to process:\n  " << Schedule
+                    << "\n");
 
   // Base case; no dimensions left
   if (Dims == 0) {
@@ -319,20 +322,20 @@ isl::union_map polly::flattenSchedule(isl::union_map Schedule) {
 
   // Fixed dimension; no need to preserve variabledness.
   if (!isVariableDim(Schedule)) {
-    DEBUG(dbgs() << "Fixed dimension; try sequence flattening\n");
+    LLVM_DEBUG(dbgs() << "Fixed dimension; try sequence flattening\n");
     auto NewScheduleSequence = tryFlattenSequence(Schedule);
     if (NewScheduleSequence)
       return NewScheduleSequence;
   }
 
   // Constant stride
-  DEBUG(dbgs() << "Try loop flattening\n");
+  LLVM_DEBUG(dbgs() << "Try loop flattening\n");
   auto NewScheduleLoop = tryFlattenLoop(Schedule);
   if (NewScheduleLoop)
     return NewScheduleLoop;
 
   // Try again without loop condition (may blow up the number of pieces!!)
-  DEBUG(dbgs() << "Try sequence flattening again\n");
+  LLVM_DEBUG(dbgs() << "Try sequence flattening again\n");
   auto NewScheduleSequence = tryFlattenSequence(Schedule);
   if (NewScheduleSequence)
     return NewScheduleSequence;

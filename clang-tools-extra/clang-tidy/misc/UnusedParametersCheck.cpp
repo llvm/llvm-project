@@ -29,10 +29,11 @@ bool isOverrideMethod(const FunctionDecl *Function) {
 } // namespace
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      functionDecl(isDefinition(), hasBody(stmt()), hasAnyParameter(decl()))
-          .bind("function"),
-      this);
+  Finder->addMatcher(functionDecl(isDefinition(),
+                                  hasBody(stmt(hasDescendant(stmt()))),
+                                  hasAnyParameter(decl()))
+                         .bind("function"),
+                     this);
 }
 
 template <typename T>

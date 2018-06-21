@@ -128,6 +128,10 @@ public:
     void clear() noexcept;
 };
 
+template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
+   deque(InputIterator, InputIterator, Allocator = Allocator())
+   -> deque<typename iterator_traits<InputIterator>::value_type, Allocator>;
+
 template <class T, class Allocator>
     bool operator==(const deque<T,Allocator>& x, const deque<T,Allocator>& y);
 template <class T, class Allocator>
@@ -921,13 +925,14 @@ class __deque_base
 {
     __deque_base(const __deque_base& __c);
     __deque_base& operator=(const __deque_base& __c);
-protected:
-    typedef _Tp                                      value_type;
+public:
     typedef _Allocator                               allocator_type;
     typedef allocator_traits<allocator_type>         __alloc_traits;
+    typedef typename __alloc_traits::size_type       size_type;
+protected:
+    typedef _Tp                                      value_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
-    typedef typename __alloc_traits::size_type       size_type;
     typedef typename __alloc_traits::difference_type difference_type;
     typedef typename __alloc_traits::pointer         pointer;
     typedef typename __alloc_traits::const_pointer   const_pointer;
@@ -946,6 +951,7 @@ protected:
     typedef __deque_iterator<value_type, const_pointer, const_reference, __map_const_pointer,
                              difference_type>    const_iterator;
 
+protected:
     __map __map_;
     size_type __start_;
     __compressed_pair<size_type, allocator_type> __size_;
@@ -1460,6 +1466,23 @@ private:
         _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
     void __move_assign(deque& __c, false_type);
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _Alloc = typename std::allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+deque(_InputIterator, _InputIterator)
+  -> deque<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _InputIterator,
+         class _Alloc,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+deque(_InputIterator, _InputIterator, _Alloc)
+  -> deque<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+#endif
+
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n)

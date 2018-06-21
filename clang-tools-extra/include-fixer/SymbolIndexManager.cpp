@@ -97,8 +97,8 @@ SymbolIndexManager::search(llvm::StringRef Identifier,
       Symbols.insert(Symbols.end(), Res.begin(), Res.end());
     }
 
-    DEBUG(llvm::dbgs() << "Searching " << Names.back() << "... got "
-                       << Symbols.size() << " results...\n");
+    LLVM_DEBUG(llvm::dbgs() << "Searching " << Names.back() << "... got "
+                            << Symbols.size() << " results...\n");
 
     for (auto &SymAndSig : Symbols) {
       const SymbolInfo &Symbol = SymAndSig.Symbol;

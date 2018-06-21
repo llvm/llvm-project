@@ -1871,21 +1871,10 @@ void CodeGenModule::ConstructAttributeList(
   }
 
   if (!AttrOnCallSite) {
-    bool DisableTailCalls = false;
-
-    if (CodeGenOpts.DisableTailCalls)
-      DisableTailCalls = true;
-    else if (TargetDecl) {
-      if (TargetDecl->hasAttr<DisableTailCallsAttr>() ||
-          TargetDecl->hasAttr<AnyX86InterruptAttr>())
-        DisableTailCalls = true;
-      else if (CodeGenOpts.NoEscapingBlockTailCalls) {
-        if (const auto *BD = dyn_cast<BlockDecl>(TargetDecl))
-          if (!BD->doesNotEscape())
-            DisableTailCalls = true;
-      }
-    }
-
+    bool DisableTailCalls =
+        CodeGenOpts.DisableTailCalls ||
+        (TargetDecl && (TargetDecl->hasAttr<DisableTailCallsAttr>() ||
+                        TargetDecl->hasAttr<AnyX86InterruptAttr>()));
     FuncAttrs.addAttribute("disable-tail-calls",
                            llvm::toStringRef(DisableTailCalls));
 

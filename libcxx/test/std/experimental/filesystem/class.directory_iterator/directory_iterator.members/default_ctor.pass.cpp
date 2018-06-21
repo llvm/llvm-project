@@ -16,13 +16,12 @@
 // directory_iterator::directory_iterator() noexcept
 
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 
-namespace fs = std::experimental::filesystem;
 
 int main() {
     {

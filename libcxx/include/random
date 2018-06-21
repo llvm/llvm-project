@@ -4673,7 +4673,7 @@ poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_type& __pr
             double __py;
             if (__x < 10)
             {
-                const result_type __fac[] = {1, 1, 2, 6, 24, 120, 720, 5040,
+                const double __fac[] = {1, 1, 2, 6, 24, 120, 720, 5040,
                                              40320, 362880};
                 __px = -__pr.__mean_;
                 __py = _VSTD::pow(__pr.__mean_, (double)__x) / __fac[__x];

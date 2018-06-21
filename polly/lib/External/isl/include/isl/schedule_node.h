@@ -5,8 +5,8 @@
 #include <isl/union_set_type.h>
 #include <isl/aff_type.h>
 #include <isl/ast_type.h>
-#include <isl/val.h>
-#include <isl/space.h>
+#include <isl/val_type.h>
+#include <isl/space_type.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -36,6 +36,9 @@ __isl_give isl_schedule *isl_schedule_node_get_schedule(
 isl_stat isl_schedule_node_foreach_descendant_top_down(
 	__isl_keep isl_schedule_node *node,
 	isl_bool (*fn)(__isl_keep isl_schedule_node *node, void *user),
+	void *user);
+isl_bool isl_schedule_node_every_descendant(__isl_keep isl_schedule_node *node,
+	isl_bool (*test)(__isl_keep isl_schedule_node *node, void *user),
 	void *user);
 isl_stat isl_schedule_node_foreach_ancestor_top_down(
 	__isl_keep isl_schedule_node *node,

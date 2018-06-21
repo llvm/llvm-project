@@ -187,7 +187,6 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }

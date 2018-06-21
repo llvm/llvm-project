@@ -28,4 +28,4 @@ target_link_libraries(omptarget
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 
 # Install libomptarget under the lib destination folder.
-install(TARGETS omptarget LIBRARY DESTINATION lib${OPENMP_LIBDIR_SUFFIX})
+install(TARGETS omptarget LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")

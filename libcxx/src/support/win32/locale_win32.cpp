@@ -13,6 +13,8 @@
 #include <memory>
 #include <type_traits>
 
+int __libcpp_vasprintf(char **sptr, const char *__restrict fmt, va_list ap);
+
 using std::__libcpp_locale_guard;
 
 // FIXME: base currently unused. Needs manual work to construct the new locale
@@ -105,7 +107,7 @@ int asprintf_l( char **ret, locale_t loc, const char *format, ... )
 int vasprintf_l( char **ret, locale_t loc, const char *format, va_list ap )
 {
     __libcpp_locale_guard __current(loc);
-    return vasprintf( ret, format, ap );
+    return __libcpp_vasprintf( ret, format, ap );
 }
 
 #if !defined(_LIBCPP_MSVCRT)

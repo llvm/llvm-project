@@ -22,6 +22,9 @@
 
 #if USE_ITT_NOTIFY
 
+#include "ittnotify_config.h"
+__itt_global __kmp_ittapi_clean_global;
+extern __itt_global __kmp_itt__ittapi_global;
 kmp_int32 __kmp_barrier_domain_count;
 kmp_int32 __kmp_region_domain_count;
 __itt_domain *__kmp_itt_barrier_domains[KMP_MAX_FRAME_DOMAINS];
@@ -53,6 +56,12 @@ kmp_bootstrap_lock_t __kmp_itt_debug_lock =
 
 #endif // USE_ITT_NOTIFY
 
+void __kmp_itt_reset() {
+#if USE_ITT_NOTIFY
+  __kmp_itt__ittapi_global = __kmp_ittapi_clean_global;
+#endif
+}
+
 void __kmp_itt_initialize() {
 
 // ITTNotify library is loaded and initialized at first call to any ittnotify
@@ -60,6 +69,9 @@ void __kmp_itt_initialize() {
 // RTL version to ITTNotify.
 
 #if USE_ITT_NOTIFY
+  // Backup a clean global state
+  __kmp_ittapi_clean_global = __kmp_itt__ittapi_global;
+
   // Report OpenMP RTL version.
   kmp_str_buf_t buf;
   __itt_mark_type version;

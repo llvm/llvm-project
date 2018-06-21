@@ -102,7 +102,8 @@ public:
                           const clang::FileEntry *File,
                           llvm::StringRef SearchPath,
                           llvm::StringRef RelativePath,
-                          const clang::Module *Imported) override;
+                          const clang::Module *Imported,
+                          clang::SrcMgr::CharacteristicKind FileType) override;
   void moduleImport(clang::SourceLocation ImportLoc, clang::ModuleIdPath Path,
                     const clang::Module *Imported) override;
   void EndOfMainFile() override;

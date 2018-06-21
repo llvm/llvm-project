@@ -938,3 +938,13 @@ bool integer_member_implicit_cast(A *p) {
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: return p->m != 0;{{$}}
+
+bool operator!=(const A&, const A&) { return false; }
+bool expr_with_cleanups(A &S) {
+  if (S != (A)S)
+    return false;
+
+  return true;
+}
+// CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
+// CHECK-FIXES: S == (A)S;{{$}}

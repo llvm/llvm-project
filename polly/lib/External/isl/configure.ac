@@ -1,10 +1,10 @@
-AC_INIT([isl], [0.18], [isl-development@googlegroups.com])
+AC_INIT([isl], [0.19], [isl-development@googlegroups.com])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 AC_SUBST(versioninfo)
-versioninfo=18:0:3
+versioninfo=19:0:0
 
 if test "x$prefix" != "xNONE"; then
 	prefix_wd=`cd $prefix && pwd`
@@ -25,20 +25,11 @@ AX_CC_MAXOPT
 AX_GCC_WARN_UNUSED_RESULT
 AX_C___ATTRIBUTE__
 
-# CXX11FLAGS contains the flags (if any) added by AX_CXX_COMPILE_STDCXX_11
-# Original state of CXX and CXXCPP is preserved because CXX11FLAGS
-# is only needed for compiling interface/isl_test_cpp
-AC_SUBST(CXX11FLAGS)
-ac_save_CXX="$CXX"
-ac_save_CXXCPP="$CXXCPP"
-AX_CXX_COMPILE_STDCXX_11([noext], [optional])
-CXX11FLAGS=${CXX#$ac_save_CXX}
-CXX="$ac_save_CXX"
-CXXCPP="$ac_save_CXXCPP"
-
 AC_PROG_GREP
 AC_PROG_LIBTOOL
 AC_PROG_SED
+AM_PATH_PYTHON([2.5], [], [:])
+AM_CONDITIONAL([HAVE_PYTHON], [test "$PYTHON" != :])
 
 AC_CHECK_PROG(PERL, perl, perl, [])
 AC_CHECK_PROG(PDFLATEX, pdflatex, pdflatex, [])
@@ -79,7 +70,6 @@ fi
 AM_CONDITIONAL(IMATH_FOR_MP, test x$with_int = ximath -o x$with_int = ximath-32)
 AM_CONDITIONAL(GMP_FOR_MP, test x$with_int = xgmp)
 
-AM_CONDITIONAL(HAVE_CXX11, test "x$HAVE_CXX11" = "x1")
 AM_CONDITIONAL(SMALL_INT_OPT, test "x$with_int" == "ximath-32")
 AS_IF([test "x$with_int" == "ximath-32"], [
 	AC_DEFINE([USE_SMALL_INT_OPT], [], [Use small integer optimization])

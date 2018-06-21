@@ -99,10 +99,6 @@ struct __tgt_target_table {
 extern "C" {
 #endif
 
-// Implemented in libomp, they are called from within __tgt_* functions.
-int omp_get_default_device(void) __attribute__((weak));
-int32_t __kmpc_omp_taskwait(void *loc_ref, int32_t gtid) __attribute__((weak));
-
 int omp_get_num_devices(void);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t size, int device_num);

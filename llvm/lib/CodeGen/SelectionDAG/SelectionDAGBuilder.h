@@ -116,12 +116,9 @@ class SelectionDAGBuilder {
     unsigned getSDNodeOrder() { return SDNodeOrder; }
   };
 
-  /// DanglingDebugInfoVector - Helper type for DanglingDebugInfoMap.
-  typedef std::vector<DanglingDebugInfo> DanglingDebugInfoVector;
-
   /// DanglingDebugInfoMap - Keeps track of dbg_values for which we have not
   /// yet seen the referent.  We defer handling these until we do see it.
-  DenseMap<const Value*, DanglingDebugInfoVector> DanglingDebugInfoMap;
+  DenseMap<const Value*, DanglingDebugInfo> DanglingDebugInfoMap;
 
 public:
   /// PendingLoads - Loads are not emitted to the program immediately.  We bunch
@@ -673,12 +670,6 @@ public:
   /// getCopyFromRegs - If there was virtual register allocated for the value V
   /// emit CopyFromReg of the specified type Ty. Return empty SDValue() otherwise.
   SDValue getCopyFromRegs(const Value *V, Type *Ty);
-
-  /// If we have dangling debug info that describes \p Variable, or an
-  /// overlapping part of variable considering the \p Expr, then this method
-  /// weill drop that debug info as it isn't valid any longer.
-  void dropDanglingDebugInfo(const DILocalVariable *Variable,
-                             const DIExpression *Expr);
 
   // resolveDanglingDebugInfo - if we saw an earlier dbg_value referring to V,
   // generate the debug data structures now that we've seen its definition.

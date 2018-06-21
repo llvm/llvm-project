@@ -22,6 +22,8 @@
 namespace clang {
 namespace clangd {
 namespace json {
+class Expr;
+template <typename T> Expr toJSON(const llvm::Optional<T> &Opt);
 
 // An Expr is an JSON value of unknown type.
 // They can be copied, but should generally be moved.
@@ -514,6 +516,11 @@ bool fromJSON(const json::Expr &E, std::map<std::string, T> &Out) {
     return true;
   }
   return false;
+}
+
+template <typename T>
+json::Expr toJSON(const llvm::Optional<T>& Opt) {
+  return Opt ? json::Expr(*Opt) : json::Expr(nullptr);
 }
 
 // Helper for mapping JSON objects onto protocol structs.

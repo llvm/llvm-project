@@ -1022,6 +1022,7 @@ bool ASTNodeImporter::ImportDefinition(RecordDecl *From, RecordDecl *To,
       = FromData.HasConstexprNonCopyMoveConstructor;
     ToData.HasDefaultedDefaultConstructor
       = FromData.HasDefaultedDefaultConstructor;
+    ToData.CanPassInRegisters = FromData.CanPassInRegisters;
     ToData.DefaultedDefaultConstructorIsConstexpr
       = FromData.DefaultedDefaultConstructorIsConstexpr;
     ToData.HasConstexprDefaultConstructor

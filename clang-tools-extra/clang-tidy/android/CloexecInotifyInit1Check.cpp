@@ -25,7 +25,7 @@ void CloexecInotifyInit1Check::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecInotifyInit1Check::check(const MatchFinder::MatchResult &Result) {
-  insertMacroFlag(Result, /*MarcoFlag=*/"IN_CLOEXEC", /*ArgPos=*/0);
+  insertMacroFlag(Result, /*MacroFlag=*/"IN_CLOEXEC", /*ArgPos=*/0);
 }
 
 } // namespace android

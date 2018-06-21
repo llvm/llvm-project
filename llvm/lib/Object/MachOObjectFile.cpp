@@ -1916,10 +1916,8 @@ unsigned MachOObjectFile::getSectionID(SectionRef Sec) const {
 }
 
 bool MachOObjectFile::isSectionVirtual(DataRefImpl Sec) const {
-  uint32_t Flags = getSectionFlags(*this, Sec);
-  unsigned SectionType = Flags & MachO::SECTION_TYPE;
-  return SectionType == MachO::S_ZEROFILL ||
-         SectionType == MachO::S_GB_ZEROFILL;
+  // FIXME: Unimplemented.
+  return false;
 }
 
 bool MachOObjectFile::isSectionBitcode(DataRefImpl Sec) const {

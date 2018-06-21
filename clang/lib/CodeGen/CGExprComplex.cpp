@@ -155,9 +155,8 @@ public:
   }
   ComplexPairTy VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
-      return EmitLoadOfLValue(CGF.getOrCreateOpaqueLValueMapping(E),
-                              E->getExprLoc());
-    return CGF.getOrCreateOpaqueRValueMapping(E).getComplexVal();
+      return EmitLoadOfLValue(CGF.getOpaqueLValueMapping(E), E->getExprLoc());
+    return CGF.getOpaqueRValueMapping(E).getComplexVal();
   }
 
   ComplexPairTy VisitPseudoObjectExpr(PseudoObjectExpr *E) {

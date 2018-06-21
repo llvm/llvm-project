@@ -42,6 +42,7 @@ public:
     Base::run();
     try {
       FrontOnEmptyContainer();
+
       if constexpr (CT != CT_ForwardList) {
         AssignInvalidates();
         BackOnEmptyContainer();
@@ -50,6 +51,8 @@ public:
         InsertIterIterIter();
         EmplaceIterValue();
         EraseIterIter();
+      } else {
+        SpliceFirstElemAfter();
       }
       if constexpr (CT == CT_Vector || CT == CT_Deque || CT == CT_List) {
         PopBack();
@@ -57,12 +60,66 @@ public:
       if constexpr (CT == CT_List || CT == CT_Deque) {
         PopFront(); // FIXME: Run with forward list as well
       }
+      if constexpr (CT == CT_List || CT == CT_ForwardList) {
+        RemoveFirstElem();
+      }
+      if constexpr (CT == CT_List) {
+        SpliceFirstElem();
+      }
     } catch (...) {
       assert(false && "uncaught debug exception");
     }
   }
 
 private:
+  static void RemoveFirstElem() {
+    // See llvm.org/PR35564
+    CHECKPOINT("remove(<first-elem>)");
+    {
+      Container C = makeContainer(1);
+      auto FirstVal = *(C.begin());
+      C.remove(FirstVal);
+      assert(C.empty());
+    }
+    {
+      Container C = {1, 1, 1, 1};
+      auto FirstVal = *(C.begin());
+      C.remove(FirstVal);
+      assert(C.empty());
+    }
+  }
+
+  static void SpliceFirstElem() {
+    // See llvm.org/PR35564
+    CHECKPOINT("splice(<first-elem>)");
+    {
+      Container C = makeContainer(1);
+      Container C2;
+      C2.splice(C2.end(), C, C.begin(), ++C.begin());
+    }
+    {
+      Container C = makeContainer(1);
+      Container C2;
+      C2.splice(C2.end(), C, C.begin());
+    }
+  }
+
+
+  static void SpliceFirstElemAfter() {
+    // See llvm.org/PR35564
+    CHECKPOINT("splice(<first-elem>)");
+    {
+      Container C = makeContainer(1);
+      Container C2;
+      C2.splice_after(C2.begin(), C, C.begin(), ++C.begin());
+    }
+    {
+      Container C = makeContainer(1);
+      Container C2;
+      C2.splice_after(C2.begin(), C, C.begin());
+    }
+  }
+
   static void AssignInvalidates() {
     CHECKPOINT("assign(Size, Value)");
     Container C(allocator_type{});

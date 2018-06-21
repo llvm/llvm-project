@@ -32,7 +32,7 @@
 
 <div id="content">
   <!--*********************************************************************-->
-  <h1>libc++ Upcoming Metting Status</h1>
+  <h1>libc++ Upcoming Meeting Status</h1>
   <!--*********************************************************************-->
 
   <p>This is a temporary page; please check the c++1z status <a href="cxx1z_status.html">here</a></p>
@@ -48,7 +48,8 @@
 
   <h3>Paper Status</h3>
   <table id="papers" border="1">
-	<tr><th>Paper #</th><th>Group</th><th>Paper Name</th><th>Meeting</th><th>Status</th><th>First released version</th></tr>
+	<tr><th>Paper #</th><th>Paper Name</th><th>Meeting</th><th>Status</th></tr>
+	<tr><td><a href="https://wg21.link/P0805R1">P0805R1</a></td><td>Comparing Containers</td><td>Jacksonville</td><td><i>Patch Ready: <a href="https://reviews.llvm.org/D43773">D43773</a></i></td></tr>
 <!--
 	<tr><td><a href="https://wg21.link/LWGn3346">3346</a></td><td>LWG</td><td>Terminology for Container Element Requirements - Rev 1</td><td>Kona</td><td>Complete</td><td>3.4</td></tr>
 -->
@@ -59,64 +60,64 @@
   <table id="issues" border="1">
 	<tr><th>Issue #</th><th>Issue Name</th><th>Meeting</th><th>Status</th></tr>
 
-	<tr><td><a href="https://wg21.link/LWG2779">2779</a></td><td>[networking.ts] Relax requirements on buffer sequence iterators</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2870">2870</a></td><td>Default value of parameter theta of polar should be dependent</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2935">2935</a></td><td>What should create_directories do when p already exists but is not a directory?</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2941">2941</a></td><td>[thread.req.timing] wording should apply to both member and namespace-level functions</td><td>Albuquerque</td><td>Nothing to do</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2944">2944</a></td><td>LWG 2905 accidentally removed requirement that construction of the deleter doesn't throw an exception</td><td>Albuquerque</td><td>Nothing to do</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2945">2945</a></td><td>Order of template parameters in optional comparisons</td><td>Albuquerque</td><td>Complete</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2948">2948</a></td><td>unique_ptr does not define operator<< for stream output</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2950">2950</a></td><td>std::byte operations are misspecified</td><td>Albuquerque</td><td>Patch Ready</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2952">2952</a></td><td>iterator_traits should work for pointers to cv T</td><td>Albuquerque</td><td>Patch ready</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2953">2953</a></td><td>LWG 2853 should apply to deque::erase too</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2964">2964</a></td><td>Apparently redundant requirement for dynamic_pointer_cast</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2965">2965</a></td><td>Non-existing path::native_string() in filesystem_error::what() specification</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2972">2972</a></td><td>What is is_trivially_destructible_v<int>?</td><td>Albuquerque</td><td>Complete</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2976">2976</a></td><td>Dangling uses_allocator specialization for packaged_task</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2977">2977</a></td><td>unordered_meow::merge() has incorrect Throws: clause</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2978">2978</a></td><td>Hash support for pmr::string and friends</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2979">2979</a></td><td>aligned_union should require complete object types</td><td>Albuquerque</td><td>Complete</td></tr>
-	<tr><td><a href="https://wg21.link/LWG2980">2980</a></td><td>Cannot compare_exchange empty pointers</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2981">2981</a></td><td>Remove redundant deduction guides from standard library</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2982">2982</a></td><td>Making size_type consistent in associative container deduction guides</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2988">2988</a></td><td>Clause 32 cleanup missed one typename</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2993">2993</a></td><td>reference_wrapper<T> conversion from T&&</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG2998">2998</a></td><td>Requirements on function objects passed to {forward_,}list-specific algorithms</td><td>Albuquerque</td><td>Nothing to do</td></tr>
-	<tr><td><a href="https://wg21.link/LWG3001">3001</a></td><td>weak_ptr::element_type needs remove_extent_t</td><td>Albuquerque</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG3024">3024</a></td><td>variant's copies must be deleted instead of disabled via SFINAE</td><td>Albuquerque</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2139">2139</a></td><td>What is a user-defined type?</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2970">2970</a></td><td>Return type of std::visit misspecified</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3058">3058</a></td><td>Parallel adjacent_difference shouldn't require creating temporaries</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3062">3062</a></td><td>Unnecessary decay_t in is_execution_policy_v should be remove_cvref_t</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3067">3067</a></td><td>recursive_directory_iterator::pop must invalidate</td><td>Rapperswil</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG3071">3071</a></td><td>[networking.ts] read_until still refers to "input sequence"</td><td>Rapperswil</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG3074">3074</a></td><td>Non-member functions for valarray should only deduce from the valarray</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3076">3076</a></td><td>basic_string CTAD ambiguity</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3079">3079</a></td><td>LWG 2935 forgot to fix the existing_p overloads of create_directory</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3080">3080</a></td><td>Floating point from_chars pattern specification breaks round-tripping</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3083">3083</a></td><td>What should ios::iword(-1) do?</td><td>Rapperswil</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG3094">3094</a></td><td>[time.duration.io]p4 makes surprising claims about encoding</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3100">3100</a></td><td>Unnecessary and confusing "empty span" wording</td><td>Rapperswil</td><td><i>Nothing to do</i></td></tr>
+<tr><td><a href="https://wg21.link/LWG3102">3102</a></td><td>Clarify span iterator and const_iterator behavior</td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG3104">3104</a></td><td>Fixing duration division</td><td>Rapperswil</td><td>Complete</td></tr>
 
-  </table>
+</table>
+
+<h3>Issues to "Review"</h3>
+<table border="1">
+<tr><th>Issue #</th><th>Issue Name</th><th>Meeting</th><th>Status</th></tr>
+<tr><td><a href="https://wg21.link/LWG2412">2412</a></td><td><tt>promise::set_value()</tt> and <tt>promise::get_future()</tt> should not race</td><td>Rapperswil</td><td>Complete</td></tr>
+<tr><td><a href="https://wg21.link/LWG2682">2682</a></td><td><code>filesystem::copy()</code> won't create a symlink to a directory</td><td>Rapperswil</td><td>Complete</td></tr>
+<tr><td><a href="https://wg21.link/LWG2697">2697</a></td><td>[concurr.ts] Behavior of <tt>future/shared_future</tt> unwrapping constructor when given an invalid <tt>future</tt></td><td>Rapperswil</td><td></td></tr>
+<tr><td><a href="https://wg21.link/LWG2708">2708</a></td><td><tt>recursive_directory_iterator::recursion_pending()</tt> is incorrectly specified</td><td>Rapperswil</td><td>Complete</td></tr>
+<tr><td><a href="https://wg21.link/LWG2936">2936</a></td><td>Path comparison is defined in terms of the generic format</td><td>Rapperswil</td><td></td></tr>
+</table>
+
 
 <h3>Comments about the issues</h3>
 <ul>
-<li>2779 - </li>
-<li>2870 - We already default to <tt>T(0)</tt>; but the PR says <tt>T()</tt>. Later - this makes no difference at all; since T has to be float/double/long double</li>
-<li>2935 - Eric? </li>
-<li>2941 - Wording cleanup; nothing to do.</li>
-<li>2944 - Wording cleanup; nothing to do. </li>
-<li>2945 - Synopsis was wrong; code was fine. <i>Fixed in r317063</i></li>
-<li>2948 - </li>
-<li>2950 - Patch ready</li>
-<li>2952 - Patch ready</li>
-<li>2953 - Probably just wording; check to be sure.</li>
-<li>2964 - At the very least, it needs a test.</li>
-<li>2965 - Eric? </li>
-<li>2972 - We already do this</li>
-<li>2976 - Looks simple. </li>
-<li>2977 - We haven't implemented p0083r3 yet (Splicing Maps and Sets), so we don't have <tt>merge</tt> for those containers yet</li>
-<li>2978 - Straightforward. </li>
-<li>2979 - <i>Test added in revision 316969</i></li>
-<li>2980 - Needs code changes and tests</li>
-<li>2981 - We need to finish the deduction guides before doing this</li>
-<li>2982 - We need to finish the deduction guides before doing this</li>
-<li>2988 - Simple; once we rewrite &lt;atomic&gt; </li>
-<li>2993 - </li>
-<li>2998 - Wording cleanup; nothing to do. </li>
-<li>3001 - Looks simple. </li>
-<li>3024 - </li>
+<li>2139 - I think that this is just wording cleanup.</li>
+<li>2970 - I think that we already do this - checking with Michael.</li>
+<li>3058 - We don't do the parallel algos yet</li>
+<li>3062 - This should be very easy.</li>
+<li>3067 - Adding restrictions; no code changes needed.</li>
+<li>3071 - This is just wording cleanup.</li>
+<li>3074 - Large change, that looks straightforward.</li>
+<li>3076 - </li>
+<li>3079 - Eric? </li>
+<li>3080 - We don't have a from_chars implementation yet.</li>
+<li>3083 - This is just wording cleanup.</li>
+<li>3094 - We haven't implemented Howard's date library yet.</li>
+<li>3100 - This is just wording cleanup.</li>
+<li>3102 - This should be just adding tests.</li>
+<li>3104 - We already do this.</li>
 </ul>
 
-<p>Last Updated: 28-Jun-2017</p>
+<h3>Comments about the "Review" issues</h3>
+<ul>
+<li> 2412 - I think we do this already</li>
+<li> 2682 - We already to this </li>
+<li> 2697 - No concurrency TS implementation yet</li>
+<li> 2708 - We already do this </li>
+<li> 2936 - Eric - don't we do this already?</li>
+</ul>
+
+<p>Last Updated: 10-May-2018</p>
 </div>
 </body>
 </html>

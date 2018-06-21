@@ -1254,46 +1254,47 @@ static bool isImmediateBase(const CXXRecordDecl *Child,
   return false;
 }
 
-static RegionOffset calculateOffset(const MemRegion *R) {
+RegionOffset MemRegion::getAsOffset() const {
+  const MemRegion *R = this;
   const MemRegion *SymbolicOffsetBase = nullptr;
   int64_t Offset = 0;
 
   while (1) {
     switch (R->getKind()) {
-    case MemRegion::CodeSpaceRegionKind:
-    case MemRegion::StackLocalsSpaceRegionKind:
-    case MemRegion::StackArgumentsSpaceRegionKind:
-    case MemRegion::HeapSpaceRegionKind:
-    case MemRegion::UnknownSpaceRegionKind:
-    case MemRegion::StaticGlobalSpaceRegionKind:
-    case MemRegion::GlobalInternalSpaceRegionKind:
-    case MemRegion::GlobalSystemSpaceRegionKind:
-    case MemRegion::GlobalImmutableSpaceRegionKind:
+    case CodeSpaceRegionKind:
+    case StackLocalsSpaceRegionKind:
+    case StackArgumentsSpaceRegionKind:
+    case HeapSpaceRegionKind:
+    case UnknownSpaceRegionKind:
+    case StaticGlobalSpaceRegionKind:
+    case GlobalInternalSpaceRegionKind:
+    case GlobalSystemSpaceRegionKind:
+    case GlobalImmutableSpaceRegionKind:
       // Stores can bind directly to a region space to set a default value.
       assert(Offset == 0 && !SymbolicOffsetBase);
       goto Finish;
 
-    case MemRegion::FunctionCodeRegionKind:
-    case MemRegion::BlockCodeRegionKind:
-    case MemRegion::BlockDataRegionKind:
+    case FunctionCodeRegionKind:
+    case BlockCodeRegionKind:
+    case BlockDataRegionKind:
       // These will never have bindings, but may end up having values requested
       // if the user does some strange casting.
       if (Offset != 0)
         SymbolicOffsetBase = R;
       goto Finish;
 
-    case MemRegion::SymbolicRegionKind:
-    case MemRegion::AllocaRegionKind:
-    case MemRegion::CompoundLiteralRegionKind:
-    case MemRegion::CXXThisRegionKind:
-    case MemRegion::StringRegionKind:
-    case MemRegion::ObjCStringRegionKind:
-    case MemRegion::VarRegionKind:
-    case MemRegion::CXXTempObjectRegionKind:
+    case SymbolicRegionKind:
+    case AllocaRegionKind:
+    case CompoundLiteralRegionKind:
+    case CXXThisRegionKind:
+    case StringRegionKind:
+    case ObjCStringRegionKind:
+    case VarRegionKind:
+    case CXXTempObjectRegionKind:
       // Usual base regions.
       goto Finish;
 
-    case MemRegion::ObjCIvarRegionKind:
+    case ObjCIvarRegionKind:
       // This is a little strange, but it's a compromise between
       // ObjCIvarRegions having unknown compile-time offsets (when using the
       // non-fragile runtime) and yet still being distinct, non-overlapping
@@ -1301,14 +1302,14 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       // of computing offsets.
       goto Finish;
 
-    case MemRegion::CXXBaseObjectRegionKind: {
+    case CXXBaseObjectRegionKind: {
       const CXXBaseObjectRegion *BOR = cast<CXXBaseObjectRegion>(R);
       R = BOR->getSuperRegion();
 
       QualType Ty;
       bool RootIsSymbolic = false;
       if (const TypedValueRegion *TVR = dyn_cast<TypedValueRegion>(R)) {
-        Ty = TVR->getDesugaredValueType(R->getContext());
+        Ty = TVR->getDesugaredValueType(getContext());
       } else if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(R)) {
         // If our base region is symbolic, we don't know what type it really is.
         // Pretend the type of the symbol is the true dynamic type.
@@ -1342,17 +1343,17 @@ static RegionOffset calculateOffset(const MemRegion *R) {
         continue;
 
       CharUnits BaseOffset;
-      const ASTRecordLayout &Layout = R->getContext().getASTRecordLayout(Child);
+      const ASTRecordLayout &Layout = getContext().getASTRecordLayout(Child);
       if (BOR->isVirtual())
         BaseOffset = Layout.getVBaseClassOffset(BOR->getDecl());
       else
         BaseOffset = Layout.getBaseClassOffset(BOR->getDecl());
 
       // The base offset is in chars, not in bits.
-      Offset += BaseOffset.getQuantity() * R->getContext().getCharWidth();
+      Offset += BaseOffset.getQuantity() * getContext().getCharWidth();
       break;
     }
-    case MemRegion::ElementRegionKind: {
+    case ElementRegionKind: {
       const ElementRegion *ER = cast<ElementRegion>(R);
       R = ER->getSuperRegion();
 
@@ -1373,14 +1374,14 @@ static RegionOffset calculateOffset(const MemRegion *R) {
 
         int64_t i = CI->getValue().getSExtValue();
         // This type size is in bits.
-        Offset += i * R->getContext().getTypeSize(EleTy);
+        Offset += i * getContext().getTypeSize(EleTy);
       } else {
         // We cannot compute offset for non-concrete index.
         SymbolicOffsetBase = R;
       }
       break;
     }
-    case MemRegion::FieldRegionKind: {
+    case FieldRegionKind: {
       const FieldRegion *FR = cast<FieldRegion>(R);
       R = FR->getSuperRegion();
 
@@ -1406,7 +1407,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
         if (FR->getDecl() == *FI)
           break;
       }
-      const ASTRecordLayout &Layout = R->getContext().getASTRecordLayout(RD);
+      const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
       // This is offset in bits.
       Offset += Layout.getFieldOffset(idx);
       break;
@@ -1418,12 +1419,6 @@ static RegionOffset calculateOffset(const MemRegion *R) {
   if (SymbolicOffsetBase)
     return RegionOffset(SymbolicOffsetBase, RegionOffset::Symbolic);
   return RegionOffset(R, Offset);
-}
-
-RegionOffset MemRegion::getAsOffset() const {
-  if (!cachedOffset)
-    cachedOffset = calculateOffset(this);
-  return *cachedOffset;
 }
 
 //===----------------------------------------------------------------------===//

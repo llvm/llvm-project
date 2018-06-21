@@ -17,8 +17,11 @@
 //                    BinaryOperation binary_op, T init); // C++17
 
 #include <numeric>
-#include <vector>
+#include <algorithm>
 #include <cassert>
+#include <functional>
+#include <iterator>
+#include <vector>
 
 #include "test_iterators.h"
 
@@ -57,50 +60,50 @@ test()
         }
 }
 
-int triangle(int n) { return n*(n+1)/2; }
+size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
 void basic_tests()
 {
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::fill(v.begin(), v.end(), 3);
-    std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), 50);
+    std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), size_t{50});
     for (size_t i = 0; i < v.size(); ++i)
-        assert(v[i] == 50 + (int)(i+1) * 3);
+        assert(v[i] == 50 + (i+1) * 3);
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 0);
-    std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), 40);
+    std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), size_t{40});
     for (size_t i = 0; i < v.size(); ++i)
         assert(v[i] == 40 + triangle(i));
     }
 
     {
-    std::vector<int> v(10);
+    std::vector<size_t> v(10);
     std::iota(v.begin(), v.end(), 1);
-    std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), 30);
+    std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), size_t{30});
     for (size_t i = 0; i < v.size(); ++i)
         assert(v[i] == 30 + triangle(i + 1));
     }
 
     {
-    std::vector<int> v, res;
-    std::inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), 40);
+    std::vector<size_t> v, res;
+    std::inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), size_t{40});
     assert(res.empty());
     }
 
 //  Make sure that the calculations are done using the init typedef
     {
     std::vector<unsigned char> v(10);
-    std::iota(v.begin(), v.end(), 1);
-    std::vector<int> res;
-    std::inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::multiplies<>(), 1);
+    std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
+    std::vector<size_t> res;
+    std::inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::multiplies<>(), size_t{1});
 
     assert(res.size() == 10);
-    int j = 1;
+    size_t j = 1;
     assert(res[0] == 1);
     for (size_t i = 1; i < v.size(); ++i)
     {

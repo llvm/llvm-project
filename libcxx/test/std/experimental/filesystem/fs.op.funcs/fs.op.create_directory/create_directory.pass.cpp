@@ -16,7 +16,7 @@
 // bool create_directory(const path& p, const path& attr);
 // bool create_directory(const path& p, const path& attr, error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -27,8 +27,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-using namespace std::experimental::filesystem;
-namespace fs = std::experimental::filesystem;
+using namespace fs;
 
 fs::perms read_umask() {
     mode_t old_mask = umask(0);

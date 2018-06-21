@@ -30,7 +30,7 @@ double Finish(Counter const& c, double cpu_time, double num_threads) {
 
 void Finish(UserCounters *l, double cpu_time, double num_threads) {
   for (auto &c : *l) {
-    c.second = Finish(c.second, cpu_time, num_threads);
+    c.second.value = Finish(c.second, cpu_time, num_threads);
   }
 }
 
@@ -39,7 +39,7 @@ void Increment(UserCounters *l, UserCounters const& r) {
   for (auto &c : *l) {
     auto it = r.find(c.first);
     if (it != r.end()) {
-      c.second = c.second + it->second;
+      c.second.value = c.second + it->second;
     }
   }
   // add counters present in r, but not in *l
@@ -57,7 +57,7 @@ bool SameNames(UserCounters const& l, UserCounters const& r) {
     return false;
   }
   for (auto const& c : l) {
-    if ( r.find(c.first) == r.end()) {
+    if (r.find(c.first) == r.end()) {
       return false;
     }
   }

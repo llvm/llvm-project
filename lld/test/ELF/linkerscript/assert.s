@@ -30,10 +30,11 @@
 # RUN: ld.lld -shared -o %t6 --script %t6.script %t1.o
 # RUN: llvm-readobj %t6 > /dev/null
 
+## Unlike the GNU ld, we accept the ASSERT without the semicolon.
+## It is consistent with how ASSERT can be written outside of the
+## output section declaration.
 # RUN: echo "SECTIONS { .foo : { ASSERT(1, \"true\") } }" > %t7.script
-# RUN: not ld.lld -shared -o %t7 --script %t7.script %t1.o > %t.log 2>&1
-# RUN: FileCheck %s -check-prefix=CHECK-SEMI < %t.log
-# CHECK-SEMI: error: {{.*}}.script:1: ; expected, but got }
+# RUN: ld.lld -shared -o %t7 --script %t7.script %t1.o
 
 .section .foo, "a"
  .quad 0

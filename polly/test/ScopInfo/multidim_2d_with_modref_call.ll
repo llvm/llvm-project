@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-allow-modref-calls \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
 ; RUN: -polly-invariant-load-hoisting=true \
 ; RUN: < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine -analyze \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -polly-allow-nonaffine -analyze \
 ; RUN: -polly-invariant-load-hoisting=true \
 ; RUN: -polly-allow-modref-calls < %s | FileCheck %s --check-prefix=NONAFFINE
 
@@ -74,7 +74,7 @@
 ; NONAFFINE-NEXT:    Assumed Context:
 ; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  :  }
 ; NONAFFINE-NEXT:    Invalid Context:
-; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  : 1 = 0 }
+; NONAFFINE-NEXT:    [tmp9, tmp14] -> {  : false }
 ; NONAFFINE-NEXT:    p0: %tmp9
 ; NONAFFINE-NEXT:    p1: %tmp14
 ; NONAFFINE-NEXT:    Arrays {

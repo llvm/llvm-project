@@ -126,6 +126,39 @@ void test_pmr_uses_alloc(Args&&... args)
     }
 }
 
+template <class Alloc, class ...Args>
+void test_pmr_not_uses_alloc(Args&&... args)
+{
+    TestResource R(12435);
+    ex::memory_resource* M = &R;
+    {
+        // NotUsesAllocator provides valid signatures for each uses-allocator
+        // construction but does not supply the required allocator_type typedef.
+        // Test that we can call these constructors manually without
+        // polymorphic_allocator interfering.
+        using T = NotUsesAllocator<Alloc, sizeof...(Args)>;
+        assert(doTestUsesAllocV0<T>(std::forward<Args>(args)...));
+        assert((doTestUsesAllocV1<T>(M, std::forward<Args>(args)...)));
+        assert((doTestUsesAllocV2<T>(M, std::forward<Args>(args)...)));
+    }
+    {
+        // Test T(std::allocator_arg_t, Alloc const&, Args...) construction
+        using T = UsesAllocatorV1<Alloc, sizeof...(Args)>;
+        assert((doTest<T>(UA_None, std::forward<Args>(args)...)));
+    }
+    {
+        // Test T(Args..., Alloc const&) construction
+        using T = UsesAllocatorV2<Alloc, sizeof...(Args)>;
+        assert((doTest<T>(UA_None, std::forward<Args>(args)...)));
+    }
+    {
+        // Test that T(std::allocator_arg_t, Alloc const&, Args...) construction
+        // is preferred when T(Args..., Alloc const&) is also available.
+        using T = UsesAllocatorV3<Alloc, sizeof...(Args)>;
+        assert((doTest<T>(UA_None, std::forward<Args>(args)...)));
+    }
+}
+
 // Test that polymorphic_allocator does not prevent us from manually
 // doing non-pmr uses-allocator construction.
 template <class Alloc, class AllocObj, class ...Args>
@@ -167,16 +200,16 @@ int main()
     const int cvalue = 43;
     {
         test_pmr_uses_alloc<ET>();
-        test_pmr_uses_alloc<PMR>();
+        test_pmr_not_uses_alloc<PMR>();
         test_pmr_uses_alloc<PMA>();
         test_pmr_uses_alloc<ET>(value);
-        test_pmr_uses_alloc<PMR>(value);
+        test_pmr_not_uses_alloc<PMR>(value);
         test_pmr_uses_alloc<PMA>(value);
         test_pmr_uses_alloc<ET>(cvalue);
-        test_pmr_uses_alloc<PMR>(cvalue);
+        test_pmr_not_uses_alloc<PMR>(cvalue);
         test_pmr_uses_alloc<PMA>(cvalue);
         test_pmr_uses_alloc<ET>(cvalue, std::move(value));
-        test_pmr_uses_alloc<PMR>(cvalue, std::move(value));
+        test_pmr_not_uses_alloc<PMR>(cvalue, std::move(value));
         test_pmr_uses_alloc<PMA>(cvalue, std::move(value));
     }
     {

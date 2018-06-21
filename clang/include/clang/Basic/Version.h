@@ -57,9 +57,6 @@ namespace clang {
   /// for use in the CPP __VERSION__ macro, which includes the clang version
   /// number, the repository version, and the vendor tag.
   std::string getClangFullCPPVersion();
-
-  /// Returns the major version number of clang.
-  unsigned getClangMajorVersionNumber();
 }
 
 #endif // LLVM_CLANG_BASIC_VERSION_H

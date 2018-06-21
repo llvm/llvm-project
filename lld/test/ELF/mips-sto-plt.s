@@ -18,9 +18,9 @@
 # CHECK-NEXT:   Other: 0
 # CHECK-NEXT:   Section: Undefined
 # CHECK-NEXT: }
-# CHECK:      Symbol {
-# CHECK:        Name: foo1@
-# CHECK-NEXT:   Value: 0x20050
+# CHECK-NEXT: Symbol {
+# CHECK-NEXT:   Name: foo1@
+# CHECK-NEXT:   Value: 0x[[FOO1:[0-9A-F]+]]
 # CHECK-NEXT:   Size: 0
 # CHECK-NEXT:   Binding: Global
 # CHECK-NEXT:   Type: Function
@@ -48,7 +48,7 @@
 # CHECK-NEXT:     Entry {
 # CHECK-NEXT:       Address:
 # CHECK-NEXT:       Initial:
-# CHECK-NEXT:       Value: 0x20050
+# CHECK-NEXT:       Value: 0x[[FOO1]]
 # CHECK-NEXT:       Type: Function
 # CHECK-NEXT:       Section: Undefined
 # CHECK-NEXT:       Name: foo1

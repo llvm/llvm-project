@@ -613,4 +613,8 @@
 #define KMP_API_NAME_GOMP_TARGET_UPDATE GOMP_target_update
 #define KMP_API_NAME_GOMP_TEAMS GOMP_teams
 
+// All GOMP_4.5 symbols
+#define KMP_API_NAME_GOMP_TASKLOOP GOMP_taskloop
+#define KMP_API_NAME_GOMP_TASKLOOP_ULL GOMP_taskloop_ull
+
 #endif /* KMP_FTN_OS_H */

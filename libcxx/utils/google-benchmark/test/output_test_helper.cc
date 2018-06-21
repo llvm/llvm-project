@@ -2,10 +2,12 @@
 #include <map>
 #include <memory>
 #include <sstream>
+#include <cstring>
 
 #include "../src/check.h"  // NOTE: check.h is for internal use only!
 #include "../src/re.h"     // NOTE: re.h is for internal use only
 #include "output_test.h"
+#include "../src/benchmark_api_internal.h"
 
 // ========================================================================= //
 // ------------------------------ Internals -------------------------------- //
@@ -34,17 +36,25 @@ SubMap& GetSubstitutions() {
   static std::string safe_dec_re = "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?";
   static SubMap map = {
       {"%float", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?"},
+      // human-readable float
+      {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kMGTPEZYmunpfazy]?"},
       {"%int", "[ ]*[0-9]+"},
       {" %s ", "[ ]+"},
       {"%time", "[ ]*[0-9]{1,5} ns"},
       {"%console_report", "[ ]*[0-9]{1,5} ns [ ]*[0-9]{1,5} ns [ ]*[0-9]+"},
       {"%console_us_report", "[ ]*[0-9] us [ ]*[0-9] us [ ]*[0-9]+"},
+      {"%csv_header",
+       "name,iterations,real_time,cpu_time,time_unit,bytes_per_second,"
+       "items_per_second,label,error_occurred,error_message"},
       {"%csv_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns,,,,,"},
       {"%csv_us_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",us,,,,,"},
       {"%csv_bytes_report",
        "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns," + safe_dec_re + ",,,,"},
       {"%csv_items_report",
        "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns,," + safe_dec_re + ",,,"},
+      {"%csv_bytes_items_report",
+       "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns," + safe_dec_re +
+       "," + safe_dec_re + ",,,"},
       {"%csv_label_report_begin", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns,,,"},
       {"%csv_label_report_end", ",,"}};
   return map;
@@ -140,7 +150,178 @@ class TestReporter : public benchmark::BenchmarkReporter {
   std::vector<benchmark::BenchmarkReporter *> reporters_;
 };
 }
+
 }  // end namespace internal
+
+// ========================================================================= //
+// -------------------------- Results checking ----------------------------- //
+// ========================================================================= //
+
+namespace internal {
+
+// Utility class to manage subscribers for checking benchmark results.
+// It works by parsing the CSV output to read the results.
+class ResultsChecker {
+ public:
+
+  struct PatternAndFn : public TestCase { // reusing TestCase for its regexes
+    PatternAndFn(const std::string& rx, ResultsCheckFn fn_)
+    : TestCase(rx), fn(fn_) {}
+    ResultsCheckFn fn;
+  };
+
+  std::vector< PatternAndFn > check_patterns;
+  std::vector< Results > results;
+  std::vector< std::string > field_names;
+
+  void Add(const std::string& entry_pattern, ResultsCheckFn fn);
+
+  void CheckResults(std::stringstream& output);
+
+ private:
+
+  void SetHeader_(const std::string& csv_header);
+  void SetValues_(const std::string& entry_csv_line);
+
+  std::vector< std::string > SplitCsv_(const std::string& line);
+
+};
+
+// store the static ResultsChecker in a function to prevent initialization
+// order problems
+ResultsChecker& GetResultsChecker() {
+  static ResultsChecker rc;
+  return rc;
+}
+
+// add a results checker for a benchmark
+void ResultsChecker::Add(const std::string& entry_pattern, ResultsCheckFn fn) {
+  check_patterns.emplace_back(entry_pattern, fn);
+}
+
+// check the results of all subscribed benchmarks
+void ResultsChecker::CheckResults(std::stringstream& output) {
+  // first reset the stream to the start
+  {
+    auto start = std::ios::streampos(0);
+    // clear before calling tellg()
+    output.clear();
+    // seek to zero only when needed
+    if(output.tellg() > start) output.seekg(start);
+    // and just in case
+    output.clear();
+  }
+  // now go over every line and publish it to the ResultsChecker
+  std::string line;
+  bool on_first = true;
+  while (output.eof() == false) {
+    CHECK(output.good());
+    std::getline(output, line);
+    if (on_first) {
+      SetHeader_(line); // this is important
+      on_first = false;
+      continue;
+    }
+    SetValues_(line);
+  }
+  // finally we can call the subscribed check functions
+  for(const auto& p : check_patterns) {
+    VLOG(2) << "--------------------------------\n";
+    VLOG(2) << "checking for benchmarks matching " << p.regex_str << "...\n";
+    for(const auto& r : results) {
+      if(!p.regex->Match(r.name)) {
+        VLOG(2) << p.regex_str << " is not matched by " << r.name << "\n";
+        continue;
+      } else {
+        VLOG(2) << p.regex_str << " is matched by " << r.name << "\n";
+      }
+      VLOG(1) << "Checking results of " << r.name << ": ... \n";
+      p.fn(r);
+      VLOG(1) << "Checking results of " << r.name << ": OK.\n";
+    }
+  }
+}
+
+// prepare for the names in this header
+void ResultsChecker::SetHeader_(const std::string& csv_header) {
+  field_names = SplitCsv_(csv_header);
+}
+
+// set the values for a benchmark
+void ResultsChecker::SetValues_(const std::string& entry_csv_line) {
+  if(entry_csv_line.empty()) return; // some lines are empty
+  CHECK(!field_names.empty());
+  auto vals = SplitCsv_(entry_csv_line);
+  CHECK_EQ(vals.size(), field_names.size());
+  results.emplace_back(vals[0]); // vals[0] is the benchmark name
+  auto &entry = results.back();
+  for (size_t i = 1, e = vals.size(); i < e; ++i) {
+    entry.values[field_names[i]] = vals[i];
+  }
+}
+
+// a quick'n'dirty csv splitter (eliminating quotes)
+std::vector< std::string > ResultsChecker::SplitCsv_(const std::string& line) {
+  std::vector< std::string > out;
+  if(line.empty()) return out;
+  if(!field_names.empty()) out.reserve(field_names.size());
+  size_t prev = 0, pos = line.find_first_of(','), curr = pos;
+  while(pos != line.npos) {
+    CHECK(curr > 0);
+    if(line[prev] == '"') ++prev;
+    if(line[curr-1] == '"') --curr;
+    out.push_back(line.substr(prev, curr-prev));
+    prev = pos + 1;
+    pos = line.find_first_of(',', pos + 1);
+    curr = pos;
+  }
+  curr = line.size();
+  if(line[prev] == '"') ++prev;
+  if(line[curr-1] == '"') --curr;
+  out.push_back(line.substr(prev, curr-prev));
+  return out;
+}
+
+}  // end namespace internal
+
+size_t AddChecker(const char* bm_name, ResultsCheckFn fn)
+{
+  auto &rc = internal::GetResultsChecker();
+  rc.Add(bm_name, fn);
+  return rc.results.size();
+}
+
+int Results::NumThreads() const {
+  auto pos = name.find("/threads:");
+  if(pos == name.npos) return 1;
+  auto end = name.find('/', pos + 9);
+  std::stringstream ss;
+  ss << name.substr(pos + 9, end);
+  int num = 1;
+  ss >> num;
+  CHECK(!ss.fail());
+  return num;
+}
+
+double Results::GetTime(BenchmarkTime which) const {
+  CHECK(which == kCpuTime || which == kRealTime);
+  const char *which_str = which == kCpuTime ? "cpu_time" : "real_time";
+  double val = GetAs< double >(which_str);
+  auto unit = Get("time_unit");
+  CHECK(unit);
+  if(*unit == "ns") {
+    return val * 1.e-9;
+  } else if(*unit == "us") {
+    return val * 1.e-6;
+  } else if(*unit == "ms") {
+    return val * 1.e-3;
+  } else if(*unit == "s") {
+    return val;
+  } else {
+    CHECK(1 == 0) << "unknown time unit: " << *unit;
+    return 0;
+  }
+}
 
 // ========================================================================= //
 // -------------------------- Public API Definitions------------------------ //
@@ -186,7 +367,8 @@ int SetSubstitutions(
 void RunOutputTests(int argc, char* argv[]) {
   using internal::GetTestCaseList;
   benchmark::Initialize(&argc, argv);
-  benchmark::ConsoleReporter CR(benchmark::ConsoleReporter::OO_None);
+  auto options = benchmark::internal::GetOutputOptions(/*force_no_color*/true);
+  benchmark::ConsoleReporter CR(options);
   benchmark::JSONReporter JR;
   benchmark::CSVReporter CSVR;
   struct ReporterTest {
@@ -231,4 +413,11 @@ void RunOutputTests(int argc, char* argv[]) {
 
     std::cout << "\n";
   }
+
+  // now that we know the output is as expected, we can dispatch
+  // the checks to subscribees.
+  auto &csv = TestCases[2];
+  // would use == but gcc spits a warning
+  CHECK(std::strcmp(csv.name, "CSVReporter") == 0);
+  internal::GetResultsChecker().CheckResults(csv.out_stream);
 }

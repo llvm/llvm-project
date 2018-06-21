@@ -8,19 +8,37 @@
 //===---------------------------------------------------------------------===//
 
 #include "Compiler.h"
+#include "Logger.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
 namespace clangd {
 
-/// Creates a CompilerInstance from \p CI, with main buffer overriden to \p
-/// Buffer and arguments to read the PCH from \p Preamble, if \p Preamble is not
-/// null. Note that vfs::FileSystem inside returned instance may differ from \p
-/// VFS if additional file remapping were set in command-line arguments.
-/// On some errors, returns null. When non-null value is returned, it's expected
-/// to be consumed by the FrontendAction as it will have a pointer to the \p
-/// Buffer that will only be deleted if BeginSourceFile is called.
+void IgnoreDiagnostics::log(DiagnosticsEngine::Level DiagLevel,
+                            const clang::Diagnostic &Info) {
+  SmallString<64> Message;
+  Info.FormatDiagnostic(Message);
+
+  SmallString<64> Location;
+  if (Info.hasSourceManager() && Info.getLocation().isValid()) {
+    auto &SourceMgr = Info.getSourceManager();
+    auto Loc = SourceMgr.getFileLoc(Info.getLocation());
+    llvm::raw_svector_ostream OS(Location);
+    Loc.print(OS, SourceMgr);
+    OS << ":";
+  }
+
+  clangd::log(llvm::formatv("Ignored diagnostic. {0}{1}", Location, Message));
+}
+
+void IgnoreDiagnostics::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                                         const clang::Diagnostic &Info) {
+  IgnoreDiagnostics::log(DiagLevel, Info);
+}
+
 std::unique_ptr<CompilerInstance>
 prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
                         const PrecompiledPreamble *Preamble,
@@ -36,7 +54,7 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
   // NOTE: we use Buffer.get() when adding remapped files, so we have to make
   // sure it will be released if no error is emitted.
   if (Preamble) {
-    Preamble->AddImplicitPreamble(*CI, VFS, Buffer.get());
+    Preamble->OverridePreamble(*CI, VFS, Buffer.get());
   } else {
     CI->getPreprocessorOpts().addRemappedFile(
         CI->getFrontendOpts().Inputs[0].getFile(), Buffer.get());

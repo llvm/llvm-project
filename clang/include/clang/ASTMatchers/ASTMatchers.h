@@ -2313,7 +2313,9 @@ inline internal::Matcher<Stmt> sizeOfExpr(
 ///   namespace a { namespace b { class X; } }
 /// \endcode
 inline internal::Matcher<NamedDecl> hasName(const std::string &Name) {
-  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher({Name}));
+  std::vector<std::string> Names;
+  Names.push_back(Name);
+  return internal::Matcher<NamedDecl>(new internal::HasNameMatcher(Names));
 }
 
 /// \brief Matches NamedDecl nodes that have any of the specified names.
@@ -2707,7 +2709,7 @@ AST_MATCHER_P(ObjCMessageExpr, hasReceiverType, internal::Matcher<QualType>,
   const QualType TypeDecl = Node.getReceiverType();
   return InnerMatcher.matches(TypeDecl, Finder, Builder);
 }
-
+  
 /// \brief Matches when BaseName == Selector.getAsString()
 ///
 ///  matcher = objCMessageExpr(hasSelector("loadHTMLString:baseURL:"));
@@ -2721,21 +2723,7 @@ AST_MATCHER_P(ObjCMessageExpr, hasSelector, std::string, BaseName) {
   return BaseName.compare(Sel.getAsString()) == 0;
 }
 
-
-/// \brief Matches when at least one of the supplied string equals to the
-/// Selector.getAsString()
-///
-///  matcher = objCMessageExpr(hasSelector("methodA:", "methodB:"));
-///  matches both of the expressions below:
-/// \code
-///     [myObj methodA:argA];
-///     [myObj methodB:argB];
-/// \endcode
-extern const internal::VariadicFunction<internal::Matcher<ObjCMessageExpr>,
-                                        StringRef,
-                                        internal::hasAnySelectorFunc>
-                                        hasAnySelector;
-
+  
 /// \brief Matches ObjC selectors whose name contains
 /// a substring matched by the given RegExp.
 ///  matcher = objCMessageExpr(matchesSelector("loadHTMLString\:baseURL?"));
@@ -3420,7 +3408,7 @@ AST_MATCHER(CXXCtorInitializer, isMemberInitializer) {
 }
 
 /// \brief Matches any argument of a call expression or a constructor call
-/// expression, or an ObjC-message-send expression.
+/// expression.
 ///
 /// Given
 /// \code
@@ -3430,18 +3418,9 @@ AST_MATCHER(CXXCtorInitializer, isMemberInitializer) {
 ///   matches x(1, y, 42)
 /// with hasAnyArgument(...)
 ///   matching y
-///
-/// For ObjectiveC, given
-/// \code
-///   @interface I - (void) f:(int) y; @end
-///   void foo(I *i) { [i f:12]; }
-/// \endcode
-/// objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
-///   matches [i f:12]
 AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(CallExpr,
-                                                          CXXConstructExpr,
-                                                          ObjCMessageExpr),
+                                                          CXXConstructExpr),
                           internal::Matcher<Expr>, InnerMatcher) {
   for (const Expr *Arg : Node.arguments()) {
     BoundNodesTreeBuilder Result(*Builder);
@@ -3474,8 +3453,7 @@ AST_MATCHER(CXXConstructExpr, requiresZeroInitialization) {
   return Node.requiresZeroInitialization();
 }
 
-/// \brief Matches the n'th parameter of a function or an ObjC method
-/// declaration.
+/// \brief Matches the n'th parameter of a function declaration.
 ///
 /// Given
 /// \code
@@ -3485,22 +3463,12 @@ AST_MATCHER(CXXConstructExpr, requiresZeroInitialization) {
 ///   matches f(int x) {}
 /// with hasParameter(...)
 ///   matching int x
-///
-/// For ObjectiveC, given
-/// \code
-///   @interface I - (void) f:(int) y; @end
-/// \endcode
-//
-/// the matcher objcMethodDecl(hasParameter(0, hasName("y")))
-/// matches the declaration of method f with hasParameter
-/// matching y.
-AST_POLYMORPHIC_MATCHER_P2(hasParameter,
-                           AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                           ObjCMethodDecl),
-                           unsigned, N, internal::Matcher<ParmVarDecl>,
-                           InnerMatcher) {
-  return (N < Node.parameters().size()
-          && InnerMatcher.matches(*Node.parameters()[N], Finder, Builder));
+AST_MATCHER_P2(FunctionDecl, hasParameter,
+               unsigned, N, internal::Matcher<ParmVarDecl>,
+               InnerMatcher) {
+  return (N < Node.getNumParams() &&
+          InnerMatcher.matches(
+              *Node.getParamDecl(N), Finder, Builder));
 }
 
 /// \brief Matches all arguments and their respective ParmVarDecl.
@@ -3557,7 +3525,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
   return Matched;
 }
 
-/// \brief Matches any parameter of a function or ObjC method declaration.
+/// \brief Matches any parameter of a function declaration.
 ///
 /// Does not match the 'this' parameter of a method.
 ///
@@ -3569,20 +3537,8 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
 ///   matches f(int x, int y, int z) {}
 /// with hasAnyParameter(...)
 ///   matching int y
-///
-/// For ObjectiveC, given
-/// \code
-///   @interface I - (void) f:(int) y; @end
-/// \endcode
-//
-/// the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
-/// matches the declaration of method f with hasParameter
-/// matching y.
-AST_POLYMORPHIC_MATCHER_P(hasAnyParameter,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                          ObjCMethodDecl),
-                          internal::Matcher<ParmVarDecl>,
-                          InnerMatcher) {
+AST_MATCHER_P(FunctionDecl, hasAnyParameter,
+              internal::Matcher<ParmVarDecl>, InnerMatcher) {
   return matchesFirstInPointerRange(InnerMatcher, Node.param_begin(),
                                     Node.param_end(), Finder, Builder);
 }

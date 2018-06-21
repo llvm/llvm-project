@@ -22,7 +22,7 @@ uint32_t FN(MULTI(BASE),get_hash)(__isl_keep MULTI(BASE) *multi)
 	hash = isl_hash_init();
 	for (i = 0; i < multi->n; ++i) {
 		uint32_t el_hash;
-		el_hash = FN(EL,get_hash)(multi->p[i]);
+		el_hash = FN(EL,get_hash)(multi->u.p[i]);
 		isl_hash_hash(hash, el_hash);
 	}
 

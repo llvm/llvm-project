@@ -11,14 +11,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define void @cfft2(i32 %n, double* %A) local_unnamed_addr #0 {
 entry:
-  br i1 undef, label %for.body.lr.ph, label %for.end
+  br i1 true, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.inc, %for.body.lr.ph
   %mj.017 = phi i32 [ 1, %for.body.lr.ph ], [ undef, %for.inc ]
-  br i1 undef, label %if.else, label %if.then
+  br i1 true, label %if.else, label %if.then
 
 if.then:                                          ; preds = %for.body
   br label %for.inc
@@ -26,16 +26,16 @@ if.then:                                          ; preds = %for.body
 if.else:                                          ; preds = %for.body
   %mul.i44 = shl i32 %mj.017, 2
   %div.i45 = sdiv i32 %n, %mul.i44
-  br i1 undef, label %for.body.i58.lr.ph, label %for.inc
+  br i1 true, label %for.body.i58.lr.ph, label %for.inc
 
 for.body.i58.lr.ph:                               ; preds = %if.else
-  br i1 undef, label %for.body.i58.us, label %for.body.i58.preheader
+  br i1 false, label %for.body.i58.us, label %for.body.i58.preheader
 
 for.body.i58.preheader:                           ; preds = %for.body.i58.lr.ph
   br label %for.body.i58
 
 for.body.i58.us:                                  ; preds = %for.body.i58.us, %for.body.i58.lr.ph
-  br i1 undef, label %for.inc, label %for.body.i58.us
+  br i1 false, label %for.inc, label %for.body.i58.us
 
 for.body.i58:                                     ; preds = %for.body.i58, %for.body.i58.preheader
   store double 0.0, double* %A

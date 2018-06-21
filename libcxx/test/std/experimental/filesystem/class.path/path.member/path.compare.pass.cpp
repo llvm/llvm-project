@@ -26,7 +26,8 @@
 //
 // size_t hash_value(path const&) noexcept;
 
-#include <experimental/filesystem>
+
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <vector>
 #include <cassert>
@@ -35,8 +36,7 @@
 #include "test_iterators.h"
 #include "count_new.hpp"
 #include "filesystem_test_helper.hpp"
-
-namespace fs = std::experimental::filesystem;
+#include "verbose_assert.h"
 
 struct PathCompareTest {
   const char* LHS;
@@ -58,8 +58,9 @@ const PathCompareTest CompareTestCases[] =
     {"a/b/c", "b/a/c", -1},
     {"a/b", "a/b/c", -1},
     {"a/b/c", "a/b", 1},
-    {"a/b/", "a/b/.", 0},
-    {"a/b//////", "a/b/////.", 0},
+    {"a/b/", "a/b/.", -1},
+    {"a/b/", "a/b",    1},
+    {"a/b//////", "a/b/////.", -1},
     {"a/.././b", "a///..//.////b", 0},
     {"//foo//bar///baz////", "//foo/bar/baz/", 0}, // duplicate separators
     {"///foo/bar", "/foo/bar", 0}, // "///" is not a root directory
@@ -95,8 +96,13 @@ int main()
       int ret2 = normalize_ret(p1.compare(R));
       int ret3 = normalize_ret(p1.compare(TC.RHS));
       int ret4 = normalize_ret(p1.compare(RV));
-      assert(ret1 == ret2 && ret1 == ret3 && ret1 == ret4);
-      assert(ret1 == E);
+
+      g.release();
+      ASSERT_EQ(ret1, ret2);
+      ASSERT_EQ(ret1, ret3);
+      ASSERT_EQ(ret1, ret4);
+      ASSERT_EQ(ret1, E)
+          << DISPLAY(TC.LHS) << DISPLAY(TC.RHS);
 
       // check signatures
       ASSERT_NOEXCEPT(p1.compare(p2));

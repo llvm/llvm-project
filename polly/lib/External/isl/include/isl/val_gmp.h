@@ -2,7 +2,7 @@
 #define ISL_VAL_GMP_H
 
 #include <gmp.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 
 #if defined(__cplusplus)
 extern "C" {

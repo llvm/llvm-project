@@ -3527,12 +3527,6 @@ class RecordDecl : public TagDecl {
   bool NonTrivialToPrimitiveCopy : 1;
   bool NonTrivialToPrimitiveDestroy : 1;
 
-  /// True if this class can be passed in a non-address-preserving fashion
-  /// (such as in registers).
-  /// This does not imply anything about how the ABI in use will actually
-  /// pass an object of this class.
-  bool CanPassInRegisters : 1;
-
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
              SourceLocation StartLoc, SourceLocation IdLoc,
@@ -3597,36 +3591,24 @@ public:
     return NonTrivialToPrimitiveDefaultInitialize;
   }
 
-  void setNonTrivialToPrimitiveDefaultInitialize(bool V) {
-    NonTrivialToPrimitiveDefaultInitialize = V;
+  void setNonTrivialToPrimitiveDefaultInitialize() {
+    NonTrivialToPrimitiveDefaultInitialize = true;
   }
 
   bool isNonTrivialToPrimitiveCopy() const {
     return NonTrivialToPrimitiveCopy;
   }
 
-  void setNonTrivialToPrimitiveCopy(bool V) {
-    NonTrivialToPrimitiveCopy = V;
+  void setNonTrivialToPrimitiveCopy() {
+    NonTrivialToPrimitiveCopy = true;
   }
 
   bool isNonTrivialToPrimitiveDestroy() const {
     return NonTrivialToPrimitiveDestroy;
   }
 
-  void setNonTrivialToPrimitiveDestroy(bool V) {
-    NonTrivialToPrimitiveDestroy = V;
-  }
-
-  /// Determine whether this class can be passed in registers. In C++ mode,
-  /// it must have at least one trivial, non-deleted copy or move constructor.
-  /// FIXME: This should be set as part of completeDefinition.
-  bool canPassInRegisters() const {
-    return CanPassInRegisters;
-  }
-
-  /// Set that we can pass this RecordDecl in registers.
-  void setCanPassInRegisters(bool CanPass) {
-    CanPassInRegisters = CanPass;
+  void setNonTrivialToPrimitiveDestroy() {
+    NonTrivialToPrimitiveDestroy = true;
   }
 
   /// \brief Determines whether this declaration represents the
@@ -3797,11 +3779,7 @@ private:
   bool BlockMissingReturnType : 1;
   bool IsConversionFromLambda : 1;
 
-  /// A bit that indicates this block is passed directly to a function as a
-  /// non-escaping parameter.
-  bool DoesNotEscape : 1;
-
-  /// A new[]'d array of pointers to ParmVarDecls for the formal
+  /// ParamInfo - new[]'d array of pointers to ParmVarDecls for the formal
   /// parameters of this function.  This is null if a prototype or if there are
   /// no formals.
   ParmVarDecl **ParamInfo = nullptr;
@@ -3820,7 +3798,7 @@ protected:
   BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
       : Decl(Block, DC, CaretLoc), DeclContext(Block), IsVariadic(false),
         CapturesCXXThis(false), BlockMissingReturnType(true),
-        IsConversionFromLambda(false), DoesNotEscape(false) {}
+        IsConversionFromLambda(false) {}
 
 public:
   static BlockDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L); 
@@ -3891,9 +3869,6 @@ public:
 
   bool isConversionFromLambda() const { return IsConversionFromLambda; }
   void setIsConversionFromLambda(bool val) { IsConversionFromLambda = val; }
-
-  bool doesNotEscape() const { return DoesNotEscape; }
-  void setDoesNotEscape() { DoesNotEscape = true; }
 
   bool capturesVariable(const VarDecl *var) const;
 

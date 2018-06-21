@@ -1,6 +1,12 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s --check-prefix=AFFINE
 ; RUN: opt %loadPolly -polly-scops -polly-allow-nonaffine -analyze < %s | FileCheck %s --check-prefix=NONAFFINE
 
+; The SCoP contains a loop with multiple exit blocks (BBs after leaving
+; the loop). The current implementation of deriving their domain derives
+; only a common domain for all of the exit blocks. We disabled loops with
+; multiple exit blocks until this is fixed.
+; XFAIL: *
+
 ; The loop for.body => for.inc has an unpredictable iteration count could due to
 ; the undef start value that it is compared to. Therefore the array element
 ; %arrayidx101 that depends on that exit value cannot be affine.

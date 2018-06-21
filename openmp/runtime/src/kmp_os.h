@@ -209,6 +209,14 @@ template <> struct traits_t<unsigned int> {
   static const unsigned_t min_value = 0x00000000;
   static const int type_size = sizeof(unsigned_t);
 };
+// long
+template <> struct traits_t<signed long> {
+  typedef signed long signed_t;
+  typedef unsigned long unsigned_t;
+  typedef long double floating_t;
+  static char const *spec;
+  static const int type_size = sizeof(signed_t);
+};
 // long long
 template <> struct traits_t<signed long long> {
   typedef signed long long signed_t;

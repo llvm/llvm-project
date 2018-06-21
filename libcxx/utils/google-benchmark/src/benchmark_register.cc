@@ -31,17 +31,17 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <thread>
 
 #include "check.h"
 #include "commandlineflags.h"
 #include "complexity.h"
+#include "statistics.h"
 #include "log.h"
 #include "mutex.h"
 #include "re.h"
-#include "stat.h"
 #include "string_util.h"
-#include "sysinfo.h"
 #include "timers.h"
 
 namespace benchmark {
@@ -69,6 +69,9 @@ class BenchmarkFamilies {
   // Registers a benchmark family and returns the index assigned to it.
   size_t AddBenchmark(std::unique_ptr<Benchmark> family);
 
+  // Clear all registered benchmark families.
+  void ClearBenchmarks();
+
   // Extract the list of benchmark instances that match the specified
   // regular expression.
   bool FindBenchmarks(const std::string& re,
@@ -92,6 +95,12 @@ size_t BenchmarkFamilies::AddBenchmark(std::unique_ptr<Benchmark> family) {
   size_t index = families_.size();
   families_.push_back(std::move(family));
   return index;
+}
+
+void BenchmarkFamilies::ClearBenchmarks() {
+  MutexLock l(mutex_);
+  families_.clear();
+  families_.shrink_to_fit();
 }
 
 bool BenchmarkFamilies::FindBenchmarks(
@@ -149,6 +158,7 @@ bool BenchmarkFamilies::FindBenchmarks(
         instance.use_manual_time = family->use_manual_time_;
         instance.complexity = family->complexity_;
         instance.complexity_lambda = family->complexity_lambda_;
+        instance.statistics = &family->statistics_;
         instance.threads = num_threads;
 
         // Add arguments to instance name
@@ -163,8 +173,8 @@ bool BenchmarkFamilies::FindBenchmarks(
                   StringPrintF("%s:", family->arg_names_[arg_i].c_str());
             }
           }
-
-          instance.name += std::to_string(arg);
+          
+          instance.name += StringPrintF("%d", arg);
           ++arg_i;
         }
 
@@ -226,7 +236,11 @@ Benchmark::Benchmark(const char* name)
       use_real_time_(false),
       use_manual_time_(false),
       complexity_(oNone),
-      complexity_lambda_(nullptr) {}
+      complexity_lambda_(nullptr) {
+  ComputeStatistics("mean", StatisticsMean);
+  ComputeStatistics("median", StatisticsMedian);
+  ComputeStatistics("stddev", StatisticsStdDev);
+}
 
 Benchmark::~Benchmark() {}
 
@@ -399,6 +413,12 @@ Benchmark* Benchmark::Complexity(BigOFunc* complexity) {
   return this;
 }
 
+Benchmark* Benchmark::ComputeStatistics(std::string name,
+                                        StatisticsFunc* statistics) {
+  statistics_.emplace_back(name, statistics);
+  return this;
+}
+
 Benchmark* Benchmark::Threads(int t) {
   CHECK_GT(t, 0);
   thread_counts_.push_back(t);
@@ -427,8 +447,7 @@ Benchmark* Benchmark::DenseThreadRange(int min_threads, int max_threads,
 }
 
 Benchmark* Benchmark::ThreadPerCpu() {
-  static int num_cpus = NumCPUs();
-  thread_counts_.push_back(num_cpus);
+  thread_counts_.push_back(CPUInfo::Get().num_cpus);
   return this;
 }
 
@@ -449,4 +468,9 @@ int Benchmark::ArgsCnt() const {
 void FunctionBenchmark::Run(State& st) { func_(st); }
 
 }  // end namespace internal
+
+void ClearRegisteredBenchmarks() {
+  internal::BenchmarkFamilies::GetInstance()->ClearBenchmarks();
+}
+
 }  // end namespace benchmark

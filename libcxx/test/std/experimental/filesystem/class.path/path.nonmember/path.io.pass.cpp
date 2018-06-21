@@ -22,10 +22,11 @@
 // operator>>(basic_istream<charT, traits>& is, path& p)
 //
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <sstream>
 #include <cassert>
+#include <iostream>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -34,6 +35,8 @@
 
 MultiStringType InStr =  MKSTR("abcdefg/\"hijklmnop\"/qrstuvwxyz/123456789");
 MultiStringType OutStr = MKSTR("\"abcdefg/\\\"hijklmnop\\\"/qrstuvwxyz/123456789\"");
+
+
 
 template <class CharT>
 void doIOTest() {
@@ -56,10 +59,40 @@ void doIOTest() {
   }
 }
 
+namespace impl {
+using namespace fs;
+
+template <class Stream, class Tp, class = decltype(std::declval<Stream&>() << std::declval<Tp&>())>
+std::true_type is_ostreamable_imp(int);
+
+template <class Stream, class Tp>
+std::false_type is_ostreamable_imp(long);
+
+template <class Stream, class Tp, class = decltype(std::declval<Stream&>() >> std::declval<Tp&>())>
+std::true_type is_istreamable_imp(int);
+
+template <class Stream, class Tp>
+std::false_type is_istreamable_imp(long);
+
+
+} // namespace impl
+
+template <class Stream, class Tp>
+struct is_ostreamable : decltype(impl::is_ostreamable_imp<Stream, Tp>(0)) {};
+template <class Stream, class Tp>
+struct is_istreamable : decltype(impl::is_istreamable_imp<Stream, Tp>(0)) {};
+
+void test_LWG2989() {
+  static_assert(!is_ostreamable<decltype(std::cout), std::wstring>::value, "");
+  static_assert(!is_ostreamable<decltype(std::wcout), std::string>::value, "");
+  static_assert(!is_istreamable<decltype(std::cin), std::wstring>::value, "");
+  static_assert(!is_istreamable<decltype(std::wcin), std::string>::value, "");
+}
 
 int main() {
   doIOTest<char>();
   doIOTest<wchar_t>();
   //doIOTest<char16_t>();
   //doIOTest<char32_t>();
+  test_LWG2989();
 }

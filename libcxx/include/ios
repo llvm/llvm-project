@@ -592,6 +592,9 @@ public:
     typedef typename traits_type::pos_type pos_type;
     typedef typename traits_type::off_type off_type;
 
+    static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+                  "traits_type::char_type must be the same type as CharT");
+
   // __true_value will generate undefined references when linking unless
   // we give it internal linkage.
 
@@ -667,7 +670,7 @@ protected:
     void set_rdbuf(basic_streambuf<char_type, traits_type>* __sb);
 private:
     basic_ostream<char_type, traits_type>* __tie_;
-     mutable int_type __fill_;
+    mutable int_type __fill_;
 };
 
 template <class _CharT, class _Traits>

@@ -59,21 +59,6 @@
 // CHECK-NEXT:     0030:
 // CHECK-NEXT:   )
 // CHECK-NEXT: }
-// CHECK-NEXT: Section {
-// CHECK-NEXT:   Index: 3
-// CHECK-NEXT:    Name: .hash
-// CHECK-NEXT:    Type: SHT_HASH
-// CHECK-NEXT:    Flags [
-// CHECK-NEXT:      SHF_ALLOC
-// CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: [[HASHADDR:.*]]
-// CHECK-NEXT:    Offset:
-// CHECK-NEXT:    Size:
-// CHECK-NEXT:    Link: 2
-// CHECK-NEXT:    Info: 0
-// CHECK-NEXT:    AddressAlignment: 4
-// CHECK-NEXT:    EntrySize: 4
-
 // CHECK:        Index: [[DYNSTR]]
 // CHECK-NEXT:   Name: .dynstr
 // CHECK-NEXT:   Type: SHT_STRTAB
@@ -90,6 +75,20 @@
 // CHECK-NEXT:   SectionData (
 // CHECK:        )
 // CHECK-NEXT: }
+// CHECK-NEXT: Section {
+// CHECK-NEXT:   Index: 4
+// CHECK-NEXT:    Name: .hash
+// CHECK-NEXT:    Type: SHT_HASH
+// CHECK-NEXT:    Flags [
+// CHECK-NEXT:      SHF_ALLOC
+// CHECK-NEXT:    ]
+// CHECK-NEXT:    Address: [[HASHADDR:.*]]
+// CHECK-NEXT:    Offset:
+// CHECK-NEXT:    Size:
+// CHECK-NEXT:    Link: 2
+// CHECK-NEXT:    Info: 0
+// CHECK-NEXT:    AddressAlignment: 4
+// CHECK-NEXT:    EntrySize: 4
 
 // CHECK:      Name: .rel.dyn
 // CHECK-NEXT: Type: SHT_REL

@@ -304,9 +304,11 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
 
 FileManager *CompilerInstance::createFileManager() {
   if (!hasVirtualFileSystem()) {
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS =
-        createVFSFromCompilerInvocation(getInvocation(), getDiagnostics());
-    setVirtualFileSystem(VFS);
+    if (IntrusiveRefCntPtr<vfs::FileSystem> VFS =
+            createVFSFromCompilerInvocation(getInvocation(), getDiagnostics()))
+      setVirtualFileSystem(VFS);
+    else
+      return nullptr;
   }
   FileMgr = new FileManager(getFileSystemOpts(), VirtualFileSystem);
   return FileMgr.get();
@@ -1110,10 +1112,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                    llvm::CachedHashString(MacroDef.split('=').first)) > 0;
       }),
       PPOpts.Macros.end());
-
-  // If the original compiler invocation had -fmodule-name, pass it through.
-  Invocation->getLangOpts()->ModuleName =
-      ImportingInstance.getInvocation().getLangOpts()->ModuleName;
 
   // Note the name of the module we're building.
   Invocation->getLangOpts()->CurrentModule = ModuleName;
@@ -2013,12 +2011,6 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     checkConfigMacro(getPreprocessor(), TopModule->ConfigMacros[I],
                      Module, ImportLoc);
   }
-
-  // Resolve any remaining module using export_as for this one.
-  getPreprocessor()
-      .getHeaderSearchInfo()
-      .getModuleMap()
-      .resolveLinkAsDependencies(TopModule);
 
   LastModuleImportLoc = ImportLoc;
   LastModuleImportResult = ModuleLoadResult(Module);

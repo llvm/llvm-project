@@ -555,6 +555,9 @@ void atomic_signal_fence(memory_order m) noexcept;
 #if !defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP)
 #error <atomic> is not implemented
 #endif
+#ifdef kill_dependency
+#error C++ standard library is incompatible with <stdatomic.h>
+#endif
 
 #if _LIBCPP_STD_VER > 14
 # define __cpp_lib_atomic_is_always_lock_free 201603L
@@ -695,7 +698,7 @@ static inline void __c11_atomic_store(_Atomic(_Tp)* __a,  _Tp __val,
 }
 
 template <typename _Tp>
-static inline _Tp __c11_atomic_load(volatile _Atomic(_Tp)* __a,
+static inline _Tp __c11_atomic_load(const volatile _Atomic(_Tp)* __a,
                                     memory_order __order) {
   _Tp __ret;
   __atomic_load(&__a->__a_value, &__ret,
@@ -704,7 +707,7 @@ static inline _Tp __c11_atomic_load(volatile _Atomic(_Tp)* __a,
 }
 
 template <typename _Tp>
-static inline _Tp __c11_atomic_load(_Atomic(_Tp)* __a, memory_order __order) {
+static inline _Tp __c11_atomic_load(const _Atomic(_Tp)* __a, memory_order __order) {
   _Tp __ret;
   __atomic_load(&__a->__a_value, &__ret,
                 __gcc_atomic::__to_gcc_order(__order));
@@ -1741,7 +1744,7 @@ typedef struct atomic_flag
     atomic_flag() _NOEXCEPT : __a_() {}
 #endif // _LIBCPP_CXX03_LANG
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
 
 #ifndef _LIBCPP_CXX03_LANG

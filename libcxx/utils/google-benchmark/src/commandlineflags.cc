@@ -209,9 +209,9 @@ bool IsFlag(const char* str, const char* flag) {
   return (ParseFlagValue(str, flag, true) != nullptr);
 }
 
-bool IsTruthyFlagValue(const std::string& str) {
-  if (str.empty()) return true;
-  char ch = str[0];
+bool IsTruthyFlagValue(const std::string& value) {
+  if (value.empty()) return true;
+  char ch = value[0];
   return isalnum(ch) &&
          !(ch == '0' || ch == 'f' || ch == 'F' || ch == 'n' || ch == 'N');
 }

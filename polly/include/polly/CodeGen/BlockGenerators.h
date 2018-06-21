@@ -329,6 +329,25 @@ protected:
                            ValueMapT &BBMap,
                            __isl_keep isl_id_to_ast_expr *NewAccesses);
 
+  /// When statement tracing is enabled, build the print instructions for
+  /// printing the current statement instance.
+  ///
+  /// The printed output looks like:
+  ///
+  ///     Stmt1(0)
+  ///
+  /// If printing of scalars is enabled, it also appends the value of each
+  /// scalar to the line:
+  ///
+  ///     Stmt1(0) %i=1 %sum=5
+  ///
+  /// @param Stmt  The statement we generate code for.
+  /// @param LTS   A mapping from loops virtual canonical induction
+  ///              variable to their new values.
+  /// @param BBMap A mapping from old values to their new values in this block.
+  void generateBeginStmtTrace(ScopStmt &Stmt, LoopToScevMapT &LTS,
+                              ValueMapT &BBMap);
+
   /// Generate instructions that compute whether one instance of @p Set is
   /// executed.
   ///

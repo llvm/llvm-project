@@ -82,44 +82,6 @@ void testPODSmallVector() {
   }
 }
 
-void testSubstitutionTable() {
-  {
-    SubstitutionTable<2> Tab;
-
-    NameType Names[] = {{"MERP"}, {"MARP"}, {"MAMP"}};
-    Tab.pushPack();
-    Tab.pushSubstitutionIntoPack(&Names[0]);
-    Tab.pushSubstitutionIntoPack(&Names[1]);
-    Tab.pushSubstitutionIntoPack(&Names[2]);
-
-    int Index = 0;
-    for (Node* N : Tab.nthSubstitution(0)) {
-      assert(static_cast<NameType*>(N)->getName() == Names[Index].getName());
-      ++Index;
-    }
-    assert(Index == 3);
-
-    Tab.popPack();
-    assert(Tab.empty() && Tab.size() == 0);
-    Tab.pushSubstitution(&Names[0]);
-    Tab.pushSubstitution(&Names[1]);
-    assert(!Tab.empty() && Tab.size() == 2);
-
-    int I = 0;
-    for (Node* N : Tab.nthSubstitution(0)) {
-      assert(static_cast<NameType*>(N)->getName() == "MERP");
-      assert(I == 0);
-      ++I;
-    }
-    for (Node* N : Tab.nthSubstitution(1)) {
-      assert(static_cast<NameType*>(N)->getName() == "MARP");
-      assert(I == 1);
-      ++I;
-    }
-  }
-}
-
 int main() {
   testPODSmallVector();
-  testSubstitutionTable();
 }

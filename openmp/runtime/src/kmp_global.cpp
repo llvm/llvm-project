@@ -502,4 +502,7 @@ int _You_must_link_with_Intel_OpenMP_library = 1;
 int _You_must_link_with_Microsoft_OpenMP_library = 1;
 #endif
 
+#if OMP_50_ENABLED
+kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
+#endif
 // end of file //

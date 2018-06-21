@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
 ;
 ; Remove a dead PHI write/read pair
 ; (accesses that are effectively not used)

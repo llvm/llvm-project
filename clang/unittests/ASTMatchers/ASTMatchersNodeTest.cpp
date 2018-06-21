@@ -1565,20 +1565,9 @@ TEST(ObjCMessageExprMatcher, SimpleExprs) {
   EXPECT_TRUE(matchesObjC(
     Objc1String,
     objcMessageExpr(anything())));
-  EXPECT_TRUE(matchesObjC(Objc1String,
-                          objcMessageExpr(hasAnySelector({
-                                          "contents", "meth:"}))
-
-                         ));
   EXPECT_TRUE(matchesObjC(
     Objc1String,
     objcMessageExpr(hasSelector("contents"))));
-  EXPECT_TRUE(matchesObjC(
-    Objc1String,
-    objcMessageExpr(hasAnySelector("contents", "contentsA"))));
-  EXPECT_FALSE(matchesObjC(
-    Objc1String,
-    objcMessageExpr(hasAnySelector("contentsB", "contentsC"))));
   EXPECT_TRUE(matchesObjC(
     Objc1String,
     objcMessageExpr(matchesSelector("cont*"))));

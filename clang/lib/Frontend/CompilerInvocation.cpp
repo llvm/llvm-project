@@ -623,8 +623,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.AssumeSaneOperatorNew = !Args.hasArg(OPT_fno_assume_sane_operator_new);
   Opts.ObjCAutoRefCountExceptions = Args.hasArg(OPT_fobjc_arc_exceptions);
   Opts.CXAAtExit = !Args.hasArg(OPT_fno_use_cxa_atexit);
-  Opts.RegisterGlobalDtorsWithAtExit =
-      Args.hasArg(OPT_fregister_global_dtors_with_atexit);
   Opts.CXXCtorDtorAliases = Args.hasArg(OPT_mconstructor_aliases);
   Opts.CodeModel = getCodeModel(Args, Diags);
   Opts.DebugPass = Args.getLastArgValue(OPT_mdebug_pass);
@@ -633,8 +631,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DisableFree = Args.hasArg(OPT_disable_free);
   Opts.DiscardValueNames = Args.hasArg(OPT_discard_value_names);
   Opts.DisableTailCalls = Args.hasArg(OPT_mdisable_tail_calls);
-  Opts.NoEscapingBlockTailCalls =
-      Args.hasArg(OPT_fno_escaping_block_tail_calls);
   Opts.FloatABI = Args.getLastArgValue(OPT_mfloat_abi);
   Opts.LessPreciseFPMAD = Args.hasArg(OPT_cl_mad_enable) ||
                           Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
@@ -1029,7 +1025,6 @@ static void ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
   Opts.Targets = Args.getAllArgValues(OPT_MT);
   Opts.IncludeSystemHeaders = Args.hasArg(OPT_sys_header_deps);
   Opts.IncludeModuleFiles = Args.hasArg(OPT_module_file_deps);
-  Opts.SkipUnusedModuleMaps = Args.hasArg(OPT_skip_unused_modulemap_file_deps);
   Opts.UsePhonyTargets = Args.hasArg(OPT_MP);
   Opts.ShowHeaderIncludes = Args.hasArg(OPT_H);
   Opts.HeaderIncludeOutputFile = Args.getLastArgValue(OPT_header_include_file);
@@ -2327,8 +2322,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.DebuggerCastResultToId = Args.hasArg(OPT_fdebugger_cast_result_to_id);
   Opts.DebuggerObjCLiteral = Args.hasArg(OPT_fdebugger_objc_literal);
   Opts.ApplePragmaPack = Args.hasArg(OPT_fapple_pragma_pack);
-  Opts.ModuleName = Args.getLastArgValue(OPT_fmodule_name_EQ);
-  Opts.CurrentModule = Opts.ModuleName;
+  Opts.CurrentModule = Args.getLastArgValue(OPT_fmodule_name_EQ);
   Opts.AppExt = Args.hasArg(OPT_fapplication_extension);
   Opts.ModuleFeatures = Args.getAllArgValues(OPT_fmodule_feature);
   std::sort(Opts.ModuleFeatures.begin(), Opts.ModuleFeatures.end());
@@ -3069,15 +3063,16 @@ createVFSFromCompilerInvocation(const CompilerInvocation &CI,
         BaseFS->getBufferForFile(File);
     if (!Buffer) {
       Diags.Report(diag::err_missing_vfs_overlay_file) << File;
-      continue;
+      return IntrusiveRefCntPtr<vfs::FileSystem>();
     }
 
     IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getVFSFromYAML(
         std::move(Buffer.get()), /*DiagHandler*/ nullptr, File);
-    if (FS)
-      Overlay->pushOverlay(FS);
-    else
+    if (!FS.get()) {
       Diags.Report(diag::err_invalid_vfs_overlay) << File;
+      return IntrusiveRefCntPtr<vfs::FileSystem>();
+    }
+    Overlay->pushOverlay(FS);
   }
   return Overlay;
 }

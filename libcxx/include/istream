@@ -960,7 +960,6 @@ basic_istream<_CharT, _Traits>::get(char_type* __s, streamsize __n, char_type __
                     ++__gc_;
                      this->rdbuf()->sbumpc();
                 }
-                *__s = char_type();
                 if (__gc_ == 0)
                    __err |= ios_base::failbit;
                 this->setstate(__err);
@@ -968,10 +967,14 @@ basic_istream<_CharT, _Traits>::get(char_type* __s, streamsize __n, char_type __
             else
                 this->setstate(ios_base::failbit);
         }
+        if (__n > 0)
+            *__s = char_type();
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
     {
+        if (__n > 0)
+            *__s = char_type();
         this->__set_badbit_and_consider_rethrow();
     }
 #endif  // _LIBCPP_NO_EXCEPTIONS

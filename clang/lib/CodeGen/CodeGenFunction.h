@@ -2132,13 +2132,27 @@ public:
     return it->second;
   }
 
-  /// Given an opaque value expression, return its LValue mapping if it exists,
-  /// otherwise create one.
-  LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
+  /// getOpaqueLValueMapping - Given an opaque value expression (which
+  /// must be mapped to an l-value), return its mapping.
+  const LValue &getOpaqueLValueMapping(const OpaqueValueExpr *e) {
+    assert(OpaqueValueMapping::shouldBindAsLValue(e));
 
-  /// Given an opaque value expression, return its RValue mapping if it exists,
-  /// otherwise create one.
-  RValue getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e);
+    llvm::DenseMap<const OpaqueValueExpr*,LValue>::iterator
+      it = OpaqueLValues.find(e);
+    assert(it != OpaqueLValues.end() && "no mapping for opaque value!");
+    return it->second;
+  }
+
+  /// getOpaqueRValueMapping - Given an opaque value expression (which
+  /// must be mapped to an r-value), return its mapping.
+  const RValue &getOpaqueRValueMapping(const OpaqueValueExpr *e) {
+    assert(!OpaqueValueMapping::shouldBindAsLValue(e));
+
+    llvm::DenseMap<const OpaqueValueExpr*,RValue>::iterator
+      it = OpaqueRValues.find(e);
+    assert(it != OpaqueRValues.end() && "no mapping for opaque value!");
+    return it->second;
+  }
 
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }
@@ -3490,8 +3504,6 @@ public:
   llvm::Value *EmitARCLoadWeak(Address addr);
   llvm::Value *EmitARCLoadWeakRetained(Address addr);
   llvm::Value *EmitARCStoreWeak(Address addr, llvm::Value *value, bool ignored);
-  void emitARCCopyAssignWeak(QualType Ty, Address DstAddr, Address SrcAddr);
-  void emitARCMoveAssignWeak(QualType Ty, Address DstAddr, Address SrcAddr);
   void EmitARCCopyWeak(Address dst, Address src);
   void EmitARCMoveWeak(Address dst, Address src);
   llvm::Value *EmitARCRetainAutorelease(QualType type, llvm::Value *value);
@@ -3620,9 +3632,6 @@ public:
   /// the given function.
   void registerGlobalDtorWithAtExit(const VarDecl &D, llvm::Constant *fn,
                                     llvm::Constant *addr);
-
-  /// Call atexit() with function dtorStub.
-  void registerGlobalDtorWithAtExit(llvm::Constant *dtorStub);
 
   /// Emit code in this function to perform a guarded variable
   /// initialization.  Guarded initializations are used when it's not

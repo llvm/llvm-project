@@ -45,12 +45,12 @@ protected:
         {
             if (ch != base::traits_type::eof())
             {
-                int n = str_.size();
+                std::size_t n = str_.size();
                 str_.push_back(static_cast<CharT>(ch));
                 str_.resize(str_.capacity());
                 base::setp(const_cast<CharT*>(str_.data()),
                            const_cast<CharT*>(str_.data() + str_.size()));
-                base::pbump(n+1);
+                base::pbump(static_cast<int>(n+1));
             }
             return ch;
         }

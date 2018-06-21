@@ -514,39 +514,6 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
     return false;
   }
 
-  // Detect invalid DBG_VALUE instructions, with a debug-use of a virtual
-  // register that hasn't been defined yet. If we do not remove those here, then
-  // the re-insertion of the DBG_VALUE instruction after register allocation
-  // will be incorrect.
-  // TODO: If earlier passes are corrected to generate sane debug information
-  // (and if the machine verifier is improved to catch this), then these checks
-  // could be removed or replaced by asserts.
-  bool Discard = false;
-  if (MI.getOperand(0).isReg() &&
-      TargetRegisterInfo::isVirtualRegister(MI.getOperand(0).getReg())) {
-    const unsigned Reg = MI.getOperand(0).getReg();
-    if (!LIS->hasInterval(Reg)) {
-      // The DBG_VALUE is described by a virtual register that does not have a
-      // live interval. Discard the DBG_VALUE.
-      Discard = true;
-      DEBUG(dbgs() << "Discarding debug info (no LIS interval): "
-            << Idx << " " << MI);
-    } else {
-      // The DBG_VALUE is only valid if either Reg is live out from Idx, or Reg
-      // is defined dead at Idx (where Idx is the slot index for the instruction
-      // preceeding the DBG_VALUE).
-      const LiveInterval &LI = LIS->getInterval(Reg);
-      LiveQueryResult LRQ = LI.Query(Idx);
-      if (!LRQ.valueOutOrDead()) {
-        // We have found a DBG_VALUE with the value in a virtual register that
-        // is not live. Discard the DBG_VALUE.
-        Discard = true;
-        DEBUG(dbgs() << "Discarding debug info (reg not live): "
-              << Idx << " " << MI);
-      }
-    }
-  }
-
   // Get or create the UserValue for (variable,offset) here.
   bool IsIndirect = MI.getOperand(1).isImm();
   if (IsIndirect)
@@ -555,10 +522,7 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   const DIExpression *Expr = MI.getDebugExpression();
   UserValue *UV =
       getUserValue(Var, Expr, MI.getDebugLoc());
-  if (!Discard)
-    UV->addDef(Idx, MI.getOperand(0), IsIndirect);
-  else
-    UV->addDef(Idx, MachineOperand::CreateReg(0U, RegState::Debug), false);
+  UV->addDef(Idx, MI.getOperand(0), IsIndirect);
   return true;
 }
 

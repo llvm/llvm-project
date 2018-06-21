@@ -23,11 +23,11 @@ namespace {
 
 /// Get the universes of all spaces in @p USet.
 isl::union_set unionSpace(const isl::union_set &USet) {
-  auto Result = give(isl_union_set_empty(isl_union_set_get_space(USet.keep())));
+  auto Result = isl::union_set::empty(USet.get_space());
   USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
-    auto Space = give(isl_set_get_space(Set.keep()));
-    auto Universe = give(isl_set_universe(Space.take()));
-    Result = give(isl_union_set_add_set(Result.take(), Universe.take()));
+    auto Space = Set.get_space();
+    auto Universe = isl::set::universe(Space);
+    Result = Result.add_set(Universe);
     return isl::stat::ok;
   });
   return Result;
@@ -36,11 +36,11 @@ isl::union_set unionSpace(const isl::union_set &USet) {
 void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
                       isl::union_set &Occupied, isl::union_map &Known,
                       isl::union_set &Undef) {
-  auto ParamSpace = give(isl_union_set_get_space(Universe.keep()));
+  auto ParamSpace = Universe.get_space();
 
   if (Undef && !Occupied) {
     assert(!Occupied);
-    Occupied = give(isl_union_set_subtract(Universe.copy(), Undef.copy()));
+    Occupied = Universe.subtract(Undef);
   }
 
   if (OccupiedAndKnown) {
@@ -52,16 +52,16 @@ void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
       Occupied = OccupiedAndKnown.domain();
 
     OccupiedAndKnown.foreach_map([&Known](isl::map Map) -> isl::stat {
-      if (isl_map_has_tuple_name(Map.keep(), isl_dim_out) != isl_bool_true)
+      if (!Map.has_tuple_name(isl::dim::out))
         return isl::stat::ok;
-      Known = give(isl_union_map_add_map(Known.take(), Map.take()));
+      Known = Known.add_map(Map);
       return isl::stat::ok;
     });
   }
 
   if (!Undef) {
     assert(Occupied);
-    Undef = give(isl_union_set_subtract(Universe.copy(), Occupied.copy()));
+    Undef = Universe.subtract(Occupied);
   }
 
   if (!Known) { // By default, nothing is known.
@@ -98,38 +98,31 @@ bool checkIsConflictingNonsymmetricCommon(
     isl::union_map ProposedOccupiedAndKnown, isl::union_set ProposedUnused,
     isl::union_map ProposedWritten) {
   // Determine universe (set of all possible domains).
-  auto Universe = give(isl_union_set_empty(isl_space_params_alloc(Ctx, 0)));
+  auto Universe = isl::union_set::empty(isl::space::params_alloc(Ctx, 0));
   if (ExistingOccupiedAndKnown)
-    Universe = give(isl_union_set_union(
-        Universe.take(), ExistingOccupiedAndKnown.domain().take()));
+    Universe = Universe.unite(ExistingOccupiedAndKnown.domain());
   if (ExistingUnused)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ExistingUnused.copy()));
+    Universe = Universe.unite(ExistingUnused);
   if (ExistingWritten)
-    Universe = give(
-        isl_union_set_union(Universe.take(), ExistingWritten.domain().take()));
+    Universe = Universe.unite(ExistingWritten.domain());
   if (ProposedOccupiedAndKnown)
-    Universe = give(isl_union_set_union(
-        Universe.take(), ProposedOccupiedAndKnown.domain().take()));
+    Universe = Universe.unite(ProposedOccupiedAndKnown.domain());
   if (ProposedUnused)
-    Universe =
-        give(isl_union_set_union(Universe.take(), ProposedUnused.copy()));
+    Universe = Universe.unite(ProposedUnused);
   if (ProposedWritten)
-    Universe = give(
-        isl_union_set_union(Universe.take(), ProposedWritten.domain().take()));
+    Universe = Universe.unite(ProposedWritten.domain());
 
   Universe = unionSpace(Universe);
 
   // Add a space the universe that does not occur anywhere else to ensure
   // robustness. Use &NewId to ensure that this Id is unique.
-  isl::id NewId = give(isl_id_alloc(Ctx, "Unrelated", &NewId));
+  isl::id NewId = isl::id::alloc(Ctx, "Unrelated", &NewId);
   // The space must contains at least one dimension to allow order
   // modifications.
-  auto NewSpace = give(isl_space_set_alloc(Ctx, 0, 1));
-  NewSpace =
-      give(isl_space_set_tuple_id(NewSpace.take(), isl_dim_set, NewId.copy()));
-  auto NewSet = give(isl_set_universe(NewSpace.take()));
-  Universe = give(isl_union_set_add_set(Universe.take(), NewSet.take()));
+  auto NewSpace = isl::space(Ctx, 0, 1);
+  NewSpace = NewSpace.set_tuple_id(isl::dim::set, NewId);
+  auto NewSet = isl::set::universe(NewSpace);
+  Universe = Universe.add_set(NewSet);
 
   // Using the universe, fill missing data.
   isl::union_set ExistingOccupied;
@@ -200,13 +193,10 @@ bool checkIsConflictingNonsymmetric(KnowledgeStr Existing,
   auto ProposedWritten = parseSetOrNull(Ctx.get(), Proposed.WrittenStr);
 
   return checkIsConflictingNonsymmetricCommon(
-      Ctx.get(),
-      isl::manage(isl_union_map_from_domain(ExistingOccupied.take())),
-      ExistingUnused,
-      isl::manage(isl_union_map_from_domain(ExistingWritten.take())),
-      isl::manage(isl_union_map_from_domain(ProposedOccupied.take())),
-      ProposedUnused,
-      isl::manage(isl_union_map_from_domain(ProposedWritten.take())));
+      Ctx.get(), isl::union_map::from_domain(ExistingOccupied), ExistingUnused,
+      isl::union_map::from_domain(ExistingWritten),
+      isl::union_map::from_domain(ProposedOccupied), ProposedUnused,
+      isl::union_map::from_domain(ProposedWritten));
 }
 
 bool checkIsConflicting(KnowledgeStr Existing, KnowledgeStr Proposed) {

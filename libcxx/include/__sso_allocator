@@ -55,14 +55,14 @@ public:
             __allocated_ = true;
             return (pointer)&buf_;
         }
-        return static_cast<pointer>(_VSTD::__allocate(__n * sizeof(_Tp)));
+        return static_cast<pointer>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), __alignof(_Tp)));
     }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type)
     {
         if (__p == (pointer)&buf_)
             __allocated_ = false;
         else
-            _VSTD::__libcpp_deallocate(__p);
+            _VSTD::__libcpp_deallocate(__p, __alignof(_Tp));
     }
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const throw() {return size_type(~0) / sizeof(_Tp);}
 

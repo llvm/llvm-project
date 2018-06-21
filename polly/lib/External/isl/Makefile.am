@@ -19,7 +19,6 @@ TESTS = isl_test codegen_test.sh pip_test.sh bound_test.sh isl_test_int \
 if IMATH_FOR_MP
 
 MP_SRC = \
-	isl_hide_deprecated.h \
 	isl_imath.c \
 	isl_imath.h \
 	isl_int_imath.h \
@@ -42,7 +41,6 @@ else
 MP_SRC += isl_val_imath.c
 endif
 
-DEPRECATED_SRC =
 MP_INCLUDE_H =
 endif
 
@@ -57,7 +55,6 @@ MP_SRC = \
 	isl_gmp.c \
 	isl_val_gmp.c
 
-DEPRECATED_SRC = isl_ast_int.c
 MP_INCLUDE_H = include/isl/val_gmp.h
 endif
 
@@ -66,7 +63,6 @@ AM_CFLAGS = @WARNING_FLAGS@
 
 libisl_la_SOURCES = \
 	$(MP_SRC) \
-	$(DEPRECATED_SRC) \
 	isl_aff.c \
 	isl_aff_private.h \
 	isl_affine_hull.c \
@@ -80,8 +76,6 @@ libisl_la_SOURCES = \
 	isl_ast_codegen.c \
 	isl_ast_graft.c \
 	isl_ast_graft_private.h \
-	isl_band.c \
-	isl_band_private.h \
 	isl_basis_reduction.h \
 	basis_reduction_tab.c \
 	isl_bernstein.c \
@@ -90,6 +84,7 @@ libisl_la_SOURCES = \
 	isl_blk.h \
 	isl_bound.c \
 	isl_bound.h \
+	isl_box.c \
 	isl_coalesce.c \
 	isl_constraint.c \
 	isl_constraint_private.h \
@@ -175,6 +170,7 @@ libisl_la_SOURCES = \
 	isl_stream_private.h \
 	isl_seq.c \
 	isl_seq.h \
+	isl_stride.c \
 	isl_tab.c \
 	isl_tab.h \
 	isl_tab_pip.c \
@@ -277,11 +273,12 @@ pkginclude_HEADERS = \
 	include/isl/ast.h \
 	include/isl/ast_type.h \
 	include/isl/ast_build.h \
-	include/isl/band.h \
 	include/isl/constraint.h \
 	include/isl/ctx.h \
+	include/isl/fixed_box.h \
 	include/isl/flow.h \
 	include/isl/id.h \
+	include/isl/id_type.h \
 	include/isl/id_to_ast_expr.h \
 	include/isl/id_to_id.h \
 	include/isl/id_to_pw_aff.h \
@@ -316,30 +313,18 @@ pkginclude_HEADERS = \
 	include/isl/set.h \
 	include/isl/set_type.h \
 	include/isl/space.h \
+	include/isl/space_type.h \
 	include/isl/stream.h \
+	include/isl/stride_info.h \
 	include/isl/union_map.h \
 	include/isl/union_map_type.h \
 	include/isl/union_set.h \
 	include/isl/union_set_type.h \
 	include/isl/val.h \
+	include/isl/val_type.h \
 	include/isl/vec.h \
 	include/isl/version.h \
 	include/isl/vertices.h
-deprecateddir = $(pkgincludedir)/deprecated
-deprecated_HEADERS = \
-	include/isl/deprecated/int.h \
-	include/isl/deprecated/aff_int.h \
-	include/isl/deprecated/ast_int.h \
-	include/isl/deprecated/constraint_int.h \
-	include/isl/deprecated/ilp_int.h \
-	include/isl/deprecated/map_int.h \
-	include/isl/deprecated/mat_int.h \
-	include/isl/deprecated/point_int.h \
-	include/isl/deprecated/polynomial_int.h \
-	include/isl/deprecated/set_int.h \
-	include/isl/deprecated/union_map_int.h \
-	include/isl/deprecated/val_int.h \
-	include/isl/deprecated/vec_int.h
 
 BUILT_SOURCES = gitversion.h
 
@@ -365,13 +350,21 @@ EXTRA_DIST = \
 	isl_map_lexopt_templ.c \
 	isl_maybe_map.h \
 	isl_multi_macro.h \
+	isl_multi_explicit_domain.c \
+	isl_multi_pw_aff_explicit_domain.c \
+	isl_multi_union_pw_aff_explicit_domain.c \
+	isl_multi_no_explicit_domain.c \
 	isl_multi_templ.c \
 	isl_multi_templ.h \
+	isl_multi_align_templ.c \
+	isl_multi_align_set.c \
+	isl_multi_align_union_set.c \
 	isl_multi_apply_templ.c \
 	isl_multi_apply_set.c \
 	isl_multi_apply_union_set.c \
 	isl_multi_cmp.c \
 	isl_multi_coalesce.c \
+	isl_multi_dims.c \
 	isl_multi_floor.c \
 	isl_multi_gist.c \
 	isl_multi_hash.c \
@@ -381,19 +374,24 @@ EXTRA_DIST = \
 	isl_power_templ.c \
 	isl_pw_macro.h \
 	isl_pw_templ.c \
+	isl_pw_templ.h \
+	isl_pw_eval.c \
 	isl_pw_hash.c \
 	isl_pw_union_opt.c \
 	read_in_string_templ.c \
 	set_to_map.c \
 	set_from_map.c \
+	set_list_from_map_list_inl.c \
 	isl_tab_lexopt_templ.c \
+	uset_to_umap.c \
+	uset_from_umap.c \
 	isl_union_macro.h \
 	isl_union_templ.c \
 	isl_union_single.c \
 	isl_union_multi.c \
 	isl_union_eval.c \
 	isl_union_neg.c \
-	isl.py \
+	libisl-gdb.py \
 	doc/CodingStyle \
 	doc/SubmittingPatches \
 	doc/implementation.tex \
@@ -409,8 +407,8 @@ EXTRA_DIST = \
 	imath/imrat.c \
 	imath/imrat.h \
 	interface/all.h \
-	interface/isl.h.top \
 	interface/isl.py.top \
+	interface/isl_test_python.py \
 	test_inputs
 
 dist-hook:
@@ -424,15 +422,17 @@ pkgconfig_DATA = $(pkgconfig_libfile)
 gitversion.h: @GIT_HEAD@
 	$(AM_V_GEN)echo '#define GIT_HEAD_ID "'@GIT_HEAD_VERSION@'"' > $@
 
-install-data-local: $(srcdir)/isl.py
+install-data-local: $(srcdir)/libisl-gdb.py
 	@libisl=`sed -ne "/^library_names=/{s/.*='//;s/'$$//;s/ .*//;p;}" \
 		 $(builddir)/libisl.la`; \
 	case $$libisl in \
 	'') echo Cannot find isl library name. GDB bindings not installed.;; \
-	*) echo $(INSTALL_DATA) $(srcdir)/isl.py \
+	*) echo $(INSTALL_DATA) $(srcdir)/libisl-gdb.py \
 		$(DESTDIR)$(libdir)/$$libisl-gdb.py; \
 	test -z "$(libdir)" || $(MKDIR_P) "$(DESTDIR)$(libdir)"; \
-	$(INSTALL_DATA) $(srcdir)/isl.py $(DESTDIR)$(libdir)/$$libisl-gdb.py; esac
+	$(INSTALL_DATA) $(srcdir)/libisl-gdb.py \
+	    $(DESTDIR)$(libdir)/$$libisl-gdb.py; \
+	esac
 
 uninstall-local:
 	@libisl=`sed -ne "/^library_names=/{s/.*='//;s/'$$//;s/ .*//;p;}" \

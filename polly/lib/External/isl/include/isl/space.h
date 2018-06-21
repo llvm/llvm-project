@@ -11,25 +11,13 @@
 #define ISL_SPACE_H
 
 #include <isl/ctx.h>
-#include <isl/id.h>
+#include <isl/space_type.h>
+#include <isl/id_type.h>
 #include <isl/printer.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-struct isl_space;
-typedef struct isl_space isl_space;
-
-enum isl_dim_type {
-	isl_dim_cst,
-	isl_dim_param,
-	isl_dim_in,
-	isl_dim_out,
-	isl_dim_set = isl_dim_out,
-	isl_dim_div,
-	isl_dim_all
-};
 
 isl_ctx *isl_space_get_ctx(__isl_keep isl_space *dim);
 __isl_give isl_space *isl_space_alloc(isl_ctx *ctx,
@@ -43,6 +31,9 @@ __isl_null isl_space *isl_space_free(__isl_take isl_space *space);
 isl_bool isl_space_is_params(__isl_keep isl_space *space);
 isl_bool isl_space_is_set(__isl_keep isl_space *space);
 isl_bool isl_space_is_map(__isl_keep isl_space *space);
+
+__isl_give isl_space *isl_space_add_param_id(__isl_take isl_space *space,
+	__isl_take isl_id *id);
 
 __isl_give isl_space *isl_space_set_tuple_name(__isl_take isl_space *dim,
 	enum isl_dim_type type, const char *s);
@@ -167,10 +158,10 @@ isl_bool isl_space_tuple_is_equal(__isl_keep isl_space *space1,
 ISL_DEPRECATED
 isl_bool isl_space_match(__isl_keep isl_space *space1, enum isl_dim_type type1,
 	__isl_keep isl_space *space2, enum isl_dim_type type2);
-ISL_DEPRECATED
-int isl_space_tuple_match(__isl_keep isl_space *space1, enum isl_dim_type type1,
-	__isl_keep isl_space *space2, enum isl_dim_type type2);
 unsigned isl_space_dim(__isl_keep isl_space *dim, enum isl_dim_type type);
+
+__isl_give isl_space *isl_space_flatten_domain(__isl_take isl_space *space);
+__isl_give isl_space *isl_space_flatten_range(__isl_take isl_space *space);
 
 __isl_give char *isl_space_to_str(__isl_keep isl_space *space);
 __isl_give isl_printer *isl_printer_print_space(__isl_take isl_printer *p,

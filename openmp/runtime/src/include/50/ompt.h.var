@@ -2,6 +2,15 @@
  * include/50/ompt.h.var
  */
 
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.txt for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __OMPT__
 #define __OMPT__
 
@@ -84,11 +93,11 @@
     /* implementation-specific states (512..) */
 
 
-#define FOREACH_OMPT_MUTEX_IMPL(macro)                                                \
-    macro (ompt_mutex_impl_unknown, 0)      /* unknown implementatin */               \
-    macro (ompt_mutex_impl_spin, 1)         /* based on spin */                       \
-    macro (ompt_mutex_impl_queuing, 2)      /* based on some fair policy */           \
-    macro (ompt_mutex_impl_speculative, 3)  /* based on HW-supported speculation */
+#define FOREACH_KMP_MUTEX_IMPL(macro)                                                \
+    macro (ompt_mutex_impl_unknown, 0)     /* unknown implementation */              \
+    macro (kmp_mutex_impl_spin, 1)         /* based on spin */                       \
+    macro (kmp_mutex_impl_queuing, 2)      /* based on some fair policy */           \
+    macro (kmp_mutex_impl_speculative, 3)  /* based on HW-supported speculation */
 
 #define FOREACH_OMPT_EVENT(macro)                                                                                        \
                                                                                                                          \
@@ -164,19 +173,19 @@ typedef union ompt_data_t {
 
 static const ompt_data_t ompt_data_none = {0};
 
-typedef uint64_t ompt_wait_id_t;
-static const ompt_wait_id_t ompt_wait_id_none = 0;
+typedef uint64_t omp_wait_id_t;
+static const omp_wait_id_t omp_wait_id_none = 0;
 
 typedef void ompt_device_t;
 
 /*---------------------
- * ompt_frame_t
+ * omp_frame_t
  *---------------------*/
 
-typedef struct ompt_frame_t {
+typedef struct omp_frame_t {
     void *exit_frame;    /* next frame is user code     */
     void *enter_frame;   /* previous frame is user code */
-} ompt_frame_t;
+} omp_frame_t;
 
 
 /*---------------------
@@ -237,11 +246,11 @@ typedef enum ompt_set_result_t {
 /*----------------------
  * mutex implementations
  *----------------------*/
-typedef enum ompt_mutex_impl_t {
-#define ompt_mutex_impl_macro(impl, code) impl = code,
-    FOREACH_OMPT_MUTEX_IMPL(ompt_mutex_impl_macro)
-#undef ompt_mutex_impl_macro
-} ompt_mutex_impl_t;
+typedef enum kmp_mutex_impl_t {
+#define kmp_mutex_impl_macro(impl, code) impl = code,
+    FOREACH_KMP_MUTEX_IMPL(kmp_mutex_impl_macro)
+#undef kmp_mutex_impl_macro
+} kmp_mutex_impl_t;
 
 
 /*****************************************************************************
@@ -278,7 +287,7 @@ typedef void (*ompt_callback_thread_end_t) (
 );
 
 typedef void (*ompt_wait_callback_t) (
-    ompt_wait_id_t wait_id                /* wait data                           */
+    omp_wait_id_t wait_id                /* wait data                           */
 );
 
 /* parallel and workshares */
@@ -299,7 +308,7 @@ typedef void (*ompt_callback_implicit_task_t) (
 
 typedef void (*ompt_callback_parallel_begin_t) (
     ompt_data_t *encountering_task_data,         /* data of encountering task           */
-    const ompt_frame_t *encountering_task_frame, /* frame data of encountering task     */
+    const omp_frame_t *encountering_task_frame,  /* frame data of encountering task     */
     ompt_data_t *parallel_data,                  /* data of parallel region             */
     unsigned int requested_team_size,            /* requested number of threads in team */
     ompt_invoker_t invoker,                      /* invoker of master task              */
@@ -341,7 +350,7 @@ typedef void (*ompt_callback_task_schedule_t) (
 
 typedef void (*ompt_callback_task_create_t) (
     ompt_data_t *encountering_task_data,         /* data of parent task                 */
-    const ompt_frame_t *encountering_task_frame, /* frame data for parent task          */
+    const omp_frame_t *encountering_task_frame,  /* frame data for parent task          */
     ompt_data_t *new_task_data,                  /* data of created task                */
     int type,                                    /* type of created task                */
     int has_dependences,                         /* created task has dependences        */
@@ -458,19 +467,19 @@ typedef void (*ompt_callback_mutex_acquire_t) (
     ompt_mutex_kind_t kind,               /* mutex kind                          */
     unsigned int hint,                    /* mutex hint                          */
     unsigned int impl,                    /* mutex implementation                */
-    ompt_wait_id_t wait_id,               /* id of object being awaited          */
+    omp_wait_id_t wait_id,               /* id of object being awaited          */
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
 typedef void (*ompt_callback_mutex_t) (
     ompt_mutex_kind_t kind,               /* mutex kind                          */
-    ompt_wait_id_t wait_id,               /* id of object being awaited          */
+    omp_wait_id_t wait_id,               /* id of object being awaited          */
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
 typedef void (*ompt_callback_nest_lock_t) (
     ompt_scope_endpoint_t endpoint,       /* endpoint of nested lock             */
-    ompt_wait_id_t wait_id,               /* id of object being awaited          */
+    omp_wait_id_t wait_id,               /* id of object being awaited          */
     const void *codeptr_ra                /* return address of runtime call      */
 );
 
@@ -560,7 +569,7 @@ extern "C" {
 
 /* state */
 OMPT_API_FUNCTION(omp_state_t, ompt_get_state, (
-    ompt_wait_id_t *wait_id
+    omp_wait_id_t *wait_id
 ));
 
 /* thread */
@@ -578,7 +587,7 @@ OMPT_API_FUNCTION(int, ompt_get_task_info, (
     int ancestor_level,
     int *type,
     ompt_data_t **task_data,
-    ompt_frame_t **task_frame,
+    omp_frame_t **task_frame,
     ompt_data_t **parallel_data,
     int *thread_num
 ));

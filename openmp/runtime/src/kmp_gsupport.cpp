@@ -32,7 +32,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_BARRIER)(void) {
   MKLOC(loc, "GOMP_barrier");
   KA_TRACE(20, ("GOMP_barrier: T#%d\n", gtid));
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_frame_t *ompt_frame;
+  omp_frame_t *ompt_frame;
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = OMPT_GET_FRAME_ADDRESS(1);
@@ -108,7 +108,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ATOMIC_START)(void) {
 
 void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_ATOMIC_END)(void) {
   int gtid = __kmp_get_gtid();
-  KA_TRACE(20, ("GOMP_atomic_start: T#%d\n", gtid));
+  KA_TRACE(20, ("GOMP_atomic_end: T#%d\n", gtid));
   __kmp_release_atomic_lock(&__kmp_atomic_lock, gtid);
 }
 
@@ -178,7 +178,7 @@ void *KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SINGLE_COPY_START)(void) {
 // and for all other threads to reach this point.
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_frame_t *ompt_frame;
+  omp_frame_t *ompt_frame;
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = OMPT_GET_FRAME_ADDRESS(1);
@@ -214,7 +214,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SINGLE_COPY_END)(void *data) {
   // propagated to all threads before trying to reuse the t_copypriv_data field.
   __kmp_team_from_gtid(gtid)->t.t_copypriv_data = data;
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_frame_t *ompt_frame;
+  omp_frame_t *ompt_frame;
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = OMPT_GET_FRAME_ADDRESS(1);
@@ -284,7 +284,7 @@ static
                                  void *data) {
 #if OMPT_SUPPORT
   kmp_info_t *thr;
-  ompt_frame_t *ompt_frame;
+  omp_frame_t *ompt_frame;
   omp_state_t enclosing_state;
 
   if (ompt_enabled.enabled) {
@@ -324,14 +324,14 @@ static
                                           enum sched_type schedule, long start,
                                           long end, long incr,
                                           long chunk_size) {
-// Intialize the loop worksharing construct.
+  // Intialize the loop worksharing construct.
 
   KMP_DISPATCH_INIT(loc, *gtid, schedule, start, end, incr, chunk_size,
                     schedule != kmp_sch_static);
 
 #if OMPT_SUPPORT
   kmp_info_t *thr;
-  ompt_frame_t *ompt_frame;
+  omp_frame_t *ompt_frame;
   omp_state_t enclosing_state;
 
   if (ompt_enabled.enabled) {
@@ -401,6 +401,7 @@ static
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, &(team_info->parallel_data),
           &(task_info->task_data), ompt_team_size, __kmp_tid_from_gtid(gtid));
+      task_info->thread_num = __kmp_tid_from_gtid(gtid);
     }
     thr->th.ompt_thread_info.state = omp_state_work_parallel;
   }
@@ -421,7 +422,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_START)(void (*task)(void *),
   int gtid = __kmp_entry_gtid();
 
 #if OMPT_SUPPORT
-  ompt_frame_t *parent_frame, *frame;
+  omp_frame_t *parent_frame, *frame;
 
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &parent_frame, NULL, NULL);
@@ -638,7 +639,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_END)(void) {
   KA_TRACE(20, ("GOMP_loop_end: T#%d\n", gtid))
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_frame_t *ompt_frame;
+  omp_frame_t *ompt_frame;
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = OMPT_GET_FRAME_ADDRESS(1);
@@ -833,7 +834,7 @@ LOOP_NEXT_ULL(KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_ULL_ORDERED_RUNTIME_NEXT),
 #if OMPT_SUPPORT && OMPT_OPTIONAL
 
 #define OMPT_LOOP_PRE()                                                        \
-  ompt_frame_t *parent_frame;                                                  \
+  omp_frame_t *parent_frame;                                                   \
   if (ompt_enabled.enabled) {                                                  \
     __ompt_get_task_info_internal(0, NULL, NULL, &parent_frame, NULL, NULL);   \
     parent_frame->enter_frame = OMPT_GET_FRAME_ADDRESS(1);                     \
@@ -1061,7 +1062,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_SECTIONS_START)(
   int gtid = __kmp_entry_gtid();
 
 #if OMPT_SUPPORT
-  ompt_frame_t *parent_frame;
+  omp_frame_t *parent_frame;
 
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &parent_frame, NULL, NULL);
@@ -1101,7 +1102,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SECTIONS_END)(void) {
   KA_TRACE(20, ("GOMP_sections_end: T#%d\n", gtid))
 
 #if OMPT_SUPPORT
-  ompt_frame_t *ompt_frame;
+  omp_frame_t *ompt_frame;
   if (ompt_enabled.enabled) {
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = OMPT_GET_FRAME_ADDRESS(1);
@@ -1413,6 +1414,137 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TEAMS)(unsigned int num_teams,
 }
 #endif // OMP_40_ENABLED
 
+#if OMP_45_ENABLED
+
+// Task duplication function which copies src to dest (both are
+// preallocated task structures)
+static void __kmp_gomp_task_dup(kmp_task_t *dest, kmp_task_t *src,
+                                kmp_int32 last_private) {
+  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(src);
+  if (taskdata->td_copy_func) {
+    (taskdata->td_copy_func)(dest->shareds, src->shareds);
+  }
+}
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+template <typename T>
+void __GOMP_taskloop(void (*func)(void *), void *data,
+                     void (*copy_func)(void *, void *), long arg_size,
+                     long arg_align, unsigned gomp_flags,
+                     unsigned long num_tasks, int priority, T start, T end,
+                     T step) {
+  typedef void (*p_task_dup_t)(kmp_task_t *, kmp_task_t *, kmp_int32);
+  MKLOC(loc, "GOMP_taskloop");
+  int sched;
+  T *loop_bounds;
+  int gtid = __kmp_entry_gtid();
+  kmp_int32 flags = 0;
+  int if_val = gomp_flags & (1u << 10);
+  int nogroup = gomp_flags & (1u << 11);
+  int up = gomp_flags & (1u << 8);
+  p_task_dup_t task_dup = NULL;
+  kmp_tasking_flags_t *input_flags = (kmp_tasking_flags_t *)&flags;
+#ifdef KMP_DEBUG
+  {
+    char *buff;
+    buff = __kmp_str_format(
+        "GOMP_taskloop: T#%%d: func:%%p data:%%p copy_func:%%p "
+        "arg_size:%%ld arg_align:%%ld gomp_flags:0x%%x num_tasks:%%lu "
+        "priority:%%d start:%%%s end:%%%s step:%%%s\n",
+        traits_t<T>::spec, traits_t<T>::spec, traits_t<T>::spec);
+    KA_TRACE(20, (buff, gtid, func, data, copy_func, arg_size, arg_align,
+                  gomp_flags, num_tasks, priority, start, end, step));
+    __kmp_str_free(&buff);
+  }
+#endif
+  KMP_ASSERT((size_t)arg_size >= 2 * sizeof(T));
+  KMP_ASSERT(arg_align > 0);
+  // The low-order bit is the "untied" flag
+  if (!(gomp_flags & 1)) {
+    input_flags->tiedness = 1;
+  }
+  // The second low-order bit is the "final" flag
+  if (gomp_flags & 2) {
+    input_flags->final = 1;
+  }
+  // Negative step flag
+  if (!up) {
+    // If step is flagged as negative, but isn't properly sign extended
+    // Then manually sign extend it.  Could be a short, int, char embedded
+    // in a long.  So cannot assume any cast.
+    if (step > 0) {
+      for (int i = sizeof(T) * CHAR_BIT - 1; i >= 0L; --i) {
+        // break at the first 1 bit
+        if (step & ((T)1 << i))
+          break;
+        step |= ((T)1 << i);
+      }
+    }
+  }
+  input_flags->native = 1;
+  // Figure out if none/grainsize/num_tasks clause specified
+  if (num_tasks > 0) {
+    if (gomp_flags & (1u << 9))
+      sched = 1; // grainsize specified
+    else
+      sched = 2; // num_tasks specified
+    // neither grainsize nor num_tasks specified
+  } else {
+    sched = 0;
+  }
+
+  // __kmp_task_alloc() sets up all other flags
+  kmp_task_t *task =
+      __kmp_task_alloc(&loc, gtid, input_flags, sizeof(kmp_task_t),
+                       arg_size + arg_align - 1, (kmp_routine_entry_t)func);
+  kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
+  taskdata->td_copy_func = copy_func;
+  taskdata->td_size_loop_bounds = sizeof(T);
+
+  // re-align shareds if needed and setup firstprivate copy constructors
+  // through the task_dup mechanism
+  task->shareds = (void *)((((size_t)task->shareds) + arg_align - 1) /
+                           arg_align * arg_align);
+  if (copy_func) {
+    task_dup = __kmp_gomp_task_dup;
+  }
+  KMP_MEMCPY(task->shareds, data, arg_size);
+
+  loop_bounds = (T *)task->shareds;
+  loop_bounds[0] = start;
+  loop_bounds[1] = end + (up ? -1 : 1);
+  __kmpc_taskloop(&loc, gtid, task, if_val, (kmp_uint64 *)&(loop_bounds[0]),
+                  (kmp_uint64 *)&(loop_bounds[1]), (kmp_int64)step, nogroup,
+                  sched, (kmp_uint64)num_tasks, (void *)task_dup);
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKLOOP)(
+    void (*func)(void *), void *data, void (*copy_func)(void *, void *),
+    long arg_size, long arg_align, unsigned gomp_flags, unsigned long num_tasks,
+    int priority, long start, long end, long step) {
+  __GOMP_taskloop<long>(func, data, copy_func, arg_size, arg_align, gomp_flags,
+                        num_tasks, priority, start, end, step);
+}
+
+void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKLOOP_ULL)(
+    void (*func)(void *), void *data, void (*copy_func)(void *, void *),
+    long arg_size, long arg_align, unsigned gomp_flags, unsigned long num_tasks,
+    int priority, unsigned long long start, unsigned long long end,
+    unsigned long long step) {
+  __GOMP_taskloop<unsigned long long>(func, data, copy_func, arg_size,
+                                      arg_align, gomp_flags, num_tasks,
+                                      priority, start, end, step);
+}
+
+#endif
+
 /* The following sections of code create aliases for the GOMP_* functions, then
    create versioned symbols using the assembler directive .symver. This is only
    pertinent for ELF .so library. The KMP_VERSION_SYMBOL macro is defined in
@@ -1519,6 +1651,11 @@ KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TARGET_DATA, 40, "GOMP_4.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TARGET_END_DATA, 40, "GOMP_4.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TARGET_UPDATE, 40, "GOMP_4.0");
 KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TEAMS, 40, "GOMP_4.0");
+#endif
+
+#if OMP_45_ENABLED
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TASKLOOP, 45, "GOMP_4.5");
+KMP_VERSION_SYMBOL(KMP_API_NAME_GOMP_TASKLOOP_ULL, 45, "GOMP_4.5");
 #endif
 
 #endif // KMP_USE_VERSION_SYMBOLS

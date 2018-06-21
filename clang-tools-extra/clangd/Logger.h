@@ -10,15 +10,15 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_LOGGER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_LOGGER_H
 
-#include "Context.h"
 #include "llvm/ADT/Twine.h"
 
 namespace clang {
 namespace clangd {
 
-/// Main logging function. Logs messages to a global logger, which can be set up
-/// by LoggingSesssion.
-void log(const Context &Ctx, const llvm::Twine &Message);
+/// Main logging function.
+/// Logs messages to a global logger, which can be set up by LoggingSesssion.
+/// If no logger is registered, writes to llvm::errs().
+void log(const llvm::Twine &Message);
 
 /// Interface to allow custom logging in clangd.
 class Logger {
@@ -26,7 +26,7 @@ public:
   virtual ~Logger() = default;
 
   /// Implementations of this method must be thread-safe.
-  virtual void log(const Context &Ctx, const llvm::Twine &Message) = 0;
+  virtual void log(const llvm::Twine &Message) = 0;
 };
 
 /// Only one LoggingSession can be active at a time.

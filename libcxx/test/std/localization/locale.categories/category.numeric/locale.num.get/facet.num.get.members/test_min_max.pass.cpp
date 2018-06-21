@@ -15,9 +15,17 @@
 
 using namespace std;
 
+template <class T>
+bool check_stream_failed(std::string const& val) {
+    istringstream ss(val);
+    T result;
+    return !(ss >> result);
+}
+
 template<typename T>
 void check_limits()
 {
+    const bool is_unsigned = std::is_unsigned<T>::value;
     T minv = numeric_limits<T>::min();
     T maxv = numeric_limits<T>::max();
 
@@ -36,17 +44,12 @@ void check_limits()
     assert(new_minv == minv);
     assert(new_maxv == maxv);
 
-    if(mins == "0")
-        mins = "-1";
-    else
-        mins[mins.size() - 1]++;
-
     maxs[maxs.size() - 1]++;
-
-    istringstream maxoss2(maxs), minoss2(mins);
-
-    assert(! (maxoss2 >> new_maxv));
-    assert(! (minoss2 >> new_minv));
+    assert(check_stream_failed<T>(maxs));
+    if (!is_unsigned) {
+        mins[mins.size() - 1]++;
+        assert(check_stream_failed<T>(mins));
+    }
 }
 
 int main(void)

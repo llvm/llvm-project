@@ -2,6 +2,7 @@
 #define ISL_ID_H
 
 #include <isl/ctx.h>
+#include <isl/id_type.h>
 #include <isl/list.h>
 #include <isl/printer_type.h>
 #include <isl/stdint.h>
@@ -10,10 +11,7 @@
 extern "C" {
 #endif
 
-struct isl_id;
-typedef struct isl_id isl_id;
-
-ISL_DECLARE_LIST(id)
+ISL_DECLARE_LIST_FN(id)
 
 isl_ctx *isl_id_get_ctx(__isl_keep isl_id *id);
 uint32_t isl_id_get_hash(__isl_keep isl_id *id);

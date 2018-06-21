@@ -25,10 +25,8 @@ void isl_constraint_get_constant(__isl_keep isl_constraint *constraint,
 	isl_int *v);
 void isl_constraint_get_coefficient(__isl_keep isl_constraint *constraint,
 	enum isl_dim_type type, int pos, isl_int *v);
-__isl_give isl_constraint *isl_constraint_set_constant(
-	__isl_take isl_constraint *constraint, isl_int v);
-__isl_give isl_constraint *isl_constraint_set_coefficient(
-	__isl_take isl_constraint *constraint,
-	enum isl_dim_type type, int pos, isl_int v);
+
+isl_bool isl_constraint_is_div_equality(__isl_keep isl_constraint *constraint,
+	unsigned div);
 
 #endif

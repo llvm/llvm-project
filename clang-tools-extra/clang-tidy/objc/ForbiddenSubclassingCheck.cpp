@@ -77,6 +77,10 @@ ForbiddenSubclassingCheck::ForbiddenSubclassingCheck(
 }
 
 void ForbiddenSubclassingCheck::registerMatchers(MatchFinder *Finder) {
+  // this check should only be applied to ObjC sources.
+  if (!getLangOpts().ObjC1 && !getLangOpts().ObjC2) {
+    return;
+  }
   Finder->addMatcher(
       objcInterfaceDecl(
           isSubclassOf(

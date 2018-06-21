@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basicaa -polly-scops -analyze -polly-allow-modref-calls \
+; RUN: opt %loadPolly -basicaa -polly-stmt-granularity=bb -polly-scops -analyze -polly-allow-modref-calls \
 ; RUN: < %s | FileCheck %s
 ; RUN: opt %loadPolly -basicaa -polly-codegen -disable-output \
 ; RUN: -polly-allow-modref-calls < %s
@@ -36,29 +36,26 @@ entry:
   %dummyloc = alloca i8*
   br label %entry.split
 
-entry.split:
-  br label %for.cond
+entry.split:					  ; preds = %entry
+  br label %for.body
 
-for.cond:                                         ; preds = %for.inc, %entry.split
-  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry.split ]
-  %exitcond = icmp ne i64 %indvars.iv, 1024
-  br i1 %exitcond, label %for.body, label %for.end
-
-for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
+for.body:                                         ; preds = %entry.split, %for.inc
+  %i = phi i64 [ 0, %entry.split ], [ %i.next, %for.inc ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %i
+  %arrayidx1 = getelementptr inbounds i32, i32* %B, i64 %i
   %bc = bitcast i32* %arrayidx to i8*
   %dummy = call i8* @f(i8* %bc, i8** null)
   store i8* %dummy, i8** %dummyloc, align 4
-  %tmp = load i32, i32* %arrayidx2
+  %tmp = load i32, i32* %arrayidx1
   store i32 %tmp, i32* %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br label %for.cond
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond = icmp ne i64 %i.next, 1024
+  br i1 %exitcond, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.inc
   ret void
 }
 

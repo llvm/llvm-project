@@ -153,14 +153,9 @@ public:
     if (IsCall != Other.IsCall)
       return false;
 
-    if (!IsCall)
-      return Loc == Other.Loc;
-
-    if (CS.getCalledValue() != Other.CS.getCalledValue())
-      return false;
-
-    assert(CS.arg_size() == Other.CS.arg_size());
-    return std::equal(CS.arg_begin(), CS.arg_end(), Other.CS.arg_begin());
+    if (IsCall)
+      return CS.getCalledValue() == Other.CS.getCalledValue();
+    return Loc == Other.Loc;
   }
 
 private:
@@ -184,18 +179,12 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
   }
 
   static unsigned getHashValue(const MemoryLocOrCall &MLOC) {
-    if (!MLOC.IsCall)
-      return hash_combine(
-          MLOC.IsCall,
-          DenseMapInfo<MemoryLocation>::getHashValue(MLOC.getLoc()));
-
-    hash_code hash =
-        hash_combine(MLOC.IsCall, DenseMapInfo<const Value *>::getHashValue(
-                                      MLOC.getCS().getCalledValue()));
-
-    for (const Value *Arg : MLOC.getCS().args())
-      hash = hash_combine(hash, DenseMapInfo<const Value *>::getHashValue(Arg));
-    return hash;
+    if (MLOC.IsCall)
+      return hash_combine(MLOC.IsCall,
+                          DenseMapInfo<const Value *>::getHashValue(
+                              MLOC.getCS().getCalledValue()));
+    return hash_combine(
+        MLOC.IsCall, DenseMapInfo<MemoryLocation>::getHashValue(MLOC.getLoc()));
   }
 
   static bool isEqual(const MemoryLocOrCall &LHS, const MemoryLocOrCall &RHS) {

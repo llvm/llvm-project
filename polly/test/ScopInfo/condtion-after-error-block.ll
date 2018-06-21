@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | FileCheck %s
 
 ; Verify that we allow scops containing uniform branch conditions, where all
 ; but one incoming block comes from an error condition.

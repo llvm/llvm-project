@@ -37,7 +37,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   DynamicTypeChecker.cpp
   ExprInspectionChecker.cpp
   FixedAddressChecker.cpp
-  GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
   GTestChecker.cpp
   IdenticalExprChecker.cpp
@@ -63,7 +62,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   NullabilityChecker.cpp
   NumberObjectConversionChecker.cpp
   ObjCAtSyncChecker.cpp
-  ObjCAutoreleaseWriteChecker.cpp
   ObjCContainersASTChecker.cpp
   ObjCContainersChecker.cpp
   ObjCMissingSuperCallChecker.cpp
@@ -85,7 +83,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   TaintTesterChecker.cpp
   TestAfterDivZeroChecker.cpp
   TraversalChecker.cpp
-  TrustNonnullChecker.cpp
   UndefBranchChecker.cpp
   UndefCapturedBlockVarChecker.cpp
   UndefResultChecker.cpp

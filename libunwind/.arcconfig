@@ -1,4 +1,4 @@
 {
-  "project_id" : "libunwind",
+  "repository.callsign" : "UNW",
   "conduit_uri" : "https://reviews.llvm.org/"
 }

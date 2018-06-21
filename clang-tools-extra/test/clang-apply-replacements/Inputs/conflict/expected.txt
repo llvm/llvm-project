@@ -1,11 +1,12 @@
-There are conflicting changes to $(path)/common.h:
-The following changes conflict:
-  Replace 8:8-8:33 with "auto & i : ints"
-  Replace 8:8-8:33 with "int & elem : ints"
-The following changes conflict:
-  Replace 9:5-9:11 with "elem"
-  Replace 9:5-9:11 with "i"
-The following changes conflict:
-  Remove 12:3-12:14
-  Insert at 12:12 (int*)
-  Replace 12:12-12:12 with "nullptr"
+The new replacement overlaps with an existing replacement.
+New replacement: $(path)/common.h: 106:+26:"int & elem : ints"
+Existing replacement: $(path)/common.h: 106:+26:"auto & i : ints"
+The new replacement overlaps with an existing replacement.
+New replacement: $(path)/common.h: 140:+7:"i"
+Existing replacement: $(path)/common.h: 140:+7:"elem"
+The new replacement overlaps with an existing replacement.
+New replacement: $(path)/common.h: 169:+0:"(int*)"
+Existing replacement: $(path)/common.h: 160:+12:""
+The new replacement overlaps with an existing replacement.
+New replacement: $(path)/common.h: 169:+1:"nullptr"
+Existing replacement: $(path)/common.h: 160:+12:""

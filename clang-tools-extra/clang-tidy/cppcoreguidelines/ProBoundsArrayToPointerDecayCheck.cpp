@@ -17,6 +17,7 @@ namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
 
+namespace {
 AST_MATCHER_P(CXXForRangeStmt, hasRangeBeginEndStmt,
               ast_matchers::internal::Matcher<DeclStmt>, InnerMatcher) {
   for (const DeclStmt *Stmt : {Node.getBeginStmt(), Node.getEndStmt()})
@@ -46,6 +47,7 @@ AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
 
   return InnerMatcher.matches(*E, Finder, Builder);
 }
+} // namespace
 
 void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)

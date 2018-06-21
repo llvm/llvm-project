@@ -243,6 +243,10 @@ module std [system] {
     header "codecvt"
     export *
   }
+  module compare {
+    header "compare"
+    export *
+  }
   module complex {
     header "complex"
     export *
@@ -470,6 +474,10 @@ module std [system] {
     export initializer_list
     export *
   }
+  module version {
+    header "version"
+    export *
+  }
 
   // FIXME: These should be private.
   module __bit_reference { header "__bit_reference" export * }
@@ -491,14 +499,6 @@ module std [system] {
 
     module algorithm {
       header "experimental/algorithm"
-      export *
-    }
-    module any {
-      header "experimental/any"
-      export *
-    }
-    module chrono {
-      header "experimental/chrono"
       export *
     }
      module coroutine {
@@ -542,24 +542,16 @@ module std [system] {
       header "experimental/memory_resource"
       export *
     }
-    module numeric {
-      header "experimental/numeric"
-      export *
-    }
-    module optional {
-      header "experimental/optional"
-      export *
-    }
     module propagate_const {
       header "experimental/propagate_const"
       export *
     }
-    module ratio {
-      header "experimental/ratio"
-      export *
-    }
     module regex {
       header "experimental/regex"
+      export *
+    }
+    module simd {
+      header "experimental/simd"
       export *
     }
     module set {
@@ -568,18 +560,6 @@ module std [system] {
     }
     module string {
       header "experimental/string"
-      export *
-    }
-    module string_view {
-      header "experimental/string_view"
-      export *
-    }
-    module system_error {
-      header "experimental/system_error"
-      export *
-    }
-    module tuple {
-      header "experimental/tuple"
       export *
     }
     module type_traits {

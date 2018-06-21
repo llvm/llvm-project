@@ -1,7 +1,7 @@
 #ifndef ISL_ID_TO_PW_AFF_H
 #define ISL_ID_TO_PW_AFF_H
 
-#include <isl/id.h>
+#include <isl/id_type.h>
 #include <isl/aff_type.h>
 #include <isl/maybe_pw_aff.h>
 

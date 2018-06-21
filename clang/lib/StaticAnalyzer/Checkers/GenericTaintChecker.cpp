@@ -646,8 +646,7 @@ bool GenericTaintChecker::isStdin(const Expr *E, CheckerContext &C) {
     if ((D->getName().find("stdin") != StringRef::npos) && D->isExternC())
         if (const PointerType * PtrTy =
               dyn_cast<PointerType>(D->getType().getTypePtr()))
-          if (PtrTy->getPointeeType().getCanonicalType() ==
-              C.getASTContext().getFILEType().getCanonicalType())
+          if (PtrTy->getPointeeType() == C.getASTContext().getFILEType())
             return true;
   }
   return false;

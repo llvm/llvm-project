@@ -99,7 +99,10 @@ public:
   /// @return The VirtualUse representing the same use as @p U.
   static VirtualUse create(Scop *S, const Use &U, LoopInfo *LI, bool Virtual);
 
-  /// Get a VirtualUse for any kind of use of a value within a statement.
+  /// Get a VirtualUse for uses within statements.
+  ///
+  /// It is assumed that the user is not a PHINode. Such uses are always
+  /// VirtualUse::Inter unless in a regions statement.
   ///
   /// @param S         The Scop object.
   /// @param UserStmt  The statement in which @p Val is used. Can be nullptr, in
@@ -304,7 +307,6 @@ void markReachable(Scop *S, LoopInfo *LI,
                    DenseSet<VirtualInstruction> &UsedInsts,
                    DenseSet<MemoryAccess *> &UsedAccs,
                    ScopStmt *OnlyLocal = nullptr);
-
 } // namespace polly
 
 namespace llvm {

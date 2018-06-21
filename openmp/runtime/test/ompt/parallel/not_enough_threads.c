@@ -1,11 +1,13 @@
 // RUN: %libomp-compile && env OMP_THREAD_LIMIT=2 %libomp-run | FileCheck %s
-// RUN: %libomp-compile && env OMP_THREAD_LIMIT=2 %libomp-run | %sort-threads | FileCheck --check-prefix=THREADS %s
+// RUN: %libomp-compile && env OMP_THREAD_LIMIT=2 %libomp-run | %sort-threads \
+// RUN:     | FileCheck --check-prefix=THREADS %s
+
 // REQUIRES: ompt
+
 #include "callback.h"
 
-int main()
-{
-  #pragma omp parallel num_threads(4)
+int main() {
+#pragma omp parallel num_threads(4)
   {
     print_ids(0);
     print_ids(1);
@@ -13,64 +15,76 @@ int main()
   print_fuzzy_address(1);
 
   // Check if libomp supports the callbacks for this test.
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_thread_begin'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_thread_end'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_begin'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_end'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_implicit_task'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_mutex_acquire'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_mutex_acquired'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_mutex_released'
+  // CHECK-NOT: {{^}}0: Could not register callback
 
-
-  // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
-
-  // make sure initial data pointers are null
+  // Make sure initial data pointers are null.
   // CHECK-NOT: 0: parallel_data initially not null
   // CHECK-NOT: 0: task_data initially not null
   // CHECK-NOT: 0: thread_data initially not null
 
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin: parent_task_id=[[PARENT_TASK_ID:[0-9]+]], parent_task_frame.exit=[[NULL]], parent_task_frame.reenter={{0x[0-f]+}}, parallel_id=[[PARALLEL_ID:[0-9]+]], requested_team_size=4, codeptr_ra=0x{{[0-f]+}}, invoker=[[PARALLEL_INVOKER:[0-9]+]]
+  // Only check callback names, arguments are verified in THREADS below.
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin
 
-  // CHECK-DAG: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
-  // CHECK-DAG: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
+  // CHECK-DAG: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin
+  // CHECK-DAG: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end
 
-  // Note that we cannot ensure that the worker threads have already called barrier_end and implicit_task_end before parallel_end!
+  // Note that we cannot ensure that the worker threads have already called
+  // barrier_end and implicit_task_end before parallel_end!
 
-  // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
+  // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin
+  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
 
-  // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-
-  // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
-  // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_end: parallel_id=[[PARALLEL_ID]], task_id=[[PARENT_TASK_ID]], invoker=[[PARALLEL_INVOKER]]
-
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_end
 
   // THREADS: 0: NULL_POINTER=[[NULL:.*$]]
-  // THREADS: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_thread_begin: thread_type=ompt_thread_initial=1, thread_id=[[MASTER_ID]]
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin: parent_task_id=[[PARENT_TASK_ID:[0-9]+]], parent_task_frame.exit=[[NULL]], parent_task_frame.reenter={{0x[0-f]+}}, parallel_id=[[PARALLEL_ID:[0-9]+]], requested_team_size=4, codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}, invoker={{[0-9]+}}
+  // THREADS: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_thread_begin
+  // THREADS-SAME: thread_type=ompt_thread_initial=1, thread_id=[[MASTER_ID]]
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
+  // THREADS-SAME: parent_task_id=[[PARENT_TASK_ID:[0-9]+]]
+  // THREADS-SAME: parent_task_frame.exit=[[NULL]]
+  // THREADS-SAME: parent_task_frame.reenter={{0x[0-f]+}}
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]], requested_team_size=4
+  // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}
 
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
-  // THREADS: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[MASTER_ID]]: task level 1: parallel_id=[[IMPLICIT_PARALLEL_ID:[0-9]+]], task_id=[[PARENT_TASK_ID]]
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]]
+  // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
+  // THREADS: {{^}}[[MASTER_ID]]: task level 0
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
+  // THREADS: {{^}}[[MASTER_ID]]: task level 1
+  // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID:[0-9]+]]
+  // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
+
   // THREADS-NOT: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_end: parallel_id=[[PARALLEL_ID]], task_id=[[PARENT_TASK_ID]]
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_begin
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
+  // parallel_id is 0 because the region ended in the barrier!
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end
+  // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end
+  // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
+  // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_end
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[PARENT_TASK_ID]]
   // THREADS: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
 
-  // THREADS: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_thread_begin: thread_type=ompt_thread_worker=2, thread_id=[[THREAD_ID]]
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
-  // THREADS: {{^}}[[THREAD_ID]]: task level 0: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[THREAD_ID]]: task level 1: parallel_id=[[IMPLICIT_PARALLEL_ID]], task_id=[[PARENT_TASK_ID]]
+  // THREADS: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_thread_begin
+  // THREADS-SAME: thread_type=ompt_thread_worker=2, thread_id=[[THREAD_ID]]
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_begin
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]]
+  // THREADS-SAME: task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
+  // THREADS: {{^}}[[THREAD_ID]]: task level 0
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
+  // THREADS: {{^}}[[THREAD_ID]]: task level 1
+  // THREADS-SAME: parallel_id=[[IMPLICIT_PARALLEL_ID]]
+  // THREADS-SAME: task_id=[[PARENT_TASK_ID]]
   // THREADS-NOT: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
-  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end: parallel_id={{[0-9]+}}, task_id=[[IMPLICIT_TASK_ID]]
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_begin
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
+  // parallel_id is 0 because the region ended in the barrier!
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_barrier_end
+  // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
+  // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
+  // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
 
   return 0;
 }

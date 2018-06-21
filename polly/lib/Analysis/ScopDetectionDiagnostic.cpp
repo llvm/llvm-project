@@ -46,7 +46,11 @@ using namespace llvm;
 #define DEBUG_TYPE "polly-detect"
 
 #define SCOP_STAT(NAME, DESC)                                                  \
-  { "polly-detect", "NAME", "Number of rejected regions: " DESC, {0}, false }
+  {                                                                            \
+    "polly-detect", "NAME", "Number of rejected regions: " DESC, {0}, {        \
+      false                                                                    \
+    }                                                                          \
+  }
 
 Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),
@@ -67,6 +71,7 @@ Statistic RejectStatistics[] = {
     SCOP_STAT(LastAffFunc, ""),
     SCOP_STAT(LoopBound, "Uncomputable loop bounds"),
     SCOP_STAT(LoopHasNoExit, "Loop without exit"),
+    SCOP_STAT(LoopHasMultipleExits, "Loop with multiple exits"),
     SCOP_STAT(LoopOnlySomeLatches, "Not all loop latches in scop"),
     SCOP_STAT(FuncCall, "Function call with side effects"),
     SCOP_STAT(NonSimpleMemoryAccess,
@@ -92,7 +97,6 @@ template <typename T> std::string operator+(Twine LHS, const T &RHS) {
 
   return LHS.concat(Buf).str();
 }
-
 } // namespace polly
 
 namespace llvm {
@@ -102,7 +106,6 @@ static bool operator<(const DebugLoc &LHS, const DebugLoc &RHS) {
   return LHS.getLine() < RHS.getLine() ||
          (LHS.getLine() == RHS.getLine() && LHS.getCol() < RHS.getCol());
 }
-
 } // namespace llvm
 
 namespace polly {
@@ -494,6 +497,31 @@ std::string ReportLoopHasNoExit::getEndUserMessage() const {
 }
 
 //===----------------------------------------------------------------------===//
+// ReportLoopHasMultipleExits.
+
+std::string ReportLoopHasMultipleExits::getRemarkName() const {
+  return "ReportLoopHasMultipleExits";
+}
+
+const Value *ReportLoopHasMultipleExits::getRemarkBB() const {
+  return L->getHeader();
+}
+
+std::string ReportLoopHasMultipleExits::getMessage() const {
+  return "Loop " + L->getHeader()->getName() + " has multiple exits.";
+}
+
+bool ReportLoopHasMultipleExits::classof(const RejectReason *RR) {
+  return RR->getKind() == RejectReasonKind::LoopHasMultipleExits;
+}
+
+const DebugLoc &ReportLoopHasMultipleExits::getDebugLoc() const { return Loc; }
+
+std::string ReportLoopHasMultipleExits::getEndUserMessage() const {
+  return "Loop cannot be handled because it has multiple exits.";
+}
+
+//===----------------------------------------------------------------------===//
 // ReportLoopOnlySomeLatches
 
 std::string ReportLoopOnlySomeLatches::getRemarkName() const {
@@ -776,5 +804,4 @@ const DebugLoc &ReportUnprofitable::getDebugLoc() const {
 bool ReportUnprofitable::classof(const RejectReason *RR) {
   return RR->getKind() == RejectReasonKind::Unprofitable;
 }
-
 } // namespace polly

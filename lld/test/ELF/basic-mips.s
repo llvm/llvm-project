@@ -19,7 +19,7 @@ __start:
 # CHECK-NEXT:     DataEncoding: LittleEndian (0x1)
 # CHECK-NEXT:     FileVersion: 1
 # CHECK-NEXT:     OS/ABI: SystemV (0x0)
-# CHECK-NEXT:     ABIVersion: 0
+# CHECK-NEXT:     ABIVersion: 1
 # CHECK-NEXT:     Unused: (00 00 00 00 00 00 00)
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Type: Executable (0x2)

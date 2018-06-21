@@ -71,7 +71,7 @@ namespace pmr {
 #include <memory>
 #include <new>
 #include <stdexcept>
-#include <tuple>
+#include <__tuple>
 #include <type_traits>
 #include <utility>
 #include <cstddef>
@@ -96,7 +96,7 @@ size_t __aligned_allocation_size(size_t __s, size_t __a) _NOEXCEPT
 }
 
 // 8.5, memory.resource
-class _LIBCPP_TEMPLATE_VIS memory_resource
+class _LIBCPP_TYPE_VIS memory_resource
 {
     static const size_t __max_align = alignof(max_align_t);
 
@@ -206,7 +206,7 @@ public:
     void construct(_Tp* __p, _Ts &&... __args)
     {
         _VSTD_LFTS::__lfts_user_alloc_construct(
-            __p, resource(), _VSTD::forward<_Ts>(__args)...
+            __p, *this, _VSTD::forward<_Ts>(__args)...
           );
     }
 
@@ -218,14 +218,14 @@ public:
         ::new ((void*)__p) pair<_T1, _T2>(piecewise_construct
           , __transform_tuple(
               typename __lfts_uses_alloc_ctor<
-                  _T1, memory_resource*, _Args1...
+                  _T1, polymorphic_allocator&, _Args1...
               >::type()
             , _VSTD::move(__x)
             , typename __make_tuple_indices<sizeof...(_Args1)>::type{}
           )
           , __transform_tuple(
               typename __lfts_uses_alloc_ctor<
-                  _T2, memory_resource*, _Args2...
+                  _T2, polymorphic_allocator&, _Args2...
               >::type()
             , _VSTD::move(__y)
             , typename __make_tuple_indices<sizeof...(_Args2)>::type{}
@@ -289,23 +289,23 @@ private:
 
     template <class ..._Args, size_t ..._Idx>
     _LIBCPP_INLINE_VISIBILITY
-    tuple<allocator_arg_t const&, memory_resource*, _Args&&...>
+    tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>
     __transform_tuple(integral_constant<int, 1>, tuple<_Args...> && __t,
-                      __tuple_indices<_Idx...>) const
+                      __tuple_indices<_Idx...>)
     {
-        using _Tup = tuple<allocator_arg_t const&, memory_resource*, _Args&&...>;
-        return _Tup(allocator_arg, resource(),
+        using _Tup = tuple<allocator_arg_t const&, polymorphic_allocator&, _Args&&...>;
+        return _Tup(allocator_arg, *this,
                     _VSTD::get<_Idx>(_VSTD::move(__t))...);
     }
 
     template <class ..._Args, size_t ..._Idx>
     _LIBCPP_INLINE_VISIBILITY
-    tuple<_Args&&..., memory_resource*>
+    tuple<_Args&&..., polymorphic_allocator&>
     __transform_tuple(integral_constant<int, 2>, tuple<_Args...> && __t,
-                      __tuple_indices<_Idx...>) const
+                      __tuple_indices<_Idx...>)
     {
-        using _Tup = tuple<_Args&&..., memory_resource*>;
-        return _Tup(_VSTD::get<_Idx>(_VSTD::move(__t))..., resource());
+        using _Tup = tuple<_Args&&..., polymorphic_allocator&>;
+        return _Tup(_VSTD::get<_Idx>(_VSTD::move(__t))..., *this);
     }
 
     _LIBCPP_INLINE_VISIBILITY

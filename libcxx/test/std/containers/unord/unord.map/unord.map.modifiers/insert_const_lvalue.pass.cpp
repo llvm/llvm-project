@@ -37,28 +37,29 @@ void do_insert_cv_test()
     assert(r.first->first == 2.5);
     assert(r.first->second == 2);
 
-    r = m.insert(VT(2.5, 3)); // test rvalue insertion works in C++03
+    const VT v2(2.5, 3);
+    r = m.insert(v2);
     assert(!r.second);
     assert(m.size() == 1);
     assert(r.first->first == 2.5);
     assert(r.first->second == 2);
 
-    const VT v2(1.5, 1);
-    r = m.insert(v2);
+    const VT v3(1.5, 1);
+    r = m.insert(v3);
     assert(r.second);
     assert(m.size() == 2);
     assert(r.first->first == 1.5);
     assert(r.first->second == 1);
 
-    const VT v3(3.5, 3);
-    r = m.insert(v3);
+    const VT v4(3.5, 3);
+    r = m.insert(v4);
     assert(r.second);
     assert(m.size() == 3);
     assert(r.first->first == 3.5);
     assert(r.first->second == 3);
 
-    const VT v4(3.5, 4);
-    r = m.insert(v4);
+    const VT v5(3.5, 4);
+    r = m.insert(v5);
     assert(!r.second);
     assert(m.size() == 3);
     assert(r.first->first == 3.5);

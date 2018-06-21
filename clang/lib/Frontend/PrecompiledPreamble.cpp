@@ -303,6 +303,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   VFS =
       createVFSFromCompilerInvocation(Clang->getInvocation(), Diagnostics, VFS);
+  if (!VFS)
+    return BuildPreambleError::CouldntCreateVFSOverlay;
 
   // Create a file manager object to provide access to and cache the filesystem.
   Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), VFS));
@@ -738,6 +740,8 @@ std::string BuildPreambleErrorCategory::message(int condition) const {
     return "Could not create temporary file for PCH";
   case BuildPreambleError::CouldntCreateTargetInfo:
     return "CreateTargetInfo() return null";
+  case BuildPreambleError::CouldntCreateVFSOverlay:
+    return "Could not create VFS Overlay";
   case BuildPreambleError::BeginSourceFileFailed:
     return "BeginSourceFile() return an error";
   case BuildPreambleError::CouldntEmitPCH:

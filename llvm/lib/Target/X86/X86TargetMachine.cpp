@@ -218,8 +218,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   // The check here for 64-bit windows is a bit icky, but as we're unlikely
   // to ever want to mix 32 and 64-bit windows code in a single module
   // this should be fine.
-  if ((TT.isOSWindows() && TT.getArch() == Triple::x86_64) || TT.isPS4() ||
-      TT.isOSBinFormatMachO())
+  if ((TT.isOSWindows() && TT.getArch() == Triple::x86_64) || TT.isPS4())
     this->Options.TrapUnreachable = true;
 
   initAsmInfo();

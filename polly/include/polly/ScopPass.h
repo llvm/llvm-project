@@ -261,14 +261,13 @@ public:
 
 private:
   ScopPassT Pass;
-}; // namespace polly
+};
 
 template <typename ScopPassT>
 FunctionToScopPassAdaptor<ScopPassT>
 createFunctionToScopPassAdaptor(ScopPassT Pass) {
   return FunctionToScopPassAdaptor<ScopPassT>(std::move(Pass));
 }
-
 } // namespace polly
 
 #endif

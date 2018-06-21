@@ -30,6 +30,28 @@ namespace polly {
 /// run time.
 struct RuntimeDebugBuilder {
 
+  /// Generate a constant string into the builder's llvm::Module which can be
+  /// passed to createGPUPrinter() or createGPUPrinter().
+  ///
+  /// @param Builder The builder used to emit the printer calls.
+  /// @param Str     The string to be printed.
+
+  /// @return        A global containing @p Str.
+  static llvm::Value *getPrintableString(PollyIRBuilder &Builder,
+                                         llvm::StringRef Str) {
+    // TODO: Get rid of magic number 4. It it NVPTX's constant address space and
+    // works on X86 (CPU) only because its backend ignores the address space.
+    return Builder.CreateGlobalStringPtr(Str, "", 4);
+  }
+
+  /// Return whether an llvm::Value of the type @p Ty is printable for
+  /// debugging.
+  ///
+  /// That is, whether such a value can be passed to createGPUPrinter() or
+  /// createGPUPrinter() to be dumped as runtime.  If false is returned, those
+  /// functions will fail.
+  static bool isPrintable(llvm::Type *Ty);
+
   /// Print a set of LLVM-IR Values or StringRefs via printf
   ///
   ///  This function emits a call to printf that will print the given arguments.
@@ -78,7 +100,7 @@ private:
   static void createPrinter(PollyIRBuilder &Builder, bool UseGPU,
                             std::vector<llvm::Value *> &Values,
                             llvm::StringRef String, Args... args) {
-    Values.push_back(Builder.CreateGlobalStringPtr(String, "", 4));
+    Values.push_back(getPrintableString(Builder, String));
     createPrinter(Builder, UseGPU, Values, args...);
   }
 
@@ -87,14 +109,8 @@ private:
   static void createPrinter(PollyIRBuilder &Builder, bool UseGPU,
                             std::vector<llvm::Value *> &Values,
                             llvm::ArrayRef<llvm::Value *> Array, Args... args) {
-    if (Array.size() >= 2)
-      createPrinter(Builder, Values, Array[0], " ",
-                    llvm::ArrayRef<llvm::Value *>(&Array[1], Array.size() - 1),
-                    args...);
-    else if (Array.size() == 1)
-      createPrinter(Builder, UseGPU, Values, Array[0], args...);
-    else
-      createPrinter(Builder, UseGPU, Values, args...);
+    Values.insert(Values.end(), Array.begin(), Array.end());
+    createPrinter(Builder, UseGPU, Values, args...);
   }
 
   /// Print a list of Values.

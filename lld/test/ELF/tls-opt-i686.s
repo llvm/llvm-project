@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t1
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=NORELOC %s

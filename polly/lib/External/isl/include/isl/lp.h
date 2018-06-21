@@ -11,7 +11,7 @@
 #define ISL_LP_H
 
 #include <isl/aff.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/set_type.h>
 
 enum isl_lp_result {

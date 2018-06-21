@@ -1,10 +1,6 @@
-# RUN: clangd -pretty -run-synchronously < %s | FileCheck -strict-whitespace %s
-# It is absolutely vital that this file has CRLF line endings.
-#
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
 # Test initialize request parameters with rootUri
-Content-Length: 143
-
-{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file:///path/to/workspace","capabilities":{},"trace":"off"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"test:///workspace","capabilities":{},"trace":"off"}}
 #      CHECK:  "id": 0,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
@@ -31,6 +27,7 @@ Content-Length: 143
 # CHECK-NEXT:          "clangd.applyFix"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "hoverProvider": true,
 # CHECK-NEXT:      "renameProvider": true,
 # CHECK-NEXT:      "signatureHelpProvider": {
 # CHECK-NEXT:        "triggerCharacters": [
@@ -38,15 +35,14 @@ Content-Length: 143
 # CHECK-NEXT:          ","
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "textDocumentSync": 1
+# CHECK-NEXT:      "textDocumentSync": 2,
+# CHECK-NEXT:      "workspaceSymbolProvider": true
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
-Content-Length: 44
-
+---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 #      CHECK:  "id": 3,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": null
-Content-Length: 33
-
+---
 {"jsonrpc":"2.0":"method":"exit"}

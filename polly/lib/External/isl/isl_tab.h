@@ -308,23 +308,24 @@ int isl_tab_min_at_most_neg_one(struct isl_tab *tab, struct isl_tab_var *var);
 int isl_tab_sign_of_max(struct isl_tab *tab, int con);
 int isl_tab_kill_col(struct isl_tab *tab, int col) WARN_UNUSED;
 
-int isl_tab_push(struct isl_tab *tab, enum isl_tab_undo_type type) WARN_UNUSED;
-int isl_tab_push_var(struct isl_tab *tab,
+isl_stat isl_tab_push(struct isl_tab *tab, enum isl_tab_undo_type type)
+	WARN_UNUSED;
+isl_stat isl_tab_push_var(struct isl_tab *tab,
 	enum isl_tab_undo_type type, struct isl_tab_var *var) WARN_UNUSED;
-int isl_tab_push_basis(struct isl_tab *tab) WARN_UNUSED;
+isl_stat isl_tab_push_basis(struct isl_tab *tab) WARN_UNUSED;
 
 struct isl_tab *isl_tab_init_samples(struct isl_tab *tab) WARN_UNUSED;
 int isl_tab_add_sample(struct isl_tab *tab,
 	__isl_take isl_vec *sample) WARN_UNUSED;
 struct isl_tab *isl_tab_drop_sample(struct isl_tab *tab, int s);
-int isl_tab_save_samples(struct isl_tab *tab) WARN_UNUSED;
+isl_stat isl_tab_save_samples(struct isl_tab *tab) WARN_UNUSED;
 
 struct isl_tab *isl_tab_detect_equalities(struct isl_tab *tab,
 	struct isl_tab *tab_cone) WARN_UNUSED;
 isl_bool isl_tab_is_constant(struct isl_tab *tab, int var, isl_int *value);
 isl_stat isl_tab_detect_constants(struct isl_tab *tab);
 
-int isl_tab_push_callback(struct isl_tab *tab,
+isl_stat isl_tab_push_callback(struct isl_tab *tab,
 	struct isl_tab_callback *callback) WARN_UNUSED;
 
 int isl_tab_insert_div(struct isl_tab *tab, int pos, __isl_keep isl_vec *div,

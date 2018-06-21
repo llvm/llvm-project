@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
-#include "Context.h"
+#include "Headers.h"
 #include "Logger.h"
 #include "Path.h"
 #include "Protocol.h"
@@ -25,6 +25,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 
 namespace clang {
+class NamedDecl;
 class PCHContainerOperations;
 namespace clangd {
 
@@ -45,21 +46,26 @@ struct CodeCompleteOptions {
   /// Add macros to code completion results.
   bool IncludeMacros = true;
 
-  /// Add globals to code completion results.
-  bool IncludeGlobals = true;
-
-  /// Add brief comments to completion items, if available.
-  /// FIXME(ibiryukov): it looks like turning this option on significantly slows
-  /// down completion, investigate if it can be made faster.
-  bool IncludeBriefComments = true;
+  /// Add comments to code completion results, if available.
+  bool IncludeComments = true;
 
   /// Include results that are not legal completions in the current context.
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
 
+  /// Combine overloads into a single completion item where possible.
+  bool BundleOverloads = false;
+
   /// Limit the number of results returned (0 means no limit).
   /// If more results are available, we set CompletionList.isIncomplete.
   size_t Limit = 0;
+
+  /// A visual indicator to prepend to the completion label to indicate whether
+  /// completion result would trigger an #include insertion or not.
+  struct IncludeInsertionIndicator {
+    std::string Insert = "•";
+    std::string NoInsert = " ";
+  } IncludeIndicator;
 
   // Populated internally by clangd, do not set.
   /// If `Index` is set, it is used to augment the code completion
@@ -70,22 +76,34 @@ struct CodeCompleteOptions {
 };
 
 /// Get code completions at a specified \p Pos in \p FileName.
-CompletionList codeComplete(const Context &Ctx, PathRef FileName,
+CompletionList codeComplete(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
+                            const std::vector<Inclusion> &PreambleInclusions,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs,
                             CodeCompleteOptions Opts);
 
 /// Get signature help at a specified \p Pos in \p FileName.
-SignatureHelp signatureHelp(const Context &Ctx, PathRef FileName,
+SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
                             PrecompiledPreamble const *Preamble,
                             StringRef Contents, Position Pos,
                             IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                             std::shared_ptr<PCHContainerOperations> PCHs);
 
+// For index-based completion, we only consider:
+//   * symbols in namespaces or translation unit scopes (e.g. no class
+//     members, no locals)
+//   * enum constants in unscoped enum decl (e.g. "red" in "enum {red};")
+//   * primary templates (no specializations)
+// For the other cases, we let Clang do the completion because it does not
+// need any non-local information and it will be much better at following
+// lookup rules. Other symbols still appear in the index for other purposes,
+// like workspace/symbols or textDocument/definition, but are not used for code
+// completion.
+bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx);
 } // namespace clangd
 } // namespace clang
 

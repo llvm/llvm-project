@@ -2,6 +2,7 @@
 ; RUN:     -polly-detect-fortran-arrays \
 ; RUN:     -polly-invariant-load-hoisting \
 ; RUN:     -polly-use-llvm-names \
+; RUN:     -polly-stmt-granularity=bb \
 ; RUN:     < %s | FileCheck %s --check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S \

@@ -1071,19 +1071,17 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, shared_ptr<_Yp> const& __p)
     return __os << __p.get();
 }
 
-#ifndef _LIBCPP_HAS_NO_DECLTYPE
 template<class _CharT, class _Traits, class _Yp, class _Dp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_same<void, typename __void_t<decltype(declval<basic_ostream<_CharT, _Traits>&>() << declval<_Yp>())>::type>::value,
+    is_same<void, typename __void_t<decltype((declval<basic_ostream<_CharT, _Traits>&>() << declval<typename unique_ptr<_Yp, _Dp>::pointer>()))>::type>::value,
     basic_ostream<_CharT, _Traits>&
 >::type
 operator<<(basic_ostream<_CharT, _Traits>& __os, unique_ptr<_Yp, _Dp> const& __p)
 {
     return __os << __p.get();
 }
-#endif
 
 template <class _CharT, class _Traits, size_t _Size>
 basic_ostream<_CharT, _Traits>&

@@ -12,14 +12,33 @@
 // template<InputIterator InIter1, InputIterator InIter2, class OutIter,
 //          Callable<auto, const InIter1::value_type&, const InIter2::value_type&> BinaryOp>
 //   requires OutputIterator<OutIter, BinaryOp::result_type> && CopyConstructible<BinaryOp>
-// OutIter
+// constexpr OutIter      // constexpr after C++17
 // transform(InIter1 first1, InIter1 last1, InIter2 first2, OutIter result, BinaryOp binary_op);
 
 #include <algorithm>
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    const int ia[] = {1, 3, 6, 7};
+    const int ib[] = {2, 4, 7, 8};
+          int ic[] = {0, 0, 0, 0, 0}; // one bigger
+    const int expected[] = {3, 7, 13, 15};
+
+    auto it = std::transform(std::begin(ia), std::end(ia),
+                             std::begin(ib), std::begin(ic), std::plus<int>());
+
+    return it == (std::begin(ic) + std::size(ia))
+        && *it == 0 // don't overwrite the last value in the output array
+        && std::equal(std::begin(expected), std::end(expected), std::begin(ic), it)
+        ;
+    }
+#endif
+
 
 template<class InIter1, class InIter2, class OutIter>
 void
@@ -214,4 +233,8 @@ int main()
     test<const int*, const int*, bidirectional_iterator<int*> >();
     test<const int*, const int*, random_access_iterator<int*> >();
     test<const int*, const int*, int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

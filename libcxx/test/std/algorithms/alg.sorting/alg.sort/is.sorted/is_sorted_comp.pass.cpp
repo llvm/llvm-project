@@ -20,6 +20,15 @@
 
 #include "test_iterators.h"
 
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 1, 0, 0};
+    int ib[] = {0, 0, 1, 1};
+    return     std::is_sorted(std::begin(ia), std::end(ia), std::greater<int>())
+           && !std::is_sorted(std::begin(ib), std::end(ib), std::greater<int>());
+    }
+#endif
+
 template <class Iter>
 void
 test()
@@ -181,4 +190,8 @@ int main()
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

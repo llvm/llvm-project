@@ -13,7 +13,6 @@
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
-#include "../readability/RedundantSmartptrGetCheck.h"
 #include "AvoidCStyleCastsCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "DefaultArgumentsCheck.h"
@@ -24,7 +23,6 @@
 #include "IntegerTypesCheck.h"
 #include "NonConstReferences.h"
 #include "OverloadedUnaryAndCheck.h"
-#include "StringReferenceMemberCheck.h"
 #include "TodoCommentCheck.h"
 #include "UnnamedNamespaceInHeaderCheck.h"
 #include "UsingNamespaceDirectiveCheck.h"
@@ -60,8 +58,6 @@ class GoogleModule : public ClangTidyModule {
         "google-runtime-operator");
     CheckFactories.registerCheck<runtime::NonConstReferences>(
         "google-runtime-references");
-    CheckFactories.registerCheck<runtime::StringReferenceMemberCheck>(
-        "google-runtime-member-string-references");
     CheckFactories.registerCheck<readability::AvoidCStyleCastsCheck>(
         "google-readability-casting");
     CheckFactories.registerCheck<readability::TodoCommentCheck>(
@@ -74,9 +70,6 @@ class GoogleModule : public ClangTidyModule {
     CheckFactories
         .registerCheck<clang::tidy::readability::NamespaceCommentCheck>(
             "google-readability-namespace-comments");
-    CheckFactories
-        .registerCheck<clang::tidy::readability::RedundantSmartptrGetCheck>(
-            "google-readability-redundant-smartptr-get");
   }
 
   ClangTidyOptions getModuleOptions() override {

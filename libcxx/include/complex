@@ -203,7 +203,7 @@ template<class T>    complex<T>           proj(const complex<T>&);
 template<Integral T> complex<double>      proj(T);
                      complex<float>       proj(float);
 
-template<class T> complex<T> polar(const T&, const T& = 0);
+template<class T> complex<T> polar(const T&, const T& = T());
 
 // 26.3.8 transcendentals:
 template<class T> complex<T> acos(const complex<T>&);
@@ -991,7 +991,7 @@ proj(_Tp __re)
 
 template<class _Tp>
 complex<_Tp>
-polar(const _Tp& __rho, const _Tp& __theta = _Tp(0))
+polar(const _Tp& __rho, const _Tp& __theta = _Tp())
 {
     if (__libcpp_isnan_or_builtin(__rho) || signbit(__rho))
         return complex<_Tp>(_Tp(NAN), _Tp(NAN));
@@ -1125,6 +1125,17 @@ pow(const _Tp& __x, const complex<_Up>& __y)
     return _VSTD::pow(result_type(__x), result_type(__y));
 }
 
+// __sqr, computes pow(x, 2)
+
+template<class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY
+complex<_Tp>
+__sqr(const complex<_Tp>& __x)
+{
+    return complex<_Tp>((__x.real() - __x.imag()) * (__x.real() + __x.imag()),
+                        _Tp(2) * __x.real() * __x.imag());
+}
+
 // asinh
 
 template<class _Tp>
@@ -1150,7 +1161,7 @@ asinh(const complex<_Tp>& __x)
     }
     if (__libcpp_isinf_or_builtin(__x.imag()))
         return complex<_Tp>(copysign(__x.imag(), __x.real()), copysign(__pi/_Tp(2), __x.imag()));
-    complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) + _Tp(1)));
+    complex<_Tp> __z = log(__x + sqrt(__sqr(__x) + _Tp(1)));
     return complex<_Tp>(copysign(__z.real(), __x.real()), copysign(__z.imag(), __x.imag()));
 }
 
@@ -1184,7 +1195,7 @@ acosh(const complex<_Tp>& __x)
     }
     if (__libcpp_isinf_or_builtin(__x.imag()))
         return complex<_Tp>(abs(__x.imag()), copysign(__pi/_Tp(2), __x.imag()));
-    complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) - _Tp(1)));
+    complex<_Tp> __z = log(__x + sqrt(__sqr(__x) - _Tp(1)));
     return complex<_Tp>(copysign(__z.real(), _Tp(0)), copysign(__z.imag(), __x.imag()));
 }
 
@@ -1318,7 +1329,7 @@ acos(const complex<_Tp>& __x)
         return complex<_Tp>(__pi/_Tp(2), -__x.imag());
     if (__x.real() == 0 && (__x.imag() == 0 || isnan(__x.imag())))
         return complex<_Tp>(__pi/_Tp(2), -__x.imag());
-    complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) - _Tp(1)));
+    complex<_Tp> __z = log(__x + sqrt(__sqr(__x) - _Tp(1)));
     if (signbit(__x.imag()))
         return complex<_Tp>(abs(__z.imag()), abs(__z.real()));
     return complex<_Tp>(abs(__z.imag()), -abs(__z.real()));

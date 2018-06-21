@@ -11,12 +11,23 @@
 
 // template<RandomAccessIterator Iter, StrictWeakOrder<auto, Iter::value_type> Compare>
 //   requires CopyConstructible<Compare>
-//   Iter
+//   constexpr bool   // constexpr after C++17
 //   is_heap_until(Iter first, Iter last, Compare comp);
 
 #include <algorithm>
 #include <functional>
 #include <cassert>
+
+#include "test_macros.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 0, 0, 0};
+    int ib[] = {0, 1, 1, 0};
+    return    (std::is_heap_until(std::begin(ia), std::end(ia), std::greater<int>()) == ia+1)
+           && (std::is_heap_until(std::begin(ib), std::end(ib), std::greater<int>()) == ib+3);
+    }
+#endif
 
 void test()
 {
@@ -519,4 +530,8 @@ void test()
 int main()
 {
     test();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

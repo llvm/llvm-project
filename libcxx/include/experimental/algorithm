@@ -23,11 +23,8 @@ inline namespace fundamentals_v1 {
 template <class ForwardIterator, class Searcher>
 ForwardIterator search(ForwardIterator first, ForwardIterator last,
                        const Searcher &searcher);
-template <class PopulationIterator, class SampleIterator, class Distance,
-          class UniformRandomNumberGenerator>
-SampleIterator sample(PopulationIterator first, PopulationIterator last,
-                      SampleIterator out, Distance n,
-                      UniformRandomNumberGenerator &&g);
+
+// sample removed because it's now part of C++17
 
 } // namespace fundamentals_v1
 } // namespace experimental
@@ -55,16 +52,6 @@ template <class _ForwardIterator, class _Searcher>
 _LIBCPP_INLINE_VISIBILITY
 _ForwardIterator search(_ForwardIterator __f, _ForwardIterator __l, const _Searcher &__s)
 { return __s(__f, __l).first; }
-
-
-template <class _PopulationIterator, class _SampleIterator, class _Distance,
-          class _UniformRandomNumberGenerator>
-inline _LIBCPP_INLINE_VISIBILITY
-_SampleIterator sample(_PopulationIterator __first, _PopulationIterator __last,
-                       _SampleIterator __output_iter, _Distance __n,
-                       _UniformRandomNumberGenerator &&__g) {
-  return _VSTD::__sample(__first, __last, __output_iter, __n, __g);
-}
 
 _LIBCPP_END_NAMESPACE_LFTS
 

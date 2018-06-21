@@ -1,6 +1,13 @@
 #include <isl/ctx.h>
 #include <isl_blk.h>
 
+/* "error" stores the last error that has occurred.
+ * It is reset to isl_error_none by isl_ctx_reset_error.
+ * "error_msg" stores the error message of the last error,
+ * while "error_file" and "error_line" specify where the last error occurred.
+ * "error_msg" and "error_file" always point to statically allocated
+ * strings (if not NULL).
+ */
 struct isl_ctx {
 	int			ref;
 
@@ -24,6 +31,9 @@ struct isl_ctx {
 	struct isl_hash_table	id_table;
 
 	enum isl_error		error;
+	const char		*error_msg;
+	const char		*error_file;
+	int			error_line;
 
 	int			abort;
 

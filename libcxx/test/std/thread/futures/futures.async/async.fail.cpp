@@ -33,6 +33,6 @@ int foo (int x) { return x; }
 
 int main ()
 {
-	std::async(                    foo, 3); // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
-	std::async(std::launch::async, foo, 3); // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::async(                    foo, 3); // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::async(std::launch::async, foo, 3); // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

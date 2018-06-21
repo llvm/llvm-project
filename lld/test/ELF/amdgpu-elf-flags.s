@@ -5,6 +5,6 @@
 
 # REQUIRES: amdgpu
 
-# CHECK: Flags [ (0x2)
-# CHECK:   EF_AMDGPU_ARCH_GCN (0x2)
+# CHECK: Flags [
+# CHECK:   EF_AMDGPU_MACH_AMDGCN_GFX803 (0x2A)
 # CHECK: ]

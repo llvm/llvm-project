@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-import-jscop -polly-import-jscop-postfix=transformed < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-import-jscop -polly-import-jscop-postfix=transformed < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 ;
 ; #define Ni 1056
 ; #define Nj 1056

@@ -90,7 +90,6 @@ class SwitchInst;
 class Value;
 
 void initializeScopDetectionWrapperPassPass(PassRegistry &);
-
 } // namespace llvm
 
 namespace polly {
@@ -670,7 +669,6 @@ struct ScopDetectionWrapperPass : public FunctionPass {
   ScopDetection &getSD() { return *Result; }
   const ScopDetection &getSD() const { return *Result; }
 };
-
 } // namespace polly
 
 #endif // POLLY_SCOPDETECTION_H

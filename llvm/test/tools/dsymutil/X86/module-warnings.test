@@ -42,7 +42,7 @@
 # STATIC: warning: {{.*}}Bar.pcm:
 # STATIC: note: Linking a static library
 # STATIC: warning: {{.*}}Foo.pcm:
-# STATIC-NOT: warning:
+# STATIC-NOT: note:
 
 ---
 triple:          'x86_64-apple-darwin'

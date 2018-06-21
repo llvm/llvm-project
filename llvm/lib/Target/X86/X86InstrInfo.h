@@ -559,9 +559,6 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  /// X86 supports the MachineOutliner.
-  bool useMachineOutliner() const override { return true; }
-
   virtual MachineOutlinerInfo getOutlininingCandidateInfo(
       std::vector<
           std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
@@ -571,7 +568,7 @@ public:
                                    bool OutlineFromLinkOnceODRs) const override;
 
   llvm::X86GenInstrInfo::MachineOutlinerInstrType
-  getOutliningType(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
+  getOutliningType(MachineInstr &MI) const override;
 
   void insertOutlinerEpilogue(MachineBasicBlock &MBB, MachineFunction &MF,
                               const MachineOutlinerInfo &MInfo) const override;

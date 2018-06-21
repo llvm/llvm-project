@@ -15,7 +15,6 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
@@ -23,6 +22,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
+#include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/Optional.h"
@@ -3831,8 +3831,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     DS.SetRangeEnd(Tok.getLocation());
     if (DiagID != diag::err_bool_redeclaration)
-      // After an error the next token can be an annotation token.
-      ConsumeAnyToken();
+      ConsumeToken();
 
     AttrsLastTime = false;
   }
@@ -3941,7 +3940,7 @@ void Parser::ParseStructDeclaration(
 ///
 void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                                   unsigned TagType, Decl *TagDecl) {
-  PrettyDeclStackTraceEntry CrashInfo(Actions.Context, TagDecl, RecordLoc,
+  PrettyDeclStackTraceEntry CrashInfo(Actions, TagDecl, RecordLoc,
                                       "parsing struct/union body");
   assert(!getLangOpts().CPlusPlus && "C++ declarations not supported");
 

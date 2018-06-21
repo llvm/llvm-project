@@ -1,4 +1,4 @@
-//===- BugReporterVisitors.h - Generate PathDiagnostics ---------*- C++ -*-===//
+//===---  BugReporterVisitors.h - Generate PathDiagnostics -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,20 +15,11 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H
 #define LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H
 
-#include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include <memory>
 
 namespace clang {
-
-class BinaryOperator;
 class CFGBlock;
-class DeclRefExpr;
-class Expr;
-class Stmt;
 
 namespace ento {
 
@@ -108,7 +99,7 @@ class FindLastStoreBRVisitor final
     : public BugReporterVisitorImpl<FindLastStoreBRVisitor> {
   const MemRegion *R;
   SVal V;
-  bool Satisfied = false;
+  bool Satisfied;
 
   /// If the visitor is tracking the value directly responsible for the
   /// bug, we are going to employ false positive suppression.
@@ -122,7 +113,10 @@ public:
 
   FindLastStoreBRVisitor(KnownSVal V, const MemRegion *R,
                          bool InEnableNullFPSuppression)
-      : R(R), V(V), EnableNullFPSuppression(InEnableNullFPSuppression) {}
+  : R(R),
+    V(V),
+    Satisfied(false),
+    EnableNullFPSuppression(InEnableNullFPSuppression) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -136,17 +130,18 @@ class TrackConstraintBRVisitor final
     : public BugReporterVisitorImpl<TrackConstraintBRVisitor> {
   DefinedSVal Constraint;
   bool Assumption;
-  bool IsSatisfied = false;
+  bool IsSatisfied;
   bool IsZeroCheck;
 
   /// We should start tracking from the last node along the path in which the
   /// value is constrained.
-  bool IsTrackingTurnedOn = false;
+  bool IsTrackingTurnedOn;
 
 public:
   TrackConstraintBRVisitor(DefinedSVal constraint, bool assumption)
-      : Constraint(constraint), Assumption(assumption),
-        IsZeroCheck(!Assumption && Constraint.getAs<Loc>()) {}
+  : Constraint(constraint), Assumption(assumption), IsSatisfied(false),
+    IsZeroCheck(!Assumption && Constraint.getAs<Loc>()),
+    IsTrackingTurnedOn(false) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -162,6 +157,7 @@ public:
 private:
   /// Checks if the constraint is valid in the current state.
   bool isUnderconstrained(const ExplodedNode *N) const;
+
 };
 
 /// \class NilReceiverBRVisitor
@@ -169,6 +165,7 @@ private:
 class NilReceiverBRVisitor final
     : public BugReporterVisitorImpl<NilReceiverBRVisitor> {
 public:
+
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
     ID.AddPointer(&x);
@@ -187,6 +184,7 @@ public:
 /// Visitor that tries to report interesting diagnostics from conditions.
 class ConditionBRVisitor final
     : public BugReporterVisitorImpl<ConditionBRVisitor> {
+
   // FIXME: constexpr initialization isn't supported by MSVC2013.
   static const char *const GenericTrueMessage;
   static const char *const GenericFalseMessage;
@@ -279,6 +277,7 @@ public:
 /// if the region's contents are not modified/accessed by the call.
 class UndefOrNullArgVisitor final
     : public BugReporterVisitorImpl<UndefOrNullArgVisitor> {
+
   /// The interesting memory region this visitor is tracking.
   const MemRegion *R;
 
@@ -304,14 +303,14 @@ class SuppressInlineDefensiveChecksVisitor final
   DefinedSVal V;
 
   /// Track if we found the node where the constraint was first added.
-  bool IsSatisfied = false;
+  bool IsSatisfied;
 
   /// Since the visitors can be registered on nodes previous to the last
   /// node in the BugReport, but the path traversal always starts with the last
   /// node, the visitor invariant (that we start with a node in which V is null)
   /// might not hold when node visitation starts. We are going to start tracking
   /// from the last node in which the value is null.
-  bool IsTrackingTurnedOn = false;
+  bool IsTrackingTurnedOn;
 
 public:
   SuppressInlineDefensiveChecksVisitor(DefinedSVal Val, const ExplodedNode *N);
@@ -329,11 +328,12 @@ public:
 };
 
 class CXXSelfAssignmentBRVisitor final
-    : public BugReporterVisitorImpl<CXXSelfAssignmentBRVisitor> {
-  bool Satisfied = false;
+  : public BugReporterVisitorImpl<CXXSelfAssignmentBRVisitor> {
+  
+  bool Satisfied;
 
 public:
-  CXXSelfAssignmentBRVisitor() = default;
+  CXXSelfAssignmentBRVisitor() : Satisfied(false) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {}
 
@@ -370,10 +370,10 @@ const Stmt *GetDenomExpr(const ExplodedNode *N);
 const Stmt *GetRetValExpr(const ExplodedNode *N);
 bool isDeclRefExprToReference(const Expr *E);
 
-} // namespace bugreporter
 
-} // namespace ento
+} // end namespace clang
+} // end namespace ento
+} // end namespace bugreporter
 
-} // namespace clang
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_BUGREPORTER_BUGREPORTERVISITORS_H
+#endif

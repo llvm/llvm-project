@@ -41,5 +41,5 @@ __aeabi_unwind_cpp_pr0:
 // CHECK-NEXT:     0x200C R_ARM_JUMP_SLOT __gxx_personality_v0
 
 // CHECK-EXTAB: Contents of section .ARM.extab:
-// 014c + 0ee4 = 0x1030 = __gxx_personality_v0(PLT)
-// CHECK-EXTAB-NEXT:  014c e40e0000 b0b0b000 00000000
+// 01d8 + 0e58 = 0x1030 = __gxx_personality_v0(PLT)
+// CHECK-EXTAB-NEXT:  01d8 580e0000 b0b0b000 00000000

@@ -3,12 +3,12 @@
 ; CHECK:         Assumed Context:
 ; CHECK-NEXT:    [N] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [N] -> {  : 1 = 0 }
+; CHECK-NEXT:    [N] -> {  : false }
 ; CHECK-NEXT:    p0: %N
 ; CHECK:         Statements {
 ; CHECK-NEXT:    	Stmt_if_then
 ; CHECK-NEXT:            Domain :=
-; CHECK-NEXT:                [N] -> { Stmt_if_then[i0] : 2*floor((1 + i0)/2) = 1 + i0 and 0 < i0 < N }
+; CHECK-NEXT:                [N] -> { Stmt_if_then[i0] : (1 + i0) mod 2 = 0 and 0 < i0 < N }
 ; CHECK-NEXT:            Schedule :=
 ; CHECK-NEXT:                [N] -> { Stmt_if_then[i0] -> [i0] };
 ; CHECK-NEXT:            ReadAccess :=	[Reduction Type: +] [Scalar: 0]

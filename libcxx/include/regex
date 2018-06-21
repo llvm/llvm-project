@@ -192,6 +192,11 @@ public:
     void swap(basic_regex&);
 };
 
+template<class ForwardIterator>
+basic_regex(ForwardIterator, ForwardIterator,
+            regex_constants::syntax_option_type = regex_constants::ECMAScript)
+    -> basic_regex<typename iterator_traits<ForwardIterator>::value_type>; // C++17
+
 typedef basic_regex<char>    regex;
 typedef basic_regex<wchar_t> wregex;
 
@@ -2922,6 +2927,15 @@ private:
     template <class, class> friend class __lookahead;
 };
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template <class _ForwardIterator,
+          class = typename enable_if<__is_forward_iterator<_ForwardIterator>::value, nullptr_t>::type
+>
+basic_regex(_ForwardIterator, _ForwardIterator,
+            regex_constants::syntax_option_type = regex_constants::ECMAScript)
+    -> basic_regex<typename iterator_traits<_ForwardIterator>::value_type>;
+#endif
+
 template <class _CharT, class _Traits>
     const regex_constants::syntax_option_type basic_regex<_CharT, _Traits>::icase;
 template <class _CharT, class _Traits>
@@ -4013,7 +4027,7 @@ basic_regex<_CharT, _Traits>::__parse_character_class(_ForwardIterator __first,
     char_class_type __class_type =
         __traits_.lookup_classname(__first, __temp, __flags_ & icase);
     if (__class_type == 0)
-        __throw_regex_error<regex_constants::error_brack>();
+        __throw_regex_error<regex_constants::error_ctype>();
     __ml->__add_class(__class_type);
     __first = _VSTD::next(__temp, 2);
     return __first;

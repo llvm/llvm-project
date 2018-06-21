@@ -51,7 +51,7 @@ template<class InputIterator1, class InputIterator2, class T>
     T
     transform_reduce(InputIterator1 first1, InputIterator1 last1,
                      InputIterator2 first2, T init);  // C++17
-                     
+
 template<class InputIterator1, class InputIterator2, class T, class BinaryOperation1, class BinaryOperation2>
     T
     transform_reduce(InputIterator1 first1, InputIterator1 last1,
@@ -75,10 +75,10 @@ template<class InputIterator, class OutputIterator, class T>
     OutputIterator
     exclusive_scan(InputIterator first, InputIterator last,
                    OutputIterator result, T init); // C++17
-                           
+
 template<class InputIterator, class OutputIterator, class T, class BinaryOperation>
     OutputIterator
-    exclusive_scan(InputIterator first, InputIterator last, 
+    exclusive_scan(InputIterator first, InputIterator last,
                    OutputIterator result, T init, BinaryOperation binary_op); // C++17
 
 template<class InputIterator, class OutputIterator>
@@ -108,7 +108,7 @@ template<class InputIterator, class OutputIterator,
 	transform_inclusive_scan(InputIterator first, InputIterator last,
                              OutputIterator result,
                              BinaryOperation binary_op, UnaryOperation unary_op);  // C++17
-                                          
+
 template<class InputIterator, class OutputIterator,
          class BinaryOperation, class UnaryOperation, class T>
 	OutputIterator
@@ -196,7 +196,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename iterator_traits<_InputIterator>::value_type
 reduce(_InputIterator __first, _InputIterator __last)
 {
-    return _VSTD::reduce(__first, __last, 
+    return _VSTD::reduce(__first, __last,
        typename iterator_traits<_InputIterator>::value_type{});
 }
 #endif
@@ -226,7 +226,7 @@ inner_product(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2
 template <class _InputIterator, class _Tp, class _BinaryOp, class _UnaryOp>
 inline _LIBCPP_INLINE_VISIBILITY
 _Tp
-transform_reduce(_InputIterator __first, _InputIterator __last, 
+transform_reduce(_InputIterator __first, _InputIterator __last,
            _Tp __init,  _BinaryOp __b, _UnaryOp __u)
 {
     for (; __first != __last; ++__first)
@@ -234,7 +234,7 @@ transform_reduce(_InputIterator __first, _InputIterator __last,
     return __init;
 }
 
-template <class _InputIterator1, class _InputIterator2, 
+template <class _InputIterator1, class _InputIterator2,
           class _Tp, class _BinaryOp1, class _BinaryOp2>
 inline _LIBCPP_INLINE_VISIBILITY
 _Tp
@@ -249,10 +249,10 @@ transform_reduce(_InputIterator1 __first1, _InputIterator1 __last1,
 template <class _InputIterator1, class _InputIterator2, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _Tp
-transform_reduce(_InputIterator1 __first1, _InputIterator1 __last1, 
+transform_reduce(_InputIterator1 __first1, _InputIterator1 __last1,
                  _InputIterator2 __first2, _Tp __init)
 {
-    return _VSTD::transform_reduce(__first1, __last1, __first2, __init, 
+    return _VSTD::transform_reduce(__first1, __last1, __first2, _VSTD::move(__init),
                                    _VSTD::plus<>(), _VSTD::multiplies<>());
 }
 #endif
@@ -298,7 +298,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 template <class _InputIterator, class _OutputIterator, class _Tp, class _BinaryOp>
 inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
-exclusive_scan(_InputIterator __first, _InputIterator __last, 
+exclusive_scan(_InputIterator __first, _InputIterator __last,
                _OutputIterator __result, _Tp __init, _BinaryOp __b)
 {
     if (__first != __last)
@@ -318,14 +318,14 @@ exclusive_scan(_InputIterator __first, _InputIterator __last,
 template <class _InputIterator, class _OutputIterator, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
-exclusive_scan(_InputIterator __first, _InputIterator __last, 
+exclusive_scan(_InputIterator __first, _InputIterator __last,
                _OutputIterator __result, _Tp __init)
 {
     return _VSTD::exclusive_scan(__first, __last, __result, __init, _VSTD::plus<>());
 }
 
 template <class _InputIterator, class _OutputIterator, class _Tp, class _BinaryOp>
-_OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last, 
+_OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
                                _OutputIterator __result, _BinaryOp __b,  _Tp __init)
 {
     for (; __first != __last; ++__first, (void) ++__result) {
@@ -336,7 +336,7 @@ _OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
 }
 
 template <class _InputIterator, class _OutputIterator, class _BinaryOp>
-_OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last, 
+_OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
                                _OutputIterator __result, _BinaryOp __b)
 {
     if (__first != __last) {
@@ -350,17 +350,17 @@ _OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
 }
 
 template <class _InputIterator, class _OutputIterator>
-_OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last, 
+_OutputIterator inclusive_scan(_InputIterator __first, _InputIterator __last,
                                _OutputIterator __result)
 {
     return _VSTD::inclusive_scan(__first, __last, __result, std::plus<>());
 }
 
-template <class _InputIterator, class _OutputIterator, class _Tp, 
+template <class _InputIterator, class _OutputIterator, class _Tp,
           class _BinaryOp, class _UnaryOp>
 inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
-transform_exclusive_scan(_InputIterator __first, _InputIterator __last, 
+transform_exclusive_scan(_InputIterator __first, _InputIterator __last,
                            _OutputIterator __result, _Tp __init,
                            _BinaryOp __b, _UnaryOp __u)
 {
@@ -379,7 +379,7 @@ transform_exclusive_scan(_InputIterator __first, _InputIterator __last,
 }
 
 template <class _InputIterator, class _OutputIterator, class _Tp, class _BinaryOp, class _UnaryOp>
-_OutputIterator transform_inclusive_scan(_InputIterator __first, _InputIterator __last, 
+_OutputIterator transform_inclusive_scan(_InputIterator __first, _InputIterator __last,
                            _OutputIterator __result, _BinaryOp __b, _UnaryOp __u, _Tp __init)
 {
     for (; __first != __last; ++__first, (void) ++__result) {
@@ -391,7 +391,7 @@ _OutputIterator transform_inclusive_scan(_InputIterator __first, _InputIterator 
 }
 
 template <class _InputIterator, class _OutputIterator, class _BinaryOp, class _UnaryOp>
-_OutputIterator transform_inclusive_scan(_InputIterator __first, _InputIterator __last, 
+_OutputIterator transform_inclusive_scan(_InputIterator __first, _InputIterator __last,
                                _OutputIterator __result, _BinaryOp __b, _UnaryOp __u)
 {
     if (__first != __last) {
@@ -400,7 +400,7 @@ _OutputIterator transform_inclusive_scan(_InputIterator __first, _InputIterator 
         if (++__first != __last)
             return _VSTD::transform_inclusive_scan(__first, __last, __result, __b, __u, __init);
         }
-    
+
     return __result;
 }
 #endif

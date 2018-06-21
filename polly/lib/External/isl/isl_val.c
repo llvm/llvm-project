@@ -1312,6 +1312,31 @@ isl_bool isl_val_gt(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
 	return isl_val_lt(v2, v1);
 }
 
+/* Is "v" (strictly) greater than "i"?
+ */
+isl_bool isl_val_gt_si(__isl_keep isl_val *v, long i)
+{
+	isl_val *vi;
+	isl_bool res;
+
+	if (!v)
+		return isl_bool_error;
+	if (isl_val_is_int(v))
+		return isl_int_cmp_si(v->n, i) > 0;
+	if (isl_val_is_nan(v))
+		return isl_bool_false;
+	if (isl_val_is_infty(v))
+		return isl_bool_true;
+	if (isl_val_is_neginfty(v))
+		return isl_bool_false;
+
+	vi = isl_val_int_from_si(isl_val_get_ctx(v), i);
+	res = isl_val_gt(v, vi);
+	isl_val_free(vi);
+
+	return res;
+}
+
 /* Is "v1" less than or equal to "v2"?
  */
 isl_bool isl_val_le(__isl_keep isl_val *v1, __isl_keep isl_val *v2)
@@ -1490,7 +1515,7 @@ __isl_give isl_val *isl_val_insert_dims(__isl_take isl_val *v,
 	return v;
 }
 
-/* Drop the the "n" first dimensions of type "type" at position "first".
+/* Drop the "n" first dimensions of type "type" at position "first".
  *
  * This function is only meant to be used in the generic isl_multi_*
  * functions which have to deal with base objects that have an associated
@@ -1640,7 +1665,9 @@ isl_stat isl_val_check_match_domain_space(__isl_keep isl_val *v,
 #define NO_IDENTITY
 #define NO_FROM_BASE
 #define NO_MOVE_DIMS
+#include <isl_multi_no_explicit_domain.c>
 #include <isl_multi_templ.c>
+#include <isl_multi_dims.c>
 
 /* Apply "fn" to each of the elements of "mv" with as second argument "v".
  */
@@ -1657,8 +1684,8 @@ static __isl_give isl_multi_val *isl_multi_val_fn_val(
 		goto error;
 
 	for (i = 0; i < mv->n; ++i) {
-		mv->p[i] = fn(mv->p[i], isl_val_copy(v));
-		if (!mv->p[i])
+		mv->u.p[i] = fn(mv->u.p[i], isl_val_copy(v));
+		if (!mv->u.p[i])
 			goto error;
 	}
 

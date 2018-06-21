@@ -9,6 +9,11 @@ endmacro()
 set(LIBCXX_LIT_VARIANT "libcxx" CACHE STRING
     "Configuration variant to use for LIT.")
 
+set(LIBCXX_TEST_LINKER_FLAGS "" CACHE STRING
+    "Additonal linker flags to pass when compiling the tests")
+set(LIBCXX_TEST_COMPILER_FLAGS "" CACHE STRING
+    "Additonal linker flags to pass when compiling the tests")
+
 # The tests shouldn't link to any ABI library when it has been linked into
 # libc++ statically or via a linker script.
 if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY OR LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
@@ -30,6 +35,7 @@ pythonize_bool(LIBCXX_BUILD_32_BITS)
 pythonize_bool(LIBCXX_GENERATE_COVERAGE)
 pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
+pythonize_bool(LIBCXX_USE_COMPILER_RT)
 pythonize_bool(LIBCXX_HAS_ATOMIC_LIB)
 pythonize_bool(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
 pythonize_bool(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)

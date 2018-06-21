@@ -22,7 +22,6 @@
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -33,13 +32,15 @@ using namespace clang::tidy::matchers;
 namespace clang {
 namespace tidy {
 namespace misc {
-
 namespace {
 using llvm::APSInt;
-} // namespace
 
-static const llvm::StringSet<> KnownBannedMacroNames = {"EAGAIN", "EWOULDBLOCK",
-                                                        "SIGCLD", "SIGCHLD"};
+static constexpr llvm::StringLiteral KnownBannedMacroNames[] = {
+    "EAGAIN",
+    "EWOULDBLOCK",
+    "SIGCLD",
+    "SIGCHLD",
+};
 
 static bool incrementWithoutOverflow(const APSInt &Value, APSInt &Result) {
   Result = Value;
@@ -319,13 +320,13 @@ AST_MATCHER(ConditionalOperator, conditionalOperatorIsInMacro) {
 
 AST_MATCHER(Expr, isMacro) { return Node.getExprLoc().isMacroID(); }
 
-AST_MATCHER_P(Expr, expandedByMacro, llvm::StringSet<>, Names) {
+AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<llvm::StringLiteral>, Names) {
   const SourceManager &SM = Finder->getASTContext().getSourceManager();
   const LangOptions &LO = Finder->getASTContext().getLangOpts();
   SourceLocation Loc = Node.getExprLoc();
   while (Loc.isMacroID()) {
     StringRef MacroName = Lexer::getImmediateMacroName(Loc, SM, LO);
-    if (Names.count(MacroName))
+    if (llvm::is_contained(Names, MacroName))
       return true;
     Loc = SM.getImmediateMacroCallerLoc(Loc);
   }
@@ -626,6 +627,7 @@ static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
 
   return LhsLoc.isMacroID() != RhsLoc.isMacroID();
 }
+} // namespace
 
 void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto AnyLiteralExpr = ignoringParenImpCasts(
@@ -1043,11 +1045,11 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     // If ShiftingConst is shifted left with more bits than the position of the
     // leftmost 1 in the bit representation of AndValue, AndConstant is
     // ineffective.
-    if (floor(log2(AndValue.getExtValue())) >= ShiftingValue)
+    if (AndValue.getActiveBits() > ShiftingValue)
       return;
 
     auto Diag = diag(BinaryAndExpr->getOperatorLoc(),
-                     "ineffective bitwise and operation.");
+                     "ineffective bitwise and operation");
   }
 
   // Check for the following bound expressions:

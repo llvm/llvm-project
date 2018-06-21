@@ -51,6 +51,20 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
       unaryOperator(hasOperatorName("*"),
                     hasUnaryOperand(callToGet(QuacksLikeASmartptr))),
       Callback);
+
+  // Catch '!ptr.get()'
+  const auto CallToGetAsBool = ignoringParenImpCasts(callToGet(recordDecl(
+      QuacksLikeASmartptr, has(cxxConversionDecl(returns(booleanType()))))));
+  Finder->addMatcher(
+      unaryOperator(hasOperatorName("!"), hasUnaryOperand(CallToGetAsBool)),
+      Callback);
+
+  // Catch 'if(ptr.get())'
+  Finder->addMatcher(ifStmt(hasCondition(CallToGetAsBool)), Callback);
+
+  // Catch 'ptr.get() ? X : Y'
+  Finder->addMatcher(conditionalOperator(hasCondition(CallToGetAsBool)),
+                     Callback);
 }
 
 void registerMatchersForGetEquals(MatchFinder *Finder,
@@ -70,11 +84,6 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
                          anyOf(cxxNullPtrLiteralExpr(), gnuNullExpr(),
                                integerLiteral(equals(0))))),
                      hasEitherOperand(callToGet(IsAKnownSmartptr))),
-      Callback);
-
-  // Matches against if(ptr.get())
-  Finder->addMatcher(
-      ifStmt(hasCondition(ignoringImpCasts(callToGet(IsAKnownSmartptr)))),
       Callback);
 
   // FIXME: Match and fix if (l.get() == r.get()).

@@ -37,8 +37,8 @@ public:
 template <class C>
 class non_const_compare
 {
-//	operator() deliberately not marked as 'const'
-    bool operator()(const C& x,const C&y) { return x < y; }
+// operator() deliberately not marked as 'const'
+    bool operator()(const C& x, const C& y) { return x < y; }
 };
 
 

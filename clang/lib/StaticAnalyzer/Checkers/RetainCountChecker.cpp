@@ -1929,12 +1929,10 @@ static bool isNumericLiteralExpression(const Expr *E) {
          isa<CXXBoolLiteralExpr>(E);
 }
 
-static Optional<std::string> describeRegion(const MemRegion *MR) {
-  if (const auto *VR = dyn_cast_or_null<VarRegion>(MR))
-    return std::string(VR->getDecl()->getName());
+static std::string describeRegion(const MemRegion *MR) {
   // Once we support more storage locations for bindings,
   // this would need to be improved.
-  return None;
+  return cast<VarRegion>(MR)->getDecl()->getName();
 }
 
 /// Returns true if this stack frame is for an Objective-C method that is a
@@ -2401,9 +2399,9 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 
   os << "Object leaked: ";
 
-  Optional<std::string> RegionDescription = describeRegion(FirstBinding);
-  if (RegionDescription) {
-    os << "object allocated and stored into '" << *RegionDescription << '\'';
+  if (FirstBinding) {
+    os << "object allocated and stored into '"
+       << describeRegion(FirstBinding) << '\'';
   }
   else
     os << "allocated object";
@@ -2521,8 +2519,7 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
   UniqueingDecl = AllocNode->getLocationContext()->getDecl();
 }
 
-void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled,
-                                        bool IncludeAllocationLine) {
+void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled, bool IncludeAllocationLine) {
   assert(Location.isValid() && UniqueingDecl && UniqueingLocation.isValid());
   Description.clear();
   llvm::raw_string_ostream os(Description);
@@ -2531,9 +2528,8 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx, bool GCEnabled,
     os << "(when using garbage collection) ";
   os << "of an object";
 
-  Optional<std::string> RegionDescription = describeRegion(AllocBinding);
-  if (RegionDescription) {
-    os << " stored into '" << *RegionDescription << '\'';
+  if (AllocBinding) {
+    os << " stored into '" << describeRegion(AllocBinding) << '\'';
     if (IncludeAllocationLine) {
       FullSourceLoc SL(AllocStmt->getLocStart(), Ctx.getSourceManager());
       os << " (allocated on line " << SL.getSpellingLineNumber() << ")";

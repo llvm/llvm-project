@@ -15,9 +15,7 @@
 namespace clang {
 namespace clangd {
 namespace json {
-void PrintTo(const Expr &E, std::ostream *OS) {
-  llvm::raw_os_ostream(*OS) << llvm::formatv("{0:2}", E);
-}
+
 namespace {
 
 std::string s(const Expr &E) { return llvm::formatv("{0}", E).str(); }
@@ -40,6 +38,8 @@ TEST(JSONExprTests, Constructors) {
   EXPECT_EQ(R"({"A":{"B":{}}})", s(obj{{"A", obj{{"B", obj{}}}}}));
   EXPECT_EQ(R"({"A":{"B":{"X":"Y"}}})",
             s(obj{{"A", obj{{"B", obj{{"X", "Y"}}}}}}));
+  EXPECT_EQ("null", s(llvm::Optional<double>()));
+  EXPECT_EQ("2.5", s(llvm::Optional<double>(2.5)));
 }
 
 TEST(JSONExprTests, StringOwnership) {

@@ -13,7 +13,7 @@
 ; SCOP:      Assumed Context:
 ; SCOP-NEXT: [N, M, Debug] -> {  :  }
 ; SCOP:      Invalid Context:
-; SCOP-NEXT: [N, M, Debug] -> {  : 1 = 0 }
+; SCOP-NEXT: [N, M, Debug] -> {  : false }
 ;
 ;    #include <stdio.h>
 ;

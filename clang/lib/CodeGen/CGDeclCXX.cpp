@@ -235,10 +235,7 @@ void CodeGenFunction::registerGlobalDtorWithAtExit(const VarDecl &VD,
                                                    llvm::Constant *addr) {
   // Create a function which calls the destructor.
   llvm::Constant *dtorStub = createAtExitStub(VD, dtor, addr);
-  registerGlobalDtorWithAtExit(dtorStub);
-}
 
-void CodeGenFunction::registerGlobalDtorWithAtExit(llvm::Constant *dtorStub) {
   // extern "C" int atexit(void (*f)(void));
   llvm::FunctionType *atexitTy =
     llvm::FunctionType::get(IntTy, dtorStub->getType(), false);

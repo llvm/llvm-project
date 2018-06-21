@@ -40,7 +40,7 @@ class ImplicitWrapper {
 template <typename T>
 class OperatorWrapper {
  public:
-  explicit OperatorWrapper(const T& t);
+  OperatorWrapper() = delete;
 };
 
 struct SimpleClass {
@@ -101,7 +101,7 @@ void ImplicitSimpleClassIterator() {
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the loop variable 'foo' is different from the one returned by the iterator and generates an implicit conversion; you can either change the type to the matching one ('const SimpleClass &' but 'const auto&' is always a valid option) or remove the reference to make it explicit that you are creating a new value [performance-implicit-conversion-in-loop]
   // for (ImplicitWrapper<SimpleClass>& foo : SimpleView()) {}
   for (const ImplicitWrapper<SimpleClass> foo : SimpleView()) {}
-  for (ImplicitWrapper<SimpleClass>foo : SimpleView()) {}
+  for (ImplicitWrapper<SimpleClass> foo : SimpleView()) {}
 }
 
 void ImplicitSimpleClassRefIterator() {
@@ -109,7 +109,16 @@ void ImplicitSimpleClassRefIterator() {
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const SimpleClass &'.*}}
   // for (ImplicitWrapper<SimpleClass>& foo : SimpleRefView()) {}
   for (const ImplicitWrapper<SimpleClass> foo : SimpleRefView()) {}
-  for (ImplicitWrapper<SimpleClass>foo : SimpleRefView()) {}
+  for (ImplicitWrapper<SimpleClass> foo : SimpleRefView()) {}
+}
+
+void ImplicitSimpleClassArray() {
+  SimpleClass array[5];
+  for (const ImplicitWrapper<SimpleClass>& foo : array) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const SimpleClass &'.*}}
+  // for (ImplicitWrapper<SimpleClass>& foo : array) {}
+  for (const ImplicitWrapper<SimpleClass> foo : array) {}
+  for (ImplicitWrapper<SimpleClass> foo : array) {}
 }
 
 void ImplicitComplexClassIterator() {
@@ -117,15 +126,24 @@ void ImplicitComplexClassIterator() {
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const ComplexClass &'.*}}
   // for (ImplicitWrapper<ComplexClass>& foo : ComplexView()) {}
   for (const ImplicitWrapper<ComplexClass> foo : ComplexView()) {}
-  for (ImplicitWrapper<ComplexClass>foo : ComplexView()) {}
+  for (ImplicitWrapper<ComplexClass> foo : ComplexView()) {}
 }
 
 void ImplicitComplexClassRefIterator() {
+  ComplexClass array[5];
+  for (const ImplicitWrapper<ComplexClass>& foo : array) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const ComplexClass &'.*}}
+  // for (ImplicitWrapper<ComplexClass>& foo : array) {}
+  for (const ImplicitWrapper<ComplexClass> foo : array) {}
+  for (ImplicitWrapper<ComplexClass> foo : array) {}
+}
+
+void ImplicitComplexClassArray() {
   for (const ImplicitWrapper<ComplexClass>& foo : ComplexRefView()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const ComplexClass &'.*}}
   // for (ImplicitWrapper<ComplexClass>& foo : ComplexRefView()) {}
   for (const ImplicitWrapper<ComplexClass> foo : ComplexRefView()) {}
-  for (ImplicitWrapper<ComplexClass>foo : ComplexRefView()) {}
+  for (ImplicitWrapper<ComplexClass> foo : ComplexRefView()) {}
 }
 
 void OperatorSimpleClassIterator() {
@@ -133,7 +151,7 @@ void OperatorSimpleClassIterator() {
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const SimpleClass &'.*}}
   // for (OperatorWrapper<SimpleClass>& foo : SimpleView()) {}
   for (const OperatorWrapper<SimpleClass> foo : SimpleView()) {}
-  for (OperatorWrapper<SimpleClass>foo : SimpleView()) {}
+  for (OperatorWrapper<SimpleClass> foo : SimpleView()) {}
 }
 
 void OperatorSimpleClassRefIterator() {
@@ -141,7 +159,16 @@ void OperatorSimpleClassRefIterator() {
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const SimpleClass &'.*}}
   // for (OperatorWrapper<SimpleClass>& foo : SimpleRefView()) {}
   for (const OperatorWrapper<SimpleClass> foo : SimpleRefView()) {}
-  for (OperatorWrapper<SimpleClass>foo : SimpleRefView()) {}
+  for (OperatorWrapper<SimpleClass> foo : SimpleRefView()) {}
+}
+
+void OperatorSimpleClassArray() {
+  SimpleClass array[5];
+  for (const OperatorWrapper<SimpleClass>& foo : array) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const SimpleClass &'.*}}
+  // for (OperatorWrapper<SimpleClass>& foo : array) {}
+  for (const OperatorWrapper<SimpleClass> foo : array) {}
+  for (OperatorWrapper<SimpleClass> foo : array) {}
 }
 
 void OperatorComplexClassIterator() {
@@ -149,7 +176,7 @@ void OperatorComplexClassIterator() {
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const ComplexClass &'.*}}
   // for (OperatorWrapper<ComplexClass>& foo : ComplexView()) {}
   for (const OperatorWrapper<ComplexClass> foo : ComplexView()) {}
-  for (OperatorWrapper<ComplexClass>foo : ComplexView()) {}
+  for (OperatorWrapper<ComplexClass> foo : ComplexView()) {}
 }
 
 void OperatorComplexClassRefIterator() {
@@ -157,5 +184,14 @@ void OperatorComplexClassRefIterator() {
   // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const ComplexClass &'.*}}
   // for (OperatorWrapper<ComplexClass>& foo : ComplexRefView()) {}
   for (const OperatorWrapper<ComplexClass> foo : ComplexRefView()) {}
-  for (OperatorWrapper<ComplexClass>foo : ComplexRefView()) {}
+  for (OperatorWrapper<ComplexClass> foo : ComplexRefView()) {}
+}
+
+void OperatorComplexClassArray() {
+  ComplexClass array[5];
+  for (const OperatorWrapper<ComplexClass>& foo : array) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:{{[0-9]*}}: warning: the type of the{{.*'const ComplexClass &'.*}}
+  // for (OperatorWrapper<ComplexClass>& foo : array) {}
+  for (const OperatorWrapper<ComplexClass> foo : array) {}
+  for (OperatorWrapper<ComplexClass> foo : array) {}
 }

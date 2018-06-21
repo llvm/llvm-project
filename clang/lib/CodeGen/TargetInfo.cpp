@@ -140,11 +140,8 @@ bool SwiftABIInfo::isLegalVectorTypeForSwift(CharUnits vectorSize,
 static CGCXXABI::RecordArgABI getRecordArgABI(const RecordType *RT,
                                               CGCXXABI &CXXABI) {
   const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-  if (!RD) {
-    if (!RT->getDecl()->canPassInRegisters())
-      return CGCXXABI::RAA_Indirect;
+  if (!RD)
     return CGCXXABI::RAA_Default;
-  }
   return CXXABI.getRecordArgABI(RD);
 }
 
@@ -154,20 +151,6 @@ static CGCXXABI::RecordArgABI getRecordArgABI(QualType T,
   if (!RT)
     return CGCXXABI::RAA_Default;
   return getRecordArgABI(RT, CXXABI);
-}
-
-static bool classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
-                               const ABIInfo &Info) {
-  QualType Ty = FI.getReturnType();
-
-  if (const auto *RT = Ty->getAs<RecordType>())
-    if (!isa<CXXRecordDecl>(RT->getDecl()) &&
-        !RT->getDecl()->canPassInRegisters()) {
-      FI.getReturnInfo() = Info.getNaturalAlignIndirect(Ty);
-      return true;
-    }
-
-  return CXXABI.classifyReturnType(FI);
 }
 
 /// Pass transparent unions as if they were the type of the first element. Sema
@@ -1771,7 +1754,7 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   } else
     State.FreeRegs = DefaultNumRegisterParameters;
 
-  if (!::classifyReturnType(getCXXABI(), FI, *this)) {
+  if (!getCXXABI().classifyReturnType(FI)) {
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType(), State);
   } else if (FI.getReturnInfo().isIndirect()) {
     // The C++ ABI is not aware of register usage, so we have to check if the
@@ -3574,7 +3557,7 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   unsigned FreeSSERegs = IsRegCall ? 16 : 8;
   unsigned NeededInt, NeededSSE;
 
-  if (!::classifyReturnType(getCXXABI(), FI, *this)) {
+  if (!getCXXABI().classifyReturnType(FI)) {
     if (IsRegCall && FI.getReturnType()->getTypePtr()->isRecordType() &&
         !FI.getReturnType()->getTypePtr()->isUnionType()) {
       FI.getReturnInfo() =
@@ -4313,7 +4296,7 @@ PPC32TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 
 namespace {
 /// PPC64_SVR4_ABIInfo - The 64-bit PowerPC ELF (SVR4) ABI information.
-class PPC64_SVR4_ABIInfo : public SwiftABIInfo {
+class PPC64_SVR4_ABIInfo : public ABIInfo {
 public:
   enum ABIKind {
     ELFv1 = 0,
@@ -4357,7 +4340,7 @@ private:
 public:
   PPC64_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, ABIKind Kind, bool HasQPX,
                      bool SoftFloatABI)
-      : SwiftABIInfo(CGT), Kind(Kind), HasQPX(HasQPX),
+      : ABIInfo(CGT), Kind(Kind), HasQPX(HasQPX),
         IsSoftFloatABI(SoftFloatABI) {}
 
   bool isPromotableTypeForABI(QualType Ty) const;
@@ -4400,15 +4383,6 @@ public:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
-
-  bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
-                                    bool asReturnValue) const override {
-    return occupiesMoreThan(CGT, scalars, /*total*/ 4);
-  }
-
-  bool isSwiftErrorInRegister() const override {
-    return false;
-  }
 };
 
 class PPC64_SVR4_TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -4932,7 +4906,7 @@ private:
   bool isIllegalVectorType(QualType Ty) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    if (!::classifyReturnType(getCXXABI(), FI, *this))
+    if (!getCXXABI().classifyReturnType(FI))
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
     for (auto &it : FI.arguments())
@@ -5666,7 +5640,7 @@ void WindowsARMTargetCodeGenInfo::setTargetAttributes(
 }
 
 void ARMABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  if (!::classifyReturnType(getCXXABI(), FI, *this))
+  if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() =
         classifyReturnType(FI.getReturnType(), FI.isVariadic());
 

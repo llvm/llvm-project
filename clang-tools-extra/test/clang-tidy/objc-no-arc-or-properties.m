@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-suspicious-semicolon %t -- -- -fno-objc-arc -fobjc-abi-version=1
+// RUN: %check_clang_tidy %s bugprone-suspicious-semicolon %t -- -- -fno-objc-arc -fobjc-abi-version=1
 
 // This test ensures check_clang_tidy.py allows disabling Objective-C ARC and
 // Objective-C 2.0 via passing arguments after -- on the command line.
@@ -24,6 +24,6 @@
 void fail(Foo *f)
 {
   if([f shouldDoStuff]); [f nop];
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: potentially unintended semicolon [misc-suspicious-semicolon]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: potentially unintended semicolon [bugprone-suspicious-semicolon]
   // CHECK-FIXES: if([f shouldDoStuff]) [f nop];
 }

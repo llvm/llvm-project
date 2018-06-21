@@ -105,6 +105,60 @@ struct is_even<stable_test>
 
 typedef std::vector<uint8_t> Vec;
 typedef std::vector<stable_test> StableVec;
+typedef StableVec::const_iterator SVIter;
+
+//	Cheap version of is_permutation
+//	Builds a set of buckets for each of the key values.
+//	Sums all the payloads.
+//	Not 100% perfect, but _way_ faster
+bool is_permutation(SVIter first1, SVIter last1, SVIter first2)
+{
+	size_t xBuckets[256]  = {0};
+	size_t xPayloads[256] = {0};
+	size_t yBuckets[256]  = {0};
+	size_t yPayloads[256] = {0};
+	
+	for (; first1 != last1; ++first1, ++first2)
+	{
+		xBuckets [first1->key]++;
+		xPayloads[first1->key] += first1->payload;
+
+		yBuckets [first2->key]++;
+		yPayloads[first2->key] += first2->payload;
+	}
+	
+	for (size_t i = 0; i < 256; ++i)
+	{
+		if (xBuckets[i]  != yBuckets[i])
+			return false;
+		if (xPayloads[i] != yPayloads[i])
+			return false;
+	}
+
+	return true;
+}
+
+template <typename Iter1, typename Iter2>
+bool is_permutation(Iter1 first1, Iter1 last1, Iter2 first2)
+{
+	static_assert((std::is_same<typename std::iterator_traits<Iter1>::value_type, uint8_t>::value), "");
+	static_assert((std::is_same<typename std::iterator_traits<Iter2>::value_type, uint8_t>::value), "");
+	
+	size_t xBuckets[256]  = {0};
+	size_t yBuckets[256]  = {0};
+	
+	for (; first1 != last1; ++first1, ++first2)
+	{
+		xBuckets [*first1]++;
+		yBuckets [*first2]++;
+	}
+	
+	for (size_t i = 0; i < 256; ++i)
+		if (xBuckets[i]  != yBuckets[i])
+			return false;
+
+	return true;
+}
 
 //	== sort ==
 int sort(const uint8_t *data, size_t size)
@@ -113,7 +167,7 @@ int sort(const uint8_t *data, size_t size)
 	std::sort(working.begin(), working.end());
 
 	if (!std::is_sorted(working.begin(), working.end())) return 1;
-	if (!std::is_permutation(data, data + size, working.begin())) return 99;
+	if (!fuzzing::is_permutation(data, data + size, working.cbegin())) return 99;
 	return 0;
 }
 
@@ -135,7 +189,7 @@ int stable_sort(const uint8_t *data, size_t size)
 		if (!std::is_sorted(range.first, range.second, total_less())) return 2;			
 		iter = range.second;
 	}
-	if (!std::is_permutation(input.begin(), input.end(), working.begin())) return 99;
+	if (!fuzzing::is_permutation(input.cbegin(), input.cend(), working.cbegin())) return 99;
 	return 0;
 }
 
@@ -147,7 +201,7 @@ int partition(const uint8_t *data, size_t size)
 
 	if (!std::all_of (working.begin(), iter, is_even<uint8_t>())) return 1;
 	if (!std::none_of(iter,   working.end(), is_even<uint8_t>())) return 2;
-	if (!std::is_permutation(data, data + size, working.begin())) return 99;
+	if (!fuzzing::is_permutation(data, data + size, working.cbegin())) return 99;
 	return 0;
 }
 
@@ -190,7 +244,7 @@ int stable_partition (const uint8_t *data, size_t size)
 	if (!std::none_of(iter,   working.end(), is_even<stable_test>())) return 2;
 	if (!std::is_sorted(working.begin(), iter, payload_less()))   return 3;
 	if (!std::is_sorted(iter,   working.end(), payload_less()))   return 4;
-	if (!std::is_permutation(input.begin(), input.end(), working.begin())) return 99;
+	if (!fuzzing::is_permutation(input.cbegin(), input.cend(), working.cbegin())) return 99;
 	return 0;
 }
 
@@ -216,7 +270,7 @@ int nth_element (const uint8_t *data, size_t size)
 			return 1;
 		if (!std::all_of(partition_iter, working.end(),   [=](uint8_t v) { return v >= nth; }))
 			return 2;
-		if (!std::is_permutation(data + 1, data + size, working.begin())) return 99;
+		if (!fuzzing::is_permutation(data + 1, data + size, working.cbegin())) return 99;
 		}
 
 	return 0;
@@ -241,7 +295,7 @@ int partial_sort (const uint8_t *data, size_t size)
 			return 2;		
 	}
 	if (!std::is_sorted(working.begin(), sort_iter)) return 3;
-	if (!std::is_permutation(data + 1, data + size, working.begin())) return 99;
+	if (!fuzzing::is_permutation(data + 1, data + size, working.cbegin())) return 99;
 
 	return 0;
 }
@@ -440,7 +494,7 @@ int make_heap (const uint8_t *data, size_t size)
 	std::make_heap(working.begin(), working.end());
 
 	if (!std::is_heap(working.begin(), working.end())) return 1;
-	if (!std::is_permutation(data, data + size, working.begin())) return 99;
+	if (!fuzzing::is_permutation(data, data + size, working.cbegin())) return 99;
 	return 0;
 }
 
@@ -461,7 +515,7 @@ int push_heap (const uint8_t *data, size_t size)
 		if (!std::is_heap(working.begin(), iter)) return 2;	
 		}
 
-	if (!std::is_permutation(data, data + size, working.begin())) return 99;
+	if (!fuzzing::is_permutation(data, data + size, working.cbegin())) return 99;
 	return 0;
 }
 

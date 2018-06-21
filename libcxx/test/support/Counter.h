@@ -45,8 +45,10 @@ namespace std {
 
 template <class T>
 struct hash<Counter<T> >
-    : public std::unary_function<Counter<T>, std::size_t>
 {
+    typedef Counter<T> argument_type;
+    typedef std::size_t result_type;
+
     std::size_t operator()(const Counter<T>& x) const {return std::hash<T>(x.get());}
 };
 }

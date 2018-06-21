@@ -18,6 +18,7 @@
 
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
@@ -29,14 +30,7 @@ namespace clang {
 class DiagnosticsEngine;
 class Rewriter;
 
-namespace format {
-struct FormatStyle;
-} // end namespace format
-
 namespace replace {
-
-/// \brief Collection of source ranges.
-typedef std::vector<clang::tooling::Range> RangeVector;
 
 /// \brief Collection of TranslationUnitReplacements.
 typedef std::vector<clang::tooling::TranslationUnitReplacements> TUReplacements;
@@ -47,10 +41,10 @@ typedef std::vector<std::string> TUReplacementFiles;
 /// \brief Collection of TranslationUniDiagnostics.
 typedef std::vector<clang::tooling::TranslationUnitDiagnostics> TUDiagnostics;
 
-/// \brief Map mapping file name to Replacements targeting that file.
+/// \brief Map mapping file name to a set of AtomicChange targeting that file.
 typedef llvm::DenseMap<const clang::FileEntry *,
-                       std::vector<clang::tooling::Replacement>>
-    FileToReplacementsMap;
+                       std::vector<tooling::AtomicChange>>
+    FileToChangesMap;
 
 /// \brief Recursively descends through a directory structure rooted at \p
 /// Directory and attempts to deserialize *.yaml files as
@@ -77,65 +71,39 @@ std::error_code collectReplacementsFromDirectory(
     const llvm::StringRef Directory, TUDiagnostics &TUs,
     TUReplacementFiles &TUFiles, clang::DiagnosticsEngine &Diagnostics);
 
-/// \brief Deduplicate, check for conflicts, and apply all Replacements stored
-/// in \c TUs. If conflicts occur, no Replacements are applied.
+/// \brief Deduplicate, check for conflicts, and extract all Replacements stored
+/// in \c TUs. Conflicting replacements are skipped.
 ///
-/// \post For all (key,value) in GroupedReplacements, value[i].getOffset() <=
+/// \post For all (key,value) in FileChanges, value[i].getOffset() <=
 /// value[i+1].getOffset().
 ///
 /// \param[in] TUs Collection of TranslationUnitReplacements or
-/// TranslationUnitDiagnostics to merge,
-/// deduplicate, and test for conflicts.
-/// \param[out] GroupedReplacements Container grouping all Replacements by the
-/// file they target.
+/// TranslationUnitDiagnostics to merge, deduplicate, and test for conflicts.
+/// \param[out] FileChanges Container grouping all changes by the
+/// file they target. Only non conflicting replacements are kept into
+/// FileChanges.
 /// \param[in] SM SourceManager required for conflict reporting.
 ///
 /// \returns \parblock
-///          \li true If all changes were applied successfully.
+///          \li true If all changes were converted successfully.
 ///          \li false If there were conflicts.
-bool mergeAndDeduplicate(const TUReplacements &TUs,
-                         FileToReplacementsMap &GroupedReplacements,
+bool mergeAndDeduplicate(const TUReplacements &TUs, const TUDiagnostics &TUDs,
+                         FileToChangesMap &FileChanges,
                          clang::SourceManager &SM);
 
-bool mergeAndDeduplicate(const TUDiagnostics &TUs,
-                         FileToReplacementsMap &GroupedReplacements,
-                         clang::SourceManager &SM);
-
-// FIXME: Remove this function after changing clang-apply-replacements to use
-// Replacements class.
-bool applyAllReplacements(const std::vector<tooling::Replacement> &Replaces,
-                          Rewriter &Rewrite);
-
-/// \brief Apply all replacements in \c GroupedReplacements.
+/// \brief Apply \c AtomicChange on File and rewrite it.
 ///
-/// \param[in] GroupedReplacements Deduplicated and conflict free Replacements
-/// to apply.
-/// \param[out] Rewrites The results of applying replacements will be applied
-/// to this Rewriter.
+/// \param[in] File Path of the file where to apply AtomicChange.
+/// \param[in] Changes to apply.
+/// \param[in] Spec For code cleanup and formatting.
+/// \param[in] Diagnostics DiagnosticsEngine used for error output.
 ///
-/// \returns \parblock
-///          \li true If all changes were applied successfully.
-///          \li false If a replacement failed to apply.
-bool applyReplacements(const FileToReplacementsMap &GroupedReplacements,
-                       clang::Rewriter &Rewrites);
-
-/// \brief Given a collection of Replacements for a single file, produces a list
-/// of source ranges that enclose those Replacements.
-///
-/// \pre Replacements[i].getOffset() <= Replacements[i+1].getOffset().
-///
-/// \param[in] Replacements Replacements from a single file.
-///
-/// \returns Collection of source ranges that enclose all given Replacements.
-/// One range is created for each replacement.
-RangeVector calculateChangedRanges(
-    const std::vector<clang::tooling::Replacement> &Replacements);
-
-/// \brief Write the contents of \c FileContents to disk. Keys of the map are
-/// filenames and values are the new contents for those files.
-///
-/// \param[in] Rewrites Rewriter containing written files to write to disk.
-bool writeFiles(const clang::Rewriter &Rewrites);
+/// \returns The changed code if all changes are applied successfully;
+/// otherwise, an llvm::Error carrying llvm::StringError or an error_code.
+llvm::Expected<std::string>
+applyChanges(StringRef File, const std::vector<tooling::AtomicChange> &Changes,
+             const tooling::ApplyChangesSpec &Spec,
+             DiagnosticsEngine &Diagnostics);
 
 /// \brief Delete the replacement files.
 ///

@@ -742,10 +742,22 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
 
 bool swiftcall::shouldPassCXXRecordIndirectly(CodeGenModule &CGM,
                                               const CXXRecordDecl *record) {
-  // FIXME: should we not rely on the standard computation in Sema, just in
-  // case we want to diverge from the platform ABI (e.g. on targets where
-  // that uses the MSVC rule)?
-  return !record->canPassInRegisters();
+  // Following a recommendation from Richard Smith, pass a C++ type
+  // indirectly only if the destructor is non-trivial or *all* of the
+  // copy/move constructors are deleted or non-trivial.
+
+  if (record->hasNonTrivialDestructor())
+    return true;
+
+  // It would be nice if this were summarized on the CXXRecordDecl.
+  for (auto ctor : record->ctors()) {
+    if (ctor->isCopyOrMoveConstructor() && !ctor->isDeleted() &&
+        ctor->isTrivial()) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,

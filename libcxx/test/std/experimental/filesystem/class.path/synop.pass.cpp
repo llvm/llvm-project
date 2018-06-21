@@ -17,13 +17,12 @@
 // typedef basic_string<value_type> string_type;
 // static constexpr value_type preferred_separator = ...;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
 
-namespace fs = std::experimental::filesystem;
 
 int main() {
   using namespace fs;

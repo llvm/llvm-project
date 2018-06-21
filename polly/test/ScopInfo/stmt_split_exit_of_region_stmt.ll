@@ -21,19 +21,19 @@
 ; CHECK-NEXT:       Instructions {
 ; CHECK-NEXT:             store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
 ; CHECK-NEXT:       }
-; CHECK-NEXT:   Stmt_Stmt1
+; CHECK-NEXT:   Stmt_Stmt_b
 ; CHECK-NEXT:       Domain :=
-; CHECK-NEXT:           { Stmt_Stmt1[i0] : 0 <= i0 <= 1023 };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0] : 0 <= i0 <= 1023 };
 ; CHECK-NEXT:       Schedule :=
-; CHECK-NEXT:           { Stmt_Stmt1[i0] -> [i0, 2] };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0] -> [i0, 2] };
 ; CHECK-NEXT:       MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:           { Stmt_Stmt1[i0] -> MemRef_B[i0] };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0] -> MemRef_B[i0] };
 ; CHECK-NEXT:       Instructions {
 ; CHECK-NEXT:             store i32 %i.0, i32* %arrayidx2, align 4
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:   }
 ;
-; Function Attrs: noinline nounwind uwtable 
+; Function Attrs: noinline nounwind uwtable
 define void @func(i32* %A, i32* %B, double* %C) {
 entry:
   br label %for.cond

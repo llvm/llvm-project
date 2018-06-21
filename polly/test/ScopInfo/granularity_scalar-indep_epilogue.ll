@@ -56,13 +56,13 @@ return:
 ; CHECK-NEXT:             %valA = load double, double* %A
 ; CHECK-NEXT:             store double %valA, double* %A
 ; CHECK-NEXT:         }
-; CHECK-NEXT:     Stmt_bodyA1
+; CHECK-NEXT:     Stmt_bodyA_last
 ; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [n] -> { Stmt_bodyA1[i0] : 0 <= i0 < n };
+; CHECK-NEXT:             [n] -> { Stmt_bodyA_last[i0] : 0 <= i0 < n };
 ; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [n] -> { Stmt_bodyA1[i0] -> [i0, 1] };
+; CHECK-NEXT:             [n] -> { Stmt_bodyA_last[i0] -> [i0, 1] };
 ; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [n] -> { Stmt_bodyA1[i0] -> MemRef_phi__phi[] };
+; CHECK-NEXT:             [n] -> { Stmt_bodyA_last[i0] -> MemRef_phi__phi[] };
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: }

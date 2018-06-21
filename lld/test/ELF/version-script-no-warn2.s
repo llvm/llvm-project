@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/version-script-no-warn2.s -o %t1.o
 # RUN: ld.lld %t1.o -o %t1.so -shared
 # RUN: echo "{ global: foo; local:  *; };" > %t.script

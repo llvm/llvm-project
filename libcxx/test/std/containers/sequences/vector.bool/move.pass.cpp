@@ -15,6 +15,7 @@
 
 #include <vector>
 #include <cassert>
+#include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
 
@@ -58,5 +59,35 @@ int main()
         assert(l2 == lo);
         assert(l.empty());
         assert(l2.get_allocator() == lo.get_allocator());
+    }
+    {
+      test_alloc_base::clear();
+      using Vect = std::vector<bool, test_allocator<bool> >;
+      using AllocT = Vect::allocator_type;
+      Vect v(test_allocator<bool>(42, 101));
+      assert(test_alloc_base::count == 1);
+      {
+        const AllocT& a = v.get_allocator();
+        assert(test_alloc_base::count == 2);
+        assert(a.get_data() == 42);
+        assert(a.get_id() == 101);
+      }
+      assert(test_alloc_base::count == 1);
+      test_alloc_base::clear_ctor_counters();
+
+      Vect v2 = std::move(v);
+      assert(test_alloc_base::count == 2);
+      assert(test_alloc_base::copied == 0);
+      assert(test_alloc_base::moved == 1);
+      {
+        const AllocT& a = v.get_allocator();
+        assert(a.get_id() == test_alloc_base::moved_value);
+        assert(a.get_data() == test_alloc_base::moved_value);
+      }
+      {
+        const AllocT& a = v2.get_allocator();
+        assert(a.get_id() == 101);
+        assert(a.get_data() == 42);
+      }
     }
 }

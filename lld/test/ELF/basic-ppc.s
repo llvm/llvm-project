@@ -65,7 +65,7 @@
 // CHECK-NEXT:     Address: 0x114
 // CHECK-NEXT:     Offset: 0x114
 // CHECK-NEXT:     Size: 16
-// CHECK-NEXT:     Link: 3
+// CHECK-NEXT:     Link: 2
 // CHECK-NEXT:     Info: 1
 // CHECK-NEXT:     AddressAlignment: 4
 // CHECK-NEXT:     EntrySize: 16
@@ -75,31 +75,13 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
 // CHECK-NEXT:     Index: 2
-// CHECK-NEXT:     Name: .hash
-// CHECK-NEXT:     Type: SHT_HASH (0x5)
-// CHECK-NEXT:     Flags [ (0x2)
-// CHECK-NEXT:       SHF_ALLOC (0x2)
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x124
-// CHECK-NEXT:     Offset: 0x124
-// CHECK-NEXT:     Size: 16
-// CHECK-NEXT:     Link: 1
-// CHECK-NEXT:     Info: 0
-// CHECK-NEXT:     AddressAlignment: 4
-// CHECK-NEXT:     EntrySize: 4
-// CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 00000001 00000001 00000000 00000000  |................|
-// CHECK-NEXT:     )
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Section {
-// CHECK-NEXT:     Index: 3
 // CHECK-NEXT:     Name: .dynstr
 // CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 // CHECK-NEXT:     Flags [ (0x2)
 // CHECK-NEXT:       SHF_ALLOC (0x2)
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     Address: 0x134
-// CHECK-NEXT:     Offset: 0x134
+// CHECK-NEXT:     Address: 0x124
+// CHECK-NEXT:     Offset: 0x124
 // CHECK-NEXT:     Size: 1
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
@@ -107,6 +89,24 @@
 // CHECK-NEXT:     EntrySize: 0
 // CHECK-NEXT:     SectionData (
 // CHECK-NEXT:       0000: 00                                   |.|
+// CHECK-NEXT:     )
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Section {
+// CHECK-NEXT:     Index: 3
+// CHECK-NEXT:     Name: .hash
+// CHECK-NEXT:     Type: SHT_HASH (0x5)
+// CHECK-NEXT:     Flags [ (0x2)
+// CHECK-NEXT:       SHF_ALLOC (0x2)
+// CHECK-NEXT:     ]
+// CHECK-NEXT:     Address: 0x128
+// CHECK-NEXT:     Offset: 0x128
+// CHECK-NEXT:     Size: 16
+// CHECK-NEXT:     Link: 1
+// CHECK-NEXT:     Info: 0
+// CHECK-NEXT:     AddressAlignment: 4
+// CHECK-NEXT:     EntrySize: 4
+// CHECK-NEXT:     SectionData (
+// CHECK-NEXT:       0000: 00000001 00000001 00000000 00000000  |................|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
@@ -139,14 +139,14 @@
 // CHECK-NEXT:     Address: 0x2000
 // CHECK-NEXT:     Offset: 0x2000
 // CHECK-NEXT:     Size: 48
-// CHECK-NEXT:     Link: 3
+// CHECK-NEXT:     Link: 2
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 4
 // CHECK-NEXT:     EntrySize: 8
 // CHECK-NEXT:     SectionData (
 // CHECK-NEXT:       0000: 00000006 00000114 0000000B 00000010  |................|
-// CHECK-NEXT:       0010: 00000005 00000134 0000000A 00000001  |.......4........|
-// CHECK-NEXT:       0020: 00000004 00000124 00000000 00000000  |.......$........|
+// CHECK-NEXT:       0010: 00000005 00000124 0000000A 00000001  |.......$........|
+// CHECK-NEXT:       0020: 00000004 00000128 00000000 00000000  |.......(........|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
@@ -165,7 +165,7 @@
 // CHECK-NEXT:     AddressAlignment: 1
 // CHECK-NEXT:     EntrySize: 1
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 4C4C4420 312E3000 |LLD 1.0.|
+// CHECK-NEXT:       0000: 4C4C4420 312E3000                    |LLD 1.0.|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
@@ -200,8 +200,8 @@
 // CHECK-NEXT:     AddressAlignment: 1
 // CHECK-NEXT:     EntrySize: 0
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 002E6479 6E73796D 002E6861 7368002E  |..dynsym..hash..|
-// CHECK-NEXT:       0010: 64796E73 7472002E 74657874 002E6479  |dynstr..text..dy|
+// CHECK-NEXT:       0000: 002E6479 6E73796D 002E6479 6E737472  |..dynsym..dynstr|
+// CHECK-NEXT:       0010: 002E6861 7368002E 74657874 002E6479  |..hash..text..dy|
 // CHECK-NEXT:       0020: 6E616D69 63002E63 6F6D6D65 6E74002E  |namic..comment..|
 // CHECK-NEXT:       0030: 73796D74 6162002E 73687374 72746162  |symtab..shstrtab|
 // CHECK-NEXT:       0040: 002E7374 72746162 00                 |..strtab.|
@@ -215,7 +215,7 @@
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
 // CHECK-NEXT:     Offset: 0x20A1
-// CHECK-NEXT:     Size: 1
+// CHECK-NEXT:     Size: 10
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 1
@@ -243,8 +243,8 @@
 // CHECK-NEXT:     Offset: 0x0
 // CHECK-NEXT:     VirtualAddress: 0x0
 // CHECK-NEXT:     PhysicalAddress: 0x0
-// CHECK-NEXT:     FileSize: 309
-// CHECK-NEXT:     MemSize: 309
+// CHECK-NEXT:     FileSize: 312
+// CHECK-NEXT:     MemSize: 312
 // CHECK-NEXT:     Flags [ (0x4)
 // CHECK-NEXT:       PF_R (0x4)
 // CHECK-NEXT:     ]

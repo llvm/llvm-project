@@ -4,10 +4,10 @@
 # RUN: ld.lld --hash-style=sysv -no-rosegment -o %t1  %t -shared
 # RUN: llvm-readobj -elf-output-style=GNU -s %t1 | FileCheck %s
 
-# CHECK:      .text    {{.*}}   AX
-# CHECK-NEXT: .dynsym  {{.*}}   A
-# CHECK-NEXT: .hash    {{.*}}   A
+# CHECK:      .dynsym  {{.*}}   A
 # CHECK-NEXT: .dynstr  {{.*}}   A
+# CHECK-NEXT: .text    {{.*}}   AX
+# CHECK-NEXT: .hash    {{.*}}   A
 # CHECK-NEXT: foo      {{.*}}  WA
 # CHECK-NEXT: .dynamic {{.*}}  WA
 

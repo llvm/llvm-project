@@ -1,5 +1,5 @@
 // RUN: clang-tidy %s -checks='-*,llvm-namespace-*' -- 2>&1 | FileCheck -implicit-check-not='{{warning:|error:}}' %s
-// RUN: clang-tidy %s -checks='-*,an-unknown-check' -- 2>&1 | FileCheck -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK2 %s
+// RUN: not clang-tidy %s -checks='-*,an-unknown-check' -- 2>&1 | FileCheck -implicit-check-not='{{warning:|error:}}' -check-prefix=CHECK2 %s
 
 // CHECK2: Error: no checks enabled.
 

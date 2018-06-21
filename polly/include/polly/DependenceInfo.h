@@ -99,7 +99,7 @@ struct Dependences {
   /// @param Kinds This integer defines the different kinds of dependences
   ///              that will be returned. To return more than one kind, the
   ///              different kinds are 'ored' together.
-  __isl_give isl_union_map *getDependences(int Kinds) const;
+  isl::union_map getDependences(int Kinds) const;
 
   /// Report if valid dependences are available.
   bool hasValidDependences() const;
@@ -310,7 +310,6 @@ private:
   /// Scop to Dependence map for the current function.
   ScopToDepsMapTy ScopToDepsMap;
 };
-
 } // namespace polly
 
 namespace llvm {

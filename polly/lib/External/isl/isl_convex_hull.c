@@ -1557,7 +1557,7 @@ static void update_constraint(struct isl_ctx *ctx, struct isl_hash_table *table,
 	c->ineq = ineq;
 }
 
-/* Check whether the constraint hash table "table" constains the constraint
+/* Check whether the constraint hash table "table" contains the constraint
  * "con".
  */
 static int has_constraint(struct isl_ctx *ctx, struct isl_hash_table *table,

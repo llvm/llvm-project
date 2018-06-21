@@ -3,17 +3,18 @@
 ; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \
-; RUN: -polly-acc-dump-code \
+; RUN: -polly-acc-dump-code -polly-stmt-granularity=bb \
 ; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=CODE
 
 ; RUN: opt %loadPolly -S -polly-use-llvm-names -polly-codegen-ppcg \
-; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=HOST-IR
+; RUN: -polly-invariant-load-hoisting -polly-stmt-granularity=bb < %s \
+; RUN: | FileCheck %s -check-prefix=HOST-IR
 
 ; REQUIRES: pollyacc
 
 ; SCOP:      Invariant Accesses: {
 ; SCOP-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; SCOP-NEXT:             { Stmt_loop[i0] -> MemRef_p[0] };
+; SCOP-NEXT:             { Stmt_loop_a[i0] -> MemRef_p[0] };
 ; SCOP-NEXT:         Execution Context: {  :  }
 ; SCOP-NEXT: }
 

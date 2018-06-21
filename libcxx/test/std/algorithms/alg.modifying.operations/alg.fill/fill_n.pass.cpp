@@ -11,14 +11,28 @@
 
 // template<class Iter, IntegralLike Size, class T>
 //   requires OutputIterator<Iter, const T&>
-//   OutputIterator
+//   constexpr OutputIterator      // constexpr after C++17
 //   fill_n(Iter first, Size n, const T& value);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "user_defined_integral.hpp"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    const size_t N = 5;
+    int ib[] = {0, 0, 0, 0, 0, 0}; // one bigger than N
+
+    auto it = std::fill_n(std::begin(ib), N, 5);
+    return it == (std::begin(ib) + N)
+        && std::all_of(std::begin(ib), it, [](int a) {return a == 5; })
+        && *it == 0 // don't overwrite the last value in the output array
+        ;
+    }
+#endif
 
 typedef UserDefinedIntegral<unsigned> UDI;
 
@@ -153,4 +167,8 @@ int main()
 
     test5();
     test6();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

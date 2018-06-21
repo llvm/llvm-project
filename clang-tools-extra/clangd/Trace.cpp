@@ -8,11 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Trace.h"
+#include "Context.h"
+#include "Function.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 #include <mutex>
 
 namespace clang {
@@ -43,27 +47,117 @@ public:
     Out.flush();
   }
 
-  EndEventCallback beginSpan(const Context &Ctx,
-                             llvm::StringRef Name) override {
-    jsonEvent("B", json::obj{{"name", Name}});
-
-    // The callback that will run when event ends.
-    return [this](json::Expr &&Args) {
-      jsonEvent("E", json::obj{{"args", std::move(Args)}});
-    };
+  // We stash a Span object in the context. It will record the start/end,
+  // and this also allows us to look up the parent Span's information.
+  Context beginSpan(llvm::StringRef Name, json::obj *Args) override {
+    return Context::current().derive(
+        SpanKey, llvm::make_unique<JSONSpan>(this, Name, Args));
   }
 
-  void instant(const Context &Ctx, llvm::StringRef Name,
-               json::obj &&Args) override {
+  // Trace viewer requires each thread to properly stack events.
+  // So we need to mark only duration that the span was active on the thread.
+  // (Hopefully any off-thread activity will be connected by a flow event).
+  // Record the end time here, but don't write the event: Args aren't ready yet.
+  void endSpan() override {
+    Context::current().getExisting(SpanKey)->markEnded();
+  }
+
+  void instant(llvm::StringRef Name, json::obj &&Args) override {
+    captureThreadMetadata();
     jsonEvent("i", json::obj{{"name", Name}, {"args", std::move(Args)}});
   }
 
   // Record an event on the current thread. ph, pid, tid, ts are set.
   // Contents must be a list of the other JSON key/values.
-  void jsonEvent(StringRef Phase, json::obj &&Contents) {
+  void jsonEvent(StringRef Phase, json::obj &&Contents,
+                 uint64_t TID = get_threadid(),
+                 double Timestamp = 0) {
+    Contents["ts"] = Timestamp ? Timestamp : timestamp();
+    Contents["tid"] = TID;
+    std::lock_guard<std::mutex> Lock(Mu);
+    rawEvent(Phase, std::move(Contents));
+  }
+
+private:
+  class JSONSpan {
+  public:
+    JSONSpan(JSONTracer *Tracer, llvm::StringRef Name, json::obj *Args)
+        : StartTime(Tracer->timestamp()), EndTime(0), Name(Name),
+          TID(get_threadid()), Tracer(Tracer), Args(Args) {
+      // ~JSONSpan() may run in a different thread, so we need to capture now.
+      Tracer->captureThreadMetadata();
+
+      // We don't record begin events here (and end events in the destructor)
+      // because B/E pairs have to appear in the right order, which is awkward.
+      // Instead we send the complete (X) event in the destructor.
+
+      // If our parent was on a different thread, add an arrow to this span.
+      auto *Parent = Context::current().get(SpanKey);
+      if (Parent && *Parent && (*Parent)->TID != TID) {
+        // If the parent span ended already, then show this as "following" it.
+        // Otherwise show us as "parallel".
+        double OriginTime = (*Parent)->EndTime;
+        if (!OriginTime)
+          OriginTime = (*Parent)->StartTime;
+
+        auto FlowID = nextID();
+        Tracer->jsonEvent("s",
+                          json::obj{{"id", FlowID},
+                                    {"name", "Context crosses threads"},
+                                    {"cat", "dummy"}},
+                          (*Parent)->TID, (*Parent)->StartTime);
+        Tracer->jsonEvent("f",
+                          json::obj{{"id", FlowID},
+                                    {"bp", "e"},
+                                    {"name", "Context crosses threads"},
+                                    {"cat", "dummy"}},
+                          TID);
+      }
+    }
+
+    ~JSONSpan() {
+      // Finally, record the event (ending at EndTime, not timestamp())!
+      Tracer->jsonEvent("X",
+                        json::obj{{"name", std::move(Name)},
+                                  {"args", std::move(*Args)},
+                                  {"dur", EndTime - StartTime}},
+                        TID, StartTime);
+    }
+
+    // May be called by any thread.
+    void markEnded() {
+      EndTime = Tracer->timestamp();
+    }
+
+  private:
+    static uint64_t nextID() {
+      static std::atomic<uint64_t> Next = {0};
+      return Next++;
+    }
+
+    double StartTime;
+    std::atomic<double> EndTime; // Filled in by markEnded().
+    std::string Name;
+    uint64_t TID;
+    JSONTracer *Tracer;
+    json::obj *Args;
+  };
+  static Key<std::unique_ptr<JSONSpan>> SpanKey;
+
+  // Record an event. ph and pid are set.
+  // Contents must be a list of the other JSON key/values.
+  void rawEvent(StringRef Phase, json::obj &&Event) /*REQUIRES(Mu)*/ {
+    // PID 0 represents the clangd process.
+    Event["pid"] = 0;
+    Event["ph"] = Phase;
+    Out << Sep << formatv(JSONFormat, json::Expr(std::move(Event)));
+    Sep = ",\n";
+  }
+
+  // If we haven't already, emit metadata describing this thread.
+  void captureThreadMetadata() {
     uint64_t TID = get_threadid();
     std::lock_guard<std::mutex> Lock(Mu);
-    // If we haven't already, emit metadata describing this thread.
     if (ThreadsWithMD.insert(TID).second) {
       SmallString<32> Name;
       get_thread_name(Name);
@@ -75,20 +169,6 @@ public:
                       });
       }
     }
-    Contents["ts"] = timestamp();
-    Contents["tid"] = TID;
-    rawEvent(Phase, std::move(Contents));
-  }
-
-private:
-  // Record an event. ph and pid are set.
-  // Contents must be a list of the other JSON key/values.
-  void rawEvent(StringRef Phase, json::obj &&Event) /*REQUIRES(Mu)*/ {
-    // PID 0 represents the clangd process.
-    Event["pid"] = 0;
-    Event["ph"] = Phase;
-    Out << Sep << formatv(JSONFormat, json::Expr(std::move(Event)));
-    Sep = ",\n";
   }
 
   double timestamp() {
@@ -103,6 +183,8 @@ private:
   const sys::TimePoint<> Start;
   const char *JSONFormat;
 };
+
+Key<std::unique_ptr<JSONTracer::JSONSpan>> JSONTracer::SpanKey;
 
 EventTracer *T = nullptr;
 } // namespace
@@ -119,29 +201,32 @@ std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
   return llvm::make_unique<JSONTracer>(OS, Pretty);
 }
 
-void log(const Context &Ctx, const Twine &Message) {
+void log(const Twine &Message) {
   if (!T)
     return;
-  T->instant(Ctx, "Log", json::obj{{"Message", Message.str()}});
+  T->instant("Log", json::obj{{"Message", Message.str()}});
 }
 
-Span::Span(const Context &Ctx, llvm::StringRef Name) {
+// Returned context owns Args.
+static Context makeSpanContext(llvm::Twine Name, json::obj *Args) {
   if (!T)
-    return;
-
-  Callback = T->beginSpan(Ctx, Name);
-  if (!Callback)
-    return;
-
-  Args = llvm::make_unique<json::obj>();
+    return Context::current().clone();
+  WithContextValue WithArgs{std::unique_ptr<json::obj>(Args)};
+  return T->beginSpan(Name.isSingleStringRef() ? Name.getSingleStringRef()
+                                               : llvm::StringRef(Name.str()),
+                      Args);
 }
+
+// Span keeps a non-owning pointer to the args, which is how users access them.
+// The args are owned by the context though. They stick around until the
+// beginSpan() context is destroyed, when the tracing engine will consume them.
+Span::Span(llvm::Twine Name)
+    : Args(T ? new json::obj() : nullptr),
+      RestoreCtx(makeSpanContext(Name, Args)) {}
 
 Span::~Span() {
-  if (!Callback)
-    return;
-
-  assert(Args && "Args must be non-null if Callback is defined");
-  Callback(std::move(*Args));
+  if (T)
+    T->endSpan();
 }
 
 } // namespace trace

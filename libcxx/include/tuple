@@ -173,16 +173,11 @@ class __tuple_leaf
 
     template <class _Tp>
     static constexpr bool __can_bind_reference() {
-        using _RawTp = typename remove_reference<_Tp>::type;
-        using _RawHp = typename remove_reference<_Hp>::type;
-        using _CheckLValueArg = integral_constant<bool,
-            is_lvalue_reference<_Tp>::value
-        ||  is_same<_RawTp, reference_wrapper<_RawHp>>::value
-        ||  is_same<_RawTp, reference_wrapper<typename remove_const<_RawHp>::type>>::value
-        >;
-        return  !is_reference<_Hp>::value
-            || (is_lvalue_reference<_Hp>::value && _CheckLValueArg::value)
-            || (is_rvalue_reference<_Hp>::value && !is_lvalue_reference<_Tp>::value);
+#if __has_keyword(__reference_binds_to_temporary)
+      return !__reference_binds_to_temporary(_Hp, _Tp);
+#else
+      return true;
+#endif
     }
 
     __tuple_leaf& operator=(const __tuple_leaf&);
@@ -216,7 +211,7 @@ public:
     template <class _Tp,
               class = typename enable_if<
                   __lazy_and<
-                      __lazy_not<is_same<typename decay<_Tp>::type, __tuple_leaf>>
+                      __lazy_not<is_same<typename __uncvref<_Tp>::type, __tuple_leaf>>
                     , is_constructible<_Hp, _Tp>
                     >::value
                 >::type
@@ -224,15 +219,15 @@ public:
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_((is_nothrow_constructible<_Hp, _Tp>::value))
             : __value_(_VSTD::forward<_Tp>(__t))
-        {static_assert(__can_bind_reference<_Tp>(),
-       "Attempted to construct a reference element in a tuple with an rvalue");}
+        {static_assert(__can_bind_reference<_Tp&&>(),
+       "Attempted construction of reference element binds to a temporary whose lifetime has ended");}
 
     template <class _Tp, class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit __tuple_leaf(integral_constant<int, 0>, const _Alloc&, _Tp&& __t)
             : __value_(_VSTD::forward<_Tp>(__t))
-        {static_assert(__can_bind_reference<_Tp>(),
-       "Attempted to construct a reference element in a tuple with an rvalue");}
+        {static_assert(__can_bind_reference<_Tp&&>(),
+       "Attempted construction of reference element binds to a temporary whose lifetime has ended");}
 
     template <class _Tp, class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
@@ -298,7 +293,7 @@ public:
     template <class _Tp,
               class = typename enable_if<
                   __lazy_and<
-                        __lazy_not<is_same<typename decay<_Tp>::type, __tuple_leaf>>
+                        __lazy_not<is_same<typename __uncvref<_Tp>::type, __tuple_leaf>>
                       , is_constructible<_Hp, _Tp>
                     >::value
                 >::type
@@ -1388,7 +1383,7 @@ constexpr decltype(auto) apply(_Fn && __f, _Tuple && __t)
 _LIBCPP_NOEXCEPT_RETURN(
     _VSTD::__apply_tuple_impl(
         _VSTD::forward<_Fn>(__f), _VSTD::forward<_Tuple>(__t),
-        typename __make_tuple_indices<tuple_size_v<decay_t<_Tuple>>>::type{})
+        typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{})
 )
 
 template <class _Tp, class _Tuple, size_t... _Idx>
@@ -1403,7 +1398,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 constexpr _Tp make_from_tuple(_Tuple&& __t)
 _LIBCPP_NOEXCEPT_RETURN(
     _VSTD::__make_from_tuple_impl<_Tp>(_VSTD::forward<_Tuple>(__t),
-        typename __make_tuple_indices<tuple_size_v<decay_t<_Tuple>>>::type{})
+        typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type{})
 )
 
 #undef _LIBCPP_NOEXCEPT_RETURN

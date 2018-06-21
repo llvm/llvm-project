@@ -61,7 +61,7 @@ int main()
             assert(v[3] == L'.');
             assert(v[4] == L'a');
             assert(v[5] == L'1');
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__FreeBSD__)
             assert(v[6] == L'\x85');
 #else
             assert(v[6] == wchar_t(-1));

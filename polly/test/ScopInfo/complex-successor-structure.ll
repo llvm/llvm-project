@@ -9,7 +9,7 @@
 ; of needed constraints (it is basically the condition of B(X) + one smax),
 ; thus we should bail out at some point.
 ;
-; CHECK: Low complexity assumption: {  : 1 = 0 }
+; CHECK: Low complexity assumption: {  : false }
 
 ;      |
 ;    for.body <--+

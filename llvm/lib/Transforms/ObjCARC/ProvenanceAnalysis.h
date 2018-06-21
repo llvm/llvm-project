@@ -56,8 +56,6 @@ class ProvenanceAnalysis {
 
   CachedResultsTy CachedResults;
 
-  DenseMap<const Value *, const Value *> UnderlyingObjCPtrCache;
-
   bool relatedCheck(const Value *A, const Value *B, const DataLayout &DL);
   bool relatedSelect(const SelectInst *A, const Value *B);
   bool relatedPHI(const PHINode *A, const Value *B);
@@ -75,7 +73,6 @@ public:
 
   void clear() {
     CachedResults.clear();
-    UnderlyingObjCPtrCache.clear();
   }
 };
 

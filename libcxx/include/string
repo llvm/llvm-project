@@ -311,6 +311,13 @@ public:
     bool __invariants() const;
 };
 
+template<class InputIterator,
+         class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
+basic_string(InputIterator, InputIterator, Allocator = Allocator())
+   -> basic_string<typename iterator_traits<InputIterator>::value_type,
+                  char_traits<typename iterator_traits<InputIterator>::value_type>,
+                  Allocator>;   // C++17
+
 template<class charT, class traits, class Allocator>
 basic_string<charT, traits, Allocator>
 operator+(const basic_string<charT, traits, Allocator>& lhs,
@@ -651,10 +658,12 @@ public:
     typedef typename __alloc_traits::pointer             pointer;
     typedef typename __alloc_traits::const_pointer       const_pointer;
 
-    static_assert(is_pod<value_type>::value, "Character type of basic_string must be a POD");
-    static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+    static_assert((!is_array<value_type>::value), "Character type of basic_string must not be an array");
+    static_assert(( is_standard_layout<value_type>::value), "Character type of basic_string must be standard-layout");
+    static_assert(( is_trivial<value_type>::value), "Character type of basic_string must be trivial");
+    static_assert(( is_same<_CharT, typename traits_type::char_type>::value),
                   "traits_type::char_type must be the same type as CharT");
-    static_assert((is_same<typename allocator_type::value_type, value_type>::value),
+    static_assert(( is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 #if defined(_LIBCPP_RAW_ITERATORS)
     typedef pointer                                      iterator;
@@ -1250,6 +1259,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY bool __invariants() const;
 
+    _LIBCPP_INLINE_VISIBILITY void __clear_and_shrink() _NOEXCEPT;
+    
     _LIBCPP_INLINE_VISIBILITY
     bool __is_long() const _NOEXCEPT
         {return bool(__r_.first().__s.__size_ & __short_mask);}
@@ -1363,9 +1374,13 @@ private:
     enum {__alignment = 16};
     static _LIBCPP_INLINE_VISIBILITY
     size_type __recommend(size_type __s) _NOEXCEPT
-        {return (__s < __min_cap ? static_cast<size_type>(__min_cap) :
-                 __align_it<sizeof(value_type) < __alignment ?
-                            __alignment/sizeof(value_type) : 1 > (__s+1)) - 1;}
+        {
+        if (__s < __min_cap) return static_cast<size_type>(__min_cap) - 1;
+        size_type __guess = __align_it<sizeof(value_type) < __alignment ?
+                     __alignment/sizeof(value_type) : 1 > (__s+1) - 1;
+        if (__guess == __min_cap) ++__guess;
+        return __guess;
+        }
 
     inline
     void __init(const value_type* __s, size_type __sz, size_type __reserve);
@@ -1415,16 +1430,14 @@ private:
             {
                 if (!__str.__is_long())
                 {
-                    clear();
-                    shrink_to_fit();
+                    __clear_and_shrink();
                     __alloc() = __str.__alloc();
                 }
                 else
                 {
                     allocator_type __a = __str.__alloc();
                     pointer __p = __alloc_traits::allocate(__a, __str.__get_long_cap());
-                    clear();
-                    shrink_to_fit();
+                    __clear_and_shrink();
                     __alloc() = _VSTD::move(__a);
                     __set_long_pointer(__p);
                     __set_long_cap(__str.__get_long_cap());
@@ -1481,6 +1494,18 @@ private:
     friend basic_string operator+<>(const basic_string&, value_type);
 };
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _CharT = typename iterator_traits<_InputIterator>::value_type,
+         class _Allocator = allocator<_CharT>,
+         class = typename enable_if<__is_input_iterator<_InputIterator>::value, void>::type,
+         class = typename enable_if<__is_allocator<_Allocator>::value, void>::type
+         >
+basic_string(_InputIterator, _InputIterator, _Allocator = _Allocator())
+  -> basic_string<_CharT, char_traits<_CharT>, _Allocator>;
+#endif
+
+                  
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
 void
@@ -2102,8 +2127,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value)
 #endif
 {
-    clear();
-    shrink_to_fit();
+    __clear_and_shrink();
     __r_.first() = __str.__r_.first();
     __move_assign_alloc(__str);
     __str.__zero();
@@ -3555,6 +3579,22 @@ basic_string<_CharT, _Traits, _Allocator>::__invariants() const
         return false;
     return true;
 }
+
+// __clear_and_shrink
+
+template<class _CharT, class _Traits, class _Allocator>
+inline _LIBCPP_INLINE_VISIBILITY
+void 
+basic_string<_CharT, _Traits, _Allocator>::__clear_and_shrink() _NOEXCEPT
+{
+    clear();
+    if(__is_long())
+    {
+        __alloc_traits::deallocate(__alloc(), __get_long_pointer(), capacity() + 1);
+        __set_long_cap(0);
+        __set_short_size(0);
+    }
+} 
 
 // operator==
 

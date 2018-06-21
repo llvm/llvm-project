@@ -59,6 +59,7 @@ if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
           -DBENCHMARK_ENABLE_TESTING:BOOL=OFF)
 endif()
 
+
 #==============================================================================
 # Benchmark tests configuration
 #==============================================================================
@@ -67,7 +68,7 @@ set(BENCHMARK_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(BENCHMARK_LIBCXX_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx)
 set(BENCHMARK_NATIVE_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native)
 set(BENCHMARK_TEST_COMPILE_FLAGS
-    -std=c++14 -O2
+    -std=c++17 -O2
     -I${BENCHMARK_LIBCXX_INSTALL}/include
     -I${LIBCXX_SOURCE_DIR}/test/support
 )

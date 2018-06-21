@@ -171,8 +171,8 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
         elif header_found:
           if not line.startswith('----'):
             f.write("""
-- The '%s' check was renamed to `%s
-  <http://clang.llvm.org/extra/clang-tidy/checks/%s.html>`_
+- The '%s' check was renamed to :doc:`%s
+  <clang-tidy/checks/%s>`
 """ % (old_check_name, new_check_name, new_check_name))
             note_added = True
 
@@ -213,7 +213,7 @@ def main():
 
   # Remove the check from the old module.
   cmake_lists = os.path.join(old_module_path, 'CMakeLists.txt')
-  check_found = deleteMatchingLines(cmake_lists, check_name_camel)
+  check_found = deleteMatchingLines(cmake_lists, '\\b' + check_name_camel)
   if not check_found:
     print("Check name '%s' not found in %s. Exiting." %
             (check_name_camel, cmake_lists))
@@ -223,7 +223,7 @@ def main():
       lambda p: p.lower() == old_module.lower() + 'tidymodule.cpp',
       os.listdir(old_module_path))[0]
   deleteMatchingLines(os.path.join(old_module_path, modulecpp),
-                      check_name_camel + '|' + args.old_check_name)
+                      '\\b' + check_name_camel + '|\\b' + args.old_check_name)
 
   for filename in getListOfFiles(clang_tidy_path):
     originalName = filename

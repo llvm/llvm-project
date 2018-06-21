@@ -59,10 +59,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
       OUTPUT_VARIABLE CONFIG_OUTPUT
       ERROR_QUIET)
     if(NOT HAD_ERROR)
-      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH)
+      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH_FROM_LLVM_CONFIG)
+      file(TO_CMAKE_PATH "${LLVM_CMAKE_PATH_FROM_LLVM_CONFIG}" LLVM_CMAKE_PATH)
     else()
-      set(LLVM_CMAKE_PATH
-          "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+      file(TO_CMAKE_PATH "${LLVM_BINARY_DIR}" LLVM_BINARY_DIR_CMAKE_STYLE)
+      set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     endif()
   else()
     message(FATAL_ERROR "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
@@ -79,7 +80,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   set(PACKAGE_NAME libunwind)
-  set(PACKAGE_VERSION 6.0.0)
+  set(PACKAGE_VERSION 7.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -139,6 +140,10 @@ option(LIBUNWIND_INSTALL_LIBRARY "Install the libunwind library." ON)
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
 set(LIBUNWIND_SYSROOT "" CACHE PATH "Sysroot for cross compiling.")
+set(LIBUNWIND_TEST_LINKER_FLAGS "" CACHE STRING
+    "Additional linker flags for test programs.")
+set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
+    "Additional compiler flags for test programs.")
 
 if (NOT LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_STATIC)
   message(FATAL_ERROR "libunwind must be built as either a shared or static library.")
@@ -328,8 +333,10 @@ find_path(
   __libcpp_version
   PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxx/include
         ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx/include
+        ${LLVM_MAIN_SRC_DIR}/../libcxx/include
   NO_DEFAULT_PATH
-)
+  NO_CMAKE_FIND_ROOT_PATH
+  )
 if ((NOT LIBUNWIND_STANDALONE_BUILD OR HAVE_LIBCXX) AND
     IS_DIRECTORY "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")
   set(LIBUNWIND_CXX_INCLUDE_PATHS_DEFAULT "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")

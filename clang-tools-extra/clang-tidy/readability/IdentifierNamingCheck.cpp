@@ -109,6 +109,7 @@ namespace readability {
     m(TemplateParameter) \
     m(TypeAlias) \
     m(MacroDefinition) \
+    m(ObjcIvar) \
 
 enum StyleKind {
 #define ENUMERATE(v) SK_ ## v,
@@ -384,6 +385,9 @@ static StyleKind findStyleKind(
     const NamedDecl *D,
     const std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
         &NamingStyles) {
+  if (isa<ObjCIvarDecl>(D) && NamingStyles[SK_ObjcIvar])
+    return SK_ObjcIvar;
+  
   if (isa<TypedefDecl>(D) && NamingStyles[SK_Typedef])
     return SK_Typedef;
 
@@ -836,10 +840,10 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
     std::string Fixup = fixupWithStyle(Name, Style);
     if (StringRef(Fixup).equals(Name)) {
       if (!IgnoreFailedSplit) {
-        DEBUG(llvm::dbgs()
-              << Decl->getLocStart().printToString(*Result.SourceManager)
-              << llvm::format(": unable to split words for %s '%s'\n",
-                              KindName.c_str(), Name.str().c_str()));
+        LLVM_DEBUG(llvm::dbgs()
+                   << Decl->getLocStart().printToString(*Result.SourceManager)
+                   << llvm::format(": unable to split words for %s '%s'\n",
+                                   KindName.c_str(), Name.str().c_str()));
       }
     } else {
       NamingCheckFailure &Failure = NamingCheckFailures[NamingCheckId(
@@ -873,10 +877,10 @@ void IdentifierNamingCheck::checkMacro(SourceManager &SourceMgr,
   std::string Fixup = fixupWithStyle(Name, Style);
   if (StringRef(Fixup).equals(Name)) {
     if (!IgnoreFailedSplit) {
-      DEBUG(
-          llvm::dbgs() << MacroNameTok.getLocation().printToString(SourceMgr)
-                       << llvm::format(": unable to split words for %s '%s'\n",
-                                       KindName.c_str(), Name.str().c_str()));
+      LLVM_DEBUG(llvm::dbgs()
+                 << MacroNameTok.getLocation().printToString(SourceMgr)
+                 << llvm::format(": unable to split words for %s '%s'\n",
+                                 KindName.c_str(), Name.str().c_str()));
     }
   } else {
     NamingCheckId ID(MI->getDefinitionLoc(), Name);

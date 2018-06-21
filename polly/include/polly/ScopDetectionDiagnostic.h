@@ -42,7 +42,6 @@ class raw_ostream;
 class Region;
 class SCEV;
 class Value;
-
 } // namespace llvm
 
 namespace polly {
@@ -91,6 +90,7 @@ enum class RejectReasonKind {
 
   LoopBound,
   LoopHasNoExit,
+  LoopHasMultipleExits,
   LoopOnlySomeLatches,
 
   FuncCall,
@@ -586,6 +586,34 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+/// Captures errors when a loop has multiple exists.
+class ReportLoopHasMultipleExits : public RejectReason {
+  /// The loop that has multiple exits.
+  Loop *L;
+
+  const DebugLoc Loc;
+
+public:
+  ReportLoopHasMultipleExits(Loop *L)
+      : RejectReason(RejectReasonKind::LoopHasMultipleExits), L(L),
+        Loc(L->getStartLoc()) {}
+
+  /// @name LLVM-RTTI interface
+  //@{
+  static bool classof(const RejectReason *RR);
+  //@}
+
+  /// @name RejectReason interface
+  //@{
+  std::string getRemarkName() const override;
+  const Value *getRemarkBB() const override;
+  std::string getMessage() const override;
+  const DebugLoc &getDebugLoc() const override;
+  std::string getEndUserMessage() const override;
+  //@}
+};
+
+//===----------------------------------------------------------------------===//
 /// Captures errors when not all loop latches are part of the scop.
 class ReportLoopOnlySomeLatches : public RejectReason {
   /// The loop for which not all loop latches are part of the scop.
@@ -830,7 +858,6 @@ public:
   std::string getEndUserMessage() const override;
   //@}
 };
-
 } // namespace polly
 
 #endif // POLLY_SCOPDETECTIONDIAGNOSTIC_H

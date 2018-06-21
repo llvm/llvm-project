@@ -15,7 +15,7 @@
 
 // void disable_recursion_pending();
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <set>
 #include <cassert>
@@ -24,7 +24,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(recursive_directory_iterator_disable_recursion_pending_tests)
 

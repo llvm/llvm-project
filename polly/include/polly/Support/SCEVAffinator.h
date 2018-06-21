@@ -118,6 +118,7 @@ private:
   PWACtx visitUnknown(const llvm::SCEVUnknown *E);
   PWACtx visitSDivInstruction(llvm::Instruction *SDiv);
   PWACtx visitSRemInstruction(llvm::Instruction *SRem);
+  PWACtx complexityBailout();
 
   friend struct llvm::SCEVVisitor<SCEVAffinator, PWACtx>;
 };

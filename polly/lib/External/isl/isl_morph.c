@@ -543,7 +543,7 @@ __isl_give isl_morph *isl_basic_set_parameter_compression(
 
 /* Add stride constraints to "bset" based on the inverse mapping
  * that was plugged in.  In particular, if morph maps x' to x,
- * the the constraints of the original input
+ * the constraints of the original input
  *
  *	A x' + b >= 0
  *

@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Context.h"
 #include "Trace.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -42,7 +41,7 @@ bool VerifyObject(yaml::Node &N, std::map<std::string, std::string> Expected) {
   }
   bool Match = true;
   SmallString<32> Tmp;
-  for (auto Prop : *M) {
+  for (auto &Prop : *M) {
     auto *K = dyn_cast_or_null<yaml::ScalarNode>(Prop.getKey());
     if (!K)
       continue;
@@ -78,8 +77,8 @@ TEST(TraceTest, SmokeTest) {
     auto JSONTracer = trace::createJSONTracer(OS);
     trace::Session Session(*JSONTracer);
     {
-      trace::Span S(Context::empty(), "A");
-      trace::log(Context::empty(), "B");
+      trace::Span Tracer("A");
+      trace::log("B");
     }
   }
 
@@ -115,12 +114,10 @@ TEST(TraceTest, SmokeTest) {
     ASSERT_NE(++Event, Events->end()) << "Expected thread name";
     EXPECT_TRUE(VerifyObject(*Event, {{"ph", "M"}, {"name", "thread_name"}}));
   }
-  ASSERT_NE(++Event, Events->end()) << "Expected span start";
-  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "B"}, {"name", "A"}}));
   ASSERT_NE(++Event, Events->end()) << "Expected log message";
   EXPECT_TRUE(VerifyObject(*Event, {{"ph", "i"}, {"name", "Log"}}));
   ASSERT_NE(++Event, Events->end()) << "Expected span end";
-  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "E"}}));
+  EXPECT_TRUE(VerifyObject(*Event, {{"ph", "X"}, {"name", "A"}}));
   ASSERT_EQ(++Event, Events->end());
   ASSERT_EQ(++Prop, Root->end());
 }

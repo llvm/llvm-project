@@ -24,6 +24,10 @@ namespace objc {
 
 namespace {
 
+AST_MATCHER(VarDecl, isLocalVariable) {
+  return Node.isLocalVarDecl();
+}
+
 FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
   char FC = Decl->getName()[0];
   if (!llvm::isAlpha(FC) || Decl->getName().size() == 1) {
@@ -57,13 +61,18 @@ void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // need to add two matchers since we need to bind different ids to distinguish
   // constants and variables. Since bind() can only be called on node matchers,
   // we cannot make it in one matcher.
+  //
+  // Note that hasGlobalStorage() matches static variables declared locally
+  // inside a function or method, so we need to exclude those with
+  // isLocalVariable().
   Finder->addMatcher(
       varDecl(hasGlobalStorage(), unless(hasType(isConstQualified())),
-              unless(matchesName("::g[A-Z]")))
+              unless(isLocalVariable()), unless(matchesName("::g[A-Z]")))
           .bind("global_var"),
       this);
   Finder->addMatcher(varDecl(hasGlobalStorage(), hasType(isConstQualified()),
-                             unless(matchesName("::k[A-Z]")))
+                             unless(isLocalVariable()),
+                             unless(matchesName("::(k[A-Z]|[A-Z]{2,})")))
                          .bind("global_const"),
                      this);
 }
@@ -79,7 +88,7 @@ void GlobalVariableDeclarationCheck::check(
   if (const auto *Decl = Result.Nodes.getNodeAs<VarDecl>("global_const")) {
     diag(Decl->getLocation(),
          "const global variable '%0' must have a name which starts with "
-         "'k[A-Z]'")
+         "an appropriate prefix")
         << Decl->getName() << generateFixItHint(Decl, true);
   }
 }

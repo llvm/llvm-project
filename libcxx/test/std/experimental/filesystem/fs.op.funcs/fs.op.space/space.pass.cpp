@@ -14,14 +14,14 @@
 // space_info space(const path& p);
 // space_info space(const path& p, error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <sys/statvfs.h>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
+using namespace fs;
 
 bool EqualDelta(std::uintmax_t x, std::uintmax_t y, std::uintmax_t delta) {
     if (x >= y) {

@@ -739,10 +739,6 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setAnonymousStructOrUnion(Record.readInt());
   RD->setHasObjectMember(Record.readInt());
   RD->setHasVolatileMember(Record.readInt());
-  RD->setNonTrivialToPrimitiveDefaultInitialize(Record.readInt());
-  RD->setNonTrivialToPrimitiveCopy(Record.readInt());
-  RD->setNonTrivialToPrimitiveDestroy(Record.readInt());
-  RD->setCanPassInRegisters(Record.readInt());
   return Redecl;
 }
 
@@ -1160,12 +1156,6 @@ void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
     ProtoLocs.push_back(ReadSourceLocation());
   CD->setProtocolList(ProtoRefs.data(), NumProtoRefs, ProtoLocs.data(),
                       Reader.getContext());
-
-  // Protocols in the class extension belong to the class.
-  if (NumProtoRefs > 0 && CD->ClassInterface && CD->IsClassExtension())
-    CD->ClassInterface->mergeClassExtensionProtocolList(
-        (ObjCProtocolDecl *const *)ProtoRefs.data(), NumProtoRefs,
-        Reader.getContext());
 }
 
 void ASTDeclReader::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) {
@@ -1594,6 +1584,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.HasIrrelevantDestructor = Record.readInt();
   Data.HasConstexprNonCopyMoveConstructor = Record.readInt();
   Data.HasDefaultedDefaultConstructor = Record.readInt();
+  Data.CanPassInRegisters = Record.readInt();
   Data.DefaultedDefaultConstructorIsConstexpr = Record.readInt();
   Data.HasConstexprDefaultConstructor = Record.readInt();
   Data.HasNonLiteralTypeFieldsOrBases = Record.readInt();
@@ -1733,6 +1724,7 @@ void ASTDeclReader::MergeDefinitionData(
   MATCH_FIELD(HasIrrelevantDestructor)
   OR_FIELD(HasConstexprNonCopyMoveConstructor)
   OR_FIELD(HasDefaultedDefaultConstructor)
+  MATCH_FIELD(CanPassInRegisters)
   MATCH_FIELD(DefaultedDefaultConstructorIsConstexpr)
   OR_FIELD(HasConstexprDefaultConstructor)
   MATCH_FIELD(HasNonLiteralTypeFieldsOrBases)
@@ -1790,31 +1782,29 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update) {
   else
     DD = new (C) struct CXXRecordDecl::DefinitionData(D);
 
-  CXXRecordDecl *Canon = D->getCanonicalDecl();
-  // Set decl definition data before reading it, so that during deserialization
-  // when we read CXXRecordDecl, it already has definition data and we don't
-  // set fake one.
-  if (!Canon->DefinitionData)
-    Canon->DefinitionData = DD;
-  D->DefinitionData = Canon->DefinitionData;
   ReadCXXDefinitionData(*DD, D);
 
-  // We might already have a different definition for this record. This can
-  // happen either because we're reading an update record, or because we've
-  // already done some merging. Either way, just merge into it.
-  if (Canon->DefinitionData != DD) {
+  // We might already have a definition for this record. This can happen either
+  // because we're reading an update record, or because we've already done some
+  // merging. Either way, just merge into it.
+  CXXRecordDecl *Canon = D->getCanonicalDecl();
+  if (Canon->DefinitionData) {
     MergeDefinitionData(Canon, std::move(*DD));
+    D->DefinitionData = Canon->DefinitionData;
     return;
   }
 
   // Mark this declaration as being a definition.
   D->IsCompleteDefinition = true;
+  D->DefinitionData = DD;
 
   // If this is not the first declaration or is an update record, we can have
   // other redeclarations already. Make a note that we need to propagate the
   // DefinitionData pointer onto them.
-  if (Update || Canon != D)
+  if (Update || Canon != D) {
+    Canon->DefinitionData = D->DefinitionData;
     Reader.PendingDefinitions.insert(D);
+  }
 }
 
 ASTDeclReader::RedeclarableResult
@@ -4099,7 +4089,6 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       bool HadRealDefinition =
           OldDD && (OldDD->Definition != RD ||
                     !Reader.PendingFakeDefinitionData.count(OldDD));
-      RD->setCanPassInRegisters(Record.readInt());
       ReadCXXRecordDefinition(RD, /*Update*/true);
 
       // Visible update is handled separately.

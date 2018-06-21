@@ -258,15 +258,12 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
     QualType T, QualType ExTy, const CastExpr* CastE, StmtNodeBuilder& Bldr,
     ExplodedNode* Pred) {
   // Delegate to SValBuilder to process.
-  SVal OrigV = state->getSVal(Ex, LCtx);
-  SVal V = svalBuilder.evalCast(OrigV, T, ExTy);
+  SVal V = state->getSVal(Ex, LCtx);
+  V = svalBuilder.evalCast(V, T, ExTy);
   // Negate the result if we're treating the boolean as a signed i1
   if (CastE->getCastKind() == CK_BooleanToSignedIntegral)
     V = evalMinus(V);
   state = state->BindExpr(CastE, LCtx, V);
-  if (V.isUnknown() && !OrigV.isUnknown()) {
-    state = escapeValue(state, OrigV, PSK_EscapeOther);
-  }
   Bldr.generateNode(CastE, Pred, state);
 
   return state;
@@ -1069,7 +1066,6 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     // constant value. If the UnaryOperator has location type, create the
     // constant with int type and pointer width.
     SVal RHS;
-    SVal Result;
 
     if (U->getType()->isAnyPointerType())
       RHS = svalBuilder.makeArrayIndex(1);
@@ -1078,14 +1074,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
     else
       RHS = UnknownVal();
 
-    // The use of an operand of type bool with the ++ operators is deprecated
-    // but valid until C++17. And if the operand of the ++ operator is of type
-    // bool, it is set to true until C++17. Note that for '_Bool', it is also
-    // set to true when it encounters ++ operator.
-    if (U->getType()->isBooleanType() && U->isIncrementOp())
-      Result = svalBuilder.makeTruthVal(true, U->getType());
-    else
-      Result = evalBinOp(state, Op, V2, RHS, U->getType());
+    SVal Result = evalBinOp(state, Op, V2, RHS, U->getType());
 
     // Conjure a new symbol if necessary to recover precision.
     if (Result.isUnknown()){
@@ -1106,6 +1095,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
           // Propagate this constraint.
           Constraint = svalBuilder.evalEQ(state, SymVal,
                                        svalBuilder.makeZeroVal(U->getType()));
+
 
           state = state->assume(Constraint, false);
           assert(state);

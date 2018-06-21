@@ -13,14 +13,13 @@
 
 // enum class copy_options;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
 #include "check_bitmask_types.hpp"
 #include "test_macros.h"
 
-namespace fs = std::experimental::filesystem;
 
 constexpr fs::copy_options ME(int val) { return static_cast<fs::copy_options>(val); }
 

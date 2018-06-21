@@ -92,28 +92,28 @@ int main() {
   {
     typedef std::function<int()> Func;
     Func f = g0;
-    Func& fr = (f = f);
+    Func& fr = (f = (Func &)f);
     assert(&fr == &f);
     assert(*f.target<int(*)()>() == g0);
   }
   {
     typedef std::function<int(int)> Func;
     Func f = g;
-    Func& fr = (f = f);
+    Func& fr = (f = (Func &)f);
     assert(&fr == &f);
     assert(*f.target<int(*)(int)>() == g);
   }
   {
     typedef std::function<int(int, int)> Func;
     Func f = g2;
-    Func& fr = (f = f);
+    Func& fr = (f = (Func &)f);
     assert(&fr == &f);
     assert(*f.target<int(*)(int, int)>() == g2);
   }
   {
     typedef std::function<int(int, int, int)> Func;
     Func f = g3;
-    Func& fr = (f = f);
+    Func& fr = (f = (Func &)f);
     assert(&fr == &f);
     assert(*f.target<int(*)(int, int, int)>() == g3);
   }

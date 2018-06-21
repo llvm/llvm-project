@@ -132,6 +132,9 @@ public:
     typedef typename traits_type::pos_type pos_type;
     typedef typename traits_type::off_type off_type;
 
+    static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+                  "traits_type::char_type must be the same type as CharT");
+
     virtual ~basic_streambuf();
 
     // 27.6.2.2.1 locales:

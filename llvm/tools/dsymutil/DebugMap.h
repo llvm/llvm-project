@@ -103,8 +103,6 @@ public:
 
   const_iterator end() const { return Objects.end(); }
 
-  unsigned getNumberOfObjects() const { return Objects.size(); }
-
   /// This function adds an DebugMapObject to the list owned by this
   /// debug map.
   DebugMapObject &
@@ -178,11 +176,6 @@ public:
     return make_range(Symbols.begin(), Symbols.end());
   }
 
-  bool empty() const { return Symbols.empty(); }
-
-  void addWarning(StringRef Warning) { Warnings.push_back(Warning); }
-  const std::vector<std::string> &getWarnings() const { return Warnings; }
-
   void print(raw_ostream &OS) const;
 #ifndef NDEBUG
   void dump() const;
@@ -201,8 +194,6 @@ private:
   DenseMap<uint64_t, DebugMapEntry *> AddressToMapping;
   uint8_t Type;
 
-  std::vector<std::string> Warnings;
-
   /// For YAMLIO support.
   ///@{
   friend yaml::MappingTraits<dsymutil::DebugMapObject>;
@@ -217,6 +208,7 @@ public:
 };
 
 } // end namespace dsymutil
+
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::dsymutil::DebugMapObject::YAMLSymbolMapping)

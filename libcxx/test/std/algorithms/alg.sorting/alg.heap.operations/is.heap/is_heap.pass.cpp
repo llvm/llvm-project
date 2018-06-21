@@ -11,11 +11,22 @@
 
 // template<RandomAccessIterator Iter>
 //   requires LessThanComparable<Iter::value_type>
-//   bool
+//   constexpr bool   // constexpr after C++17
 //   is_heap(Iter first, Iter last);
 
 #include <algorithm>
 #include <cassert>
+
+#include "test_macros.h"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {1, 1, 1, 1, 0, 1, 1};
+    int ib[] = {0, 0, 1, 0, 0, 0, 0};
+    return     std::is_heap(std::begin(ia), std::end(ia))
+           && !std::is_heap(std::begin(ib), std::end(ib));
+    }
+#endif
 
 void test()
 {
@@ -518,4 +529,8 @@ void test()
 int main()
 {
     test();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

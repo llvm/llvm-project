@@ -1,1 +1,0 @@
-// void funcA(void);

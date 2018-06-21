@@ -18,6 +18,7 @@
 #include <utility>
 #include <memory>
 #include <cassert>
+#include <archetypes.hpp>
 
 struct Base
 {
@@ -39,5 +40,20 @@ int main()
         p2 = std::move(p1);
         assert(p2.first == nullptr);
         assert(p2.second == 4);
+    }
+    {
+       using C = TestTypes::TestType;
+       using P = std::pair<int, C>;
+       using T = std::pair<long, C>;
+       T t(42, -42);
+       P p(101, 101);
+       C::reset_constructors();
+       p = std::move(t);
+       assert(C::constructed == 0);
+       assert(C::assigned == 1);
+       assert(C::copy_assigned == 0);
+       assert(C::move_assigned == 1);
+       assert(p.first == 42);
+       assert(p.second.value == -42);
     }
 }

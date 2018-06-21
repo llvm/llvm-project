@@ -15,6 +15,7 @@
 
 #include <strstream>
 #include <cassert>
+#include <cstring>
 
 int main()
 {
@@ -71,8 +72,8 @@ int main()
     }
     {
         signed char buf[10] = "abcd";
-        int s = std::strlen((char*)buf);
-        std::strstreambuf sb(buf, sizeof(buf)-s, buf + s);
+        std::size_t s = std::strlen((char*)buf);
+        std::strstreambuf sb(buf, sizeof(buf) - s, buf + s);
         assert(sb.sgetc() == 'a');
         assert(sb.snextc() == 'b');
         assert(sb.snextc() == 'c');

@@ -1,3 +1,14 @@
+version: 0.19
+date: Sat Mar  3 10:44:49 CET 2018
+changes:
+	- minor improvements to coalescing
+	- minor improvement to parametric integer programming
+	- try harder to avoid large coefficients in scheduler
+	- support kill accesses in dependence analysis
+	- drop deprecated isl_int
+	- drop deprecated band forests
+	- drop deprecated functions
+---
 version: 0.18
 date: Sun Dec 18 11:01:58 CET 2016
 changes:

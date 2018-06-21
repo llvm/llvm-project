@@ -64,7 +64,38 @@ int main()
         C::const_reference r2 = c.back();
         assert(r2 == 3.5);
     }
-
+    {
+      typedef double T;
+      typedef std::array<T, 0> C;
+      C c = {};
+      C const& cc = c;
+      static_assert((std::is_same<decltype(c.front()), T &>::value), "");
+      static_assert((std::is_same<decltype(cc.front()), const T &>::value), "");
+      static_assert((std::is_same<decltype(c.back()), T &>::value), "");
+      static_assert((std::is_same<decltype(cc.back()), const T &>::value), "");
+      if (c.size() > (0)) { // always false
+        TEST_IGNORE_NODISCARD c.front();
+        TEST_IGNORE_NODISCARD c.back();
+        TEST_IGNORE_NODISCARD cc.front();
+        TEST_IGNORE_NODISCARD cc.back();
+      }
+    }
+    {
+      typedef double T;
+      typedef std::array<const T, 0> C;
+      C c = {{}};
+      C const& cc = c;
+      static_assert((std::is_same<decltype(c.front()),  const T &>::value), "");
+      static_assert((std::is_same<decltype(cc.front()), const T &>::value), "");
+      static_assert((std::is_same<decltype(c.back()),   const T &>::value), "");
+      static_assert((std::is_same<decltype(cc.back()),  const T &>::value), "");
+      if (c.size() > (0)) {
+        TEST_IGNORE_NODISCARD c.front();
+        TEST_IGNORE_NODISCARD c.back();
+        TEST_IGNORE_NODISCARD cc.front();
+        TEST_IGNORE_NODISCARD cc.back();
+      }
+    }
 #if TEST_STD_VER > 11
     {
         typedef double T;

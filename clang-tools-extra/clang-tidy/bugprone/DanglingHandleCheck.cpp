@@ -25,8 +25,12 @@ namespace {
 ast_matchers::internal::BindableMatcher<Stmt>
 handleFrom(const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle,
            const ast_matchers::internal::Matcher<Expr> &Arg) {
-  return cxxConstructExpr(hasDeclaration(cxxMethodDecl(ofClass(IsAHandle))),
-                          hasArgument(0, Arg));
+  return expr(
+      anyOf(cxxConstructExpr(hasDeclaration(cxxMethodDecl(ofClass(IsAHandle))),
+                             hasArgument(0, Arg)),
+            cxxMemberCallExpr(hasType(cxxRecordDecl(IsAHandle)),
+                              callee(memberExpr(member(cxxConversionDecl()))),
+                              on(Arg))));
 }
 
 ast_matchers::internal::Matcher<Stmt> handleFromTemporaryValue(

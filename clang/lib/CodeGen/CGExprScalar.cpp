@@ -422,11 +422,10 @@ public:
 
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
-      return EmitLoadOfLValue(CGF.getOrCreateOpaqueLValueMapping(E),
-                              E->getExprLoc());
+      return EmitLoadOfLValue(CGF.getOpaqueLValueMapping(E), E->getExprLoc());
 
     // Otherwise, assume the mapping is the scalar directly.
-    return CGF.getOrCreateOpaqueRValueMapping(E).getScalarVal();
+    return CGF.getOpaqueRValueMapping(E).getScalarVal();
   }
 
   Value *emitConstant(const CodeGenFunction::ConstantEmission &Constant,

@@ -17,7 +17,7 @@
 ; CHECK-NEXT: Assumed Context:
 ; CHECK-NEXT: {  :  }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT: {  : 1 = 0 }
+; CHECK-NEXT: {  : false }
 ; CHECK-NEXT: Arrays {
 ; CHECK-NEXT:     float MemRef_A[*]; // Element size 4
 ; CHECK-NEXT: }

@@ -70,6 +70,15 @@ void BM_error_before_running(benchmark::State& state) {
 BENCHMARK(BM_error_before_running);
 ADD_CASES("BM_error_before_running", {{"", true, "error message"}});
 
+void BM_error_before_running_range_for(benchmark::State& state) {
+  state.SkipWithError("error message");
+  for (auto _ : state) {
+    assert(false);
+  }
+}
+BENCHMARK(BM_error_before_running_range_for);
+ADD_CASES("BM_error_before_running_range_for", {{"", true, "error message"}});
+
 void BM_error_during_running(benchmark::State& state) {
   int first_iter = true;
   while (state.KeepRunning()) {
@@ -93,8 +102,31 @@ ADD_CASES("BM_error_during_running", {{"/1/threads:1", true, "error message"},
                                       {"/2/threads:4", false, ""},
                                       {"/2/threads:8", false, ""}});
 
+void BM_error_during_running_ranged_for(benchmark::State& state) {
+  assert(state.max_iterations > 3 && "test requires at least a few iterations");
+  int first_iter = true;
+  // NOTE: Users should not write the for loop explicitly.
+  for (auto It = state.begin(), End = state.end(); It != End; ++It) {
+    if (state.range(0) == 1) {
+      assert(first_iter);
+      first_iter = false;
+      state.SkipWithError("error message");
+      // Test the unfortunate but documented behavior that the ranged-for loop
+      // doesn't automatically terminate when SkipWithError is set.
+      assert(++It != End);
+      break; // Required behavior
+    }
+  }
+}
+BENCHMARK(BM_error_during_running_ranged_for)->Arg(1)->Arg(2)->Iterations(5);
+ADD_CASES("BM_error_during_running_ranged_for",
+          {{"/1/iterations:5", true, "error message"},
+           {"/2/iterations:5", false, ""}});
+
+
+
 void BM_error_after_running(benchmark::State& state) {
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     benchmark::DoNotOptimize(state.iterations());
   }
   if (state.thread_index <= (state.threads / 2))

@@ -45,7 +45,8 @@ llvm::Optional<bool> isExpensiveToCopy(QualType Type,
     return llvm::None;
   return !Type.isTriviallyCopyableType(Context) &&
          !classHasTrivialCopyAndDestroy(Type) &&
-         !hasDeletedCopyConstructor(Type);
+         !hasDeletedCopyConstructor(Type) &&
+         !Type->isObjCLifetimeType();
 }
 
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,

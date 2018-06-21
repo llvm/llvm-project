@@ -38,6 +38,25 @@ int main()
         const T* p = c.data();
         (void)p; // to placate scan-build
     }
+    {
+      struct NoDefault {
+        NoDefault(int) {}
+      };
+      typedef NoDefault T;
+      typedef std::array<T, 0> C;
+      const C c = {};
+      const T* p = c.data();
+      assert(p != nullptr);
+    }
+    {
+      typedef std::max_align_t T;
+      typedef std::array<T, 0> C;
+      const C c = {};
+      const T* p = c.data();
+      assert(p != nullptr);
+      std::uintptr_t pint = reinterpret_cast<std::uintptr_t>(p);
+      assert(pint % TEST_ALIGNOF(std::max_align_t) == 0);
+    }
 #if TEST_STD_VER > 14
     {
         typedef std::array<int, 5> C;

@@ -45,8 +45,7 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       IsInferred(false), IsSwiftInferImportAsMember(false),
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
-      NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-      NameVisibility(Hidden) {
+      NoUndeclaredIncludes(false), NameVisibility(Hidden) {
   if (Parent) {
     if (!Parent->isAvailable())
       IsAvailable = false;
@@ -56,8 +55,6 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       IsExternC = true;
     if (Parent->NoUndeclaredIncludes)
       NoUndeclaredIncludes = true;
-    if (Parent->ModuleMapIsPrivate)
-      ModuleMapIsPrivate = true;
     IsMissingRequirement = Parent->IsMissingRequirement;
     
     Parent->SubModuleIndex[Name] = Parent->SubModules.size();

@@ -11,6 +11,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/CharInfo.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -25,6 +27,34 @@ const char IteratorDeclStmtId[] = "iterator_decl";
 const char DeclWithNewId[] = "decl_new";
 const char DeclWithCastId[] = "decl_cast";
 const char DeclWithTemplateCastId[] = "decl_template";
+
+size_t GetTypeNameLength(bool RemoveStars, StringRef Text) {
+  enum CharType { Space, Alpha, Punctuation };
+  CharType LastChar = Space, BeforeSpace = Punctuation;
+  size_t NumChars = 0;
+  int TemplateTypenameCntr = 0;
+  for (const unsigned char C : Text) {
+    if (C == '<')
+      ++TemplateTypenameCntr;
+    else if (C == '>')
+      --TemplateTypenameCntr;
+    const CharType NextChar =
+        isAlphanumeric(C)
+            ? Alpha
+            : (isWhitespace(C) ||
+               (!RemoveStars && TemplateTypenameCntr == 0 && C == '*'))
+                  ? Space
+                  : Punctuation;
+    if (NextChar != Space) {
+      ++NumChars; // Count the non-space character.
+      if (LastChar == Space && NextChar == Alpha && BeforeSpace == Alpha)
+        ++NumChars; // Count a single space character between two words.
+      BeforeSpace = NextChar;
+    }
+    LastChar = NextChar;
+  }
+  return NumChars;
+}
 
 /// \brief Matches variable declarations that have explicit initializers that
 /// are not initializer lists.
@@ -287,9 +317,11 @@ StatementMatcher makeCombinedMatcher() {
 
 UseAutoCheck::UseAutoCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      MinTypeNameLength(Options.get("MinTypeNameLength", 5)),
       RemoveStars(Options.get("RemoveStars", 0)) {}
 
 void UseAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "MinTypeNameLength", MinTypeNameLength);
   Options.store(Opts, "RemoveStars", RemoveStars ? 1 : 0);
 }
 
@@ -414,6 +446,14 @@ void UseAutoCheck::replaceExpr(
     Loc = Loc.getNextTypeLoc();
   }
   SourceRange Range(Loc.getSourceRange());
+
+  if (MinTypeNameLength != 0 &&
+      GetTypeNameLength(RemoveStars,
+                        tooling::fixit::getText(Loc.getSourceRange(),
+                                                FirstDecl->getASTContext())) <
+          MinTypeNameLength)
+    return;
+
   auto Diag = diag(Range.getBegin(), Message);
 
   // Space after 'auto' to handle cases where the '*' in the pointer type is

@@ -12,24 +12,41 @@
 // template<class Iter, IntegralLike Size, Callable Generator>
 //   requires OutputIterator<Iter, Generator::result_type>
 //         && CopyConstructible<Generator>
-//   void
+//   constexpr void      // constexpr after c++17
 //   generate_n(Iter first, Size n, Generator gen);
 
-#ifdef _MSC_VER
+#include "test_macros.h"
+
+#ifdef TEST_COMPILER_C1XX
 #pragma warning(disable: 4244) // conversion from 'const double' to 'int', possible loss of data
 #endif
 
 #include <algorithm>
 #include <cassert>
 
-#include "test_macros.h"
 #include "test_iterators.h"
 #include "user_defined_integral.hpp"
 
 struct gen_test
 {
-    int operator()() const {return 2;}
+    TEST_CONSTEXPR int operator()() const {return 2;}
 };
+
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    const size_t N = 5;
+    int ib[] = {0, 0, 0, 0, 0, 0}; // one bigger than N
+
+    auto it = std::generate_n(std::begin(ib), N, gen_test());
+
+    return it == (std::begin(ib) + N)
+        && std::all_of(std::begin(ib), it, [](int x) { return x == 2; })
+        && *it == 0 // don't overwrite the last value in the output array
+        ;
+    }
+#endif
+
 
 template <class Iter, class Size>
 void
@@ -64,4 +81,8 @@ int main()
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

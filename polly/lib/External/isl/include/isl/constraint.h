@@ -11,11 +11,11 @@
 #define ISL_CONSTRAINT_H
 
 #include <isl/local_space.h>
-#include <isl/space.h>
+#include <isl/space_type.h>
 #include <isl/aff_type.h>
 #include <isl/set_type.h>
 #include <isl/list.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/printer.h>
 
 #if defined(__cplusplus)
@@ -36,7 +36,6 @@ __isl_give isl_constraint *isl_constraint_alloc_inequality(
 __isl_give isl_constraint *isl_equality_alloc(__isl_take isl_local_space *ls);
 __isl_give isl_constraint *isl_inequality_alloc(__isl_take isl_local_space *ls);
 
-struct isl_constraint *isl_constraint_cow(struct isl_constraint *c);
 struct isl_constraint *isl_constraint_copy(struct isl_constraint *c);
 __isl_null isl_constraint *isl_constraint_free(__isl_take isl_constraint *c);
 

@@ -41,6 +41,11 @@ struct isl_pw_aff {
 	struct isl_pw_aff_piece p[1];
 };
 
+#undef PW
+#define PW isl_pw_aff
+
+#include <isl_pw_templ.h>
+
 #undef EL
 #define EL isl_pw_aff
 
@@ -62,6 +67,11 @@ struct isl_pw_multi_aff {
 	struct isl_pw_multi_aff_piece p[1];
 };
 
+#undef PW
+#define PW isl_pw_multi_aff
+
+#include <isl_pw_templ.h>
+
 __isl_give isl_aff *isl_aff_alloc_vec(__isl_take isl_local_space *ls,
 	__isl_take isl_vec *v);
 __isl_give isl_aff *isl_aff_alloc(__isl_take isl_local_space *ls);
@@ -73,14 +83,16 @@ __isl_give isl_aff *isl_aff_reset_domain_space(__isl_take isl_aff *aff,
 __isl_give isl_aff *isl_aff_realign_domain(__isl_take isl_aff *aff,
 	__isl_take isl_reordering *r);
 
-int isl_aff_get_constant(__isl_keep isl_aff *aff, isl_int *v);
 __isl_give isl_aff *isl_aff_set_constant(__isl_take isl_aff *aff, isl_int v);
 __isl_give isl_aff *isl_aff_set_coefficient(__isl_take isl_aff *aff,
 	enum isl_dim_type type, int pos, isl_int v);
 __isl_give isl_aff *isl_aff_add_constant(__isl_take isl_aff *aff, isl_int v);
 
+__isl_give isl_aff *isl_aff_domain_factor_domain(__isl_take isl_aff *aff);
+
 int isl_aff_plain_cmp(__isl_keep isl_aff *aff1, __isl_keep isl_aff *aff2);
 
+__isl_give isl_aff *isl_aff_remove_unused_divs(__isl_take isl_aff *aff);
 __isl_give isl_aff *isl_aff_normalize(__isl_take isl_aff *aff);
 
 __isl_give isl_aff *isl_aff_expand_divs( __isl_take isl_aff *aff,
@@ -102,6 +114,7 @@ __isl_give isl_pw_aff *isl_pw_aff_set_rational(__isl_take isl_pw_aff *pwaff);
 __isl_give isl_pw_aff_list *isl_pw_aff_list_set_rational(
 	__isl_take isl_pw_aff_list *list);
 
+__isl_give isl_aff *isl_aff_scale_down(__isl_take isl_aff *aff, isl_int f);
 __isl_give isl_pw_aff *isl_pw_aff_scale(__isl_take isl_pw_aff *pwaff,
 	isl_int f);
 __isl_give isl_pw_aff *isl_pw_aff_scale_down(__isl_take isl_pw_aff *pwaff,
@@ -128,6 +141,11 @@ __isl_give isl_multi_aff *isl_multi_aff_from_basic_set_equalities(
 __isl_give isl_multi_aff *isl_multi_aff_from_aff_mat(
 	__isl_take isl_space *space, __isl_take isl_mat *mat);
 
+#undef EL
+#define EL isl_pw_multi_aff
+
+#include <isl_list_templ.h>
+
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_reset_domain_space(
 	__isl_take isl_pw_multi_aff *pwmaff, __isl_take isl_space *space);
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_reset_space(
@@ -150,6 +168,9 @@ __isl_give isl_pw_multi_aff *isl_pw_multi_aff_substitute(
 	__isl_take isl_pw_multi_aff *pma, enum isl_dim_type type, unsigned pos,
 	__isl_keep isl_pw_aff *subs);
 
+isl_stat isl_pw_aff_check_named_params(__isl_keep isl_pw_aff *pa);
+isl_stat isl_pw_multi_aff_check_named_params(__isl_keep isl_pw_multi_aff *pma);
+
 isl_bool isl_pw_aff_matching_params(__isl_keep isl_pw_aff *pa,
 	__isl_keep isl_space *space);
 isl_stat isl_pw_aff_check_match_domain_space(__isl_keep isl_pw_aff *pa,
@@ -159,8 +180,13 @@ __isl_give isl_basic_set *isl_aff_pos_basic_set(__isl_take isl_aff *aff);
 
 #undef BASE
 #define BASE pw_aff
+#undef DOMBASE
+#define DOMBASE set
+#define EXPLICIT_DOMAIN
 
 #include <isl_multi_templ.h>
+
+#undef EXPLICIT_DOMAIN
 
 #undef EL
 #define EL isl_union_pw_aff
@@ -169,8 +195,13 @@ __isl_give isl_basic_set *isl_aff_pos_basic_set(__isl_take isl_aff *aff);
 
 #undef BASE
 #define BASE union_pw_aff
+#undef DOMBASE
+#define DOMBASE union_set
+#define EXPLICIT_DOMAIN
 
 #include <isl_multi_templ.h>
+
+#undef EXPLICIT_DOMAIN
 
 #undef EL
 #define EL isl_union_pw_multi_aff

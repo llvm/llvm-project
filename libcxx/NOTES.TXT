@@ -26,3 +26,4 @@ to libc++.
 1. Add a test under `test/libcxx` that the header defines `_LIBCPP_VERSION`.
 2. Update `test/libcxx/double_include.sh.cpp` to include the new header.
 3. Create a submodule in `include/module.modulemap` for the new header.
+4. Update the include/CMakeLists.txt file to include the new header.

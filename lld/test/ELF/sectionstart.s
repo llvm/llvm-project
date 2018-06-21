@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o --section-start .text=0x100000 \
-# RUN:   --section-start .data=0x110000 --section-start .bss=0x200000 -o %t
+# RUN:   --section-start=.data=0x110000 --section-start .bss=0x200000 -o %t
 # RUN: llvm-objdump -section-headers %t | FileCheck %s
 
 # CHECK:      Sections:

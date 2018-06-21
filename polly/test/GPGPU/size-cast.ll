@@ -13,7 +13,7 @@
 ; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_arg3, MemRef_arg3, (arg) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
-; CODE-NEXT:     dim3 k0_dimGrid(arg >= 1048546 ? 32768 : (arg + 31) / 32);
+; CODE-NEXT:     dim3 k0_dimGrid(arg >= 1048545 ? 32768 : (arg + 31) / 32);
 ; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_arg3, dev_MemRef_arg2, arg, arg1);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
@@ -50,7 +50,7 @@ bb6:                                              ; preds = %bb6, %bb4
   %tmp7 = getelementptr inbounds double, double* %arg3, i64 %tmp
   %tmp8 = load double, double* %tmp7, align 8
   %tmp9 = getelementptr inbounds [1000 x double], [1000 x double]* %arg2, i64 0, i64 %tmp
-  store double undef, double* %tmp9, align 8
+  store double %tmp8, double* %tmp9, align 8
   %tmp10 = add nuw nsw i64 %tmp, 1
   %tmp11 = zext i32 %arg to i64
   %tmp12 = icmp ne i64 %tmp10, %tmp11

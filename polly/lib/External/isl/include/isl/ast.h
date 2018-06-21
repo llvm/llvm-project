@@ -3,9 +3,9 @@
 
 #include <isl/ctx.h>
 #include <isl/ast_type.h>
-#include <isl/id.h>
+#include <isl/id_type.h>
 #include <isl/id_to_ast_expr.h>
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/list.h>
 #include <isl/printer.h>
 

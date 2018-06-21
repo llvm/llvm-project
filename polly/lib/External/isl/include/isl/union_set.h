@@ -16,7 +16,7 @@ __isl_give isl_union_set *isl_union_set_from_basic_set(
 	__isl_take isl_basic_set *bset);
 __isl_constructor
 __isl_give isl_union_set *isl_union_set_from_set(__isl_take isl_set *set);
-__isl_give isl_union_set *isl_union_set_empty(__isl_take isl_space *dim);
+__isl_give isl_union_set *isl_union_set_empty(__isl_take isl_space *space);
 __isl_give isl_union_set *isl_union_set_copy(__isl_keep isl_union_set *uset);
 __isl_null isl_union_set *isl_union_set_free(__isl_take isl_union_set *uset);
 
@@ -80,10 +80,13 @@ __isl_give isl_union_set *isl_union_set_gist_params(
 __isl_export
 __isl_give isl_union_set *isl_union_set_apply(
 	__isl_take isl_union_set *uset, __isl_take isl_union_map *umap);
+__isl_overload
 __isl_give isl_union_set *isl_union_set_preimage_multi_aff(
 	__isl_take isl_union_set *uset, __isl_take isl_multi_aff *ma);
+__isl_overload
 __isl_give isl_union_set *isl_union_set_preimage_pw_multi_aff(
 	__isl_take isl_union_set *uset, __isl_take isl_pw_multi_aff *pma);
+__isl_overload
 __isl_give isl_union_set *isl_union_set_preimage_union_pw_multi_aff(
 	__isl_take isl_union_set *uset,
 	__isl_take isl_union_pw_multi_aff *upma);
@@ -117,6 +120,8 @@ __isl_export
 isl_stat isl_union_set_foreach_set(__isl_keep isl_union_set *uset,
 	isl_stat (*fn)(__isl_take isl_set *set, void *user), void *user);
 __isl_give isl_basic_set_list *isl_union_set_get_basic_set_list(
+	__isl_keep isl_union_set *uset);
+__isl_give isl_set_list *isl_union_set_get_set_list(
 	__isl_keep isl_union_set *uset);
 isl_bool isl_union_set_contains(__isl_keep isl_union_set *uset,
 	__isl_keep isl_space *space);

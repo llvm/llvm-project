@@ -1,7 +1,6 @@
 ; RUN: opt < %s -simplifycfg -S | FileCheck %s
 
-; Check that the debug location for the hoisted store for "ret = 0" is a
-; line-0 location.
+; Check if the debug info for hoisted store for "ret = 0" is removed
 ;
 ; int foo(int x) {
 ;   int ret = 1;
@@ -13,11 +12,12 @@
 ; CHECK: store i32 1,{{.+}}!dbg ![[DLOC1:[0-9]+]]
 ; CHECK: icmp ne {{.+}}!dbg ![[DLOC2:[0-9]+]]
 ; CHECK: [[VREG:%[^ ]+]] = select
-; CHECK: store i32 [[VREG]],{{.*}} !dbg [[storeLoc:![0-9]+]]
+; CHECK: store i32 [[VREG]]
+; CHECK-NOT: !dbg
+; CHECK-SAME: {{$}}
 ; CHECK: ret {{.+}}!dbg ![[DLOC3:[0-9]+]]
 ; CHECK: ![[DLOC1]] = !DILocation(line: 2
 ; CHECK: ![[DLOC2]] = !DILocation(line: 3
-; CHECK: [[storeLoc]] = !DILocation(line: 0
 ; CHECK: ![[DLOC3]] = !DILocation(line: 5
 
 target triple = "x86_64-unknown-linux-gnu"

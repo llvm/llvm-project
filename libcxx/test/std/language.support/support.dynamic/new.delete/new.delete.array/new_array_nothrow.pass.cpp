@@ -42,7 +42,8 @@ int main()
     try
 #endif
     {
-        void*volatile vp = operator new [] (std::numeric_limits<std::size_t>::max(), std::nothrow);
+        void* vp = operator new [] (std::numeric_limits<std::size_t>::max(), std::nothrow);
+        DoNotOptimize(vp);
         assert(new_handler_called == 1);
         assert(vp == 0);
     }
@@ -53,8 +54,10 @@ int main()
     }
 #endif
     A* ap = new(std::nothrow) A[3];
+    DoNotOptimize(ap);
     assert(ap);
     assert(A_constructed == 3);
     delete [] ap;
+    DoNotOptimize(ap);
     assert(A_constructed == 0);
 }

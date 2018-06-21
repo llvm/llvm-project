@@ -11,7 +11,7 @@
 #include <stdexcept>
 
 #include "../src/check.h"
-#include "benchmark/benchmark_api.h"
+#include "benchmark/benchmark.h"
 
 #if defined(__GNUC__) && !defined(__EXCEPTIONS)
 #define TEST_HAS_NO_EXCEPTIONS
@@ -47,7 +47,7 @@ void BM_diagnostic_test(benchmark::State& state) {
 
   if (called_once == false) try_invalid_pause_resume(state);
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     benchmark::DoNotOptimize(state.iterations());
   }
 
@@ -56,6 +56,22 @@ void BM_diagnostic_test(benchmark::State& state) {
   called_once = true;
 }
 BENCHMARK(BM_diagnostic_test);
+
+
+void BM_diagnostic_test_keep_running(benchmark::State& state) {
+  static bool called_once = false;
+
+  if (called_once == false) try_invalid_pause_resume(state);
+
+  while(state.KeepRunning()) {
+    benchmark::DoNotOptimize(state.iterations());
+  }
+
+  if (called_once == false) try_invalid_pause_resume(state);
+
+  called_once = true;
+}
+BENCHMARK(BM_diagnostic_test_keep_running);
 
 int main(int argc, char* argv[]) {
   benchmark::internal::GetAbortHandler() = &TestHandler;

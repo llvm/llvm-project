@@ -53,7 +53,7 @@ __isl_give isl_ast_graft_list *isl_ast_graft_list_fuse(
 	__isl_keep isl_ast_build *build);
 __isl_give isl_ast_graft *isl_ast_graft_alloc_domain(
 	__isl_take isl_map *schedule, __isl_keep isl_ast_build *build);
-void *isl_ast_graft_free(__isl_take isl_ast_graft *graft);
+__isl_null isl_ast_graft *isl_ast_graft_free(__isl_take isl_ast_graft *graft);
 __isl_give isl_ast_graft_list *isl_ast_graft_list_sort_guard(
 	__isl_take isl_ast_graft_list *list);
 

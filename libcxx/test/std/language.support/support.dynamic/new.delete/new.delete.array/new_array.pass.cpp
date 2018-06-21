@@ -41,8 +41,8 @@ int main()
     std::set_new_handler(my_new_handler);
     try
     {
-        void* volatile vp = operator new[] (std::numeric_limits<std::size_t>::max());
-        ((void)vp);
+        void* vp = operator new[] (std::numeric_limits<std::size_t>::max());
+        DoNotOptimize(vp);
         assert(false);
     }
     catch (std::bad_alloc&)
@@ -55,8 +55,10 @@ int main()
     }
 #endif
     A* ap = new A[3];
+    DoNotOptimize(ap);
     assert(ap);
     assert(A_constructed == 3);
     delete [] ap;
+    DoNotOptimize(ap);
     assert(A_constructed == 0);
 }

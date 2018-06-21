@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-make-unique %t -- -- -std=c++11 \
+// RUN: %check_clang_tidy %s modernize-make-unique %t -- -- -std=c++14 \
 // RUN:   -I%S/Inputs/modernize-smart-ptr
 
 #include "unique_ptr.h"
@@ -25,6 +25,11 @@ struct DPair {
   int a, b;
 };
 
+template<typename T>
+struct MyVector {
+  MyVector(std::initializer_list<T>);
+};
+
 struct Empty {};
 
 struct E {
@@ -45,6 +50,8 @@ struct G {
 
 struct H {
   H(std::vector<int>);
+  H(std::vector<int> &, double);
+  H(MyVector<int>, int);
 };
 
 struct I {
@@ -331,6 +338,20 @@ void initialization(int T, Base b) {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
   // CHECK-FIXES: PH1.reset(new H({1, 2, 3}));
 
+  std::unique_ptr<H> PH2 = std::unique_ptr<H>(new H({1, 2, 3}, 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<H> PH2 = std::unique_ptr<H>(new H({1, 2, 3}, 1));
+  PH2.reset(new H({1, 2, 3}, 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PH2.reset(new H({1, 2, 3}, 1));
+
+  std::unique_ptr<H> PH3 = std::unique_ptr<H>(new H({1, 2, 3}, 1.0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<H> PH3 = std::unique_ptr<H>(new H({1, 2, 3}, 1.0));
+  PH3.reset(new H({1, 2, 3}, 1.0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PH3.reset(new H({1, 2, 3}, 1.0));
+
   std::unique_ptr<I> PI1 = std::unique_ptr<I>(new I(G({1, 2, 3})));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<I> PI1 = std::make_unique<I>(G({1, 2, 3}));
@@ -484,4 +505,13 @@ void template_fun(T* t) {
 void invoke_template() {
   Foo* foo;
   template_fun(foo);
+}
+
+void no_fix_for_invalid_new_loc() {
+  // FIXME: Although the code is valid, the end location of `new struct Base` is
+  // invalid. Correct it once https://bugs.llvm.org/show_bug.cgi?id=35952 is
+  // fixed.
+  auto T = std::unique_ptr<Base>(new struct Base);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use std::make_unique instead
+  // CHECK-FIXES: auto T = std::unique_ptr<Base>(new struct Base);
 }

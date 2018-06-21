@@ -1460,13 +1460,6 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
       outs() << '\n' << std::get<1>(Symbols[si]) << ":\n";
 
-      // Don't print raw contents of a virtual section. A virtual section
-      // doesn't have any contents in the file.
-      if (Section.isVirtual()) {
-        outs() << "...\n";
-        continue;
-      }
-
 #ifndef NDEBUG
       raw_ostream &DebugOut = DebugFlag ? dbgs() : nulls();
 #else

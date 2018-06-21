@@ -42,7 +42,6 @@ private:
   StringRef lexWord();
 
   template <typename T> struct LexOrCompleteWord;
-  template <typename T> LexOrCompleteWord<T> lexOrCompleteWord(StringRef &Str);
 
   QueryRef parseSetBool(bool QuerySession::*Var);
   QueryRef parseSetOutputKind();

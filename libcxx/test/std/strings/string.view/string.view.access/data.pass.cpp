@@ -22,6 +22,10 @@ void test ( const CharT *s, size_t len ) {
     std::basic_string_view<CharT> sv ( s, len );
     assert ( sv.length() == len );
     assert ( sv.data() == s );
+#if TEST_STD_VER > 14
+//  make sure we pick up std::data, too!
+    assert ( sv.data() == std::data(sv));
+#endif
     }
 
 int main () {

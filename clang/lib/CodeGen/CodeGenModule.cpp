@@ -397,7 +397,6 @@ void CodeGenModule::Release() {
   checkAliases();
   EmitCXXGlobalInitFunc();
   EmitCXXGlobalDtorFunc();
-  registerGlobalDtorsWithAtExit();
   EmitCXXThreadLocalInitFunc();
   if (ObjCRuntime)
     if (llvm::Function *ObjCInitFunction = ObjCRuntime->ModuleInitFunction())
@@ -812,11 +811,6 @@ void CodeGenModule::AddGlobalCtor(llvm::Function *Ctor, int Priority,
 /// AddGlobalDtor - Add a function to the list that will be called
 /// when the module is unloaded.
 void CodeGenModule::AddGlobalDtor(llvm::Function *Dtor, int Priority) {
-  if (CodeGenOpts.RegisterGlobalDtorsWithAtExit) {
-    DtorsUsingAtExit[Priority].push_back(Dtor);
-    return;
-  }
-
   // FIXME: Type coercion of void()* types.
   GlobalDtors.push_back(Structor(Priority, Dtor, nullptr));
 }
@@ -1334,12 +1328,6 @@ static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
   // Add linker options to link against the libraries/frameworks
   // described by this module.
   llvm::LLVMContext &Context = CGM.getLLVMContext();
-
-  // For modules that use export_as for linking, use that module
-  // name instead.
-  if (Mod->UseExportAsModuleLinkName)
-    return;
-
   for (unsigned I = Mod->LinkLibraries.size(); I > 0; --I) {
     // Link against a framework.  Frameworks are currently Darwin only, so we
     // don't to ask TargetCodeGenInfo for the spelling of the linker option.

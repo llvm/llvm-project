@@ -7,6 +7,7 @@ add_clang_library(clangTidy
   ClangTidyModule.cpp
   ClangTidyDiagnosticConsumer.cpp
   ClangTidyOptions.cpp
+  ClangTidyProfiling.cpp
 
   DEPENDS
   ClangSACheckers
@@ -27,6 +28,7 @@ add_clang_library(clangTidy
   )
 
 add_subdirectory(android)
+add_subdirectory(abseil)
 add_subdirectory(boost)
 add_subdirectory(bugprone)
 add_subdirectory(cert)
@@ -41,6 +43,8 @@ add_subdirectory(mpi)
 add_subdirectory(objc)
 add_subdirectory(performance)
 add_subdirectory(plugin)
+add_subdirectory(portability)
 add_subdirectory(readability)
 add_subdirectory(tool)
 add_subdirectory(utils)
+add_subdirectory(zircon)

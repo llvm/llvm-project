@@ -1,4 +1,4 @@
-//===- CoreEngine.h - Path-Sensitive Dataflow Engine ------------*- C++ -*-===//
+//==- CoreEngine.h - Path-Sensitive Dataflow Engine ----------------*- C++ -*-//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,33 +15,22 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_COREENGINE_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_COREENGINE_H
 
-#include "clang/AST/Stmt.h"
+#include "clang/AST/Expr.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "clang/Analysis/CFG.h"
-#include "clang/Analysis/ProgramPoint.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BlockCounter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/FunctionSummary.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/WorkList.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
-#include <cassert>
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include <memory>
-#include <utility>
-#include <vector>
 
 namespace clang {
 
-class AnalyzerOptions;
-class CXXBindTemporaryExpr;
-class Expr;
-class LabelDecl;
-
+class ProgramPointTag;
+  
 namespace ento {
 
-class FunctionSummariesTy;
-class SubEngine;
+class NodeBuilder;
 
 //===----------------------------------------------------------------------===//
 /// CoreEngine - Implements the core logic of the graph-reachability
@@ -53,23 +42,23 @@ class SubEngine;
 ///   at the statement and block-level.  The analyses themselves must implement
 ///   any transfer function logic and the sub-expression level (if any).
 class CoreEngine {
-  friend class CommonNodeBuilder;
-  friend class EndOfFunctionNodeBuilder;
-  friend class ExprEngine;
-  friend class IndirectGotoNodeBuilder;
-  friend class NodeBuilder;
   friend struct NodeBuilderContext;
+  friend class NodeBuilder;
+  friend class ExprEngine;
+  friend class CommonNodeBuilder;
+  friend class IndirectGotoNodeBuilder;
   friend class SwitchNodeBuilder;
-
+  friend class EndOfFunctionNodeBuilder;
 public:
-  using BlocksExhausted =
-      std::vector<std::pair<BlockEdge, const ExplodedNode *>>;
+  typedef std::vector<std::pair<BlockEdge, const ExplodedNode*> >
+            BlocksExhausted;
   
-  using BlocksAborted =
-      std::vector<std::pair<const CFGBlock *, const ExplodedNode *>>;
+  typedef std::vector<std::pair<const CFGBlock*, const ExplodedNode*> >
+            BlocksAborted;
 
 private:
-  SubEngine &SubEng;
+
+  SubEngine& SubEng;
 
   /// G - The simulation graph.  Each node is a (location,state) pair.
   mutable ExplodedGraph G;
@@ -118,6 +107,9 @@ private:
                         ExplodedNode *Pred);
 
 private:
+  CoreEngine(const CoreEngine &) = delete;
+  void operator=(const CoreEngine &) = delete;
+
   ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
                                           const ReturnStmt *RS);
 
@@ -127,9 +119,6 @@ public:
              FunctionSummariesTy *FS,
              AnalyzerOptions &Opts);
 
-  CoreEngine(const CoreEngine &) = delete;
-  CoreEngine &operator=(const CoreEngine &) = delete;
-
   /// getGraph - Returns the exploded graph.
   ExplodedGraph &getGraph() { return G; }
 
@@ -137,7 +126,6 @@ public:
   ///  steps.  Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps,
                        ProgramStateRef InitState);
-
   /// Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkListWithInitialState(const LocationContext *L,
                                        unsigned Steps,
@@ -167,15 +155,12 @@ public:
   BlocksExhausted::const_iterator blocks_exhausted_begin() const {
     return blocksExhausted.begin();
   }
-
   BlocksExhausted::const_iterator blocks_exhausted_end() const {
     return blocksExhausted.end();
   }
-
   BlocksAborted::const_iterator blocks_aborted_begin() const {
     return blocksAborted.begin();
   }
-
   BlocksAborted::const_iterator blocks_aborted_end() const {
     return blocksAborted.end();
   }
@@ -200,9 +185,8 @@ struct NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;
   const LocationContext *LC;
-
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
-      : Eng(E), Block(B), LC(N->getLocationContext()) { assert(B); }
+    : Eng(E), Block(B), LC(N->getLocationContext()) { assert(B); }
 
   /// \brief Return the CFGBlock associated with this builder.
   const CFGBlock *getBlock() const { return Block; }
@@ -227,29 +211,29 @@ struct NodeBuilderContext {
 /// constructed nodes) but did not have any outgoing transitions added.
 class NodeBuilder {
   virtual void anchor();
-
 protected:
   const NodeBuilderContext &C;
 
   /// Specifies if the builder results have been finalized. For example, if it
   /// is set to false, autotransitions are yet to be generated.
   bool Finalized;
-
-  bool HasGeneratedNodes = false;
-
+  bool HasGeneratedNodes;
   /// \brief The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
 
   /// Checkes if the results are ready.
   virtual bool checkResults() {
-    return Finalized;
+    if (!Finalized)
+      return false;
+    return true;
   }
 
   bool hasNoSinksInFrontier() {
-    for (const auto  I : Frontier)
-      if (I->isSink())
+    for (iterator I = Frontier.begin(), E = Frontier.end(); I != E; ++I) {
+      if ((*I)->isSink())
         return false;
+    }
     return true;
   }
 
@@ -264,18 +248,18 @@ protected:
 public:
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx, bool F = true)
-      : C(Ctx), Finalized(F), Frontier(DstSet) {
+    : C(Ctx), Finalized(F), HasGeneratedNodes(false), Frontier(DstSet) {
     Frontier.Add(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx, bool F = true)
-      : C(Ctx), Finalized(F), Frontier(DstSet) {
+    : C(Ctx), Finalized(F), HasGeneratedNodes(false), Frontier(DstSet) {
     Frontier.insert(SrcSet);
     assert(hasNoSinksInFrontier());
   }
 
-  virtual ~NodeBuilder() = default;
+  virtual ~NodeBuilder() {}
 
   /// \brief Generates a node in the ExplodedGraph.
   ExplodedNode *generateNode(const ProgramPoint &PP,
@@ -301,16 +285,14 @@ public:
     return Frontier;
   }
 
-  using iterator = ExplodedNodeSet::iterator;
-
+  typedef ExplodedNodeSet::iterator iterator;
   /// \brief Iterators through the results frontier.
-  iterator begin() {
+  inline iterator begin() {
     finalizeResults();
     assert(checkResults());
     return Frontier.begin();
   }
-
-  iterator end() {
+  inline iterator end() {
     finalizeResults();
     return Frontier.end();
   }
@@ -319,10 +301,9 @@ public:
   bool hasGeneratedNodes() { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
-    for (const auto I : S)
-      Frontier.erase(I);
+    for (ExplodedNodeSet::iterator I = S.begin(), E = S.end(); I != E; ++I )
+      Frontier.erase(*I);
   }
-
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
   void addNodes(ExplodedNode *N) { Frontier.Add(N); }
@@ -332,7 +313,6 @@ public:
 /// \brief This node builder keeps track of the generated sink nodes.
 class NodeBuilderWithSinks: public NodeBuilder {
   void anchor() override;
-
 protected:
   SmallVector<ExplodedNode*, 2> sinksGenerated;
   ProgramPoint &Location;
@@ -340,7 +320,7 @@ protected:
 public:
   NodeBuilderWithSinks(ExplodedNode *Pred, ExplodedNodeSet &DstSet,
                        const NodeBuilderContext &Ctx, ProgramPoint &L)
-      : NodeBuilder(Pred, DstSet, Ctx), Location(L) {}
+    : NodeBuilder(Pred, DstSet, Ctx), Location(L) {}
 
   ExplodedNode *generateNode(ProgramStateRef State,
                              ExplodedNode *Pred,
@@ -369,15 +349,15 @@ public:
 /// that it creates a statement specific ProgramPoint.
 class StmtNodeBuilder: public NodeBuilder {
   NodeBuilder *EnclosingBldr;
-
 public:
+
   /// \brief Constructs a StmtNodeBuilder. If the builder is going to process
   /// nodes currently owned by another builder(with larger scope), use
   /// Enclosing builder to transfer ownership.
   StmtNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
                   const NodeBuilderContext &Ctx,
                   NodeBuilder *Enclosing = nullptr)
-      : NodeBuilder(SrcNode, DstSet, Ctx), EnclosingBldr(Enclosing) {
+    : NodeBuilder(SrcNode, DstSet, Ctx), EnclosingBldr(Enclosing) {
     if (EnclosingBldr)
       EnclosingBldr->takeNodes(SrcNode);
   }
@@ -385,10 +365,11 @@ public:
   StmtNodeBuilder(ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
                   const NodeBuilderContext &Ctx,
                   NodeBuilder *Enclosing = nullptr)
-      : NodeBuilder(SrcSet, DstSet, Ctx), EnclosingBldr(Enclosing) {
+    : NodeBuilder(SrcSet, DstSet, Ctx), EnclosingBldr(Enclosing) {
     if (EnclosingBldr)
-      for (const auto I : SrcSet)
-        EnclosingBldr->takeNodes(I);
+      for (ExplodedNodeSet::iterator I = SrcSet.begin(),
+                                     E = SrcSet.end(); I != E; ++I )
+        EnclosingBldr->takeNodes(*I);
   }
 
   ~StmtNodeBuilder() override;
@@ -420,20 +401,19 @@ public:
 /// \brief BranchNodeBuilder is responsible for constructing the nodes
 /// corresponding to the two branches of the if statement - true and false.
 class BranchNodeBuilder: public NodeBuilder {
+  void anchor() override;
   const CFGBlock *DstT;
   const CFGBlock *DstF;
 
   bool InFeasibleTrue;
   bool InFeasibleFalse;
 
-  void anchor() override;
-
 public:
   BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
                     const NodeBuilderContext &C,
                     const CFGBlock *dstT, const CFGBlock *dstF)
-      : NodeBuilder(SrcNode, DstSet, C), DstT(dstT), DstF(dstF),
-        InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
+  : NodeBuilder(SrcNode, DstSet, C), DstT(dstT), DstF(dstF),
+    InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
     // The branch node builder does not generate autotransitions.
     // If there are no successors it means that both branches are infeasible.
     takeNodes(SrcNode);
@@ -442,8 +422,8 @@ public:
   BranchNodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
                     const NodeBuilderContext &C,
                     const CFGBlock *dstT, const CFGBlock *dstF)
-      : NodeBuilder(SrcSet, DstSet, C), DstT(dstT), DstF(dstF),
-        InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
+  : NodeBuilder(SrcSet, DstSet, C), DstT(dstT), DstF(dstF),
+    InFeasibleTrue(!DstT), InFeasibleFalse(!DstF) {
     takeNodes(SrcSet);
   }
 
@@ -476,16 +456,15 @@ class IndirectGotoNodeBuilder {
 public:
   IndirectGotoNodeBuilder(ExplodedNode *pred, const CFGBlock *src, 
                     const Expr *e, const CFGBlock *dispatch, CoreEngine* eng)
-      : Eng(*eng), Src(src), DispatchBlock(*dispatch), E(e), Pred(pred) {}
+    : Eng(*eng), Src(src), DispatchBlock(*dispatch), E(e), Pred(pred) {}
 
   class iterator {
-    friend class IndirectGotoNodeBuilder;
-
     CFGBlock::const_succ_iterator I;
 
+    friend class IndirectGotoNodeBuilder;
     iterator(CFGBlock::const_succ_iterator i) : I(i) {}
-
   public:
+
     iterator &operator++() { ++I; return *this; }
     bool operator!=(const iterator &X) const { return I != X.I; }
 
@@ -523,13 +502,12 @@ class SwitchNodeBuilder {
 public:
   SwitchNodeBuilder(ExplodedNode *pred, const CFGBlock *src,
                     const Expr *condition, CoreEngine* eng)
-      : Eng(*eng), Src(src), Condition(condition), Pred(pred) {}
+  : Eng(*eng), Src(src), Condition(condition), Pred(pred) {}
 
   class iterator {
-    friend class SwitchNodeBuilder;
-
     CFGBlock::const_succ_reverse_iterator I;
 
+    friend class SwitchNodeBuilder;
     iterator(CFGBlock::const_succ_reverse_iterator i) : I(i) {}
 
   public:
@@ -568,8 +546,7 @@ public:
   }
 };
 
-} // namespace ento
+} // end ento namespace
+} // end clang namespace
 
-} // namespace clang
-
-#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_COREENGINE_H
+#endif

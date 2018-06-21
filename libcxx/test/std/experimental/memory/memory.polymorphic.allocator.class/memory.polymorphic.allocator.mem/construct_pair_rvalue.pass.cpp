@@ -90,6 +90,31 @@ void test_pmr_uses_allocator(std::pair<TT, UU>&& p)
     }
 }
 
+template <class Alloc, class TT, class UU>
+void test_pmr_not_uses_allocator(std::pair<TT, UU>&& p)
+{
+    {
+        using T = NotUsesAllocator<Alloc, 1>;
+        using U = NotUsesAllocator<Alloc, 1>;
+        assert((doTest<T, U>(UA_None, UA_None, std::move(p))));
+    }
+    {
+        using T = UsesAllocatorV1<Alloc, 1>;
+        using U = UsesAllocatorV2<Alloc, 1>;
+        assert((doTest<T, U>(UA_None, UA_None, std::move(p))));
+    }
+    {
+        using T = UsesAllocatorV2<Alloc, 1>;
+        using U = UsesAllocatorV3<Alloc, 1>;
+        assert((doTest<T, U>(UA_None, UA_None, std::move(p))));
+    }
+    {
+        using T = UsesAllocatorV3<Alloc, 1>;
+        using U = NotUsesAllocator<Alloc, 1>;
+        assert((doTest<T, U>(UA_None, UA_None, std::move(p))));
+    }
+}
+
 int main()
 {
     using ERT = std::experimental::erased_type;
@@ -100,7 +125,7 @@ int main()
         int y = 42;
         std::pair<int&, int&&> p(x, std::move(y));
         test_pmr_uses_allocator<ERT>(std::move(p));
-        test_pmr_uses_allocator<PMR>(std::move(p));
+        test_pmr_not_uses_allocator<PMR>(std::move(p));
         test_pmr_uses_allocator<PMA>(std::move(p));
     }
     {
@@ -108,7 +133,7 @@ int main()
         int y = 42;
         std::pair<int&&, int&> p(std::move(x), y);
         test_pmr_uses_allocator<ERT>(std::move(p));
-        test_pmr_uses_allocator<PMR>(std::move(p));
+        test_pmr_not_uses_allocator<PMR>(std::move(p));
         test_pmr_uses_allocator<PMA>(std::move(p));
     }
 }

@@ -10,15 +10,26 @@
 // <algorithm>
 
 // template<class ForwardIterator, class Size, class T>
-//   ForwardIterator
+//   constexpr ForwardIterator     // constexpr after C++17
 //   search_n(ForwardIterator first, ForwardIterator last, Size count,
 //            const T& value);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "user_defined_integral.hpp"
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {0, 0, 1, 1, 2, 2};
+    return    (std::search_n(std::begin(ia), std::end(ia), 1, 0) == ia)
+           && (std::search_n(std::begin(ia), std::end(ia), 2, 1) == ia+2)
+           && (std::search_n(std::begin(ia), std::end(ia), 1, 3) == std::end(ia))
+           ;
+    }
+#endif
 
 template <class Iter>
 void
@@ -74,4 +85,8 @@ int main()
     test<forward_iterator<const int*> >();
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

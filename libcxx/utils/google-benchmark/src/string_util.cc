@@ -27,8 +27,6 @@ static_assert(arraysize(kSmallSIUnits) == arraysize(kBigSIUnits),
 
 static const int64_t kUnitsSize = arraysize(kBigSIUnits);
 
-}  // end anonymous namespace
-
 void ToExponentAndMantissa(double val, double thresh, int precision,
                            double one_k, std::string* mantissa,
                            int64_t* exponent) {
@@ -100,13 +98,15 @@ std::string ExponentToPrefix(int64_t exponent, bool iec) {
 }
 
 std::string ToBinaryStringFullySpecified(double value, double threshold,
-                                         int precision) {
+                                         int precision, double one_k = 1024.0) {
   std::string mantissa;
   int64_t exponent;
-  ToExponentAndMantissa(value, threshold, precision, 1024.0, &mantissa,
+  ToExponentAndMantissa(value, threshold, precision, one_k, &mantissa,
                         &exponent);
   return mantissa + ExponentToPrefix(exponent, false);
 }
+
+}  // end namespace
 
 void AppendHumanReadable(int n, std::string* str) {
   std::stringstream ss;
@@ -115,11 +115,11 @@ void AppendHumanReadable(int n, std::string* str) {
   *str += ss.str();
 }
 
-std::string HumanReadableNumber(double n) {
+std::string HumanReadableNumber(double n, double one_k) {
   // 1.1 means that figures up to 1.1k should be shown with the next unit down;
   // this softens edge effects.
   // 1 means that we should show one decimal place of precision.
-  return ToBinaryStringFullySpecified(n, 1.1, 1);
+  return ToBinaryStringFullySpecified(n, 1.1, 1, one_k);
 }
 
 std::string StringPrintFImp(const char* msg, va_list args) {

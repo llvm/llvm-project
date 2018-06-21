@@ -10,7 +10,7 @@ namespace benchmark {
 
 void AppendHumanReadable(int n, std::string* str);
 
-std::string HumanReadableNumber(double n);
+std::string HumanReadableNumber(double n, double one_k = 1024.0);
 
 std::string StringPrintF(const char* format, ...);
 

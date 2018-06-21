@@ -7773,12 +7773,10 @@ public:
     if (!HasArithmeticOrEnumeralCandidateType)
       return;
 
-    for (unsigned Arith = 0; Arith < NumArithmeticTypes; ++Arith) {
-      const auto TypeOfT = ArithmeticTypes[Arith];
-      if (Op == OO_MinusMinus && TypeOfT == S.Context.BoolTy)
-        continue;
+    for (unsigned Arith = (Op == OO_PlusPlus? 0 : 1);
+         Arith < NumArithmeticTypes; ++Arith) {
       addPlusPlusMinusMinusStyleOverloads(
-        TypeOfT,
+        ArithmeticTypes[Arith],
         VisibleTypeConversionsQuals.hasVolatile(),
         VisibleTypeConversionsQuals.hasRestrict());
     }

@@ -56,7 +56,34 @@ int main()
         C::const_reference r2 = c[2];
         assert(r2 == 3.5);
     }
-
+    { // Test operator[] "works" on zero sized arrays
+        typedef double T;
+        typedef std::array<T, 0> C;
+        C c = {};
+        C const& cc = c;
+        static_assert((std::is_same<decltype(c[0]), T &>::value), "");
+        static_assert((std::is_same<decltype(cc[0]), const T &>::value), "");
+        if (c.size() > (0)) { // always false
+          C::reference r1 = c[0];
+          C::const_reference r2 = cc[0];
+          ((void)r1);
+          ((void)r2);
+        }
+    }
+    { // Test operator[] "works" on zero sized arrays
+        typedef double T;
+        typedef std::array<const T, 0> C;
+        C c = {{}};
+        C const& cc = c;
+        static_assert((std::is_same<decltype(c[0]), const T &>::value), "");
+        static_assert((std::is_same<decltype(cc[0]), const T &>::value), "");
+        if (c.size() > (0)) { // always false
+          C::reference r1 = c[0];
+          C::const_reference r2 = cc[0];
+          ((void)r1);
+          ((void)r2);
+        }
+    }
 #if TEST_STD_VER > 11
     {
         typedef double T;

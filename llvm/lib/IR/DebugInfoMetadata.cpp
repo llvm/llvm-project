@@ -19,7 +19,6 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 
 using namespace llvm;
 
@@ -69,23 +68,17 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                    Storage, Context.pImpl->DILocations);
 }
 
-const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
-                                                const DILocation *LocB,
-                                                bool GenerateLocation,
-                                                Instruction *ForInst) {
+const DILocation *
+DILocation::getMergedLocation(const DILocation *LocA, const DILocation *LocB,
+                              const Instruction *ForInst) {
   if (!LocA || !LocB)
     return nullptr;
 
   if (LocA == LocB || !LocA->canDiscriminate(*LocB))
     return LocA;
 
-  if (!GenerateLocation)
+  if (!dyn_cast_or_null<CallInst>(ForInst))
     return nullptr;
-
-  // We cannot change the scope for debug info intrinsics.
-  if (isa<DbgInfoIntrinsic>(ForInst))
-    return DILocation::get(LocA->getContext(), 0, 0, LocA->getScope(),
-                           LocA->getInlinedAt());
 
   SmallPtrSet<DILocation *, 5> InlinedLocationsA;
   for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())

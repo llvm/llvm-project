@@ -1,4 +1,4 @@
-//===- AnalyzerOptions.h - Analysis Engine Options --------------*- C++ -*-===//
+//===--- AnalyzerOptions.h - Analysis Engine Options ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,18 +19,18 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace clang {
+class ASTConsumer;
+class DiagnosticsEngine;
+class Preprocessor;
+class LangOptions;
 
 namespace ento {
-
 class CheckerBase;
-
-} // namespace ento
+}
 
 /// Analysis - Set of available source code analyses.
 enum Analyses {
@@ -123,20 +123,20 @@ enum IPAKind {
 
 class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
 public:
-  using ConfigTable = llvm::StringMap<std::string>;
+  typedef llvm::StringMap<std::string> ConfigTable;
 
   static std::vector<StringRef>
   getRegisteredCheckers(bool IncludeExperimental = false);
 
   /// \brief Pair of checker name and enable/disable.
-  std::vector<std::pair<std::string, bool>> CheckersControlList;
+  std::vector<std::pair<std::string, bool> > CheckersControlList;
   
   /// \brief A key-value table of use-specified configuration values.
   ConfigTable Config;
-  AnalysisStores AnalysisStoreOpt = RegionStoreModel;
-  AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
-  AnalysisDiagClients AnalysisDiagOpt = PD_HTML;
-  AnalysisPurgeMode AnalysisPurgeOpt = PurgeStmt;
+  AnalysisStores AnalysisStoreOpt;
+  AnalysisConstraints AnalysisConstraintsOpt;
+  AnalysisDiagClients AnalysisDiagOpt;
+  AnalysisPurgeMode AnalysisPurgeOpt;
   
   std::string AnalyzeSpecificFunction;
 
@@ -146,6 +146,7 @@ public:
   
   /// \brief The maximum number of times the analyzer visits a block.
   unsigned maxBlockVisitOnPath;
+  
   
   /// \brief Disable all analyzer checks.
   ///
@@ -182,11 +183,10 @@ public:
   unsigned NoRetryExhausted : 1;
   
   /// \brief The inlining stack depth limit.
-  // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
-  unsigned InlineMaxStackDepth = 5;
+  unsigned InlineMaxStackDepth;
   
   /// \brief The mode of function selection used during inlining.
-  AnalysisInliningMode InliningMode = NoRedundancy;
+  AnalysisInliningMode InliningMode;
 
   enum class ExplorationStrategyKind {
     DFS,
@@ -198,15 +198,14 @@ public:
   };
 
 private:
-  ExplorationStrategyKind ExplorationStrategy = ExplorationStrategyKind::NotSet;
+
+  ExplorationStrategyKind ExplorationStrategy;
 
   /// \brief Describes the kinds for high-level analyzer mode.
   enum UserModeKind {
     UMK_NotSet = 0,
-
     /// Perform shallow but fast analyzes.
     UMK_Shallow = 1,
-
     /// Perform deep analyzes.
     UMK_Deep = 2
   };
@@ -214,10 +213,10 @@ private:
   /// Controls the high-level analyzer mode, which influences the default 
   /// settings for some of the lower-level config options (such as IPAMode).
   /// \sa getUserMode
-  UserModeKind UserMode = UMK_NotSet;
+  UserModeKind UserMode;
 
   /// Controls the mode of inter-procedural analysis.
-  IPAKind IPAMode = IPAK_NotSet;
+  IPAKind IPAMode;
 
   /// Controls which C++ member functions will be considered for inlining.
   CXXInlineableMemberKind CXXMemberInliningMode;
@@ -240,9 +239,6 @@ private:
   /// \sa mayInlineCXXStandardLibrary
   Optional<bool> InlineCXXStandardLibrary;
   
-  /// \sa includeScopesInCFG
-  Optional<bool> IncludeScopesInCFG;
-
   /// \sa mayInlineTemplateFunctions
   Optional<bool> InlineTemplateFunctions;
 
@@ -349,15 +345,6 @@ private:
                              bool SearchInParents = false);
 
 public:
-  AnalyzerOptions()
-      : DisableAllChecks(false), ShowCheckerHelp(false),
-        ShowEnabledCheckerList(false), AnalyzeAll(false),
-        AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
-        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
-        visualizeExplodedGraphWithGraphViz(false),
-        visualizeExplodedGraphWithUbiGraph(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), CXXMemberInliningMode() {}
-
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.
   ///
@@ -483,12 +470,6 @@ public:
   /// This is controlled by the 'cfg-rich-constructors' config options,
   /// which accepts the values "true" and "false".
   bool includeRichConstructorsInCFG();
-
-  /// Returns whether or not scope information should be included in the CFG.
-  ///
-  /// This is controlled by the 'cfg-scope-info' config option, which accepts
-  /// the values "true" and "false".
-  bool includeScopesInCFG();
 
   /// Returns whether or not C++ standard library functions may be considered
   /// for inlining.
@@ -676,10 +657,38 @@ public:
   /// This is an experimental feature to inline functions from another
   /// translation units.
   bool naiveCTUEnabled();
+
+public:
+  AnalyzerOptions() :
+    AnalysisStoreOpt(RegionStoreModel),
+    AnalysisConstraintsOpt(RangeConstraintsModel),
+    AnalysisDiagOpt(PD_HTML),
+    AnalysisPurgeOpt(PurgeStmt),
+    DisableAllChecks(0),
+    ShowCheckerHelp(0),
+    ShowEnabledCheckerList(0),
+    AnalyzeAll(0),
+    AnalyzerDisplayProgress(0),
+    AnalyzeNestedBlocks(0),
+    eagerlyAssumeBinOpBifurcation(0),
+    TrimGraph(0),
+    visualizeExplodedGraphWithGraphViz(0),
+    visualizeExplodedGraphWithUbiGraph(0),
+    UnoptimizedCFG(0),
+    PrintStats(0),
+    NoRetryExhausted(0),
+    // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
+    InlineMaxStackDepth(5),
+    InliningMode(NoRedundancy),
+    ExplorationStrategy(ExplorationStrategyKind::NotSet),
+    UserMode(UMK_NotSet),
+    IPAMode(IPAK_NotSet),
+    CXXMemberInliningMode() {}
+
 };
   
-using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
+typedef IntrusiveRefCntPtr<AnalyzerOptions> AnalyzerOptionsRef;
   
-} // namespace clang
+}
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H
+#endif

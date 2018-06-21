@@ -21,6 +21,7 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+namespace {
 static const char AutoPtrTokenId[] = "AutoPrTokenId";
 static const char AutoPtrOwnershipTransferId[] = "AutoPtrOwnershipTransferId";
 
@@ -68,6 +69,8 @@ AST_MATCHER(Decl, isFromStdNamespace) {
 
   return (Info && Info->isStr("std"));
 }
+
+} // namespace
 
 ReplaceAutoPtrCheck::ReplaceAutoPtrCheck(StringRef Name,
                                          ClangTidyContext *Context)

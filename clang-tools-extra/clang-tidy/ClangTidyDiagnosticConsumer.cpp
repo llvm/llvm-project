@@ -177,9 +177,11 @@ private:
 };
 
 ClangTidyContext::ClangTidyContext(
-    std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider)
+    std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
+    bool AllowEnablingAnalyzerAlphaCheckers)
     : DiagEngine(nullptr), OptionsProvider(std::move(OptionsProvider)),
-      Profile(nullptr) {
+      Profile(false),
+      AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers) {
   // Before the first translation unit we can get errors related to command-line
   // parsing, use empty string for the file name in this case.
   setCurrentFile("");
@@ -233,7 +235,19 @@ ClangTidyOptions ClangTidyContext::getOptionsForFile(StringRef File) const {
       OptionsProvider->getOptions(File));
 }
 
-void ClangTidyContext::setCheckProfileData(ProfileData *P) { Profile = P; }
+void ClangTidyContext::setEnableProfiling(bool P) { Profile = P; }
+
+void ClangTidyContext::setProfileStoragePrefix(StringRef Prefix) {
+  ProfilePrefix = Prefix;
+}
+
+llvm::Optional<ClangTidyProfiling::StorageParams>
+ClangTidyContext::getProfileStorageParams() const {
+  if (ProfilePrefix.empty())
+    return llvm::None;
+
+  return ClangTidyProfiling::StorageParams(ProfilePrefix, CurrentFile);
+}
 
 bool ClangTidyContext::isCheckEnabled(StringRef CheckName) const {
   assert(CheckFilter != nullptr);
@@ -374,7 +388,7 @@ static bool LineIsMarkedWithNOLINTinMacro(SourceManager &SM, SourceLocation Loc,
       return true;
     if (!Loc.isMacroID())
       return false;
-    Loc = SM.getImmediateExpansionRange(Loc).first;
+    Loc = SM.getImmediateExpansionRange(Loc).getBegin();
   }
   return false;
 }

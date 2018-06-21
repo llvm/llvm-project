@@ -35,6 +35,13 @@ static cl::opt<bool> PollyAllowErrorBlocks(
     cl::desc("Allow to speculate on the execution of 'error blocks'."),
     cl::Hidden, cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::list<std::string> DebugFunctions(
+    "polly-debug-func",
+    cl::desc("Allow calls to the specified functions in SCoPs even if their "
+             "side-effects are unknown. This can be used to do debug output in "
+             "Polly-transformed code."),
+    cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+
 // Ensures that there is just one predecessor to the entry node from outside the
 // region.
 // The identity of the region entry node is preserved.
@@ -399,27 +406,11 @@ bool polly::isErrorBlock(BasicBlock &BB, const Region &R, LoopInfo &LI,
   if (DominatesAllPredecessors)
     return false;
 
-  // FIXME: This is a simple heuristic to determine if the load is executed
-  //        in a conditional. However, we actually would need the control
-  //        condition, i.e., the post dominance frontier. Alternatively we
-  //        could walk up the dominance tree until we find a block that is
-  //        not post dominated by the load and check if it is a conditional
-  //        or a loop header.
-  auto *DTNode = DT.getNode(&BB);
-  if (!DTNode)
-    return false;
-
-  DTNode = DTNode->getIDom();
-
-  if (!DTNode)
-    return false;
-
-  auto *IDomBB = DTNode->getBlock();
-  if (LI.isLoopHeader(IDomBB))
-    return false;
-
   for (Instruction &Inst : BB)
     if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+      if (isDebugCall(CI))
+        continue;
+
       if (isIgnoredIntrinsic(CI))
         continue;
 
@@ -604,4 +595,46 @@ llvm::Loop *polly::getFirstNonBoxedLoopFor(llvm::BasicBlock *BB,
                                            const BoxedLoopsSetTy &BoxedLoops) {
   Loop *L = LI.getLoopFor(BB);
   return getFirstNonBoxedLoopFor(L, LI, BoxedLoops);
+}
+
+bool polly::isDebugCall(Instruction *Inst) {
+  auto *CI = dyn_cast<CallInst>(Inst);
+  if (!CI)
+    return false;
+
+  Function *CF = CI->getCalledFunction();
+  if (!CF)
+    return false;
+
+  return std::find(DebugFunctions.begin(), DebugFunctions.end(),
+                   CF->getName()) != DebugFunctions.end();
+}
+
+static bool hasDebugCall(BasicBlock *BB) {
+  for (Instruction &Inst : *BB) {
+    if (isDebugCall(&Inst))
+      return true;
+  }
+  return false;
+}
+
+bool polly::hasDebugCall(ScopStmt *Stmt) {
+  // Quick skip if no debug functions have been defined.
+  if (DebugFunctions.empty())
+    return false;
+
+  if (!Stmt)
+    return false;
+
+  for (Instruction *Inst : Stmt->getInstructions())
+    if (isDebugCall(Inst))
+      return true;
+
+  if (Stmt->isRegionStmt()) {
+    for (BasicBlock *RBB : Stmt->getRegion()->blocks())
+      if (RBB != Stmt->getEntryBlock() && ::hasDebugCall(RBB))
+        return true;
+  }
+
+  return false;
 }

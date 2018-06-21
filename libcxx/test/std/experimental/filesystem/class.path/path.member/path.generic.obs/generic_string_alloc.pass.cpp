@@ -18,7 +18,7 @@
 // basic_string<ECharT, Traits, Allocator>
 // generic_string(const Allocator& a = Allocator()) const;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -27,8 +27,6 @@
 #include "count_new.hpp"
 #include "min_allocator.h"
 #include "filesystem_test_helper.hpp"
-
-namespace fs = std::experimental::filesystem;
 
 MultiStringType longString = MKSTR("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/123456789/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 

@@ -225,10 +225,10 @@ public:
     if (SM.isMacroArgExpansion(StartLoc) && SM.isMacroArgExpansion(EndLoc)) {
       SourceLocation FileLocStart = SM.getFileLoc(StartLoc),
                      FileLocEnd = SM.getFileLoc(EndLoc);
-      SourceLocation ImmediateMarcoArgLoc, MacroLoc;
+      SourceLocation ImmediateMacroArgLoc, MacroLoc;
       // Skip NULL macros used in macro.
-      if (!getMacroAndArgLocations(StartLoc, ImmediateMarcoArgLoc, MacroLoc) ||
-          ImmediateMarcoArgLoc != FileLocStart)
+      if (!getMacroAndArgLocations(StartLoc, ImmediateMacroArgLoc, MacroLoc) ||
+          ImmediateMacroArgLoc != FileLocStart)
         return skipSubTree();
 
       if (isReplaceableRange(FileLocStart, FileLocEnd, SM) &&
@@ -332,7 +332,7 @@ private:
                NullMacros.end();
       }
 
-      MacroLoc = SM.getExpansionRange(ArgLoc).first;
+      MacroLoc = SM.getExpansionRange(ArgLoc).getBegin();
 
       ArgLoc = Expansion.getSpellingLoc().getLocWithOffset(LocInfo.second);
       if (ArgLoc.isFileID())
@@ -387,7 +387,7 @@ private:
         continue;
       }
 
-      MacroLoc = SM.getImmediateExpansionRange(Loc).first;
+      MacroLoc = SM.getImmediateExpansionRange(Loc).getBegin();
       if (MacroLoc.isFileID() && MacroLoc == TestMacroLoc) {
         // Match made.
         return true;

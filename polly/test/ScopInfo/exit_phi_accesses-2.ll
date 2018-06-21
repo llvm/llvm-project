@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -analyze -polly-scops %s | FileCheck %s
 
 ; CHECK-LABEL: Function: foo
 ;

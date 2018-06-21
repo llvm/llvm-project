@@ -208,7 +208,9 @@ public:
     typedef ptrdiff_t                                  difference_type;
     static _LIBCPP_CONSTEXPR const size_type npos = -1; // size_type(-1);
 
-    static_assert(is_pod<value_type>::value, "Character type of basic_string_view must be a POD");
+    static_assert((!is_array<value_type>::value), "Character type of basic_string_view must not be an array");
+    static_assert(( is_standard_layout<value_type>::value), "Character type of basic_string_view must be standard-layout");
+    static_assert(( is_trivial<value_type>::value), "Character type of basic_string_view must be trivial");
     static_assert((is_same<_CharT, typename traits_type::char_type>::value),
                   "traits_type::char_type must be the same type as CharT");
 

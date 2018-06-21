@@ -14,7 +14,7 @@
 // bool create_directories(const path& p);
 // bool create_directories(const path& p, error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -22,8 +22,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
-namespace fs = std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_create_directories_test_suite)
 
@@ -34,7 +33,7 @@ TEST_CASE(test_signatures)
     ASSERT_SAME_TYPE(decltype(fs::create_directories(p)), bool);
     ASSERT_SAME_TYPE(decltype(fs::create_directories(p, ec)), bool);
     ASSERT_NOT_NOEXCEPT(fs::create_directories(p));
-    ASSERT_NOEXCEPT(fs::create_directories(p, ec));
+    ASSERT_NOT_NOEXCEPT(fs::create_directories(p, ec));
 }
 
 TEST_CASE(create_existing_directory)

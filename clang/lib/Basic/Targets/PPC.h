@@ -334,15 +334,6 @@ public:
     }
     return false;
   }
-
-  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    switch (CC) {
-    case CC_Swift:
-      return CCCR_OK;
-    default:
-      return CCCR_Warning;
-    }
-  }
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinPPC32TargetInfo

@@ -59,12 +59,20 @@ public:
     int outstanding_new;
     int new_called;
     int delete_called;
+    int aligned_new_called;
+    int aligned_delete_called;
     std::size_t last_new_size;
+    std::size_t last_new_align;
+    std::size_t last_delete_align;
 
     int outstanding_array_new;
     int new_array_called;
     int delete_array_called;
+    int aligned_new_array_called;
+    int aligned_delete_array_called;
     std::size_t last_new_array_size;
+    std::size_t last_new_array_align;
+    std::size_t last_delete_array_align;
 
 public:
     void newCalled(std::size_t s)
@@ -82,11 +90,23 @@ public:
         last_new_size = s;
     }
 
+    void alignedNewCalled(std::size_t s, std::size_t a) {
+      newCalled(s);
+      ++aligned_new_called;
+      last_new_align = a;
+    }
+
     void deleteCalled(void * p)
     {
         assert(p);
         --outstanding_new;
         ++delete_called;
+    }
+
+    void alignedDeleteCalled(void *p, std::size_t a) {
+      deleteCalled(p);
+      ++aligned_delete_called;
+      last_delete_align = a;
     }
 
     void newArrayCalled(std::size_t s)
@@ -104,11 +124,23 @@ public:
         last_new_array_size = s;
     }
 
+    void alignedNewArrayCalled(std::size_t s, std::size_t a) {
+      newArrayCalled(s);
+      ++aligned_new_array_called;
+      last_new_array_align = a;
+    }
+
     void deleteArrayCalled(void * p)
     {
         assert(p);
         --outstanding_array_new;
         ++delete_array_called;
+    }
+
+    void alignedDeleteArrayCalled(void * p, std::size_t a) {
+      deleteArrayCalled(p);
+      ++aligned_delete_array_called;
+      last_delete_array_align = a;
     }
 
     void disableAllocations()
@@ -121,7 +153,6 @@ public:
         disable_allocations = false;
     }
 
-
     void reset()
     {
         disable_allocations = false;
@@ -130,12 +161,18 @@ public:
         outstanding_new = 0;
         new_called = 0;
         delete_called = 0;
+        aligned_new_called = 0;
+        aligned_delete_called = 0;
         last_new_size = 0;
+        last_new_align = 0;
 
         outstanding_array_new = 0;
         new_array_called = 0;
         delete_array_called = 0;
+        aligned_new_array_called = 0;
+        aligned_delete_array_called = 0;
         last_new_array_size = 0;
+        last_new_array_align = 0;
     }
 
 public:
@@ -174,6 +211,31 @@ public:
         return disable_checking || n != delete_called;
     }
 
+    bool checkAlignedNewCalledEq(int n) const
+    {
+        return disable_checking || n == aligned_new_called;
+    }
+
+    bool checkAlignedNewCalledNotEq(int n) const
+    {
+        return disable_checking || n != aligned_new_called;
+    }
+
+    bool checkAlignedNewCalledGreaterThan(int n) const
+    {
+        return disable_checking || aligned_new_called > n;
+    }
+
+    bool checkAlignedDeleteCalledEq(int n) const
+    {
+        return disable_checking || n == aligned_delete_called;
+    }
+
+    bool checkAlignedDeleteCalledNotEq(int n) const
+    {
+        return disable_checking || n != aligned_delete_called;
+    }
+
     bool checkLastNewSizeEq(std::size_t n) const
     {
         return disable_checking || n == last_new_size;
@@ -182,6 +244,26 @@ public:
     bool checkLastNewSizeNotEq(std::size_t n) const
     {
         return disable_checking || n != last_new_size;
+    }
+
+    bool checkLastNewAlignEq(std::size_t n) const
+    {
+        return disable_checking || n == last_new_align;
+    }
+
+    bool checkLastNewAlignNotEq(std::size_t n) const
+    {
+        return disable_checking || n != last_new_align;
+    }
+
+    bool checkLastDeleteAlignEq(std::size_t n) const
+    {
+        return disable_checking || n == last_delete_align;
+    }
+
+    bool checkLastDeleteAlignNotEq(std::size_t n) const
+    {
+        return disable_checking || n != last_delete_align;
     }
 
     bool checkOutstandingArrayNewEq(int n) const
@@ -214,6 +296,31 @@ public:
         return disable_checking || n != delete_array_called;
     }
 
+    bool checkAlignedNewArrayCalledEq(int n) const
+    {
+        return disable_checking || n == aligned_new_array_called;
+    }
+
+    bool checkAlignedNewArrayCalledNotEq(int n) const
+    {
+        return disable_checking || n != aligned_new_array_called;
+    }
+
+    bool checkAlignedNewArrayCalledGreaterThan(int n) const
+    {
+        return disable_checking || aligned_new_array_called > n;
+    }
+
+    bool checkAlignedDeleteArrayCalledEq(int n) const
+    {
+        return disable_checking || n == aligned_delete_array_called;
+    }
+
+    bool checkAlignedDeleteArrayCalledNotEq(int n) const
+    {
+        return disable_checking || n != aligned_delete_array_called;
+    }
+
     bool checkLastNewArraySizeEq(std::size_t n) const
     {
         return disable_checking || n == last_new_array_size;
@@ -222,6 +329,16 @@ public:
     bool checkLastNewArraySizeNotEq(std::size_t n) const
     {
         return disable_checking || n != last_new_array_size;
+    }
+
+    bool checkLastNewArrayAlignEq(std::size_t n) const
+    {
+        return disable_checking || n == last_new_array_align;
+    }
+
+    bool checkLastNewArrayAlignNotEq(std::size_t n) const
+    {
+        return disable_checking || n != last_new_array_align;
     }
 };
 
@@ -254,13 +371,11 @@ void  operator delete(void* p) TEST_NOEXCEPT
     std::free(p);
 }
 
-
 void* operator new[](std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
 {
     getGlobalMemCounter()->newArrayCalled(s);
     return operator new(s);
 }
-
 
 void operator delete[](void* p) TEST_NOEXCEPT
 {
@@ -268,8 +383,53 @@ void operator delete[](void* p) TEST_NOEXCEPT
     operator delete(p);
 }
 
-#endif // DISABLE_NEW_COUNT
+#ifndef TEST_HAS_NO_ALIGNED_ALLOCATION
+#if defined(_LIBCPP_MSVCRT_LIKE) || \
+  (!defined(_LIBCPP_VERSION) && defined(_WIN32))
+#define USE_ALIGNED_ALLOC
+#endif
 
+void* operator new(std::size_t s, std::align_val_t av) TEST_THROW_SPEC(std::bad_alloc) {
+  const std::size_t a = static_cast<std::size_t>(av);
+  getGlobalMemCounter()->alignedNewCalled(s, a);
+  void *ret;
+#ifdef USE_ALIGNED_ALLOC
+  ret = _aligned_malloc(s, a);
+#else
+  posix_memalign(&ret, a, s);
+#endif
+  if (ret == nullptr)
+    detail::throw_bad_alloc_helper();
+  return ret;
+}
+
+void operator delete(void *p, std::align_val_t av) TEST_NOEXCEPT {
+  const std::size_t a = static_cast<std::size_t>(av);
+  getGlobalMemCounter()->alignedDeleteCalled(p, a);
+  if (p) {
+#ifdef USE_ALIGNED_ALLOC
+    ::_aligned_free(p);
+#else
+    ::free(p);
+#endif
+  }
+}
+
+void* operator new[](std::size_t s, std::align_val_t av) TEST_THROW_SPEC(std::bad_alloc) {
+  const std::size_t a = static_cast<std::size_t>(av);
+  getGlobalMemCounter()->alignedNewArrayCalled(s, a);
+  return operator new(s, av);
+}
+
+void operator delete[](void *p, std::align_val_t av) TEST_NOEXCEPT {
+  const std::size_t a = static_cast<std::size_t>(av);
+  getGlobalMemCounter()->alignedDeleteArrayCalled(p, a);
+  return operator delete(p, av);
+}
+
+#endif // TEST_HAS_NO_ALIGNED_ALLOCATION
+
+#endif // DISABLE_NEW_COUNT
 
 struct DisableAllocationGuard {
     explicit DisableAllocationGuard(bool disable = true) : m_disabled(disable)
@@ -294,7 +454,6 @@ private:
     DisableAllocationGuard(DisableAllocationGuard const&);
     DisableAllocationGuard& operator=(DisableAllocationGuard const&);
 };
-
 
 struct RequireAllocationGuard {
     explicit RequireAllocationGuard(std::size_t RequireAtLeast = 1)

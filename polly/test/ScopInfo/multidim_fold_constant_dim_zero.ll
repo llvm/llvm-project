@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -debug -S < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -debug -S < %s 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
@@ -9,9 +9,9 @@
 ; invalidated due to the zero size dimension.
 
 ; CHECK: Assumed Context:
-; CHECK-NEXT: {  : 1 = 0 }
+; CHECK-NEXT: {  : false }
 ; CHECK-NEXT: Invalid Context:
-; CHECK-NEXT: {  : 1 = 0 }
+; CHECK-NEXT: {  : false }
 ; CHECK-NEXT: Arrays {
 ; CHECK-NEXT:     i8 MemRef_arg[*][0]; // Element size 1
 ; CHECK-NEXT: }
@@ -29,7 +29,7 @@
 ; CHECK-NEXT:         MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             { Stmt_bb2[] -> MemRef_arg[0, 0] };
 ; CHECK-NEXT:         MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:             { Stmt_bb2[] -> MemRef_arg[o0, o1] : 1 = 0 };
+; CHECK-NEXT:             { Stmt_bb2[] -> MemRef_arg[o0, o1] : false };
 ; CHECK-NEXT: }
 
 target datalayout = "e-p:64:64:64-S128-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f16:16:16-f32:32:32-f64:64:64-f128:128:128-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"

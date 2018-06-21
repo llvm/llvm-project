@@ -46,7 +46,6 @@ class ScalarEvolution;
 class SCEV;
 class Type;
 class Value;
-
 } // namespace llvm
 
 namespace polly {
@@ -55,7 +54,6 @@ struct InvariantEquivClassTy;
 class MemoryAccess;
 class Scop;
 class ScopStmt;
-
 } // namespace polly
 
 struct isl_ast_node;

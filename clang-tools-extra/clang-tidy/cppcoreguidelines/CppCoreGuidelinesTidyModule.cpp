@@ -11,7 +11,9 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
+#include "AvoidGotoCheck.h"
 #include "InterfacesGlobalInitCheck.h"
+#include "NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
 #include "OwningMemoryCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
@@ -35,8 +37,12 @@ namespace cppcoreguidelines {
 class CppCoreGuidelinesModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AvoidGotoCheck>(
+        "cppcoreguidelines-avoid-goto");
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<NarrowingConversionsCheck>(
+        "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");
     CheckFactories.registerCheck<OwningMemoryCheck>(
         "cppcoreguidelines-owning-memory");

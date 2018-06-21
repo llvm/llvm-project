@@ -9,14 +9,35 @@ add_clang_library(clangTidyBugproneModule
   DanglingHandleCheck.cpp
   FoldInitTypeCheck.cpp
   ForwardDeclarationNamespaceCheck.cpp
+  ForwardingReferenceOverloadCheck.cpp
   InaccurateEraseCheck.cpp
+  IncorrectRoundingsCheck.cpp
   IntegerDivisionCheck.cpp
+  LambdaFunctionNameCheck.cpp
+  MacroParenthesesCheck.cpp
+  MacroRepeatedSideEffectsCheck.cpp
   MisplacedOperatorInStrlenInAllocCheck.cpp
+  MisplacedWideningCastCheck.cpp
   MoveForwardingReferenceCheck.cpp
   MultipleStatementMacroCheck.cpp
+  ParentVirtualCallCheck.cpp
+  SizeofContainerCheck.cpp
+  SizeofExpressionCheck.cpp
   StringConstructorCheck.cpp
+  StringIntegerAssignmentCheck.cpp
+  StringLiteralWithEmbeddedNulCheck.cpp
+  SuspiciousEnumUsageCheck.cpp
   SuspiciousMemsetUsageCheck.cpp
+  SuspiciousMissingCommaCheck.cpp
+  SuspiciousSemicolonCheck.cpp
+  SuspiciousStringCompareCheck.cpp
+  SwappedArgumentsCheck.cpp
+  TerminatingContinueCheck.cpp
+  ThrowKeywordMissingCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
+  UndelegatedConstructorCheck.cpp
+  UnusedRaiiCheck.cpp
+  UnusedReturnValueCheck.cpp
   UseAfterMoveCheck.cpp
   VirtualNearMissCheck.cpp
 
@@ -27,6 +48,7 @@ add_clang_library(clangTidyBugproneModule
   clangBasic
   clangLex
   clangTidy
+  clangTidyCppCoreGuidelinesModule
   clangTidyUtils
   clangTooling
   )

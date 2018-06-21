@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-print-instructions < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-print-instructions < %s | FileCheck %s
 ;
 ; CHECK:    Statements {
 ; CHECK-NEXT:  	Stmt_Stmt
@@ -11,13 +11,13 @@
 ; CHECK-NEXT:       Instructions {
 ; CHECK-NEXT:             store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
 ; CHECK-NEXT:       }
-; CHECK-NEXT:  	Stmt_Stmt1
+; CHECK-NEXT:  	Stmt_Stmt_b
 ; CHECK-NEXT:       Domain :=
-; CHECK-NEXT:           { Stmt_Stmt1[i0, i1] : 0 <= i0 <= 1023 and 0 <= i1 <= 512 };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0, i1] : 0 <= i0 <= 1023 and 0 <= i1 <= 512 };
 ; CHECK-NEXT:       Schedule :=
-; CHECK-NEXT:           { Stmt_Stmt1[i0, i1] -> [i0, i1, 1] };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0, i1] -> [i0, i1, 1] };
 ; CHECK-NEXT:       MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:           { Stmt_Stmt1[i0, i1] -> MemRef_B[i0] };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0, i1] -> MemRef_B[i0] };
 ; CHECK-NEXT:       Instructions {
 ; CHECK-NEXT:             store i32 %i.0, i32* %arrayidx2, align 4
 ; CHECK-NEXT:             %cond = icmp slt i32 %j, 512

@@ -27,7 +27,7 @@ void CloexecSocketCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void CloexecSocketCheck::check(const MatchFinder::MatchResult &Result) {
-  insertMacroFlag(Result, /*MarcoFlag=*/"SOCK_CLOEXEC", /*ArgPos=*/1);
+  insertMacroFlag(Result, /*MacroFlag=*/"SOCK_CLOEXEC", /*ArgPos=*/1);
 }
 
 } // namespace android

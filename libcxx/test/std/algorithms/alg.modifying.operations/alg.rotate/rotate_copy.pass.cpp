@@ -10,13 +10,30 @@
 // <algorithm>
 
 // template<ForwardIterator InIter, OutputIterator<auto, InIter::reference> OutIter>
-//   OutIter
+//   constexpr OutIter          // constexpr after C++17
 //   rotate_copy(InIter first, InIter middle, InIter last, OutIter result);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
+
+// #if TEST_STD_VER > 17
+// TEST_CONSTEXPR bool test_constexpr() {
+//     int ia[] = {1, 3, 5, 2, 5, 6};
+//     int ib[std::size(ia)] = {0};
+//
+//     const size_t N = 2;
+//     const auto middle = std::begin(ia) + N;
+//     auto it = std::rotate_copy(std::begin(ia), middle, std::end(ia), std::begin(ib));
+//
+//     return std::distance(std::begin(ib), it) == std::size(ia)
+//         && std::equal   (std::begin(ia), middle,       std::begin(ib) + std::size(ia) - N)
+//         && std::equal   (middle,         std::end(ia), std::begin(ib))
+//            ;
+//     }
+// #endif
 
 template <class InIter, class OutIter>
 void
@@ -131,4 +148,8 @@ int main()
     test<const int*, bidirectional_iterator<int*> >();
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
+
+// #if TEST_STD_VER > 17
+//    static_assert(test_constexpr());
+// #endif
 }

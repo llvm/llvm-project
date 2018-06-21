@@ -3891,17 +3891,6 @@ This matcher is only provided as a performance optimization of hasName.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;internal::Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;&gt;</td><td class="name" onclick="toggle('hasAnySelector0')"><a name="hasAnySelector0Anchor">hasAnySelector</a></td><td>StringRef, ..., StringRef</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnySelector0"><pre>Matches when at least one of the supplied string equals to the
-Selector.getAsString()
-
- matcher = objCMessageExpr(hasSelector("methodA:", "methodB:"));
- matches both of the expressions below:
-    [myObj methodA:argA];
-    [myObj methodB:argB];
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;internal::Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;&gt;</td><td class="name" onclick="toggle('isInTemplateInstantiation0')"><a name="isInTemplateInstantiation0Anchor">isInTemplateInstantiation</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isInTemplateInstantiation0"><pre>Matches statements inside of a template instantiation.
 
@@ -4301,7 +4290,7 @@ and parmVarDecl(...)
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument1')"><a name="hasAnyArgument1Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyArgument1"><pre>Matches any argument of a call expression or a constructor call
-expression, or an ObjC-message-send expression.
+expression.
 
 Given
   void x(int, int, int) { int y; x(1, y, 42); }
@@ -4309,12 +4298,6 @@ callExpr(hasAnyArgument(declRefExpr()))
   matches x(1, y, 42)
 with hasAnyArgument(...)
   matching y
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-  void foo(I *i) { [i f:12] }
-objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
-  matches [i f:12]
 </pre></td></tr>
 
 
@@ -4636,7 +4619,7 @@ and parmVarDecl(...)
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument0')"><a name="hasAnyArgument0Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyArgument0"><pre>Matches any argument of a call expression or a constructor call
-expression, or an ObjC-message-send expression.
+expression.
 
 Given
   void x(int, int, int) { int y; x(1, y, 42); }
@@ -4644,12 +4627,6 @@ callExpr(hasAnyArgument(declRefExpr()))
   matches x(1, y, 42)
 with hasAnyArgument(...)
   matching y
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-  void foo(I *i) { [i f:12] }
-objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
-  matches [i f:12]
 </pre></td></tr>
 
 
@@ -5175,7 +5152,7 @@ matches 'int x = 0' in
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter0')"><a name="hasAnyParameter0Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyParameter0"><pre>Matches any parameter of a function or ObjC method declaration.
+<tr><td colspan="4" class="doc" id="hasAnyParameter0"><pre>Matches any parameter of a function declaration.
 
 Does not match the 'this' parameter of a method.
 
@@ -5185,13 +5162,6 @@ cxxMethodDecl(hasAnyParameter(hasName("y")))
   matches f(int x, int y, int z) {}
 with hasAnyParameter(...)
   matching int y
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-
-the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
-matches the declaration of method f with hasParameter
-matching y.
 </pre></td></tr>
 
 
@@ -5231,8 +5201,7 @@ with compoundStmt()
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasParameter0')"><a name="hasParameter0Anchor">hasParameter</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasParameter0"><pre>Matches the n'th parameter of a function or an ObjC method
-declaration.
+<tr><td colspan="4" class="doc" id="hasParameter0"><pre>Matches the n'th parameter of a function declaration.
 
 Given
   class X { void f(int x) {} };
@@ -5240,13 +5209,6 @@ cxxMethodDecl(hasParameter(0, hasType(varDecl())))
   matches f(int x) {}
 with hasParameter(...)
   matching int x
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-
-the matcher objcMethodDecl(hasParameter(0, hasName("y")))
-matches the declaration of method f with hasParameter
-matching y.
 </pre></td></tr>
 
 
@@ -5537,25 +5499,6 @@ nestedNameSpecifier(specifiesType(
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyArgument2')"><a name="hasAnyArgument2Anchor">hasAnyArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyArgument2"><pre>Matches any argument of a call expression or a constructor call
-expression, or an ObjC-message-send expression.
-
-Given
-  void x(int, int, int) { int y; x(1, y, 42); }
-callExpr(hasAnyArgument(declRefExpr()))
-  matches x(1, y, 42)
-with hasAnyArgument(...)
-  matching y
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-  void foo(I *i) { [i f:12] }
-objcMessageExpr(hasAnyArgument(integerLiteral(equals(12))))
-  matches [i f:12]
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('hasArgument2')"><a name="hasArgument2Anchor">hasArgument</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasArgument2"><pre>Matches the n'th argument of a call expression or a constructor
 call expression.
@@ -5575,47 +5518,6 @@ matches the [webView ...] message invocation.
   NSString *webViewJavaScript = ...
   UIWebView *webView = ...
   [webView stringByEvaluatingJavaScriptFromString:webViewJavascript];
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyParameter1')"><a name="hasAnyParameter1Anchor">hasAnyParameter</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyParameter1"><pre>Matches any parameter of a function or ObjC method declaration.
-
-Does not match the 'this' parameter of a method.
-
-Given
-  class X { void f(int x, int y, int z) {} };
-cxxMethodDecl(hasAnyParameter(hasName("y")))
-  matches f(int x, int y, int z) {}
-with hasAnyParameter(...)
-  matching int y
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-
-the matcher objcMethodDecl(hasAnyParameter(hasName("y")))
-matches the declaration of method f with hasParameter
-matching y.
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;</td><td class="name" onclick="toggle('hasParameter1')"><a name="hasParameter1Anchor">hasParameter</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ParmVarDecl.html">ParmVarDecl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasParameter1"><pre>Matches the n'th parameter of a function or an ObjC method
-declaration.
-
-Given
-  class X { void f(int x) {} };
-cxxMethodDecl(hasParameter(0, hasType(varDecl())))
-  matches f(int x) {}
-with hasParameter(...)
-  matching int x
-
-For ObjectiveC, given
-  @interface I - (void) f:(int) y; @end
-
-the matcher objcMethodDecl(hasParameter(0, hasName("y")))
-matches the declaration of method f with hasParameter
-matching y.
 </pre></td></tr>
 
 

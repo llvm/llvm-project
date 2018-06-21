@@ -102,7 +102,7 @@ void test_copy_assign_self() {
     // empty
     {
         any a;
-        a = a;
+        a = (any &)a;
         assertEmpty(a);
         assert(globalMemCounter.checkOutstandingNewEq(0));
     }
@@ -112,7 +112,7 @@ void test_copy_assign_self() {
         any a((small(1)));
         assert(small::count == 1);
 
-        a = a;
+        a = (any &)a;
 
         assert(small::count == 1);
         assertContains<small>(a, 1);
@@ -125,7 +125,7 @@ void test_copy_assign_self() {
         any a(large(1));
         assert(large::count == 1);
 
-        a = a;
+        a = (any &)a;
 
         assert(large::count == 1);
         assertContains<large>(a, 1);

@@ -13,6 +13,24 @@ Afterwards the ABI list should be updated to include the new changes.
 New entries should be added directly below the "Version" header.
 
 -----------
+Version 7.0
+-----------
+
+* r333467 - Fix embarrasing typo in uncaught_exceptions.
+
+  This bug caused __uncaught_exception to be ODR used instead of
+  __uncaught_exceptions. This change is non-ABI breaking because the symbols
+  for std::uncaught_exception and std::uncaught_exceptions haven't changed,
+  and because users shouldn't be depending directly on libc++ exporting
+  __uncaught_exception/__uncaught_exceptions.
+
+  All Platforms
+  ----------------
+  SYMBOL REMOVED: __cxa_uncaught_exception
+  Symbol added: __cxa_uncaught_exceptions
+
+
+-----------
 Version 5.0
 -----------
 

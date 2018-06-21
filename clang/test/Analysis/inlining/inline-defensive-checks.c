@@ -159,7 +159,8 @@ void idcTrackZeroValueThroughUnaryPointerOperatorsWithOffset1(struct S *s) {
 void idcTrackZeroValueThroughUnaryPointerOperatorsWithOffset2(struct S *s) {
   idc(s);
   int *x = &(s->f2) - 1;
-  *x = 7; // no-warning
+  // FIXME: Should not warn.
+  *x = 7; // expected-warning{{Dereference of null pointer}}
 }
 
 void idcTrackZeroValueThroughUnaryPointerOperatorsWithAssignment(struct S *s) {

@@ -396,7 +396,7 @@ public:
     const _Hash& hash_function() const _NOEXCEPT {return *this;}
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _Cp& __x) const
-        {return static_cast<const _Hash&>(*this)(__x.__cc.first);}
+        {return static_cast<const _Hash&>(*this)(__x.__get_value().first);}
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _Key& __x) const
         {return static_cast<const _Hash&>(*this)(__x);}
@@ -425,7 +425,7 @@ public:
     const _Hash& hash_function() const _NOEXCEPT {return __hash_;}
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _Cp& __x) const
-        {return __hash_(__x.__cc.first);}
+        {return __hash_(__x.__get_value().first);}
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const _Key& __x) const
         {return __hash_(__x);}
@@ -464,13 +464,13 @@ public:
     const _Pred& key_eq() const _NOEXCEPT {return *this;}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Cp& __x, const _Cp& __y) const
-        {return static_cast<const _Pred&>(*this)(__x.__cc.first, __y.__cc.first);}
+        {return static_cast<const _Pred&>(*this)(__x.__get_value().first, __y.__get_value().first);}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Cp& __x, const _Key& __y) const
-        {return static_cast<const _Pred&>(*this)(__x.__cc.first, __y);}
+        {return static_cast<const _Pred&>(*this)(__x.__get_value().first, __y);}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _Cp& __y) const
-        {return static_cast<const _Pred&>(*this)(__x, __y.__cc.first);}
+        {return static_cast<const _Pred&>(*this)(__x, __y.__get_value().first);}
     void swap(__unordered_map_equal&__y)
         _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value)
     {
@@ -496,13 +496,13 @@ public:
     const _Pred& key_eq() const _NOEXCEPT {return __pred_;}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Cp& __x, const _Cp& __y) const
-        {return __pred_(__x.__cc.first, __y.__cc.first);}
+        {return __pred_(__x.__get_value().first, __y.__get_value().first);}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Cp& __x, const _Key& __y) const
-        {return __pred_(__x.__cc.first, __y);}
+        {return __pred_(__x.__get_value().first, __y);}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _Cp& __y) const
-        {return __pred_(__x, __y.__cc.first);}
+        {return __pred_(__x, __y.__get_value().first);}
     void swap(__unordered_map_equal&__y)
         _NOEXCEPT_(__is_nothrow_swappable<_Pred>::value)
     {
@@ -572,9 +572,9 @@ public:
     void operator()(pointer __p) _NOEXCEPT
     {
         if (__second_constructed)
-            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__value_.__cc.second));
+            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__value_.__get_value().second));
         if (__first_constructed)
-            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__value_.__cc.first));
+            __alloc_traits::destroy(__na_, _VSTD::addressof(__p->__value_.__get_value().first));
         if (__p)
             __alloc_traits::deallocate(__na_, __p, 1);
     }
@@ -582,23 +582,67 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Key, class _Tp>
-union __hash_value_type
+struct __hash_value_type
 {
     typedef _Key                                     key_type;
     typedef _Tp                                      mapped_type;
     typedef pair<const key_type, mapped_type>        value_type;
-    typedef pair<key_type, mapped_type>              __nc_value_type;
+    typedef pair<key_type&, mapped_type&>            __nc_ref_pair_type;
+    typedef pair<key_type&&, mapped_type&&>          __nc_rref_pair_type;
 
+private:
     value_type __cc;
-    __nc_value_type __nc;
+
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    value_type& __get_value()
+    {
+#if _LIBCPP_STD_VER > 14
+        return *_VSTD::launder(_VSTD::addressof(__cc));
+#else
+        return __cc;
+#endif
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    const value_type& __get_value() const
+    {
+#if _LIBCPP_STD_VER > 14
+        return *_VSTD::launder(_VSTD::addressof(__cc));
+#else
+        return __cc;
+#endif
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    __nc_ref_pair_type __ref()
+    {
+        value_type& __v = __get_value();
+        return __nc_ref_pair_type(const_cast<key_type&>(__v.first), __v.second);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    __nc_rref_pair_type __move()
+    {
+        value_type& __v = __get_value();
+        return __nc_rref_pair_type(
+            _VSTD::move(const_cast<key_type&>(__v.first)),
+            _VSTD::move(__v.second));
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_value_type& operator=(const __hash_value_type& __v)
-        {__nc = __v.__cc; return *this;}
+    {
+        __ref() = __v.__get_value();
+        return *this;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_value_type& operator=(__hash_value_type&& __v)
-        {__nc = _VSTD::move(__v.__nc); return *this;}
+    {
+        __ref() = __v.__move();
+        return *this;
+    }
 
     template <class _ValueTp,
               class = typename enable_if<
@@ -606,8 +650,10 @@ union __hash_value_type
                  >::type
              >
     _LIBCPP_INLINE_VISIBILITY
-    __hash_value_type& operator=(_ValueTp&& __v) {
-        __nc = _VSTD::forward<_ValueTp>(__v); return *this;
+    __hash_value_type& operator=(_ValueTp&& __v)
+    {
+        __ref() = _VSTD::forward<_ValueTp>(__v);
+        return *this;
     }
 
 private:
@@ -628,7 +674,14 @@ struct __hash_value_type
     typedef _Tp                                      mapped_type;
     typedef pair<const key_type, mapped_type>        value_type;
 
+private:
     value_type __cc;
+
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    value_type& __get_value() { return __cc; }
+    _LIBCPP_INLINE_VISIBILITY
+    const value_type& __get_value() const { return __cc; }
 
 private:
    ~__hash_value_type();
@@ -657,9 +710,9 @@ public:
     __hash_map_iterator(_HashIterator __i) _NOEXCEPT : __i_(__i) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    reference operator*() const {return __i_->__cc;}
+    reference operator*() const {return __i_->__get_value();}
     _LIBCPP_INLINE_VISIBILITY
-    pointer operator->() const {return pointer_traits<pointer>::pointer_to(__i_->__cc);}
+    pointer operator->() const {return pointer_traits<pointer>::pointer_to(__i_->__get_value());}
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_map_iterator& operator++() {++__i_; return *this;}
@@ -711,9 +764,9 @@ public:
                 : __i_(__i.__i_) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    reference operator*() const {return __i_->__cc;}
+    reference operator*() const {return __i_->__get_value();}
     _LIBCPP_INLINE_VISIBILITY
-    pointer operator->() const {return pointer_traits<pointer>::pointer_to(__i_->__cc);}
+    pointer operator->() const {return pointer_traits<pointer>::pointer_to(__i_->__get_value());}
 
     _LIBCPP_INLINE_VISIBILITY
     __hash_map_const_iterator& operator++() {++__i_; return *this;}
@@ -750,7 +803,6 @@ public:
     typedef _Pred                                          key_equal;
     typedef _Alloc                                         allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
-    typedef pair<key_type, mapped_type>                    __nc_value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
@@ -1298,8 +1350,8 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     {
         iterator __i = __u.begin();
         while (__u.size() != 0) {
-            __table_.__emplace_unique(_VSTD::move(
-                __u.__table_.remove((__i++).__i_)->__value_.__nc));
+            __table_.__emplace_unique(
+                __u.__table_.remove((__i++).__i_)->__value_.__move());
         }
     }
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -1385,7 +1437,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](const key_type& __k)
 {
     return __table_.__emplace_unique_key_args(__k,
         std::piecewise_construct, std::forward_as_tuple(__k),
-                                  std::forward_as_tuple()).first->__cc.second;
+                                  std::forward_as_tuple()).first->__get_value().second;
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
@@ -1394,7 +1446,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::operator[](key_type&& __k)
 {
     return __table_.__emplace_unique_key_args(__k,
         std::piecewise_construct, std::forward_as_tuple(std::move(__k)),
-                                  std::forward_as_tuple()).first->__cc.second;
+                                  std::forward_as_tuple()).first->__get_value().second;
 }
 #else // _LIBCPP_CXX03_LANG
 
@@ -1404,9 +1456,9 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node_with_key(const 
 {
     __node_allocator& __na = __table_.__node_alloc();
     __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.first), __k);
+    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__get_value().first), __k);
     __h.get_deleter().__first_constructed = true;
-    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__cc.second));
+    __node_traits::construct(__na, _VSTD::addressof(__h->__value_.__get_value().second));
     __h.get_deleter().__second_constructed = true;
     return _LIBCPP_EXPLICIT_MOVE(__h);  // explicitly moved for C++03
 }
@@ -1500,7 +1552,6 @@ public:
     typedef _Pred                                          key_equal;
     typedef _Alloc                                         allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
-    typedef pair<key_type, mapped_type>                    __nc_value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
@@ -1915,8 +1966,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
         while (__u.size() != 0)
         {
             __table_.__insert_multi(
-                      _VSTD::move(__u.__table_.remove((__i++).__i_)->__value_.__nc)
-                                   );
+                __u.__table_.remove((__i++).__i_)->__value_.__move());
         }
     }
 #if _LIBCPP_DEBUG_LEVEL >= 2

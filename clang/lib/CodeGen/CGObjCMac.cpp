@@ -3401,9 +3401,7 @@ static bool hasMRCWeakIvars(CodeGenModule &CGM,
   See EmitClassExtension();
 */
 void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
-  IdentifierInfo *RuntimeName =
-      &CGM.getContext().Idents.get(ID->getObjCRuntimeNameAsString());
-  DefinedSymbols.insert(RuntimeName);
+  DefinedSymbols.insert(ID->getIdentifier());
 
   std::string ClassName = ID->getNameAsString();
   // FIXME: Gross
@@ -4986,9 +4984,7 @@ llvm::Value *CGObjCMac::EmitClassRef(CodeGenFunction &CGF,
   if (ID->hasAttr<ObjCRuntimeVisibleAttr>())
     return EmitClassRefViaRuntime(CGF, ID, ObjCTypes);
 
-  IdentifierInfo *RuntimeName =
-      &CGM.getContext().Idents.get(ID->getObjCRuntimeNameAsString());
-  return EmitClassRefFromId(CGF, RuntimeName);
+  return EmitClassRefFromId(CGF, ID->getIdentifier());
 }
 
 llvm::Value *CGObjCMac::EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) {

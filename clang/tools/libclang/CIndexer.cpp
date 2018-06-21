@@ -22,7 +22,6 @@
 #include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/YAMLParser.h"
 #include <cstdio>
 
 #ifdef __CYGWIN__
@@ -92,8 +91,8 @@ StringRef CIndexer::getClangToolchainPath() {
 }
 
 LibclangInvocationReporter::LibclangInvocationReporter(
-    CIndexer &Idx, StringRef SourceFilename, OperationKind Op,
-    unsigned ParseOptions, llvm::ArrayRef<const char *> Args,
+    CIndexer &Idx, OperationKind Op, unsigned ParseOptions,
+    llvm::ArrayRef<const char *> Args,
     llvm::ArrayRef<std::string> InvocationArgs,
     llvm::ArrayRef<CXUnsavedFile> UnsavedFiles) {
   StringRef Path = Idx.getInvocationEmissionPath();
@@ -113,16 +112,10 @@ LibclangInvocationReporter::LibclangInvocationReporter(
   // Write out the information about the invocation to it.
   auto WriteStringKey = [&OS](StringRef Key, StringRef Value) {
     OS << R"(")" << Key << R"(":")";
-    OS << llvm::yaml::escape(Value) << '"';
+    OS << Value << '"';
   };
   OS << '{';
   WriteStringKey("toolchain", Idx.getClangToolchainPath());
-  OS << ',';
-  std::string Signature;
-  llvm::raw_string_ostream SignatureOS(Signature);
-  SignatureOS << "clang-" << getClangMajorVersionNumber() << ';'
-              << llvm::sys::path::filename(SourceFilename);
-  WriteStringKey("signature", SignatureOS.str());
   OS << ',';
   WriteStringKey("libclang.operation",
                  Op == OperationKind::ParseOperation ? "parse" : "complete");

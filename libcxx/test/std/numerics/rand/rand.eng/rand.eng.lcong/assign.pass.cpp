@@ -25,7 +25,7 @@ test1()
     E e1;
     E e2;
     assert(e1 == e2);
-    e1();
+    (void)e1();
     e2 = e1;
     assert(e1 == e2);
 }

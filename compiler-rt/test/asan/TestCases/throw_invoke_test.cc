@@ -1,4 +1,5 @@
 // RUN: %clangxx_asan %s -o %t && %run %t
+// RUN: %clangxx_asan %s -o %t -stdlib=libstdc++ -static-libstdc++ && %run %t
 
 #include <stdio.h>
 static volatile int zero = 0;

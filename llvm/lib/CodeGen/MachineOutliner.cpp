@@ -66,9 +66,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -98,9 +96,6 @@ private:
   /// The number of instructions in this \p Candidate.
   unsigned Len;
 
-  /// The MachineFunction containing this \p Candidate.
-  MachineFunction *MF = nullptr;
-
 public:
   /// Set to false if the candidate overlapped with another candidate.
   bool InCandidateList = true;
@@ -111,15 +106,6 @@ public:
 
   /// Contains all target-specific information for this \p Candidate.
   TargetInstrInfo::MachineOutlinerInfo MInfo;
-
-  /// If there is a DISubprogram associated with the function that this
-  /// Candidate lives in, return it.
-  DISubprogram *getSubprogramOrNull() const {
-    assert(MF && "Candidate has no MF!");
-    if (DISubprogram *SP = MF->getFunction().getSubprogram())
-      return SP;
-    return nullptr;
-  }
 
   /// Return the number of instructions in this Candidate.
   unsigned getLength() const { return Len; }
@@ -139,9 +125,8 @@ public:
   /// for some given candidate.
   unsigned Benefit = 0;
 
-  Candidate(unsigned StartIdx, unsigned Len, unsigned FunctionIdx,
-            MachineFunction *MF)
-      : StartIdx(StartIdx), Len(Len), MF(MF), FunctionIdx(FunctionIdx) {}
+  Candidate(unsigned StartIdx, unsigned Len, unsigned FunctionIdx)
+      : StartIdx(StartIdx), Len(Len), FunctionIdx(FunctionIdx) {}
 
   Candidate() {}
 
@@ -176,15 +161,6 @@ public:
 
   /// Contains all target-specific information for this \p OutlinedFunction.
   TargetInstrInfo::MachineOutlinerInfo MInfo;
-
-  /// If there is a DISubprogram for any Candidate for this outlined function,
-  /// then return it. Otherwise, return nullptr.
-  DISubprogram *getSubprogramOrNull() const {
-    for (const auto &C : Candidates)
-      if (DISubprogram *SP = C->getSubprogramOrNull())
-        return SP;
-    return nullptr;
-  }
 
   /// Return the number of candidates for this \p OutlinedFunction.
   unsigned getOccurrenceCount() { return OccurrenceCount; }
@@ -744,13 +720,11 @@ struct InstructionMapper {
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetRegisterInfo &TRI,
                             const TargetInstrInfo &TII) {
-    unsigned Flags = TII.getMachineOutlinerMBBFlags(MBB);
-
     for (MachineBasicBlock::iterator It = MBB.begin(), Et = MBB.end(); It != Et;
          It++) {
 
       // Keep track of where this instruction is in the module.
-      switch (TII.getOutliningType(It, Flags)) {
+      switch (TII.getOutliningType(*It)) {
       case TargetInstrInfo::MachineOutlinerInstrType::Illegal:
         mapToIllegalUnsigned(It);
         break;
@@ -799,9 +773,6 @@ struct MachineOutliner : public ModulePass {
   /// \brief Set to true if the outliner should consider functions with
   /// linkonceodr linkage.
   bool OutlineFromLinkOnceODRs = false;
-
-  // Collection of IR functions created by the outliner.
-  std::vector<Function *> CreatedIRFunctions;
 
   StringRef getPassName() const override { return "Machine Outliner"; }
 
@@ -1002,13 +973,9 @@ unsigned MachineOutliner::findCandidates(
           MachineBasicBlock::iterator StartIt = Mapper.InstrList[StartIdx];
           MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
 
-          // Save the MachineFunction containing the Candidate.
-          MachineFunction *MF = StartIt->getParent()->getParent();
-          assert(MF && "Candidate doesn't have a MF?");
-
           // Save the candidate and its location.
           CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen,
-                                                FunctionList.size(), MF);
+                                                FunctionList.size());
           RepeatedSequenceLocs.emplace_back(std::make_pair(StartIt, EndIt));
         }
       }
@@ -1238,11 +1205,8 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
 
   // NOTE: If this is linkonceodr, then we can take advantage of linker deduping
   // which gives us better results when we outline from linkonceodr functions.
-  F->setLinkage(GlobalValue::InternalLinkage);
+  F->setLinkage(GlobalValue::PrivateLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-
-  // Save F so that we can add debug info later if we need to.
-  CreatedIRFunctions.push_back(F);
 
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
@@ -1267,49 +1231,12 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
     NewMI->dropMemRefs();
 
     // Don't keep debug information for outlined instructions.
+    // FIXME: This means outlined functions are currently undebuggable.
     NewMI->setDebugLoc(DebugLoc());
     MBB.insert(MBB.end(), NewMI);
   }
 
   TII.insertOutlinerEpilogue(MBB, MF, OF.MInfo);
-
-  // If there's a DISubprogram associated with this outlined function, then
-  // emit debug info for the outlined function.
-  if (DISubprogram *SP = OF.getSubprogramOrNull()) {
-    // We have a DISubprogram. Get its DICompileUnit.
-    DICompileUnit *CU = SP->getUnit();
-    DIBuilder DB(M, true, CU);
-    DIFile *Unit = SP->getFile();
-    Mangler Mg;
-
-    // Walk over each IR function we created in the outliner and create
-    // DISubprograms for each function.
-    for (Function *F : CreatedIRFunctions) {
-      // Get the mangled name of the function for the linkage name.
-      std::string Dummy;
-      llvm::raw_string_ostream MangledNameStream(Dummy);
-      Mg.getNameWithPrefix(MangledNameStream, F, false);
-
-      DISubprogram *SP = DB.createFunction(
-          Unit /* Context */, F->getName(), StringRef(MangledNameStream.str()),
-          Unit /* File */,
-          0 /* Line 0 is reserved for compiler-generated code. */,
-          DB.createSubroutineType(
-              DB.getOrCreateTypeArray(None)), /* void type */
-          false, true, 0, /* Line 0 is reserved for compiler-generated code. */
-          DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
-          true /* Outlined code is optimized code by definition. */);
-
-      // Don't add any new variables to the subprogram.
-      DB.finalizeSubprogram(SP);
-
-      // Attach subprogram to the function.
-      F->setSubprogram(SP);
-    }
-
-    // We're done with the DIBuilder.
-    DB.finalize();
-  }
 
   return &MF;
 }
@@ -1404,8 +1331,8 @@ bool MachineOutliner::outline(
 }
 
 bool MachineOutliner::runOnModule(Module &M) {
-  // Check if there's anything in the module. If it's empty, then there's
-  // nothing to outline.
+
+  // Is there anything in the module at all?
   if (M.empty())
     return false;
 
@@ -1415,54 +1342,25 @@ bool MachineOutliner::runOnModule(Module &M) {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetInstrInfo *TII = STI.getInstrInfo();
 
-  // Does the target implement the MachineOutliner? If it doesn't, quit here.
-  if (!TII->useMachineOutliner()) {
-    // No. So we're done.
-    DEBUG(dbgs()
-          << "Skipping pass: Target does not support the MachineOutliner.\n");
-    return false;
-  }
-
   InstructionMapper Mapper;
 
-  // Build instruction mappings for each function in the module. Start by
-  // iterating over each Function in M.
+  // Build instruction mappings for each function in the module.
   for (Function &F : M) {
+    MachineFunction &MF = MMI.getOrCreateMachineFunction(F);
 
-    // If there's nothing in F, then there's no reason to try and outline from
-    // it.
-    if (F.empty())
+    // Is the function empty? Safe to outline from?
+    if (F.empty() ||
+        !TII->isFunctionSafeToOutlineFrom(MF, OutlineFromLinkOnceODRs))
       continue;
 
-    // There's something in F. Check if it has a MachineFunction associated with
-    // it.
-    MachineFunction *MF = MMI.getMachineFunction(F);
+    // If it is, look at each MachineBasicBlock in the function.
+    for (MachineBasicBlock &MBB : MF) {
 
-    // If it doesn't, then there's nothing to outline from. Move to the next
-    // Function.
-    if (!MF)
-      continue;
-
-    // We have a MachineFunction. Ask the target if it's suitable for outlining.
-    // If it isn't, then move on to the next Function in the module.
-    if (!TII->isFunctionSafeToOutlineFrom(*MF, OutlineFromLinkOnceODRs))
-      continue;
-
-    // We have a function suitable for outlining. Iterate over every
-    // MachineBasicBlock in MF and try to map its instructions to a list of
-    // unsigned integers.
-    for (MachineBasicBlock &MBB : *MF) {
-      // If there isn't anything in MBB, then there's no point in outlining from
-      // it.
+      // Is there anything in MBB?
       if (MBB.empty())
         continue;
 
-      // Check if MBB could be the target of an indirect branch. If it is, then
-      // we don't want to outline from it.
-      if (MBB.hasAddressTaken())
-        continue;
-
-      // MBB is suitable for outlining. Map it to a list of unsigneds.
+      // If yes, map it.
       Mapper.convertToUnsignedVec(MBB, *TRI, *TII);
     }
   }
@@ -1480,7 +1378,5 @@ bool MachineOutliner::runOnModule(Module &M) {
   pruneOverlaps(CandidateList, FunctionList, Mapper, MaxCandidateLen, *TII);
 
   // Outline each of the candidates and return true if something was outlined.
-  bool OutlinedSomething = outline(M, CandidateList, FunctionList, Mapper);
-
-  return OutlinedSomething;
+  return outline(M, CandidateList, FunctionList, Mapper);
 }

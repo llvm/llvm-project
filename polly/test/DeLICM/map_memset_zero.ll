@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -analyze < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-delicm -analyze < %s | FileCheck -match-full-lines %s
 ;
 ; Check that PHI mapping works even in presence of a memset whose'
 ; zero value is used.
@@ -53,7 +53,7 @@ return:
 ; CHECK-NEXT:     Stmt_bodyA
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_bodyA[i0] -> MemRef_phi__phi[] };
-; CHECK-NEXT:            new: { Stmt_bodyA[i0] -> MemRef_A[o0] : 1 = 0 };
+; CHECK-NEXT:            new: { Stmt_bodyA[i0] -> MemRef_A[o0] : false };
 ; CHECK-NEXT:     Stmt_bodyB
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 { Stmt_bodyB[i0] -> MemRef_A[i0] };

@@ -251,6 +251,7 @@ StringRef polly::PollySkipFnAttr = "polly.skip.fn";
 
 STATISTIC(NumScopRegions, "Number of scops");
 STATISTIC(NumLoopsInScop, "Number of loops in scops");
+STATISTIC(NumScopsDepthZero, "Number of scops with maximal loop depth 0");
 STATISTIC(NumScopsDepthOne, "Number of scops with maximal loop depth 1");
 STATISTIC(NumScopsDepthTwo, "Number of scops with maximal loop depth 2");
 STATISTIC(NumScopsDepthThree, "Number of scops with maximal loop depth 3");
@@ -262,6 +263,8 @@ STATISTIC(NumProfScopRegions, "Number of scops (profitable scops only)");
 STATISTIC(NumLoopsInProfScop,
           "Number of loops in scops (profitable scops only)");
 STATISTIC(NumLoopsOverall, "Number of total loops");
+STATISTIC(NumProfScopsDepthZero,
+          "Number of scops with maximal loop depth 0 (profitable scops only)");
 STATISTIC(NumProfScopsDepthOne,
           "Number of scops with maximal loop depth 1 (profitable scops only)");
 STATISTIC(NumProfScopsDepthTwo,
@@ -304,7 +307,6 @@ public:
     return DI->getKind() == PluginDiagnosticKind;
   }
 };
-
 } // namespace
 
 int DiagnosticScopFound::PluginDiagnosticKind =
@@ -408,8 +410,8 @@ inline bool ScopDetection::invalid(DetectionContext &Context, bool Assert,
     if (PollyTrackFailures)
       Log.report(RejectReason);
 
-    DEBUG(dbgs() << RejectReason->getMessage());
-    DEBUG(dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << RejectReason->getMessage());
+    LLVM_DEBUG(dbgs() << "\n");
   } else {
     assert(!Assert && "Verification of detected scop failed");
   }
@@ -701,6 +703,12 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
   if (CalledFunction == nullptr)
     return false;
 
+  if (isDebugCall(&CI)) {
+    LLVM_DEBUG(dbgs() << "Allow call to debug function: "
+                      << CalledFunction->getName() << '\n');
+    return true;
+  }
+
   if (AllowModrefCall) {
     switch (AA.getModRefBehavior(CalledFunction)) {
     case FMRB_UnknownModRefBehavior:
@@ -854,7 +862,6 @@ public:
 private:
   std::vector<const SCEV *> *Terms;
 };
-
 } // namespace
 
 SmallVector<const SCEV *, 4>
@@ -1290,6 +1297,18 @@ bool ScopDetection::isValidLoop(Loop *L, DetectionContext &Context) const {
   if (!hasExitingBlocks(L))
     return invalid<ReportLoopHasNoExit>(Context, /*Assert=*/true, L);
 
+  // The algorithm for domain construction assumes that loops has only a single
+  // exit block (and hence corresponds to a subregion). Note that we cannot use
+  // L->getExitBlock() because it does not check whether all exiting edges point
+  // to the same BB.
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+  BasicBlock *TheExitBlock = ExitBlocks[0];
+  for (BasicBlock *ExitBB : ExitBlocks) {
+    if (TheExitBlock != ExitBB)
+      return invalid<ReportLoopHasMultipleExits>(Context, /*Assert=*/true, L);
+  }
+
   if (canUseISLTripCount(L, Context))
     return true;
 
@@ -1364,14 +1383,14 @@ Region *ScopDetection::expandRegion(Region &R) {
   std::unique_ptr<Region> LastValidRegion;
   auto ExpandedRegion = std::unique_ptr<Region>(R.getExpandedRegion());
 
-  DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
+  LLVM_DEBUG(dbgs() << "\tExpanding " << R.getNameStr() << "\n");
 
   while (ExpandedRegion) {
     const auto &It = DetectionContextMap.insert(std::make_pair(
         getBBPairForRegion(ExpandedRegion.get()),
         DetectionContext(*ExpandedRegion, AA, false /*verifying*/)));
     DetectionContext &Context = It.first->second;
-    DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
+    LLVM_DEBUG(dbgs() << "\t\tTrying " << ExpandedRegion->getNameStr() << "\n");
     // Only expand when we did not collect errors.
 
     if (!Context.Log.hasErrors()) {
@@ -1405,7 +1424,7 @@ Region *ScopDetection::expandRegion(Region &R) {
     }
   }
 
-  DEBUG({
+  LLVM_DEBUG({
     if (LastValidRegion)
       dbgs() << "\tto " << LastValidRegion->getNameStr() << "\n";
     else
@@ -1611,23 +1630,23 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
 bool ScopDetection::isValidRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
-  DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
+  LLVM_DEBUG(dbgs() << "Checking region: " << CurRegion.getNameStr() << "\n\t");
 
   if (!PollyAllowFullFunction && CurRegion.isTopLevelRegion()) {
-    DEBUG(dbgs() << "Top level region is invalid\n");
+    LLVM_DEBUG(dbgs() << "Top level region is invalid\n");
     return false;
   }
 
   DebugLoc DbgLoc;
   if (CurRegion.getExit() &&
       isa<UnreachableInst>(CurRegion.getExit()->getTerminator())) {
-    DEBUG(dbgs() << "Unreachable in exit\n");
+    LLVM_DEBUG(dbgs() << "Unreachable in exit\n");
     return invalid<ReportUnreachableInExit>(Context, /*Assert=*/true,
                                             CurRegion.getExit(), DbgLoc);
   }
 
   if (!CurRegion.getEntry()->getName().count(OnlyRegion)) {
-    DEBUG({
+    LLVM_DEBUG({
       dbgs() << "Region entry does not match -polly-region-only";
       dbgs() << "\n";
     });
@@ -1648,7 +1667,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) const {
     return invalid<ReportIrreducibleRegion>(Context, /*Assert=*/true,
                                             &CurRegion, DbgLoc);
 
-  DEBUG(dbgs() << "OK\n");
+  LLVM_DEBUG(dbgs() << "OK\n");
   return true;
 }
 
@@ -1759,7 +1778,9 @@ static void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
     NumLoopsInScop += Stats.NumLoops;
     MaxNumLoopsInScop =
         std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
-    if (Stats.MaxDepth == 1)
+    if (Stats.MaxDepth == 0)
+      NumScopsDepthZero++;
+    else if (Stats.MaxDepth == 1)
       NumScopsDepthOne++;
     else if (Stats.MaxDepth == 2)
       NumScopsDepthTwo++;
@@ -1775,7 +1796,9 @@ static void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
     NumLoopsInProfScop += Stats.NumLoops;
     MaxNumLoopsInProfScop =
         std::max(MaxNumLoopsInProfScop.getValue(), (unsigned)Stats.NumLoops);
-    if (Stats.MaxDepth == 1)
+    if (Stats.MaxDepth == 0)
+      NumProfScopsDepthZero++;
+    else if (Stats.MaxDepth == 1)
       NumProfScopsDepthOne++;
     else if (Stats.MaxDepth == 2)
       NumProfScopsDepthTwo++;

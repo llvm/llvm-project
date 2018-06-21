@@ -9,7 +9,7 @@ INCLUDE(CheckCXXSourceCompiles)
 
 function(check_cxx_atomics varname)
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-  set(CMAKE_REQUIRED_FLAGS "-nodefaultlibs -std=c++11 -nostdinc++ -isystem ${LIBCXX_SOURCE_DIR}/include")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs -std=c++11 -nostdinc++ -isystem ${LIBCXX_SOURCE_DIR}/include")
   if (${LIBCXX_GCC_TOOLCHAIN})
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
   endif()
@@ -31,7 +31,14 @@ int main() {
   set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
 endfunction(check_cxx_atomics)
 
+# Perform the check for 64bit atomics without libatomic. It may have been
+# added to the required libraries during in the configuration of LLVM, which
+# would cause the check for CXX atomics without libatomic to incorrectly pass.
+set(OLD_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES "atomic")
 check_cxx_atomics(LIBCXX_HAVE_CXX_ATOMICS_WITHOUT_LIB)
+set(CMAKE_REQUIRED_LIBRARIES ${OLD_CMAKE_REQUIRED_LIBRARIES})
+
 check_library_exists(atomic __atomic_fetch_add_8 "" LIBCXX_HAS_ATOMIC_LIB)
 # If not, check if the library exists, and atomics work with it.
 if(NOT LIBCXX_HAVE_CXX_ATOMICS_WITHOUT_LIB)

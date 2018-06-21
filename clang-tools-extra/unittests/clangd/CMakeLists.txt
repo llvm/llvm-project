@@ -11,29 +11,44 @@ include_directories(
 add_extra_unittest(ClangdTests
   Annotations.cpp
   ClangdTests.cpp
+  ClangdUnitTests.cpp
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp
   ContextTests.cpp
+  DraftStoreTests.cpp
   FileIndexTests.cpp
+  FindSymbolsTests.cpp
   FuzzyMatchTests.cpp
+  GlobalCompilationDatabaseTests.cpp
+  HeadersTests.cpp
   IndexTests.cpp
   JSONExprTests.cpp
-  TestFS.cpp
-  TraceTests.cpp
+  QualityTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
+  SyncAPI.cpp
+  TestFS.cpp
+  TestTU.cpp
+  ThreadingTests.cpp
+  TraceTests.cpp
+  TUSchedulerTests.cpp
+  URITests.cpp
   XRefsTests.cpp
   )
 
 target_link_libraries(ClangdTests
   PRIVATE
+  clangAST
   clangBasic
   clangDaemon
   clangFormat
   clangFrontend
   clangIndex
+  clangLex
   clangSema
   clangTooling
   clangToolingCore
+  clangToolingInclusions
   LLVMSupport
+  LLVMTestingSupport
   )

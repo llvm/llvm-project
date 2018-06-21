@@ -42,3 +42,8 @@ references parameter names in its body. Example:
 In the case of multiple redeclarations or function template specializations,
 a warning is issued for every redeclaration or specialization inconsistent with
 the definition or the first declaration seen in a translation unit.
+
+.. option:: IgnoreMacros
+
+   If this option is set to non-zero (default is `1`), the check will not warn
+   about names declared inside macros.

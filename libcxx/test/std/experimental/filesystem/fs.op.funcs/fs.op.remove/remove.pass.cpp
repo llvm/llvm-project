@@ -14,14 +14,13 @@
 // bool remove(const path& p);
 // bool remove(const path& p, error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
-namespace fs = std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_remove_test_suite)
 
@@ -61,16 +60,28 @@ TEST_CASE(test_error_reporting)
     const path file_in_bad_dir = env.create_file(bad_perms_dir / "file", 42);
     permissions(bad_perms_dir, perms::none);
     const path testCases[] = {
-        "",
-        env.make_env_path("dne"),
         non_empty_dir,
         file_in_bad_dir,
     };
     for (auto& p : testCases) {
         std::error_code ec;
+
         TEST_CHECK(!fs::remove(p, ec));
         TEST_CHECK(ec);
         TEST_CHECK(checkThrow(p, ec));
+    }
+
+    // PR#35780
+    const path testCasesNonexistant[] = {
+        "",
+        env.make_env_path("dne")
+    };
+
+    for (auto& p : testCasesNonexistant) {
+        std::error_code ec;
+
+        TEST_CHECK(!fs::remove(p, ec));
+        TEST_CHECK(!ec);
     }
 }
 

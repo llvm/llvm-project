@@ -176,7 +176,11 @@ private:
   /// The source range for the written file name in #include (i.e. "old.h" for
   /// #include "old.h") in old.cc,  including the enclosing quotes or angle
   /// brackets.
-  clang::CharSourceRange OldHeaderIncludeRange;
+  clang::CharSourceRange OldHeaderIncludeRangeInCC;
+  /// The source range for the written file name in #include (i.e. "old.h" for
+  /// #include "old.h") in old.h,  including the enclosing quotes or angle
+  /// brackets.
+  clang::CharSourceRange OldHeaderIncludeRangeInHeader;
   /// Mapping from FilePath to FileID, which can be used in post processes like
   /// cleanup around replacements.
   llvm::StringMap<FileID> FilePathToFileID;

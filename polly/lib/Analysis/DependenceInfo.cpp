@@ -296,9 +296,10 @@ static __isl_give isl_union_flow *buildFlow(__isl_keep isl_union_map *Snk,
     AI = isl_union_access_info_set_must_source(AI, isl_union_map_copy(Src));
   AI = isl_union_access_info_set_schedule(AI, isl_schedule_copy(Schedule));
   auto Flow = isl_union_access_info_compute_flow(AI);
-  DEBUG(if (!Flow) dbgs() << "last error: "
-                          << isl_ctx_last_error(isl_schedule_get_ctx(Schedule))
-                          << '\n';);
+  LLVM_DEBUG(if (!Flow) dbgs()
+                 << "last error: "
+                 << isl_ctx_last_error(isl_schedule_get_ctx(Schedule))
+                 << '\n';);
   return Flow;
 }
 
@@ -407,18 +408,18 @@ void Dependences::calculateDependences(Scop &S) {
   isl_schedule *Schedule;
   isl_union_set *TaggedStmtDomain;
 
-  DEBUG(dbgs() << "Scop: \n" << S << "\n");
+  LLVM_DEBUG(dbgs() << "Scop: \n" << S << "\n");
 
   collectInfo(S, Read, MustWrite, MayWrite, ReductionTagMap, TaggedStmtDomain,
               Level);
 
   bool HasReductions = !isl_union_map_is_empty(ReductionTagMap);
 
-  DEBUG(dbgs() << "Read: " << Read << '\n';
-        dbgs() << "MustWrite: " << MustWrite << '\n';
-        dbgs() << "MayWrite: " << MayWrite << '\n';
-        dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
-        dbgs() << "TaggedStmtDomain: " << TaggedStmtDomain << '\n';);
+  LLVM_DEBUG(dbgs() << "Read: " << Read << '\n';
+             dbgs() << "MustWrite: " << MustWrite << '\n';
+             dbgs() << "MayWrite: " << MayWrite << '\n';
+             dbgs() << "ReductionTagMap: " << ReductionTagMap << '\n';
+             dbgs() << "TaggedStmtDomain: " << TaggedStmtDomain << '\n';);
 
   Schedule = S.getScheduleTree().release();
 
@@ -455,10 +456,10 @@ void Dependences::calculateDependences(Scop &S) {
     Schedule = isl_schedule_pullback_union_pw_multi_aff(Schedule, Tags);
   }
 
-  DEBUG(dbgs() << "Read: " << Read << "\n";
-        dbgs() << "MustWrite: " << MustWrite << "\n";
-        dbgs() << "MayWrite: " << MayWrite << "\n";
-        dbgs() << "Schedule: " << Schedule << "\n");
+  LLVM_DEBUG(dbgs() << "Read: " << Read << "\n";
+             dbgs() << "MustWrite: " << MustWrite << "\n";
+             dbgs() << "MayWrite: " << MayWrite << "\n";
+             dbgs() << "Schedule: " << Schedule << "\n");
 
   isl_union_map *StrictWAW = nullptr;
   {
@@ -600,7 +601,7 @@ void Dependences::calculateDependences(Scop &S) {
       isl_union_map_copy(WAW), isl_union_set_copy(TaggedStmtDomain));
   STMT_WAR =
       isl_union_map_intersect_domain(isl_union_map_copy(WAR), TaggedStmtDomain);
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Wrapped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -646,9 +647,10 @@ void Dependences::calculateDependences(Scop &S) {
 
     // Step 4)
     addPrivatizationDependences();
-  }
+  } else
+    TC_RED = isl_union_map_empty(isl_union_map_get_space(RED));
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Final Wrapped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -698,7 +700,7 @@ void Dependences::calculateDependences(Scop &S) {
   RED = isl_union_map_zip(RED);
   TC_RED = isl_union_map_zip(TC_RED);
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Zipped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -710,7 +712,7 @@ void Dependences::calculateDependences(Scop &S) {
   RED = isl_union_set_unwrap(isl_union_map_domain(RED));
   TC_RED = isl_union_set_unwrap(isl_union_map_domain(TC_RED));
 
-  DEBUG({
+  LLVM_DEBUG({
     dbgs() << "Unwrapped Dependences:\n";
     dump();
     dbgs() << "\n";
@@ -726,7 +728,7 @@ void Dependences::calculateDependences(Scop &S) {
   RED = isl_union_map_coalesce(RED);
   TC_RED = isl_union_map_coalesce(TC_RED);
 
-  DEBUG(dump());
+  LLVM_DEBUG(dump());
 }
 
 bool Dependences::isValidSchedule(Scop &S,
@@ -734,7 +736,8 @@ bool Dependences::isValidSchedule(Scop &S,
   if (LegalityCheckDisabled)
     return true;
 
-  isl_union_map *Dependences = getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR);
+  isl_union_map *Dependences =
+      (getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR)).release();
   isl_space *Space = S.getParamSpace().release();
   isl_union_map *Schedule = isl_union_map_empty(Space);
 
@@ -872,28 +875,28 @@ void Dependences::releaseMemory() {
   ReductionDependences.clear();
 }
 
-__isl_give isl_union_map *Dependences::getDependences(int Kinds) const {
+isl::union_map Dependences::getDependences(int Kinds) const {
   assert(hasValidDependences() && "No valid dependences available");
-  isl_space *Space = isl_union_map_get_space(RAW);
-  isl_union_map *Deps = isl_union_map_empty(Space);
+  isl::space Space = isl::manage_copy(RAW).get_space();
+  isl::union_map Deps = Deps.empty(Space);
 
   if (Kinds & TYPE_RAW)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(RAW));
+    Deps = Deps.unite(isl::manage_copy(RAW));
 
   if (Kinds & TYPE_WAR)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(WAR));
+    Deps = Deps.unite(isl::manage_copy(WAR));
 
   if (Kinds & TYPE_WAW)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(WAW));
+    Deps = Deps.unite(isl::manage_copy(WAW));
 
   if (Kinds & TYPE_RED)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(RED));
+    Deps = Deps.unite(isl::manage_copy(RED));
 
   if (Kinds & TYPE_TC_RED)
-    Deps = isl_union_map_union(Deps, isl_union_map_copy(TC_RED));
+    Deps = Deps.unite(isl::manage_copy(TC_RED));
 
-  Deps = isl_union_map_coalesce(Deps);
-  Deps = isl_union_map_detect_equalities(Deps);
+  Deps = Deps.coalesce();
+  Deps = Deps.detect_equalities();
   return Deps;
 }
 

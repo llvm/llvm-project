@@ -1,0 +1,4 @@
+// RUN: llgoi < %s | FileCheck %s
+
+1 + 1
+// CHECK: 2

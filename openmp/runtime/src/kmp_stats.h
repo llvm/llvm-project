@@ -46,8 +46,7 @@
 enum stats_flags_e {
   noTotal = 1 << 0, //!< do not show a TOTAL_aggregation for this statistic
   onlyInMaster = 1 << 1, //!< statistic is valid only for master
-  noUnits =
-      1 << 2, //!< statistic doesn't need units printed next to it in output
+  noUnits = 1 << 2, //!< statistic doesn't need units printed next to it
   notInMaster = 1 << 3, //!< statistic is valid only for non-master threads
   logEvent = 1 << 4 //!< statistic can be logged on the event timeline when
   //! KMP_STATS_EVENTS is on (valid only for timers)
@@ -90,20 +89,26 @@ enum stats_state_e {
  */
 // clang-format off
 #define KMP_FOREACH_COUNTER(macro, arg)                                        \
-  macro(OMP_PARALLEL, stats_flags_e::onlyInMaster | stats_flags_e::noTotal,    \
-        arg) macro(OMP_NESTED_PARALLEL, 0, arg) macro(OMP_FOR_static, 0, arg)  \
-      macro(OMP_FOR_static_steal, 0, arg) macro(OMP_FOR_dynamic, 0, arg)       \
-          macro(OMP_DISTRIBUTE, 0, arg) macro(OMP_BARRIER, 0, arg)             \
-              macro(OMP_CRITICAL, 0, arg) macro(OMP_SINGLE, 0, arg)            \
-                  macro(OMP_MASTER, 0, arg) macro(OMP_TEAMS, 0, arg)           \
-                      macro(OMP_set_lock, 0, arg) macro(OMP_test_lock, 0, arg) \
-                          macro(REDUCE_wait, 0, arg)                           \
-                              macro(REDUCE_nowait, 0, arg)                     \
-                                  macro(OMP_TASKYIELD, 0, arg)                 \
-                                      macro(OMP_TASKLOOP, 0, arg)              \
-                                          macro(TASK_executed, 0, arg)         \
-                                              macro(TASK_cancelled, 0, arg)    \
-                                                  macro(TASK_stolen, 0, arg)
+  macro(OMP_PARALLEL,stats_flags_e::onlyInMaster|stats_flags_e::noTotal,arg)   \
+  macro(OMP_NESTED_PARALLEL, 0, arg)                                           \
+  macro(OMP_FOR_static, 0, arg)                                                \
+  macro(OMP_FOR_static_steal, 0, arg)                                          \
+  macro(OMP_FOR_dynamic, 0, arg)                                               \
+  macro(OMP_DISTRIBUTE, 0, arg)                                                \
+  macro(OMP_BARRIER, 0, arg)                                                   \
+  macro(OMP_CRITICAL, 0, arg)                                                  \
+  macro(OMP_SINGLE, 0, arg)                                                    \
+  macro(OMP_MASTER, 0, arg)                                                    \
+  macro(OMP_TEAMS, 0, arg)                                                     \
+  macro(OMP_set_lock, 0, arg)                                                  \
+  macro(OMP_test_lock, 0, arg)                                                 \
+  macro(REDUCE_wait, 0, arg)                                                   \
+  macro(REDUCE_nowait, 0, arg)                                                 \
+  macro(OMP_TASKYIELD, 0, arg)                                                 \
+  macro(OMP_TASKLOOP, 0, arg)                                                  \
+  macro(TASK_executed, 0, arg)                                                 \
+  macro(TASK_cancelled, 0, arg)                                                \
+  macro(TASK_stolen, 0, arg)
 // clang-format on
 
 /*!
@@ -213,20 +218,28 @@ enum stats_state_e {
 // KMP_tree_release       -- time in __kmp_tree_barrier_release
 // KMP_hyper_gather       -- time in __kmp_hyper_barrier_gather
 // KMP_hyper_release      -- time in __kmp_hyper_barrier_release
+// clang-format off
 #define KMP_FOREACH_DEVELOPER_TIMER(macro, arg)                                \
-  macro(KMP_fork_call, 0, arg) macro(KMP_join_call, 0, arg) macro(             \
-      KMP_end_split_barrier, 0, arg) macro(KMP_hier_gather, 0, arg)            \
-      macro(KMP_hier_release, 0, arg) macro(KMP_hyper_gather, 0, arg)          \
-          macro(KMP_hyper_release, 0, arg) macro(KMP_linear_gather, 0, arg)    \
-              macro(KMP_linear_release, 0, arg) macro(KMP_tree_gather, 0, arg) \
-                  macro(KMP_tree_release, 0, arg) macro(USER_resume, 0, arg)   \
-                      macro(USER_suspend, 0, arg)                              \
-                          macro(KMP_allocate_team, 0, arg)                     \
-                              macro(KMP_setup_icv_copy, 0, arg)                \
-                                  macro(USER_icv_copy, 0, arg)
+  macro(KMP_fork_call, 0, arg)                                                 \
+  macro(KMP_join_call, 0, arg)                                                 \
+  macro(KMP_end_split_barrier, 0, arg)                                         \
+  macro(KMP_hier_gather, 0, arg)                                               \
+  macro(KMP_hier_release, 0, arg)                                              \
+  macro(KMP_hyper_gather, 0, arg)                                              \
+  macro(KMP_hyper_release, 0, arg)                                             \
+  macro(KMP_linear_gather, 0, arg)                                             \
+  macro(KMP_linear_release, 0, arg)                                            \
+  macro(KMP_tree_gather, 0, arg)                                               \
+  macro(KMP_tree_release, 0, arg)                                              \
+  macro(USER_resume, 0, arg)                                                   \
+  macro(USER_suspend, 0, arg)                                                  \
+  macro(KMP_allocate_team, 0, arg)                                             \
+  macro(KMP_setup_icv_copy, 0, arg)                                            \
+  macro(USER_icv_copy, 0, arg)
 #else
 #define KMP_FOREACH_DEVELOPER_TIMER(macro, arg)
 #endif
+// clang-format on
 
 /*!
  * \brief Add new explicit timers under KMP_FOREACH_EXPLICIT_TIMER() macro.

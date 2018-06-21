@@ -66,6 +66,10 @@ Threading Configuration Macros
   This macro is defined when libc++ should use POSIX threads to implement the
   internal threading API.
 
+**_LIBCPP_HAS_THREAD_API_WIN32**
+  This macro is defined when libc++ should use Win32 threads to implement the
+  internal threading API.
+
 **_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL**
   This macro is defined when libc++ expects the definitions of the internal
   threading API to be provided by an external library. When defined

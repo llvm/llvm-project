@@ -10,6 +10,7 @@ import os
 import sys
 
 from libcxx.test.config import Configuration as LibcxxConfiguration
+from libcxx.test.config import intMacroValue
 
 
 class Configuration(LibcxxConfiguration):
@@ -34,7 +35,7 @@ class Configuration(LibcxxConfiguration):
         super(Configuration, self).configure_obj_root()
 
     def has_cpp_feature(self, feature, required_value):
-        return int(self.cxx.dumpMacros().get('__cpp_' + feature, 0)) >= required_value
+        return intMacroValue(self.cxx.dumpMacros().get('__cpp_' + feature, '0')) >= required_value
 
     def configure_features(self):
         super(Configuration, self).configure_features()
@@ -49,7 +50,10 @@ class Configuration(LibcxxConfiguration):
             self.config.available_features.add('libcxxabi-has-system-unwinder')
 
     def configure_compile_flags(self):
-        self.cxx.compile_flags += ['-DLIBCXXABI_NO_TIMER']
+        self.cxx.compile_flags += [
+            '-DLIBCXXABI_NO_TIMER',
+            '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS',
+        ]
         if self.get_lit_bool('enable_exceptions', True):
             self.cxx.compile_flags += ['-funwind-tables']
         else:

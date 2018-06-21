@@ -49,3 +49,28 @@ point to the binary.
    $ code .
    # When VS Code starts, press <F5>.
 ```
+
+## Publish to VS Code Marketplace
+
+New changes to `clangd-vscode` are not released until a new version is published
+to the marketplace.
+
+### Requirements
+
+* Make sure install the `vsce` command (`npm install -g vsce`)
+* `llvm-vs-code-extensions` account
+* Bump the version in `package.json`, and commit the change to upstream
+
+The extension is published under `llvm-vs-code-extensions` account, which is
+currently maintained by clangd developers. If you want to make a new release,
+please contact cfe-dev@lists.llvm.org.
+
+### Steps
+
+```bash
+  $ cd /path/to/clang-tools-extra/clangd/clients/clangd-vscode/
+  # For the first time, you need to login in the account. vsce will ask you for
+    the Personal Access Token, and remember it for future commands.
+  $ vsce login llvm-vs-code-extensions
+  $ vsce publish
+```

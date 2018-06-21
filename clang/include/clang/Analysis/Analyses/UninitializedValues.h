@@ -1,4 +1,4 @@
-//=- UninitializedValues.h - Finding uses of uninitialized values -*- C++ -*-=//
+//= UninitializedValues.h - Finding uses of uninitialized values -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,7 +15,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_UNINITIALIZEDVALUES_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_UNINITIALIZEDVALUES_H
 
-#include "clang/Basic/LLVM.h"
+#include "clang/AST/Stmt.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
@@ -24,7 +24,6 @@ class AnalysisDeclContext;
 class CFG;
 class DeclContext;
 class Expr;
-class Stmt;
 class VarDecl;
 
 /// A use of a variable, which might be uninitialized.
@@ -40,10 +39,10 @@ private:
   const Expr *User;
 
   /// Is this use uninitialized whenever the function is called?
-  bool UninitAfterCall = false;
+  bool UninitAfterCall;
 
   /// Is this use uninitialized whenever the variable declaration is reached?
-  bool UninitAfterDecl = false;
+  bool UninitAfterDecl;
 
   /// Does this use always see an uninitialized value?
   bool AlwaysUninit;
@@ -54,7 +53,8 @@ private:
 
 public:
   UninitUse(const Expr *User, bool AlwaysUninit)
-      : User(User), AlwaysUninit(AlwaysUninit) {}
+      : User(User), UninitAfterCall(false), UninitAfterDecl(false),
+        AlwaysUninit(AlwaysUninit) {}
 
   void addUninitBranch(Branch B) {
     UninitBranches.push_back(B);
@@ -70,18 +70,14 @@ public:
   enum Kind {
     /// The use might be uninitialized.
     Maybe,
-
     /// The use is uninitialized whenever a certain branch is taken.
     Sometimes,
-
     /// The use is uninitialized the first time it is reached after we reach
     /// the variable's declaration.
     AfterDecl,
-
     /// The use is uninitialized the first time it is reached after the function
     /// is called.
     AfterCall,
-
     /// The use is always uninitialized.
     Always
   };
@@ -94,8 +90,7 @@ public:
            !branch_empty() ? Sometimes : Maybe;
   }
 
-  using branch_iterator = SmallVectorImpl<Branch>::const_iterator;
-
+  typedef SmallVectorImpl<Branch>::const_iterator branch_iterator;
   /// Branches which inevitably result in the variable being used uninitialized.
   branch_iterator branch_begin() const { return UninitBranches.begin(); }
   branch_iterator branch_end() const { return UninitBranches.end(); }
@@ -104,7 +99,7 @@ public:
 
 class UninitVariablesHandler {
 public:
-  UninitVariablesHandler() = default;
+  UninitVariablesHandler() {}
   virtual ~UninitVariablesHandler();
 
   /// Called when the uninitialized variable is used at the given expression.
@@ -127,6 +122,5 @@ void runUninitializedVariablesAnalysis(const DeclContext &dc, const CFG &cfg,
                                        UninitVariablesHandler &handler,
                                        UninitVariablesAnalysisStats &stats);
 
-} // namespace clang
-
-#endif // LLVM_CLANG_ANALYSIS_ANALYSES_UNINITIALIZEDVALUES_H
+}
+#endif

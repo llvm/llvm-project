@@ -6,8 +6,8 @@ Diagnostics:
     FilePath: $(path)/basic.h
     FileOffset: 148
     Replacements:
-      - FilePath:        $(path)/basic.h
-        Offset:          148
-        Length:          0
-        ReplacementText: 'override '
+      - FilePath:        $(path)/../basic/basic.h
+        Offset:          298
+        Length:          1
+        ReplacementText: elem
 ...

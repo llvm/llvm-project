@@ -79,15 +79,17 @@ bool PolyhedralInfo::checkParallel(Loop *L, isl_pw_aff **MinDepDistPtr) const {
       DI->getDependences(const_cast<Scop *>(S), Dependences::AL_Access);
   if (!D.hasValidDependences())
     return false;
-  DEBUG(dbgs() << "Loop :\t" << L->getHeader()->getName() << ":\n");
+  LLVM_DEBUG(dbgs() << "Loop :\t" << L->getHeader()->getName() << ":\n");
 
   isl_union_map *Deps =
       D.getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
-                       Dependences::TYPE_WAR | Dependences::TYPE_RED);
-  DEBUG(dbgs() << "Dependences :\t" << stringFromIslObj(Deps) << "\n");
+                       Dependences::TYPE_WAR | Dependences::TYPE_RED)
+          .release();
+
+  LLVM_DEBUG(dbgs() << "Dependences :\t" << stringFromIslObj(Deps) << "\n");
 
   isl_union_map *Schedule = getScheduleForLoop(S, L);
-  DEBUG(dbgs() << "Schedule: \t" << stringFromIslObj(Schedule) << "\n");
+  LLVM_DEBUG(dbgs() << "Schedule: \t" << stringFromIslObj(Schedule) << "\n");
 
   IsParallel = D.isParallel(Schedule, Deps, MinDepDistPtr);
   isl_union_map_free(Schedule);
@@ -123,14 +125,14 @@ __isl_give isl_union_map *PolyhedralInfo::getScheduleForLoop(const Scop *S,
                                                              Loop *L) const {
   isl_union_map *Schedule = isl_union_map_empty(S->getParamSpace().release());
   int CurrDim = S->getRelativeLoopDepth(L);
-  DEBUG(dbgs() << "Relative loop depth:\t" << CurrDim << "\n");
+  LLVM_DEBUG(dbgs() << "Relative loop depth:\t" << CurrDim << "\n");
   assert(CurrDim >= 0 && "Loop in region should have at least depth one");
 
   for (auto &SS : *S) {
     if (L->contains(SS.getSurroundingLoop())) {
 
       unsigned int MaxDim = SS.getNumIterators();
-      DEBUG(dbgs() << "Maximum depth of Stmt:\t" << MaxDim << "\n");
+      LLVM_DEBUG(dbgs() << "Maximum depth of Stmt:\t" << MaxDim << "\n");
       isl_map *ScheduleMap = SS.getSchedule().release();
       assert(
           ScheduleMap &&

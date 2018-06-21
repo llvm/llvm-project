@@ -139,6 +139,10 @@ namespace std {
   private:
     T *val; // exposition only
   };
+
+template<class T>
+  optional(T) -> optional<T>;
+
 } // namespace std
 
 */
@@ -612,8 +616,8 @@ private:
     };
     template <class _Up>
     using _CheckOptionalArgsCtor = conditional_t<
-        !is_same_v<decay_t<_Up>, in_place_t> &&
-        !is_same_v<decay_t<_Up>, optional>,
+        !is_same_v<__uncvref_t<_Up>, in_place_t> &&
+        !is_same_v<__uncvref_t<_Up>, optional>,
         _CheckOptionalArgsConstructor,
         __check_tuple_constructor_fail
     >;
@@ -761,7 +765,7 @@ public:
               class = enable_if_t
                       <__lazy_and<
                           integral_constant<bool,
-                              !is_same_v<decay_t<_Up>, optional> &&
+                              !is_same_v<__uncvref_t<_Up>, optional> &&
                               !(is_same_v<_Up, value_type> && is_scalar_v<value_type>)
                           >,
                           is_constructible<value_type, _Up>,
@@ -1002,6 +1006,11 @@ private:
         return &__x;
     }
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class T>
+    optional(T) -> optional<T>;
+#endif
 
 // Comparisons between optionals
 template <class _Tp, class _Up>

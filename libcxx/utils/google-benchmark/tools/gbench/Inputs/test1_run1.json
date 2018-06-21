@@ -29,6 +29,20 @@
       "time_unit": "ns"
     },
     {
+      "name": "BM_1PercentFaster",
+      "iterations": 1000,
+      "real_time": 100,
+      "cpu_time": 100,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_1PercentSlower",
+      "iterations": 1000,
+      "real_time": 100,
+      "cpu_time": 100,
+      "time_unit": "ns"
+    },
+    {
       "name": "BM_10PercentFaster",
       "iterations": 1000,
       "real_time": 100,
@@ -55,6 +69,34 @@
       "real_time": 10000,
       "cpu_time": 10000,
       "time_unit": "ns"
+    },
+    {
+      "name": "BM_10PercentCPUToTime",
+      "iterations": 1000,
+      "real_time": 100,
+      "cpu_time": 100,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_ThirdFaster",
+      "iterations": 1000,
+      "real_time": 100,
+      "cpu_time": 100,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_BadTimeUnit",
+      "iterations": 1000,
+      "real_time": 0.4,
+      "cpu_time": 0.5,
+      "time_unit": "s"
+    },
+    {
+      "name": "BM_DifferentTimeUnit",
+      "iterations": 1,
+      "real_time": 1,
+      "cpu_time": 1,
+      "time_unit": "s"
     }
   ]
 }

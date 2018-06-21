@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 
 # RUN: llvm-dwarfdump -v %t.o | FileCheck -check-prefix=INPUT %s

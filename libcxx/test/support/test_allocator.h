@@ -36,12 +36,37 @@ public:
     static int throw_after;
     static int count;
     static int alloc_count;
+    static int copied;
+    static int moved;
+    static int converted;
+
+    const static int destructed_value = -1;
+    const static int default_value = 0;
+    const static int moved_value = INT_MAX;
+
+    static void clear() {
+      assert(count == 0 && "clearing leaking allocator data?");
+      count = 0;
+      time_to_throw = 0;
+      alloc_count = 0;
+      throw_after = INT_MAX;
+      clear_ctor_counters();
+    }
+
+    static void clear_ctor_counters() {
+      copied = 0;
+      moved = 0;
+      converted = 0;
+    }
 };
 
 int test_alloc_base::count = 0;
 int test_alloc_base::time_to_throw = 0;
 int test_alloc_base::alloc_count = 0;
 int test_alloc_base::throw_after = INT_MAX;
+int test_alloc_base::copied = 0;
+int test_alloc_base::moved = 0;
+int test_alloc_base::converted = 0;
 
 template <class T>
 class test_allocator
@@ -65,13 +90,35 @@ public:
     test_allocator() TEST_NOEXCEPT : data_(0), id_(0) {++count;}
     explicit test_allocator(int i, int id = 0) TEST_NOEXCEPT : data_(i), id_(id)
       {++count;}
-    test_allocator(const test_allocator& a) TEST_NOEXCEPT
-        : data_(a.data_), id_(a.id_) {++count;}
-    template <class U> test_allocator(const test_allocator<U>& a) TEST_NOEXCEPT
-        : data_(a.data_), id_(a.id_) {++count;}
+    test_allocator(const test_allocator& a) TEST_NOEXCEPT : data_(a.data_),
+                                                            id_(a.id_) {
+      ++count;
+      ++copied;
+      assert(a.data_ != destructed_value && a.id_ != destructed_value &&
+             "copying from destroyed allocator");
+    }
+#if TEST_STD_VER >= 11
+    test_allocator(test_allocator&& a) TEST_NOEXCEPT : data_(a.data_),
+                                                       id_(a.id_) {
+      ++count;
+      ++moved;
+      assert(a.data_ != destructed_value && a.id_ != destructed_value &&
+             "moving from destroyed allocator");
+      a.data_ = moved_value;
+      a.id_ = moved_value;
+    }
+#endif
+    template <class U>
+    test_allocator(const test_allocator<U>& a) TEST_NOEXCEPT : data_(a.data_),
+                                                               id_(a.id_) {
+      ++count;
+      ++converted;
+    }
     ~test_allocator() TEST_NOEXCEPT {
       assert(data_ >= 0); assert(id_ >= 0);
-      --count; data_ = -1; id_ = -1;
+      --count;
+      data_ = destructed_value;
+      id_ = destructed_value;
     }
     pointer address(reference x) const {return &x;}
     const_pointer address(const_reference x) const {return &x;}

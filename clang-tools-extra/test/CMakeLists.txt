@@ -37,10 +37,14 @@ set(CLANG_TOOLS_TEST_DEPS
   # For the clang-apply-replacements test that uses clang-rename.
   clang-rename
 
+  # For the clang-doc tests that emit bitcode files.
+  llvm-bcanalyzer
+
   # Individual tools we test.
   clang-apply-replacements
   clang-change-namespace
   clangd
+  clang-doc
   clang-include-fixer
   clang-move
   clang-query

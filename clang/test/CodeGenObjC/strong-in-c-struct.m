@@ -1,11 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-llvm -o - -DUSESTRUCT -I %S/Inputs %s | FileCheck %s
-
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-pch -I %S/Inputs -o %t %s
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -include-pch %t -emit-llvm -o - -DUSESTRUCT -I %S/Inputs %s | FileCheck %s
-
-#ifndef HEADER
-#define HEADER
-#include "strong_in_union.h"
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-llvm -o - %s | FileCheck %s
 
 typedef void (^BlockTy)(void);
 
@@ -70,15 +63,6 @@ typedef struct {
   volatile char i6;
 } Bitfield1;
 
-typedef struct {
-  id x;
-  volatile int a[16];
-} VolatileArray ;
-
-#endif
-
-#ifdef USESTRUCT
-
 StrongSmall getStrongSmall(void);
 StrongOuter getStrongOuter(void);
 void calleeStrongSmall(StrongSmall);
@@ -103,7 +87,7 @@ void func(Strong *);
 // CHECK: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 24
 // CHECK: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
 // CHECK: %[[V4:.*]] = bitcast i8** %[[V3]] to i8*
-// CHECK: call void @llvm.memset.p0i8.i64(i8* %[[V4]], i8 0, i64 8, i32 8, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V4]], i8 0, i64 8, i1 false)
 // CHECK: ret void
 
 // CHECK: define linkonce_odr hidden void @__default_constructor_8_s16(i8** %[[DST:.*]])
@@ -114,7 +98,7 @@ void func(Strong *);
 // CHECK: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 16
 // CHECK: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
 // CHECK: %[[V4:.*]] = bitcast i8** %[[V3]] to i8*
-// CHECK: call void @llvm.memset.p0i8.i64(i8* %[[V4]], i8 0, i64 8, i32 8, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %[[V4]], i8 0, i64 8, i1 false)
 // CHECK: ret void
 
 // CHECK: define linkonce_odr hidden void @__destructor_8_s16_s24(i8** %[[DST:.*]])
@@ -192,7 +176,7 @@ void test_constructor_destructor_StrongOuter(void) {
 // CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
 // CHECK: %[[V2:.*]] = bitcast i8** %[[V0]] to i8*
 // CHECK: %[[V3:.*]] = bitcast i8** %[[V1]] to i8*
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %[[V2]], i8* %[[V3]], i64 16, i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[V2]], i8* align 8 %[[V3]], i64 16, i1 false)
 // CHECK: %[[V4:.*]] = bitcast i8** %[[V0]] to i8*
 // CHECK: %[[V5:.*]] = getelementptr inbounds i8, i8* %[[V4]], i64 16
 // CHECK: %[[V6:.*]] = bitcast i8* %[[V5]] to i8**
@@ -475,7 +459,7 @@ void test_variable_length_array(int n) {
 }
 
 // CHECK: define linkonce_odr hidden void @__default_constructor_8_AB8s8n4_s8_AE(
-// CHECK: call void @llvm.memset.p0i8.i64(i8* %{{.*}}, i8 0, i64 32, i32 8, i1 false)
+// CHECK: call void @llvm.memset.p0i8.i64(i8* align 8 %{{.*}}, i8 0, i64 32, i1 false)
 void test_constructor_destructor_IDArray(void) {
   IDArray t;
 }
@@ -509,8 +493,8 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 // CHECK: store i16 %[[V4]], i16* %{{.*}}, align 8
 // CHECK: %[[V21:.*]] = load i32, i32* %{{.*}}, align 8
 // CHECK: store i32 %[[V21]], i32* %{{.*}}, align 8
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* %{{.*}}, i64 12, i32 8, i1 false)
-// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* %{{.*}}, i8* %{{.*}}, i64 9, i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 %{{.*}}, i64 12, i1 false)
+// CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 8 %{{.*}}, i64 9, i1 false)
 // CHECK: %[[V54:.*]] = bitcast i8** %[[V0:.*]] to %[[STRUCT_BITFIELD1]]*
 // CHECK: %[[I5:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], %[[STRUCT_BITFIELD1]]* %[[V54]], i32 0, i32 8
 // CHECK: %[[V55:.*]] = bitcast i8** %[[V1:.*]] to %[[STRUCT_BITFIELD1]]*
@@ -536,28 +520,3 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 void test_copy_constructor_Bitfield1(Bitfield1 *a) {
   Bitfield1 t = *a;
 }
-
-// CHECK: define void @test_strong_in_union()
-// CHECK: alloca %{{.*}}
-// CHECK-NEXT: ret void
-
-void test_strong_in_union() {
-  U t;
-}
-
-// CHECK: define void @test_copy_constructor_VolatileArray(
-// CHECK: call void @__copy_constructor_8_8_s0_AB8s4n16_tv64w32_AE(
-
-// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_s0_AB8s4n16_tv64w32_AE(
-// CHECK: %[[ADDR_CUR:.*]] = phi i8**
-// CHECK: %[[ADDR_CUR1:.*]] = phi i8**
-// CHECK: %[[V12:.*]] = bitcast i8** %[[ADDR_CUR]] to i32*
-// CHECK: %[[V13:.*]] = bitcast i8** %[[ADDR_CUR1]] to i32*
-// CHECK: %[[V14:.*]] = load volatile i32, i32* %[[V13]], align 4
-// CHECK: store volatile i32 %[[V14]], i32* %[[V12]], align 4
-
-void test_copy_constructor_VolatileArray(VolatileArray *a) {
-  VolatileArray t = *a;
-}
-
-#endif /* USESTRUCT */

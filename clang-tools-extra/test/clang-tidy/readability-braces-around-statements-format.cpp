@@ -19,15 +19,15 @@ void test() {
   // CHECK-MESSAGES: :[[@LINE-3]]:26: warning: statement should be inside braces
   // CHECK-MESSAGES: :[[@LINE-4]]:35: warning: statement should be inside braces
   // CHECK-MESSAGES: :[[@LINE-5]]:38: warning: statement should be inside braces
-  // CHECK-FIXES:      {{^}}   if (1) {{{$}}
-  // CHECK-FIXES-NEXT: {{^}}      while (2) {
-  // CHECK-FIXES-NEXT: {{^}}         if (3) {
-  // CHECK-FIXES-NEXT: {{^}}            for (;;) {
-  // CHECK-FIXES-NEXT: {{^}}               do {
-  // CHECK-FIXES-NEXT: {{^}}                  ;
-  // CHECK-FIXES-NEXT: {{^}}               } while (false) /**/; /**/
-  // CHECK-FIXES-NEXT: {{^}}            }
-  // CHECK-FIXES-NEXT: {{^}}         }
-  // CHECK-FIXES-NEXT: {{^}}      }
-  // CHECK-FIXES-NEXT: {{^}}   }
+  // CHECK-FIXES:      {{^}}  if (1) {{{$}}
+  // CHECK-FIXES-NEXT: {{^}}     while (2) {
+  // CHECK-FIXES-NEXT: {{^}}        if (3) {
+  // CHECK-FIXES-NEXT: {{^}}           for (;;) {
+  // CHECK-FIXES-NEXT: {{^}}              do {
+  // CHECK-FIXES-NEXT: {{^}}                 ;
+  // CHECK-FIXES-NEXT: {{^}}              } while (false) /**/; /**/
+  // CHECK-FIXES-NEXT: {{^}}           }
+  // CHECK-FIXES-NEXT: {{^}}        }
+  // CHECK-FIXES-NEXT: {{^}}     }
+  // CHECK-FIXES-NEXT: {{^}}  }
 }

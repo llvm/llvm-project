@@ -17,11 +17,20 @@ isl_ctx *FN(UNION,get_ctx)(__isl_keep UNION *u)
 	return u ? u->space->ctx : NULL;
 }
 
-__isl_give isl_space *FN(UNION,get_space)(__isl_keep UNION *u)
+/* Return the space of "u".
+ */
+static __isl_keep isl_space *FN(UNION,peek_space)(__isl_keep UNION *u)
 {
 	if (!u)
 		return NULL;
-	return isl_space_copy(u->space);
+	return u->space;
+}
+
+/* Return a copy of the space of "u".
+ */
+__isl_give isl_space *FN(UNION,get_space)(__isl_keep UNION *u)
+{
+	return isl_space_copy(FN(UNION,peek_space)(u));
 }
 
 /* Return the number of parameters of "u", where "type"
@@ -108,25 +117,12 @@ __isl_give UNION *FN(UNION,copy)(__isl_keep UNION *u)
  * Return the ZERO element if "u" does not contain any element
  * living in "space".
  */
-__isl_give PART *FN(FN(UNION,extract),PARTS)(__isl_keep UNION *u,
+__isl_give PART *FN(FN(UNION,extract),BASE)(__isl_keep UNION *u,
 	__isl_take isl_space *space)
 {
 	struct isl_hash_table_entry *entry;
-	isl_bool equal_params;
 
-	if (!u || !space)
-		goto error;
-	equal_params = isl_space_has_equal_params(u->space, space);
-	if (equal_params < 0)
-		goto error;
-	if (!equal_params) {
-		space = isl_space_drop_dims(space, isl_dim_param,
-					0, isl_space_dim(space, isl_dim_param));
-		space = isl_space_align_params(space,
-					FN(UNION,get_space)(u));
-		if (!space)
-			goto error;
-	}
+	space = isl_space_replace_params(space, FN(UNION,peek_space)(u));
 
 	entry = FN(UNION,find_part_entry)(u, space, 0);
 	if (!entry)
@@ -210,7 +206,7 @@ error:
 /* Add "part" to "u", where "u" is assumed not to already have
  * a part that is defined on the same space as "part".
  */
-__isl_give UNION *FN(FN(UNION,add),PARTS)(__isl_take UNION *u,
+__isl_give UNION *FN(FN(UNION,add),BASE)(__isl_take UNION *u,
 	__isl_take PART *part)
 {
 	return FN(UNION,add_part_generic)(u, part, 1);
@@ -272,7 +268,7 @@ static isl_stat FN(UNION,transform_entry)(__isl_take PART *part, void *user)
 	S(UNION,transform_data) *data = (S(UNION,transform_data) *)user;
 
 	part = data->fn(part, data->user);
-	data->res = FN(FN(UNION,add),PARTS)(data->res, part);
+	data->res = FN(FN(UNION,add),BASE)(data->res, part);
 	if (!data->res)
 		return isl_stat_error;
 
@@ -289,7 +285,7 @@ static __isl_give UNION *FN(UNION,transform_space)(__isl_take UNION *u,
 	S(UNION,transform_data) data = { fn, user };
 
 	data.res = FN(UNION,alloc_same_size_on_space)(u, space);
-	if (FN(FN(UNION,foreach),PARTS)(u,
+	if (FN(FN(UNION,foreach),BASE)(u,
 					&FN(UNION,transform_entry), &data) < 0)
 		data.res = FN(UNION,free)(data.res);
 	FN(UNION,free)(u);
@@ -402,7 +398,7 @@ static __isl_give UNION *FN(UNION,realign_domain)(__isl_take UNION *u,
 	if (!u || !r)
 		goto error;
 
-	space = isl_space_copy(r->dim);
+	space = isl_reordering_get_space(r);
 	u = FN(UNION,transform_space)(u, space, &FN(UNION,align_entry), r);
 	isl_reordering_free(r);
 	return u;
@@ -431,7 +427,6 @@ __isl_give UNION *FN(UNION,align_params)(__isl_take UNION *u,
 		return u;
 	}
 
-	model = isl_space_params(model);
 	r = isl_parameter_alignment_reordering(u->space, model);
 	isl_space_free(model);
 
@@ -475,7 +470,7 @@ static __isl_give UNION *FN(UNION,union_add_)(__isl_take UNION *u1,
 	if (!u1 || !u2)
 		goto error;
 
-	if (FN(FN(UNION,foreach),PARTS)(u2, &FN(UNION,union_add_part), &u1) < 0)
+	if (FN(FN(UNION,foreach),BASE)(u2, &FN(UNION,union_add_part), &u1) < 0)
 		goto error;
 
 	FN(UNION,free)(u2);
@@ -487,7 +482,7 @@ error:
 	return NULL;
 }
 
-__isl_give UNION *FN(FN(UNION,from),PARTS)(__isl_take PART *part)
+__isl_give UNION *FN(FN(UNION,from),BASE)(__isl_take PART *part)
 {
 	isl_space *dim;
 	UNION *u;
@@ -503,7 +498,7 @@ __isl_give UNION *FN(FN(UNION,from),PARTS)(__isl_take PART *part)
 #else
 	u = FN(UNION,ZERO)(dim);
 #endif
-	u = FN(FN(UNION,add),PARTS)(u, part);
+	u = FN(FN(UNION,add),BASE)(u, part);
 
 	return u;
 }
@@ -544,7 +539,7 @@ static isl_stat FN(UNION,match_bin_entry)(__isl_take PART *part, void *user)
 
 	part = data->fn(part, FN(PART, copy)(entry2->data));
 
-	data->res = FN(FN(UNION,add),PARTS)(data->res, part);
+	data->res = FN(FN(UNION,add),BASE)(data->res, part);
 	if (!data->res)
 		return isl_stat_error;
 
@@ -578,7 +573,7 @@ static __isl_give UNION *FN(UNION,match_bin_op)(__isl_take UNION *u1,
 
 	data.u2 = u2;
 	data.res = FN(UNION,alloc_same_size)(u1);
-	if (FN(FN(UNION,foreach),PARTS)(u1,
+	if (FN(FN(UNION,foreach),BASE)(u1,
 				    &FN(UNION,match_bin_entry), &data) < 0)
 		goto error;
 
@@ -707,7 +702,7 @@ static isl_stat FN(UNION,match_domain_entry)(__isl_take PART *part, void *user)
 
 	part = data->fn(part, isl_set_copy(entry2->data));
 
-	data->res = FN(FN(UNION,add),PARTS)(data->res, part);
+	data->res = FN(FN(UNION,add),BASE)(data->res, part);
 	if (!data->res)
 		return isl_stat_error;
 
@@ -732,7 +727,7 @@ static __isl_give UNION *FN(UNION,match_domain_op)(__isl_take UNION *u,
 
 	data.uset = uset;
 	data.res = FN(UNION,alloc_same_size)(u);
-	if (FN(FN(UNION,foreach),PARTS)(u,
+	if (FN(FN(UNION,foreach),BASE)(u,
 				   &FN(UNION,match_domain_entry), &data) < 0)
 		goto error;
 
@@ -837,7 +832,7 @@ __isl_give isl_union_set *FN(UNION,domain)(__isl_take UNION *u)
 	isl_union_set *uset;
 
 	uset = isl_union_set_empty(FN(UNION,get_space)(u));
-	if (FN(FN(UNION,foreach),PARTS)(u, &FN(UNION,domain_entry), &uset) < 0)
+	if (FN(FN(UNION,foreach),BASE)(u, &FN(UNION,domain_entry), &uset) < 0)
 		goto error;
 
 	FN(UNION,free)(u);
@@ -869,38 +864,6 @@ static __isl_give UNION *FN(UNION,negate_type)(__isl_take UNION *u)
 	return u;
 }
 #endif
-
-static __isl_give PART *FN(UNION,mul_isl_int_entry)(__isl_take PART *part,
-	void *user)
-{
-	isl_int *v = user;
-
-	return FN(PW,mul_isl_int)(part, *v);
-}
-
-__isl_give UNION *FN(UNION,mul_isl_int)(__isl_take UNION *u, isl_int v)
-{
-	if (isl_int_is_one(v))
-		return u;
-
-	if (DEFAULT_IS_ZERO && u && isl_int_is_zero(v)) {
-		UNION *zero;
-		isl_space *dim = FN(UNION,get_space)(u);
-#ifdef HAS_TYPE
-		zero = FN(UNION,ZERO)(dim, u->type);
-#else
-		zero = FN(UNION,ZERO)(dim);
-#endif
-		FN(UNION,free)(u);
-		return zero;
-	}
-
-	u = FN(UNION,transform_inplace)(u, &FN(UNION,mul_isl_int_entry), &v);
-	if (isl_int_is_neg(v))
-		u = FN(UNION,negate_type)(u);
-
-	return u;
-}
 
 /* Multiply "part" by the isl_val "user" and return the result.
  */
@@ -1033,8 +996,8 @@ isl_bool FN(UNION,plain_is_equal)(__isl_keep UNION *u1, __isl_keep UNION *u2)
 		return isl_bool_true;
 	if (u1->table.n != u2->table.n)
 		return isl_bool_false;
-	n1 = FN(FN(UNION,n),PARTS)(u1);
-	n2 = FN(FN(UNION,n),PARTS)(u2);
+	n1 = FN(FN(UNION,n),BASE)(u1);
+	n2 = FN(FN(UNION,n),BASE)(u2);
 	if (n1 < 0 || n2 < 0)
 		return isl_bool_error;
 	if (n1 != n2)
@@ -1201,4 +1164,40 @@ __isl_give UNION *FN(UNION,reset_user)(__isl_take UNION *u)
 	space = isl_space_reset_user(space);
 	return FN(UNION,transform_space)(u, space, &FN(UNION,reset_user_entry),
 					NULL);
+}
+
+/* Add the base expression held by "entry" to "list".
+ */
+static isl_stat FN(UNION,add_to_list)(void **entry, void *user)
+{
+	PW *pw = *entry;
+	LIST(PART) **list = user;
+
+	*list = FN(LIST(PART),add)(*list, FN(PART,copy)(pw));
+	if (!*list)
+		return isl_stat_error;
+
+	return isl_stat_ok;
+}
+
+/* Return a list containing all the base expressions in "u".
+ *
+ * First construct a list of the appropriate size and
+ * then add all the elements.
+ */
+__isl_give LIST(PART) *FN(FN(UNION,get),LIST(BASE))(__isl_keep UNION *u)
+{
+	int n;
+	LIST(PART) *list;
+
+	if (!u)
+		return NULL;
+	n = FN(FN(UNION,n),BASE)(u);
+	if (n < 0)
+		return NULL;
+	list = FN(LIST(PART),alloc)(FN(UNION,get_ctx(u)), n);
+	if (FN(UNION,foreach_inplace)(u, &FN(UNION,add_to_list), &list) < 0)
+		return FN(LIST(PART),free)(list);
+
+	return list;
 }

@@ -38,7 +38,7 @@ function(add_cxx_compiler_flag FLAG)
     if(ARGV1)
       string(TOUPPER "_${VARIANT}" VARIANT)
     endif()
-    set(CMAKE_CXX_FLAGS${VARIANT} "${CMAKE_CXX_FLAGS${VARIANT}} ${FLAG}" PARENT_SCOPE)
+    set(CMAKE_CXX_FLAGS${VARIANT} "${CMAKE_CXX_FLAGS${VARIANT}} ${BENCHMARK_CXX_FLAGS${VARIANT}} ${FLAG}" PARENT_SCOPE)
   endif()
 endfunction()
 

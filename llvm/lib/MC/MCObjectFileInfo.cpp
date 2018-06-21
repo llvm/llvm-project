@@ -135,10 +135,6 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   // "__DATA/__datacoal_nt" => section "__DATA/__data"
   Triple::ArchType ArchTy = T.getArch();
 
-  ConstDataSection  // .const_data
-    = Ctx->getMachOSection("__DATA", "__const", 0,
-                           SectionKind::getReadOnlyWithRel());
-
   if (ArchTy == Triple::ppc || ArchTy == Triple::ppc64) {
     TextCoalSection
       = Ctx->getMachOSection("__TEXT", "__textcoal_nt",
@@ -151,14 +147,15 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
                              SectionKind::getReadOnly());
     DataCoalSection = Ctx->getMachOSection(
         "__DATA", "__datacoal_nt", MachO::S_COALESCED, SectionKind::getData());
-    ConstDataCoalSection = DataCoalSection;
   } else {
     TextCoalSection = TextSection;
     ConstTextCoalSection = ReadOnlySection;
     DataCoalSection = DataSection;
-    ConstDataCoalSection = ConstDataSection;
   }
 
+  ConstDataSection  // .const_data
+    = Ctx->getMachOSection("__DATA", "__const", 0,
+                           SectionKind::getReadOnlyWithRel());
   DataCommonSection
     = Ctx->getMachOSection("__DATA","__common",
                            MachO::S_ZEROFILL,

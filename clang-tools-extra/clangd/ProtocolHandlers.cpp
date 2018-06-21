@@ -24,32 +24,28 @@ namespace {
 // FooParams should have a fromJSON function.
 struct HandlerRegisterer {
   template <typename Param>
-  void operator()(StringRef Method,
-                  void (ProtocolCallbacks::*Handler)(Context, Param)) {
+  void operator()(StringRef Method, void (ProtocolCallbacks::*Handler)(Param)) {
     // Capture pointers by value, as the lambda will outlive this object.
     auto *Callbacks = this->Callbacks;
-    Dispatcher.registerHandler(
-        Method, [=](Context C, const json::Expr &RawParams) {
-          typename std::remove_reference<Param>::type P;
-          if (fromJSON(RawParams, P)) {
-            (Callbacks->*Handler)(std::move(C), P);
-          } else {
-            log(C, "Failed to decode " + Method + " request.");
-          }
-        });
+    Dispatcher.registerHandler(Method, [=](const json::Expr &RawParams) {
+      typename std::remove_reference<Param>::type P;
+      if (fromJSON(RawParams, P)) {
+        (Callbacks->*Handler)(P);
+      } else {
+        log("Failed to decode " + Method + " request.");
+      }
+    });
   }
 
   JSONRPCDispatcher &Dispatcher;
-  JSONOutput *Out;
   ProtocolCallbacks *Callbacks;
 };
 
 } // namespace
 
 void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
-                                      JSONOutput &Out,
                                       ProtocolCallbacks &Callbacks) {
-  HandlerRegisterer Register{Dispatcher, &Out, &Callbacks};
+  HandlerRegisterer Register{Dispatcher, &Callbacks};
 
   Register("initialize", &ProtocolCallbacks::onInitialize);
   Register("shutdown", &ProtocolCallbacks::onShutdown);
@@ -69,8 +65,12 @@ void clangd::registerCallbackHandlers(JSONRPCDispatcher &Dispatcher,
   Register("textDocument/switchSourceHeader",
            &ProtocolCallbacks::onSwitchSourceHeader);
   Register("textDocument/rename", &ProtocolCallbacks::onRename);
+  Register("textDocument/hover", &ProtocolCallbacks::onHover);
   Register("workspace/didChangeWatchedFiles", &ProtocolCallbacks::onFileEvent);
   Register("workspace/executeCommand", &ProtocolCallbacks::onCommand);
   Register("textDocument/documentHighlight",
            &ProtocolCallbacks::onDocumentHighlight);
+  Register("workspace/didChangeConfiguration",
+           &ProtocolCallbacks::onChangeConfiguration);
+  Register("workspace/symbol", &ProtocolCallbacks::onWorkspaceSymbol);
 }

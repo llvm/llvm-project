@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s modernize-use-auto %t
+// RUN: %check_clang_tidy %s modernize-use-auto %t -- \
+// RUN:   -config="{CheckOptions: [{key: modernize-use-auto.MinTypeNameLength, value: '0'}]}" \
+// RUN:   -- -std=c++11 -frtti
 
 class MyType {};
 

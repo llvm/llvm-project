@@ -17,7 +17,9 @@
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 using namespace polly;

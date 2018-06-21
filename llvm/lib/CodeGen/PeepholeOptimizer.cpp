@@ -1882,8 +1882,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
     return ValueTrackerResult();
   // Otherwise, we want the whole source.
   const MachineOperand &Src = Def->getOperand(1);
-  if (Src.isUndef())
-    return ValueTrackerResult();
   return ValueTrackerResult(Src.getReg(), Src.getSubReg());
 }
 
@@ -1927,8 +1925,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   }
 
   const MachineOperand &Src = Def->getOperand(SrcIdx);
-  if (Src.isUndef())
-    return ValueTrackerResult();
   return ValueTrackerResult(Src.getReg(), Src.getSubReg());
 }
 
@@ -2097,10 +2093,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
   for (unsigned i = 1, e = Def->getNumOperands(); i < e; i += 2) {
     auto &MO = Def->getOperand(i);
     assert(MO.isReg() && "Invalid PHI instruction");
-    // We have no code to deal with undef operands. They shouldn't happen in
-    // normal programs anyway.
-    if (MO.isUndef())
-      return ValueTrackerResult();
     Res.addSource(MO.getReg(), MO.getSubReg());
   }
 
@@ -2157,14 +2149,9 @@ ValueTrackerResult ValueTracker::getNextSource() {
     // If we can still move up in the use-def chain, move to the next
     // definition.
     if (!TargetRegisterInfo::isPhysicalRegister(Reg) && OneRegSrc) {
-      MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
-      if (DI != MRI.def_end()) {
-        Def = DI->getParent();
-        DefIdx = DI.getOperandNo();
-        DefSubReg = Res.getSrcSubReg(0);
-      } else {
-        Def = nullptr;
-      }
+      Def = MRI.getVRegDef(Reg);
+      DefIdx = MRI.def_begin(Reg).getOperandNo();
+      DefSubReg = Res.getSrcSubReg(0);
       return Res;
     }
   }

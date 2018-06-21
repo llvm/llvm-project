@@ -8,4 +8,4 @@
 
 .global _start
 _start:
-callq foo
+ .long foo - .

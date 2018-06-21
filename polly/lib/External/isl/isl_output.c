@@ -23,6 +23,7 @@
 #include <isl_space_private.h>
 #include <isl_mat_private.h>
 #include <isl_vec_private.h>
+#include <isl/union_set.h>
 #include <isl/union_map.h>
 #include <isl/constraint.h>
 #include <isl_local_space_private.h>
@@ -35,6 +36,7 @@
 
 #include <bset_to_bmap.c>
 #include <set_to_map.c>
+#include <uset_to_umap.c>
 
 static const char *s_to[2] = { " -> ", " \\to " };
 static const char *s_and[2] = { " and ", " \\wedge " };
@@ -49,6 +51,7 @@ static const char *s_such_that[2] = { " : ", " \\mid " };
 static const char *s_open_exists[2] = { "exists (", "\\exists \\, " };
 static const char *s_close_exists[2] = { ")", "" };
 static const char *s_div_prefix[2] = { "e", "\\alpha_" };
+static const char *s_mod[2] = { "mod", "\\bmod" };
 static const char *s_param_prefix[2] = { "p", "p_" };
 static const char *s_input_prefix[2] = { "i", "i_" };
 static const char *s_output_prefix[2] = { "o", "o_" };
@@ -316,15 +319,20 @@ static __isl_give isl_printer *print_affine_of_len(__isl_keep isl_space *dim,
 	return p;
 }
 
-/* Print an affine expression "c" corresponding to a constraint in "bmap"
+/* Print an affine expression "c"
  * to "p", with the variable names taken from "space" and
  * the integer division definitions taken from "div".
  */
-static __isl_give isl_printer *print_affine(__isl_keep isl_basic_map *bmap,
-	__isl_keep isl_space *space, __isl_keep isl_mat *div,
-	__isl_take isl_printer *p, isl_int *c)
+static __isl_give isl_printer *print_affine(__isl_take isl_printer *p,
+	__isl_keep isl_space *space, __isl_keep isl_mat *div, isl_int *c)
 {
-	unsigned len = 1 + isl_basic_map_total_dim(bmap);
+	unsigned n_div;
+	unsigned len;
+
+	if (!space || !div)
+		return isl_printer_free(p);
+	n_div = isl_mat_rows(div);
+	len = 1 + isl_space_dim(space, isl_dim_all) + n_div;
 	return print_affine_of_len(space, div, p, c, len);
 }
 
@@ -493,7 +501,7 @@ static const char *constraint_op(int sign, int strict, int latex)
 		return s_ge[latex];
 }
 
-/* Print one side of a constraint "c" from "bmap" to "p", with
+/* Print one side of a constraint "c" to "p", with
  * the variable names taken from "space" and the integer division definitions
  * taken from "div".
  * "last" is the position of the last non-zero coefficient.
@@ -503,20 +511,13 @@ static const char *constraint_op(int sign, int strict, int latex)
  *	c' op
  *
  * is printed.
- * "first_constraint" is set if this is the first constraint
- * in the conjunction.
  */
-static __isl_give isl_printer *print_half_constraint(
-	__isl_keep isl_basic_map *bmap,
+static __isl_give isl_printer *print_half_constraint(__isl_take isl_printer *p,
 	__isl_keep isl_space *space, __isl_keep isl_mat *div,
-	__isl_take isl_printer *p, isl_int *c, int last, const char *op,
-	int first_constraint, int latex)
+	isl_int *c, int last, const char *op, int latex)
 {
-	if (!first_constraint)
-		p = isl_printer_print_str(p, s_and[latex]);
-
 	isl_int_set_si(c[last], 0);
-	p = print_affine(bmap, space, div, p, c);
+	p = print_affine(p, space, div, c);
 
 	p = isl_printer_print_str(p, " ");
 	p = isl_printer_print_str(p, op);
@@ -525,7 +526,7 @@ static __isl_give isl_printer *print_half_constraint(
 	return p;
 }
 
-/* Print a constraint "c" from "bmap" to "p", with the variable names
+/* Print a constraint "c" to "p", with the variable names
  * taken from "space" and the integer division definitions taken from "div".
  * "last" is the position of the last non-zero coefficient, which is
  * moreover assumed to be negative.
@@ -533,18 +534,11 @@ static __isl_give isl_printer *print_half_constraint(
  * the constraint is printed in the form
  *
  *	-c[last] op c'
- *
- * "first_constraint" is set if this is the first constraint
- * in the conjunction.
  */
-static __isl_give isl_printer *print_constraint(__isl_keep isl_basic_map *bmap,
+static __isl_give isl_printer *print_constraint(__isl_take isl_printer *p,
 	__isl_keep isl_space *space, __isl_keep isl_mat *div,
-	__isl_take isl_printer *p,
-	isl_int *c, int last, const char *op, int first_constraint, int latex)
+	isl_int *c, int last, const char *op, int latex)
 {
-	if (!first_constraint)
-		p = isl_printer_print_str(p, s_and[latex]);
-
 	isl_int_abs(c[last], c[last]);
 
 	p = print_term(space, div, c[last], last, p, latex);
@@ -554,9 +548,145 @@ static __isl_give isl_printer *print_constraint(__isl_keep isl_basic_map *bmap,
 	p = isl_printer_print_str(p, " ");
 
 	isl_int_set_si(c[last], 0);
-	p = print_affine(bmap, space, div, p, c);
+	p = print_affine(p, space, div, c);
 
 	return p;
+}
+
+/* Given an integer division
+ *
+ *	floor(f/m)
+ *
+ * at position "pos" in "div", print the corresponding modulo expression
+ *
+ *	(f) mod m
+ *
+ * to "p".  The variable names are taken from "space", while any
+ * nested integer division definitions are taken from "div".
+ */
+static __isl_give isl_printer *print_mod(__isl_take isl_printer *p,
+	__isl_keep isl_space *space, __isl_keep isl_mat *div, int pos,
+	int latex)
+{
+	if (!p || !div)
+		return isl_printer_free(p);
+
+	p = isl_printer_print_str(p, "(");
+	p = print_affine_of_len(space, div, p,
+				div->row[pos] + 1, div->n_col - 1);
+	p = isl_printer_print_str(p, ") ");
+	p = isl_printer_print_str(p, s_mod[latex]);
+	p = isl_printer_print_str(p, " ");
+	p = isl_printer_print_isl_int(p, div->row[pos][0]);
+	return p;
+}
+
+/* Can the equality constraints "c" be printed as a modulo constraint?
+ * In particular, is of the form
+ *
+ *	f - a m floor(g/m) = 0,
+ *
+ * with c = -a m the coefficient at position "pos"?
+ * Return the position of the corresponding integer division if so.
+ * Return the number of integer divisions if not.
+ * Return -1 on error.
+ *
+ * Modulo constraints are currently not printed in C format.
+ * Other than that, "pos" needs to correspond to an integer division
+ * with explicit representation and "c" needs to be a multiple
+ * of the denominator of the integer division.
+ */
+static int print_as_modulo_pos(__isl_keep isl_printer *p,
+	__isl_keep isl_space *space, __isl_keep isl_mat *div, unsigned pos,
+	isl_int c)
+{
+	isl_bool can_print;
+	unsigned n_div;
+	enum isl_dim_type type;
+
+	if (!p)
+		return -1;
+	n_div = isl_mat_rows(div);
+	if (p->output_format == ISL_FORMAT_C)
+		return n_div;
+	type = pos2type(space, &pos);
+	if (type != isl_dim_div)
+		return n_div;
+	can_print = can_print_div_expr(p, div, pos);
+	if (can_print < 0)
+		return -1;
+	if (!can_print)
+		return n_div;
+	if (!isl_int_is_divisible_by(c, div->row[pos][0]))
+		return n_div;
+	return pos;
+}
+
+/* Print equality constraint "c" to "p" as a modulo constraint,
+ * with the variable names taken from "space" and
+ * the integer division definitions taken from "div".
+ * "last" is the position of the last non-zero coefficient, which is
+ * moreover assumed to be negative and a multiple of the denominator
+ * of the corresponding integer division.  "div_pos" is the corresponding
+ * position in the sequence of integer divisions.
+ *
+ * The equality is of the form
+ *
+ *	f - a m floor(g/m) = 0.
+ *
+ * Print it as
+ *
+ *	a (g mod m) = -f + a g
+ */
+static __isl_give isl_printer *print_eq_mod_constraint(
+	__isl_take isl_printer *p, __isl_keep isl_space *space,
+	__isl_keep isl_mat *div, unsigned div_pos,
+	isl_int *c, int last, int latex)
+{
+	isl_ctx *ctx;
+	int multiple;
+
+	ctx = isl_printer_get_ctx(p);
+	isl_int_divexact(c[last], c[last], div->row[div_pos][0]);
+	isl_int_abs(c[last], c[last]);
+	multiple = !isl_int_is_one(c[last]);
+	if (multiple) {
+		p = isl_printer_print_isl_int(p, c[last]);
+		p = isl_printer_print_str(p, "*(");
+	}
+	p = print_mod(p, space, div, div_pos, latex);
+	if (multiple)
+		p = isl_printer_print_str(p, ")");
+	p = isl_printer_print_str(p, " = ");
+	isl_seq_combine(c, ctx->negone, c,
+			    c[last], div->row[div_pos] + 1, last);
+	isl_int_set_si(c[last], 0);
+	p = print_affine(p, space, div, c);
+	return p;
+}
+
+/* Print equality constraint "c" to "p", with the variable names
+ * taken from "space" and the integer division definitions taken from "div".
+ * "last" is the position of the last non-zero coefficient, which is
+ * moreover assumed to be negative.
+ *
+ * If possible, print the equality constraint as a modulo constraint.
+ */
+static __isl_give isl_printer *print_eq_constraint(__isl_take isl_printer *p,
+	__isl_keep isl_space *space, __isl_keep isl_mat *div, isl_int *c,
+	int last, int latex)
+{
+	unsigned n_div;
+	int div_pos;
+
+	n_div = isl_mat_rows(div);
+	div_pos = print_as_modulo_pos(p, space, div, last, c[last]);
+	if (div_pos < 0)
+		return isl_printer_free(p);
+	if (div_pos < n_div)
+		return print_eq_mod_constraint(p, space, div, div_pos,
+						c, last, latex);
+	return print_constraint(p, space, div, c, last, "=", latex);
 }
 
 /* Print the constraints of "bmap" to "p".
@@ -632,12 +762,13 @@ static __isl_give isl_printer *print_constraints(__isl_keep isl_basic_map *bmap,
 			p = isl_printer_print_str(p, "0 = 0");
 			continue;
 		}
+		if (!first)
+			p = isl_printer_print_str(p, s_and[latex]);
 		if (isl_int_is_neg(bmap->eq[i][l]))
 			isl_seq_cpy(c->el, bmap->eq[i], 1 + total);
 		else
 			isl_seq_neg(c->el, bmap->eq[i], 1 + total);
-		p = print_constraint(bmap, space, div, p, c->el, l,
-				    "=", first, latex);
+		p = print_eq_constraint(p, space, div, c->el, l, latex);
 		first = 0;
 	}
 	for (i = 0; i < bmap->n_ineq; ++i) {
@@ -657,6 +788,8 @@ static __isl_give isl_printer *print_constraints(__isl_keep isl_basic_map *bmap,
 			if (is_div)
 				continue;
 		}
+		if (!first)
+			p = isl_printer_print_str(p, s_and[latex]);
 		s = isl_int_sgn(bmap->ineq[i][l]);
 		strict = !rational && isl_int_is_negone(bmap->ineq[i][0]);
 		if (s < 0)
@@ -667,13 +800,13 @@ static __isl_give isl_printer *print_constraints(__isl_keep isl_basic_map *bmap,
 			isl_int_set_si(c->el[0], 0);
 		if (!dump && next_is_opposite(bmap, i, l)) {
 			op = constraint_op(-s, strict, latex);
-			p = print_half_constraint(bmap, space, div, p, c->el, l,
-						op, first, latex);
+			p = print_half_constraint(p, space, div, c->el, l,
+						op, latex);
 			first = 1;
 		} else {
 			op = constraint_op(s, strict, latex);
-			p = print_constraint(bmap, space, div, p, c->el, l,
-						op, first, latex);
+			p = print_constraint(p, space, div, c->el, l,
+						op, latex);
 			first = 0;
 		}
 	}
@@ -787,6 +920,21 @@ static __isl_give isl_printer *open_exists(__isl_take isl_printer *p,
 	return p;
 }
 
+/* Remove the explicit representations of all local variables in "div".
+ */
+static __isl_give isl_mat *mark_all_unknown(__isl_take isl_mat *div)
+{
+	int i, n_div;
+
+	if (!div)
+		return NULL;
+
+	n_div = isl_mat_rows(div);
+	for (i = 0; i < n_div; ++i)
+		div = isl_mat_set_element_si(div, i, 0, 0);
+	return div;
+}
+
 /* Print the constraints of "bmap" to "p".
  * The names of the variables are taken from "space".
  * "latex" is set if the constraints should be printed in LaTeX format.
@@ -808,7 +956,7 @@ static __isl_give isl_printer *print_disjunct(__isl_keep isl_basic_map *bmap,
 		p = open_exists(p, space, div, latex);
 
 	if (dump)
-		div = isl_mat_free(div);
+		div = mark_all_unknown(div);
 	p = print_constraints(bmap, space, div, p, latex);
 	isl_mat_free(div);
 
@@ -928,7 +1076,7 @@ static __isl_give isl_printer *print_disjuncts_core(__isl_keep isl_map *map,
 	int i;
 
 	if (map->n == 0)
-		p = isl_printer_print_str(p, "1 = 0");
+		p = isl_printer_print_str(p, "false");
 	for (i = 0; i < map->n; ++i) {
 		if (i)
 			p = isl_printer_print_str(p, s_or[latex]);
@@ -1026,6 +1174,16 @@ static __isl_give isl_printer *print_disjuncts_map(__isl_keep isl_map *map,
 		return isl_printer_print_str(p, s_such_that[latex]);
 	else
 		return print_disjuncts(map, space, p, latex);
+}
+
+/* Print the disjuncts of a set.
+ * The names of the variables are taken from "space".
+ * "latex" is set if the constraints should be printed in LaTeX format.
+ */
+static __isl_give isl_printer *print_disjuncts_set(__isl_keep isl_set *set,
+	__isl_keep isl_space *space, __isl_take isl_printer *p, int latex)
+{
+	return print_disjuncts_map(set_to_map(set), space, p, latex);
 }
 
 struct isl_aff_split {
@@ -1420,22 +1578,46 @@ static isl_stat print_map_body(__isl_take isl_map *map, void *user)
 	return isl_stat_ok;
 }
 
-static __isl_give isl_printer *isl_union_map_print_isl(
-	__isl_keep isl_union_map *umap, __isl_take isl_printer *p)
+/* Print the body of "umap" (everything except the parameter declarations)
+ * to "p" in isl format.
+ */
+static __isl_give isl_printer *isl_printer_print_union_map_isl_body(
+	__isl_take isl_printer *p, __isl_keep isl_union_map *umap)
 {
 	struct isl_union_print_data data;
-	struct isl_print_space_data space_data = { 0 };
-	isl_space *space;
 
-	space = isl_union_map_get_space(umap);
-	p = print_param_tuple(p, space, &space_data);
-	isl_space_free(space);
 	p = isl_printer_print_str(p, s_open_set[0]);
 	data.p = p;
 	data.first = 1;
 	isl_union_map_foreach_map(umap, &print_map_body, &data);
 	p = data.p;
 	p = isl_printer_print_str(p, s_close_set[0]);
+	return p;
+}
+
+/* Print the body of "uset" (everything except the parameter declarations)
+ * to "p" in isl format.
+ */
+static __isl_give isl_printer *isl_printer_print_union_set_isl_body(
+	__isl_take isl_printer *p, __isl_keep isl_union_set *uset)
+{
+	return isl_printer_print_union_map_isl_body(p, uset_to_umap(uset));
+}
+
+/* Print the isl_union_map "umap" to "p" in isl format.
+ */
+static __isl_give isl_printer *isl_union_map_print_isl(
+	__isl_keep isl_union_map *umap, __isl_take isl_printer *p)
+{
+	struct isl_print_space_data space_data = { 0 };
+	isl_space *space;
+
+	space = isl_union_map_get_space(umap);
+	p = print_param_tuple(p, space, &space_data);
+	isl_space_free(space);
+
+	p = isl_printer_print_union_map_isl_body(p, umap);
+
 	return p;
 }
 
@@ -1488,9 +1670,9 @@ __isl_give isl_printer *isl_printer_print_union_set(__isl_take isl_printer *p,
 		goto error;
 
 	if (p->output_format == ISL_FORMAT_ISL)
-		return isl_union_map_print_isl((isl_union_map *)uset, p);
+		return isl_union_map_print_isl(uset_to_umap(uset), p);
 	if (p->output_format == ISL_FORMAT_LATEX)
-		return isl_union_map_print_latex((isl_union_map *)uset, p);
+		return isl_union_map_print_latex(uset_to_umap(uset), p);
 
 	isl_die(p->ctx, isl_error_invalid,
 		"invalid output format for isl_union_set", goto error);
@@ -2404,8 +2586,11 @@ error:
 	return NULL;
 }
 
+/* Print the (potentially rational) affine expression "aff" to "p",
+ * with the variable names taken from "space".
+ */
 static __isl_give isl_printer *print_aff_body(__isl_take isl_printer *p,
-	__isl_keep isl_aff *aff)
+	__isl_keep isl_space *space, __isl_keep isl_aff *aff)
 {
 	unsigned total;
 
@@ -2414,7 +2599,7 @@ static __isl_give isl_printer *print_aff_body(__isl_take isl_printer *p,
 
 	total = isl_local_space_dim(aff->ls, isl_dim_all);
 	p = isl_printer_print_str(p, "(");
-	p = print_affine_of_len(aff->ls->dim, aff->ls->div, p,
+	p = print_affine_of_len(space, aff->ls->div, p,
 				aff->v->el + 1, 1 + total);
 	if (isl_int_is_one(aff->v->el[0]))
 		p = isl_printer_print_str(p, ")");
@@ -2438,7 +2623,7 @@ static __isl_give isl_printer *print_aff(__isl_take isl_printer *p,
 		p = isl_printer_print_str(p, " -> ");
 	}
 	p = isl_printer_print_str(p, "[");
-	p = print_aff_body(p, aff);
+	p = print_aff_body(p, aff->ls->dim, aff);
 	p = isl_printer_print_str(p, "]");
 
 	return p;
@@ -2749,10 +2934,15 @@ static __isl_give isl_printer *print_dim_ma(__isl_take isl_printer *p,
 {
 	isl_multi_aff *ma = data->user;
 
-	if (data->type == isl_dim_out)
-		p = print_aff_body(p, ma->p[pos]);
-	else
+	if (data->type == isl_dim_out) {
+		isl_space *space;
+
+		space = isl_multi_aff_get_domain_space(ma);
+		p = print_aff_body(p, space, ma->u.p[pos]);
+		isl_space_free(space);
+	} else {
 		p = print_name(data->space, p, data->type, pos, data->latex);
+	}
 
 	return p;
 }
@@ -2856,12 +3046,12 @@ static __isl_give isl_printer *print_unnamed_pw_multi_aff_c(
 		p = isl_printer_print_str(p, "(");
 		p = print_set_c(p, space, pma->p[i].set);
 		p = isl_printer_print_str(p, ") ? (");
-		p = print_aff_c(p, pma->p[i].maff->p[0]);
+		p = print_aff_c(p, pma->p[i].maff->u.p[0]);
 		p = isl_printer_print_str(p, ") : ");
 	}
 	isl_space_free(space);
 
-	return print_aff_c(p, pma->p[pma->n - 1].maff->p[0]);
+	return print_aff_c(p, pma->p[pma->n - 1].maff->u.p[0]);
 }
 
 static __isl_give isl_printer *print_pw_multi_aff_c(__isl_take isl_printer *p,
@@ -2977,29 +3167,29 @@ static __isl_give isl_printer *print_dim_mpa(__isl_take isl_printer *p,
 {
 	int i;
 	int need_parens;
+	isl_space *space;
 	isl_multi_pw_aff *mpa = data->user;
 	isl_pw_aff *pa;
 
 	if (data->type != isl_dim_out)
 		return print_name(data->space, p, data->type, pos, data->latex);
 
-	pa = mpa->p[pos];
+	pa = mpa->u.p[pos];
 	if (pa->n == 0)
-		return isl_printer_print_str(p, "(0 : 1 = 0)");
+		return isl_printer_print_str(p, "(0 : false)");
 
 	need_parens = pa->n != 1 || !isl_set_plain_is_universe(pa->p[0].set);
 	if (need_parens)
 		p = isl_printer_print_str(p, "(");
+	space = isl_multi_pw_aff_get_domain_space(mpa);
 	for (i = 0; i < pa->n; ++i) {
-		isl_space *space;
 
 		if (i)
 			p = isl_printer_print_str(p, "; ");
-		p = print_aff_body(p, pa->p[i].aff);
-		space = isl_aff_get_domain_space(pa->p[i].aff);
+		p = print_aff_body(p, space, pa->p[i].aff);
 		p = print_disjuncts(pa->p[i].set, space, p, 0);
-		isl_space_free(space);
 	}
+	isl_space_free(space);
 	if (need_parens)
 		p = isl_printer_print_str(p, ")");
 
@@ -3007,11 +3197,15 @@ static __isl_give isl_printer *print_dim_mpa(__isl_take isl_printer *p,
 }
 
 /* Print "mpa" to "p" in isl format.
+ *
+ * If "mpa" is zero-dimensional and has a non-trivial explicit domain,
+ * then it is printed after the tuple of affine expressions.
  */
 static __isl_give isl_printer *print_multi_pw_aff_isl(__isl_take isl_printer *p,
 	__isl_keep isl_multi_pw_aff *mpa)
 {
 	struct isl_print_space_data data = { 0 };
+	isl_bool has_domain;
 
 	if (!mpa)
 		return isl_printer_free(p);
@@ -3021,6 +3215,16 @@ static __isl_give isl_printer *print_multi_pw_aff_isl(__isl_take isl_printer *p,
 	data.print_dim = &print_dim_mpa;
 	data.user = mpa;
 	p = isl_print_space(mpa->space, p, 0, &data);
+	has_domain = isl_multi_pw_aff_has_non_trivial_domain(mpa);
+	if (has_domain < 0)
+		return isl_printer_free(p);
+	if (has_domain) {
+		isl_space *space;
+
+		space = isl_space_domain(isl_space_copy(mpa->space));
+		p = print_disjuncts_set(mpa->u.dom, space, p, 0);
+		isl_space_free(space);
+	}
 	p = isl_printer_print_str(p, " }");
 	return p;
 }
@@ -3050,7 +3254,7 @@ static __isl_give isl_printer *print_dim_mv(__isl_take isl_printer *p,
 	isl_multi_val *mv = data->user;
 
 	if (data->type == isl_dim_out)
-		return isl_printer_print_val(p, mv->p[pos]);
+		return isl_printer_print_val(p, mv->u.p[pos]);
 	else
 		return print_name(data->space, p, data->type, pos, data->latex);
 }
@@ -3112,21 +3316,44 @@ static __isl_give isl_printer *print_union_pw_aff_dim(__isl_take isl_printer *p,
 }
 
 /* Print the isl_multi_union_pw_aff "mupa" to "p" in isl format.
+ *
+ * If "mupa" is zero-dimensional and has a non-trivial explicit domain,
+ * then it is printed after the tuple of affine expressions.
+ * In order to clarify that this domain belongs to the expression,
+ * the tuple along with the domain are placed inside parentheses.
+ * If "mupa" has any parameters, then the opening parenthesis
+ * appears after the parameter declarations.
  */
 static __isl_give isl_printer *print_multi_union_pw_aff_isl(
 	__isl_take isl_printer *p, __isl_keep isl_multi_union_pw_aff *mupa)
 {
 	struct isl_print_space_data data = { 0 };
+	isl_bool has_domain;
 	isl_space *space;
+
+	if (!mupa)
+		return isl_printer_free(p);
+	has_domain = isl_multi_union_pw_aff_has_non_trivial_domain(mupa);
+	if (has_domain < 0)
+		return isl_printer_free(p);
 
 	space = isl_multi_union_pw_aff_get_space(mupa);
 	p = print_param_tuple(p, space, &data);
+
+	if (has_domain)
+		p = isl_printer_print_str(p, "(");
 
 	data.print_dim = &print_union_pw_aff_dim;
 	data.user = mupa;
 
 	p = isl_print_space(space, p, 0, &data);
 	isl_space_free(space);
+
+	if (has_domain) {
+		p = isl_printer_print_str(p, " : ");
+		p = isl_printer_print_union_set_isl_body(p, mupa->u.dom);
+		p = isl_printer_print_str(p, ")");
+	}
 
 	return p;
 }

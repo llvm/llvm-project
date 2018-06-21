@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-print-instructions < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze -polly-print-instructions < %s | FileCheck %s
 ;
 ; CHECK:    Statements {
 ; CHECK-NEXT:  	Stmt_Stmt
@@ -14,15 +14,15 @@
 ; CHECK-NEXT:             %a = fadd double 2.100000e+01, 2.100000e+01
 ; CHECK-NEXT:             store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
 ; CHECK-NEXT:       }
-; CHECK-NEXT:   Stmt_Stmt1
+; CHECK-NEXT:   Stmt_Stmt_b
 ; CHECK-NEXT:       Domain :=
-; CHECK-NEXT:           { Stmt_Stmt1[i0] : 0 <= i0 <= 1023 };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0] : 0 <= i0 <= 1023 };
 ; CHECK-NEXT:       Schedule :=
-; CHECK-NEXT:           { Stmt_Stmt1[i0] -> [i0, 1] };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0] -> [i0, 1] };
 ; CHECK-NEXT:       MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:           { Stmt_Stmt1[i0] -> MemRef_B[0] };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0] -> MemRef_B[0] };
 ; CHECK-NEXT:       ReadAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:           { Stmt_Stmt1[i0] -> MemRef_a[] };
+; CHECK-NEXT:           { Stmt_Stmt_b[i0] -> MemRef_a[] };
 ; CHECK-NEXT:       Instructions {
 ; CHECK-NEXT:             store double %a, double* %B
 ; CHECK-NEXT:       }

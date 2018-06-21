@@ -63,6 +63,7 @@ int main()
 
     globalMemCounter.last_new_size = 0;
     A* ap = a.allocate(3);
+    DoNotOptimize(ap);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkLastNewSizeEq(3 * sizeof(int)));
     assert(A_constructed == 0);
@@ -100,6 +101,7 @@ int main()
     assert(A_constructed == 0);
 
     a.deallocate(ap, 3);
+    DoNotOptimize(ap);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(A_constructed == 0);
     }
@@ -111,6 +113,7 @@ int main()
 
     globalMemCounter.last_new_size = 0;
     move_only* ap = a.allocate(3);
+    DoNotOptimize(ap);
     assert(globalMemCounter.checkOutstandingNewEq(1));
     assert(globalMemCounter.checkLastNewSizeEq(3 * sizeof(int)));
     assert(move_only_constructed == 0);
@@ -132,6 +135,7 @@ int main()
     assert(move_only_constructed == 0);
 
     a.deallocate(ap, 3);
+    DoNotOptimize(ap);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(move_only_constructed == 0);
     }

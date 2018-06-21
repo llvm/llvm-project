@@ -20,15 +20,16 @@
 #include "InputFiles.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
-#include "Strings.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "lld/Common/Version.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/Decompressor.h"
@@ -47,27 +48,19 @@ using namespace llvm::dwarf;
 using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::support;
-using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf;
 
+using llvm::support::endian::write32le;
+using llvm::support::endian::write64le;
+
 constexpr size_t MergeNoTailSection::NumShards;
-
-static void write32(void *Buf, uint32_t Val) {
-  endian::write32(Buf, Val, Config->Endianness);
-}
-
-uint64_t SyntheticSection::getVA() const {
-  if (OutputSection *Sec = getParent())
-    return Sec->Addr + OutSecOff;
-  return 0;
-}
 
 // Returns an LLD version string.
 static ArrayRef<uint8_t> getVersion() {
   // Check LLD_VERSION first for ease of testing.
-  // You can get consitent output by using the environment variable.
+  // You can get consistent output by using the environment variable.
   // This is only for testing.
   StringRef S = getenv("LLD_VERSION");
   if (S.empty())
@@ -192,8 +185,6 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
 
       auto *Opt = reinterpret_cast<const Elf_Mips_Options *>(D.data());
       if (Opt->kind == ODK_REGINFO) {
-        if (Config->Relocatable && Opt->getRegInfo().ri_gp_value)
-          error(Filename + ": unsupported non-zero ri_gp_value");
         Reginfo.ri_gprmask |= Opt->getRegInfo().ri_gprmask;
         Sec->getFile<ELFT>()->MipsGp0 = Opt->getRegInfo().ri_gp_value;
         break;
@@ -244,10 +235,8 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
       error(toString(Sec->File) + ": invalid size of .reginfo section");
       return nullptr;
     }
-    auto *R = reinterpret_cast<const Elf_Mips_RegInfo *>(Sec->Data.data());
-    if (Config->Relocatable && R->ri_gp_value)
-      error(toString(Sec->File) + ": unsupported non-zero ri_gp_value");
 
+    auto *R = reinterpret_cast<const Elf_Mips_RegInfo *>(Sec->Data.data());
     Reginfo.ri_gprmask |= R->ri_gprmask;
     Sec->getFile<ELFT>()->MipsGp0 = R->ri_gp_value;
   };
@@ -266,8 +255,8 @@ InputSection *elf::createInterpSection() {
   return Sec;
 }
 
-Symbol *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
-                               uint64_t Size, InputSectionBase &Section) {
+Defined *elf::addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
+                                uint64_t Size, InputSectionBase &Section) {
   auto *S = make<Defined>(Section.File, Name, STB_LOCAL, STV_DEFAULT, Type,
                           Value, Size, &Section);
   if (InX::SymTab)
@@ -381,7 +370,7 @@ EhFrameSection::EhFrameSection()
 template <class ELFT, class RelTy>
 CieRecord *EhFrameSection::addCie(EhSectionPiece &Cie, ArrayRef<RelTy> Rels) {
   auto *Sec = cast<EhInputSection>(Cie.Sec);
-  if (read32(Cie.data().data() + 4, Config->Endianness) != 0)
+  if (read32(Cie.data().data() + 4) != 0)
     fatal(toString(Sec) + ": CIE expected at beginning of .eh_frame");
 
   Symbol *Personality = nullptr;
@@ -433,14 +422,14 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &Fde, ArrayRef<RelTy> Rels) {
 // one and associates FDEs to the CIE.
 template <class ELFT, class RelTy>
 void EhFrameSection::addSectionAux(EhInputSection *Sec, ArrayRef<RelTy> Rels) {
-  DenseMap<size_t, CieRecord *> OffsetToCie;
+  OffsetToCie.clear();
   for (EhSectionPiece &Piece : Sec->Pieces) {
     // The empty record is the end marker.
     if (Piece.Size == 4)
       return;
 
     size_t Offset = Piece.InputOff;
-    uint32_t ID = read32(Piece.data().data() + 4, Config->Endianness);
+    uint32_t ID = read32(Piece.data().data() + 4);
     if (ID == 0) {
       OffsetToCie[Offset] = addCie<ELFT>(Piece, Rels);
       continue;
@@ -468,10 +457,6 @@ template <class ELFT> void EhFrameSection::addSection(InputSectionBase *C) {
   for (auto *DS : Sec->DependentSections)
     DependentSections.push_back(DS);
 
-  // .eh_frame is a sequence of CIE or FDE records. This function
-  // splits it into pieces so that we can call
-  // SplitInputSection::getSectionPiece on the section.
-  Sec->split<ELFT>();
   if (Sec->Pieces.empty())
     return;
 
@@ -509,10 +494,10 @@ void EhFrameSection::finalizeContents() {
   }
 
   // The LSB standard does not allow a .eh_frame section with zero
-  // Call Frame Information records. Therefore add a CIE record length
-  // 0 as a terminator if this .eh_frame section is empty.
-  if (Off == 0)
-    Off = 4;
+  // Call Frame Information records. glibc unwind-dw2-fde.c
+  // classify_object_over_fdes expects there is a CIE record length 0 as a
+  // terminator. Thus we add one unconditionally.
+  Off += 4;
 
   this->Size = Off;
 }
@@ -538,11 +523,11 @@ std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
 static uint64_t readFdeAddr(uint8_t *Buf, int Size) {
   switch (Size) {
   case DW_EH_PE_udata2:
-    return read16(Buf, Config->Endianness);
+    return read16(Buf);
   case DW_EH_PE_udata4:
-    return read32(Buf, Config->Endianness);
+    return read32(Buf);
   case DW_EH_PE_udata8:
-    return read64(Buf, Config->Endianness);
+    return read64(Buf);
   case DW_EH_PE_absptr:
     return readUint(Buf);
   }
@@ -589,7 +574,15 @@ void EhFrameSection::writeTo(uint8_t *Buf) {
 
 GotSection::GotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotEntrySize, ".got") {}
+                       Target->GotEntrySize, ".got") {
+  // PPC64 saves the ElfSym::GlobalOffsetTable .TOC. as the first entry in the
+  // .got. If there are no references to .TOC. in the symbol table,
+  // ElfSym::GlobalOffsetTable will not be defined and we won't need to save
+  // .TOC. in the .got. When it is defined, we increase NumEntries by the number
+  // of entries used to emit ElfSym::GlobalOffsetTable.
+  if (ElfSym::GlobalOffsetTable && !Target->GotBaseSymInGotPlt)
+    NumEntries += Target->GotHeaderEntriesNum;
+}
 
 void GotSection::addEntry(Symbol &Sym) {
   Sym.GotIndex = NumEntries;
@@ -623,112 +616,25 @@ uint64_t GotSection::getGlobalDynOffset(const Symbol &B) const {
   return B.GlobalDynIndex * Config->Wordsize;
 }
 
-void GotSection::finalizeContents() { Size = NumEntries * Config->Wordsize; }
+void GotSection::finalizeContents() {
+  Size = NumEntries * Config->Wordsize;
+}
 
 bool GotSection::empty() const {
   // We need to emit a GOT even if it's empty if there's a relocation that is
   // relative to GOT(such as GOTOFFREL) or there's a symbol that points to a GOT
-  // (i.e. _GLOBAL_OFFSET_TABLE_).
-  return NumEntries == 0 && !HasGotOffRel && !ElfSym::GlobalOffsetTable;
+  // (i.e. _GLOBAL_OFFSET_TABLE_) that the target defines relative to the .got.
+  return NumEntries == 0 && !HasGotOffRel &&
+         !(ElfSym::GlobalOffsetTable && !Target->GotBaseSymInGotPlt);
 }
 
 void GotSection::writeTo(uint8_t *Buf) {
   // Buf points to the start of this section's buffer,
   // whereas InputSectionBase::relocateAlloc() expects its argument
   // to point to the start of the output section.
+  Target->writeGotHeader(Buf);
+  Buf += Target->GotHeaderEntriesNum * Target->GotEntrySize;
   relocateAlloc(Buf - OutSecOff, Buf - OutSecOff + Size);
-}
-
-MipsGotSection::MipsGotSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, SHT_PROGBITS, 16,
-                       ".got") {}
-
-void MipsGotSection::addEntry(Symbol &Sym, int64_t Addend, RelExpr Expr) {
-  // For "true" local symbols which can be referenced from the same module
-  // only compiler creates two instructions for address loading:
-  //
-  // lw   $8, 0($gp) # R_MIPS_GOT16
-  // addi $8, $8, 0  # R_MIPS_LO16
-  //
-  // The first instruction loads high 16 bits of the symbol address while
-  // the second adds an offset. That allows to reduce number of required
-  // GOT entries because only one global offset table entry is necessary
-  // for every 64 KBytes of local data. So for local symbols we need to
-  // allocate number of GOT entries to hold all required "page" addresses.
-  //
-  // All global symbols (hidden and regular) considered by compiler uniformly.
-  // It always generates a single `lw` instruction and R_MIPS_GOT16 relocation
-  // to load address of the symbol. So for each such symbol we need to
-  // allocate dedicated GOT entry to store its address.
-  //
-  // If a symbol is preemptible we need help of dynamic linker to get its
-  // final address. The corresponding GOT entries are allocated in the
-  // "global" part of GOT. Entries for non preemptible global symbol allocated
-  // in the "local" part of GOT.
-  //
-  // See "Global Offset Table" in Chapter 5:
-  // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (Expr == R_MIPS_GOT_LOCAL_PAGE) {
-    // At this point we do not know final symbol value so to reduce number
-    // of allocated GOT entries do the following trick. Save all output
-    // sections referenced by GOT relocations. Then later in the `finalize`
-    // method calculate number of "pages" required to cover all saved output
-    // section and allocate appropriate number of GOT entries.
-    PageIndexMap.insert({Sym.getOutputSection(), 0});
-    return;
-  }
-  if (Sym.isTls()) {
-    // GOT entries created for MIPS TLS relocations behave like
-    // almost GOT entries from other ABIs. They go to the end
-    // of the global offset table.
-    Sym.GotIndex = TlsEntries.size();
-    TlsEntries.push_back(&Sym);
-    return;
-  }
-  auto AddEntry = [&](Symbol &S, uint64_t A, GotEntries &Items) {
-    if (S.isInGot() && !A)
-      return;
-    size_t NewIndex = Items.size();
-    if (!EntryIndexMap.insert({{&S, A}, NewIndex}).second)
-      return;
-    Items.emplace_back(&S, A);
-    if (!A)
-      S.GotIndex = NewIndex;
-  };
-  if (Sym.IsPreemptible) {
-    // Ignore addends for preemptible symbols. They got single GOT entry anyway.
-    AddEntry(Sym, 0, GlobalEntries);
-    Sym.IsInGlobalMipsGot = true;
-  } else if (Expr == R_MIPS_GOT_OFF32) {
-    AddEntry(Sym, Addend, LocalEntries32);
-    Sym.Is32BitMipsGot = true;
-  } else {
-    // Hold local GOT entries accessed via a 16-bit index separately.
-    // That allows to write them in the beginning of the GOT and keep
-    // their indexes as less as possible to escape relocation's overflow.
-    AddEntry(Sym, Addend, LocalEntries);
-  }
-}
-
-bool MipsGotSection::addDynTlsEntry(Symbol &Sym) {
-  if (Sym.GlobalDynIndex != -1U)
-    return false;
-  Sym.GlobalDynIndex = TlsEntries.size();
-  // Global Dynamic TLS entries take two GOT slots.
-  TlsEntries.push_back(nullptr);
-  TlsEntries.push_back(&Sym);
-  return true;
-}
-
-// Reserves TLS entries for a TLS module ID and a TLS block offset.
-// In total it takes two GOT slots.
-bool MipsGotSection::addTlsIndex() {
-  if (TlsIndexOff != uint32_t(-1))
-    return false;
-  TlsIndexOff = TlsEntries.size() * Config->Wordsize;
-  TlsEntries.push_back(nullptr);
-  TlsEntries.push_back(nullptr);
-  return true;
 }
 
 static uint64_t getMipsPageAddr(uint64_t Addr) {
@@ -739,71 +645,332 @@ static uint64_t getMipsPageCount(uint64_t Size) {
   return (Size + 0xfffe) / 0xffff + 1;
 }
 
-uint64_t MipsGotSection::getPageEntryOffset(const Symbol &B,
-                                            int64_t Addend) const {
-  const OutputSection *OutSec = B.getOutputSection();
-  uint64_t SecAddr = getMipsPageAddr(OutSec->Addr);
-  uint64_t SymAddr = getMipsPageAddr(B.getVA(Addend));
-  uint64_t Index = PageIndexMap.lookup(OutSec) + (SymAddr - SecAddr) / 0xffff;
-  assert(Index < PageEntriesNum);
-  return (HeaderEntriesNum + Index) * Config->Wordsize;
+MipsGotSection::MipsGotSection()
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, SHT_PROGBITS, 16,
+                       ".got") {}
+
+void MipsGotSection::addEntry(InputFile &File, Symbol &Sym, int64_t Addend,
+                              RelExpr Expr) {
+  FileGot &G = getGot(File);
+  if (Expr == R_MIPS_GOT_LOCAL_PAGE) {
+    if (const OutputSection *OS = Sym.getOutputSection())
+      G.PagesMap.insert({OS, {}});
+    else
+      G.Local16.insert({{nullptr, getMipsPageAddr(Sym.getVA(Addend))}, 0});
+  } else if (Sym.isTls())
+    G.Tls.insert({&Sym, 0});
+  else if (Sym.IsPreemptible && Expr == R_ABS)
+    G.Relocs.insert({&Sym, 0});
+  else if (Sym.IsPreemptible)
+    G.Global.insert({&Sym, 0});
+  else if (Expr == R_MIPS_GOT_OFF32)
+    G.Local32.insert({{&Sym, Addend}, 0});
+  else
+    G.Local16.insert({{&Sym, Addend}, 0});
 }
 
-uint64_t MipsGotSection::getSymEntryOffset(const Symbol &B,
-                                           int64_t Addend) const {
-  // Calculate offset of the GOT entries block: TLS, global, local.
-  uint64_t Index = HeaderEntriesNum + PageEntriesNum;
-  if (B.isTls())
-    Index += LocalEntries.size() + LocalEntries32.size() + GlobalEntries.size();
-  else if (B.IsInGlobalMipsGot)
-    Index += LocalEntries.size() + LocalEntries32.size();
-  else if (B.Is32BitMipsGot)
-    Index += LocalEntries.size();
-  // Calculate offset of the GOT entry in the block.
-  if (B.isInGot())
-    Index += B.GotIndex;
-  else {
-    auto It = EntryIndexMap.find({&B, Addend});
-    assert(It != EntryIndexMap.end());
-    Index += It->second;
+void MipsGotSection::addDynTlsEntry(InputFile &File, Symbol &Sym) {
+  getGot(File).DynTlsSymbols.insert({&Sym, 0});
+}
+
+void MipsGotSection::addTlsIndex(InputFile &File) {
+  getGot(File).DynTlsSymbols.insert({nullptr, 0});
+}
+
+size_t MipsGotSection::FileGot::getEntriesNum() const {
+  return getPageEntriesNum() + Local16.size() + Global.size() + Relocs.size() +
+         Tls.size() + DynTlsSymbols.size() * 2;
+}
+
+size_t MipsGotSection::FileGot::getPageEntriesNum() const {
+  size_t Num = 0;
+  for (const std::pair<const OutputSection *, FileGot::PageBlock> &P : PagesMap)
+    Num += P.second.Count;
+  return Num;
+}
+
+size_t MipsGotSection::FileGot::getIndexedEntriesNum() const {
+  size_t Count = getPageEntriesNum() + Local16.size() + Global.size();
+  // If there are relocation-only entries in the GOT, TLS entries
+  // are allocated after them. TLS entries should be addressable
+  // by 16-bit index so count both reloc-only and TLS entries.
+  if (!Tls.empty() || !DynTlsSymbols.empty())
+    Count += Relocs.size() + Tls.size() + DynTlsSymbols.size() * 2;
+  return Count;
+}
+
+MipsGotSection::FileGot &MipsGotSection::getGot(InputFile &F) {
+  if (!F.MipsGotIndex.hasValue()) {
+    Gots.emplace_back();
+    Gots.back().File = &F;
+    F.MipsGotIndex = Gots.size() - 1;
+  }
+  return Gots[*F.MipsGotIndex];
+}
+
+uint64_t MipsGotSection::getPageEntryOffset(const InputFile *F,
+                                            const Symbol &Sym,
+                                            int64_t Addend) const {
+  const FileGot &G = Gots[*F->MipsGotIndex];
+  uint64_t Index = 0;
+  if (const OutputSection *OutSec = Sym.getOutputSection()) {
+    uint64_t SecAddr = getMipsPageAddr(OutSec->Addr);
+    uint64_t SymAddr = getMipsPageAddr(Sym.getVA(Addend));
+    Index = G.PagesMap.lookup(OutSec).FirstIndex + (SymAddr - SecAddr) / 0xffff;
+  } else {
+    Index = G.Local16.lookup({nullptr, getMipsPageAddr(Sym.getVA(Addend))});
   }
   return Index * Config->Wordsize;
 }
 
-uint64_t MipsGotSection::getTlsOffset() const {
-  return (getLocalEntriesNum() + GlobalEntries.size()) * Config->Wordsize;
+uint64_t MipsGotSection::getSymEntryOffset(const InputFile *F, const Symbol &S,
+                                           int64_t Addend) const {
+  const FileGot &G = Gots[*F->MipsGotIndex];
+  Symbol *Sym = const_cast<Symbol *>(&S);
+  if (Sym->isTls())
+    return G.Tls.lookup(Sym) * Config->Wordsize;
+  if (Sym->IsPreemptible)
+    return G.Global.lookup(Sym) * Config->Wordsize;
+  return G.Local16.lookup({Sym, Addend}) * Config->Wordsize;
 }
 
-uint64_t MipsGotSection::getGlobalDynOffset(const Symbol &B) const {
-  return B.GlobalDynIndex * Config->Wordsize;
+uint64_t MipsGotSection::getTlsIndexOffset(const InputFile *F) const {
+  const FileGot &G = Gots[*F->MipsGotIndex];
+  return G.DynTlsSymbols.lookup(nullptr) * Config->Wordsize;
+}
+
+uint64_t MipsGotSection::getGlobalDynOffset(const InputFile *F,
+                                            const Symbol &S) const {
+  const FileGot &G = Gots[*F->MipsGotIndex];
+  Symbol *Sym = const_cast<Symbol *>(&S);
+  return G.DynTlsSymbols.lookup(Sym) * Config->Wordsize;
 }
 
 const Symbol *MipsGotSection::getFirstGlobalEntry() const {
-  return GlobalEntries.empty() ? nullptr : GlobalEntries.front().first;
+  if (Gots.empty())
+    return nullptr;
+  const FileGot &PrimGot = Gots.front();
+  if (!PrimGot.Global.empty())
+    return PrimGot.Global.front().first;
+  if (!PrimGot.Relocs.empty())
+    return PrimGot.Relocs.front().first;
+  return nullptr;
 }
 
 unsigned MipsGotSection::getLocalEntriesNum() const {
-  return HeaderEntriesNum + PageEntriesNum + LocalEntries.size() +
-         LocalEntries32.size();
+  if (Gots.empty())
+    return HeaderEntriesNum;
+  return HeaderEntriesNum + Gots.front().getPageEntriesNum() +
+         Gots.front().Local16.size();
+}
+
+bool MipsGotSection::tryMergeGots(FileGot &Dst, FileGot &Src, bool IsPrimary) {
+  FileGot Tmp = Dst;
+  set_union(Tmp.PagesMap, Src.PagesMap);
+  set_union(Tmp.Local16, Src.Local16);
+  set_union(Tmp.Global, Src.Global);
+  set_union(Tmp.Relocs, Src.Relocs);
+  set_union(Tmp.Tls, Src.Tls);
+  set_union(Tmp.DynTlsSymbols, Src.DynTlsSymbols);
+
+  size_t Count = IsPrimary ? HeaderEntriesNum : 0;
+  Count += Tmp.getIndexedEntriesNum();
+
+  if (Count * Config->Wordsize > Config->MipsGotSize)
+    return false;
+
+  std::swap(Tmp, Dst);
+  return true;
 }
 
 void MipsGotSection::finalizeContents() { updateAllocSize(); }
 
 bool MipsGotSection::updateAllocSize() {
-  PageEntriesNum = 0;
-  for (std::pair<const OutputSection *, size_t> &P : PageIndexMap) {
-    // For each output section referenced by GOT page relocations calculate
-    // and save into PageIndexMap an upper bound of MIPS GOT entries required
-    // to store page addresses of local symbols. We assume the worst case -
-    // each 64kb page of the output section has at least one GOT relocation
-    // against it. And take in account the case when the section intersects
-    // page boundaries.
-    P.second = PageEntriesNum;
-    PageEntriesNum += getMipsPageCount(P.first->Size);
-  }
-  Size = (getLocalEntriesNum() + GlobalEntries.size() + TlsEntries.size()) *
-         Config->Wordsize;
+  Size = HeaderEntriesNum * Config->Wordsize;
+  for (const FileGot &G : Gots)
+    Size += G.getEntriesNum() * Config->Wordsize;
   return false;
+}
+
+template <class ELFT> void MipsGotSection::build() {
+  if (Gots.empty())
+    return;
+
+  std::vector<FileGot> MergedGots(1);
+
+  // For each GOT move non-preemptible symbols from the `Global`
+  // to `Local16` list. Preemptible symbol might become non-preemptible
+  // one if, for example, it gets a related copy relocation.
+  for (FileGot &Got : Gots) {
+    for (auto &P: Got.Global)
+      if (!P.first->IsPreemptible)
+        Got.Local16.insert({{P.first, 0}, 0});
+    Got.Global.remove_if([&](const std::pair<Symbol *, size_t> &P) {
+      return !P.first->IsPreemptible;
+    });
+  }
+
+  // For each GOT remove "reloc-only" entry if there is "global"
+  // entry for the same symbol. And add local entries which indexed
+  // using 32-bit value at the end of 16-bit entries.
+  for (FileGot &Got : Gots) {
+    Got.Relocs.remove_if([&](const std::pair<Symbol *, size_t> &P) {
+      return Got.Global.count(P.first);
+    });
+    set_union(Got.Local16, Got.Local32);
+    Got.Local32.clear();
+  }
+
+  // Evaluate number of "reloc-only" entries in the resulting GOT.
+  // To do that put all unique "reloc-only" and "global" entries
+  // from all GOTs to the future primary GOT.
+  FileGot *PrimGot = &MergedGots.front();
+  for (FileGot &Got : Gots) {
+    set_union(PrimGot->Relocs, Got.Global);
+    set_union(PrimGot->Relocs, Got.Relocs);
+    Got.Relocs.clear();
+  }
+
+  // Evaluate number of "page" entries in each GOT.
+  for (FileGot &Got : Gots) {
+    for (std::pair<const OutputSection *, FileGot::PageBlock> &P :
+         Got.PagesMap) {
+      const OutputSection *OS = P.first;
+      uint64_t SecSize = 0;
+      for (BaseCommand *Cmd : OS->SectionCommands) {
+        if (auto *ISD = dyn_cast<InputSectionDescription>(Cmd))
+          for (InputSection *IS : ISD->Sections) {
+            uint64_t Off = alignTo(SecSize, IS->Alignment);
+            SecSize = Off + IS->getSize();
+          }
+      }
+      P.second.Count = getMipsPageCount(SecSize);
+    }
+  }
+
+  // Merge GOTs. Try to join as much as possible GOTs but do not exceed
+  // maximum GOT size. At first, try to fill the primary GOT because
+  // the primary GOT can be accessed in the most effective way. If it
+  // is not possible, try to fill the last GOT in the list, and finally
+  // create a new GOT if both attempts failed.
+  for (FileGot &SrcGot : Gots) {
+    InputFile *File = SrcGot.File;
+    if (tryMergeGots(MergedGots.front(), SrcGot, true)) {
+      File->MipsGotIndex = 0;
+    } else {
+      if (!tryMergeGots(MergedGots.back(), SrcGot, false)) {
+        MergedGots.emplace_back();
+        std::swap(MergedGots.back(), SrcGot);
+      }
+      File->MipsGotIndex = MergedGots.size() - 1;
+    }
+  }
+  std::swap(Gots, MergedGots);
+
+  // Reduce number of "reloc-only" entries in the primary GOT
+  // by substracting "global" entries exist in the primary GOT.
+  PrimGot = &Gots.front();
+  PrimGot->Relocs.remove_if([&](const std::pair<Symbol *, size_t> &P) {
+    return PrimGot->Global.count(P.first);
+  });
+
+  // Calculate indexes for each GOT entry.
+  size_t Index = HeaderEntriesNum;
+  for (FileGot &Got : Gots) {
+    Got.StartIndex = &Got == PrimGot ? 0 : Index;
+    for (std::pair<const OutputSection *, FileGot::PageBlock> &P :
+         Got.PagesMap) {
+      // For each output section referenced by GOT page relocations calculate
+      // and save into PagesMap an upper bound of MIPS GOT entries required
+      // to store page addresses of local symbols. We assume the worst case -
+      // each 64kb page of the output section has at least one GOT relocation
+      // against it. And take in account the case when the section intersects
+      // page boundaries.
+      P.second.FirstIndex = Index;
+      Index += P.second.Count;
+    }
+    for (auto &P: Got.Local16)
+      P.second = Index++;
+    for (auto &P: Got.Global)
+      P.second = Index++;
+    for (auto &P: Got.Relocs)
+      P.second = Index++;
+    for (auto &P: Got.Tls)
+      P.second = Index++;
+    for (auto &P: Got.DynTlsSymbols) {
+      P.second = Index;
+      Index += 2;
+    }
+  }
+
+  // Update Symbol::GotIndex field to use this
+  // value later in the `sortMipsSymbols` function.
+  for (auto &P : PrimGot->Global)
+    P.first->GotIndex = P.second;
+  for (auto &P : PrimGot->Relocs)
+    P.first->GotIndex = P.second;
+
+  // Create dynamic relocations.
+  for (FileGot &Got : Gots) {
+    // Create dynamic relocations for TLS entries.
+    for (std::pair<Symbol *, size_t> &P : Got.Tls) {
+      Symbol *S = P.first;
+      uint64_t Offset = P.second * Config->Wordsize;
+      if (S->IsPreemptible)
+        InX::RelaDyn->addReloc(Target->TlsGotRel, this, Offset, S);
+    }
+    for (std::pair<Symbol *, size_t> &P : Got.DynTlsSymbols) {
+      Symbol *S = P.first;
+      uint64_t Offset = P.second * Config->Wordsize;
+      if (S == nullptr) {
+        if (!Config->Pic)
+          continue;
+        InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, this, Offset, S);
+      } else {
+        // When building a shared library we still need a dynamic relocation
+        // for the module index. Therefore only checking for
+        // S->IsPreemptible is not sufficient (this happens e.g. for
+        // thread-locals that have been marked as local through a linker script)
+        if (!S->IsPreemptible && !Config->Pic)
+          continue;
+        InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, this, Offset, S);
+        // However, we can skip writing the TLS offset reloc for non-preemptible
+        // symbols since it is known even in shared libraries
+        if (!S->IsPreemptible)
+          continue;
+        Offset += Config->Wordsize;
+        InX::RelaDyn->addReloc(Target->TlsOffsetRel, this, Offset, S);
+      }
+    }
+
+    // Do not create dynamic relocations for non-TLS
+    // entries in the primary GOT.
+    if (&Got == PrimGot)
+      continue;
+
+    // Dynamic relocations for "global" entries.
+    for (const std::pair<Symbol *, size_t> &P : Got.Global) {
+      uint64_t Offset = P.second * Config->Wordsize;
+      InX::RelaDyn->addReloc(Target->RelativeRel, this, Offset, P.first);
+    }
+    if (!Config->Pic)
+      continue;
+    // Dynamic relocations for "local" entries in case of PIC.
+    for (const std::pair<const OutputSection *, FileGot::PageBlock> &L :
+         Got.PagesMap) {
+      size_t PageCount = L.second.Count;
+      for (size_t PI = 0; PI < PageCount; ++PI) {
+        uint64_t Offset = (L.second.FirstIndex + PI) * Config->Wordsize;
+        InX::RelaDyn->addReloc({Target->RelativeRel, this, Offset, L.first,
+                                int64_t(PI * 0x10000)});
+      }
+    }
+    for (const std::pair<GotEntry, size_t> &P : Got.Local16) {
+      uint64_t Offset = P.second * Config->Wordsize;
+      InX::RelaDyn->addReloc({Target->RelativeRel, this, Offset, true,
+                              P.first.first, P.first.second});
+    }
+  }
 }
 
 bool MipsGotSection::empty() const {
@@ -812,7 +979,15 @@ bool MipsGotSection::empty() const {
   return Config->Relocatable;
 }
 
-uint64_t MipsGotSection::getGp() const { return ElfSym::MipsGp->getVA(0); }
+uint64_t MipsGotSection::getGp(const InputFile *F) const {
+  // For files without related GOT or files refer a primary GOT
+  // returns "common" _gp value. For secondary GOTs calculate
+  // individual _gp values.
+  if (!F || !F->MipsGotIndex.hasValue() || *F->MipsGotIndex == 0)
+    return ElfSym::MipsGp->getVA(0);
+  return getVA() + Gots[*F->MipsGotIndex].StartIndex * Config->Wordsize +
+         0x7ff0;
+}
 
 void MipsGotSection::writeTo(uint8_t *Buf) {
   // Set the MSB of the second GOT slot. This is not required by any
@@ -830,59 +1005,67 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
   // keep doing this for now. We really need to revisit this to see
   // if we had to do this.
   writeUint(Buf + Config->Wordsize, (uint64_t)1 << (Config->Wordsize * 8 - 1));
-  Buf += HeaderEntriesNum * Config->Wordsize;
-  // Write 'page address' entries to the local part of the GOT.
-  for (std::pair<const OutputSection *, size_t> &L : PageIndexMap) {
-    size_t PageCount = getMipsPageCount(L.first->Size);
-    uint64_t FirstPageAddr = getMipsPageAddr(L.first->Addr);
-    for (size_t PI = 0; PI < PageCount; ++PI) {
-      uint8_t *Entry = Buf + (L.second + PI) * Config->Wordsize;
-      writeUint(Entry, FirstPageAddr + PI * 0x10000);
+  for (const FileGot &G : Gots) {
+    auto Write = [&](size_t I, const Symbol *S, int64_t A) {
+      uint64_t VA = A;
+      if (S) {
+        VA = S->getVA(A);
+        if (S->StOther & STO_MIPS_MICROMIPS)
+          VA |= 1;
+      }
+      writeUint(Buf + I * Config->Wordsize, VA);
+    };
+    // Write 'page address' entries to the local part of the GOT.
+    for (const std::pair<const OutputSection *, FileGot::PageBlock> &L :
+         G.PagesMap) {
+      size_t PageCount = L.second.Count;
+      uint64_t FirstPageAddr = getMipsPageAddr(L.first->Addr);
+      for (size_t PI = 0; PI < PageCount; ++PI)
+        Write(L.second.FirstIndex + PI, nullptr, FirstPageAddr + PI * 0x10000);
     }
-  }
-  Buf += PageEntriesNum * Config->Wordsize;
-  auto AddEntry = [&](const GotEntry &SA) {
-    uint8_t *Entry = Buf;
-    Buf += Config->Wordsize;
-    const Symbol *Sym = SA.first;
-    uint64_t VA = Sym->getVA(SA.second);
-    if (Sym->StOther & STO_MIPS_MICROMIPS)
-      VA |= 1;
-    writeUint(Entry, VA);
-  };
-  std::for_each(std::begin(LocalEntries), std::end(LocalEntries), AddEntry);
-  std::for_each(std::begin(LocalEntries32), std::end(LocalEntries32), AddEntry);
-  std::for_each(std::begin(GlobalEntries), std::end(GlobalEntries), AddEntry);
-  // Initialize TLS-related GOT entries. If the entry has a corresponding
-  // dynamic relocations, leave it initialized by zero. Write down adjusted
-  // TLS symbol's values otherwise. To calculate the adjustments use offsets
-  // for thread-local storage.
-  // https://www.linux-mips.org/wiki/NPTL
-  if (TlsIndexOff != -1U && !Config->Pic)
-    writeUint(Buf + TlsIndexOff, 1);
-  for (const Symbol *B : TlsEntries) {
-    if (!B || B->IsPreemptible)
-      continue;
-    uint64_t VA = B->getVA();
-    if (B->GotIndex != -1U) {
-      uint8_t *Entry = Buf + B->GotIndex * Config->Wordsize;
-      writeUint(Entry, VA - 0x7000);
-    }
-    if (B->GlobalDynIndex != -1U) {
-      uint8_t *Entry = Buf + B->GlobalDynIndex * Config->Wordsize;
-      writeUint(Entry, 1);
-      Entry += Config->Wordsize;
-      writeUint(Entry, VA - 0x8000);
+    // Local, global, TLS, reloc-only  entries.
+    // If TLS entry has a corresponding dynamic relocations, leave it
+    // initialized by zero. Write down adjusted TLS symbol's values otherwise.
+    // To calculate the adjustments use offsets for thread-local storage.
+    // https://www.linux-mips.org/wiki/NPTL
+    for (const std::pair<GotEntry, size_t> &P : G.Local16)
+      Write(P.second, P.first.first, P.first.second);
+    // Write VA to the primary GOT only. For secondary GOTs that
+    // will be done by REL32 dynamic relocations.
+    if (&G == &Gots.front())
+      for (const std::pair<const Symbol *, size_t> &P : G.Global)
+        Write(P.second, P.first, 0);
+    for (const std::pair<Symbol *, size_t> &P : G.Relocs)
+      Write(P.second, P.first, 0);
+    for (const std::pair<Symbol *, size_t> &P : G.Tls)
+      Write(P.second, P.first, P.first->IsPreemptible ? 0 : -0x7000);
+    for (const std::pair<Symbol *, size_t> &P : G.DynTlsSymbols) {
+      if (P.first == nullptr && !Config->Pic)
+        Write(P.second, nullptr, 1);
+      else if (P.first && !P.first->IsPreemptible) {
+        // If we are emitting PIC code with relocations we mustn't write
+        // anything to the GOT here. When using Elf_Rel relocations the value
+        // one will be treated as an addend and will cause crashes at runtime
+        if (!Config->Pic)
+          Write(P.second, nullptr, 1);
+        Write(P.second + 1, P.first, -0x8000);
+      }
     }
   }
 }
 
+// On PowerPC the .plt section is used to hold the table of function addresses
+// instead of the .got.plt, and the type is SHT_NOBITS similar to a .bss
+// section. I don't know why we have a BSS style type for the section but it is
+// consitent across both 64-bit PowerPC ABIs as well as the 32-bit PowerPC ABI.
 GotPltSection::GotPltSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotPltEntrySize, ".got.plt") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE,
+                       Config->EMachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
+                       Target->GotPltEntrySize,
+                       Config->EMachine == EM_PPC64 ? ".plt" : ".got.plt") {}
 
 void GotPltSection::addEntry(Symbol &Sym) {
-  Sym.GotPltIndex = Target->GotPltHeaderEntriesNum + Entries.size();
+  assert(Sym.PltIndex == Entries.size());
   Entries.push_back(&Sym);
 }
 
@@ -900,16 +1083,37 @@ void GotPltSection::writeTo(uint8_t *Buf) {
   }
 }
 
-// On ARM the IgotPltSection is part of the GotSection, on other Targets it is
-// part of the .got.plt
+bool GotPltSection::empty() const {
+  // We need to emit a GOT.PLT even if it's empty if there's a symbol that
+  // references the _GLOBAL_OFFSET_TABLE_ and the Target defines the symbol
+  // relative to the .got.plt section.
+  return Entries.empty() &&
+         !(ElfSym::GlobalOffsetTable && Target->GotBaseSymInGotPlt);
+}
+
+static StringRef getIgotPltName() {
+  // On ARM the IgotPltSection is part of the GotSection.
+  if (Config->EMachine == EM_ARM)
+    return ".got";
+
+  // On PowerPC64 the GotPltSection is renamed to '.plt' so the IgotPltSection
+  // needs to be named the same.
+  if (Config->EMachine == EM_PPC64)
+    return ".plt";
+
+  return ".got.plt";
+}
+
+// On PowerPC64 the GotPltSection type is SHT_NOBITS so we have to follow suit
+// with the IgotPltSection.
 IgotPltSection::IgotPltSection()
-    : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS,
-                       Target->GotPltEntrySize,
-                       Config->EMachine == EM_ARM ? ".got" : ".got.plt") {}
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE,
+                       Config->EMachine == EM_PPC64 ? SHT_NOBITS : SHT_PROGBITS,
+                       Target->GotPltEntrySize, getIgotPltName()) {}
 
 void IgotPltSection::addEntry(Symbol &Sym) {
   Sym.IsInIgot = true;
-  Sym.GotPltIndex = Entries.size();
+  assert(Sym.PltIndex == Entries.size());
   Entries.push_back(&Sym);
 }
 
@@ -1005,8 +1209,14 @@ void DynamicSection<ELFT>::addInt(int32_t Tag, uint64_t Val) {
 
 template <class ELFT>
 void DynamicSection<ELFT>::addInSec(int32_t Tag, InputSection *Sec) {
+  Entries.push_back({Tag, [=] { return Sec->getVA(0); }});
+}
+
+template <class ELFT>
+void DynamicSection<ELFT>::addInSecRelative(int32_t Tag, InputSection *Sec) {
+  size_t TagOffset = Entries.size() * Entsize;
   Entries.push_back(
-      {Tag, [=] { return Sec->getParent()->Addr + Sec->OutSecOff; }});
+      {Tag, [=] { return Sec->getVA(0) - (getVA() + TagOffset); }});
 }
 
 template <class ELFT>
@@ -1034,6 +1244,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   uint32_t DtFlags1 = 0;
   if (Config->Bsymbolic)
     DtFlags |= DF_SYMBOLIC;
+  if (Config->ZInitfirst)
+    DtFlags1 |= DF_1_INITFIRST;
   if (Config->ZNodelete)
     DtFlags1 |= DF_1_NODELETE;
   if (Config->ZNodlopen)
@@ -1046,6 +1258,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     DtFlags |= DF_ORIGIN;
     DtFlags1 |= DF_1_ORIGIN;
   }
+  if (!Config->ZText)
+    DtFlags |= DF_TEXTREL;
 
   if (DtFlags)
     addInt(DT_FLAGS, DtFlags);
@@ -1160,8 +1374,23 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     else
       addInt(DT_MIPS_GOTSYM, InX::DynSymTab->getNumSymbols());
     addInSec(DT_PLTGOT, InX::MipsGot);
-    if (InX::MipsRldMap)
-      addInSec(DT_MIPS_RLD_MAP, InX::MipsRldMap);
+    if (InX::MipsRldMap) {
+      if (!Config->Pie)
+        addInSec(DT_MIPS_RLD_MAP, InX::MipsRldMap);
+      // Store the offset to the .rld_map section
+      // relative to the address of the tag.
+      addInSecRelative(DT_MIPS_RLD_MAP_REL, InX::MipsRldMap);
+    }
+  }
+
+  // Glink dynamic tag is required by the V2 abi if the plt section isn't empty.
+  if (Config->EMachine == EM_PPC64 && !InX::Plt->empty()) {
+    // The Glink tag points to 32 bytes before the first lazy symbol resolution
+    // stub, which starts directly after the header.
+    Entries.push_back({DT_PPC64_GLINK, [=] {
+                         unsigned Offset = Target->PltHeaderSize - 32;
+                         return InX::Plt->getVA(0) + Offset;
+                       }});
   }
 
   addInt(DT_NULL, 0);
@@ -1181,13 +1410,16 @@ template <class ELFT> void DynamicSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 uint64_t DynamicReloc::getOffset() const {
-  return InputSec->getOutputSection()->Addr + InputSec->getOffset(OffsetInSec);
+  return InputSec->getVA(OffsetInSec);
 }
 
-int64_t DynamicReloc::getAddend() const {
+int64_t DynamicReloc::computeAddend() const {
   if (UseSymVA)
     return Sym->getVA(Addend);
-  return Addend;
+  if (!OutputSec)
+    return Addend;
+  // See the comment in the DynamicReloc ctor.
+  return getMipsPageAddr(OutputSec->Addr) + Addend;
 }
 
 uint32_t DynamicReloc::getSymIndex() const {
@@ -1201,6 +1433,23 @@ RelocationBaseSection::RelocationBaseSection(StringRef Name, uint32_t Type,
                                              int32_t SizeDynamicTag)
     : SyntheticSection(SHF_ALLOC, Type, Config->Wordsize, Name),
       DynamicTag(DynamicTag), SizeDynamicTag(SizeDynamicTag) {}
+
+void RelocationBaseSection::addReloc(RelType DynType, InputSectionBase *IS,
+                                     uint64_t OffsetInSec, Symbol *Sym) {
+  addReloc({DynType, IS, OffsetInSec, false, Sym, 0});
+}
+
+void RelocationBaseSection::addReloc(RelType DynType,
+                                     InputSectionBase *InputSec,
+                                     uint64_t OffsetInSec, Symbol *Sym,
+                                     int64_t Addend, RelExpr Expr,
+                                     RelType Type) {
+  // Write the addends to the relocated address if required. We skip
+  // it if the written value would be zero.
+  if (Config->WriteAddends && (Expr != R_ADDEND || Addend != 0))
+    InputSec->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
+  addReloc({DynType, InputSec, OffsetInSec, Expr != R_ADDEND, Sym, Addend});
+}
 
 void RelocationBaseSection::addReloc(const DynamicReloc &Reloc) {
   if (Reloc.Type == Target->RelativeRel)
@@ -1222,19 +1471,8 @@ template <class ELFT>
 static void encodeDynamicReloc(typename ELFT::Rela *P,
                                const DynamicReloc &Rel) {
   if (Config->IsRela)
-    P->r_addend = Rel.getAddend();
+    P->r_addend = Rel.computeAddend();
   P->r_offset = Rel.getOffset();
-  if (Config->EMachine == EM_MIPS && Rel.getInputSec() == InX::MipsGot)
-    // The MIPS GOT section contains dynamic relocations that correspond to TLS
-    // entries. These entries are placed after the global and local sections of
-    // the GOT. At the point when we create these relocations, the size of the
-    // global and local sections is unknown, so the offset that we store in the
-    // TLS entry's DynamicReloc is relative to the start of the TLS section of
-    // the GOT, rather than being relative to the start of the GOT. This line of
-    // code adds the size of the global and local sections to the virtual
-    // address computed by getOffset() in order to adjust it into the TLS
-    // section.
-    P->r_offset += InX::MipsGot->getTlsOffset();
   P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->IsMips64EL);
 }
 
@@ -1247,31 +1485,21 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
   this->Entsize = Config->IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
 }
 
-template <class ELFT, class RelTy>
-static bool compRelocations(const RelTy &A, const RelTy &B) {
-  bool AIsRel = A.getType(Config->IsMips64EL) == Target->RelativeRel;
-  bool BIsRel = B.getType(Config->IsMips64EL) == Target->RelativeRel;
+static bool compRelocations(const DynamicReloc &A, const DynamicReloc &B) {
+  bool AIsRel = A.Type == Target->RelativeRel;
+  bool BIsRel = B.Type == Target->RelativeRel;
   if (AIsRel != BIsRel)
     return AIsRel;
-
-  return A.getSymbol(Config->IsMips64EL) < B.getSymbol(Config->IsMips64EL);
+  return A.getSymIndex() < B.getSymIndex();
 }
 
 template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
-  uint8_t *BufBegin = Buf;
+  if (Sort)
+    std::stable_sort(Relocs.begin(), Relocs.end(), compRelocations);
+
   for (const DynamicReloc &Rel : Relocs) {
     encodeDynamicReloc<ELFT>(reinterpret_cast<Elf_Rela *>(Buf), Rel);
     Buf += Config->IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-  }
-
-  if (Sort) {
-    if (Config->IsRela)
-      std::stable_sort((Elf_Rela *)BufBegin,
-                       (Elf_Rela *)BufBegin + Relocs.size(),
-                       compRelocations<ELFT, Elf_Rela>);
-    else
-      std::stable_sort((Elf_Rel *)BufBegin, (Elf_Rel *)BufBegin + Relocs.size(),
-                       compRelocations<ELFT, Elf_Rel>);
   }
 }
 
@@ -1360,10 +1588,10 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
       NonRelatives.push_back(R);
   }
 
-  std::sort(Relatives.begin(), Relatives.end(),
-            [](const Elf_Rel &A, const Elf_Rel &B) {
-              return A.r_offset < B.r_offset;
-            });
+  llvm::sort(Relatives.begin(), Relatives.end(),
+             [](const Elf_Rel &A, const Elf_Rel &B) {
+               return A.r_offset < B.r_offset;
+             });
 
   // Try to find groups of relative relocations which are spaced one word
   // apart from one another. These generally correspond to vtable entries. The
@@ -1441,10 +1669,10 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
   }
 
   // Finally the non-relative relocations.
-  std::sort(NonRelatives.begin(), NonRelatives.end(),
-            [](const Elf_Rela &A, const Elf_Rela &B) {
-              return A.r_offset < B.r_offset;
-            });
+  llvm::sort(NonRelatives.begin(), NonRelatives.end(),
+             [](const Elf_Rela &A, const Elf_Rela &B) {
+               return A.r_offset < B.r_offset;
+             });
   if (!NonRelatives.empty()) {
     Add(NonRelatives.size());
     Add(HasAddendIfRela);
@@ -1482,50 +1710,71 @@ SymbolTableBaseSection::SymbolTableBaseSection(StringTableSection &StrTabSec)
 static bool sortMipsSymbols(const SymbolTableEntry &L,
                             const SymbolTableEntry &R) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
-  // All other entries go to the first part of GOT in arbitrary order.
-  bool LIsInLocalGot = !L.Sym->IsInGlobalMipsGot;
-  bool RIsInLocalGot = !R.Sym->IsInGlobalMipsGot;
-  if (LIsInLocalGot || RIsInLocalGot)
-    return !RIsInLocalGot;
-  return L.Sym->GotIndex < R.Sym->GotIndex;
+  // All other entries go to the beginning of a dynsym in arbitrary order.
+  if (L.Sym->isInGot() && R.Sym->isInGot())
+    return L.Sym->GotIndex < R.Sym->GotIndex;
+  if (!L.Sym->isInGot() && !R.Sym->isInGot())
+    return false;
+  return !L.Sym->isInGot();
 }
 
 void SymbolTableBaseSection::finalizeContents() {
   getParent()->Link = StrTabSec.getParent()->SectionIndex;
 
+  if (this->Type != SHT_DYNSYM)
+    return;
+
   // If it is a .dynsym, there should be no local symbols, but we need
   // to do a few things for the dynamic linker.
-  if (this->Type == SHT_DYNSYM) {
-    // Section's Info field has the index of the first non-local symbol.
-    // Because the first symbol entry is a null entry, 1 is the first.
-    getParent()->Info = 1;
 
-    if (InX::GnuHashTab) {
-      // NB: It also sorts Symbols to meet the GNU hash table requirements.
-      InX::GnuHashTab->addSymbols(Symbols);
-    } else if (Config->EMachine == EM_MIPS) {
-      std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
-    }
+  // Section's Info field has the index of the first non-local symbol.
+  // Because the first symbol entry is a null entry, 1 is the first.
+  getParent()->Info = 1;
 
-    size_t I = 0;
-    for (const SymbolTableEntry &S : Symbols) S.Sym->DynsymIndex = ++I;
-    return;
+  if (InX::GnuHashTab) {
+    // NB: It also sorts Symbols to meet the GNU hash table requirements.
+    InX::GnuHashTab->addSymbols(Symbols);
+  } else if (Config->EMachine == EM_MIPS) {
+    std::stable_sort(Symbols.begin(), Symbols.end(), sortMipsSymbols);
   }
+
+  size_t I = 0;
+  for (const SymbolTableEntry &S : Symbols)
+    S.Sym->DynsymIndex = ++I;
 }
 
 // The ELF spec requires that all local symbols precede global symbols, so we
 // sort symbol entries in this function. (For .dynsym, we don't do that because
 // symbols for dynamic linking are inherently all globals.)
+//
+// Aside from above, we put local symbols in groups starting with the STT_FILE
+// symbol. That is convenient for purpose of identifying where are local symbols
+// coming from.
 void SymbolTableBaseSection::postThunkContents() {
   if (this->Type == SHT_DYNSYM)
     return;
-  // move all local symbols before global symbols.
-  auto It = std::stable_partition(
+
+  // Move all local symbols before global symbols.
+  auto E = std::stable_partition(
       Symbols.begin(), Symbols.end(), [](const SymbolTableEntry &S) {
         return S.Sym->isLocal() || S.Sym->computeBinding() == STB_LOCAL;
       });
-  size_t NumLocals = It - Symbols.begin();
+  size_t NumLocals = E - Symbols.begin();
   getParent()->Info = NumLocals + 1;
+
+  // Assign the growing unique ID for each local symbol's file.
+  DenseMap<InputFile *, unsigned> FileIDs;
+  for (auto I = Symbols.begin(); I != E; ++I)
+    FileIDs.insert({I->Sym->File, FileIDs.size()});
+
+  // Sort the local symbols to group them by file. We do not need to care about
+  // the STT_FILE symbols, they are already naturally placed first in each group.
+  // That happens because STT_FILE is always the first symbol in the object and
+  // hence precede all other local symbols we add for a file.
+  std::stable_sort(Symbols.begin(), E,
+                   [&](const SymbolTableEntry &L, const SymbolTableEntry &R) {
+                     return FileIDs[L.Sym->File] < FileIDs[R.Sym->File];
+                   });
 }
 
 void SymbolTableBaseSection::addSymbol(Symbol *B) {
@@ -1592,6 +1841,8 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
         CommonSec = dyn_cast_or_null<BssSection>(D->Section);
     if (CommonSec)
       ESym->st_shndx = SHN_COMMON;
+    else if (Sym->NeedsPltAddr)
+      ESym->st_shndx = SHN_UNDEF;
     else if (const OutputSection *OutSec = Sym->getOutputSection())
       ESym->st_shndx = OutSec->SectionIndex;
     else if (isa<Defined>(Sym))
@@ -1633,9 +1884,11 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
         ESym->st_other |= STO_MIPS_PLT;
       if (isMicroMips()) {
         // Set STO_MIPS_MICROMIPS flag and less-significant bit for
-        // defined microMIPS symbols and shared symbols with PLT record.
-        if ((Sym->isDefined() && (Sym->StOther & STO_MIPS_MICROMIPS)) ||
-            (Sym->isShared() && Sym->NeedsPltAddr)) {
+        // a defined microMIPS symbol and symbol should point to its
+        // PLT entry (in case of microMIPS, PLT entries always contain
+        // microMIPS code).
+        if (Sym->isDefined() &&
+            ((Sym->StOther & STO_MIPS_MICROMIPS) || Sym->NeedsPltAddr)) {
           if (StrTabSec.isDynamic())
             ESym->st_value |= 1;
           ESym->st_other |= STO_MIPS_MICROMIPS;
@@ -1688,12 +1941,14 @@ GnuHashTableSection::GnuHashTableSection()
 void GnuHashTableSection::finalizeContents() {
   getParent()->Link = InX::DynSymTab->getParent()->SectionIndex;
 
-  // Computes bloom filter size in word size. We want to allocate 8
+  // Computes bloom filter size in word size. We want to allocate 12
   // bits for each symbol. It must be a power of two.
-  if (Symbols.empty())
+  if (Symbols.empty()) {
     MaskWords = 1;
-  else
-    MaskWords = NextPowerOf2((Symbols.size() - 1) / Config->Wordsize);
+  } else {
+    uint64_t NumBits = Symbols.size() * 12;
+    MaskWords = NextPowerOf2(NumBits / (Config->Wordsize * 8));
+  }
 
   Size = 16;                            // Header
   Size += Config->Wordsize * MaskWords; // Bloom filter
@@ -1711,7 +1966,7 @@ void GnuHashTableSection::writeTo(uint8_t *Buf) {
   write32(Buf, NBuckets);
   write32(Buf + 4, InX::DynSymTab->getNumSymbols() - Symbols.size());
   write32(Buf + 8, MaskWords);
-  write32(Buf + 12, getShift2());
+  write32(Buf + 12, Shift2);
   Buf += 16;
 
   // Write a bloom filter and a hash table.
@@ -1728,12 +1983,12 @@ void GnuHashTableSection::writeTo(uint8_t *Buf) {
 // [1] Ulrich Drepper (2011), "How To Write Shared Libraries" (Ver. 4.1.2),
 //     p.9, https://www.akkadia.org/drepper/dsohowto.pdf
 void GnuHashTableSection::writeBloomFilter(uint8_t *Buf) {
-  const unsigned C = Config->Wordsize * 8;
+  unsigned C = Config->Is64 ? 64 : 32;
   for (const Entry &Sym : Symbols) {
     size_t I = (Sym.Hash / C) & (MaskWords - 1);
     uint64_t Val = readUint(Buf + I * Config->Wordsize);
     Val |= uint64_t(1) << (Sym.Hash % C);
-    Val |= uint64_t(1) << ((Sym.Hash >> getShift2()) % C);
+    Val |= uint64_t(1) << ((Sym.Hash >> Shift2) % C);
     writeUint(Buf + I * Config->Wordsize, Val);
   }
 }
@@ -1775,20 +2030,22 @@ void GnuHashTableSection::addSymbols(std::vector<SymbolTableEntry> &V) {
   // its type correctly.
   std::vector<SymbolTableEntry>::iterator Mid =
       std::stable_partition(V.begin(), V.end(), [](const SymbolTableEntry &S) {
-        // Shared symbols that this executable preempts are special. The dynamic
-        // linker has to look them up, so they have to be in the hash table.
-        if (auto *SS = dyn_cast<SharedSymbol>(S.Sym))
-          return SS->CopyRelSec == nullptr && !SS->NeedsPltAddr;
         return !S.Sym->isDefined();
       });
-  if (Mid == V.end())
-    return;
 
   // We chose load factor 4 for the on-disk hash table. For each hash
   // collision, the dynamic linker will compare a uint32_t hash value.
-  // Since the integer comparison is quite fast, we believe we can make
-  // the load factor even larger. 4 is just a conservative choice.
+  // Since the integer comparison is quite fast, we believe we can
+  // make the load factor even larger. 4 is just a conservative choice.
+  //
+  // Note that we don't want to create a zero-sized hash table because
+  // Android loader as of 2018 doesn't like a .gnu.hash containing such
+  // table. If that's the case, we create a hash table with one unused
+  // dummy slot.
   NBuckets = std::max<size_t>((V.end() - Mid) / 4, 1);
+
+  if (Mid == V.end())
+    return;
 
   for (SymbolTableEntry &Ent : llvm::make_range(Mid, V.end())) {
     Symbol *B = Ent.Sym;
@@ -1845,9 +2102,12 @@ void HashTableSection::writeTo(uint8_t *Buf) {
   }
 }
 
-PltSection::PltSection(size_t S)
-    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
-      HeaderSize(S) {
+// On PowerPC64 the lazy symbol resolvers go into the `global linkage table`
+// in the .glink section, rather then the typical .plt section.
+PltSection::PltSection(bool IsIplt)
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16,
+                       Config->EMachine == EM_PPC64 ? ".glink" : ".plt"),
+      HeaderSize(IsIplt ? 0 : Target->PltHeaderSize), IsIplt(IsIplt) {
   // The PLT needs to be writable on SPARC as the dynamic linker will
   // modify the instructions in the PLT entries.
   if (Config->EMachine == EM_SPARCV9)
@@ -1857,7 +2117,7 @@ PltSection::PltSection(size_t S)
 void PltSection::writeTo(uint8_t *Buf) {
   // At beginning of PLT but not the IPLT, we have code to call the dynamic
   // linker to resolve dynsyms at runtime. Write such code.
-  if (HeaderSize != 0)
+  if (!IsIplt)
     Target->writePltHeader(Buf);
   size_t Off = HeaderSize;
   // The IPlt is immediately after the Plt, account for this in RelOff
@@ -1876,7 +2136,7 @@ void PltSection::writeTo(uint8_t *Buf) {
 template <class ELFT> void PltSection::addEntry(Symbol &Sym) {
   Sym.PltIndex = Entries.size();
   RelocationBaseSection *PltRelocSection = InX::RelaPlt;
-  if (HeaderSize == 0) {
+  if (IsIplt) {
     PltRelocSection = InX::RelaIplt;
     Sym.IsInIplt = true;
   }
@@ -1893,7 +2153,7 @@ size_t PltSection::getSize() const {
 // example ARM uses mapping symbols to aid disassembly
 void PltSection::addSymbols() {
   // The PLT may have symbols defined for the Header, the IPLT has no header
-  if (HeaderSize != 0)
+  if (!IsIplt)
     Target->addPltHeaderSymbols(*this);
   size_t Off = HeaderSize;
   for (size_t I = 0; I < Entries.size(); ++I) {
@@ -1903,7 +2163,7 @@ void PltSection::addSymbols() {
 }
 
 unsigned PltSection::getPltRelocOff() const {
-  return (HeaderSize == 0) ? InX::Plt->getSize() : 0;
+  return IsIplt ? InX::Plt->getSize() : 0;
 }
 
 // The string hash function for .gdb_index.
@@ -2117,8 +2377,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   // Write the address area.
   for (GdbIndexChunk &D : Chunks) {
     for (GdbIndexChunk::AddressEntry &E : D.AddressAreas) {
-      uint64_t BaseAddr =
-          E.Section->getParent()->Addr + E.Section->getOffset(0);
+      uint64_t BaseAddr = E.Section->getVA(0);
       write64le(Buf, BaseAddr + E.LowAddress);
       write64le(Buf + 8, BaseAddr + E.HighAddress);
       write32le(Buf + 16, E.CuIndex);
@@ -2158,7 +2417,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
 bool GdbIndexSection::empty() const { return !Out::DebugInfo; }
 
 EhFrameHeader::EhFrameHeader()
-    : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 1, ".eh_frame_hdr") {}
+    : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 4, ".eh_frame_hdr") {}
 
 // .eh_frame_hdr contains a binary search table of pointers to FDEs.
 // Each entry of the search table consists of two values,
@@ -2298,11 +2557,9 @@ VersionNeedSection<ELFT>::VersionNeedSection()
   NextIndex = getVerDefNum() + 1;
 }
 
-template <class ELFT>
-void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
-  SharedFile<ELFT> &File = SS->getFile<ELFT>();
-  const typename ELFT::Verdef *Ver = File.Verdefs[SS->VerdefIndex];
-  if (!Ver) {
+template <class ELFT> void VersionNeedSection<ELFT>::addSymbol(Symbol *SS) {
+  auto &File = cast<SharedFile<ELFT>>(*SS->File);
+  if (SS->VerdefIndex == VER_NDX_GLOBAL) {
     SS->VersionId = VER_NDX_GLOBAL;
     return;
   }
@@ -2312,7 +2569,9 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol *SS) {
   // for the soname.
   if (File.VerdefMap.empty())
     Needed.push_back({&File, InX::DynStrTab->addString(File.SoName)});
+  const typename ELFT::Verdef *Ver = File.Verdefs[SS->VerdefIndex];
   typename SharedFile<ELFT>::NeededVer &NV = File.VerdefMap[Ver];
+
   // If we don't already know that we need an Elf_Vernaux for this Elf_Verdef,
   // prepare to create one by allocating a version identifier and creating a
   // dynstr entry for the version name.
@@ -2476,11 +2735,20 @@ static MergeSyntheticSection *createMergeSynthetic(StringRef Name,
   return make<MergeNoTailSection>(Name, Type, Flags, Alignment);
 }
 
-// Debug sections may be compressed by zlib. Uncompress if exists.
+// Debug sections may be compressed by zlib. Decompress if exists.
 void elf::decompressSections() {
+  parallelForEach(InputSections,
+                  [](InputSectionBase *Sec) { Sec->maybeDecompress(); });
+}
+
+template <class ELFT> void elf::splitSections() {
+  // splitIntoPieces needs to be called on each MergeInputSection
+  // before calling finalizeContents().
   parallelForEach(InputSections, [](InputSectionBase *Sec) {
-    if (Sec->Live)
-      Sec->maybeUncompress();
+    if (auto *S = dyn_cast<MergeInputSection>(Sec))
+      S->splitIntoPieces();
+    else if (auto *Eh = dyn_cast<EhInputSection>(Sec))
+      Eh->split<ELFT>();
   });
 }
 
@@ -2492,14 +2760,6 @@ void elf::decompressSections() {
 // that it replaces. It then finalizes each synthetic section in order
 // to compute an output offset for each piece of each input section.
 void elf::mergeSections() {
-  // splitIntoPieces needs to be called on each MergeInputSection
-  // before calling finalizeContents(). Do that first.
-  parallelForEach(InputSections, [](InputSectionBase *Sec) {
-    if (Sec->Live)
-      if (auto *S = dyn_cast<MergeInputSection>(Sec))
-        S->splitIntoPieces();
-  });
-
   std::vector<MergeSyntheticSection *> MergeSections;
   for (InputSectionBase *&S : InputSections) {
     MergeInputSection *MS = dyn_cast<MergeInputSection>(S);
@@ -2561,8 +2821,7 @@ ARMExidxSentinelSection::ARMExidxSentinelSection()
 // address described by any other table entry.
 void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
   assert(Highest);
-  uint64_t S =
-      Highest->getParent()->Addr + Highest->getOffset(Highest->getSize());
+  uint64_t S = Highest->getVA(Highest->getSize());
   uint64_t P = getVA();
   Target->relocateOne(Buf, R_ARM_PREL31, S - P);
   write32le(Buf + 4, 1);
@@ -2570,12 +2829,9 @@ void ARMExidxSentinelSection::writeTo(uint8_t *Buf) {
 
 // The sentinel has to be removed if there are no other .ARM.exidx entries.
 bool ARMExidxSentinelSection::empty() const {
-  OutputSection *OS = getParent();
-  for (auto *B : OS->SectionCommands)
-    if (auto *ISD = dyn_cast<InputSectionDescription>(B))
-      for (auto *S : ISD->Sections)
-        if (!isa<ARMExidxSentinelSection>(S))
-          return false;
+  for (InputSection *IS : getInputSections(getParent()))
+    if (!isa<ARMExidxSentinelSection>(IS))
+      return false;
   return true;
 }
 
@@ -2587,16 +2843,13 @@ ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
 }
 
 void ThunkSection::addThunk(Thunk *T) {
-  uint64_t Off = alignTo(Size, T->Alignment);
-  T->Offset = Off;
   Thunks.push_back(T);
   T->addSymbols(*this);
-  Size = Off + T->size();
 }
 
 void ThunkSection::writeTo(uint8_t *Buf) {
-  for (const Thunk *T : Thunks)
-    T->writeTo(Buf + T->Offset, *this);
+  for (Thunk *T : Thunks)
+    T->writeTo(Buf + T->Offset);
 }
 
 InputSection *ThunkSection::getTargetInputSection() const {
@@ -2604,6 +2857,20 @@ InputSection *ThunkSection::getTargetInputSection() const {
     return nullptr;
   const Thunk *T = Thunks.front();
   return T->getTargetInputSection();
+}
+
+bool ThunkSection::assignOffsets() {
+  uint64_t Off = 0;
+  for (Thunk *T : Thunks) {
+    Off = alignTo(Off, T->Alignment);
+    T->setOffset(Off);
+    uint32_t Size = T->size();
+    T->getThunkTargetSym()->Size = Size;
+    Off += Size;
+  }
+  bool Changed = Off != Size;
+  Size = Off;
+  return Changed;
 }
 
 InputSection *InX::ARMAttributes;
@@ -2638,6 +2905,11 @@ template GdbIndexSection *elf::createGdbIndex<ELF32BE>();
 template GdbIndexSection *elf::createGdbIndex<ELF64LE>();
 template GdbIndexSection *elf::createGdbIndex<ELF64BE>();
 
+template void elf::splitSections<ELF32LE>();
+template void elf::splitSections<ELF32BE>();
+template void elf::splitSections<ELF64LE>();
+template void elf::splitSections<ELF64BE>();
+
 template void EhFrameSection::addSection<ELF32LE>(InputSectionBase *);
 template void EhFrameSection::addSection<ELF32BE>(InputSectionBase *);
 template void EhFrameSection::addSection<ELF64LE>(InputSectionBase *);
@@ -2647,6 +2919,11 @@ template void PltSection::addEntry<ELF32LE>(Symbol &Sym);
 template void PltSection::addEntry<ELF32BE>(Symbol &Sym);
 template void PltSection::addEntry<ELF64LE>(Symbol &Sym);
 template void PltSection::addEntry<ELF64BE>(Symbol &Sym);
+
+template void MipsGotSection::build<ELF32LE>();
+template void MipsGotSection::build<ELF32BE>();
+template void MipsGotSection::build<ELF64LE>();
+template void MipsGotSection::build<ELF64BE>();
 
 template class elf::MipsAbiFlagsSection<ELF32LE>;
 template class elf::MipsAbiFlagsSection<ELF32BE>;

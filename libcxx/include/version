@@ -1,0 +1,25 @@
+// -*- C++ -*-
+//===--------------------------- version ----------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_VERSIONH
+#define _LIBCPP_VERSIONH
+
+/*
+    version synopsis
+
+*/
+
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+#endif  // _LIBCPP_VERSIONH

@@ -40,6 +40,9 @@ protected:
   /// in this class.
   virtual SmartPtrTypeMatcher getSmartPointerTypeMatcher() const = 0;
 
+  /// Returns whether the C++ version is compatible with current check.
+  virtual bool isLanguageVersionSupported(const LangOptions &LangOpts) const;
+
   static const char PointerType[];
   static const char ConstructorCall[];
   static const char ResetCall[];

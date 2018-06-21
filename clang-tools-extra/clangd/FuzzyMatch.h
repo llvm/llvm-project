@@ -31,9 +31,14 @@ public:
   // Characters beyond MaxPat are ignored.
   FuzzyMatcher(llvm::StringRef Pattern);
 
-  // If Word matches the pattern, return a score in [0,1] (higher is better).
+  // If Word matches the pattern, return a score indicating the quality match.
+  // Scores usually fall in a [0,1] range, with 1 being a very good score.
+  // "Super" scores in (1,2] are possible if the pattern is the full word.
   // Characters beyond MaxWord are ignored.
   llvm::Optional<float> match(llvm::StringRef Word);
+
+  llvm::StringRef pattern() const { return llvm::StringRef(Pat, PatN); }
+  bool empty() const { return PatN == 0; }
 
   // Dump internal state from the last match() to the stream, for debugging.
   // Returns the pattern with [] around matched characters, e.g.
@@ -45,24 +50,27 @@ private:
   constexpr static int MaxPat = 63, MaxWord = 127;
   enum CharRole : unsigned char; // For segmentation.
   enum CharType : unsigned char; // For segmentation.
-  // Action should be an enum, but this causes bitfield problems:
+  // Action describes how a word character was matched to the pattern.
+  // It should be an enum, but this causes bitfield problems:
   //   - for MSVC the enum type must be explicitly unsigned for correctness
   //   - GCC 4.8 complains not all values fit if the type is unsigned
   using Action = bool;
-  constexpr static Action Miss = false, Match = true;
+  constexpr static Action Miss = false; // Word character was skipped.
+  constexpr static Action Match = true; // Matched against a pattern character.
 
   bool init(llvm::StringRef Word);
   void buildGraph();
-  void calculateRoles(const char *Text, CharRole *Out, int N);
-  int skipPenalty(int W, Action Last);
-  int matchBonus(int P, int W, Action Last);
+  void calculateRoles(const char *Text, CharRole *Out, int &Types, int N);
+  bool allowMatch(int P, int W, Action Last) const;
+  int skipPenalty(int W, Action Last) const;
+  int matchBonus(int P, int W, Action Last) const;
 
   // Pattern data is initialized by the constructor, then constant.
   char Pat[MaxPat];         // Pattern data
   int PatN;                 // Length
   char LowPat[MaxPat];      // Pattern in lowercase
   CharRole PatRole[MaxPat]; // Pattern segmentation info
-  bool CaseSensitive;       // Case-sensitive match if pattern has uppercase
+  int PatTypeSet;           // Bitmask of 1<<CharType for all Pattern characters
   float ScoreScale;         // Normalizes scores for the pattern length.
 
   // Word data is initialized on each call to match(), mostly by init().
@@ -70,6 +78,7 @@ private:
   int WordN;                  // Length
   char LowWord[MaxWord];      // Word in lowercase
   CharRole WordRole[MaxWord]; // Word segmentation info
+  int WordTypeSet;            // Bitmask of 1<<CharType for all Word characters
   bool WordContainsPattern;   // Simple substring check
 
   // Cumulative best-match score table.

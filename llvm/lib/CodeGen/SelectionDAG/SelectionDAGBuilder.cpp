@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SelectionDAGBuilder.h"
-#include "SDNodeDbgValue.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1078,33 +1077,14 @@ void SelectionDAGBuilder::visit(unsigned Opcode, const User &I) {
   }
 }
 
-void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,
-                                                const DIExpression *Expr) {
-  for (auto &DDIMI : DanglingDebugInfoMap)
-    for (auto &DDI : DDIMI.second)
-      if (DDI.getDI()) {
-        const DbgValueInst *DI = DDI.getDI();
-        DIVariable *DanglingVariable = DI->getVariable();
-        DIExpression *DanglingExpr = DI->getExpression();
-        if (DanglingVariable == Variable &&
-            Expr->fragmentsOverlap(DanglingExpr)) {
-          DEBUG(dbgs() << "Dropping dangling debug info for " << *DI << "\n");
-          DDI = DanglingDebugInfo();
-        }
-      }
-}
-
 // resolveDanglingDebugInfo - if we saw an earlier dbg_value referring to V,
 // generate the debug data structures now that we've seen its definition.
 void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
                                                    SDValue Val) {
-  DanglingDebugInfoVector &DDIV = DanglingDebugInfoMap[V];
-  for (auto &DDI : DDIV) {
-    if (!DDI.getDI())
-      continue;
+  DanglingDebugInfo &DDI = DanglingDebugInfoMap[V];
+  if (DDI.getDI()) {
     const DbgValueInst *DI = DDI.getDI();
     DebugLoc dl = DDI.getdl();
-    unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
     unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
     DILocalVariable *Variable = DI->getVariable();
     DIExpression *Expr = DI->getExpression();
@@ -1113,26 +1093,13 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
     SDDbgValue *SDV;
     if (Val.getNode()) {
       if (!EmitFuncArgumentDbgValue(V, Variable, Expr, dl, false, Val)) {
-        DEBUG(dbgs() << "Resolve dangling debug info [order=" << DbgSDNodeOrder
-              << "] for:\n  " << *DI << "\n");
-        DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
-        // Increase the SDNodeOrder for the DbgValue here to make sure it is
-        // inserted after the definition of Val when emitting the instructions
-        // after ISel. An alternative could be to teach
-        // ScheduleDAGSDNodes::EmitSchedule to delay the insertion properly.
-        DEBUG(if (ValSDNodeOrder > DbgSDNodeOrder)
-                dbgs() << "changing SDNodeOrder from " << DbgSDNodeOrder
-                       << " to " << ValSDNodeOrder << "\n");
-        SDV = getDbgValue(Val, Variable, Expr, dl,
-                          std::max(DbgSDNodeOrder, ValSDNodeOrder));
+        SDV = getDbgValue(Val, Variable, Expr, dl, DbgSDNodeOrder);
         DAG.AddDbgValue(SDV, Val.getNode(), false);
-      } else
-        DEBUG(dbgs() << "Resolved dangling debug info for " << *DI
-              << "in EmitFuncArgumentDbgValue\n");
+      }
     } else
       DEBUG(dbgs() << "Dropping debug info for " << *DI << "\n");
+    DanglingDebugInfoMap[V] = DanglingDebugInfo();
   }
-  DanglingDebugInfoMap[V].clear();
 }
 
 /// getCopyFromRegs - If there was virtual register allocated for the value V
@@ -5197,7 +5164,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     const DbgInfoIntrinsic &DI = cast<DbgInfoIntrinsic>(I);
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
     assert(Variable && "Missing variable");
 
     // Check if address has undef value.
@@ -5229,11 +5195,10 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // DBG_VALUE instructions. llvm.dbg.declare is handled as a frame index in
     // the MachineFunction variable table.
     if (FI != std::numeric_limits<int>::max()) {
-      if (Intrinsic == Intrinsic::dbg_addr) {
-         SDDbgValue *SDV = DAG.getFrameIndexDbgValue(Variable, Expression,
-                                                     FI, dl, SDNodeOrder);
-         DAG.AddDbgValue(SDV, getRoot().getNode(), isParameter);
-      }
+      if (Intrinsic == Intrinsic::dbg_addr)
+        DAG.AddDbgValue(DAG.getFrameIndexDbgValue(Variable, Expression, FI, dl,
+                                                  SDNodeOrder),
+                        getRoot().getNode(), isParameter);
       return nullptr;
     }
 
@@ -5277,7 +5242,6 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
 
     DILocalVariable *Variable = DI.getVariable();
     DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
     const Value *V = DI.getValue();
     if (!V)
       return nullptr;
@@ -5302,17 +5266,11 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
       return nullptr;
     }
 
-    // TODO: When we get here we will either drop the dbg.value completely, or
-    // we try to move it forward by letting it dangle for awhile. So we should
-    // probably add an extra DbgValue to the DAG here, with a reference to
-    // "noreg", to indicate that we have lost the debug location for the
-    // variable.
-
     if (!V->use_empty() ) {
       // Do not call getValue(V) yet, as we don't want to generate code.
       // Remember it for later.
       DanglingDebugInfo DDI(&DI, dl, SDNodeOrder);
-      DanglingDebugInfoMap[V].push_back(DDI);
+      DanglingDebugInfoMap[V] = DDI;
       return nullptr;
     }
 

@@ -21,6 +21,6 @@
 
 int main ()
 {
-	char buffer[100];
+    char buffer[100];
     ::operator new[](4, buffer);  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

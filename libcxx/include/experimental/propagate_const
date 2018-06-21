@@ -463,8 +463,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR void swap(propagate_const<_Tp>& __pc1, propagate_const<_Tp>& __pc2) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
 {
-  using _VSTD::swap;
-  swap(_VSTD_LFTS_V2::get_underlying(__pc1), _VSTD_LFTS_V2::get_underlying(__pc2));
+  __pc1.swap(__pc2);
 }
 
 template <class _Tp>

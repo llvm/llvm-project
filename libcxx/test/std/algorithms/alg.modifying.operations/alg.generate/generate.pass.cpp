@@ -12,18 +12,32 @@
 // template<ForwardIterator Iter, Callable Generator>
 //   requires OutputIterator<Iter, Generator::result_type>
 //         && CopyConstructible<Generator>
-//   void
+//   constexpr void      // constexpr after c++17
 //   generate(Iter first, Iter last, Generator gen);
 
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 struct gen_test
 {
-    int operator()() const {return 1;}
+    TEST_CONSTEXPR int operator()() const {return 1;}
 };
+
+
+#if TEST_STD_VER > 17
+TEST_CONSTEXPR bool test_constexpr() {
+    int ia[] = {0, 1, 2, 3, 4};
+
+    std::generate(std::begin(ia), std::end(ia), gen_test());
+
+    return std::all_of(std::begin(ia), std::end(ia), [](int x) { return x == 1; })
+        ;
+    }
+#endif
+
 
 template <class Iter>
 void
@@ -44,4 +58,8 @@ int main()
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_constexpr());
+#endif
 }

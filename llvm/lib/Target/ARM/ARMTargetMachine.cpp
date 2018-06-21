@@ -238,9 +238,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       this->Options.EABIVersion = EABI::EABI5;
   }
 
-  if (TT.isOSBinFormatMachO())
-    this->Options.TrapUnreachable = true;
-
   initAsmInfo();
 }
 

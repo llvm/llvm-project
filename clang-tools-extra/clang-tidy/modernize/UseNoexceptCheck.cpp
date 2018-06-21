@@ -89,7 +89,7 @@ void UseNoexceptCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Context->getLangOpts());
 
   assert(FnTy && "FunctionProtoType is null.");
-  bool IsNoThrow = FnTy->isNothrow(*Result.Context);
+  bool IsNoThrow = FnTy->isNothrow();
   StringRef ReplacementStr =
       IsNoThrow
           ? NoexceptMacro.empty() ? "noexcept" : NoexceptMacro.c_str()

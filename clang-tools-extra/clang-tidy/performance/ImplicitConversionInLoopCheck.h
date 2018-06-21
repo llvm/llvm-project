@@ -28,7 +28,7 @@ public:
 
 private:
   void ReportAndFix(const ASTContext *Context, const VarDecl *VD,
-                    const CXXOperatorCallExpr *OperatorCall);
+                    const Expr *OperatorCall);
 };
 
 } // namespace performance

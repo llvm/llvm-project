@@ -147,6 +147,11 @@ public:
     void reverse() noexcept;
 };
 
+
+template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
+    list(InputIterator, InputIterator, Allocator = Allocator())
+    -> list<typename iterator_traits<InputIterator>::value_type, Allocator>;  // C++17
+
 template <class T, class Alloc>
     bool operator==(const list<T,Alloc>& x, const list<T,Alloc>& y);
 template <class T, class Alloc>
@@ -527,11 +532,12 @@ class __list_imp
 {
     __list_imp(const __list_imp&);
     __list_imp& operator=(const __list_imp&);
-protected:
-    typedef _Tp                                                     value_type;
+public:
     typedef _Alloc                                                  allocator_type;
     typedef allocator_traits<allocator_type>                        __alloc_traits;
     typedef typename __alloc_traits::size_type                      size_type;
+protected:
+    typedef _Tp                                                     value_type;
     typedef typename __alloc_traits::void_pointer                   __void_pointer;
     typedef __list_iterator<value_type, __void_pointer>             iterator;
     typedef __list_const_iterator<value_type, __void_pointer>       const_iterator;
@@ -550,6 +556,9 @@ protected:
 
     typedef typename __rebind_alloc_helper<__alloc_traits, __node_base>::type __node_base_allocator;
     typedef typename allocator_traits<__node_base_allocator>::pointer __node_base_pointer;
+    static_assert((!is_same<allocator_type, __node_allocator>::value),
+                  "internal allocator type must differ from user-specified "
+                  "type; otherwise overload resolution breaks");
 
     __node_base __end_;
     __compressed_pair<size_type, __node_allocator> __size_alloc_;
@@ -584,6 +593,11 @@ protected:
         _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value);
     _LIBCPP_INLINE_VISIBILITY
     __list_imp(const allocator_type& __a);
+    _LIBCPP_INLINE_VISIBILITY
+    __list_imp(const __node_allocator& __a);
+#ifndef _LIBCPP_CXX03_LANG
+    __list_imp(__node_allocator&& __a) _NOEXCEPT;
+#endif
     ~__list_imp();
     void clear() _NOEXCEPT;
     _LIBCPP_INLINE_VISIBILITY
@@ -707,9 +721,18 @@ __list_imp<_Tp, _Alloc>::__list_imp(const allocator_type& __a)
 }
 
 template <class _Tp, class _Alloc>
-__list_imp<_Tp, _Alloc>::~__list_imp()
-{
-    clear();
+inline __list_imp<_Tp, _Alloc>::__list_imp(const __node_allocator& __a)
+    : __size_alloc_(0, __a) {}
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _Alloc>
+inline __list_imp<_Tp, _Alloc>::__list_imp(__node_allocator&& __a) _NOEXCEPT
+    : __size_alloc_(0, std::move(__a)) {}
+#endif
+
+template <class _Tp, class _Alloc>
+__list_imp<_Tp, _Alloc>::~__list_imp() {
+  clear();
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);
 #endif
@@ -1106,6 +1129,22 @@ private:
     void __move_assign(list& __c, false_type);
 };
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _Alloc = typename std::allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+list(_InputIterator, _InputIterator)
+  -> list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+
+template<class _InputIterator,
+         class _Alloc,
+         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         >
+list(_InputIterator, _InputIterator, _Alloc)
+  -> list<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+#endif
+
 // Link in nodes [__f, __l] just prior to __p
 template <class _Tp, class _Alloc>
 inline
@@ -1226,10 +1265,8 @@ list<_Tp, _Alloc>::list(_InpIter __f, _InpIter __l, const allocator_type& __a,
 
 template <class _Tp, class _Alloc>
 list<_Tp, _Alloc>::list(const list& __c)
-    : base(allocator_type(
-           __node_alloc_traits::select_on_container_copy_construction(
-                __c.__node_alloc())))
-{
+    : base(__node_alloc_traits::select_on_container_copy_construction(
+          __c.__node_alloc())) {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -1274,11 +1311,9 @@ list<_Tp, _Alloc>::list(initializer_list<value_type> __il)
 }
 
 template <class _Tp, class _Alloc>
-inline
-list<_Tp, _Alloc>::list(list&& __c)
+inline list<_Tp, _Alloc>::list(list&& __c)
     _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value)
-    : base(allocator_type(_VSTD::move(__c.__node_alloc())))
-{
+    : base(_VSTD::move(__c.__node_alloc())) {
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -2058,15 +2093,15 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
 #endif
     if (__f != __l)
     {
-        if (this != &__c)
-        {
-            size_type __s = _VSTD::distance(__f, __l);
-            __c.__sz() -= __s;
-            base::__sz() += __s;
-        }
         __link_pointer __first = __f.__ptr_;
         --__l;
         __link_pointer __last = __l.__ptr_;
+        if (this != &__c)
+        {
+            size_type __s = _VSTD::distance(__f, __l) + 1;
+            __c.__sz() -= __s;
+            base::__sz() += __s;
+        }
         base::__unlink_nodes(__first, __last);
         __link_nodes(__p.__ptr_, __first, __last);
 #if _LIBCPP_DEBUG_LEVEL >= 2

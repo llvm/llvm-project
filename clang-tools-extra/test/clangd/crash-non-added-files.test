@@ -1,0 +1,34 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":104,"character":13},"end":{"line":0,"character":35}},"context":{"diagnostics":[{"range":{"start": {"line": 0, "character": 32}, "end": {"line": 0, "character": 37}},"severity":2,"message":"using the result of an assignment as a condition without parentheses"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"place parentheses around the assignment to silence this warning"},{"range":{"start": {"line": 0, "character": 34}, "end": {"line": 0, "character": 35}},"severity":3,"message":"use '==' to turn this assignment into an equality comparison"}]}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onCodeAction called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 2,
+---
+{"jsonrpc":"2.0","id":3,"method":"textDocument/rangeFormatting","params":{"textDocument":{"uri":"test:///foo.c"},"range":{"start":{"line":1,"character":4},"end":{"line":1,"character":12}},"options":{"tabSize":4,"insertSpaces":true}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onDocumentRangeFormatting called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 3,
+---
+{"jsonrpc":"2.0","id":4,"method":"textDocument/formatting","params":{"textDocument":{"uri":"test:///foo.c"},"options":{"tabSize":4,"insertSpaces":true}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onDocumentFormatting called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 4,
+---
+{"jsonrpc":"2.0","id":5,"method":"textDocument/onTypeFormatting","params":{"textDocument":{"uri":"test:///foo.c"},"position":{"line":3,"character":1},"ch":"}","options":{"tabSize":4,"insertSpaces":true}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602
+# CHECK-NEXT:    "message": "onDocumentOnTypeFormatting called for non-added file"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 5,
+---
+{"jsonrpc":"2.0","id":6,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

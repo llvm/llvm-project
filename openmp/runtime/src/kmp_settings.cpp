@@ -665,9 +665,6 @@ static void __kmp_stg_print_blocktime(kmp_str_buf_t *buffer, char const *name,
   __kmp_stg_print_int(buffer, name, __kmp_dflt_blocktime);
 } // __kmp_stg_print_blocktime
 
-// Used for OMP_WAIT_POLICY
-static char const *blocktime_str = NULL;
-
 // -----------------------------------------------------------------------------
 // KMP_DUPLICATE_LIB_OK
 
@@ -701,6 +698,9 @@ static void __kmp_stg_print_inherit_fp_control(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_inherit_fp_control
 
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
+
+// Used for OMP_WAIT_POLICY
+static char const *blocktime_str = NULL;
 
 // -----------------------------------------------------------------------------
 // KMP_LIBRARY, OMP_WAIT_POLICY
@@ -1177,6 +1177,46 @@ static void __kmp_stg_print_default_device(kmp_str_buf_t *buffer,
                                            char const *name, void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_default_device);
 } // __kmp_stg_print_default_device
+#endif
+
+#if OMP_50_ENABLED
+// -----------------------------------------------------------------------------
+// OpenMP 5.0: OMP_TARGET_OFFLOAD
+static void __kmp_stg_parse_target_offload(char const *name, char const *value,
+                                           void *data) {
+  const char *next = value;
+  const char *scan = next;
+
+  __kmp_target_offload = tgt_default;
+  SKIP_WS(next);
+  if (*next == '\0')
+    return;
+  scan = next;
+  if (__kmp_match_str("MANDATORY", scan, &next)) {
+    __kmp_target_offload = tgt_mandatory;
+  } else if (__kmp_match_str("DISABLED", scan, &next)) {
+    __kmp_target_offload = tgt_disabled;
+  } else if (__kmp_match_str("DEFAULT", scan, &next)) {
+    __kmp_target_offload = tgt_default;
+  } else {
+    KMP_WARNING(SyntaxErrorUsing, name, "DEFAULT");
+  }
+
+} // __kmp_stg_parse_target_offload
+
+static void __kmp_stg_print_target_offload(kmp_str_buf_t *buffer,
+                                           char const *name, void *data) {
+  const char *value = NULL;
+  if (__kmp_target_offload == tgt_default)
+    value = "DEFAULT";
+  else if (__kmp_target_offload == tgt_mandatory)
+    value = "MANDATORY";
+  else if (__kmp_target_offload == tgt_disabled)
+    value = "DISABLED";
+  if (value) {
+    __kmp_str_buf_print(buffer, "   %s=%s\n", name, value);
+  }
+} // __kmp_stg_print_target_offload
 #endif
 
 #if OMP_45_ENABLED
@@ -4443,6 +4483,10 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"OMP_DEFAULT_DEVICE", __kmp_stg_parse_default_device,
      __kmp_stg_print_default_device, NULL, 0, 0},
 #endif
+#if OMP_50_ENABLED
+    {"OMP_TARGET_OFFLOAD", __kmp_stg_parse_target_offload,
+     __kmp_stg_print_target_offload, NULL, 0, 0},
+#endif
 #if OMP_45_ENABLED
     {"OMP_MAX_TASK_PRIORITY", __kmp_stg_parse_max_task_priority,
      __kmp_stg_print_max_task_priority, NULL, 0, 0},
@@ -4702,7 +4746,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *omp_stacksize =
           __kmp_stg_find("OMP_STACKSIZE"); // 3rd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       // !!! Compiler does not understand rivals is used and optimizes out
       // assignments
       // !!!     rivals[ i ++ ] = ...;
@@ -4740,7 +4784,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *omp_wait_policy =
           __kmp_stg_find("OMP_WAIT_POLICY"); // 2nd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       static kmp_stg_wp_data_t kmp_data = {0, CCAST(kmp_setting_t **, rivals)};
       static kmp_stg_wp_data_t omp_data = {1, CCAST(kmp_setting_t **, rivals)};
@@ -4764,7 +4808,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *kmp_all_threads =
           __kmp_stg_find("KMP_ALL_THREADS"); // 2nd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       int i = 0;
 
@@ -4782,7 +4826,7 @@ static void __kmp_stg_init(void) {
       // 2nd priority
       kmp_setting_t *kmp_place_threads = __kmp_stg_find("KMP_PLACE_THREADS");
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       int i = 0;
 
@@ -4810,7 +4854,7 @@ static void __kmp_stg_init(void) {
           __kmp_stg_find("OMP_PROC_BIND"); // 3rd priority.
       KMP_DEBUG_ASSERT(omp_proc_bind != NULL);
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[4];
       int i = 0;
 
@@ -4852,7 +4896,7 @@ static void __kmp_stg_init(void) {
       kmp_setting_t *kmp_determ_red =
           __kmp_stg_find("KMP_DETERMINISTIC_REDUCTION"); // 2nd priority.
 
-      // !!! volatile keyword is Intel (R) C Compiler bug CQ49908 workaround.
+      // !!! volatile keyword is Intel(R) C Compiler bug CQ49908 workaround.
       static kmp_setting_t *volatile rivals[3];
       static kmp_stg_fr_data_t force_data = {1,
                                              CCAST(kmp_setting_t **, rivals)};
@@ -5126,6 +5170,15 @@ void __kmp_env_initialize(char const *string) {
 #if KMP_AFFINITY_SUPPORTED
 
   if (!TCR_4(__kmp_init_middle)) {
+#if KMP_USE_HWLOC
+    // Force using hwloc when either tiles or numa nodes requested within
+    // KMP_HW_SUBSET and no other topology method is requested
+    if ((__kmp_hws_node.num > 0 || __kmp_hws_tile.num > 0 ||
+         __kmp_affinity_gran == affinity_gran_tile) &&
+        (__kmp_affinity_top_method == affinity_top_method_default)) {
+      __kmp_affinity_top_method = affinity_top_method_hwloc;
+    }
+#endif
     // Determine if the machine/OS is actually capable of supporting
     // affinity.
     const char *var = "KMP_AFFINITY";
@@ -5354,6 +5407,8 @@ void __kmp_env_initialize(char const *string) {
     KMP_DEBUG_ASSERT(__kmp_affinity_type != affinity_default);
 #if OMP_40_ENABLED
     KMP_DEBUG_ASSERT(__kmp_nested_proc_bind.bind_types[0] != proc_bind_default);
+    K_DIAG(1, ("__kmp_nested_proc_bind.bind_types[0] == %d\n",
+               __kmp_nested_proc_bind.bind_types[0]));
 #endif
   }
 

@@ -10,15 +10,13 @@
 #include "MachOUtils.h"
 #include "BinaryHolder.h"
 #include "DebugMap.h"
-#include "ErrorReporting.h"
-#include "NonRelocatableStringpool.h"
 #include "dsymutil.h"
 #include "NonRelocatableStringpool.h"
-#include "dsymutil.h"
-#include "llvm/MC/MCAsmLayout.h"
-#include "llvm/MC/MCMachObjectWriter.h"
-#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FileUtilities.h"
@@ -41,7 +39,7 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
     Path = sys::findProgramByName("lipo");
 
   if (!Path) {
-    error_ostream() << "lipo: " << Path.getError().message() << "\n";
+    errs() << "error: lipo: " << Path.getError().message() << "\n";
     return false;
   }
 
@@ -49,7 +47,7 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<const char *> &Args) {
   int result =
       sys::ExecuteAndWait(*Path, Args.data(), nullptr, {}, 0, 0, &ErrMsg);
   if (result) {
-    error_ostream() << "lipo: " << ErrMsg << "\n";
+    errs() << "error: lipo: " << ErrMsg << "\n";
     return false;
   }
 
@@ -66,8 +64,8 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
     StringRef From(ArchFiles.front().Path);
     if (sys::fs::rename(From, OutputFileName)) {
       if (std::error_code EC = sys::fs::copy_file(From, OutputFileName)) {
-        error_ostream() << "while copying " << From << " to " << OutputFileName
-                        << ": " << EC.message() << "\n";
+        errs() << "error: while copying " << From << " to " << OutputFileName
+               << ": " << EC.message() << "\n";
         return false;
       }
       sys::fs::remove(From);
@@ -103,9 +101,9 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
   return Options.NoOutput ? true : runLipo(SDKPath, Args);
 }
 
-// Return a MachO::segment_command_64 that holds the same values as the passed
-// MachO::segment_command. We do that to avoid having to duplicate the logic
-// for 32bits and 64bits segments.
+// Return a MachO::segment_command_64 that holds the same values as
+// the passed MachO::segment_command. We do that to avoid having to
+// duplicat the logic for 32bits and 64bits segments.
 struct MachO::segment_command_64 adaptFrom32bits(MachO::segment_command Seg) {
   MachO::segment_command_64 Seg64;
   Seg64.cmd = Seg.cmd;
@@ -139,9 +137,9 @@ static void iterateOnSegments(const object::MachOObjectFile &Obj,
   }
 }
 
-// Transfer the symbols described by \a NList to \a NewSymtab which is just the
-// raw contents of the symbol table for the dSYM companion file. \returns
-// whether the symbol was transferred or not.
+// Transfer the symbols described by \a NList to \a NewSymtab which is
+// just the raw contents of the symbol table for the dSYM companion file.
+// \returns whether the symbol was tranfered or not.
 template <typename NListTy>
 static bool transferSymbol(NListTy NList, bool IsLittleEndian,
                            StringRef Strings, SmallVectorImpl<char> &NewSymtab,
@@ -469,7 +467,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   if (DwarfVMAddr + DwarfSegmentSize > DwarfVMMax ||
       DwarfVMAddr + DwarfSegmentSize < DwarfVMAddr /* Overflow */) {
     // There is no room for the __DWARF segment at the end of the
-    // address space. Look through segments to find a gap.
+    // address space. Look trhough segments to find a gap.
     DwarfVMAddr = GapForDwarf;
     if (DwarfVMAddr == UINT64_MAX)
       warn("not enough VM space for the __DWARF segment.",
@@ -523,6 +521,6 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
 
   return true;
 }
-} // namespace MachOUtils
-} // namespace dsymutil
-} // namespace llvm
+}
+}
+}

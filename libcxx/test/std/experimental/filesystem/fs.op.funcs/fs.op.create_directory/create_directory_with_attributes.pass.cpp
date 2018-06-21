@@ -14,7 +14,7 @@
 // bool create_directory(const path& p, const path& attr);
 // bool create_directory(const path& p, const path& attr, error_code& ec) noexcept;
 
-#include <experimental/filesystem>
+#include "filesystem_include.hpp"
 #include <type_traits>
 #include <cassert>
 
@@ -22,8 +22,7 @@
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
-using namespace std::experimental::filesystem;
-namespace fs = std::experimental::filesystem;
+using namespace fs;
 
 TEST_SUITE(filesystem_create_directory_test_suite)
 
@@ -61,7 +60,7 @@ TEST_CASE(create_directory_one_level)
 {
     scoped_test_env env;
     // Remove setgid which mkdir would inherit
-    permissions(env.test_root, perms::remove_perms | perms::set_gid);
+    permissions(env.test_root, perms::set_gid, perm_options::remove);
 
     const path dir = env.make_env_path("dir1");
     const path attr_dir = env.create_dir("dir2");

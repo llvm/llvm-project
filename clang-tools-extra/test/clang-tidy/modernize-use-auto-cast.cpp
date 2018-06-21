@@ -1,5 +1,6 @@
-// RUN: %check_clang_tidy %s modernize-use-auto %t -- -- \
-// RUN:   -std=c++11 -I %S/Inputs/modernize-use-auto -frtti
+// RUN: %check_clang_tidy %s modernize-use-auto %t -- \
+// RUN:   -config="{CheckOptions: [{key: modernize-use-auto.MinTypeNameLength, value: '0'}]}" \
+// RUN:   -- -std=c++11 -I %S/Inputs/modernize-use-auto -frtti
 
 struct A {
   virtual ~A() {}

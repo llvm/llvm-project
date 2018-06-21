@@ -1,0 +1,1136 @@
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package runtime
+#include "runtime.h"
+#include "arch.h"
+#include "go-type.h"
+#include "malloc.h"
+#include "chan.h"
+
+uint32 runtime_Hchansize = sizeof(Hchan);
+
+static	void	dequeueg(WaitQ*);
+static	SudoG*	dequeue(WaitQ*);
+static	void	enqueue(WaitQ*, SudoG*);
+
+static Hchan*
+makechan(ChanType *t, int64 hint)
+{
+	Hchan *c;
+	uintptr n;
+	const Type *elem;
+
+	elem = t->__element_type;
+
+	// compiler checks this but be safe.
+	if(elem->__size >= (1<<16))
+		runtime_throw("makechan: invalid channel element type");
+
+	if(hint < 0 || (intgo)hint != hint || (elem->__size > 0 && (uintptr)hint > (MaxMem - sizeof(*c)) / elem->__size))
+		runtime_panicstring("makechan: size out of range");
+
+	n = sizeof(*c);
+	n = ROUND(n, elem->__align);
+
+	// allocate memory in one call
+	c = (Hchan*)runtime_mallocgc(sizeof(*c) + hint*elem->__size, (uintptr)t | TypeInfo_Chan, 0);
+	c->elemsize = elem->__size;
+	c->elemtype = elem;
+	c->dataqsiz = hint;
+
+	if(debug)
+		runtime_printf("makechan: chan=%p; elemsize=%D; dataqsiz=%D\n",
+			c, (int64)elem->__size, (int64)c->dataqsiz);
+
+	return c;
+}
+
+func reflect.makechan(t *ChanType, size uint64) (c *Hchan) {
+	c = makechan(t, size);
+}
+
+Hchan*
+__go_new_channel(ChanType *t, uintptr hint)
+{
+	return makechan(t, hint);
+}
+
+Hchan*
+__go_new_channel_big(ChanType *t, uint64 hint)
+{
+	return makechan(t, hint);
+}
+
+/*
+ * generic single channel send/recv
+ * if the bool pointer is nil,
+ * then the full exchange will
+ * occur. if pres is not nil,
+ * then the protocol will not
+ * sleep but return if it could
+ * not complete.
+ *
+ * sleep can wake up with g->param == nil
+ * when a channel involved in the sleep has
+ * been closed.  it is easiest to loop and re-run
+ * the operation; we'll see that it's now closed.
+ */
+static bool
+chansend(ChanType *t, Hchan *c, byte *ep, bool block, void *pc)
+{
+	USED(pc);
+	SudoG *sg;
+	SudoG mysg;
+	G* gp;
+	int64 t0;
+	G* g;
+
+	g = runtime_g();
+
+	if(c == nil) {
+		USED(t);
+		if(!block)
+			return false;
+		runtime_park(nil, nil, "chan send (nil chan)");
+		return false;  // not reached
+	}
+
+	if(runtime_gcwaiting())
+		runtime_gosched();
+
+	if(debug) {
+		runtime_printf("chansend: chan=%p\n", c);
+	}
+
+	t0 = 0;
+	mysg.releasetime = 0;
+	if(runtime_blockprofilerate > 0) {
+		t0 = runtime_cputicks();
+		mysg.releasetime = -1;
+	}
+
+	runtime_lock(&c->lock);
+	if(c->closed)
+		goto closed;
+
+	if(c->dataqsiz > 0)
+		goto asynch;
+
+	sg = dequeue(&c->recvq);
+	if(sg != nil) {
+		runtime_unlock(&c->lock);
+
+		gp = sg->g;
+		gp->param = sg;
+		if(sg->elem != nil)
+			runtime_memmove(sg->elem, ep, c->elemsize);
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+		return true;
+	}
+
+	if(!block) {
+		runtime_unlock(&c->lock);
+		return false;
+	}
+
+	mysg.elem = ep;
+	mysg.g = g;
+	mysg.selectdone = nil;
+	g->param = nil;
+	enqueue(&c->sendq, &mysg);
+	runtime_parkunlock(&c->lock, "chan send");
+
+	if(g->param == nil) {
+		runtime_lock(&c->lock);
+		if(!c->closed)
+			runtime_throw("chansend: spurious wakeup");
+		goto closed;
+	}
+
+	if(mysg.releasetime > 0)
+		runtime_blockevent(mysg.releasetime - t0, 2);
+
+	return true;
+
+asynch:
+	if(c->closed)
+		goto closed;
+
+	if(c->qcount >= c->dataqsiz) {
+		if(!block) {
+			runtime_unlock(&c->lock);
+			return false;
+		}
+		mysg.g = g;
+		mysg.elem = nil;
+		mysg.selectdone = nil;
+		enqueue(&c->sendq, &mysg);
+		runtime_parkunlock(&c->lock, "chan send");
+
+		runtime_lock(&c->lock);
+		goto asynch;
+	}
+
+	runtime_memmove(chanbuf(c, c->sendx), ep, c->elemsize);
+	if(++c->sendx == c->dataqsiz)
+		c->sendx = 0;
+	c->qcount++;
+
+	sg = dequeue(&c->recvq);
+	if(sg != nil) {
+		gp = sg->g;
+		runtime_unlock(&c->lock);
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+	} else
+		runtime_unlock(&c->lock);
+	if(mysg.releasetime > 0)
+		runtime_blockevent(mysg.releasetime - t0, 2);
+	return true;
+
+closed:
+	runtime_unlock(&c->lock);
+	runtime_panicstring("send on closed channel");
+	return false;  // not reached
+}
+
+
+static bool
+chanrecv(ChanType *t, Hchan* c, byte *ep, bool block, bool *received)
+{
+	SudoG *sg;
+	SudoG mysg;
+	G *gp;
+	int64 t0;
+	G *g;
+
+	if(runtime_gcwaiting())
+		runtime_gosched();
+
+	if(debug)
+		runtime_printf("chanrecv: chan=%p\n", c);
+
+	g = runtime_g();
+
+	if(c == nil) {
+		USED(t);
+		if(!block)
+			return false;
+		runtime_park(nil, nil, "chan receive (nil chan)");
+		return false;  // not reached
+	}
+
+	t0 = 0;
+	mysg.releasetime = 0;
+	if(runtime_blockprofilerate > 0) {
+		t0 = runtime_cputicks();
+		mysg.releasetime = -1;
+	}
+
+	runtime_lock(&c->lock);
+	if(c->dataqsiz > 0)
+		goto asynch;
+
+	if(c->closed)
+		goto closed;
+
+	sg = dequeue(&c->sendq);
+	if(sg != nil) {
+		runtime_unlock(&c->lock);
+
+		if(ep != nil)
+			runtime_memmove(ep, sg->elem, c->elemsize);
+		gp = sg->g;
+		gp->param = sg;
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+
+		if(received != nil)
+			*received = true;
+		return true;
+	}
+
+	if(!block) {
+		runtime_unlock(&c->lock);
+		return false;
+	}
+
+	mysg.elem = ep;
+	mysg.g = g;
+	mysg.selectdone = nil;
+	g->param = nil;
+	enqueue(&c->recvq, &mysg);
+	runtime_parkunlock(&c->lock, "chan receive");
+
+	if(g->param == nil) {
+		runtime_lock(&c->lock);
+		if(!c->closed)
+			runtime_throw("chanrecv: spurious wakeup");
+		goto closed;
+	}
+
+	if(received != nil)
+		*received = true;
+	if(mysg.releasetime > 0)
+		runtime_blockevent(mysg.releasetime - t0, 2);
+	return true;
+
+asynch:
+	if(c->qcount <= 0) {
+		if(c->closed)
+			goto closed;
+
+		if(!block) {
+			runtime_unlock(&c->lock);
+			if(received != nil)
+				*received = false;
+			return false;
+		}
+		mysg.g = g;
+		mysg.elem = nil;
+		mysg.selectdone = nil;
+		enqueue(&c->recvq, &mysg);
+		runtime_parkunlock(&c->lock, "chan receive");
+
+		runtime_lock(&c->lock);
+		goto asynch;
+	}
+
+	if(ep != nil)
+		runtime_memmove(ep, chanbuf(c, c->recvx), c->elemsize);
+	runtime_memclr(chanbuf(c, c->recvx), c->elemsize);
+	if(++c->recvx == c->dataqsiz)
+		c->recvx = 0;
+	c->qcount--;
+
+	sg = dequeue(&c->sendq);
+	if(sg != nil) {
+		gp = sg->g;
+		runtime_unlock(&c->lock);
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+	} else
+		runtime_unlock(&c->lock);
+
+	if(received != nil)
+		*received = true;
+	if(mysg.releasetime > 0)
+		runtime_blockevent(mysg.releasetime - t0, 2);
+	return true;
+
+closed:
+	if(ep != nil)
+		runtime_memclr(ep, c->elemsize);
+	if(received != nil)
+		*received = false;
+	runtime_unlock(&c->lock);
+	if(mysg.releasetime > 0)
+		runtime_blockevent(mysg.releasetime - t0, 2);
+	return true;
+}
+
+// The compiler generates a call to __go_send_small to send a value 8
+// bytes or smaller.
+void
+__go_send_small(ChanType *t, Hchan* c, uint64 val)
+{
+	union
+	{
+		byte b[sizeof(uint64)];
+		uint64 v;
+	} u;
+	byte *v;
+
+	u.v = val;
+#ifndef WORDS_BIGENDIAN
+	v = u.b;
+#else
+	v = u.b + sizeof(uint64) - t->__element_type->__size;
+#endif
+	chansend(t, c, v, true, runtime_getcallerpc(&t));
+}
+
+// The compiler generates a call to __go_send_big to send a value
+// larger than 8 bytes or smaller.
+void
+__go_send_big(ChanType *t, Hchan* c, byte* v)
+{
+	chansend(t, c, v, true, runtime_getcallerpc(&t));
+}
+
+// The compiler generates a call to __go_receive to receive a
+// value from a channel.
+void
+__go_receive(ChanType *t, Hchan* c, byte* v)
+{
+	chanrecv(t, c, v, true, nil);
+}
+
+_Bool runtime_chanrecv2(ChanType *t, Hchan* c, byte* v)
+  __asm__ (GOSYM_PREFIX "runtime.chanrecv2");
+
+_Bool
+runtime_chanrecv2(ChanType *t, Hchan* c, byte* v)
+{
+	bool received = false;
+
+	chanrecv(t, c, v, true, &received);
+	return received;
+}
+
+// compiler implements
+//
+//	select {
+//	case c <- v:
+//		... foo
+//	default:
+//		... bar
+//	}
+//
+// as
+//
+//	if selectnbsend(c, v) {
+//		... foo
+//	} else {
+//		... bar
+//	}
+//
+func selectnbsend(t *ChanType, c *Hchan, elem *byte) (selected bool) {
+	selected = chansend(t, c, elem, false, runtime_getcallerpc(&t));
+}
+
+// compiler implements
+//
+//	select {
+//	case v = <-c:
+//		... foo
+//	default:
+//		... bar
+//	}
+//
+// as
+//
+//	if selectnbrecv(&v, c) {
+//		... foo
+//	} else {
+//		... bar
+//	}
+//
+func selectnbrecv(t *ChanType, elem *byte, c *Hchan) (selected bool) {
+	selected = chanrecv(t, c, elem, false, nil);
+}
+
+// compiler implements
+//
+//	select {
+//	case v, ok = <-c:
+//		... foo
+//	default:
+//		... bar
+//	}
+//
+// as
+//
+//	if c != nil && selectnbrecv2(&v, &ok, c) {
+//		... foo
+//	} else {
+//		... bar
+//	}
+//
+func selectnbrecv2(t *ChanType, elem *byte, received *bool, c *Hchan) (selected bool) {
+	bool r;
+
+	selected = chanrecv(t, c, elem, false, received == nil ? nil : &r);
+	if(received != nil)
+		*received = r;
+}
+
+func reflect.chansend(t *ChanType, c *Hchan, elem *byte, nb bool) (selected bool) {
+	selected = chansend(t, c, elem, !nb, runtime_getcallerpc(&t));
+}
+
+func reflect.chanrecv(t *ChanType, c *Hchan, nb bool, elem *byte) (selected bool, received bool) {
+	received = false;
+	selected = chanrecv(t, c, elem, !nb, &received);
+}
+
+static Select* newselect(int32);
+
+func newselect(size int32) (sel *byte) {
+ 	sel = (byte*)newselect(size);
+}
+
+static Select*
+newselect(int32 size)
+{
+	int32 n;
+	Select *sel;
+
+	n = 0;
+	if(size > 1)
+		n = size-1;
+
+	// allocate all the memory we need in a single allocation
+	// start with Select with size cases
+	// then lockorder with size entries
+	// then pollorder with size entries
+	sel = runtime_mal(sizeof(*sel) +
+		n*sizeof(sel->scase[0]) +
+		size*sizeof(sel->lockorder[0]) +
+		size*sizeof(sel->pollorder[0]));
+
+	sel->tcase = size;
+	sel->ncase = 0;
+	sel->lockorder = (void*)(sel->scase + size);
+	sel->pollorder = (void*)(sel->lockorder + size);
+
+	if(debug)
+		runtime_printf("newselect s=%p size=%d\n", sel, size);
+	return sel;
+}
+
+// cut in half to give stack a chance to split
+static void selectsend(Select *sel, Hchan *c, int index, void *elem);
+
+func selectsend(sel *Select, c *Hchan, elem *byte, index int32) {
+	// nil cases do not compete
+	if(c != nil)
+		selectsend(sel, c, index, elem);
+}
+
+static void
+selectsend(Select *sel, Hchan *c, int index, void *elem)
+{
+	int32 i;
+	Scase *cas;
+
+	i = sel->ncase;
+	if(i >= sel->tcase)
+		runtime_throw("selectsend: too many cases");
+	sel->ncase = i+1;
+	cas = &sel->scase[i];
+
+	cas->index = index;
+	cas->chan = c;
+	cas->kind = CaseSend;
+	cas->sg.elem = elem;
+
+	if(debug)
+		runtime_printf("selectsend s=%p index=%d chan=%p\n",
+			sel, cas->index, cas->chan);
+}
+
+// cut in half to give stack a chance to split
+static void selectrecv(Select *sel, Hchan *c, int index, void *elem, bool*);
+
+func selectrecv(sel *Select, c *Hchan, elem *byte, index int32) {
+	// nil cases do not compete
+	if(c != nil)
+		selectrecv(sel, c, index, elem, nil);
+}
+
+func selectrecv2(sel *Select, c *Hchan, elem *byte, received *bool, index int32) {
+	// nil cases do not compete
+	if(c != nil)
+		selectrecv(sel, c, index, elem, received);
+}
+
+static void
+selectrecv(Select *sel, Hchan *c, int index, void *elem, bool *received)
+{
+	int32 i;
+	Scase *cas;
+
+	i = sel->ncase;
+	if(i >= sel->tcase)
+		runtime_throw("selectrecv: too many cases");
+	sel->ncase = i+1;
+	cas = &sel->scase[i];
+	cas->index = index;
+	cas->chan = c;
+
+	cas->kind = CaseRecv;
+	cas->sg.elem = elem;
+	cas->receivedp = received;
+
+	if(debug)
+		runtime_printf("selectrecv s=%p index=%d chan=%p\n",
+			sel, cas->index, cas->chan);
+}
+
+// cut in half to give stack a chance to split
+static void selectdefault(Select*, int);
+
+func selectdefault(sel *Select, index int32) {
+	selectdefault(sel, index);
+}
+
+static void
+selectdefault(Select *sel, int32 index)
+{
+	int32 i;
+	Scase *cas;
+
+	i = sel->ncase;
+	if(i >= sel->tcase)
+		runtime_throw("selectdefault: too many cases");
+	sel->ncase = i+1;
+	cas = &sel->scase[i];
+	cas->index = index;
+	cas->chan = nil;
+
+	cas->kind = CaseDefault;
+
+	if(debug)
+		runtime_printf("selectdefault s=%p index=%d\n",
+			sel, cas->index);
+}
+
+static void
+sellock(Select *sel)
+{
+	uint32 i;
+	Hchan *c, *c0;
+
+	c = nil;
+	for(i=0; i<sel->ncase; i++) {
+		c0 = sel->lockorder[i];
+		if(c0 && c0 != c) {
+			c = sel->lockorder[i];
+			runtime_lock(&c->lock);
+		}
+	}
+}
+
+static void
+selunlock(Select *sel)
+{
+	int32 i, n, r;
+	Hchan *c;
+
+	// We must be very careful here to not touch sel after we have unlocked
+	// the last lock, because sel can be freed right after the last unlock.
+	// Consider the following situation.
+	// First M calls runtime_park() in runtime_selectgo() passing the sel.
+	// Once runtime_park() has unlocked the last lock, another M makes
+	// the G that calls select runnable again and schedules it for execution.
+	// When the G runs on another M, it locks all the locks and frees sel.
+	// Now if the first M touches sel, it will access freed memory.
+	n = (int32)sel->ncase;
+	r = 0;
+	// skip the default case
+	if(n>0 && sel->lockorder[0] == nil)
+		r = 1;
+	for(i = n-1; i >= r; i--) {
+		c = sel->lockorder[i];
+		if(i>0 && sel->lockorder[i-1] == c)
+			continue;  // will unlock it on the next iteration
+		runtime_unlock(&c->lock);
+	}
+}
+
+static bool
+selparkcommit(G *gp, void *sel)
+{
+	USED(gp);
+	selunlock(sel);
+	return true;
+}
+
+func block() {
+	runtime_park(nil, nil, "select (no cases)");	// forever
+}
+
+static int selectgo(Select**);
+
+// selectgo(sel *byte);
+
+func selectgo(sel *Select) (ret int32) {
+	return selectgo(&sel);
+}
+
+static int
+selectgo(Select **selp)
+{
+	Select *sel;
+	uint32 o, i, j, k, done;
+	int64 t0;
+	Scase *cas, *dfl;
+	Hchan *c;
+	SudoG *sg;
+	G *gp;
+	int index;
+	G *g;
+
+	sel = *selp;
+	if(runtime_gcwaiting())
+		runtime_gosched();
+
+	if(debug)
+		runtime_printf("select: sel=%p\n", sel);
+
+	g = runtime_g();
+
+	t0 = 0;
+	if(runtime_blockprofilerate > 0) {
+		t0 = runtime_cputicks();
+		for(i=0; i<sel->ncase; i++)
+			sel->scase[i].sg.releasetime = -1;
+	}
+
+	// The compiler rewrites selects that statically have
+	// only 0 or 1 cases plus default into simpler constructs.
+	// The only way we can end up with such small sel->ncase
+	// values here is for a larger select in which most channels
+	// have been nilled out.  The general code handles those
+	// cases correctly, and they are rare enough not to bother
+	// optimizing (and needing to test).
+
+	// generate permuted order
+	for(i=0; i<sel->ncase; i++)
+		sel->pollorder[i] = i;
+	for(i=1; i<sel->ncase; i++) {
+		o = sel->pollorder[i];
+		j = runtime_fastrand1()%(i+1);
+		sel->pollorder[i] = sel->pollorder[j];
+		sel->pollorder[j] = o;
+	}
+
+	// sort the cases by Hchan address to get the locking order.
+	// simple heap sort, to guarantee n log n time and constant stack footprint.
+	for(i=0; i<sel->ncase; i++) {
+		j = i;
+		c = sel->scase[j].chan;
+		while(j > 0 && sel->lockorder[k=(j-1)/2] < c) {
+			sel->lockorder[j] = sel->lockorder[k];
+			j = k;
+		}
+		sel->lockorder[j] = c;
+	}
+	for(i=sel->ncase; i-->0; ) {
+		c = sel->lockorder[i];
+		sel->lockorder[i] = sel->lockorder[0];
+		j = 0;
+		for(;;) {
+			k = j*2+1;
+			if(k >= i)
+				break;
+			if(k+1 < i && sel->lockorder[k] < sel->lockorder[k+1])
+				k++;
+			if(c < sel->lockorder[k]) {
+				sel->lockorder[j] = sel->lockorder[k];
+				j = k;
+				continue;
+			}
+			break;
+		}
+		sel->lockorder[j] = c;
+	}
+	/*
+	for(i=0; i+1<sel->ncase; i++)
+		if(sel->lockorder[i] > sel->lockorder[i+1]) {
+			runtime_printf("i=%d %p %p\n", i, sel->lockorder[i], sel->lockorder[i+1]);
+			runtime_throw("select: broken sort");
+		}
+	*/
+	sellock(sel);
+
+loop:
+	// pass 1 - look for something already waiting
+	dfl = nil;
+	for(i=0; i<sel->ncase; i++) {
+		o = sel->pollorder[i];
+		cas = &sel->scase[o];
+		c = cas->chan;
+
+		switch(cas->kind) {
+		case CaseRecv:
+			if(c->dataqsiz > 0) {
+				if(c->qcount > 0)
+					goto asyncrecv;
+			} else {
+				sg = dequeue(&c->sendq);
+				if(sg != nil)
+					goto syncrecv;
+			}
+			if(c->closed)
+				goto rclose;
+			break;
+
+		case CaseSend:
+			if(c->closed)
+				goto sclose;
+			if(c->dataqsiz > 0) {
+				if(c->qcount < c->dataqsiz)
+					goto asyncsend;
+			} else {
+				sg = dequeue(&c->recvq);
+				if(sg != nil)
+					goto syncsend;
+			}
+			break;
+
+		case CaseDefault:
+			dfl = cas;
+			break;
+		}
+	}
+
+	if(dfl != nil) {
+		selunlock(sel);
+		cas = dfl;
+		goto retc;
+	}
+
+
+	// pass 2 - enqueue on all chans
+	done = 0;
+	for(i=0; i<sel->ncase; i++) {
+		o = sel->pollorder[i];
+		cas = &sel->scase[o];
+		c = cas->chan;
+		sg = &cas->sg;
+		sg->g = g;
+		sg->selectdone = &done;
+
+		switch(cas->kind) {
+		case CaseRecv:
+			enqueue(&c->recvq, sg);
+			break;
+
+		case CaseSend:
+			enqueue(&c->sendq, sg);
+			break;
+		}
+	}
+
+	g->param = nil;
+	runtime_park(selparkcommit, sel, "select");
+
+	sellock(sel);
+	sg = g->param;
+
+	// pass 3 - dequeue from unsuccessful chans
+	// otherwise they stack up on quiet channels
+	for(i=0; i<sel->ncase; i++) {
+		cas = &sel->scase[i];
+		if(cas != (Scase*)sg) {
+			c = cas->chan;
+			if(cas->kind == CaseSend)
+				dequeueg(&c->sendq);
+			else
+				dequeueg(&c->recvq);
+		}
+	}
+
+	if(sg == nil)
+		goto loop;
+
+	cas = (Scase*)sg;
+	c = cas->chan;
+
+	if(c->dataqsiz > 0)
+		runtime_throw("selectgo: shouldn't happen");
+
+	if(debug)
+		runtime_printf("wait-return: sel=%p c=%p cas=%p kind=%d\n",
+			sel, c, cas, cas->kind);
+
+	if(cas->kind == CaseRecv) {
+		if(cas->receivedp != nil)
+			*cas->receivedp = true;
+	}
+
+	selunlock(sel);
+	goto retc;
+
+asyncrecv:
+	// can receive from buffer
+	if(cas->receivedp != nil)
+		*cas->receivedp = true;
+	if(cas->sg.elem != nil)
+		runtime_memmove(cas->sg.elem, chanbuf(c, c->recvx), c->elemsize);
+	runtime_memclr(chanbuf(c, c->recvx), c->elemsize);
+	if(++c->recvx == c->dataqsiz)
+		c->recvx = 0;
+	c->qcount--;
+	sg = dequeue(&c->sendq);
+	if(sg != nil) {
+		gp = sg->g;
+		selunlock(sel);
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+	} else {
+		selunlock(sel);
+	}
+	goto retc;
+
+asyncsend:
+	// can send to buffer
+	runtime_memmove(chanbuf(c, c->sendx), cas->sg.elem, c->elemsize);
+	if(++c->sendx == c->dataqsiz)
+		c->sendx = 0;
+	c->qcount++;
+	sg = dequeue(&c->recvq);
+	if(sg != nil) {
+		gp = sg->g;
+		selunlock(sel);
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+	} else {
+		selunlock(sel);
+	}
+	goto retc;
+
+syncrecv:
+	// can receive from sleeping sender (sg)
+	selunlock(sel);
+	if(debug)
+		runtime_printf("syncrecv: sel=%p c=%p o=%d\n", sel, c, o);
+	if(cas->receivedp != nil)
+		*cas->receivedp = true;
+	if(cas->sg.elem != nil)
+		runtime_memmove(cas->sg.elem, sg->elem, c->elemsize);
+	gp = sg->g;
+	gp->param = sg;
+	if(sg->releasetime)
+		sg->releasetime = runtime_cputicks();
+	runtime_ready(gp);
+	goto retc;
+
+rclose:
+	// read at end of closed channel
+	selunlock(sel);
+	if(cas->receivedp != nil)
+		*cas->receivedp = false;
+	if(cas->sg.elem != nil)
+		runtime_memclr(cas->sg.elem, c->elemsize);
+	goto retc;
+
+syncsend:
+	// can send to sleeping receiver (sg)
+	selunlock(sel);
+	if(debug)
+		runtime_printf("syncsend: sel=%p c=%p o=%d\n", sel, c, o);
+	if(sg->elem != nil)
+		runtime_memmove(sg->elem, cas->sg.elem, c->elemsize);
+	gp = sg->g;
+	gp->param = sg;
+	if(sg->releasetime)
+		sg->releasetime = runtime_cputicks();
+	runtime_ready(gp);
+
+retc:
+	// return index corresponding to chosen case
+	index = cas->index;
+	if(cas->sg.releasetime > 0)
+		runtime_blockevent(cas->sg.releasetime - t0, 2);
+	runtime_free(sel);
+	return index;
+
+sclose:
+	// send on closed channel
+	selunlock(sel);
+	runtime_panicstring("send on closed channel");
+	return 0;  // not reached
+}
+
+// This struct must match ../reflect/value.go:/runtimeSelect.
+typedef struct runtimeSelect runtimeSelect;
+struct runtimeSelect
+{
+	uintptr dir;
+	ChanType *typ;
+	Hchan *ch;
+	byte *val;
+};
+
+// This enum must match ../reflect/value.go:/SelectDir.
+enum SelectDir {
+	SelectSend = 1,
+	SelectRecv,
+	SelectDefault,
+};
+
+func reflect.rselect(cases Slice) (chosen int, recvOK bool) {
+	int32 i;
+	Select *sel;
+	runtimeSelect* rcase, *rc;
+
+	chosen = -1;
+	recvOK = false;
+
+	rcase = (runtimeSelect*)cases.__values;
+
+	sel = newselect(cases.__count);
+	for(i=0; i<cases.__count; i++) {
+		rc = &rcase[i];
+		switch(rc->dir) {
+		case SelectDefault:
+			selectdefault(sel, i);
+			break;
+		case SelectSend:
+			if(rc->ch == nil)
+				break;
+			selectsend(sel, rc->ch, i, rc->val);
+			break;
+		case SelectRecv:
+			if(rc->ch == nil)
+				break;
+			selectrecv(sel, rc->ch, i, rc->val, &recvOK);
+			break;
+		}
+	}
+
+	chosen = (intgo)(uintptr)selectgo(&sel);
+}
+
+static void closechan(Hchan *c, void *pc);
+
+func closechan(c *Hchan) {
+	closechan(c, runtime_getcallerpc(&c));
+}
+
+func reflect.chanclose(c *Hchan) {
+	closechan(c, runtime_getcallerpc(&c));
+}
+
+static void
+closechan(Hchan *c, void *pc)
+{
+	USED(pc);
+	SudoG *sg;
+	G* gp;
+
+	if(c == nil)
+		runtime_panicstring("close of nil channel");
+
+	if(runtime_gcwaiting())
+		runtime_gosched();
+
+	runtime_lock(&c->lock);
+	if(c->closed) {
+		runtime_unlock(&c->lock);
+		runtime_panicstring("close of closed channel");
+	}
+	c->closed = true;
+
+	// release all readers
+	for(;;) {
+		sg = dequeue(&c->recvq);
+		if(sg == nil)
+			break;
+		gp = sg->g;
+		gp->param = nil;
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+	}
+
+	// release all writers
+	for(;;) {
+		sg = dequeue(&c->sendq);
+		if(sg == nil)
+			break;
+		gp = sg->g;
+		gp->param = nil;
+		if(sg->releasetime)
+			sg->releasetime = runtime_cputicks();
+		runtime_ready(gp);
+	}
+
+	runtime_unlock(&c->lock);
+}
+
+void
+__go_builtin_close(Hchan *c)
+{
+	runtime_closechan(c);
+}
+
+func reflect.chanlen(c *Hchan) (len int) {
+	if(c == nil)
+		len = 0;
+	else
+		len = c->qcount;
+}
+
+intgo
+__go_chan_len(Hchan *c)
+{
+	return reflect_chanlen(c);
+}
+
+func reflect.chancap(c *Hchan) (cap int) {
+	if(c == nil)
+		cap = 0;
+	else
+		cap = c->dataqsiz;
+}
+
+intgo
+__go_chan_cap(Hchan *c)
+{
+	return reflect_chancap(c);
+}
+
+static SudoG*
+dequeue(WaitQ *q)
+{
+	SudoG *sgp;
+
+loop:
+	sgp = q->first;
+	if(sgp == nil)
+		return nil;
+	q->first = sgp->link;
+
+	// if sgp participates in a select and is already signaled, ignore it
+	if(sgp->selectdone != nil) {
+		// claim the right to signal
+		if(*sgp->selectdone != 0 || !runtime_cas(sgp->selectdone, 0, 1))
+			goto loop;
+	}
+
+	return sgp;
+}
+
+static void
+dequeueg(WaitQ *q)
+{
+	SudoG **l, *sgp, *prevsgp;
+	G *g;
+
+	g = runtime_g();
+	prevsgp = nil;
+	for(l=&q->first; (sgp=*l) != nil; l=&sgp->link, prevsgp=sgp) {
+		if(sgp->g == g) {
+			*l = sgp->link;
+			if(q->last == sgp)
+				q->last = prevsgp;
+			break;
+		}
+	}
+}
+
+static void
+enqueue(WaitQ *q, SudoG *sgp)
+{
+	sgp->link = nil;
+	if(q->first == nil) {
+		q->first = sgp;
+		q->last = sgp;
+		return;
+	}
+	q->last->link = sgp;
+	q->last = sgp;
+}

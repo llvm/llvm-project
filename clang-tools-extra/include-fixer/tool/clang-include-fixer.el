@@ -314,14 +314,18 @@ They are replaced by the single element selected by the user."
               (goto-char (clang-include-fixer--closest-overlay overlays)))
             (cl-flet ((header (info) (let-alist info .Header)))
               ;; The header-infos is already sorted by include-fixer.
-              (let* ((header (completing-read
+              (let* ((headers (mapcar #'header .HeaderInfos))
+                     (header (completing-read
                               (clang-include-fixer--format-message
                                "Select include for '%s': " symbol)
-                              (mapcar #'header .HeaderInfos)
-                              nil :require-match nil
-                              'clang-include-fixer--history))
+                              headers nil :require-match nil
+                              'clang-include-fixer--history
+                              ;; Specify a default to prevent the behavior
+                              ;; described in
+                              ;; https://github.com/DarwinAwardWinner/ido-completing-read-plus#why-does-ret-sometimes-not-select-the-first-completion-on-the-list--why-is-there-an-empty-entry-at-the-beginning-of-the-completion-list--what-happened-to-old-style-default-selection.
+                              (car headers)))
                      (info (cl-find header .HeaderInfos :key #'header :test #'string=)))
-                (cl-assert info)
+                (unless info (user-error "No header selected"))
                 (setcar .HeaderInfos info)
                 (setcdr .HeaderInfos nil))))
         (mapc #'delete-overlay overlays)))))

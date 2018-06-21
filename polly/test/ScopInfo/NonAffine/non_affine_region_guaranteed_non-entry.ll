@@ -1,6 +1,12 @@
 ; RUN: opt %loadPolly -polly-detect -polly-scops -analyze \
 ; RUN:                -polly-allow-nonaffine-loops < %s | FileCheck %s
 
+; The SCoP contains a loop with multiple exit blocks (BBs after leaving
+; the loop). The current implementation of deriving their domain derives
+; only a common domain for all of the exit blocks. We disabled loops with
+; multiple exit blocks until this is fixed.
+; XFAIL: *
+
 ; The BasicBlock "guaranteed" is always executed inside the non-affine subregion
 ; region_entry->region_exit. As such, writes accesses in blocks that always
 ; execute are MustWriteAccesses. Before Polly commit r255473, we only assumed

@@ -21,16 +21,9 @@
 #include <string>
 #include <vector>
 
-#include "benchmark/benchmark_api.h"
-#include "benchmark/reporter.h"
+#include "benchmark/benchmark.h"
 
 namespace benchmark {
-
-// Return a vector containing the mean and standard devation information for
-// the specified list of reports. If 'reports' contains less than two
-// non-errored runs an empty vector is returned
-std::vector<BenchmarkReporter::Run> ComputeStats(
-    const std::vector<BenchmarkReporter::Run>& reports);
 
 // Return a vector containing the bigO and RMS information for the specified
 // list of reports. If 'reports.size() < 2' an empty vector is returned.
@@ -58,4 +51,5 @@ struct LeastSq {
 std::string GetBigOString(BigO complexity);
 
 }  // end namespace benchmark
+
 #endif  // COMPLEXITY_H_

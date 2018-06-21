@@ -2787,7 +2787,6 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExplicit...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InferExportWild...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ConfigMacrosExh...
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ModuleMapIsPriv...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
   unsigned DefinitionAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
@@ -2893,8 +2892,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
                                          Mod->InferSubmodules,
                                          Mod->InferExplicitSubmodules,
                                          Mod->InferExportWildcard,
-                                         Mod->ConfigMacrosExhaustive,
-                                         Mod->ModuleMapIsPrivate};
+                                         Mod->ConfigMacrosExhaustive};
       Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
     }
 
@@ -5171,7 +5169,6 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       case UPD_CXX_INSTANTIATED_CLASS_DEFINITION: {
         auto *RD = cast<CXXRecordDecl>(D);
         UpdatedDeclContexts.insert(RD->getPrimaryContext());
-        Record.push_back(RD->canPassInRegisters());
         Record.AddCXXDefinitionData(RD);
         Record.AddOffset(WriteDeclContextLexicalBlock(
             *Context, const_cast<CXXRecordDecl *>(RD)));
@@ -5999,6 +5996,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
   Record->push_back(Data.HasIrrelevantDestructor);
   Record->push_back(Data.HasConstexprNonCopyMoveConstructor);
   Record->push_back(Data.HasDefaultedDefaultConstructor);
+  Record->push_back(Data.CanPassInRegisters);
   Record->push_back(Data.DefaultedDefaultConstructorIsConstexpr);
   Record->push_back(Data.HasConstexprDefaultConstructor);
   Record->push_back(Data.HasNonLiteralTypeFieldsOrBases);

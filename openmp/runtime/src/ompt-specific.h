@@ -1,3 +1,16 @@
+/*
+ * ompt-specific.h - header of OMPT internal functions implementation
+ */
+
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.txt for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef OMPT_SPECIFIC_H
 #define OMPT_SPECIFIC_H
 
@@ -34,7 +47,7 @@ int __ompt_get_parallel_info_internal(int ancestor_level,
 
 int __ompt_get_task_info_internal(int ancestor_level, int *type,
                                   ompt_data_t **task_data,
-                                  ompt_frame_t **task_frame,
+                                  omp_frame_t **task_frame,
                                   ompt_data_t **parallel_data, int *thread_num);
 
 ompt_data_t *__ompt_get_thread_data_internal();
