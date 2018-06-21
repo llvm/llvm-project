@@ -58,7 +58,8 @@ bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr);
 /// value indicates success or failure.
 bool MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT = nullptr,
                                LoopInfo *LI = nullptr,
-                               MemoryDependenceResults *MemDep = nullptr);
+                               MemoryDependenceResults *MemDep = nullptr,
+                               DeferredDominance *DDT = nullptr);
 
 /// Replace all uses of an instruction (specified by BI) with a value, then
 /// remove and delete the original instruction.

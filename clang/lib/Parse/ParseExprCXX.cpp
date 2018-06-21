@@ -2505,10 +2505,9 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
     if (AllowConstructorName && 
         Actions.isCurrentClassName(*Id, getCurScope(), &SS)) {
       // We have parsed a constructor name.
-      ParsedType Ty = Actions.getTypeName(*Id, IdLoc, getCurScope(), &SS, false,
-                                          false, nullptr,
-                                          /*IsCtorOrDtorName=*/true,
-                                          /*NonTrivialTypeSourceInfo=*/true);
+      ParsedType Ty = Actions.getConstructorName(*Id, IdLoc, getCurScope(), SS);
+      if (!Ty)
+        return true;
       Result.setConstructorName(Ty, IdLoc, IdLoc);
     } else if (getLangOpts().CPlusPlus17 &&
                AllowDeductionGuide && SS.isEmpty() &&
@@ -2555,11 +2554,10 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
           << TemplateId->Name
           << FixItHint::CreateRemoval(
                     SourceRange(TemplateId->LAngleLoc, TemplateId->RAngleLoc));
-        ParsedType Ty =
-            Actions.getTypeName(*TemplateId->Name, TemplateId->TemplateNameLoc,
-                                getCurScope(), &SS, false, false, nullptr,
-                                /*IsCtorOrDtorName=*/true,
-                                /*NontrivialTypeSourceInfo=*/true);
+        ParsedType Ty = Actions.getConstructorName(
+            *TemplateId->Name, TemplateId->TemplateNameLoc, getCurScope(), SS);
+        if (!Ty)
+          return true;
         Result.setConstructorName(Ty, TemplateId->TemplateNameLoc,
                                   TemplateId->RAngleLoc);
         ConsumeAnnotationToken();

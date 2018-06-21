@@ -117,9 +117,12 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
 
 bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
                                      LoopInfo *LI,
-                                     MemoryDependenceResults *MemDep) {
-  // Don't merge away blocks who have their address taken.
-  if (BB->hasAddressTaken()) return false;
+                                     MemoryDependenceResults *MemDep,
+                                     DeferredDominance *DDT) {
+  assert(!(DT && DDT) && "Cannot call with both DT and DDT.");
+
+  if (BB->hasAddressTaken())
+    return false;
 
   // Can't merge if there are multiple predecessors, or no predecessors.
   BasicBlock *PredBB = BB->getUniquePredecessor();
@@ -131,16 +134,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
   if (PredBB->getTerminator()->isExceptional())
     return false;
 
-  succ_iterator SI(succ_begin(PredBB)), SE(succ_end(PredBB));
-  BasicBlock *OnlySucc = BB;
-  for (; SI != SE; ++SI)
-    if (*SI != OnlySucc) {
-      OnlySucc = nullptr;     // There are multiple distinct successors!
-      break;
-    }
-
-  // Can't merge if there are multiple successors.
-  if (!OnlySucc) return false;
+  // Can't merge if there are multiple distinct successors.
+  if (PredBB->getUniqueSuccessor() != BB)
+    return false;
 
   // Can't merge if there is PHI loop.
   for (PHINode &PN : BB->phis())
@@ -156,6 +152,18 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
           cast<PHINode>(PN.getIncomingValue(0))->getParent() != BB)
         IncomingValues.push_back(PN.getIncomingValue(0));
     FoldSingleEntryPHINodes(BB, MemDep);
+  }
+
+  // Deferred DT update: Collect all the edges that exit BB. These
+  // dominator edges will be redirected from Pred.
+  std::vector<DominatorTree::UpdateType> Updates;
+  if (DDT) {
+    Updates.reserve(1 + (2 * succ_size(BB)));
+    Updates.push_back({DominatorTree::Delete, PredBB, BB});
+    for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+      Updates.push_back({DominatorTree::Delete, BB, *I});
+      Updates.push_back({DominatorTree::Insert, PredBB, *I});
+    }
   }
 
   // Delete the unconditional branch from the predecessor...
@@ -204,7 +212,12 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
   if (MemDep)
     MemDep->invalidateCachedPredecessors();
 
-  BB->eraseFromParent();
+  if (DDT) {
+    DDT->deleteBB(BB); // Deferred deletion of BB.
+    DDT->applyUpdates(Updates);
+  } else {
+    BB->eraseFromParent(); // Nuke BB.
+  }
   return true;
 }
 

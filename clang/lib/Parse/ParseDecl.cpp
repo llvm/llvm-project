@@ -3250,6 +3250,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         continue;
       }
 
+      // If we're in a context where the identifier could be a class name,
+      // check whether this is a constructor declaration.
+      if (getLangOpts().CPlusPlus && DSContext == DeclSpecContext::DSC_class &&
+          Actions.isCurrentClassName(*Tok.getIdentifierInfo(), getCurScope()) &&
+          isConstructorDeclarator(/*Unqualified*/true))
+        goto DoneWithDeclSpec;
+
       ParsedType TypeRep = Actions.getTypeName(
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
           false, false, nullptr, false, false,
@@ -3268,13 +3275,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         }
         goto DoneWithDeclSpec;
       }
-
-      // If we're in a context where the identifier could be a class name,
-      // check whether this is a constructor declaration.
-      if (getLangOpts().CPlusPlus && DSContext == DeclSpecContext::DSC_class &&
-          Actions.isCurrentClassName(*Tok.getIdentifierInfo(), getCurScope()) &&
-          isConstructorDeclarator(/*Unqualified*/true))
-        goto DoneWithDeclSpec;
 
       // Likewise, if this is a context where the identifier could be a template
       // name, check whether this is a deduction guide declaration.

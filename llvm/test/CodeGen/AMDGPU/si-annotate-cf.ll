@@ -89,11 +89,11 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 
 ; This broke the old AMDIL cfg structurizer
 ; FUNC-LABEL: {{^}}loop_land_info_assert:
-; SI: s_cmp_gt_i32
-; SI-NEXT: s_cbranch_scc0 [[ENDPGM:BB[0-9]+_[0-9]+]]
+; SI: s_cmp_lt_i32
+; SI-NEXT: s_cbranch_scc1 [[ENDPGM:BB[0-9]+_[0-9]+]]
 
-; SI: s_cmpk_gt_i32
-; SI-NEXT: s_cbranch_scc1 [[ENDPGM]]
+; SI: s_cmpk_lt_i32
+; SI-NEXT: s_cbranch_scc0 [[ENDPGM]]
 
 ; SI: [[INFLOOP:BB[0-9]+_[0-9]+]]
 ; SI: s_cbranch_vccnz [[INFLOOP]]

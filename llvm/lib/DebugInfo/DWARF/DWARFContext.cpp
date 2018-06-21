@@ -470,8 +470,13 @@ void DWARFContext::dump(
                                   isLittleEndian(), savedAddressByteSize);
     uint32_t offset = 0;
     DWARFDebugRangeList rangeList;
-    while (rangeList.extract(rangesData, &offset))
+    while (rangesData.isValidOffset(offset)) {
+      if (Error E = rangeList.extract(rangesData, &offset)) {
+        WithColor::error() << toString(std::move(E)) << '\n';
+        break;  
+      }
       rangeList.dump(OS);
+    }
   }
 
   if (shouldDump(Explicit, ".debug_rnglists", DIDT_ID_DebugRnglists,
