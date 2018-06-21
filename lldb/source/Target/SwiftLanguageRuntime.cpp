@@ -1188,16 +1188,11 @@ SwiftASTContext *SwiftLanguageRuntime::GetScratchSwiftASTContext() {
 }
 
 SwiftLanguageRuntime::MetadataPromise::MetadataPromise(
-    swift::ASTContext *ast_ctx, SwiftLanguageRuntime *runtime,
+    SwiftASTContext &swift_ast_ctx, SwiftLanguageRuntime &runtime,
     lldb::addr_t location)
-    : m_swift_ast(ast_ctx), m_swift_runtime(runtime),
-      m_metadata_location(location) {
-  lldbassert(m_swift_ast && "MetadataPromise requires a swift::ASTContext");
-  lldbassert(m_swift_runtime &&
-             "MetadataPromise requires a SwiftLanguageRuntime");
-  m_remote_ast.reset(new swift::remoteAST::RemoteASTContext(
-      *ast_ctx, m_swift_runtime->GetMemoryReader()));
-}
+    : m_swift_ast(*swift_ast_ctx.GetASTContext()),
+      m_remote_ast(runtime.GetRemoteASTContext(swift_ast_ctx)),
+      m_swift_runtime(runtime), m_metadata_location(location) {}
 
 CompilerType
 SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
@@ -1215,11 +1210,11 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
     return m_compiler_type.getValue();
 
   swift::remoteAST::Result<swift::Type> result =
-      m_remote_ast->getTypeForRemoteTypeMetadata(
+      m_remote_ast.getTypeForRemoteTypeMetadata(
           swift::remote::RemoteAddress(m_metadata_location));
 
   if (result) {
-    m_compiler_type = CompilerType(m_swift_ast, result.getValue().getPointer());
+    m_compiler_type = CompilerType(&m_swift_ast, result.getValue().getPointer());
     if (log)
       log->Printf("[MetadataPromise] result is type %s",
                   m_compiler_type->GetTypeName().AsCString());
@@ -1251,7 +1246,7 @@ SwiftLanguageRuntime::MetadataPromise::FulfillKindPromise(Status *error) {
     return m_metadata_kind;
 
   swift::remoteAST::Result<swift::MetadataKind> result =
-      m_remote_ast->getKindForRemoteTypeMetadata(
+      m_remote_ast.getKindForRemoteTypeMetadata(
           swift::remote::RemoteAddress(m_metadata_location));
 
   if (result) {
@@ -1316,7 +1311,7 @@ SwiftLanguageRuntime::GetMetadataPromise(lldb::addr_t addr,
     return iter->second;
 
   MetadataPromiseSP promise_sp(
-      new MetadataPromise(std::get<0>(key), this, std::get<1>(key)));
+      new MetadataPromise(*swift_ast_ctx, *this, std::get<1>(key)));
   m_promises_map.emplace(key, promise_sp);
   return promise_sp;
 }
@@ -1330,12 +1325,11 @@ SwiftLanguageRuntime::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
     return *known->second;
 
   // Initialize a new remote AST context.
-  return *m_remote_ast_contexts.emplace(
-             swift_ast_ctx.GetASTContext(),
-             llvm::make_unique<swift::remoteAST::RemoteASTContext>(
-                                             *swift_ast_ctx.GetASTContext(),
-                                             GetMemoryReader()))
-    .first->second;
+  return *m_remote_ast_contexts
+              .emplace(swift_ast_ctx.GetASTContext(),
+                       llvm::make_unique<swift::remoteAST::RemoteASTContext>(
+                           *swift_ast_ctx.GetASTContext(), GetMemoryReader()))
+              .first->second;
 }
 
 void SwiftLanguageRuntime::ReleaseAssociatedRemoteASTContext(
@@ -1393,7 +1387,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
         break;
       swift::remote::RemoteAddress address(pointer);
       if (auto metadata =
-            remote_ast_context.getHeapMetadataForObject(address)) {
+              remote_ast_context.getHeapMetadataForObject(address)) {
         optmeta = metadata.getValue();
       }
     }
@@ -1410,8 +1404,8 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
 
   // Determine the member offset.
   swift::remoteAST::Result<uint64_t> result =
-    remote_ast_context.getOffsetOfMember(swift_type, optmeta,
-                                         member_name.GetStringRef());
+      remote_ast_context.getOffsetOfMember(swift_type, optmeta,
+                                           member_name.GetStringRef());
   if (result) {
     if (log)
       log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64,
@@ -1462,17 +1456,17 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     return false;
   address.SetRawAddress(class_metadata_ptr);
 
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
   SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
-
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+    return false;
 
   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
-
   swift::remote::RemoteAddress instance_address(class_metadata_ptr);
-  auto metadata_address =
-    remote_ast.getHeapMetadataForObject(instance_address);
+  auto metadata_address = remote_ast.getHeapMetadataForObject(instance_address);
   if (!metadata_address) {
     if (log) {
       log->Printf("could not read heap metadata for object at %llu: %s\n",
@@ -1484,8 +1478,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
   }
 
   auto instance_type =
-    remote_ast.getTypeForRemoteTypeMetadata(metadata_address.getValue(),
-                                            /*skipArtificial=*/true);
+      remote_ast.getTypeForRemoteTypeMetadata(metadata_address.getValue(),
+                                              /*skipArtificial=*/true);
   if (!instance_type) {
     if (log) {
       log->Printf("could not get type metadata from address %llu: %s\n",
@@ -2134,19 +2128,22 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_GenericTypeParam(
   if (addr_of_meta == LLDB_INVALID_ADDRESS || addr_of_meta == 0 ||
       error.Fail())
     return true;
-  
-   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
-   // use the scratch context where such operations are legal and safe.
-   SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
-   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
-   swift::remote::RemoteAddress metadata_address(addr_of_meta);
-   auto instance_type =
-       remote_ast.getTypeForRemoteTypeMetadata(metadata_address,
-                                               /*skipArtificial*/ true);
+
+  // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
+  // use the scratch context where such operations are legal and safe.
+  SwiftASTContext *swift_ast_ctx = GetScratchSwiftASTContext();
+  if (!swift_ast_ctx || swift_ast_ctx->HasFatalErrors())
+    return false;
+
+  auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
+  swift::remote::RemoteAddress metadata_address(addr_of_meta);
+  auto instance_type =
+      remote_ast.getTypeForRemoteTypeMetadata(metadata_address,
+                                              /*skipArtificial*/ true);
   if (!instance_type)
     return false;
   CompilerType result_type(swift_ast_ctx,
-                            instance_type.getValue().getPointer());
+                           instance_type.getValue().getPointer());
   class_type_or_name.SetCompilerType(result_type);
   return true;
 }
