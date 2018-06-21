@@ -25,6 +25,7 @@ class TestSwiftMetatype(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_with_dsym(self):
         """Test the formatting of Swift metatypes"""
         self.build()
