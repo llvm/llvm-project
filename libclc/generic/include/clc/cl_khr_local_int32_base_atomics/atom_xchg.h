@@ -1,2 +1,3 @@
-_CLC_OVERLOAD _CLC_DECL int atom_xchg(local int *p, int val);
-_CLC_OVERLOAD _CLC_DECL unsigned int atom_xchg(local unsigned int *p, unsigned int val);
+#define __CLC_FUNCTION atom_xchg
+#define __CLC_ADDRESS_SPACE local
+#include <clc/atom_decl_int32.inc>

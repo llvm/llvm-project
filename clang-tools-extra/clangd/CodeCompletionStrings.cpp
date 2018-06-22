@@ -249,18 +249,5 @@ std::string getDetail(const CodeCompletionString &CCS) {
   return "";
 }
 
-std::string getFilterText(const CodeCompletionString &CCS) {
-  for (const auto &Chunk : CCS) {
-    switch (Chunk.Kind) {
-    case CodeCompletionString::CK_TypedText:
-      // There's always exactly one CK_TypedText chunk.
-      return Chunk.Text;
-    default:
-      break;
-    }
-  }
-  return "";
-}
-
 } // namespace clangd
 } // namespace clang
