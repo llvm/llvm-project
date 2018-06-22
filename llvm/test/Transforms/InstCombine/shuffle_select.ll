@@ -224,3 +224,18 @@ define <4 x double> @fdiv(<4 x double> %v0) {
   ret <4 x double> %t3
 }
 
+; The variable operand must be either the first operand or second operand in both binops.
+
+define <4 x double> @frem(<4 x double> %v0) {
+; CHECK-LABEL: @frem(
+; CHECK-NEXT:    [[T1:%.*]] = frem <4 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>, [[V0:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = frem <4 x double> [[V0]], <double 5.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>
+; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x double> [[T1]], <4 x double> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x double> [[T3]]
+;
+  %t1 = frem <4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>, %v0
+  %t2 = frem <4 x double> %v0, <double 5.0, double 6.0, double 7.0, double 8.0>
+  %t3 = shufflevector <4 x double> %t1, <4 x double> %t2, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x double> %t3
+}
+

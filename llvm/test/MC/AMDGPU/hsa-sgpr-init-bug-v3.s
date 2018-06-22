@@ -1,6 +1,9 @@
 // RUN: llvm-mc -mattr=+code-object-v3 -triple amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj < %s > %t
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
+// big endian not supported
+// XFAIL: powerpc-, powerpc64-, s390x, mips-, mips64-, sparc
+
 // Check that SGPR init bug on gfx803 is corrected by the assembler, setting
 // GRANULATED_WAVEFRONT_SGPR_COUNT to 11.
 

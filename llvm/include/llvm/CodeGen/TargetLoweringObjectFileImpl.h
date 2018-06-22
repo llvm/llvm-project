@@ -36,10 +36,13 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
 protected:
   MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =
       MCSymbolRefExpr::VK_None;
+  const TargetMachine *TM;
 
 public:
   TargetLoweringObjectFileELF() = default;
   ~TargetLoweringObjectFileELF() override = default;
+
+  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
   /// Emit Obj-C garbage collection and linker options.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
@@ -133,11 +136,6 @@ public:
 
 class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
   mutable unsigned NextUniqueID = 0;
-
-  /// Append "$symbol" to the section name when targetting mingw. The ld.bfd
-  /// COFF linker will not properly handle comdats otherwise.
-  void appendComdatSymbolForMinGW(SmallVectorImpl<char> &SecName,
-                                  StringRef Symbol, const DataLayout &DL) const;
 
 public:
   ~TargetLoweringObjectFileCOFF() override = default;

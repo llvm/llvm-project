@@ -1166,6 +1166,13 @@ static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
   if (isa<Constant>(X))
     return nullptr;
 
+  // Constant operands must be on the same side of each binop. We can't fold:
+  // shuffle (sdiv X, C0), (sdiv C1, X).
+  bool B00IsConst = isa<Constant>(B0->getOperand(0));
+  bool B10IsConst = isa<Constant>(B1->getOperand(0));
+  if (B00IsConst != B10IsConst)
+    return nullptr;
+
   // Remove a binop and the shuffle by rearranging the constant:
   // shuffle (op X, C0), (op X, C1), M --> op X, C'
   // shuffle (op C0, X), (op C1, X), M --> op C', X
@@ -1178,8 +1185,7 @@ static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
     NewC = getSafeVectorConstantForIntDivRem(NewC);
 
   BinaryOperator::BinaryOps Opc = B0->getOpcode();
-  bool Op0IsConst = isa<Constant>(B0->getOperand(0));
-  Instruction *NewBO = Op0IsConst ? BinaryOperator::Create(Opc, NewC, X) :
+  Instruction *NewBO = B00IsConst ? BinaryOperator::Create(Opc, NewC, X) :
                                     BinaryOperator::Create(Opc, X, NewC);
 
   // Flags are intersected from the 2 source binops.
