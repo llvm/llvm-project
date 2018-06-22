@@ -314,9 +314,12 @@ public:
 
   void resetRootFile() {
     assert(Header.MCDwarfFiles.empty());
+    Header.RootFile.Name.clear();
     Header.resetMD5Usage();
     Header.HasSource = false;
   }
+
+  bool hasRootFile() const { return !Header.RootFile.Name.empty(); }
 
   // Report whether MD5 usage has been consistent (all-or-none).
   bool isMD5UsageConsistent() const { return Header.isMD5UsageConsistent(); }

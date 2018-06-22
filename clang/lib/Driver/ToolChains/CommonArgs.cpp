@@ -593,14 +593,17 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
         HelperStaticRuntimes.push_back("asan-preinit");
     }
     if (SanArgs.needsUbsanRt()) {
-      if (SanArgs.requiresMinimalRuntime()) {
+      if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
-      } else {
+      else
         SharedRuntimes.push_back("ubsan_standalone");
-      }
     }
-    if (SanArgs.needsScudoRt())
-      SharedRuntimes.push_back("scudo");
+    if (SanArgs.needsScudoRt()) {
+      if (SanArgs.requiresMinimalRuntime())
+        SharedRuntimes.push_back("scudo_minimal");
+      else
+        SharedRuntimes.push_back("scudo");
+    }
     if (SanArgs.needsHwasanRt())
       SharedRuntimes.push_back("hwasan");
   }
@@ -666,9 +669,15 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   if (SanArgs.needsEsanRt())
     StaticRuntimes.push_back("esan");
   if (SanArgs.needsScudoRt()) {
-    StaticRuntimes.push_back("scudo");
-    if (SanArgs.linkCXXRuntimes())
-      StaticRuntimes.push_back("scudo_cxx");
+    if (SanArgs.requiresMinimalRuntime()) {
+      StaticRuntimes.push_back("scudo_minimal");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("scudo_cxx_minimal");
+    } else {
+      StaticRuntimes.push_back("scudo");
+      if (SanArgs.linkCXXRuntimes())
+        StaticRuntimes.push_back("scudo_cxx");
+    }
   }
 }
 

@@ -202,18 +202,15 @@ vector<Ty> make_vector(Arg A) {}
   bool SeenMakeVector = false;
   M.fuzzyFind(Req, [&](const Symbol &Sym) {
     if (Sym.Name == "vector") {
-      EXPECT_EQ(Sym.CompletionLabel, "vector<class Ty>");
-      EXPECT_EQ(Sym.CompletionSnippetInsertText, "vector<${1:class Ty}>");
-      EXPECT_EQ(Sym.CompletionPlainInsertText, "vector");
+      EXPECT_EQ(Sym.Signature, "<class Ty>");
+      EXPECT_EQ(Sym.CompletionSnippetSuffix, "<${1:class Ty}>");
       SeenVector = true;
       return;
     }
 
     if (Sym.Name == "make_vector") {
-      EXPECT_EQ(Sym.CompletionLabel, "make_vector<class Ty>(Arg A)");
-      EXPECT_EQ(Sym.CompletionSnippetInsertText,
-                "make_vector<${1:class Ty}>(${2:Arg A})");
-      EXPECT_EQ(Sym.CompletionPlainInsertText, "make_vector");
+      EXPECT_EQ(Sym.Signature, "<class Ty>(Arg A)");
+      EXPECT_EQ(Sym.CompletionSnippetSuffix, "<${1:class Ty}>(${2:Arg A})");
       SeenMakeVector = true;
     }
   });

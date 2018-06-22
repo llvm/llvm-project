@@ -45,7 +45,7 @@ enum : SanitizerMask {
                       Nullability | LocalBounds | CFI,
   TrappingDefault = CFI,
   CFIClasses = CFIVCall | CFINVCall | CFIDerivedCast | CFIUnrelatedCast,
-  CompatibleWithMinimalRuntime = TrappingSupported,
+  CompatibleWithMinimalRuntime = TrappingSupported | Scudo,
 };
 
 enum CoverageFeature {
@@ -179,7 +179,8 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsHwasanRt() || needsTsanRt() ||
-      needsDfsanRt() || needsLsanRt() || needsCfiDiagRt() || needsScudoRt())
+      needsDfsanRt() || needsLsanRt() || needsCfiDiagRt() ||
+      (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||

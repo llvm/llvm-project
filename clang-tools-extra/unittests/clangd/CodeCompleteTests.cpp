@@ -164,9 +164,6 @@ Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
   }
   USR += Regex("^.*$").sub(USRFormat, Sym.Name); // e.g. func -> @F@func#
   Sym.ID = SymbolID(USR);
-  Sym.CompletionPlainInsertText = Sym.Name;
-  Sym.CompletionSnippetInsertText = Sym.Name;
-  Sym.CompletionLabel = Sym.Name;
   Sym.SymInfo.Kind = Kind;
   Sym.IsIndexedForCodeCompletion = true;
   return Sym;

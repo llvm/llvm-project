@@ -2086,6 +2086,80 @@ static llvm::Value *createRuntimeShuffleFunction(CodeGenFunction &CGF,
   return castValueToType(CGF, ShuffledVal, CastTy, ElemType, Loc);
 }
 
+static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
+                            Address DestAddr, QualType ElemType,
+                            llvm::Value *Offset, SourceLocation Loc) {
+  CGBuilderTy &Bld = CGF.Builder;
+
+  CharUnits Size = CGF.getContext().getTypeSizeInChars(ElemType);
+  // Create the loop over the big sized data.
+  // ptr = (void*)Elem;
+  // ptrEnd = (void*) Elem + 1;
+  // Step = 8;
+  // while (ptr + Step < ptrEnd)
+  //   shuffle((int64_t)*ptr);
+  // Step = 4;
+  // while (ptr + Step < ptrEnd)
+  //   shuffle((int32_t)*ptr);
+  // ...
+  Address ElemPtr = DestAddr;
+  Address Ptr = SrcAddr;
+  Address PtrEnd = Bld.CreatePointerBitCastOrAddrSpaceCast(
+      Bld.CreateConstGEP(SrcAddr, 1, Size), CGF.VoidPtrTy);
+  for (int IntSize = 8; IntSize >= 1; IntSize /= 2) {
+    if (Size < CharUnits::fromQuantity(IntSize))
+      continue;
+    QualType IntType = CGF.getContext().getIntTypeForBitwidth(
+        CGF.getContext().toBits(CharUnits::fromQuantity(IntSize)),
+        /*Signed=*/1);
+    llvm::Type *IntTy = CGF.ConvertTypeForMem(IntType);
+    Ptr = Bld.CreatePointerBitCastOrAddrSpaceCast(Ptr, IntTy->getPointerTo());
+    ElemPtr =
+        Bld.CreatePointerBitCastOrAddrSpaceCast(ElemPtr, IntTy->getPointerTo());
+    if (Size.getQuantity() / IntSize > 1) {
+      llvm::BasicBlock *PreCondBB = CGF.createBasicBlock(".shuffle.pre_cond");
+      llvm::BasicBlock *ThenBB = CGF.createBasicBlock(".shuffle.then");
+      llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".shuffle.exit");
+      llvm::BasicBlock *CurrentBB = Bld.GetInsertBlock();
+      CGF.EmitBlock(PreCondBB);
+      llvm::PHINode *PhiSrc =
+          Bld.CreatePHI(Ptr.getType(), /*NumReservedValues=*/2);
+      PhiSrc->addIncoming(Ptr.getPointer(), CurrentBB);
+      llvm::PHINode *PhiDest =
+          Bld.CreatePHI(ElemPtr.getType(), /*NumReservedValues=*/2);
+      PhiDest->addIncoming(ElemPtr.getPointer(), CurrentBB);
+      Ptr = Address(PhiSrc, Ptr.getAlignment());
+      ElemPtr = Address(PhiDest, ElemPtr.getAlignment());
+      llvm::Value *PtrDiff = Bld.CreatePtrDiff(
+          PtrEnd.getPointer(), Bld.CreatePointerBitCastOrAddrSpaceCast(
+                                   Ptr.getPointer(), CGF.VoidPtrTy));
+      Bld.CreateCondBr(Bld.CreateICmpSGT(PtrDiff, Bld.getInt64(IntSize - 1)),
+                       ThenBB, ExitBB);
+      CGF.EmitBlock(ThenBB);
+      llvm::Value *Res = createRuntimeShuffleFunction(
+          CGF, CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc),
+          IntType, Offset, Loc);
+      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType);
+      Ptr = Bld.CreateConstGEP(Ptr, 1, CharUnits::fromQuantity(IntSize));
+      ElemPtr =
+          Bld.CreateConstGEP(ElemPtr, 1, CharUnits::fromQuantity(IntSize));
+      PhiSrc->addIncoming(Ptr.getPointer(), ThenBB);
+      PhiDest->addIncoming(ElemPtr.getPointer(), ThenBB);
+      CGF.EmitBranch(PreCondBB);
+      CGF.EmitBlock(ExitBB);
+    } else {
+      llvm::Value *Res = createRuntimeShuffleFunction(
+          CGF, CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc),
+          IntType, Offset, Loc);
+      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType);
+      Ptr = Bld.CreateConstGEP(Ptr, 1, CharUnits::fromQuantity(IntSize));
+      ElemPtr =
+          Bld.CreateConstGEP(ElemPtr, 1, CharUnits::fromQuantity(IntSize));
+    }
+    Size = Size % IntSize;
+  }
+}
+
 namespace {
 enum CopyAction : unsigned {
   // RemoteLaneToThread: Copy over a Reduce list from a remote lane in
@@ -2227,24 +2301,29 @@ static void emitReductionListCopy(
     // element as this is required in all directions
     SrcElementAddr = Bld.CreateElementBitCast(
         SrcElementAddr, CGF.ConvertTypeForMem(Private->getType()));
-    llvm::Value *Elem =
-        CGF.EmitLoadOfScalar(SrcElementAddr, /*Volatile=*/false,
-                             Private->getType(), Private->getExprLoc());
+    DestElementAddr = Bld.CreateElementBitCast(DestElementAddr,
+                                               SrcElementAddr.getElementType());
 
     // Now that all active lanes have read the element in the
     // Reduce list, shuffle over the value from the remote lane.
     if (ShuffleInElement) {
-      Elem =
-          createRuntimeShuffleFunction(CGF, Elem, Private->getType(),
-                                       RemoteLaneOffset, Private->getExprLoc());
+      shuffleAndStore(CGF, SrcElementAddr, DestElementAddr, Private->getType(),
+                      RemoteLaneOffset, Private->getExprLoc());
+    } else {
+      if (Private->getType()->isScalarType()) {
+        llvm::Value *Elem =
+            CGF.EmitLoadOfScalar(SrcElementAddr, /*Volatile=*/false,
+                                 Private->getType(), Private->getExprLoc());
+        // Store the source element value to the dest element address.
+        CGF.EmitStoreOfScalar(Elem, DestElementAddr, /*Volatile=*/false,
+                              Private->getType());
+      } else {
+        CGF.EmitAggregateCopy(
+            CGF.MakeAddrLValue(DestElementAddr, Private->getType()),
+            CGF.MakeAddrLValue(SrcElementAddr, Private->getType()),
+            Private->getType(), AggValueSlot::DoesNotOverlap);
+      }
     }
-
-    DestElementAddr = Bld.CreateElementBitCast(DestElementAddr,
-                                               SrcElementAddr.getElementType());
-
-    // Store the source element value to the dest element address.
-    CGF.EmitStoreOfScalar(Elem, DestElementAddr, /*Volatile=*/false,
-                          Private->getType());
 
     // Step 3.1: Modify reference in dest Reduce list as needed.
     // Modifying the reference in Reduce list to point to the newly
@@ -2616,9 +2695,6 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
         Address(ElemPtrPtr, C.getTypeAlignInChars(Private->getType()));
     ElemPtr = Bld.CreateElementBitCast(
         ElemPtr, CGF.ConvertTypeForMem(Private->getType()));
-    // elem = *elemptr
-    llvm::Value *Elem = CGF.EmitLoadOfScalar(
-        ElemPtr, /*Volatile=*/false, Private->getType(), SourceLocation());
 
     // Get pointer to location in transfer medium.
     // MediumPtr = &medium[warp_id]
@@ -2630,8 +2706,19 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
     MediumPtr = Bld.CreateElementBitCast(
         MediumPtr, CGF.ConvertTypeForMem(Private->getType()));
 
+    // elem = *elemptr
     //*MediumPtr = elem
-    Bld.CreateStore(Elem, MediumPtr);
+    if (Private->getType()->isScalarType()) {
+      llvm::Value *Elem = CGF.EmitLoadOfScalar(ElemPtr, /*Volatile=*/false,
+                                               Private->getType(), Loc);
+      // Store the source element value to the dest element address.
+      CGF.EmitStoreOfScalar(Elem, MediumPtr, /*Volatile=*/false,
+                            Private->getType());
+    } else {
+      CGF.EmitAggregateCopy(CGF.MakeAddrLValue(ElemPtr, Private->getType()),
+                            CGF.MakeAddrLValue(MediumPtr, Private->getType()),
+                            Private->getType(), AggValueSlot::DoesNotOverlap);
+    }
 
     Bld.CreateBr(MergeBB);
 
@@ -2671,8 +2758,6 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
     // SrcMediumVal = *SrcMediumPtr;
     SrcMediumPtr = Bld.CreateElementBitCast(
         SrcMediumPtr, CGF.ConvertTypeForMem(Private->getType()));
-    llvm::Value *SrcMediumValue = CGF.EmitLoadOfScalar(
-        SrcMediumPtr, /*Volatile=*/false, Private->getType(), SourceLocation());
 
     // TargetElemPtr = (type[i]*)(SrcDataAddr[i])
     Address TargetElemPtrPtr =
@@ -2685,8 +2770,17 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
         TargetElemPtr, CGF.ConvertTypeForMem(Private->getType()));
 
     // *TargetElemPtr = SrcMediumVal;
-    CGF.EmitStoreOfScalar(SrcMediumValue, TargetElemPtr, /*Volatile=*/false,
-                          Private->getType());
+    if (Private->getType()->isScalarType()) {
+      llvm::Value *SrcMediumValue = CGF.EmitLoadOfScalar(
+          SrcMediumPtr, /*Volatile=*/false, Private->getType(), Loc);
+      CGF.EmitStoreOfScalar(SrcMediumValue, TargetElemPtr, /*Volatile=*/false,
+                            Private->getType());
+    } else {
+      CGF.EmitAggregateCopy(
+          CGF.MakeAddrLValue(SrcMediumPtr, Private->getType()),
+          CGF.MakeAddrLValue(TargetElemPtr, Private->getType()),
+          Private->getType(), AggValueSlot::DoesNotOverlap);
+    }
     Bld.CreateBr(W0MergeBB);
 
     CGF.EmitBlock(W0ElseBB);

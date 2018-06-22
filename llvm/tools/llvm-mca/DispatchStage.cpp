@@ -92,8 +92,6 @@ void DispatchStage::updateRAWDependencies(ReadState &RS,
     int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
     WS->addUser(&RS, ReadAdvance);
   }
-  // Prepare the set for another round.
-  DependentWrites.clear();
 }
 
 void DispatchStage::dispatch(InstRef IR) {

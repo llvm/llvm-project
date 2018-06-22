@@ -32,10 +32,11 @@ public:
   Stage();
   virtual ~Stage() = default;
 
-  /// Called prior to preExecute to ensure that the stage can operate.
-  /// TODO: Remove this logic once backend::run and backend::runCycle become
-  /// one routine.
-  virtual bool isReady() const { return true; }
+  /// Called prior to preExecute to ensure that the stage has items that it
+  /// is to process.  For example, a FetchStage might have more instructions
+  /// that need to be processed, or a RCU might have items that have yet to
+  /// retire.
+  virtual bool hasWorkToComplete() const = 0;
 
   /// Called as a setup phase to prepare for the main stage execution.
   virtual void preExecute(const InstRef &IR) {}

@@ -69,7 +69,7 @@ template <> struct MappingTraits<SymbolInfo> {
 template <> struct MappingTraits<Symbol::Details> {
   static void mapping(IO &io, Symbol::Details &Detail) {
     io.mapOptional("Documentation", Detail.Documentation);
-    io.mapOptional("CompletionDetail", Detail.CompletionDetail);
+    io.mapOptional("ReturnType", Detail.ReturnType);
     io.mapOptional("IncludeHeader", Detail.IncludeHeader);
   }
 };
@@ -110,11 +110,8 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("References", Sym.References, 0u);
     IO.mapOptional("IsIndexedForCodeCompletion", Sym.IsIndexedForCodeCompletion,
                    false);
-    IO.mapRequired("CompletionLabel", Sym.CompletionLabel);
-    IO.mapRequired("CompletionPlainInsertText", Sym.CompletionPlainInsertText);
-
-    IO.mapOptional("CompletionSnippetInsertText",
-                   Sym.CompletionSnippetInsertText);
+    IO.mapOptional("Signature", Sym.Signature);
+    IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);
     IO.mapOptional("Detail", NDetail->Opt);
   }
 };
