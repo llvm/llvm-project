@@ -1,5 +1,5 @@
 // RUN: rm -f %t.hmap
-// RUN: '%python' hmaptool write %S/Inputs/headermap-rel/foo.hmap.json %t.hmap
+// RUN: %hmaptool write %S/Inputs/headermap-rel/foo.hmap.json %t.hmap
 // RUN: %clang_cc1 -E %s -o %t.i -I %t.hmap -F %S/Inputs/headermap-rel
 // RUN: FileCheck %s -input-file %t.i
 
