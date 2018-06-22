@@ -23,24 +23,23 @@ public:
         CCTUInfo(Allocator), Builder(*Allocator, CCTUInfo) {}
 
 protected:
-  void labelAndInsertText(const CodeCompletionString &CCS,
-                          bool EnableSnippets = false) {
-    Label.clear();
-    InsertText.clear();
-    getLabelAndInsertText(CCS, &Label, &InsertText, EnableSnippets);
+  void computeSignature(const CodeCompletionString &CCS) {
+    Signature.clear();
+    Snippet.clear();
+    getSignature(CCS, &Signature, &Snippet);
   }
 
   std::shared_ptr<clang::GlobalCodeCompletionAllocator> Allocator;
   CodeCompletionTUInfo CCTUInfo;
   CodeCompletionBuilder Builder;
-  std::string Label;
-  std::string InsertText;
+  std::string Signature;
+  std::string Snippet;
 };
 
-TEST_F(CompletionStringTest, Detail) {
+TEST_F(CompletionStringTest, ReturnType) {
   Builder.AddResultTypeChunk("result");
   Builder.AddResultTypeChunk("redundant result no no");
-  EXPECT_EQ(getDetail(*Builder.TakeString()), "result");
+  EXPECT_EQ(getReturnType(*Builder.TakeString()), "result");
 }
 
 TEST_F(CompletionStringTest, Documentation) {
@@ -65,31 +64,15 @@ TEST_F(CompletionStringTest, MultipleAnnotations) {
             "Annotations: Ano1 Ano2 Ano3\n");
 }
 
-TEST_F(CompletionStringTest, SimpleLabelAndInsert) {
+TEST_F(CompletionStringTest, EmptySignature) {
   Builder.AddTypedTextChunk("X");
   Builder.AddResultTypeChunk("result no no");
-  labelAndInsertText(*Builder.TakeString());
-  EXPECT_EQ(Label, "X");
-  EXPECT_EQ(InsertText, "X");
+  computeSignature(*Builder.TakeString());
+  EXPECT_EQ(Signature, "");
+  EXPECT_EQ(Snippet, "");
 }
 
-TEST_F(CompletionStringTest, FunctionPlainText) {
-  Builder.AddResultTypeChunk("result no no");
-  Builder.AddTypedTextChunk("Foo");
-  Builder.AddChunk(CodeCompletionString::CK_LeftParen);
-  Builder.AddPlaceholderChunk("p1");
-  Builder.AddChunk(CodeCompletionString::CK_Comma);
-  Builder.AddPlaceholderChunk("p2");
-  Builder.AddChunk(CodeCompletionString::CK_RightParen);
-  Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
-  Builder.AddInformativeChunk("const");
-
-  labelAndInsertText(*Builder.TakeString());
-  EXPECT_EQ(Label, "Foo(p1, p2) const");
-  EXPECT_EQ(InsertText, "Foo");
-}
-
-TEST_F(CompletionStringTest, FunctionSnippet) {
+TEST_F(CompletionStringTest, Function) {
   Builder.AddResultTypeChunk("result no no");
   Builder.addBriefComment("This comment is ignored");
   Builder.AddTypedTextChunk("Foo");
@@ -100,13 +83,9 @@ TEST_F(CompletionStringTest, FunctionSnippet) {
   Builder.AddChunk(CodeCompletionString::CK_RightParen);
 
   auto *CCS = Builder.TakeString();
-  labelAndInsertText(*CCS);
-  EXPECT_EQ(Label, "Foo(p1, p2)");
-  EXPECT_EQ(InsertText, "Foo");
-
-  labelAndInsertText(*CCS, /*EnableSnippets=*/true);
-  EXPECT_EQ(Label, "Foo(p1, p2)");
-  EXPECT_EQ(InsertText, "Foo(${1:p1}, ${2:p2})");
+  computeSignature(*CCS);
+  EXPECT_EQ(Signature, "(p1, p2)");
+  EXPECT_EQ(Snippet, "(${1:p1}, ${2:p2})");
   EXPECT_EQ(formatDocumentation(*CCS, "Foo's comment"), "Foo's comment");
 }
 
@@ -116,18 +95,18 @@ TEST_F(CompletionStringTest, EscapeSnippet) {
   Builder.AddPlaceholderChunk("$p}1\\");
   Builder.AddChunk(CodeCompletionString::CK_RightParen);
 
-  labelAndInsertText(*Builder.TakeString(), /*EnableSnippets=*/true);
-  EXPECT_EQ(Label, "Foo($p}1\\)");
-  EXPECT_EQ(InsertText, "Foo(${1:\\$p\\}1\\\\})");
+  computeSignature(*Builder.TakeString());
+  EXPECT_EQ(Signature, "($p}1\\)");
+  EXPECT_EQ(Snippet, "(${1:\\$p\\}1\\\\})");
 }
 
 TEST_F(CompletionStringTest, IgnoreInformativeQualifier) {
   Builder.AddTypedTextChunk("X");
   Builder.AddInformativeChunk("info ok");
   Builder.AddInformativeChunk("info no no::");
-  labelAndInsertText(*Builder.TakeString());
-  EXPECT_EQ(Label, "Xinfo ok");
-  EXPECT_EQ(InsertText, "X");
+  computeSignature(*Builder.TakeString());
+  EXPECT_EQ(Signature, "info ok");
+  EXPECT_EQ(Snippet, "");
 }
 
 } // namespace

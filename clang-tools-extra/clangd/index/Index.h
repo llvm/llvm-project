@@ -125,6 +125,11 @@ namespace clangd {
 // When adding new unowned data fields to Symbol, remember to update:
 //   - SymbolSlab::Builder in Index.cpp, to copy them to the slab's storage.
 //   - mergeSymbol in Merge.cpp, to properly combine two Symbols.
+//
+// A fully documented symbol can be split as:
+// size_type std::map<k, t>::count(const K& key) const
+// | Return  |     Scope     |Name|    Signature     |
+// We split up these components to allow display flexibility later.
 struct Symbol {
   // The ID of the symbol.
   SymbolID ID;
@@ -152,15 +157,13 @@ struct Symbol {
   /// Whether or not this symbol is meant to be used for the code completion.
   /// See also isIndexedForCodeCompletion().
   bool IsIndexedForCodeCompletion = false;
-  /// A brief description of the symbol that can be displayed in the completion
-  /// candidate list. For example, "Foo(X x, Y y) const" is a label for a
-  /// function.
-  llvm::StringRef CompletionLabel;
-  /// What to insert when completing this symbol (plain text version).
-  llvm::StringRef CompletionPlainInsertText;
-  /// What to insert when completing this symbol (snippet version). This is
-  /// empty if it is the same as the plain insert text above.
-  llvm::StringRef CompletionSnippetInsertText;
+  /// A brief description of the symbol that can be appended in the completion
+  /// candidate list. For example, "(X x, Y y) const" is a function signature.
+  llvm::StringRef Signature;
+  /// What to insert when completing this symbol, after the symbol name.
+  /// This is in LSP snippet syntax (e.g. "({$0})" for a no-args function).
+  /// (When snippets are disabled, the symbol name alone is used).
+  llvm::StringRef CompletionSnippetSuffix;
 
   /// Optional symbol details that are not required to be set. For example, an
   /// index fuzzy match can return a large number of symbol candidates, and it
@@ -170,9 +173,9 @@ struct Symbol {
   struct Details {
     /// Documentation including comment for the symbol declaration.
     llvm::StringRef Documentation;
-    /// This is what goes into the LSP detail field in a completion item. For
-    /// example, the result type of a function.
-    llvm::StringRef CompletionDetail;
+    /// Type when this symbol is used in an expression. (Short display form).
+    /// e.g. return type of a function, or type of a variable.
+    llvm::StringRef ReturnType;
     /// This can be either a URI of the header to be #include'd for this symbol,
     /// or a literal header quoted with <> or "" that is suitable to be included
     /// directly. When this is a URI, the exact #include path needs to be

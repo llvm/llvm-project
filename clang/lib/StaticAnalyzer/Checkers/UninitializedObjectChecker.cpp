@@ -85,7 +85,7 @@ private:
 };
 
 struct FieldChainInfoComparator {
-  bool operator()(const FieldChainInfo &lhs, const FieldChainInfo &rhs) {
+  bool operator()(const FieldChainInfo &lhs, const FieldChainInfo &rhs) const {
     assert(!lhs.Chain.isEmpty() && !rhs.Chain.isEmpty() &&
            "Attempted to store an empty fieldchain!");
     return *lhs.Chain.begin() < *rhs.Chain.begin();

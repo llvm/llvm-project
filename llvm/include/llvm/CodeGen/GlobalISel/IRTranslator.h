@@ -423,7 +423,7 @@ private:
     return false;
   }
   bool translateAddrSpaceCast(const User &U, MachineIRBuilder &MIRBuilder) {
-    return false;
+    return translateCast(TargetOpcode::G_ADDRSPACE_CAST, U, MIRBuilder);
   }
   bool translateCleanupPad(const User &U, MachineIRBuilder &MIRBuilder) {
     return false;

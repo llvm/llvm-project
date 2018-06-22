@@ -476,7 +476,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       }
 
       if (Disp.isImm() && isDisp8(Disp.getImm())) {
-        if (Disp.getImm() == 0 && BaseRegNo != N86::EBP) {
+        if (Disp.getImm() == 0 && RMfield != 6) {
           // There is no displacement; just the register.
           EmitByte(ModRMByte(0, RegOpcodeField, RMfield), CurByte, OS);
           return;

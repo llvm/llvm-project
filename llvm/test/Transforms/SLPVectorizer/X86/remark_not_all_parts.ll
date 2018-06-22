@@ -33,16 +33,6 @@ for.body:                                         ; preds = %for.body, %entry
 
  ; CHECK-NOT: add nsw <{{[0-9]+}} x i32> 
  ; YAML:      Pass:            slp-vectorizer
- ; YAML-NEXT: Name:            InequableTypes
- ; YAML-NEXT: Function:        foo
- ; YAML-NEXT: Args:
- ; YAML-NEXT:   - String:          'Cannot SLP vectorize list: not all of the '
- ; YAML-NEXT:   - String:          'parts of scalar instructions are of the same type: '
- ; YAML-NEXT:   - Instruction1Opcode: add
- ; YAML-NEXT:   - String:          ' and '
- ; YAML-NEXT:   - Instruction2Opcode: phi
-
- ; YAML:      Pass:            slp-vectorizer
  ; YAML-NEXT: Name:            NotPossible
  ; YAML-NEXT: Function:        foo
  ; YAML-NEXT: Args:

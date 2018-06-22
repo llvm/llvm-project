@@ -106,7 +106,7 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
         " in " + toString(File));
 }
 
-static void checkFunctionType(Symbol *Existing, const InputFile *File,
+static void checkFunctionType(const Symbol *Existing, const InputFile *File,
                               const WasmSignature *NewSig) {
   auto ExistingFunction = dyn_cast<FunctionSymbol>(Existing);
   if (!ExistingFunction) {
@@ -114,27 +114,12 @@ static void checkFunctionType(Symbol *Existing, const InputFile *File,
     return;
   }
 
-
   const WasmSignature *OldSig = ExistingFunction->getFunctionType();
   if (OldSig && NewSig && *NewSig != *OldSig) {
-    // Don't generate more than one warning per symbol.
-    if (Existing->SignatureMismatch)
-      return;
-    Existing->SignatureMismatch = true;
-
-    std::string msg = ("function signature mismatch: " + Existing->getName() +
-                       "\n>>> defined as " + toString(*OldSig) + " in " +
-                       toString(Existing->getFile()) + "\n>>> defined as " +
-                       toString(*NewSig) + " in " + toString(File))
-                          .str();
-    // A function signature mismatch is only really problem if the mismatched
-    // symbol is included in the final output, and gc-sections can remove the
-    // offending uses.  Therefore we delay reporting this as an error when
-    // section GC is enabled.
-    if (Config->GcSections)
-      warn(msg);
-    else
-      error(msg);
+    warn("function signature mismatch: " + Existing->getName() +
+         "\n>>> defined as " + toString(*OldSig) + " in " +
+         toString(Existing->getFile()) + "\n>>> defined as " +
+         toString(*NewSig) + " in " + toString(File));
   }
 }
 

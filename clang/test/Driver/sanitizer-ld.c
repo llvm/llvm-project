@@ -689,6 +689,15 @@
 // CHECK-SCUDO-LINUX: "-lpthread"
 // CHECK-SCUDO-LINUX: "-ldl"
 
+// RUN: %clang -fsanitize=scudo -fsanitize-minimal-runtime %s -### -o %t.o 2>&1 \
+// RUN:     -target i386-unknown-linux -fuse-ld=ld \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-SCUDO-MINIMAL-LINUX %s
+// CHECK-SCUDO-MINIMAL-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-SCUDO-MINIMAL-LINUX: "-pie"
+// CHECK-SCUDO-MINIMAL-LINUX: "--whole-archive" "{{.*}}libclang_rt.scudo_minimal-i386.a" "--no-whole-archive"
+// CHECK-SCUDO-MINIMAL-LINUX: "-lpthread"
+
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.so -shared 2>&1 \
 // RUN:     -target i386-unknown-linux -fuse-ld=ld -fsanitize=scudo -shared-libsan \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \

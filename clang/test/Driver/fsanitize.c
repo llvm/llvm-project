@@ -674,6 +674,14 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=scudo,undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-UBSAN
 // CHECK-SCUDO-UBSAN: "-fsanitize={{.*}}scudo"
 
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=scudo -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-MINIMAL
+// CHECK-SCUDO-MINIMAL: "-fsanitize=scudo"
+// CHECK-SCUDO-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined,scudo -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCUDO-UBSAN-MINIMAL
+// CHECK-SCUDO-UBSAN-MINIMAL: "-fsanitize={{.*}}scudo"
+// CHECK-SCUDO-UBSAN-MINIMAL: "-fsanitize-minimal-runtime"
+
 // RUN: %clang -target powerpc-unknown-linux -fsanitize=scudo %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SCUDO
 // CHECK-NO-SCUDO: unsupported option
 
