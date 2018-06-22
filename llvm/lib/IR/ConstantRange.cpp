@@ -191,8 +191,7 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
     return CR0.inverse().unionWith(CR1.inverse()).inverse();
   };
 
-  assert(BinOp >= Instruction::BinaryOpsBegin &&
-         BinOp < Instruction::BinaryOpsEnd && "Binary operators only!");
+  assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
 
   assert((NoWrapKind == OBO::NoSignedWrap ||
           NoWrapKind == OBO::NoUnsignedWrap ||
@@ -665,8 +664,7 @@ ConstantRange ConstantRange::sextOrTrunc(uint32_t DstTySize) const {
 
 ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
                                       const ConstantRange &Other) const {
-  assert(BinOp >= Instruction::BinaryOpsBegin &&
-         BinOp < Instruction::BinaryOpsEnd && "Binary operators only!");
+  assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
 
   switch (BinOp) {
   case Instruction::Add:

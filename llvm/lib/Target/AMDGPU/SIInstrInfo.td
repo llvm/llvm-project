@@ -233,6 +233,10 @@ def AMDGPUld_glue : SDNode <"ISD::LOAD", SDTLoad,
   [SDNPHasChain, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
 >;
 
+def AMDGPUatomic_ld_glue : SDNode <"ISD::ATOMIC_LOAD", SDTAtomicLoad,
+  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand, SDNPInGlue]
+>;
+
 def unindexedload_glue : PatFrag <(ops node:$ptr), (AMDGPUld_glue node:$ptr), [{
   return cast<LoadSDNode>(N)->getAddressingMode() == ISD::UNINDEXED;
 }]>;
@@ -240,6 +244,18 @@ def unindexedload_glue : PatFrag <(ops node:$ptr), (AMDGPUld_glue node:$ptr), [{
 def load_glue : PatFrag <(ops node:$ptr), (unindexedload_glue node:$ptr), [{
   return cast<LoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD;
 }]>;
+
+def atomic_load_32_glue : PatFrag<(ops node:$ptr),
+  (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i32;
+}
+
+def atomic_load_64_glue : PatFrag<(ops node:$ptr),
+  (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i64;
+}
 
 def extload_glue : PatFrag<(ops node:$ptr), (load_glue node:$ptr), [{
   return cast<LoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD;
@@ -286,11 +302,21 @@ def az_extloadi8_local_m0 : LoadFrag<az_extloadi8_glue>, LocalAddress;
 def az_extloadi16_local_m0 : LoadFrag<az_extloadi16_glue>, LocalAddress;
 def load_align8_local_m0 : LoadFrag <load_glue_align8>, LocalAddress;
 def load_align16_local_m0 : LoadFrag <load_glue_align16>, LocalAddress;
+def atomic_load_32_local_m0 : LoadFrag<atomic_load_32_glue>, LocalAddress;
+def atomic_load_64_local_m0 : LoadFrag<atomic_load_64_glue>, LocalAddress;
 
 
 def AMDGPUst_glue : SDNode <"ISD::STORE", SDTStore,
   [SDNPHasChain, SDNPMayStore, SDNPMemOperand, SDNPInGlue]
 >;
+
+def AMDGPUatomic_st_glue : SDNode <"ISD::ATOMIC_STORE", SDTAtomicStore,
+  [SDNPHasChain, SDNPMayStore, SDNPMemOperand, SDNPInGlue]
+>;
+
+def atomic_store_glue : PatFrag<(ops node:$ptr, node:$val),
+  (AMDGPUatomic_st_glue node:$ptr, node:$val)> {
+}
 
 def unindexedstore_glue : PatFrag<(ops node:$val, node:$ptr),
                                    (AMDGPUst_glue node:$val, node:$ptr), [{
@@ -328,6 +354,7 @@ def store_glue_align16 : Aligned16Bytes <
 def store_local_m0 : StoreFrag<store_glue>, LocalAddress;
 def truncstorei8_local_m0 : StoreFrag<truncstorei8_glue>, LocalAddress;
 def truncstorei16_local_m0 : StoreFrag<truncstorei16_glue>, LocalAddress;
+def atomic_store_local_m0 : StoreFrag<AMDGPUatomic_st_glue>, LocalAddress;
 
 def store_align8_local_m0 : StoreFrag<store_glue_align8>, LocalAddress;
 def store_align16_local_m0 : StoreFrag<store_glue_align16>, LocalAddress;

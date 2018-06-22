@@ -564,7 +564,9 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   case ISD::LOAD:
-  case ISD::STORE: {
+  case ISD::STORE:
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE: {
     N = glueCopyToM0(N);
     break;
   }

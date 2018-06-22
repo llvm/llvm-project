@@ -3,7 +3,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/m %t/i/Foo.framework/Headers
 // RUN: echo '// Foo.h' > %t/i/Foo.framework/Headers/Foo.h
-// RUN: '%python' hmaptool write %S/../Preprocessor/Inputs/headermap-rel/foo.hmap.json %t/i/foo.hmap
+// RUN: %hmaptool write %S/../Preprocessor/Inputs/headermap-rel/foo.hmap.json %t/i/foo.hmap
 
 // RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
 // RUN: %clang -fsyntax-only -fmodules -fmodules-cache-path=%t/m %s \

@@ -989,7 +989,8 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   if (!MF.getTarget().Options.EmitStackSizeSection)
     return;
 
-  MCSection *StackSizeSection = getObjFileLowering().getStackSizesSection();
+  MCSection *StackSizeSection =
+      getObjFileLowering().getStackSizesSection(*getCurrentSection());
   if (!StackSizeSection)
     return;
 
