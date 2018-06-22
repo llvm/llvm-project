@@ -158,6 +158,13 @@ template <class ELFT> void SymbolTable::addSymbolWrap(StringRef Name) {
   Symbol *Sym = find(Name);
   if (!Sym)
     return;
+
+  // Do not wrap the same symbol twice.
+  if (llvm::find_if(WrappedSymbols, [&](const WrappedSymbol &S) {
+        return S.Sym == Sym;
+      }) != WrappedSymbols.end())
+    return;
+
   Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
   WrappedSymbols.push_back({Sym, Real, Wrap});

@@ -1304,11 +1304,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Symtab->scanVersionScript();
 
   // Create wrapped symbols for -wrap option.
-  std::vector<std::string> Wraps = Args.getAllArgValues(OPT_wrap);
-  llvm::sort(Wraps.begin(), Wraps.end());
-  Wraps.erase(std::unique(Wraps.begin(), Wraps.end()), Wraps.end());
-  for (StringRef Name : Wraps)
-    Symtab->addSymbolWrap<ELFT>(Name);
+  for (auto *Arg : Args.filtered(OPT_wrap))
+    Symtab->addSymbolWrap<ELFT>(Arg->getValue());
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.

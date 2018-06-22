@@ -483,8 +483,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
 
   // Do size optimizations: garbage collection
-  if (Config->GcSections)
-    markLive();
+  markLive();
 
   // Write the result to the file.
   writeResult();
