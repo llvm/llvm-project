@@ -39229,7 +39229,8 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
       if (C->getAPIntValue().isOneValue()) {
         SDValue Mask = Src.getOperand(0);
         if (Mask.getOpcode() == ISD::TRUNCATE &&
-            Mask.getOperand(0).getValueType() != MVT::i16)
+            (Mask.getOperand(0).getValueType() == MVT::i8 ||
+             Mask.getOperand(0).getValueType() == MVT::i32))
           Mask = Mask.getOperand(0);
         return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), MVT::v1i1, Mask);
       }
@@ -39243,11 +39244,11 @@ static SDValue combineScalarToVector(SDNode *N, SelectionDAG &DAG) {
       if (C->getAPIntValue().isOneValue()) {
         SDValue Mask = Src.getOperand(0).getOperand(0);
         if (Mask.getOpcode() == ISD::TRUNCATE &&
-            Mask.getOperand(0).getValueType() != MVT::i16)
+            (Mask.getOperand(0).getValueType() == MVT::i8 ||
+             Mask.getOperand(0).getValueType() == MVT::i32))
           Mask = Mask.getOperand(0);
-        // Check if the initial value is an i16. scalar_to_vector fails to
-        // select for that type, so the combine should be aborted.
-        if (Mask.getValueType() == MVT::i16)
+        // Check if the initial value is of a legal type for scalar_to_vector.
+        if (Mask.getValueType() != MVT::i8 && Mask.getValueType() != MVT::i32)
           return SDValue();
         return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), MVT::v1i1, Mask);
       }

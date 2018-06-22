@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: func1:
 ; CHECK-NEXT: .Lfunc_begin0:
-; CHECK: .section .stack_sizes,"",%progbits
+; CHECK: .section .stack_sizes,"o",%progbits,.text,unique,0
 ; CHECK-NEXT: .long .Lfunc_begin0
 ; CHECK-NEXT: .byte 8
 define void @func1(i32, i32) #0 {
@@ -13,7 +13,7 @@ define void @func1(i32, i32) #0 {
 
 ; CHECK-LABEL: func2:
 ; CHECK-NEXT: .Lfunc_begin1:
-; CHECK: .section .stack_sizes,"",%progbits
+; CHECK: .section .stack_sizes,"o",%progbits,.text,unique,0
 ; CHECK-NEXT: .long .Lfunc_begin1
 ; CHECK-NEXT: .byte 16
 define void @func2() #0 {

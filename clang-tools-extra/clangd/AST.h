@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
 
+#include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
@@ -27,6 +28,10 @@ namespace clangd {
 /// The returned location is usually the spelling location where the name of the
 /// decl occurs in the code.
 SourceLocation findNameLoc(const clang::Decl *D);
+
+/// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
+/// like inline namespaces.
+std::string printQualifiedName(const NamedDecl &ND);
 
 } // namespace clangd
 } // namespace clang

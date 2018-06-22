@@ -98,8 +98,6 @@ mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
   S.References += O.References;
   if (S.CompletionLabel == "")
     S.CompletionLabel = O.CompletionLabel;
-  if (S.CompletionFilterText == "")
-    S.CompletionFilterText = O.CompletionFilterText;
   if (S.CompletionPlainInsertText == "")
     S.CompletionPlainInsertText = O.CompletionPlainInsertText;
   if (S.CompletionSnippetInsertText == "")

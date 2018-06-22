@@ -1150,27 +1150,22 @@ static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
       !match(Shuf.getOperand(1), m_BinOp(B1)))
     return nullptr;
 
-  // TODO: There are potential folds where the opcodes do not match (mul+shl).
-  if (B0->getOpcode() != B1->getOpcode())
-    return nullptr;
-
   // TODO: Fold the case with different variable operands (requires creating a
   // new shuffle and checking number of uses).
   Value *X;
   Constant *C0, *C1;
-  if (!match(B0, m_c_BinOp(m_Value(X), m_Constant(C0))) ||
-      !match(B1, m_c_BinOp(m_Specific(X), m_Constant(C1))))
+  bool ConstantsAreOp1;
+  if (match(B0, m_BinOp(m_Value(X), m_Constant(C0))) &&
+      match(B1, m_BinOp(m_Specific(X), m_Constant(C1))))
+    ConstantsAreOp1 = true;
+  else if (match(B0, m_BinOp(m_Constant(C0), m_Value(X))) &&
+           match(B1, m_BinOp(m_Constant(C1), m_Specific(X))))
+    ConstantsAreOp1 = false;
+  else
     return nullptr;
 
-  // If all operands are constants, let constant folding remove the binops.
-  if (isa<Constant>(X))
-    return nullptr;
-
-  // Constant operands must be on the same side of each binop. We can't fold:
-  // shuffle (sdiv X, C0), (sdiv C1, X).
-  bool B00IsConst = isa<Constant>(B0->getOperand(0));
-  bool B10IsConst = isa<Constant>(B1->getOperand(0));
-  if (B00IsConst != B10IsConst)
+  // TODO: There are potential folds where the opcodes do not match (mul+shl).
+  if (B0->getOpcode() != B1->getOpcode())
     return nullptr;
 
   // Remove a binop and the shuffle by rearranging the constant:
@@ -1185,8 +1180,8 @@ static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
     NewC = getSafeVectorConstantForIntDivRem(NewC);
 
   BinaryOperator::BinaryOps Opc = B0->getOpcode();
-  Instruction *NewBO = B00IsConst ? BinaryOperator::Create(Opc, NewC, X) :
-                                    BinaryOperator::Create(Opc, X, NewC);
+  Instruction *NewBO = ConstantsAreOp1 ? BinaryOperator::Create(Opc, X, NewC) :
+                                         BinaryOperator::Create(Opc, NewC, X);
 
   // Flags are intersected from the 2 source binops.
   NewBO->copyIRFlags(B0);

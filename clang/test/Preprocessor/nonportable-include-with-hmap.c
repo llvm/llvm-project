@@ -1,5 +1,5 @@
 // RUN: rm -f %t.hmap
-// RUN: '%python' hmaptool write %S/Inputs/nonportable-hmaps/foo.hmap.json %t.hmap
+// RUN: %hmaptool write %S/Inputs/nonportable-hmaps/foo.hmap.json %t.hmap
 // RUN: %clang_cc1 -Eonly                        \
 // RUN:   -I%t.hmap \
 // RUN:   -I%S/Inputs/nonportable-hmaps          \

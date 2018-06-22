@@ -1227,6 +1227,15 @@ TEST_F(FormatTestObjC, AlwaysBreakBeforeMultilineStrings) {
                "     @\"cccc\");");
   verifyFormat("aaaa(qqq, @\"bbbb\"\n"
                "          @\"cccc\");");
+  verifyFormat("[aaaa qqqq:@\"bbbb\"\n"
+               "           @\"cccc\"];");
+  verifyFormat("aaaa = [aaaa qqqq:@\"bbbb\"\n"
+               "                  @\"cccc\"];");
+  verifyFormat("[aaaa qqqq:@\"bbbb\"\n"
+               "           @\"cccc\"\n"
+               "        rr:42\n"
+               "    ssssss:@\"ee\"\n"
+               "           @\"fffff\"];");
 }
 
 } // end namespace
