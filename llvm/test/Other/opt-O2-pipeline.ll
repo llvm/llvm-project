@@ -249,10 +249,6 @@
 ; CHECK-NEXT:     Strip Unused Function Prototypes
 ; CHECK-NEXT:     Dead Global Elimination
 ; CHECK-NEXT:     Merge Duplicate Global Constants
-; CHECK-NEXT:     CGProfilePass
-; FIXME: This pass uses the magic "on-demand function analysis" feature of the
-; legacy pass manager and doesn't correctly print pass names.
-; CHECK-NEXT:       Unnamed pass
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information

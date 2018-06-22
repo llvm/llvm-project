@@ -536,11 +536,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
 
   switch (I.getOpcode()) {
   default:
-    break;
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FPTOUI:
-  case TargetOpcode::G_OR:
     return selectImpl(I, CoverageInfo);
   case TargetOpcode::G_ADD:
     return selectG_ADD(I);
@@ -563,6 +558,14 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   return false;
 }
 
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVCSRC(MachineOperand &Root) const {
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); }
+  }};
+
+}
+
 ///
 /// This will select either an SGPR or VGPR operand and will save us from
 /// having to write an extra tablegen pattern.
@@ -578,6 +581,14 @@ AMDGPUInstructionSelector::selectVOP3Mods0(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // src0_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // clamp
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // omod
+  }};
+}
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3OMods(MachineOperand &Root) const {
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // clamp
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // omod
   }};

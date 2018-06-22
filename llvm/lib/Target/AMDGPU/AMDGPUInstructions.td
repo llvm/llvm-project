@@ -365,12 +365,15 @@ def az_extloadi8_local : LocalLoad <az_extloadi8>;
 def sextloadi8_local : LocalLoad <sextloadi8>;
 def az_extloadi16_local : LocalLoad <az_extloadi16>;
 def sextloadi16_local : LocalLoad <sextloadi16>;
+def atomic_load_32_local : LocalLoad<atomic_load_32>;
+def atomic_load_64_local : LocalLoad<atomic_load_64>;
 
 def store_local : LocalStore <store>;
 def truncstorei8_local : LocalStore <truncstorei8>;
 def truncstorei16_local : LocalStore <truncstorei16>;
 def store_local_hi16 : StoreHi16 <truncstorei16>, LocalAddress;
 def truncstorei8_local_hi16 : StoreHi16<truncstorei8>, LocalAddress;
+def atomic_store_local : LocalStore <atomic_store>;
 
 def load_align8_local : Aligned8Bytes <
   (ops node:$ptr), (load_local node:$ptr)
