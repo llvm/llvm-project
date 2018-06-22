@@ -63,6 +63,7 @@ private:
   bool selectG_CONSTANT(MachineInstr &I) const;
   bool selectG_ADD(MachineInstr &I) const;
   bool selectG_GEP(MachineInstr &I) const;
+  bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const;
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
@@ -72,10 +73,15 @@ private:
   bool selectG_STORE(MachineInstr &I) const;
 
   InstructionSelector::ComplexRendererFns
+  selectVCSRC(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
   selectVSRC0(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
 
