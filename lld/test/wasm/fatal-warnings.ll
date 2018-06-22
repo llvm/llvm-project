@@ -10,11 +10,6 @@ target triple = "wasm32-unknown-unknown"
 
 define hidden void @_start() local_unnamed_addr #0 {
 entry:
-  ret void
-}
-
-define hidden void @_call_ret32() local_unnamed_addr #0 {
-entry:
   %call = tail call i32 @ret32(i32 1, i64 2, i32 3) #2
   ret void
 }

@@ -84,9 +84,8 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
   Intern(S.CanonicalDeclaration.FileURI);
   Intern(S.Definition.FileURI);
 
-  Intern(S.CompletionLabel);
-  Intern(S.CompletionPlainInsertText);
-  Intern(S.CompletionSnippetInsertText);
+  Intern(S.Signature);
+  Intern(S.CompletionSnippetSuffix);
 
   if (S.Detail) {
     // Copy values of StringRefs into arena.
@@ -94,7 +93,7 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
     *Detail = *S.Detail;
     // Intern the actual strings.
     Intern(Detail->Documentation);
-    Intern(Detail->CompletionDetail);
+    Intern(Detail->ReturnType);
     Intern(Detail->IncludeHeader);
     // Replace the detail pointer with our copy.
     S.Detail = Detail;

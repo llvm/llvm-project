@@ -386,18 +386,13 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
       *ASTCtx, *PP, CodeCompletionContext::CCC_Name, *CompletionAllocator,
       *CompletionTUInfo,
       /*IncludeBriefComments*/ false);
-  std::string Label;
-  std::string SnippetInsertText;
-  std::string IgnoredLabel;
-  std::string PlainInsertText;
-  getLabelAndInsertText(*CCS, &Label, &SnippetInsertText,
-                        /*EnableSnippets=*/true);
-  getLabelAndInsertText(*CCS, &IgnoredLabel, &PlainInsertText,
-                        /*EnableSnippets=*/false);
+  std::string Signature;
+  std::string SnippetSuffix;
+  getSignature(*CCS, &Signature, &SnippetSuffix);
   std::string Documentation =
       formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
                                               /*CommentsFromHeaders=*/true));
-  std::string CompletionDetail = getDetail(*CCS);
+  std::string ReturnType = getReturnType(*CCS);
 
   std::string Include;
   if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
@@ -407,12 +402,11 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
             QName, SM, SM.getExpansionLoc(ND.getLocation()), Opts))
       Include = std::move(*Header);
   }
-  S.CompletionLabel = Label;
-  S.CompletionPlainInsertText = PlainInsertText;
-  S.CompletionSnippetInsertText = SnippetInsertText;
+  S.Signature = Signature;
+  S.CompletionSnippetSuffix = SnippetSuffix;
   Symbol::Details Detail;
   Detail.Documentation = Documentation;
-  Detail.CompletionDetail = CompletionDetail;
+  Detail.ReturnType = ReturnType;
   Detail.IncludeHeader = Include;
   S.Detail = &Detail;
 

@@ -274,11 +274,11 @@ TEST(MergeTest, Merge) {
   R.CanonicalDeclaration.FileURI = "file:///right.h";
   L.References = 1;
   R.References = 2;
-  L.CompletionPlainInsertText = "f00";        // present in left only
-  R.CompletionSnippetInsertText = "f0{$1:0}"; // present in right only
+  L.Signature = "()";                   // present in left only
+  R.CompletionSnippetSuffix = "{$1:0}"; // present in right only
   Symbol::Details DetL, DetR;
-  DetL.CompletionDetail = "DetL";
-  DetR.CompletionDetail = "DetR";
+  DetL.ReturnType = "DetL";
+  DetR.ReturnType = "DetR";
   DetR.Documentation = "--doc--";
   L.Detail = &DetL;
   R.Detail = &DetR;
@@ -288,10 +288,10 @@ TEST(MergeTest, Merge) {
   EXPECT_EQ(M.Name, "Foo");
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:///left.h");
   EXPECT_EQ(M.References, 3u);
-  EXPECT_EQ(M.CompletionPlainInsertText, "f00");
-  EXPECT_EQ(M.CompletionSnippetInsertText, "f0{$1:0}");
+  EXPECT_EQ(M.Signature, "()");
+  EXPECT_EQ(M.CompletionSnippetSuffix, "{$1:0}");
   ASSERT_TRUE(M.Detail);
-  EXPECT_EQ(M.Detail->CompletionDetail, "DetL");
+  EXPECT_EQ(M.Detail->ReturnType, "DetL");
   EXPECT_EQ(M.Detail->Documentation, "--doc--");
 }
 
@@ -302,19 +302,19 @@ TEST(MergeTest, PreferSymbolWithDefn) {
   L.ID = R.ID = SymbolID("hello");
   L.CanonicalDeclaration.FileURI = "file:/left.h";
   R.CanonicalDeclaration.FileURI = "file:/right.h";
-  L.CompletionPlainInsertText = "left-insert";
-  R.CompletionPlainInsertText = "right-insert";
+  L.Name = "left";
+  R.Name = "right";
 
   Symbol M = mergeSymbol(L, R, &Scratch);
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/left.h");
   EXPECT_EQ(M.Definition.FileURI, "");
-  EXPECT_EQ(M.CompletionPlainInsertText, "left-insert");
+  EXPECT_EQ(M.Name, "left");
 
   R.Definition.FileURI = "file:/right.cpp"; // Now right will be favored.
   M = mergeSymbol(L, R, &Scratch);
   EXPECT_EQ(M.CanonicalDeclaration.FileURI, "file:/right.h");
   EXPECT_EQ(M.Definition.FileURI, "file:/right.cpp");
-  EXPECT_EQ(M.CompletionPlainInsertText, "right-insert");
+  EXPECT_EQ(M.Name, "right");
 }
 
 } // namespace

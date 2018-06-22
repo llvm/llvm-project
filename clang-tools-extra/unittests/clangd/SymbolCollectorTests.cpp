@@ -36,15 +36,18 @@ using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
 // GMock helpers for matching Symbol.
-MATCHER_P(Labeled, Label, "") { return arg.CompletionLabel == Label; }
-MATCHER(HasDetail, "") { return arg.Detail; }
-MATCHER_P(Detail, D, "") {
-  return arg.Detail && arg.Detail->CompletionDetail == D;
+MATCHER_P(Labeled, Label, "") {
+  return (arg.Name + arg.Signature).str() == Label;
+}
+MATCHER(HasReturnType, "") {
+  return arg.Detail && !arg.Detail->ReturnType.empty();
+}
+MATCHER_P(ReturnType, D, "") {
+  return arg.Detail && arg.Detail->ReturnType == D;
 }
 MATCHER_P(Doc, D, "") { return arg.Detail && arg.Detail->Documentation == D; }
-MATCHER_P(Plain, Text, "") { return arg.CompletionPlainInsertText == Text; }
 MATCHER_P(Snippet, S, "") {
-  return arg.CompletionSnippetInsertText == S;
+  return (arg.Name + arg.CompletionSnippetSuffix).str() == S;
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
 MATCHER_P(DeclURI, P, "") { return arg.CanonicalDeclaration.FileURI == P; }
@@ -656,10 +659,10 @@ TEST_F(SymbolCollectorTest, SymbolWithDocumentation) {
       Symbols,
       UnorderedElementsAre(
           QName("nx"), AllOf(QName("nx::ff"), Labeled("ff(int x, double y)"),
-                             Detail("int"), Doc("Foo comment."))));
+                             ReturnType("int"), Doc("Foo comment."))));
 }
 
-TEST_F(SymbolCollectorTest, PlainAndSnippet) {
+TEST_F(SymbolCollectorTest, Snippet) {
   const std::string Header = R"(
     namespace nx {
     void f() {}
@@ -667,13 +670,12 @@ TEST_F(SymbolCollectorTest, PlainAndSnippet) {
     }
   )";
   runSymbolCollector(Header, /*Main=*/"");
-  EXPECT_THAT(
-      Symbols,
-      UnorderedElementsAre(
-          QName("nx"),
-          AllOf(QName("nx::f"), Labeled("f()"), Plain("f"), Snippet("f()")),
-          AllOf(QName("nx::ff"), Labeled("ff(int x, double y)"), Plain("ff"),
-                Snippet("ff(${1:int x}, ${2:double y})"))));
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  QName("nx"),
+                  AllOf(QName("nx::f"), Labeled("f()"), Snippet("f()")),
+                  AllOf(QName("nx::ff"), Labeled("ff(int x, double y)"),
+                        Snippet("ff(${1:int x}, ${2:double y})"))));
 }
 
 TEST_F(SymbolCollectorTest, YAMLConversions) {
@@ -694,12 +696,9 @@ CanonicalDeclaration:
     Line: 1
     Column: 1
 IsIndexedForCodeCompletion:    true
-CompletionLabel:    'Foo1-label'
-CompletionFilterText:    'filter'
-CompletionPlainInsertText:    'plain'
 Detail:
   Documentation:    'Foo doc'
-  CompletionDetail:    'int'
+  ReturnType:    'int'
 ...
 )";
   const std::string YAML2 = R"(
@@ -719,25 +718,23 @@ CanonicalDeclaration:
     Line: 1
     Column: 1
 IsIndexedForCodeCompletion:    false
-CompletionLabel:    'Foo2-label'
-CompletionFilterText:    'filter'
-CompletionPlainInsertText:    'plain'
-CompletionSnippetInsertText:    'snippet'
+Signature:    '-sig'
+CompletionSnippetSuffix:    '-snippet'
 ...
 )";
 
   auto Symbols1 = SymbolsFromYAML(YAML1);
 
   EXPECT_THAT(Symbols1,
-              UnorderedElementsAre(AllOf(
-                  QName("clang::Foo1"), Labeled("Foo1-label"), Doc("Foo doc"),
-                  Detail("int"), DeclURI("file:///path/foo.h"),
-                  ForCodeCompletion(true))));
+              UnorderedElementsAre(AllOf(QName("clang::Foo1"), Labeled("Foo1"),
+                                         Doc("Foo doc"), ReturnType("int"),
+                                         DeclURI("file:///path/foo.h"),
+                                         ForCodeCompletion(true))));
   auto Symbols2 = SymbolsFromYAML(YAML2);
-  EXPECT_THAT(Symbols2,
-              UnorderedElementsAre(AllOf(
-                  QName("clang::Foo2"), Labeled("Foo2-label"), Not(HasDetail()),
-                  DeclURI("file:///path/bar.h"), ForCodeCompletion(false))));
+  EXPECT_THAT(Symbols2, UnorderedElementsAre(AllOf(
+                            QName("clang::Foo2"), Labeled("Foo2-sig"),
+                            Not(HasReturnType()), DeclURI("file:///path/bar.h"),
+                            ForCodeCompletion(false))));
 
   std::string ConcatenatedYAML;
   {

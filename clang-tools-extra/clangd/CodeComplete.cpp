@@ -249,17 +249,21 @@ struct CompletionCandidate {
     CompletionItem I;
     bool InsertingInclude = false; // Whether a new #include will be added.
     if (SemaResult) {
-      I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->Declaration);
-      getLabelAndInsertText(*SemaCCS, &I.label, &I.insertText,
-                            Opts.EnableSnippets);
-      if (const char* Text = SemaCCS->getTypedText())
-        I.filterText = Text;
+      llvm::StringRef Name(SemaCCS->getTypedText());
+      std::string Signature, SnippetSuffix, Qualifiers;
+      getSignature(*SemaCCS, &Signature, &SnippetSuffix, &Qualifiers);
+      I.label = (Qualifiers + Name + Signature).str();
+      I.filterText = Name;
+      I.insertText = (Qualifiers + Name).str();
+      if (Opts.EnableSnippets)
+        I.insertText += SnippetSuffix;
       I.documentation = formatDocumentation(*SemaCCS, SemaDocComment);
-      I.detail = getDetail(*SemaCCS);
+      I.detail = getReturnType(*SemaCCS);
       if (SemaResult->Kind == CodeCompletionResult::RK_Declaration)
         if (const auto *D = SemaResult->getDeclaration())
           if (const auto *ND = llvm::dyn_cast<NamedDecl>(D))
             I.SymbolScope = splitQualifiedName(printQualifiedName(*ND)).first;
+      I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->Declaration);
     }
     if (IndexResult) {
       if (I.SymbolScope.empty())
@@ -268,21 +272,22 @@ struct CompletionCandidate {
         I.kind = toCompletionItemKind(IndexResult->SymInfo.Kind);
       // FIXME: reintroduce a way to show the index source for debugging.
       if (I.label.empty())
-        I.label = IndexResult->CompletionLabel;
+        I.label = (IndexResult->Name + IndexResult->Signature).str();
       if (I.filterText.empty())
         I.filterText = IndexResult->Name;
 
       // FIXME(ioeric): support inserting/replacing scope qualifiers.
-      if (I.insertText.empty())
-        I.insertText = Opts.EnableSnippets
-                           ? IndexResult->CompletionSnippetInsertText
-                           : IndexResult->CompletionPlainInsertText;
+      if (I.insertText.empty()) {
+        I.insertText = IndexResult->Name;
+        if (Opts.EnableSnippets)
+          I.insertText += IndexResult->CompletionSnippetSuffix;
+      }
 
       if (auto *D = IndexResult->Detail) {
         if (I.documentation.empty())
           I.documentation = D->Documentation;
         if (I.detail.empty())
-          I.detail = D->CompletionDetail;
+          I.detail = D->ReturnType;
         if (auto Inserted = headerToInsertIfNotPresent()) {
           auto IncludePath = [&]() -> Expected<std::string> {
             auto ResolvedDeclaring = toHeaderFile(
