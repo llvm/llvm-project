@@ -7,6 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef LLDB_DISABLE_PYTHON
+
+// Python is disabled in this build
+
+#else
+
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
@@ -1028,3 +1034,5 @@ bool PythonFile::GetUnderlyingFile(File &file) const {
   file.SetOptions(PythonFile::GetOptionsFromMode(py_mode.GetString()));
   return file.IsValid();
 }
+
+#endif

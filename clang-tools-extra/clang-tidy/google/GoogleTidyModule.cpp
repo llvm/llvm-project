@@ -13,7 +13,6 @@
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
-#include "../readability/RedundantSmartptrGetCheck.h"
 #include "AvoidCStyleCastsCheck.h"
 #include "AvoidThrowingObjCExceptionCheck.h"
 #include "DefaultArgumentsCheck.h"
@@ -71,9 +70,6 @@ class GoogleModule : public ClangTidyModule {
     CheckFactories
         .registerCheck<clang::tidy::readability::NamespaceCommentCheck>(
             "google-readability-namespace-comments");
-    CheckFactories
-        .registerCheck<clang::tidy::readability::RedundantSmartptrGetCheck>(
-            "google-readability-redundant-smartptr-get");
   }
 
   ClangTidyOptions getModuleOptions() override {

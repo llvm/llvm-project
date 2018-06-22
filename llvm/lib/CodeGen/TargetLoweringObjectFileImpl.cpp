@@ -1060,7 +1060,7 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
                                      Selection);
 }
 
-static const char *getCOFFSectionNameForUniqueGlobal(SectionKind Kind) {
+static StringRef getCOFFSectionNameForUniqueGlobal(SectionKind Kind) {
   if (Kind.isText())
     return ".text";
   if (Kind.isBSS())
@@ -1083,7 +1083,8 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
     EmitUniquedSection = TM.getDataSections();
 
   if ((EmitUniquedSection && !Kind.isCommon()) || GO->hasComdat()) {
-    const char *Name = getCOFFSectionNameForUniqueGlobal(Kind);
+    SmallString<256> Name = getCOFFSectionNameForUniqueGlobal(Kind);
+
     unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
 
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
@@ -1103,6 +1104,12 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
     if (!ComdatGV->hasPrivateLinkage()) {
       MCSymbol *Sym = TM.getSymbol(ComdatGV);
       StringRef COMDATSymName = Sym->getName();
+
+      // Append "$symbol" to the section name when targetting mingw. The ld.bfd
+      // COFF linker will not properly handle comdats otherwise.
+      if (getTargetTriple().isWindowsGNUEnvironment())
+        raw_svector_ostream(Name) << '$' << COMDATSymName;
+
       return getContext().getCOFFSection(Name, Characteristics, Kind,
                                          COMDATSymName, Selection, UniqueID);
     } else {
@@ -1160,13 +1167,14 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
   StringRef COMDATSymName = Sym->getName();
 
   SectionKind Kind = SectionKind::getReadOnly();
-  const char *Name = getCOFFSectionNameForUniqueGlobal(Kind);
+  StringRef SecName = getCOFFSectionNameForUniqueGlobal(Kind);
   unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
   Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
   unsigned UniqueID = NextUniqueID++;
 
-  return getContext().getCOFFSection(Name, Characteristics, Kind, COMDATSymName,
-                                     COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
+  return getContext().getCOFFSection(
+      SecName, Characteristics, Kind, COMDATSymName,
+      COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
 }
 
 void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,

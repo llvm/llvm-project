@@ -1,9 +1,3 @@
-#include <clc/clc.h>
-
-#define IMPL(TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_max(local TYPE *p, TYPE val) { \
-  return atomic_max(p, val); \
-}
-
-IMPL(int)
-IMPL(unsigned int)
+#define __CLC_ATOMIC_OP max
+#define __CLC_ATOMIC_ADDRESS_SPACE local
+#include "../atom_int32_binary.inc"

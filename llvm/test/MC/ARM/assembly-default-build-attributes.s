@@ -21,7 +21,7 @@
 // v6M: .eabi_attribute 7, 77   @ Tag_CPU_arch_profile
 // v6M: .eabi_attribute 8, 0    @ Tag_ARM_ISA_use
 // v6M: .eabi_attribute 9, 1    @ Tag_THUMB_ISA_use
-// v6M: .eabi_attribute 34, 1   @ Tag_CPU_unaligned_access
+// v6M: .eabi_attribute 34, 0   @ Tag_CPU_unaligned_access
 
 // v7M-NOT: .cpu
 // v7M: .eabi_attribute 6, 10   @ Tag_CPU_arch

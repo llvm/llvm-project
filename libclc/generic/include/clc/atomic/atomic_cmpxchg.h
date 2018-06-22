@@ -1,15 +1,4 @@
-#define __CLC_FUNCTION atomic_cmpxchg
-
-#define __CLC_DECLARE_ATOMIC_3_ARG(ADDRSPACE, TYPE) \
-	_CLC_OVERLOAD _CLC_DECL TYPE __CLC_FUNCTION (volatile ADDRSPACE TYPE *, TYPE, TYPE);
-
-#define __CLC_DECLARE_ATOMIC_ADDRSPACE_3_ARG(TYPE) \
-	__CLC_DECLARE_ATOMIC_3_ARG(global, TYPE) \
-	__CLC_DECLARE_ATOMIC_3_ARG(local, TYPE)
-
-__CLC_DECLARE_ATOMIC_ADDRSPACE_3_ARG(int)
-__CLC_DECLARE_ATOMIC_ADDRSPACE_3_ARG(uint)
-
-#undef __CLC_FUNCTION
-#undef __CLC_DECLARE_ATOMIC_3_ARG
-#undef __CLC_DECLARE_ATOMIC_ADDRESS_SPACE_3_ARG
+_CLC_OVERLOAD _CLC_DECL int atomic_cmpxchg (volatile local int *, int, int);
+_CLC_OVERLOAD _CLC_DECL int atomic_cmpxchg (volatile global int *, int, int);
+_CLC_OVERLOAD _CLC_DECL uint atomic_cmpxchg (volatile local uint *, uint, uint);
+_CLC_OVERLOAD _CLC_DECL uint atomic_cmpxchg (volatile global uint *, uint, uint);

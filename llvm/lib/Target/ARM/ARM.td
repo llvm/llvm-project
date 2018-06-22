@@ -330,6 +330,10 @@ def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
     "DisablePostRAScheduler", "true",
     "Don't schedule again after register allocation">;
 
+// Enable use of alias analysis during code generation
+def FeatureUseAA : SubtargetFeature<"use-aa", "UseAA", "true",
+                                    "Use alias analysis during codegen">;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
@@ -522,13 +526,15 @@ def ARMv6m    : Architecture<"armv6-m",   "ARMv6m",   [HasV6MOps,
                                                        FeatureNoARM,
                                                        ModeThumb,
                                                        FeatureDB,
-                                                       FeatureMClass]>;
+                                                       FeatureMClass,
+                                                       FeatureStrictAlign]>;
 
 def ARMv6sm   : Architecture<"armv6s-m",  "ARMv6sm",  [HasV6MOps,
                                                        FeatureNoARM,
                                                        ModeThumb,
                                                        FeatureDB,
-                                                       FeatureMClass]>;
+                                                       FeatureMClass,
+                                                       FeatureStrictAlign]>;
 
 def ARMv7a    : Architecture<"armv7-a",   "ARMv7a",   [HasV7Ops,
                                                        FeatureNEON,
@@ -638,7 +644,8 @@ def ARMv8mBaseline : Architecture<"armv8-m.base", "ARMv8mBaseline",
                                                        FeatureV7Clrex,
                                                        Feature8MSecExt,
                                                        FeatureAcquireRelease,
-                                                       FeatureMClass]>;
+                                                       FeatureMClass,
+                                                       FeatureStrictAlign]>;
 
 def ARMv8mMainline : Architecture<"armv8-m.main", "ARMv8mMainline",
                                                       [HasV8MMainlineOps,
@@ -1006,7 +1013,8 @@ def : ProcNoItin<"kryo",                                [ARMv8a, ProcKryo,
 
 def : ProcessorModel<"cortex-r52", CortexR52Model,      [ARMv8r, ProcR52,
                                                          FeatureUseMISched,
-                                                         FeatureFPAO]>;
+                                                         FeatureFPAO,
+                                                         FeatureUseAA]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

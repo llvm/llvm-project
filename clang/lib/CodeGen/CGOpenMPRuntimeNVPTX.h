@@ -77,12 +77,12 @@ private:
   /// Helper for generic variables globalization epilog.
   void emitGenericVarsEpilog(CodeGenFunction &CGF);
 
-  /// Helper for Spmd mode target directive's entry function.
-  void emitSpmdEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
+  /// Helper for SPMD mode target directive's entry function.
+  void emitSPMDEntryHeader(CodeGenFunction &CGF, EntryFunctionState &EST,
                            const OMPExecutableDirective &D);
 
-  /// Signal termination of Spmd mode execution.
-  void emitSpmdEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
+  /// Signal termination of SPMD mode execution.
+  void emitSPMDEntryFooter(CodeGenFunction &CGF, EntryFunctionState &EST);
 
   //
   // Base class overrides.
@@ -119,7 +119,7 @@ private:
   /// \param CodeGen Object containing the target statements.
   /// An outlined function may not be an entry if, e.g. the if clause always
   /// evaluates to false.
-  void emitSpmdKernel(const OMPExecutableDirective &D, StringRef ParentName,
+  void emitSPMDKernel(const OMPExecutableDirective &D, StringRef ParentName,
                       llvm::Function *&OutlinedFn,
                       llvm::Constant *&OutlinedFnID, bool IsOffloadEntry,
                       const RegionCodeGenTy &CodeGen);
@@ -166,7 +166,7 @@ private:
   /// \param IfCond Condition in the associated 'if' clause, if it was
   /// specified, nullptr otherwise.
   ///
-  void emitSpmdParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+  void emitSPMDParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                             llvm::Value *OutlinedFn,
                             ArrayRef<llvm::Value *> CapturedVars,
                             const Expr *IfCond);

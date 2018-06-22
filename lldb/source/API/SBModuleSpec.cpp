@@ -82,11 +82,11 @@ void SBModuleSpec::SetTriple(const char *triple) {
 }
 
 const uint8_t *SBModuleSpec::GetUUIDBytes() {
-  return (const uint8_t *)m_opaque_ap->GetUUID().GetBytes();
+  return m_opaque_ap->GetUUID().GetBytes().data();
 }
 
 size_t SBModuleSpec::GetUUIDLength() {
-  return m_opaque_ap->GetUUID().GetByteSize();
+  return m_opaque_ap->GetUUID().GetBytes().size();
 }
 
 bool SBModuleSpec::SetUUIDBytes(const uint8_t *uuid, size_t uuid_len) {

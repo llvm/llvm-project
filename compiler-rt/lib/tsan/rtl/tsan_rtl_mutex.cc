@@ -361,7 +361,7 @@ void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
     if (s->recursion == 0) {
       StatInc(thr, StatMutexUnlock);
       s->owner_tid = SyncVar::kInvalidTid;
-      ReleaseImpl(thr, pc, &s->clock);
+      ReleaseStoreImpl(thr, pc, &s->clock);
     } else {
       StatInc(thr, StatMutexRecUnlock);
     }

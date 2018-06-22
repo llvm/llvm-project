@@ -20,8 +20,14 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
       StoredVal->getType()->isStructTy() || StoredVal->getType()->isArrayTy())
     return false;
 
+  uint64_t StoreSize = DL.getTypeSizeInBits(StoredVal->getType());
+
+  // The store size must be byte-aligned to support future type casts.
+  if (llvm::alignTo(StoreSize, 8) != StoreSize)
+    return false;
+
   // The store has to be at least as big as the load.
-  if (DL.getTypeSizeInBits(StoredVal->getType()) < DL.getTypeSizeInBits(LoadTy))
+  if (StoreSize < DL.getTypeSizeInBits(LoadTy))
     return false;
 
   // Don't coerce non-integral pointers to integers or vice versa.

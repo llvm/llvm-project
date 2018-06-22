@@ -127,8 +127,8 @@ void test_integer(void) {
                                 // expected-note@vecintrin.h:* 1 {{must be a constant integer from 0 to 15}}
 
   vuc = vec_msum_u128(vul, vul, vuc, idx);  // expected-error {{must be a constant integer}}
-  vuc = vec_msum_u128(vul, vul, vuc, -1);   // expected-error {{should be a value from 0 to 15}}
-  vuc = vec_msum_u128(vul, vul, vuc, 16);   // expected-error {{should be a value from 0 to 15}}
+  vuc = vec_msum_u128(vul, vul, vuc, -1);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vuc = vec_msum_u128(vul, vul, vuc, 16);   // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void test_float(void) {

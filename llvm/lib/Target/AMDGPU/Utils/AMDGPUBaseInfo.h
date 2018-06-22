@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -28,12 +29,12 @@ class Argument;
 class FeatureBitset;
 class Function;
 class GlobalValue;
-class MachineMemOperand;
 class MCContext;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSection;
 class MCSubtargetInfo;
+class MachineMemOperand;
 class Triple;
 
 namespace AMDGPU {
@@ -138,6 +139,22 @@ unsigned getMinNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 unsigned getMaxNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU,
                         bool Addressable);
 
+/// \returns Number of extra SGPRs implicitly required by given subtarget \p
+/// Features when the given special registers are used.
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
+                          bool FlatScrUsed, bool XNACKUsed);
+
+/// \returns Number of extra SGPRs implicitly required by given subtarget \p
+/// Features when the given special registers are used. XNACK is inferred from
+/// \p Features.
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
+                          bool FlatScrUsed);
+
+/// \returns Number of SGPR blocks needed for given subtarget \p Features when
+/// \p NumSGPRs are used. \p NumSGPRs should already include any special
+/// register counts.
+unsigned getNumSGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs);
+
 /// \returns VGPR allocation granularity for given subtarget \p Features.
 unsigned getVGPRAllocGranule(const FeatureBitset &Features);
 
@@ -157,6 +174,10 @@ unsigned getMinNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p Features.
 unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU);
+
+/// \returns Number of VGPR blocks needed for given subtarget \p Features when
+/// \p NumVGPRs are used.
+unsigned getNumVGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs);
 
 } // end namespace IsaInfo
 
@@ -202,6 +223,8 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
                                const FeatureBitset &Features);
+
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor();
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);

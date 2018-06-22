@@ -316,27 +316,27 @@ __m256 test_mm256_dp_ps(__m256 A, __m256 B) {
 
 int test_mm256_extract_epi8(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi8
-  // CHECK: extractelement <32 x i8> %{{.*}}, i32 31
+  // CHECK: extractelement <32 x i8> %{{.*}}, {{i32|i64}} 31
   // CHECK: zext i8 %{{.*}} to i32
   return _mm256_extract_epi8(A, 31);
 }
 
 int test_mm256_extract_epi16(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi16
-  // CHECK: extractelement <16 x i16> %{{.*}}, i32 15
+  // CHECK: extractelement <16 x i16> %{{.*}}, {{i32|i64}} 15
   // CHECK: zext i16 %{{.*}} to i32
   return _mm256_extract_epi16(A, 15);
 }
 
 int test_mm256_extract_epi32(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi32
-  // CHECK: extractelement <8 x i32> %{{.*}}, i32 7
+  // CHECK: extractelement <8 x i32> %{{.*}}, {{i32|i64}} 7
   return _mm256_extract_epi32(A, 7);
 }
 
 long long test_mm256_extract_epi64(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi64
-  // CHECK: extractelement <4 x i64> %{{.*}}, i32 3
+  // CHECK: extractelement <4 x i64> %{{.*}}, {{i32|i64}} 3
   return _mm256_extract_epi64(A, 3);
 }
 
@@ -396,25 +396,25 @@ __m256 test_mm256_hsub_ps(__m256 A, __m256 B) {
 
 __m256i test_mm256_insert_epi8(__m256i x, char b) {
   // CHECK-LABEL: test_mm256_insert_epi8
-  // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, i32 14
+  // CHECK: insertelement <32 x i8> %{{.*}}, i8 %{{.*}}, {{i32|i64}} 14
   return _mm256_insert_epi8(x, b, 14);
 }
 
 __m256i test_mm256_insert_epi16(__m256i x, int b) {
   // CHECK-LABEL: test_mm256_insert_epi16
-  // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, i32 4
+  // CHECK: insertelement <16 x i16> %{{.*}}, i16 %{{.*}}, {{i32|i64}} 4
   return _mm256_insert_epi16(x, b, 4);
 }
 
 __m256i test_mm256_insert_epi32(__m256i x, int b) {
   // CHECK-LABEL: test_mm256_insert_epi32
-  // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, i32 5
+  // CHECK: insertelement <8 x i32> %{{.*}}, i32 %{{.*}}, {{i32|i64}} 5
   return _mm256_insert_epi32(x, b, 5);
 }
 
 __m256i test_mm256_insert_epi64(__m256i x, long long b) {
   // CHECK-LABEL: test_mm256_insert_epi64
-  // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, i32 2
+  // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, {{i32|i64}} 2
   return _mm256_insert_epi64(x, b, 2);
 }
 

@@ -124,7 +124,6 @@ protected:
   bool EnableXNACK;
   bool TrapHandler;
   bool DebuggerInsertNops;
-  bool DebuggerReserveRegs;
   bool DebuggerEmitPrologue;
 
   // Used as options.
@@ -823,16 +822,11 @@ public:
   }
 
   bool debuggerSupported() const {
-    return debuggerInsertNops() && debuggerReserveRegs() &&
-      debuggerEmitPrologue();
+    return debuggerInsertNops() && debuggerEmitPrologue();
   }
 
   bool debuggerInsertNops() const {
     return DebuggerInsertNops;
-  }
-
-  bool debuggerReserveRegs() const {
-    return DebuggerReserveRegs;
   }
 
   bool debuggerEmitPrologue() const {
@@ -960,11 +954,6 @@ public:
   /// execution unit requirement supported by the subtarget.
   unsigned getMaxNumVGPRs(unsigned WavesPerEU) const {
     return AMDGPU::IsaInfo::getMaxNumVGPRs(getFeatureBits(), WavesPerEU);
-  }
-
-  /// \returns Reserved number of VGPRs for given function \p MF.
-  unsigned getReservedNumVGPRs(const MachineFunction &MF) const {
-    return debuggerReserveRegs() ? 4 : 0;
   }
 
   /// \returns Maximum number of VGPRs that meets number of waves per execution

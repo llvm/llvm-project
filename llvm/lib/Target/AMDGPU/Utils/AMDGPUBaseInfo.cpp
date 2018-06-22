@@ -198,6 +198,10 @@ void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
          << ISAVersion.Major
          << ISAVersion.Minor
          << ISAVersion.Stepping;
+
+  if (hasXNACK(*STI))
+    Stream << "+xnack";
+
   Stream.flush();
 }
 
@@ -334,6 +338,39 @@ unsigned getMaxNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU,
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
+                          bool FlatScrUsed, bool XNACKUsed) {
+  unsigned ExtraSGPRs = 0;
+  if (VCCUsed)
+    ExtraSGPRs = 2;
+
+  IsaVersion Version = getIsaVersion(Features);
+  if (Version.Major < 8) {
+    if (FlatScrUsed)
+      ExtraSGPRs = 4;
+  } else {
+    if (XNACKUsed)
+      ExtraSGPRs = 4;
+
+    if (FlatScrUsed)
+      ExtraSGPRs = 6;
+  }
+
+  return ExtraSGPRs;
+}
+
+unsigned getNumExtraSGPRs(const FeatureBitset &Features, bool VCCUsed,
+                          bool FlatScrUsed) {
+  return getNumExtraSGPRs(Features, VCCUsed, FlatScrUsed,
+                          Features[AMDGPU::FeatureXNACK]);
+}
+
+unsigned getNumSGPRBlocks(const FeatureBitset &Features, unsigned NumSGPRs) {
+  NumSGPRs = alignTo(std::max(1u, NumSGPRs), getSGPREncodingGranule(Features));
+  // SGPRBlocks is actual number of SGPR blocks minus 1.
+  return NumSGPRs / getSGPREncodingGranule(Features) - 1;
+}
+
 unsigned getVGPRAllocGranule(const FeatureBitset &Features) {
   return 4;
 }
@@ -370,6 +407,12 @@ unsigned getMaxNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
   return std::min(MaxNumVGPRs, AddressableNumVGPRs);
 }
 
+unsigned getNumVGPRBlocks(const FeatureBitset &Features, unsigned NumVGPRs) {
+  NumVGPRs = alignTo(std::max(1u, NumVGPRs), getVGPREncodingGranule(Features));
+  // VGPRBlocks is actual number of VGPR blocks minus 1.
+  return NumVGPRs / getVGPREncodingGranule(Features) - 1;
+}
+
 } // end namespace IsaInfo
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
@@ -397,6 +440,21 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   Header.kernarg_segment_alignment = 4;
   Header.group_segment_alignment = 4;
   Header.private_segment_alignment = 4;
+}
+
+amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor() {
+  amdhsa::kernel_descriptor_t KD;
+  memset(&KD, 0, sizeof(KD));
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  amdhsa::COMPUTE_PGM_RSRC1_FLOAT_DENORM_MODE_16_64,
+                  amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  amdhsa::COMPUTE_PGM_RSRC1_ENABLE_DX10_CLAMP, 1);
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                  amdhsa::COMPUTE_PGM_RSRC1_ENABLE_IEEE_MODE, 1);
+  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2,
+                  amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, 1);
+  return KD;
 }
 
 bool isGroupSegment(const GlobalValue *GV) {

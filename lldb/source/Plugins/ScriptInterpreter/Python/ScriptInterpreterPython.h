@@ -10,6 +10,12 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H
 
+#ifdef LLDB_DISABLE_PYTHON
+
+// Python is disabled in this build
+
+#else
+
 // C Includes
 // C++ Includes
 #include <memory>
@@ -564,5 +570,7 @@ protected:
 };
 
 } // namespace lldb_private
+
+#endif // LLDB_DISABLE_PYTHON
 
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H

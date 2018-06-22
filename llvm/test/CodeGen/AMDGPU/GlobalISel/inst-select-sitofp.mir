@@ -1,0 +1,36 @@
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+
+--- |
+  define amdgpu_kernel void @sitofp(i32 addrspace(1)* %global0) {ret void}
+...
+---
+
+name:            sitofp
+legalized:       true
+regBankSelected: true
+
+# GCN-LABEL: name: sitofp
+body: |
+  bb.0:
+    liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
+
+    ; GCN: [[SGPR:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    %0:sgpr(s32) = COPY $sgpr0
+
+    ; GCN: [[VGPR:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    %1:vgpr(s32) = COPY $vgpr0
+
+    %2:vgpr(s64) = COPY $vgpr3_vgpr4
+
+    ; sitofp s
+    ; GCN: V_CVT_F32_I32_e64 [[SGPR]], 0, 0
+    %3:vgpr(s32) = G_SITOFP %0
+
+    ; sitofp v
+    ; GCN: V_CVT_F32_I32_e64 [[VGPR]], 0, 0
+    %4:vgpr(s32) = G_SITOFP %1
+
+    G_STORE %3, %2 :: (store 4 into %ir.global0)
+    G_STORE %4, %2 :: (store 4 into %ir.global0)
+...
+---

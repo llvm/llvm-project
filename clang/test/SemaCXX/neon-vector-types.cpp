@@ -35,7 +35,7 @@ namespace rdar11688587 {
     extern float32x4_t vec;
     return __extension__ ({ 
         float32x4_t __a = (vec); 
-        (float32_t)__builtin_neon_vgetq_lane_f32(__a, I);  // expected-error{{argument should be a value from 0 to 3}}
+        (float32_t)__builtin_neon_vgetq_lane_f32(__a, I);  // expected-error-re{{argument value {{.*}} is outside the valid range}}
       });
   }
 
