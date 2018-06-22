@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=x86_64-windows-itanium < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-w64-windows-gnu < %s | FileCheck %s --check-prefix=GNU
+; RUN: llc -mtriple=i686-w64-windows-gnu < %s | FileCheck %s --check-prefix=GNU32
 ; RUN: llc -mtriple=x86_64-w64-windows-gnu < %s -filetype=obj | llvm-objdump - -headers | FileCheck %s --check-prefix=GNUOBJ
 
 ; GCC and MSVC handle comdats completely differently. Make sure we do the right
@@ -48,6 +49,13 @@ entry:
 ; GNU: .section        .data$gv,"dw",discard,gv
 ; GNU: gv:
 ; GNU: .long 42
+
+; GNU32: .section        .text$__Z3fooi,"xr",discard,__Z3fooi
+; GNU32: __Z3fooi:
+; GNU32: .section        .data$_gv,"dw",discard,_gv
+; GNU32: _gv:
+; GNU32: .long 42
+
 
 ; Make sure the assembler puts the .xdata and .pdata in sections with the right
 ; names.

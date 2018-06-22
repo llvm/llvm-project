@@ -7,58 +7,58 @@
 void test_vcvt_f16_16(int16_t a){
   vcvth_n_f16_s16(a, 1);
   vcvth_n_f16_s16(a, 16);
-  vcvth_n_f16_s16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_f16_s16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_f16_s16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_f16_s16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   vcvth_n_f16_u16(a, 1);
   vcvth_n_f16_u16(a, 16);
-  vcvth_n_f16_u16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_f16_u16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_f16_u16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_f16_u16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void test_vcvt_f16_32(int32_t a){
   vcvth_n_f16_u32(a, 1);
   vcvth_n_f16_u32(a, 16);
-  vcvth_n_f16_u32(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_f16_u32(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_f16_u32(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_f16_u32(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   vcvth_n_f16_s32(a, 1);
   vcvth_n_f16_s32(a, 16);
-  vcvth_n_f16_s32(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_f16_s32(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_f16_s32(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_f16_s32(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 void test_vcvt_f16_64(int64_t a){
   vcvth_n_f16_s64(a, 1);
   vcvth_n_f16_s64(a, 16);
-  vcvth_n_f16_s64(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_f16_s64(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_f16_s64(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_f16_s64(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
 
 void test_vcvt_su_f(float16_t a){
   vcvth_n_s16_f16(a, 1);
   vcvth_n_s16_f16(a, 16);
-  vcvth_n_s16_f16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_s16_f16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_s16_f16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_s16_f16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   vcvth_n_s32_f16(a, 1);
   vcvth_n_s32_f16(a, 16);
-  vcvth_n_s32_f16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_s32_f16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_s32_f16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_s32_f16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   vcvth_n_s64_f16(a, 1);
   vcvth_n_s64_f16(a, 16);
-  vcvth_n_s64_f16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_s64_f16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_s64_f16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_s64_f16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   vcvth_n_u16_f16(a, 1);
   vcvth_n_u16_f16(a, 16);
-  vcvth_n_u16_f16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_u16_f16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_u16_f16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_u16_f16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 
   vcvth_n_u32_f16(a, 1);
   vcvth_n_u32_f16(a, 16);
-  vcvth_n_u32_f16(a, 0);  // expected-error {{argument should be a value from 1 to 16}}
-  vcvth_n_u32_f16(a, 17); // expected-error {{argument should be a value from 1 to 16}}
+  vcvth_n_u32_f16(a, 0);  // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  vcvth_n_u32_f16(a, 17); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }

@@ -62,7 +62,7 @@ ErrorOr<std::vector<MemoryBufferRef>> BinaryHolder::GetMemoryBuffersForFile(
   // (either because the archive is not there anymore, or because the
   // archive doesn't contain the requested member), this will still
   // provide a sensible error message.
-  auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(Filename);
+  auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(Filename, -1, false);
   if (auto Err = ErrOrFile.getError())
     return Err;
 
@@ -136,7 +136,7 @@ BinaryHolder::MapArchiveAndGetMemberBuffers(
     StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp) {
   StringRef ArchiveFilename = Filename.substr(0, Filename.find('('));
 
-  auto ErrOrBuff = MemoryBuffer::getFileOrSTDIN(ArchiveFilename);
+  auto ErrOrBuff = MemoryBuffer::getFileOrSTDIN(ArchiveFilename, -1, false);
   if (auto Err = ErrOrBuff.getError())
     return Err;
 

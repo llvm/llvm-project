@@ -749,11 +749,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ProfileSampleAccurate = Args.hasArg(OPT_fprofile_sample_accurate);
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
-  Opts.PrepareForThinLTO = false;
+  Opts.EmitSummaryIndex = false;
   if (Arg *A = Args.getLastArg(OPT_flto_EQ)) {
     StringRef S = A->getValue();
     if (S == "thin")
-      Opts.PrepareForThinLTO = true;
+      Opts.EmitSummaryIndex = true;
     else if (S != "full")
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << S;
   }

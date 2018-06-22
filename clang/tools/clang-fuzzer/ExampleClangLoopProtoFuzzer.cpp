@@ -11,7 +11,7 @@
 ///  This file implements a function that runs Clang on a single
 ///  input and uses libprotobuf-mutator to find new inputs. This function is
 ///  then linked into the Fuzzer library. This file differs from
-///  ExampleClangProtoFuzzer in that it uses the new protobuf that includes
+///  ExampleClangProtoFuzzer in that it uses a different protobuf that includes
 ///  C++ code with a single for loop.
 ///
 //===----------------------------------------------------------------------===//
