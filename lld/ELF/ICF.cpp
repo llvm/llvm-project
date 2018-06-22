@@ -239,9 +239,6 @@ template <class ELFT>
 template <class RelTy>
 bool ICF<ELFT>::constantEq(const InputSection *SecA, ArrayRef<RelTy> RA,
                            const InputSection *SecB, ArrayRef<RelTy> RB) {
-  if (RA.size() != RB.size())
-    return false;
-
   for (size_t I = 0; I < RA.size(); ++I) {
     if (RA[I].r_offset != RB[I].r_offset ||
         RA[I].getType(Config->IsMips64EL) != RB[I].getType(Config->IsMips64EL))
