@@ -65,11 +65,6 @@ std::string formatDocumentation(const CodeCompletionString &CCS,
 /// is usually the return type of a function.
 std::string getDetail(const CodeCompletionString &CCS);
 
-/// Gets the piece of text that the user is expected to type to match the
-/// code-completion string, typically a keyword or the name of a declarator or
-/// macro.
-std::string getFilterText(const CodeCompletionString &CCS);
-
 } // namespace clangd
 } // namespace clang
 

@@ -7,6 +7,8 @@ async/wait_group_events.cl
 atomic/atomic_add.cl
 atomic/atomic_and.cl
 atomic/atomic_cmpxchg.cl
+atomic/atomic_dec.cl
+atomic/atomic_inc.cl
 atomic/atomic_max.cl
 atomic/atomic_min.cl
 atomic/atomic_or.cl
