@@ -1,4 +1,2 @@
-_CLC_OVERLOAD _CLC_DECL long atom_sub(volatile global long *p, long val);
-_CLC_OVERLOAD _CLC_DECL unsigned long atom_sub(volatile global unsigned long *p, unsigned long val);
-_CLC_OVERLOAD _CLC_DECL long atom_sub(volatile local long *p, long val);
-_CLC_OVERLOAD _CLC_DECL unsigned long atom_sub(volatile local unsigned long *p, unsigned long val);
+#define __CLC_FUNCTION atom_sub
+#include <clc/atom_decl_int64.inc>

@@ -1,9 +1,3 @@
-#include <clc/clc.h>
-
-#define IMPL(TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_xchg(global TYPE *p, TYPE val) { \
-  return atomic_xchg(p, val); \
-}
-
-IMPL(int)
-IMPL(unsigned int)
+#define __CLC_ATOMIC_OP xchg
+#define __CLC_ATOMIC_ADDRESS_SPACE global
+#include "../atom_int32_binary.inc"
