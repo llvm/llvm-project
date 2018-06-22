@@ -910,6 +910,7 @@ void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
                                                   BranchInst *OldBranch,
                                                   TerminatorInst *TI) {
   assert(OldBranch->isUnconditional() && "Preheader is not split correctly");
+  assert(TrueDest != FalseDest && "Branch targets should be different");
   // Insert a conditional branch on LIC to the two preheaders.  The original
   // code is the true version and the new code is the false version.
   Value *BranchVal = LIC;
@@ -942,9 +943,9 @@ void LoopUnswitch::EmitPreheaderBranchOnCondition(Value *LIC, Constant *Val,
   if (DT) {
     // First, add both successors.
     SmallVector<DominatorTree::UpdateType, 3> Updates;
-    if (TrueDest != OldBranchParent)
+    if (TrueDest != OldBranchSucc)
       Updates.push_back({DominatorTree::Insert, OldBranchParent, TrueDest});
-    if (FalseDest != OldBranchParent)
+    if (FalseDest != OldBranchSucc)
       Updates.push_back({DominatorTree::Insert, OldBranchParent, FalseDest});
     // If both of the new successors are different from the old one, inform the
     // DT that the edge was deleted.

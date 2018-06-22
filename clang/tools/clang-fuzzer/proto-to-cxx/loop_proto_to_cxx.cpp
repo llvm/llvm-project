@@ -67,12 +67,6 @@ std::ostream &operator<<(std::ostream &os, const BinaryOp &x) {
   case BinaryOp::MUL:
     os << "*";
     break;
-  case BinaryOp::DIV:
-    os << "/";
-    break;
-  case BinaryOp::MOD:
-    os << "%";
-    break;
   case BinaryOp::XOR:
     os << "^";
     break;
@@ -105,11 +99,6 @@ std::ostream &operator<<(std::ostream &os, const BinaryOp &x) {
 }
 std::ostream &operator<<(std::ostream &os, const AssignmentStatement &x) {
   return os << x.varref() << "=" << x.rvalue() << ";\n";
-}
-std::ostream &operator<<(std::ostream &os, const IfElse &x) {
-  return os << "if (" << x.cond() << "){\n"
-            << x.if_body() << "} else { \n"
-            << x.else_body() << "}\n";
 }
 std::ostream &operator<<(std::ostream &os, const Statement &x) {
   return os << x.assignment();

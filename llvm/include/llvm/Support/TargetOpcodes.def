@@ -467,6 +467,9 @@ HANDLE_TARGET_OPCODE(G_SHUFFLE_VECTOR)
 /// Generic byte swap.
 HANDLE_TARGET_OPCODE(G_BSWAP)
 
+/// Generic AddressSpaceCast.
+HANDLE_TARGET_OPCODE(G_ADDRSPACE_CAST)
+
 // TODO: Add more generic opcodes as we move along.
 
 /// Marker for the end of the generic opcode.

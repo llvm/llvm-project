@@ -9591,9 +9591,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_addrspace)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
-          << FromQs.getAddressSpaceAttributePrintValue()
-          << ToQs.getAddressSpaceAttributePrintValue()
-          << (unsigned)isObjectArgument << I + 1;
+          << ToTy << (unsigned)isObjectArgument << I + 1;
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }

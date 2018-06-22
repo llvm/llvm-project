@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This is a copy and will be updated later to introduce changes
 
 #include <fstream>
 #include <iostream>

@@ -451,7 +451,7 @@ void PassManagerBuilder::populateModulePassManager(
     // This has to be done after we add the extensions to the pass manager
     // as there could be passes (e.g. Adddress sanitizer) which introduce
     // new unnamed globals.
-    if (PrepareForThinLTO)
+    if (PrepareForLTO || PrepareForThinLTO)
       MPM.add(createNameAnonGlobalPass());
     return;
   }
@@ -715,6 +715,10 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createCFGSimplificationPass());
 
   addExtensionsToPM(EP_OptimizerLast, MPM);
+
+  // Rename anon globals to be able to handle them in the summary
+  if (PrepareForLTO)
+    MPM.add(createNameAnonGlobalPass());
 }
 
 void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {

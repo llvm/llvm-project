@@ -50,29 +50,30 @@ static bool HandleDynamicTypeCacheMiss(
 
   ScopedReport R(Opts, Loc, ET);
 
-  Diag(Loc, DL_Error,
+  Diag(Loc, DL_Error, ET,
        "%0 address %1 which does not point to an object of type %2")
     << TypeCheckKinds[Data->TypeCheckKind] << (void*)Pointer << Data->Type;
 
   // If possible, say what type it actually points to.
   if (!DTI.isValid()) {
     if (DTI.getOffset() < -VptrMaxOffsetToTop || DTI.getOffset() > VptrMaxOffsetToTop) {
-      Diag(Pointer, DL_Note, "object has a possibly invalid vptr: abs(offset to top) too big")
+      Diag(Pointer, DL_Note, ET,
+           "object has a possibly invalid vptr: abs(offset to top) too big")
           << TypeName(DTI.getMostDerivedTypeName())
           << Range(Pointer, Pointer + sizeof(uptr), "possibly invalid vptr");
     } else {
-      Diag(Pointer, DL_Note, "object has invalid vptr")
+      Diag(Pointer, DL_Note, ET, "object has invalid vptr")
           << TypeName(DTI.getMostDerivedTypeName())
           << Range(Pointer, Pointer + sizeof(uptr), "invalid vptr");
     }
   } else if (!DTI.getOffset())
-    Diag(Pointer, DL_Note, "object is of type %0")
+    Diag(Pointer, DL_Note, ET, "object is of type %0")
         << TypeName(DTI.getMostDerivedTypeName())
         << Range(Pointer, Pointer + sizeof(uptr), "vptr for %0");
   else
     // FIXME: Find the type at the specified offset, and include that
     //        in the note.
-    Diag(Pointer - DTI.getOffset(), DL_Note,
+    Diag(Pointer - DTI.getOffset(), DL_Note, ET,
          "object is base class subobject at offset %0 within object of type %1")
         << DTI.getOffset() << TypeName(DTI.getMostDerivedTypeName())
         << TypeName(DTI.getSubobjectTypeName())
@@ -126,19 +127,20 @@ void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
     Die();
   }
 
-  Diag(Loc, DL_Error, "control flow integrity check for type %0 failed during "
-                      "%1 (vtable address %2)")
+  Diag(Loc, DL_Error, ET,
+       "control flow integrity check for type %0 failed during "
+       "%1 (vtable address %2)")
       << Data->Type << CheckKindStr << (void *)Vtable;
 
   // If possible, say what type it actually points to.
   if (!DTI.isValid()) {
     const char *module = Symbolizer::GetOrInit()->GetModuleNameForPc(Vtable);
     if (module)
-      Diag(Vtable, DL_Note, "invalid vtable in module %0") << module;
+      Diag(Vtable, DL_Note, ET, "invalid vtable in module %0") << module;
     else
-      Diag(Vtable, DL_Note, "invalid vtable");
+      Diag(Vtable, DL_Note, ET, "invalid vtable");
   } else {
-    Diag(Vtable, DL_Note, "vtable is of type %0")
+    Diag(Vtable, DL_Note, ET, "vtable is of type %0")
         << TypeName(DTI.getMostDerivedTypeName());
   }
 }

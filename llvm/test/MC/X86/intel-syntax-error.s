@@ -44,3 +44,5 @@ punpcklwd mm0, word ptr [rsp]
 // CHECK: error: invalid operand for instruction
 punpckldq mm0, qword ptr [rsp]
 
+// CHECK: error: invalid 16-bit base register
+lea bx, [ax]

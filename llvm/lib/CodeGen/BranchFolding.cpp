@@ -921,11 +921,12 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
   if (UpdateLiveIns) {
     LivePhysRegs NewLiveIns(*TRI);
     computeLiveIns(NewLiveIns, *MBB);
+    LiveRegs.init(*TRI);
 
     // The flag merging may lead to some register uses no longer using the
     // <undef> flag, add IMPLICIT_DEFs in the predecessors as necessary.
     for (MachineBasicBlock *Pred : MBB->predecessors()) {
-      LiveRegs.init(*TRI);
+      LiveRegs.clear();
       LiveRegs.addLiveOuts(*Pred);
       MachineBasicBlock::iterator InsertBefore = Pred->getFirstTerminator();
       for (unsigned Reg : NewLiveIns) {
