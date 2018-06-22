@@ -7,7 +7,7 @@
 # interpreter and the debug info format, which is why it is written as
 # a LIT test.
 
-# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: rm -rf %t && mkdir %t && cd %t
 # RUN: %target-swift-frontend -c -g -serialize-debugging-options \
 # RUN:          -module-cache-path %t/cache \
 # RUN:          -primary-file %S/Inputs/Library.swift \
