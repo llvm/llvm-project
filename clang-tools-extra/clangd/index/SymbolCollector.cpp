@@ -378,6 +378,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   Symbol S;
   S.ID = std::move(ID);
   std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
+  // FIXME: this returns foo:bar: for objective-C methods, we prefer only foo:
+  // for consistency with CodeCompletionString and a clean name/signature split.
 
   S.IsIndexedForCodeCompletion = isIndexedForCodeCompletion(ND, Ctx);
   S.SymInfo = index::getSymbolInfo(&ND);
@@ -403,7 +405,6 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
                         /*EnableSnippets=*/true);
   getLabelAndInsertText(*CCS, &IgnoredLabel, &PlainInsertText,
                         /*EnableSnippets=*/false);
-  std::string FilterText = getFilterText(*CCS);
   std::string Documentation =
       formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
                                               /*CommentsFromHeaders=*/true));
@@ -417,7 +418,6 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
             QName, SM, SM.getExpansionLoc(ND.getLocation()), Opts))
       Include = std::move(*Header);
   }
-  S.CompletionFilterText = FilterText;
   S.CompletionLabel = Label;
   S.CompletionPlainInsertText = PlainInsertText;
   S.CompletionSnippetInsertText = SnippetInsertText;

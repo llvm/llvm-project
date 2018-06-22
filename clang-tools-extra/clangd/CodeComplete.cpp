@@ -249,7 +249,8 @@ struct CompletionCandidate {
       I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->Declaration);
       getLabelAndInsertText(*SemaCCS, &I.label, &I.insertText,
                             Opts.EnableSnippets);
-      I.filterText = getFilterText(*SemaCCS);
+      if (const char* Text = SemaCCS->getTypedText())
+        I.filterText = Text;
       I.documentation = formatDocumentation(*SemaCCS, SemaDocComment);
       I.detail = getDetail(*SemaCCS);
     }

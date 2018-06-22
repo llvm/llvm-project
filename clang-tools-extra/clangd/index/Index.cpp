@@ -85,7 +85,6 @@ static void own(Symbol &S, DenseSet<StringRef> &Strings,
   Intern(S.Definition.FileURI);
 
   Intern(S.CompletionLabel);
-  Intern(S.CompletionFilterText);
   Intern(S.CompletionPlainInsertText);
   Intern(S.CompletionSnippetInsertText);
 
