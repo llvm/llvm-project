@@ -38,5 +38,20 @@ SourceLocation findNameLoc(const clang::Decl* D) {
   return SpellingLoc;
 }
 
+std::string printQualifiedName(const NamedDecl &ND) {
+  std::string QName;
+  llvm::raw_string_ostream OS(QName);
+  PrintingPolicy Policy(ND.getASTContext().getLangOpts());
+  // Note that inline namespaces are treated as transparent scopes. This
+  // reflects the way they're most commonly used for lookup. Ideally we'd
+  // include them, but at query time it's hard to find all the inline
+  // namespaces to query: the preamble doesn't have a dedicated list.
+  Policy.SuppressUnwrittenScope = true;
+  ND.printQualifiedName(OS, Policy);
+  OS.flush();
+  assert(!StringRef(QName).startswith("::"));
+  return QName;
+}
+
 } // namespace clangd
 } // namespace clang
