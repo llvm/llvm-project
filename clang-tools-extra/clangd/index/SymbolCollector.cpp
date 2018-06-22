@@ -363,20 +363,9 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   auto &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();
 
-  std::string QName;
-  llvm::raw_string_ostream OS(QName);
-  PrintingPolicy Policy(ASTCtx->getLangOpts());
-  // Note that inline namespaces are treated as transparent scopes. This
-  // reflects the way they're most commonly used for lookup. Ideally we'd
-  // include them, but at query time it's hard to find all the inline
-  // namespaces to query: the preamble doesn't have a dedicated list.
-  Policy.SuppressUnwrittenScope = true;
-  ND.printQualifiedName(OS, Policy);
-  OS.flush();
-  assert(!StringRef(QName).startswith("::"));
-
   Symbol S;
   S.ID = std::move(ID);
+  std::string QName = printQualifiedName(ND);
   std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
   // FIXME: this returns foo:bar: for objective-C methods, we prefer only foo:
   // for consistency with CodeCompletionString and a clean name/signature split.
@@ -397,18 +386,13 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
       *ASTCtx, *PP, CodeCompletionContext::CCC_Name, *CompletionAllocator,
       *CompletionTUInfo,
       /*IncludeBriefComments*/ false);
-  std::string Label;
-  std::string SnippetInsertText;
-  std::string IgnoredLabel;
-  std::string PlainInsertText;
-  getLabelAndInsertText(*CCS, &Label, &SnippetInsertText,
-                        /*EnableSnippets=*/true);
-  getLabelAndInsertText(*CCS, &IgnoredLabel, &PlainInsertText,
-                        /*EnableSnippets=*/false);
+  std::string Signature;
+  std::string SnippetSuffix;
+  getSignature(*CCS, &Signature, &SnippetSuffix);
   std::string Documentation =
       formatDocumentation(*CCS, getDocComment(Ctx, SymbolCompletion,
                                               /*CommentsFromHeaders=*/true));
-  std::string CompletionDetail = getDetail(*CCS);
+  std::string ReturnType = getReturnType(*CCS);
 
   std::string Include;
   if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
@@ -418,12 +402,11 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
             QName, SM, SM.getExpansionLoc(ND.getLocation()), Opts))
       Include = std::move(*Header);
   }
-  S.CompletionLabel = Label;
-  S.CompletionPlainInsertText = PlainInsertText;
-  S.CompletionSnippetInsertText = SnippetInsertText;
+  S.Signature = Signature;
+  S.CompletionSnippetSuffix = SnippetSuffix;
   Symbol::Details Detail;
   Detail.Documentation = Documentation;
-  Detail.CompletionDetail = CompletionDetail;
+  Detail.ReturnType = ReturnType;
   Detail.IncludeHeader = Include;
   S.Detail = &Detail;
 

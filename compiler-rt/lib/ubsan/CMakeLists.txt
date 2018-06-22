@@ -5,6 +5,7 @@ set(UBSAN_SOURCES
   ubsan_init.cc
   ubsan_flags.cc
   ubsan_handlers.cc
+  ubsan_monitor.cc
   ubsan_value.cc
   )
 
