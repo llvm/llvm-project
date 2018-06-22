@@ -84,13 +84,6 @@ private:
     // Number of VGPRs that meets number of waves per execution unit request.
     uint32_t NumVGPRsForWavesPerEU = 0;
 
-    // If ReservedVGPRCount is 0 then must be 0. Otherwise, this is the first
-    // fixed VGPR number reserved.
-    uint16_t ReservedVGPRFirst = 0;
-
-    // The number of consecutive VGPRs reserved.
-    uint16_t ReservedVGPRCount = 0;
-
     // Fixed SGPR number used to hold wave scratch offset for entire kernel
     // execution, or std::numeric_limits<uint16_t>::max() if the register is not
     // used or not known.

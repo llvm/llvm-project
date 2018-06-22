@@ -187,6 +187,8 @@ struct SanitizerCoverageOptions {
 ModulePass *createSanitizerCoverageModulePass(
     const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
 
+ModulePass *createCGProfilePass();
+
 /// Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the

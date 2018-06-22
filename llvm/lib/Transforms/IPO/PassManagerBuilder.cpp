@@ -694,6 +694,8 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createConstantMergePass());     // Merge dup global constants
   }
 
+  MPM.add(createCGProfilePass());
+
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
 

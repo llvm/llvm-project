@@ -475,13 +475,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       Twine(CurrentProgramInfo.NumVGPRsForWavesPerEU), false);
 
     OutStreamer->emitRawComment(
-      " ReservedVGPRFirst: " + Twine(CurrentProgramInfo.ReservedVGPRFirst),
-      false);
-    OutStreamer->emitRawComment(
-      " ReservedVGPRCount: " + Twine(CurrentProgramInfo.ReservedVGPRCount),
-      false);
-
-    OutStreamer->emitRawComment(
       " WaveLimiterHint : " + Twine(MFI->needsWaveLimiter()), false);
 
     if (MF.getSubtarget<SISubtarget>().debuggerEmitPrologue()) {
@@ -831,7 +824,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // unified.
   unsigned ExtraSGPRs = IsaInfo::getNumExtraSGPRs(
       STM.getFeatureBits(), ProgInfo.VCCUsed, ProgInfo.FlatUsed);
-  unsigned ExtraVGPRs = STM.getReservedNumVGPRs(MF);
 
   // Check the addressable register limit before we add ExtraSGPRs.
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
@@ -852,7 +844,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Account for extra SGPRs and VGPRs reserved for debugger use.
   ProgInfo.NumSGPR += ExtraSGPRs;
-  ProgInfo.NumVGPR += ExtraVGPRs;
 
   // Ensure there are enough SGPRs and VGPRs for wave dispatch, where wave
   // dispatch registers are function args.
@@ -917,10 +908,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       STM.getFeatureBits(), ProgInfo.NumSGPRsForWavesPerEU);
   ProgInfo.VGPRBlocks = IsaInfo::getNumVGPRBlocks(
       STM.getFeatureBits(), ProgInfo.NumVGPRsForWavesPerEU);
-
-  // Record first reserved VGPR and number of reserved VGPRs.
-  ProgInfo.ReservedVGPRFirst = STM.debuggerReserveRegs() ? ProgInfo.NumVGPR : 0;
-  ProgInfo.ReservedVGPRCount = STM.getReservedNumVGPRs(MF);
 
   // Update DebuggerWavefrontPrivateSegmentOffsetSGPR and
   // DebuggerPrivateSegmentBufferSGPR fields if "amdgpu-debugger-emit-prologue"
@@ -1196,8 +1183,6 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   Out.workitem_vgpr_count = CurrentProgramInfo.NumVGPR;
   Out.workitem_private_segment_byte_size = CurrentProgramInfo.ScratchSize;
   Out.workgroup_group_segment_byte_size = CurrentProgramInfo.LDSSize;
-  Out.reserved_vgpr_first = CurrentProgramInfo.ReservedVGPRFirst;
-  Out.reserved_vgpr_count = CurrentProgramInfo.ReservedVGPRCount;
 
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
@@ -1248,8 +1233,6 @@ AMDGPU::HSAMD::Kernel::DebugProps::Metadata AMDGPUAsmPrinter::getHSADebugProps(
 
   HSADebugProps.mDebuggerABIVersion.push_back(1);
   HSADebugProps.mDebuggerABIVersion.push_back(0);
-  HSADebugProps.mReservedNumVGPRs = ProgramInfo.ReservedVGPRCount;
-  HSADebugProps.mReservedFirstVGPR = ProgramInfo.ReservedVGPRFirst;
 
   if (STM.debuggerEmitPrologue()) {
     HSADebugProps.mPrivateSegmentBufferSGPR =
