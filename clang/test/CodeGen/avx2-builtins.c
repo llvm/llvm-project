@@ -612,9 +612,7 @@ __m128d test_mm_mask_i64gather_pd(__m128d a, double const *b, __m128i c, __m128d
 
 __m256d test_mm256_i64gather_pd(double const *b, __m256i c) {
   // CHECK-LABEL: test_mm256_i64gather_pd
-  // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x double>
-  // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-  // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <4 x double>
+  // CHECK: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
   // CHECK: call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> zeroinitializer, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x double> %{{.*}}, i8 2)
   return _mm256_i64gather_pd(b, c, 2);
 }

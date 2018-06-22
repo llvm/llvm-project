@@ -299,23 +299,6 @@ isShuffle(ArrayRef<Value *> VL) {
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
 
-///\returns Opcode that can be clubbed with \p Op to create an alternate
-/// sequence which can later be merged as a ShuffleVector instruction.
-static unsigned getAltOpcode(unsigned Op) {
-  switch (Op) {
-  case Instruction::FAdd:
-    return Instruction::FSub;
-  case Instruction::FSub:
-    return Instruction::FAdd;
-  case Instruction::Add:
-    return Instruction::Sub;
-  case Instruction::Sub:
-    return Instruction::Add;
-  default:
-    return 0;
-  }
-}
-
 static bool sameOpcodeOrAlt(unsigned Opcode, unsigned AltOpcode,
                             unsigned CheckedOpcode) {
   return Opcode == CheckedOpcode || AltOpcode == CheckedOpcode;
@@ -361,19 +344,20 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (llvm::any_of(VL, [](Value *V) { return !isa<Instruction>(V); }))
     return InstructionsState(VL[BaseIndex], 0, 0);
 
+  bool IsBinOp = isa<BinaryOperator>(VL[BaseIndex]);
   unsigned Opcode = cast<Instruction>(VL[BaseIndex])->getOpcode();
   unsigned AltOpcode = Opcode;
-  bool HasAltOpcodes = llvm::any_of(VL, [Opcode](Value *V) {
-    return Opcode != cast<Instruction>(V)->getOpcode();
-  });
 
-  // Check for an alternate opcode pattern.
-  if (HasAltOpcodes) {
-    AltOpcode = getAltOpcode(Opcode);
-    for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
-      unsigned InstOpcode = cast<Instruction>(VL[Cnt])->getOpcode();
-      if (!sameOpcodeOrAlt(Opcode, AltOpcode, InstOpcode))
-        return InstructionsState(VL[BaseIndex], 0, 0);
+  // Check for one alternate opcode from another BinaryOperator.
+  // TODO - can we support other operators (casts etc.)?
+  for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
+    unsigned InstOpcode = cast<Instruction>(VL[Cnt])->getOpcode();
+    if (!sameOpcodeOrAlt(Opcode, AltOpcode, InstOpcode)) {
+      if (Opcode == AltOpcode && IsBinOp && isa<BinaryOperator>(VL[Cnt])) {
+        AltOpcode = InstOpcode;
+        continue;
+      }
+      return InstructionsState(VL[BaseIndex], 0, 0);
     }
   }
 

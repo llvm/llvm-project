@@ -112,14 +112,15 @@ static void ResolveAddress(const ExecutionContext &exe_ctx, const Address &addr,
     // it to something
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {
-      if (target->GetSectionLoadList().IsEmpty()) {
-        target->GetImages().ResolveFileAddress(addr.GetOffset(), resolved_addr);
-      } else {
-        target->GetSectionLoadList().ResolveLoadAddress(addr.GetOffset(),
-                                                        resolved_addr);
-      }
+      bool is_resolved =
+          target->GetSectionLoadList().IsEmpty() ?
+              target->GetImages().ResolveFileAddress(addr.GetOffset(),
+                                                     resolved_addr) :
+              target->GetSectionLoadList().ResolveLoadAddress(addr.GetOffset(),
+                                                              resolved_addr);
+
       // We weren't able to resolve the address, just treat it as a raw address
-      if (resolved_addr.IsValid())
+      if (is_resolved && resolved_addr.IsValid())
         return;
     }
   }

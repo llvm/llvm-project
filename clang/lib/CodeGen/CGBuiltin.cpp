@@ -10120,44 +10120,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateExtractValue(Call, 1);
   }
 
-  case X86::BI__builtin_ia32_cmpps128_mask:
-  case X86::BI__builtin_ia32_cmpps256_mask:
-  case X86::BI__builtin_ia32_cmpps512_mask:
-  case X86::BI__builtin_ia32_cmppd128_mask:
-  case X86::BI__builtin_ia32_cmppd256_mask:
-  case X86::BI__builtin_ia32_cmppd512_mask: {
-    unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
-    Value *MaskIn = Ops[3];
-    Ops.erase(&Ops[3]);
-
-    Intrinsic::ID ID;
-    switch (BuiltinID) {
-    default: llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_cmpps128_mask:
-      ID = Intrinsic::x86_avx512_mask_cmp_ps_128;
-      break;
-    case X86::BI__builtin_ia32_cmpps256_mask:
-      ID = Intrinsic::x86_avx512_mask_cmp_ps_256;
-      break;
-    case X86::BI__builtin_ia32_cmpps512_mask:
-      ID = Intrinsic::x86_avx512_mask_cmp_ps_512;
-      break;
-    case X86::BI__builtin_ia32_cmppd128_mask:
-      ID = Intrinsic::x86_avx512_mask_cmp_pd_128;
-      break;
-    case X86::BI__builtin_ia32_cmppd256_mask:
-      ID = Intrinsic::x86_avx512_mask_cmp_pd_256;
-      break;
-    case X86::BI__builtin_ia32_cmppd512_mask:
-      ID = Intrinsic::x86_avx512_mask_cmp_pd_512;
-      break;
-    }
-
-    Value *Cmp = Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
-    return EmitX86MaskedCompareResult(*this, Cmp, NumElts, MaskIn);
-  }
-
-  // SSE packed comparison intrinsics
+  // packed comparison intrinsics
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
     return getVectorFCmpIR(CmpInst::FCMP_OEQ);
@@ -10185,64 +10148,84 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpps256:
   case X86::BI__builtin_ia32_cmppd:
-  case X86::BI__builtin_ia32_cmppd256: {
+  case X86::BI__builtin_ia32_cmppd256:
+  case X86::BI__builtin_ia32_cmpps128_mask:
+  case X86::BI__builtin_ia32_cmpps256_mask:
+  case X86::BI__builtin_ia32_cmpps512_mask:
+  case X86::BI__builtin_ia32_cmppd128_mask:
+  case X86::BI__builtin_ia32_cmppd256_mask:
+  case X86::BI__builtin_ia32_cmppd512_mask: {
+    // Lowering vector comparisons to fcmp instructions, while
+    // ignoring signalling behaviour requested
+    // ignoring rounding mode requested
+    // This is is only possible as long as FENV_ACCESS is not implemented.
+    // See also: https://reviews.llvm.org/D45616
+
+    // The third argument is the comparison condition, and integer in the
+    // range [0, 31]
     unsigned CC = cast<llvm::ConstantInt>(Ops[2])->getZExtValue() & 0x1f;
-    // If this one of the SSE immediates, we can use native IR.
-    if (CC < 8) {
-      FCmpInst::Predicate Pred;
-      switch (CC) {
-      case 0: Pred = FCmpInst::FCMP_OEQ; break;
-      case 1: Pred = FCmpInst::FCMP_OLT; break;
-      case 2: Pred = FCmpInst::FCMP_OLE; break;
-      case 3: Pred = FCmpInst::FCMP_UNO; break;
-      case 4: Pred = FCmpInst::FCMP_UNE; break;
-      case 5: Pred = FCmpInst::FCMP_UGE; break;
-      case 6: Pred = FCmpInst::FCMP_UGT; break;
-      case 7: Pred = FCmpInst::FCMP_ORD; break;
-      }
-      return getVectorFCmpIR(Pred);
+
+    // Lowering to IR fcmp instruction.
+    // Ignoring requested signaling behaviour,
+    // e.g. both _CMP_GT_OS & _CMP_GT_OQ are translated to FCMP_OGT.
+    FCmpInst::Predicate Pred;
+    switch (CC) {
+    case 0x00: Pred = FCmpInst::FCMP_OEQ; break;
+    case 0x01: Pred = FCmpInst::FCMP_OLT; break;
+    case 0x02: Pred = FCmpInst::FCMP_OLE; break;
+    case 0x03: Pred = FCmpInst::FCMP_UNO; break;
+    case 0x04: Pred = FCmpInst::FCMP_UNE; break;
+    case 0x05: Pred = FCmpInst::FCMP_UGE; break;
+    case 0x06: Pred = FCmpInst::FCMP_UGT; break;
+    case 0x07: Pred = FCmpInst::FCMP_ORD; break;
+    case 0x08: Pred = FCmpInst::FCMP_UEQ; break;
+    case 0x09: Pred = FCmpInst::FCMP_ULT; break;
+    case 0x0a: Pred = FCmpInst::FCMP_ULE; break;
+    case 0x0c: Pred = FCmpInst::FCMP_ONE; break;
+    case 0x0d: Pred = FCmpInst::FCMP_OGE; break;
+    case 0x0e: Pred = FCmpInst::FCMP_OGT; break;
+    case 0x10: Pred = FCmpInst::FCMP_OEQ; break;
+    case 0x11: Pred = FCmpInst::FCMP_OLT; break;
+    case 0x12: Pred = FCmpInst::FCMP_OLE; break;
+    case 0x13: Pred = FCmpInst::FCMP_UNO; break;
+    case 0x14: Pred = FCmpInst::FCMP_UNE; break;
+    case 0x15: Pred = FCmpInst::FCMP_UGE; break;
+    case 0x16: Pred = FCmpInst::FCMP_UGT; break;
+    case 0x17: Pred = FCmpInst::FCMP_ORD; break;
+    case 0x18: Pred = FCmpInst::FCMP_UEQ; break;
+    case 0x19: Pred = FCmpInst::FCMP_ULT; break;
+    case 0x1a: Pred = FCmpInst::FCMP_ULE; break;
+    case 0x1c: Pred = FCmpInst::FCMP_ONE; break;
+    case 0x1d: Pred = FCmpInst::FCMP_OGE; break;
+    case 0x1e: Pred = FCmpInst::FCMP_OGT; break;
+    // _CMP_TRUE_UQ, _CMP_TRUE_US produce -1,-1... vector
+    // on any input and _CMP_FALSE_OQ, _CMP_FALSE_OS produce 0, 0...
+    case 0x0b: // FALSE_OQ
+    case 0x1b: // FALSE_OS
+      return llvm::Constant::getNullValue(ConvertType(E->getType()));
+    case 0x0f: // TRUE_UQ
+    case 0x1f: // TRUE_US
+      return llvm::Constant::getAllOnesValue(ConvertType(E->getType()));
+
+    default: llvm_unreachable("Unhandled CC");
     }
 
-    // We can't handle 8-31 immediates with native IR, use the intrinsic.
-    // Except for predicates that create constants.
-    Intrinsic::ID ID;
+    // Builtins without the _mask suffix return a vector of integers
+    // of the same width as the input vectors
     switch (BuiltinID) {
-    default: llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_cmpps:
-      ID = Intrinsic::x86_sse_cmp_ps;
-      break;
-    case X86::BI__builtin_ia32_cmpps256:
-      // _CMP_TRUE_UQ, _CMP_TRUE_US produce -1,-1... vector
-      // on any input and _CMP_FALSE_OQ, _CMP_FALSE_OS produce 0, 0...
-      if (CC == 0xf || CC == 0xb || CC == 0x1b || CC == 0x1f) {
-         Value *Constant = (CC == 0xf || CC == 0x1f) ?
-                llvm::Constant::getAllOnesValue(Builder.getInt32Ty()) :
-                llvm::Constant::getNullValue(Builder.getInt32Ty());
-         Value *Vec = Builder.CreateVectorSplat(
-                        Ops[0]->getType()->getVectorNumElements(), Constant);
-         return Builder.CreateBitCast(Vec, Ops[0]->getType());
-      }
-      ID = Intrinsic::x86_avx_cmp_ps_256;
-      break;
-    case X86::BI__builtin_ia32_cmppd:
-      ID = Intrinsic::x86_sse2_cmp_pd;
-      break;
-    case X86::BI__builtin_ia32_cmppd256:
-      // _CMP_TRUE_UQ, _CMP_TRUE_US produce -1,-1... vector
-      // on any input and _CMP_FALSE_OQ, _CMP_FALSE_OS produce 0, 0...
-      if (CC == 0xf || CC == 0xb || CC == 0x1b || CC == 0x1f) {
-         Value *Constant = (CC == 0xf || CC == 0x1f) ?
-                llvm::Constant::getAllOnesValue(Builder.getInt64Ty()) :
-                llvm::Constant::getNullValue(Builder.getInt64Ty());
-         Value *Vec = Builder.CreateVectorSplat(
-                        Ops[0]->getType()->getVectorNumElements(), Constant);
-         return Builder.CreateBitCast(Vec, Ops[0]->getType());
-      }
-      ID = Intrinsic::x86_avx_cmp_pd_256;
-      break;
+    case X86::BI__builtin_ia32_cmpps512_mask:
+    case X86::BI__builtin_ia32_cmppd512_mask:
+    case X86::BI__builtin_ia32_cmpps128_mask:
+    case X86::BI__builtin_ia32_cmpps256_mask:
+    case X86::BI__builtin_ia32_cmppd128_mask:
+    case X86::BI__builtin_ia32_cmppd256_mask: {
+      unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
+      Value *Cmp = Builder.CreateFCmp(Pred, Ops[0], Ops[1]);
+      return EmitX86MaskedCompareResult(*this, Cmp, NumElts, Ops[3]);
     }
-
-    return Builder.CreateCall(CGM.getIntrinsic(ID), Ops);
+    default:
+      return getVectorFCmpIR(Pred); 
+    }
   }
 
   // SSE scalar comparison intrinsics
