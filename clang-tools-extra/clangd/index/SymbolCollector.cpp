@@ -363,20 +363,9 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   auto &Ctx = ND.getASTContext();
   auto &SM = Ctx.getSourceManager();
 
-  std::string QName;
-  llvm::raw_string_ostream OS(QName);
-  PrintingPolicy Policy(ASTCtx->getLangOpts());
-  // Note that inline namespaces are treated as transparent scopes. This
-  // reflects the way they're most commonly used for lookup. Ideally we'd
-  // include them, but at query time it's hard to find all the inline
-  // namespaces to query: the preamble doesn't have a dedicated list.
-  Policy.SuppressUnwrittenScope = true;
-  ND.printQualifiedName(OS, Policy);
-  OS.flush();
-  assert(!StringRef(QName).startswith("::"));
-
   Symbol S;
   S.ID = std::move(ID);
+  std::string QName = printQualifiedName(ND);
   std::tie(S.Scope, S.Name) = splitQualifiedName(QName);
   // FIXME: this returns foo:bar: for objective-C methods, we prefer only foo:
   // for consistency with CodeCompletionString and a clean name/signature split.
