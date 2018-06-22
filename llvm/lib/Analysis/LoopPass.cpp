@@ -142,8 +142,17 @@ void LPPassManager::getAnalysisUsage(AnalysisUsage &Info) const {
 void LPPassManager::markLoopAsDeleted(Loop &L) {
   assert((&L == CurrentLoop || CurrentLoop->contains(&L)) &&
          "Must not delete loop outside the current loop tree!");
-  if (&L == CurrentLoop)
+  // If this loop appears elsewhere within the queue, we also need to remove it
+  // there. However, we have to be careful to not remove the back of the queue
+  // as that is assumed to match the current loop.
+  assert(LQ.back() == CurrentLoop && "Loop queue back isn't the current loop!");
+  LQ.erase(std::remove(LQ.begin(), LQ.end(), &L), LQ.end());
+
+  if (&L == CurrentLoop) {
     CurrentLoopDeleted = true;
+    // Add this loop back onto the back of the queue to preserve our invariants.
+    LQ.push_back(&L);
+  }
 }
 
 /// run - Execute all of the passes scheduled for execution.  Keep track of

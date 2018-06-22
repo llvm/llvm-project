@@ -43,13 +43,6 @@ TEST_F(CompletionStringTest, Detail) {
   EXPECT_EQ(getDetail(*Builder.TakeString()), "result");
 }
 
-TEST_F(CompletionStringTest, FilterText) {
-  Builder.AddTypedTextChunk("typed");
-  Builder.AddTypedTextChunk("redundant typed no no");
-  auto *S = Builder.TakeString();
-  EXPECT_EQ(getFilterText(*S), "typed");
-}
-
 TEST_F(CompletionStringTest, Documentation) {
   Builder.addBriefComment("This is ignored");
   EXPECT_EQ(formatDocumentation(*Builder.TakeString(), "Is this brief?"),
@@ -115,7 +108,6 @@ TEST_F(CompletionStringTest, FunctionSnippet) {
   EXPECT_EQ(Label, "Foo(p1, p2)");
   EXPECT_EQ(InsertText, "Foo(${1:p1}, ${2:p2})");
   EXPECT_EQ(formatDocumentation(*CCS, "Foo's comment"), "Foo's comment");
-  EXPECT_EQ(getFilterText(*CCS), "Foo");
 }
 
 TEST_F(CompletionStringTest, EscapeSnippet) {

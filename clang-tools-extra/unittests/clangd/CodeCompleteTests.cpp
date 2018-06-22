@@ -44,6 +44,7 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
 
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.insertText == Name; }
+MATCHER_P(Scope, Name, "") { return arg.SymbolScope == Name; }
 MATCHER_P(Labeled, Label, "") {
   std::string Indented;
   if (!StringRef(Label).startswith(
@@ -1251,6 +1252,17 @@ TEST(CompletionTest, CompleteOnInvalidLine) {
       Failed());
 }
 
+TEST(CompletionTest, QualifiedNames) {
+  auto Results = completions(
+      R"cpp(
+          namespace ns { int local; void both(); }
+          void f() { ::ns::^ }
+      )cpp",
+      {func("ns::both"), cls("ns::Index")});
+  // We get results from both index and sema, with no duplicates.
+  EXPECT_THAT(Results.items, UnorderedElementsAre(Scope("ns::"), Scope("ns::"),
+                                                  Scope("ns::")));
+}
 
 } // namespace
 } // namespace clangd

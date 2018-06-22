@@ -156,10 +156,6 @@ struct Symbol {
   /// candidate list. For example, "Foo(X x, Y y) const" is a label for a
   /// function.
   llvm::StringRef CompletionLabel;
-  /// The piece of text that the user is expected to type to match the
-  /// code-completion string, typically a keyword or the name of a declarator or
-  /// macro.
-  llvm::StringRef CompletionFilterText;
   /// What to insert when completing this symbol (plain text version).
   llvm::StringRef CompletionPlainInsertText;
   /// What to insert when completing this symbol (snippet version). This is
