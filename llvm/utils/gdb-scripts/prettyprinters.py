@@ -20,7 +20,7 @@ class StringRefPrinter:
     self.val = val
 
   def to_string(self):
-    return self.val['Data'].string(length =  self.val['Length'])
+    return self.val['Data'].string(encoding='Latin-1', length=self.val['Length'])
 
   def display_hint (self):
     return 'string'

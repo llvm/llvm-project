@@ -440,6 +440,18 @@ define i64 @bitcast(i64 %a) {
   ret i64 %res2
 }
 
+; CHECK-LABEL: name: addrspacecast
+; CHECK: [[ARG1:%[0-9]+]]:_(p1) = COPY $x0
+; CHECK: [[RES1:%[0-9]+]]:_(p2) = G_ADDRSPACE_CAST [[ARG1]]
+; CHECK: [[RES2:%[0-9]+]]:_(p0) = G_ADDRSPACE_CAST [[RES1]]
+; CHECK: $x0 = COPY [[RES2]]
+; CHECK: RET_ReallyLR implicit $x0
+define i64* @addrspacecast(i32 addrspace(1)* %a) {
+  %res1 = addrspacecast i32 addrspace(1)* %a to i64 addrspace(2)*
+  %res2 = addrspacecast i64 addrspace(2)* %res1 to i64*
+  ret i64* %res2
+}
+
 ; CHECK-LABEL: name: trunc
 ; CHECK: [[ARG1:%[0-9]+]]:_(s64) = COPY $x0
 ; CHECK: [[VEC:%[0-9]+]]:_(<4 x s32>) = G_LOAD

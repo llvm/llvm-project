@@ -219,7 +219,7 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
   for (CurrentDef = 0; CurrentDef < NumImplicitDefs; ++CurrentDef) {
     unsigned Index = NumExplicitDefs + CurrentDef;
     WriteDescriptor &Write = ID.Writes[Index];
-    Write.OpIndex = -1;
+    Write.OpIndex = ~CurrentDef;
     Write.RegisterID = MCDesc.getImplicitDefs()[CurrentDef];
     if (Index < NumWriteLatencyEntries) {
       const MCWriteLatencyEntry &WLE =
@@ -302,7 +302,7 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
 
   for (unsigned CurrentUse = 0; CurrentUse < NumImplicitUses; ++CurrentUse) {
     ReadDescriptor &Read = ID.Reads[NumExplicitUses + CurrentUse];
-    Read.OpIndex = -1;
+    Read.OpIndex = ~CurrentUse;
     Read.UseIndex = NumExplicitUses + CurrentUse;
     Read.RegisterID = MCDesc.getImplicitUses()[CurrentUse];
     Read.HasReadAdvanceEntries = HasReadAdvanceEntries;
@@ -394,7 +394,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   // Initialize Reads first.
   for (const ReadDescriptor &RD : D.Reads) {
     int RegID = -1;
-    if (RD.OpIndex != -1) {
+    if (!RD.isImplicitRead()) {
       // explicit read.
       const MCOperand &Op = MCI.getOperand(RD.OpIndex);
       // Skip non-register operands.
@@ -431,7 +431,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   unsigned WriteIndex = 0;
   for (const WriteDescriptor &WD : D.Writes) {
     unsigned RegID =
-        WD.OpIndex == -1 ? WD.RegisterID : MCI.getOperand(WD.OpIndex).getReg();
+        WD.isImplicitWrite() ? WD.RegisterID : MCI.getOperand(WD.OpIndex).getReg();
     // Check if this is a optional definition that references NoReg.
     if (WD.IsOptionalDef && !RegID) {
       ++WriteIndex;

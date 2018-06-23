@@ -17,7 +17,7 @@ while.body:
 ;CHECK-NEXT:    %4 = load i32, i32* %scevgep, align 4
 ;CHECK-NEXT:    %add = add nsw i32 %4, %S.011
 ;CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
-;CHECK-NEXT:    %exitcond = icmp eq i32* %scevgep, %scevgep5
+;CHECK-NEXT:    %exitcond = icmp eq i64 %indvar, %3
 ;CHECK-NEXT:    br i1 %exitcond, label %while.end.loopexit, label %while.body
 
   %S.011 = phi i32 [ %add2, %while.body ], [ undef, %while.body.preheader ]
@@ -57,7 +57,7 @@ while.body:
 ;CHECK-NEXT:    %5 = load i32, i32* %scevgep, align 4
 ;CHECK-NEXT:    %add = add nsw i32 %5, %S.011
 ;CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
-;CHECK-NEXT:    %exitcond = icmp eq i32* %scevgep, %scevgep5
+;CHECK-NEXT:    %exitcond = icmp eq i64 %indvar, %3
 ;CHECK-NEXT:    br i1 %exitcond, label %while.end.loopexit, label %while.body
 
   %S.011 = phi i32 [ %add2, %while.body ], [ undef, %while.body.preheader ]

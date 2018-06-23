@@ -794,7 +794,9 @@ static bool translateRMMemory(MCInst &mcInst, InternalInstruction &insn,
         tryAddingPcLoadReferenceComment(insn.startLocation +
                                         insn.displacementOffset,
                                         insn.displacement + pcrel, Dis);
-        baseReg = MCOperand::createReg(X86::RIP); // Section 2.2.1.6
+        // Section 2.2.1.6
+        baseReg = MCOperand::createReg(insn.addressSize == 4 ? X86::EIP :
+                                                               X86::RIP);
       }
       else
         baseReg = MCOperand::createReg(0);

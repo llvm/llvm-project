@@ -37,6 +37,7 @@ public:
   RetireStage(const RetireStage &Other) = delete;
   RetireStage &operator=(const RetireStage &Other) = delete;
 
+  virtual bool hasWorkToComplete() const override final { return !RCU.isEmpty(); }
   virtual void preExecute(const InstRef &IR) override final;
   virtual bool execute(InstRef &IR) override final { return true; }
   void notifyInstructionRetired(const InstRef &IR);

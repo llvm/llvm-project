@@ -14,7 +14,9 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
@@ -158,6 +160,7 @@ protected:
 
   /// Section containing metadata on function stack sizes.
   MCSection *StackSizesSection;
+  mutable DenseMap<const MCSymbol *, unsigned> StackSizesUniquing;
 
   // ELF specific sections.
   MCSection *DataRelROSection;
@@ -299,7 +302,7 @@ public:
   MCSection *getStackMapSection() const { return StackMapSection; }
   MCSection *getFaultMapSection() const { return FaultMapSection; }
 
-  MCSection *getStackSizesSection() const { return StackSizesSection; }
+  MCSection *getStackSizesSection(const MCSection &TextSec) const;
 
   // ELF specific sections.
   MCSection *getDataRelROSection() const { return DataRelROSection; }

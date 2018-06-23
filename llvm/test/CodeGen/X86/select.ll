@@ -1102,6 +1102,35 @@ entry:
  ret i16 %1
 }
 
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i16 @select_xor_1b(i16 %A, i8 %cond) {
+; CHECK-LABEL: select_xor_1b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    xorl $43, %eax
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    cmovel %edi, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_xor_1b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %dl
+; MCU-NEXT:    je .LBB26_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    xorl $43, %eax
+; MCU-NEXT:  .LBB26_2: # %entry
+; MCU-NEXT:    # kill: def $ax killed $ax killed $eax
+; MCU-NEXT:    retl
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp ne i8 %and, 1
+ %0 = xor i16 %A, 43
+ %1 = select i1 %cmp10, i16 %A, i16 %0
+ ret i16 %1
+}
+
 define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; CHECK-LABEL: select_xor_2:
 ; CHECK:       ## %bb.0: ## %entry
@@ -1121,6 +1150,33 @@ define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp eq i8 %and, 0
+ %0 = xor i32 %B, %A
+ %1 = select i1 %cmp10, i32 %A, i32 %0
+ ret i32 %1
+}
+
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
+; CHECK-LABEL: select_xor_2b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    xorl %edi, %esi
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_xor_2b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %cl
+; MCU-NEXT:    je .LBB28_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    xorl %edx, %eax
+; MCU-NEXT:  .LBB28_2: # %entry
+; MCU-NEXT:    retl
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp ne i8 %and, 1
  %0 = xor i32 %B, %A
  %1 = select i1 %cmp10, i32 %A, i32 %0
  ret i32 %1
@@ -1150,6 +1206,33 @@ entry:
  ret i32 %1
 }
 
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
+; CHECK-LABEL: select_or_b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_or_b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %cl
+; MCU-NEXT:    je .LBB30_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    orl %edx, %eax
+; MCU-NEXT:  .LBB30_2: # %entry
+; MCU-NEXT:    retl
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp ne i8 %and, 1
+ %0 = or i32 %B, %A
+ %1 = select i1 %cmp10, i32 %A, i32 %0
+ ret i32 %1
+}
+
 define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; CHECK-LABEL: select_or_1:
 ; CHECK:       ## %bb.0: ## %entry
@@ -1169,6 +1252,33 @@ define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 entry:
  %and = and i32 %cond, 1
  %cmp10 = icmp eq i32 %and, 0
+ %0 = or i32 %B, %A
+ %1 = select i1 %cmp10, i32 %A, i32 %0
+ ret i32 %1
+}
+
+; Equivalent to above, but with icmp ne (and %cond, 1), 1 instead of
+; icmp eq (and %cond, 1), 0
+define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
+; CHECK-LABEL: select_or_1b:
+; CHECK:       ## %bb.0: ## %entry
+; CHECK-NEXT:    orl %edi, %esi
+; CHECK-NEXT:    testb $1, %dl
+; CHECK-NEXT:    cmovel %edi, %esi
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    retq
+;
+; MCU-LABEL: select_or_1b:
+; MCU:       # %bb.0: # %entry
+; MCU-NEXT:    testb $1, %cl
+; MCU-NEXT:    je .LBB32_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    orl %edx, %eax
+; MCU-NEXT:  .LBB32_2: # %entry
+; MCU-NEXT:    retl
+entry:
+ %and = and i32 %cond, 1
+ %cmp10 = icmp ne i32 %and, 1
  %0 = or i32 %B, %A
  %1 = select i1 %cmp10, i32 %A, i32 %0
  ret i32 %1

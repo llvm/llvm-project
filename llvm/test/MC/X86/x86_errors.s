@@ -81,3 +81,40 @@ mov (%rax,%rip), %rbx
 
 // 32: error: instruction requires: 64-bit mode
 ljmpq *(%eax)
+
+// 32: error: register %rax is only available in 64-bit mode
+// 64: error: invalid base+index expression
+leaq (%rax,%rsp), %rax
+
+// 32: error: invalid base+index expression
+// 64: error: invalid base+index expression
+leaq (%eax,%esp), %eax
+
+// 32: error: invalid 16-bit base/index register combination
+// 64: error: invalid 16-bit base register
+lea (%si,%bp), %ax
+// 32: error: invalid 16-bit base/index register combination
+// 64: error: invalid 16-bit base register
+lea (%di,%bp), %ax
+// 32: error: invalid 16-bit base/index register combination
+// 64: error: invalid 16-bit base register
+lea (%si,%bx), %ax
+// 32: error: invalid 16-bit base/index register combination
+// 64: error: invalid 16-bit base register
+lea (%di,%bx), %ax
+
+// 32: error: invalid base+index expression
+// 64: error: invalid base+index expression
+mov (,%eip), %rbx
+
+// 32: error: invalid base+index expression
+// 64: error: invalid base+index expression
+mov (%eip,%eax), %rbx
+
+// 32: error: register %rax is only available in 64-bit mode
+// 64: error: base register is 64-bit, but index register is not
+mov (%rax,%eiz), %ebx
+
+// 32: error: register %riz is only available in 64-bit mode
+// 64: error: base register is 32-bit, but index register is not
+mov (%eax,%riz), %ebx

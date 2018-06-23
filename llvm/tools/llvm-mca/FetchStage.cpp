@@ -17,7 +17,7 @@
 
 namespace mca {
 
-bool FetchStage::isReady() const { return SM.hasNext(); }
+bool FetchStage::hasWorkToComplete() const { return SM.hasNext(); }
 
 bool FetchStage::execute(InstRef &IR) {
   if (!SM.hasNext())

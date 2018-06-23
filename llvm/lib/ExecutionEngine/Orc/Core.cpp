@@ -817,7 +817,8 @@ void VSO::dump(raw_ostream &OS) {
        << "Symbol table:\n";
 
     for (auto &KV : Symbols) {
-      OS << "    \"" << *KV.first << "\": " << KV.second.getAddress();
+      OS << "    \"" << *KV.first
+         << "\": " << format("0x%016x", KV.second.getAddress());
       if (KV.second.getFlags().isLazy() ||
           KV.second.getFlags().isMaterializing()) {
         OS << " (";
@@ -840,8 +841,11 @@ void VSO::dump(raw_ostream &OS) {
       OS << "    \"" << *KV.first << "\":\n"
          << "      IsFinalized = " << (KV.second.IsFinalized ? "true" : "false")
          << "\n"
-         << "      " << KV.second.PendingQueries.size() << " pending queries.\n"
-         << "      Dependants:\n";
+         << "      " << KV.second.PendingQueries.size()
+         << " pending queries: { ";
+      for (auto &Q : KV.second.PendingQueries)
+        OS << Q.get() << " ";
+      OS << "}\n      Dependants:\n";
       for (auto &KV2 : KV.second.Dependants)
         OS << "        " << KV2.first->getName() << ": " << KV2.second << "\n";
       OS << "      Unfinalized Dependencies:\n";

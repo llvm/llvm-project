@@ -7,12 +7,12 @@
 define <8 x float> @test1(<8 x float> %a, <8 x float> %b, <8 x float> %c)  {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
+; X32-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vfmsub213ps %ymm2, %ymm1, %ymm0
+; X64-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm2
 ; X64-NEXT:    retq
 entry:
   %sub.i = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -25,12 +25,12 @@ declare <8 x float> @llvm.x86.fma.vfmadd.ps.256(<8 x float>, <8 x float>, <8 x f
 define <4 x float> @test2(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; X32-LABEL: test2:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0
+; X32-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vfnmsub213ps %xmm2, %xmm1, %xmm0
+; X64-NEXT:    vfnmsub213ps {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <4 x float> @llvm.x86.fma.vfmadd.ps(<4 x float> %a, <4 x float> %b, <4 x float> %c) #2
@@ -65,12 +65,12 @@ declare <4 x float> @llvm.x86.fma.vfnmadd.ss(<4 x float> %a, <4 x float> %b, <4 
 define <8 x float> @test4(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; X32-LABEL: test4:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0
+; X32-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test4:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0
+; X64-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float> %a, <8 x float> %b, <8 x float> %c) #2
@@ -100,12 +100,12 @@ declare <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float>, <8 x float>, <8 x f
 define <2 x double> @test6(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; X32-LABEL: test6:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0
+; X32-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test6:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vfnmsub213pd %xmm2, %xmm1, %xmm0
+; X64-NEXT:    vfnmsub213pd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
 ; X64-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.x86.fma.vfmadd.pd(<2 x double> %a, <2 x double> %b, <2 x double> %c) #2
@@ -115,3 +115,31 @@ entry:
 
 declare <2 x double> @llvm.x86.fma.vfmadd.pd(<2 x double> %a, <2 x double> %b, <2 x double> %c)
 
+define <8 x float> @test7(float %a, <8 x float> %b, <8 x float> %c)  {
+; X32-LABEL: test7:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X32-NEXT:    vsubps %ymm2, %ymm3, %ymm2
+; X32-NEXT:    vbroadcastss %xmm2, %ymm2
+; X32-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm2 * ymm0) + ymm1
+; X32-NEXT:    retl
+;
+; X64-LABEL: test7:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; X64-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X64-NEXT:    vsubps %ymm0, %ymm3, %ymm0
+; X64-NEXT:    vbroadcastss %xmm0, %ymm0
+; X64-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
+; X64-NEXT:    retq
+entry:
+  %0 = insertelement <8 x float> undef, float %a, i32 0
+  %1 = fsub <8 x float> <float -0.000000e+00, float undef, float undef, float undef, float undef, float undef, float undef, float undef>, %0
+  %2 = shufflevector <8 x float> %1, <8 x float> undef, <8 x i32> zeroinitializer
+  %3 = tail call <8 x float> @llvm.fma.v8f32(<8 x float> %2, <8 x float> %b, <8 x float> %c)
+  ret <8 x float> %3
+
+}
+
+declare <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c)

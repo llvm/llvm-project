@@ -239,3 +239,60 @@ define <4 x double> @frem(<4 x double> %v0) {
   ret <4 x double> %t3
 }
 
+; FIXME:
+; Shift-left with constant shift amount can be converted to mul to enable the fold.
+
+define <4 x i32> @mul_shl(<4 x i32> %v0) {
+; CHECK-LABEL: @mul_shl(
+; CHECK-NEXT:    [[T1:%.*]] = mul nuw <4 x i32> [[V0:%.*]], <i32 undef, i32 undef, i32 3, i32 4>
+; CHECK-NEXT:    [[T2:%.*]] = shl nuw <4 x i32> [[V0]], <i32 5, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[T3]]
+;
+  %t1 = mul nuw <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
+  %t2 = shl nuw <4 x i32> %v0, <i32 5, i32 6, i32 7, i32 8>
+  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  ret <4 x i32> %t3
+}
+
+define <4 x i32> @shl_mul(<4 x i32> %v0) {
+; CHECK-LABEL: @shl_mul(
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[T2:%.*]] = mul nsw <4 x i32> [[V0]], <i32 5, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 undef, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[T3]]
+;
+  %t1 = shl nsw <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
+  %t2 = mul nsw <4 x i32> %v0, <i32 5, i32 6, i32 7, i32 8>
+  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 4, i32 undef, i32 2, i32 3>
+  ret <4 x i32> %t3
+}
+
+; PR37806 - https://bugs.llvm.org/show_bug.cgi?id=37806
+; Demanded elements + simplification can remove the mul alone, but that's not the best case.
+
+define <4 x i32> @mul_is_nop_shl(<4 x i32> %v0) {
+; CHECK-LABEL: @mul_is_nop_shl(
+; CHECK-NEXT:    [[T2:%.*]] = shl <4 x i32> [[V0:%.*]], <i32 5, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[T3]]
+;
+  %t1 = mul <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
+  %t2 = shl <4 x i32> %v0, <i32 5, i32 6, i32 7, i32 8>
+  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x i32> %t3
+}
+
+define <4 x i32> @shl_mul_not_constant_shift_amount(<4 x i32> %v0) {
+; CHECK-LABEL: @shl_mul_not_constant_shift_amount(
+; CHECK-NEXT:    [[T1:%.*]] = shl <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = mul <4 x i32> [[V0]], <i32 5, i32 6, i32 undef, i32 undef>
+; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[T3]]
+;
+  %t1 = shl <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0
+  %t2 = mul <4 x i32> %v0, <i32 5, i32 6, i32 7, i32 8>
+  %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  ret <4 x i32> %t3
+}
+

@@ -62,7 +62,10 @@ namespace llvm {
 class raw_ostream;
 class RecordKeeper;
 
-void EmitIntrinsics(RecordKeeper &RK, raw_ostream &OS, bool TargetOnly = false);
+void EmitIntrinsicEnums(RecordKeeper &RK, raw_ostream &OS,
+                        bool TargetOnly = false);
+void EmitIntrinsicImpl(RecordKeeper &RK, raw_ostream &OS,
+                       bool TargetOnly = false);
 void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS);
 void EmitAsmWriter(RecordKeeper &RK, raw_ostream &OS);
 void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS);

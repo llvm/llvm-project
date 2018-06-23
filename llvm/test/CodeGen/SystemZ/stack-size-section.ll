@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: func1:
 ; CHECK-NEXT: .Lfunc_begin0:
-; CHECK: .section .stack_sizes,"",@progbits
+; CHECK: .section .stack_sizes,"o",@progbits,.text,unique,0
 ; CHECK-NEXT: .quad .Lfunc_begin0
 ; CHECK-NEXT: .byte 0
 define void @func1(i32, i32) #0 {
@@ -11,7 +11,7 @@ define void @func1(i32, i32) #0 {
 
 ; CHECK-LABEL: func2:
 ; CHECK-NEXT: .Lfunc_begin1:
-; CHECK: .section .stack_sizes,"",@progbits
+; CHECK: .section .stack_sizes,"o",@progbits,.text,unique,0
 ; CHECK-NEXT: .quad .Lfunc_begin1
 ; CHECK-NEXT: .ascii  "\250\001"
 define void @func2(i32, i32) #0 {
@@ -22,7 +22,7 @@ define void @func2(i32, i32) #0 {
 
 ; CHECK-LABEL: func3:
 ; CHECK-NEXT: .Lfunc_begin2:
-; CHECK: .section .stack_sizes,"",@progbits
+; CHECK: .section .stack_sizes,"o",@progbits,.text,unique,0
 ; CHECK-NEXT: .quad .Lfunc_begin2
 ; CHECK-NEXT: .ascii  "\250\001"
 define void @func3() #0 {
