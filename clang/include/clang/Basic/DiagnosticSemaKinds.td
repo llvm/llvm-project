@@ -7719,6 +7719,10 @@ def warn_format_argument_needs_cast : Warning<
   "%select{values of type|enum values with underlying type}2 '%0' should not "
   "be used as format arguments; add an explicit cast to %1 instead">,
   InGroup<Format>;
+def warn_format_argument_needs_cast_pedantic : Warning<
+  "%select{values of type|enum values with underlying type}2 '%0' should not "
+  "be used as format arguments; add an explicit cast to %1 instead">,
+  InGroup<FormatPedantic>, DefaultIgnore;
 def warn_printf_positional_arg_exceeds_data_args : Warning <
   "data argument position '%0' exceeds the number of data arguments (%1)">,
   InGroup<Format>;

@@ -477,6 +477,20 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         continue;
       }
 
+      // Try hoisting the instruction out to the preheader.  We can only do
+      // this if all of the operands of the instruction are loop invariant and
+      // if it is safe to hoist the instruction.
+      //
+      if (CurLoop->hasLoopInvariantOperands(&I) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
+          (IsMustExecute ||
+           isSafeToExecuteUnconditionally(
+               I, DT, CurLoop, SafetyInfo, ORE,
+               CurLoop->getLoopPreheader()->getTerminator()))) {
+        Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
+        continue;
+      }
+
       // Attempt to remove floating point division out of the loop by
       // converting it to a reciprocal multiplication.
       if (I.getOpcode() == Instruction::FDiv &&
@@ -497,20 +511,6 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 
         hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
         Changed = true;
-        continue;
-      }
-
-      // Try hoisting the instruction out to the preheader.  We can only do
-      // this if all of the operands of the instruction are loop invariant and
-      // if it is safe to hoist the instruction.
-      //
-      if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, SafetyInfo, ORE) &&
-          (IsMustExecute ||
-           isSafeToExecuteUnconditionally(
-               I, DT, CurLoop, SafetyInfo, ORE,
-               CurLoop->getLoopPreheader()->getTerminator()))) {
-        Changed |= hoist(I, DT, CurLoop, SafetyInfo, ORE);
         continue;
       }
 

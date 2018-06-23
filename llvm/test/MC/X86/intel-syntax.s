@@ -889,3 +889,11 @@ sysret
 // CHECK: sysretq
 sysretq
 
+// CHECK: leaq (%rsp,%rax), %rax
+lea rax, [rax+rsp]
+// CHECK: leaq (%rsp,%rax), %rax
+lea rax, [rsp+rax]
+// CHECK: leal (%esp,%eax), %eax
+lea eax, [eax+esp]
+// CHECK: leal (%esp,%eax), %eax
+lea eax, [esp+eax]

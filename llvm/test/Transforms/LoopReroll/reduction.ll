@@ -35,10 +35,10 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: %indvar = phi i64 [ %indvar.next, %for.body ], [ 0, %entry ]
 ; CHECK: %r.029 = phi i32 [ 0, %entry ], [ %add, %for.body ]
 ; CHECK: %arrayidx = getelementptr inbounds i32, i32* %x, i64 %indvar
-; CHECK: %0 = load i32, i32* %arrayidx, align 4
-; CHECK: %add = add nsw i32 %0, %r.029
+; CHECK: %1 = load i32, i32* %arrayidx, align 4
+; CHECK: %add = add nsw i32 %1, %r.029
 ; CHECK: %indvar.next = add i64 %indvar, 1
-; CHECK: %exitcond = icmp eq i64 %indvar, 399
+; CHECK: %exitcond = icmp eq i32 %0, 399
 ; CHECK: br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: ret
@@ -80,10 +80,10 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: %indvar = phi i64 [ %indvar.next, %for.body ], [ 0, %entry ]
 ; CHECK: %r.029 = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
 ; CHECK: %arrayidx = getelementptr inbounds float, float* %x, i64 %indvar
-; CHECK: %0 = load float, float* %arrayidx, align 4
-; CHECK: %add = fadd float %0, %r.029
+; CHECK: %1 = load float, float* %arrayidx, align 4
+; CHECK: %add = fadd float %1, %r.029
 ; CHECK: %indvar.next = add i64 %indvar, 1
-; CHECK: %exitcond = icmp eq i64 %indvar, 399
+; CHECK: %exitcond = icmp eq i32 %0, 399
 ; CHECK: br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: ret

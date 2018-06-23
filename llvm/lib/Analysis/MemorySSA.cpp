@@ -1573,19 +1573,18 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   assert(MA->use_empty() &&
          "Trying to remove memory access that still has uses");
   BlockNumbering.erase(MA);
-  if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(MA))
+  if (auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
     MUD->setDefiningAccess(nullptr);
   // Invalidate our walker's cache if necessary
   if (!isa<MemoryUse>(MA))
     Walker->invalidateInfo(MA);
-  // The call below to erase will destroy MA, so we can't change the order we
-  // are doing things here
+
   Value *MemoryInst;
-  if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(MA)) {
+  if (const auto *MUD = dyn_cast<MemoryUseOrDef>(MA))
     MemoryInst = MUD->getMemoryInst();
-  } else {
+  else
     MemoryInst = MA->getBlock();
-  }
+
   auto VMA = ValueToMemoryAccess.find(MemoryInst);
   if (VMA->second == MA)
     ValueToMemoryAccess.erase(VMA);
