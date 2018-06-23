@@ -9,6 +9,9 @@
 //
 //  This file implements semantic analysis for C++ Coroutines.
 //
+//  This file contains references to sections of the Coroutines TS, which
+//  can be found at http://wg21.link/coroutines.
+//
 //===----------------------------------------------------------------------===//
 
 #include "CoroutineStmtBuilder.h"
@@ -196,13 +199,25 @@ static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
 
 static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
                                     StringRef Keyword) {
-  // 'co_await' and 'co_yield' are not permitted in unevaluated operands.
+  // 'co_await' and 'co_yield' are not permitted in unevaluated operands,
+  // such as subexpressions of \c sizeof.
+  //
+  // [expr.await]p2, emphasis added: "An await-expression shall appear only in
+  // a *potentially evaluated* expression within the compound-statement of a
+  // function-body outside of a handler [...] A context within a function where
+  // an await-expression can appear is called a suspension context of the
+  // function." And per [expr.yield]p1: "A yield-expression shall appear only
+  // within a suspension context of a function."
   if (S.isUnevaluatedContext()) {
     S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
     return false;
   }
 
-  // Any other usage must be within a function.
+  // Per [expr.await]p2, any other usage must be within a function.
+  // FIXME: This also covers [expr.await]p2: "An await-expression shall not
+  // appear in a default argument." But the diagnostic QoI here could be
+  // improved to inform the user that default arguments specifically are not
+  // allowed.
   auto *FD = dyn_cast<FunctionDecl>(S.CurContext);
   if (!FD) {
     S.Diag(Loc, isa<ObjCMethodDecl>(S.CurContext)
@@ -233,22 +248,37 @@ static bool isValidCoroutineContext(Sema &S, SourceLocation Loc,
   // Diagnose when a constructor, destructor, copy/move assignment operator,
   // or the function 'main' are declared as a coroutine.
   auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  // [class.ctor]p6: "A constructor shall not be a coroutine."
   if (MD && isa<CXXConstructorDecl>(MD))
     return DiagInvalid(DiagCtor);
+  // [class.dtor]p17: "A destructor shall not be a coroutine."
   else if (MD && isa<CXXDestructorDecl>(MD))
     return DiagInvalid(DiagDtor);
+  // N4499 [special]p6: "A special member function shall not be a coroutine."
+  // Per C++ [special]p1, special member functions are the "default constructor,
+  // copy constructor and copy assignment operator, move constructor and move
+  // assignment operator, and destructor."
   else if (MD && MD->isCopyAssignmentOperator())
     return DiagInvalid(DiagCopyAssign);
   else if (MD && MD->isMoveAssignmentOperator())
     return DiagInvalid(DiagMoveAssign);
+  // [basic.start.main]p3: "The function main shall not be a coroutine."
   else if (FD->isMain())
     return DiagInvalid(DiagMain);
 
   // Emit a diagnostics for each of the following conditions which is not met.
+  // [expr.const]p2: "An expression e is a core constant expression unless the
+  // evaluation of e [...] would evaluate one of the following expressions:
+  // [...] an await-expression [...] a yield-expression."
   if (FD->isConstexpr())
     DiagInvalid(DiagConstexpr);
+  // [dcl.spec.auto]p15: "A function declared with a return type that uses a
+  // placeholder type shall not be a coroutine."
   if (FD->getReturnType()->isUndeducedType())
     DiagInvalid(DiagAutoRet);
+  // [dcl.fct.def.coroutine]p1: "The parameter-declaration-clause of the
+  // coroutine shall not terminate with an ellipsis that is not part of a
+  // parameter-declaration."
   if (FD->isVariadic())
     DiagInvalid(DiagVarargs);
 

@@ -18,9 +18,9 @@ struct throwing_awaitable {
   void await_resume() { throw 42; }
 };
 
-struct task {
+struct throwing_task {
   struct promise_type {
-    task get_return_object() { return task{}; }
+    auto get_return_object() { return throwing_task{}; }
     auto initial_suspend() { return throwing_awaitable{}; }
     auto final_suspend() { return coro::suspend_never{}; }
     void return_void() {}
@@ -29,7 +29,7 @@ struct task {
 };
 
 // CHECK-LABEL: define void @_Z1fv()
-task f() {
+throwing_task f() {
   // A variable RESUMETHREW is used to keep track of whether the body
   // of 'await_resume' threw an exception. Exceptions thrown in
   // 'await_resume' are unwound to RESUMELPAD.
@@ -50,7 +50,7 @@ task f() {
   // CHECK: [[RESUMELPAD]]:
   // CHECK: br label %[[RESUMECATCH:.+]]
   // CHECK: [[RESUMECATCH]]:
-  // CHECK: invoke void @_ZN4task12promise_type19unhandled_exceptionEv
+  // CHECK: invoke void @_ZN13throwing_task12promise_type19unhandled_exceptionEv
   // CHECK-NEXT: to label %[[RESUMEENDCATCH:.+]] unwind label
   // CHECK: [[RESUMEENDCATCH]]:
   // CHECK-NEXT: invoke void @__cxa_end_catch()
@@ -67,7 +67,7 @@ task f() {
   // CHECK-NEXT: br i1 %[[RESUMETHREWLOAD]], label %[[RESUMEDCONT:.+]], label %[[RESUMEDBODY:.+]]
 
   // CHECK: [[RESUMEDBODY]]:
-  // CHECK: invoke void @_ZN4task12promise_type11return_voidEv
+  // CHECK: invoke void @_ZN13throwing_task12promise_type11return_voidEv
   // CHECK-NEXT: to label %[[REDUMEDBODYCONT:.+]] unwind label
   // CHECK: [[REDUMEDBODYCONT]]:
   // CHECK-NEXT: br label %[[COROFINAL:.+]]
@@ -76,6 +76,33 @@ task f() {
   // CHECK-NEXT: br label %[[COROFINAL]]
 
   // CHECK: [[COROFINAL]]:
-  // CHECK-NEXT: invoke void @_ZN4task12promise_type13final_suspendEv
+  // CHECK-NEXT: invoke void @_ZN13throwing_task12promise_type13final_suspendEv
+  co_return;
+}
+
+struct noexcept_awaitable {
+  bool await_ready() { return true; }
+  void await_suspend(coro::coroutine_handle<>) {}
+  void await_resume() noexcept {}
+};
+
+struct noexcept_task {
+  struct promise_type {
+    auto get_return_object() { return noexcept_task{}; }
+    auto initial_suspend() { return noexcept_awaitable{}; }
+    auto final_suspend() { return coro::suspend_never{}; }
+    void return_void() {}
+    void unhandled_exception() {}
+  };
+};
+
+// CHECK-LABEL: define void @_Z1gv()
+noexcept_task g() {
+  // If the await_resume function is marked as noexcept, none of the additional
+  // conditions that are present in f() above are added to the IR.
+  // This means that no i1 are stored before or after calling await_resume:
+  // CHECK: init.ready:
+  // CHECK-NEXT: call void @_ZN18noexcept_awaitable12await_resumeEv
+  // CHECK-NOT: store i1 false, i1*
   co_return;
 }

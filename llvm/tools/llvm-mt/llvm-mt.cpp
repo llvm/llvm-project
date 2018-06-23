@@ -24,6 +24,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
 
@@ -65,7 +66,7 @@ public:
 } // namespace
 
 LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
-  errs() << "llvm-mt error: " << Msg << "\n";
+  WithColor::error(errs(), "llvm-mt") << Msg << '\n';
   exit(1);
 }
 
