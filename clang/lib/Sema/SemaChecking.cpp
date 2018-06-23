@@ -6805,11 +6805,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     ExprTy = TET->getUnderlyingExpr()->getType();
   }
 
-  analyze_printf::ArgType::MatchKind match = AT.matchesType(S.Context, ExprTy);
-
-  if (match == analyze_printf::ArgType::Match) {
+  const analyze_printf::ArgType::MatchKind Match =
+      AT.matchesType(S.Context, ExprTy);
+  bool Pedantic = Match == analyze_printf::ArgType::NoMatchPedantic;
+  if (Match == analyze_printf::ArgType::Match)
     return true;
-  }
 
   // Look through argument promotions for our error message's reported type.
   // This includes the integral and floating promotions, but excludes array
@@ -6885,6 +6885,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     QualType CastTy;
     std::tie(CastTy, CastTyName) = shouldNotPrintDirectly(S.Context, IntendedTy, E);
     if (!CastTy.isNull()) {
+      // %zi/%zu are OK to use for NSInteger/NSUInteger of type int
+      // (long in ASTContext). Only complain to pedants.
+      if ((CastTyName == "NSInteger" || CastTyName == "NSUInteger") &&
+          AT.isSizeT() && AT.matchesType(S.Context, CastTy))
+        Pedantic = true;
       IntendedTy = CastTy;
       ShouldNotPrintDirectly = true;
     }
@@ -6892,10 +6897,10 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
 
   // We may be able to offer a FixItHint if it is a supported type.
   PrintfSpecifier fixedFS = FS;
-  bool success =
+  bool Success =
       fixedFS.fixType(IntendedTy, S.getLangOpts(), S.Context, isObjCContext());
 
-  if (success) {
+  if (Success) {
     // Get the fix string from the fixed format specifier
     SmallString<16> buf;
     llvm::raw_svector_ostream os(buf);
@@ -6904,13 +6909,13 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     CharSourceRange SpecRange = getSpecifierRange(StartSpecifier, SpecifierLen);
 
     if (IntendedTy == ExprTy && !ShouldNotPrintDirectly) {
-      unsigned diag = diag::warn_format_conversion_argument_type_mismatch;
-      if (match == analyze_format_string::ArgType::NoMatchPedantic) {
-        diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
-      }
+      unsigned Diag =
+          Pedantic
+              ? diag::warn_format_conversion_argument_type_mismatch_pedantic
+              : diag::warn_format_conversion_argument_type_mismatch;
       // In this case, the specifier is wrong and should be changed to match
       // the argument.
-      EmitFormatDiagnostic(S.PDiag(diag)
+      EmitFormatDiagnostic(S.PDiag(Diag)
                                << AT.getRepresentativeTypeName(S.Context)
                                << IntendedTy << IsEnum << E->getSourceRange(),
                            E->getLocStart(),
@@ -6963,9 +6968,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
           Name = TypedefTy->getDecl()->getName();
         else
           Name = CastTyName;
-        EmitFormatDiagnostic(S.PDiag(diag::warn_format_argument_needs_cast)
-                               << Name << IntendedTy << IsEnum
-                               << E->getSourceRange(),
+        unsigned Diag = Pedantic
+                            ? diag::warn_format_argument_needs_cast_pedantic
+                            : diag::warn_format_argument_needs_cast;
+        EmitFormatDiagnostic(S.PDiag(Diag) << Name << IntendedTy << IsEnum
+                                           << E->getSourceRange(),
                              E->getLocStart(), /*IsStringLocation=*/false,
                              SpecRange, Hints);
       } else {
@@ -6989,13 +6996,13 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     switch (S.isValidVarArgType(ExprTy)) {
     case Sema::VAK_Valid:
     case Sema::VAK_ValidInCXX11: {
-      unsigned diag = diag::warn_format_conversion_argument_type_mismatch;
-      if (match == analyze_printf::ArgType::NoMatchPedantic) {
-        diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
-      }
+      unsigned Diag =
+          Pedantic
+              ? diag::warn_format_conversion_argument_type_mismatch_pedantic
+              : diag::warn_format_conversion_argument_type_mismatch;
 
       EmitFormatDiagnostic(
-          S.PDiag(diag) << AT.getRepresentativeTypeName(S.Context) << ExprTy
+          S.PDiag(Diag) << AT.getRepresentativeTypeName(S.Context) << ExprTy
                         << IsEnum << CSR << E->getSourceRange(),
           E->getLocStart(), /*IsStringLocation*/ false, CSR);
       break;
@@ -7178,29 +7185,28 @@ bool CheckScanfHandler::HandleScanfSpecifier(
     return true;
   }
 
-  analyze_format_string::ArgType::MatchKind match =
+  analyze_format_string::ArgType::MatchKind Match =
       AT.matchesType(S.Context, Ex->getType());
-  if (match == analyze_format_string::ArgType::Match) {
+  bool Pedantic = Match == analyze_format_string::ArgType::NoMatchPedantic;
+  if (Match == analyze_format_string::ArgType::Match)
     return true;
-  }
 
   ScanfSpecifier fixedFS = FS;
-  bool success = fixedFS.fixType(Ex->getType(), Ex->IgnoreImpCasts()->getType(),
+  bool Success = fixedFS.fixType(Ex->getType(), Ex->IgnoreImpCasts()->getType(),
                                  S.getLangOpts(), S.Context);
 
-  unsigned diag = diag::warn_format_conversion_argument_type_mismatch;
-  if (match == analyze_format_string::ArgType::NoMatchPedantic) {
-    diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
-  }
+  unsigned Diag =
+      Pedantic ? diag::warn_format_conversion_argument_type_mismatch_pedantic
+               : diag::warn_format_conversion_argument_type_mismatch;
 
-  if (success) {
+  if (Success) {
     // Get the fix string from the fixed format specifier.
     SmallString<128> buf;
     llvm::raw_svector_ostream os(buf);
     fixedFS.toString(os);
 
     EmitFormatDiagnostic(
-        S.PDiag(diag) << AT.getRepresentativeTypeName(S.Context)
+        S.PDiag(Diag) << AT.getRepresentativeTypeName(S.Context)
                       << Ex->getType() << false << Ex->getSourceRange(),
         Ex->getLocStart(),
         /*IsStringLocation*/ false,
@@ -7208,7 +7214,7 @@ bool CheckScanfHandler::HandleScanfSpecifier(
         FixItHint::CreateReplacement(
             getSpecifierRange(startSpecifier, specifierLen), os.str()));
   } else {
-    EmitFormatDiagnostic(S.PDiag(diag)
+    EmitFormatDiagnostic(S.PDiag(Diag)
                              << AT.getRepresentativeTypeName(S.Context)
                              << Ex->getType() << false << Ex->getSourceRange(),
                          Ex->getLocStart(),

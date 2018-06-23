@@ -53,20 +53,19 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK:   %1 = sub i32 %0, %m
 ; CHECK:   %2 = lshr i32 %1, 2
 ; CHECK:   %3 = shl i32 %2, 2
-; CHECK:   %4 = add i32 %m, %3
-; CHECK:   %5 = add i32 %4, 3
+; CHECK:   %4 = add i32 %3, 3
 ; CHECK:   br label %for.body
 
 ; CHECK: for.body:                                         ; preds = %for.body, %for.body.preheader
 ; CHECK:   %indvar = phi i32 [ 0, %for.body.preheader ], [ %indvar.next, %for.body ]
-; CHECK:   %6 = add i32 %m, %indvar
-; CHECK:   %arrayidx = getelementptr inbounds i32, i32* %B, i32 %6
-; CHECK:   %7 = load i32, i32* %arrayidx, align 4
-; CHECK:   %mul = shl nsw i32 %7, 2
-; CHECK:   %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %6
+; CHECK:   %5 = add i32 %m, %indvar
+; CHECK:   %arrayidx = getelementptr inbounds i32, i32* %B, i32 %5
+; CHECK:   %6 = load i32, i32* %arrayidx, align 4
+; CHECK:   %mul = shl nsw i32 %6, 2
+; CHECK:   %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %5
 ; CHECK:   store i32 %mul, i32* %arrayidx2, align 4
 ; CHECK:   %indvar.next = add i32 %indvar, 1
-; CHECK:   %exitcond = icmp eq i32 %6, %5
+; CHECK:   %exitcond = icmp eq i32 %indvar, %4
 ; CHECK:   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
 ;void daxpy_ur(int n,float da,float *dx,float *dy)
@@ -133,20 +132,19 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK:   %1 = sub i32 %0, %rem
 ; CHECK:   %2 = lshr i32 %1, 2
 ; CHECK:   %3 = shl i32 %2, 2
-; CHECK:   %4 = add i32 %rem, %3
-; CHECK:   %5 = add i32 %4, 3
+; CHECK:   %4 = add i32 %3, 3
 ; CHECK:   br label %for.body
 
 ; CHECK: for.body:
 ; CHECK:   %indvar = phi i32 [ 0, %for.body.preheader ], [ %indvar.next, %for.body ]
-; CHECK:   %6 = add i32 %rem, %indvar
-; CHECK:   %arrayidx = getelementptr inbounds float, float* %dy, i32 %6
-; CHECK:   %7 = load float, float* %arrayidx, align 4
-; CHECK:   %arrayidx1 = getelementptr inbounds float, float* %dx, i32 %6
-; CHECK:   %8 = load float, float* %arrayidx1, align 4
-; CHECK:   %mul = fmul float %8, %da
-; CHECK:   %add = fadd float %7, %mul
+; CHECK:   %5 = add i32 %rem, %indvar
+; CHECK:   %arrayidx = getelementptr inbounds float, float* %dy, i32 %5
+; CHECK:   %6 = load float, float* %arrayidx, align 4
+; CHECK:   %arrayidx1 = getelementptr inbounds float, float* %dx, i32 %5
+; CHECK:   %7 = load float, float* %arrayidx1, align 4
+; CHECK:   %mul = fmul float %7, %da
+; CHECK:   %add = fadd float %6, %mul
 ; CHECK:   store float %add, float* %arrayidx, align 4
 ; CHECK:   %indvar.next = add i32 %indvar, 1
-; CHECK:   %exitcond = icmp eq i32 %6, %5
+; CHECK:   %exitcond = icmp eq i32 %indvar, %4
 ; CHECK:   br i1 %exitcond, label %for.end.loopexit, label %for.body

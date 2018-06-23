@@ -14,18 +14,16 @@ while.body.preheader:
 
 while.body:
 ;CHECK-LABEL: while.body:
-;CHECK-NEXT:    %indvars.iv.i423 = phi i64 [ %indvars.iv.next.i424, %while.body ], [ 0, %while.body.preheader ]
-;CHECK-NEXT:    [[T1:%[0-9]+]] = trunc i64 %indvars.iv.i423 to i32
-;CHECK-NEXT:    %arrayidx62.i = getelementptr inbounds float, float* %arrayidx200, i64 %indvars.iv.i423
+;CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %while.body ], [ 0, %while.body.preheader ]
+;CHECK-NEXT:    %arrayidx62.i = getelementptr inbounds float, float* %arrayidx200, i64 %indvar
 ;CHECK-NEXT:    %t1 = load float, float* %arrayidx62.i, align 4
-;CHECK-NEXT:    %arrayidx64.i = getelementptr inbounds float, float* %arrayidx164, i64 %indvars.iv.i423
+;CHECK-NEXT:    %arrayidx64.i = getelementptr inbounds float, float* %arrayidx164, i64 %indvar
 ;CHECK-NEXT:    %t2 = load float, float* %arrayidx64.i, align 4
 ;CHECK-NEXT:    %mul65.i = fmul fast float %t2, %t22
 ;CHECK-NEXT:    %add66.i = fadd fast float %mul65.i, %t1
 ;CHECK-NEXT:    store float %add66.i, float* %arrayidx62.i, align 4
-;CHECK-NEXT:    %indvars.iv.next.i424 = add i64 %indvars.iv.i423, 1
-;CHECK-NEXT:    [[T2:%[0-9]+]] = sext i32 [[T1]] to i64
-;CHECK-NEXT:    %exitcond = icmp eq i64 [[T2]], %{{[0-9]+}}
+;CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
+;CHECK-NEXT:    %exitcond = icmp eq i64 %indvar, %{{[0-9]+}}
 ;CHECK-NEXT:    br i1 %exitcond, label %while.end.loopexit, label %while.body
 
   %indvars.iv.i423 = phi i64 [ %indvars.iv.next.i424, %while.body ], [ 0, %while.body.preheader ]
@@ -69,7 +67,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
 
-;CHECK:     for.body:
+;CHECK-LABEL:     for.body:
 ;CHECK-NEXT:  %indvar = phi i64 [ %indvar.next, %for.body ], [ 0, %for.body.preheader ]
 ;CHECK-NEXT:  %arrayidx = getelementptr inbounds i32, i32* %y, i64 %indvar
 ;CHECK-NEXT:  [[T1:%[0-9]+]] = load i32, i32* %arrayidx, align 4
@@ -111,7 +109,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
 
-;CHECK:      for.body:
+;CHECK-LABEL:      for.body:
 ;CHECK:        %add12 = add i8 %i.022, 2
 ;CHECK-NEXT:   %conv = sext i8 %add12 to i32
 ;CHECK-NEXT:   %cmp = icmp slt i32 %conv, %n
@@ -153,7 +151,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
 
-;CHECK:     for.body:
+;CHECK-LABEL:     for.body:
 ;CHECK-NEXT:  %indvar = phi i64 [ %indvar.next, %for.body ], [ 0, %for.body.preheader ]
 ;CHECK-NEXT:  %arrayidx = getelementptr inbounds i32, i32* %y, i64 %indvar
 ;CHECK-NEXT:  [[T1:%[0-9]+]] = load i32, i32* %arrayidx, align 4
