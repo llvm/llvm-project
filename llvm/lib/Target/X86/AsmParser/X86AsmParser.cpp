@@ -978,15 +978,36 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   // both 64-bit or 32-bit registers.
   // To support VSIB, IndexReg can be 128-bit or 256-bit registers.
 
-  if ((BaseReg == X86::RIP && IndexReg != 0) || (IndexReg == X86::RIP) ||
-      (IndexReg == X86::ESP) || (IndexReg == X86::RSP)) {
+  if (BaseReg != 0 &&
+      !(BaseReg == X86::RIP || BaseReg == X86::EIP ||
+        X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg) ||
+        X86MCRegisterClasses[X86::GR32RegClassID].contains(BaseReg) ||
+        X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg))) {
+    ErrMsg = "invalid base+index expression";
+    return true;
+  }
+
+  if (IndexReg != 0 &&
+      !(IndexReg == X86::EIZ || IndexReg == X86::RIZ ||
+        X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg) ||
+        X86MCRegisterClasses[X86::GR32RegClassID].contains(IndexReg) ||
+        X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg) ||
+        X86MCRegisterClasses[X86::VR128XRegClassID].contains(IndexReg) ||
+        X86MCRegisterClasses[X86::VR256XRegClassID].contains(IndexReg) ||
+        X86MCRegisterClasses[X86::VR512RegClassID].contains(IndexReg))) {
+    ErrMsg = "invalid base+index expression";
+    return true;
+  }
+
+  if (((BaseReg == X86::RIP || BaseReg == X86::EIP) && IndexReg != 0) ||
+      IndexReg == X86::EIP || IndexReg == X86::RIP ||
+      IndexReg == X86::ESP || IndexReg == X86::RSP) {
     ErrMsg = "invalid base+index expression";
     return true;
   }
 
   // Check for use of invalid 16-bit registers. Only BX/BP/SI/DI are allowed,
-  // and then only in non-64-bit modes. Except for DX, which is a special case
-  // because an unofficial form of in/out instructions uses it.
+  // and then only in non-64-bit modes.
   if (X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg) &&
       (Is64BitMode || (BaseReg != X86::BX && BaseReg != X86::BP &&
                        BaseReg != X86::SI && BaseReg != X86::DI))) {
@@ -1003,15 +1024,15 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   if (BaseReg != 0 && IndexReg != 0) {
     if (X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) &&
         (X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg) ||
-         X86MCRegisterClasses[X86::GR32RegClassID].contains(IndexReg)) &&
-        IndexReg != X86::RIZ) {
+         X86MCRegisterClasses[X86::GR32RegClassID].contains(IndexReg) ||
+         IndexReg == X86::EIZ)) {
       ErrMsg = "base register is 64-bit, but index register is not";
       return true;
     }
     if (X86MCRegisterClasses[X86::GR32RegClassID].contains(BaseReg) &&
         (X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg) ||
-         X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg)) &&
-        IndexReg != X86::EIZ){
+         X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg) ||
+         IndexReg == X86::RIZ)) {
       ErrMsg = "base register is 32-bit, but index register is not";
       return true;
     }
