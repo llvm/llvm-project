@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RetireControlUnit.h"
-#include "DispatchStage.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;

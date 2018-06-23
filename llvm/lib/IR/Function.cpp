@@ -487,13 +487,13 @@ void Function::copyAttributesFrom(const Function *Src) {
 static const char * const IntrinsicNameTable[] = {
   "not_intrinsic",
 #define GET_INTRINSIC_NAME_TABLE
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
 /// Table of per-target intrinsic name tables.
 #define GET_INTRINSIC_TARGET_DATA
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_TARGET_DATA
 
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same
@@ -840,7 +840,7 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 }
 
 #define GET_INTRINSIC_GENERATOR_GLOBAL
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_GENERATOR_GLOBAL
 
 void Intrinsic::getIntrinsicInfoTableEntries(ID id,
@@ -977,7 +977,7 @@ FunctionType *Intrinsic::getType(LLVMContext &Context,
 
 bool Intrinsic::isOverloaded(ID id) {
 #define GET_INTRINSIC_OVERLOAD_TABLE
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
@@ -995,7 +995,7 @@ bool Intrinsic::isLeaf(ID id) {
 
 /// This defines the "Intrinsic::getAttributes(ID id)" method.
 #define GET_INTRINSIC_ATTRIBUTES
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
 
 Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
@@ -1008,12 +1008,12 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
 
 // This defines the "Intrinsic::getIntrinsicForGCCBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_LLVM_INTRINSIC_FOR_GCC_BUILTIN
 
 // This defines the "Intrinsic::getIntrinsicForMSBuiltin()" method.
 #define GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
-#include "llvm/IR/Intrinsics.inc"
+#include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 
 bool Intrinsic::matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,

@@ -68,7 +68,7 @@ cl::opt<bool>
 static cl::list<std::string>
 ArchFlags("arch", cl::desc("architecture(s) from a Mach-O file to dump"),
           cl::ZeroOrMore);
-bool ArchAll = false;
+static bool ArchAll = false;
 
 enum RadixTy { octal = 8, decimal = 10, hexadecimal = 16 };
 static cl::opt<unsigned int>
@@ -93,7 +93,7 @@ static cl::alias TotalSizesShort("t", cl::desc("Short for --totals"),
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input files>"), cl::ZeroOrMore);
 
-bool HadError = false;
+static bool HadError = false;
 
 static std::string ToolName;
 
