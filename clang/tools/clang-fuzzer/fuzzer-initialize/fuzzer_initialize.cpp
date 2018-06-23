@@ -15,6 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "fuzzer_initialize.h"
+
+#include "llvm/Support/TargetSelect.h"
 #include <cstring>
 
 using namespace clang_fuzzer;
@@ -31,6 +33,11 @@ const std::vector<const char *>& GetCLArgs() {
 }
 
 extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
+
   CLArgs.push_back("-O2");
   for (int I = 1; I < *argc; I++) {
     if (strcmp((*argv)[I], "-ignore_remaining_args=1") == 0) {

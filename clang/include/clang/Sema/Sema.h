@@ -5026,7 +5026,8 @@ public:
                                           IdentifierInfo &Name);
 
   ParsedType getConstructorName(IdentifierInfo &II, SourceLocation NameLoc,
-                                Scope *S, CXXScopeSpec &SS);
+                                Scope *S, CXXScopeSpec &SS,
+                                bool EnteringContext);
   ParsedType getDestructorName(SourceLocation TildeLoc,
                                IdentifierInfo &II, SourceLocation NameLoc,
                                Scope *S, CXXScopeSpec &SS,

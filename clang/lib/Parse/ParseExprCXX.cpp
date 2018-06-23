@@ -2505,7 +2505,8 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
     if (AllowConstructorName && 
         Actions.isCurrentClassName(*Id, getCurScope(), &SS)) {
       // We have parsed a constructor name.
-      ParsedType Ty = Actions.getConstructorName(*Id, IdLoc, getCurScope(), SS);
+      ParsedType Ty = Actions.getConstructorName(*Id, IdLoc, getCurScope(), SS,
+                                                 EnteringContext);
       if (!Ty)
         return true;
       Result.setConstructorName(Ty, IdLoc, IdLoc);
@@ -2555,7 +2556,8 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, bool EnteringContext,
           << FixItHint::CreateRemoval(
                     SourceRange(TemplateId->LAngleLoc, TemplateId->RAngleLoc));
         ParsedType Ty = Actions.getConstructorName(
-            *TemplateId->Name, TemplateId->TemplateNameLoc, getCurScope(), SS);
+            *TemplateId->Name, TemplateId->TemplateNameLoc, getCurScope(), SS,
+            EnteringContext);
         if (!Ty)
           return true;
         Result.setConstructorName(Ty, TemplateId->TemplateNameLoc,

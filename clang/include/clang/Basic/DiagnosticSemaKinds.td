@@ -3757,8 +3757,8 @@ def note_ovl_candidate_bad_lvalue : Note<
     "%select{%ordinal4 argument|object argument}3">;
 def note_ovl_candidate_bad_addrspace : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "%select{%ordinal7|'this'}6 argument (%3) is in "
-    "address space %4, but parameter must be in address space %5">;
+    "address space mismatch in %select{%ordinal6|'this'}5 argument (%3), "
+    "parameter type must be %4">;
 def note_ovl_candidate_bad_gc : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "%select{%ordinal7|'this'}6 argument (%3) has %select{no|__weak|__strong}4 "
@@ -7793,6 +7793,10 @@ def warn_format_argument_needs_cast : Warning<
   "%select{values of type|enum values with underlying type}2 '%0' should not "
   "be used as format arguments; add an explicit cast to %1 instead">,
   InGroup<Format>;
+def warn_format_argument_needs_cast_pedantic : Warning<
+  "%select{values of type|enum values with underlying type}2 '%0' should not "
+  "be used as format arguments; add an explicit cast to %1 instead">,
+  InGroup<FormatPedantic>, DefaultIgnore;
 def warn_printf_positional_arg_exceeds_data_args : Warning <
   "data argument position '%0' exceeds the number of data arguments (%1)">,
   InGroup<Format>;
