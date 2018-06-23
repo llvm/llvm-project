@@ -15,6 +15,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 
@@ -51,9 +52,7 @@ void PrintWarning(const char *Loc, const Twine &Msg) {
   SrcMgr.PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Warning, Msg);
 }
 
-void PrintWarning(const Twine &Msg) {
-  errs() << "warning:" << Msg << "\n";
-}
+void PrintWarning(const Twine &Msg) { WithColor::warning() << Msg << "\n"; }
 
 void PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
   PrintMessage(ErrorLoc, SourceMgr::DK_Error, Msg);
@@ -63,9 +62,7 @@ void PrintError(const char *Loc, const Twine &Msg) {
   SrcMgr.PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Error, Msg);
 }
 
-void PrintError(const Twine &Msg) {
-  errs() << "error:" << Msg << "\n";
-}
+void PrintError(const Twine &Msg) { WithColor::error() << Msg << "\n"; }
 
 void PrintFatalError(const Twine &Msg) {
   PrintError(Msg);

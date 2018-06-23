@@ -17,15 +17,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <set>
@@ -579,7 +580,7 @@ int main(int argc, char **argv) {
     usage();
 
   if (LinkMode == LinkModeShared && !DyLibExists && !BuiltSharedLibs) {
-    errs() << "llvm-config: error: " << DyLibName << " is missing\n";
+    WithColor::error(errs(), "llvm-config") << DyLibName << " is missing\n";
     return 1;
   }
 
@@ -612,19 +613,19 @@ int main(int argc, char **argv) {
           break;
         // Using component shared libraries.
         for (auto &Lib : MissingLibs)
-          errs() << "llvm-config: error: missing: " << Lib << "\n";
+          WithColor::error(errs(), "llvm-config") << "missing: " << Lib << "\n";
         return 1;
       case LinkModeAuto:
         if (DyLibExists) {
           LinkMode = LinkModeShared;
           break;
         }
-        errs()
-            << "llvm-config: error: component libraries and shared library\n\n";
+        WithColor::error(errs(), "llvm-config")
+            << "component libraries and shared library\n\n";
         LLVM_FALLTHROUGH;
       case LinkModeStatic:
         for (auto &Lib : MissingLibs)
-          errs() << "llvm-config: error: missing: " << Lib << "\n";
+          WithColor::error(errs(), "llvm-config") << "missing: " << Lib << "\n";
         return 1;
       }
     } else if (LinkMode == LinkModeAuto) {
@@ -707,7 +708,8 @@ int main(int argc, char **argv) {
       OS << (LinkMode == LinkModeStatic ? LLVM_SYSTEM_LIBS : "") << '\n';
     }
   } else if (!Components.empty()) {
-    errs() << "llvm-config: error: components given, but unused\n\n";
+    WithColor::error(errs(), "llvm-config")
+        << "components given, but unused\n\n";
     usage();
   }
 
