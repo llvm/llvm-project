@@ -15,6 +15,7 @@ set(LLVM_OPTIONAL_SOURCES
   DummyClangFuzzer.cpp
   ExampleClangProtoFuzzer.cpp
   ExampleClangLoopProtoFuzzer.cpp
+  ExampleClangLLVMProtoFuzzer.cpp
   )
 
 if(CLANG_ENABLE_PROTO_FUZZER)
@@ -49,6 +50,9 @@ if(CLANG_ENABLE_PROTO_FUZZER)
 
   # Build the protobuf->C++ translation library and driver.
   add_clang_subdirectory(proto-to-cxx)
+
+  # Build the protobuf->LLVM IR translation library and driver.
+  add_clang_subdirectory(proto-to-llvm)
   
   # Build the fuzzer initialization library.
   add_clang_subdirectory(fuzzer-initialize)
@@ -65,29 +69,45 @@ if(CLANG_ENABLE_PROTO_FUZZER)
     ExampleClangLoopProtoFuzzer.cpp
     )
 
+  # Build the llvm protobuf fuzzer
+  add_clang_executable(clang-llvm-proto-fuzzer
+    ${DUMMY_MAIN}
+    ExampleClangLLVMProtoFuzzer.cpp
+    )
+
   set(COMMON_PROTO_FUZZ_LIBRARIES
     ${ProtobufMutator_LIBRARIES}
     ${PROTOBUF_LIBRARIES}
     ${LLVM_LIB_FUZZING_ENGINE}
     clangFuzzerInitialize
-    clangHandleCXX
     )
 
   target_link_libraries(clang-proto-fuzzer
     PRIVATE
     ${COMMON_PROTO_FUZZ_LIBRARIES}
+    clangHandleCXX
     clangCXXProto
     clangProtoToCXX
     )
   target_link_libraries(clang-loop-proto-fuzzer
     PRIVATE
     ${COMMON_PROTO_FUZZ_LIBRARIES}
+    clangHandleCXX
     clangCXXLoopProto
     clangLoopProtoToCXX
     )
+  target_link_libraries(clang-llvm-proto-fuzzer
+    PRIVATE
+    ${COMMON_PROTO_FUZZ_LIBRARIES}
+    clangHandleLLVM
+    clangCXXLoopProto
+    clangLoopProtoToLLVM
+    )
+
 endif()
 
 add_clang_subdirectory(handle-cxx)
+add_clang_subdirectory(handle-llvm)
 
 add_clang_executable(clang-fuzzer
   EXCLUDE_FROM_ALL

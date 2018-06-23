@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Backend.h"
-#include "FetchStage.h"
 #include "HWEventListener.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/Debug.h"
@@ -29,8 +28,29 @@ void Backend::addEventListener(HWEventListener *Listener) {
     Listeners.insert(Listener);
 }
 
+bool Backend::hasWorkToProcess() {
+  const auto It = llvm::find_if(Stages, [](const std::unique_ptr<Stage> &S) {
+    return S->hasWorkToComplete();
+  });
+  return It != Stages.end();
+}
+
+// This routine returns early if any stage returns 'false' after execute() is
+// called on it.
+bool Backend::executeStages(InstRef &IR) {
+  for (const std::unique_ptr<Stage> &S : Stages)
+    if (!S->execute(IR))
+      return false;
+  return true;
+}
+
+void Backend::postExecuteStages(const InstRef &IR) {
+  for (const std::unique_ptr<Stage> &S : Stages)
+    S->postExecute(IR);
+}
+
 void Backend::run() {
-  while (Fetch->isReady() || !Dispatch->isReady())
+  while (hasWorkToProcess())
     runCycle(Cycles++);
 }
 
@@ -39,17 +59,13 @@ void Backend::runCycle(unsigned Cycle) {
 
   // Update the stages before we do any processing for this cycle.
   InstRef IR;
-  Retire->preExecute(IR);
-  Dispatch->preExecute(IR);
-  Execute->preExecute(IR);
+  for (auto &S : Stages)
+    S->preExecute(IR);
 
-  // Fetch instructions and dispatch them to the hardware.
-  while (Fetch->execute(IR)) {
-    if (!Dispatch->execute(IR))
-      break;
-    Execute->execute(IR);
-    Fetch->postExecute(IR);
-  }
+  // Continue executing this cycle until any stage claims it cannot make
+  // progress.
+  while (executeStages(IR))
+    postExecuteStages(IR);
 
   notifyCycleEnd(Cycle);
 }

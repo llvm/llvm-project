@@ -37,17 +37,15 @@ message BinaryOp {
     PLUS = 0;
     MINUS = 1;
     MUL = 2;
-    DIV = 3;
-    MOD = 4;
-    XOR = 5;
-    AND = 6;
-    OR = 7;
-    EQ = 8;
-    NE = 9;
-    LE = 10;
-    GE = 11;
-    LT = 12;
-    GT = 13;
+    XOR = 3;
+    AND = 4;
+    OR = 5;
+    EQ = 6;
+    NE = 7;
+    LE = 8;
+    GE = 9;
+    LT = 10;
+    GT = 11;
   };
   required Op op = 1;
   required Rvalue left = 2;
@@ -65,12 +63,6 @@ message Rvalue {
 message AssignmentStatement {
   required VarRef varref = 1;
   required Rvalue rvalue = 2;
-}
-
-message IfElse {
-  required Rvalue cond = 1;
-  required StatementSeq if_body = 2;
-  required StatementSeq else_body = 3;
 }
 
 message Statement {

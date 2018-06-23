@@ -64,7 +64,6 @@ class DispatchStage : public Stage {
   bool checkPRF(const InstRef &IR);
   bool checkScheduler(const InstRef &IR);
   void dispatch(InstRef IR);
-  bool isRCUEmpty() const { return RCU.isEmpty(); }
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
 
   void notifyInstructionDispatched(const InstRef &IR,
@@ -92,7 +91,10 @@ public:
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
         CarryOver(0U), Owner(B), STI(Subtarget), RCU(R), PRF(F), SC(Sched) {}
 
-  virtual bool isReady() const override final { return isRCUEmpty(); }
+  // We can always try to dispatch, so returning false is okay in this case.
+  // The retire stage, which controls the RCU, might have items to complete but
+  // RetireStage::hasWorkToComplete will check for that case.
+  virtual bool hasWorkToComplete() const override final { return false; }
   virtual void preExecute(const InstRef &IR) override final;
   virtual bool execute(InstRef &IR) override final;
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);

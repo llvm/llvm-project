@@ -624,7 +624,7 @@ private:
 
   /// \reorder commutative operands in alt shuffle if they result in
   ///  vectorized code.
-  void reorderAltShuffleOperands(unsigned Opcode, unsigned AltOpcode,
+  void reorderAltShuffleOperands(const InstructionsState &S,
                                  ArrayRef<Value *> VL,
                                  SmallVectorImpl<Value *> &Left,
                                  SmallVectorImpl<Value *> &Right);
@@ -1898,7 +1898,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Reorder operands if reordering would enable vectorization.
       if (isa<BinaryOperator>(VL0)) {
         ValueList Left, Right;
-        reorderAltShuffleOperands(S.Opcode, S.AltOpcode, VL, Left, Right);
+        reorderAltShuffleOperands(S, VL, Left, Right);
         buildTree_rec(Left, Depth + 1, UserTreeIdx);
         buildTree_rec(Right, Depth + 1, UserTreeIdx);
         return;
@@ -2623,15 +2623,14 @@ int BoUpSLP::getGatherCost(ArrayRef<Value *> VL) {
 // load a[3] + load b[3]
 // Reordering the second load b[1]  load a[1] would allow us to vectorize this
 // code.
-void BoUpSLP::reorderAltShuffleOperands(unsigned Opcode, unsigned AltOpcode,
+void BoUpSLP::reorderAltShuffleOperands(const InstructionsState &S,
                                         ArrayRef<Value *> VL,
                                         SmallVectorImpl<Value *> &Left,
                                         SmallVectorImpl<Value *> &Right) {
   // Push left and right operands of binary operation into Left and Right
-  (void)AltOpcode;
   for (Value *V : VL) {
     auto *I = cast<Instruction>(V);
-    assert(sameOpcodeOrAlt(Opcode, AltOpcode, I->getOpcode()) &&
+    assert(sameOpcodeOrAlt(S.Opcode, S.AltOpcode, I->getOpcode()) &&
            "Incorrect instruction in vector");
     Left.push_back(I->getOperand(0));
     Right.push_back(I->getOperand(1));
@@ -3469,8 +3468,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       ValueList LHSVL, RHSVL;
       assert(Instruction::isBinaryOp(S.Opcode) &&
              "Invalid Shuffle Vector Operand");
-      reorderAltShuffleOperands(S.Opcode, S.AltOpcode, E->Scalars, LHSVL,
-                                RHSVL);
+      reorderAltShuffleOperands(S, E->Scalars, LHSVL, RHSVL);
       setInsertPointAfterBundle(E->Scalars, S);
 
       Value *LHS = vectorizeTree(LHSVL);
@@ -4826,13 +4824,13 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   LLVM_DEBUG(dbgs() << "SLP: Trying to vectorize a list of length = "
                     << VL.size() << ".\n");
 
-  // Check that all of the parts are scalar instructions of the same type.
-  Instruction *I0 = dyn_cast<Instruction>(VL[0]);
-  if (!I0)
+  // Check that all of the parts are scalar instructions of the same type,
+  // we permit an alternate opcode via InstructionsState.
+  InstructionsState S = getSameOpcode(VL);
+  if (!S.Opcode)
     return false;
 
-  unsigned Opcode0 = I0->getOpcode();
-
+  Instruction *I0 = cast<Instruction>(S.OpValue);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = std::max(2U, R.getMinVecRegSize() / Sz);
   unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
@@ -4849,30 +4847,15 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   for (Value *V : VL) {
     Type *Ty = V->getType();
     if (!isValidElementType(Ty)) {
-      // NOTE: the following will give user internal llvm type name, which may not be useful
+      // NOTE: the following will give user internal llvm type name, which may
+      // not be useful.
       R.getORE()->emit([&]() {
-          std::string type_str;
-          llvm::raw_string_ostream rso(type_str);
-          Ty->print(rso);
-          return OptimizationRemarkMissed(
-                     SV_NAME, "UnsupportedType", I0)
-                 << "Cannot SLP vectorize list: type "
-                 << rso.str() + " is unsupported by vectorizer";
-      });
-      return false;
-    }
-    Instruction *Inst = dyn_cast<Instruction>(V);
-
-    if (!Inst)
-      return false;
-    if (Inst->getOpcode() != Opcode0) {
-      R.getORE()->emit([&]() {
-          return OptimizationRemarkMissed(
-                     SV_NAME, "InequableTypes", I0)
-                 << "Cannot SLP vectorize list: not all of the "
-                 << "parts of scalar instructions are of the same type: "
-                 << ore::NV("Instruction1Opcode", I0) << " and "
-                 << ore::NV("Instruction2Opcode", Inst);
+        std::string type_str;
+        llvm::raw_string_ostream rso(type_str);
+        Ty->print(rso);
+        return OptimizationRemarkMissed(SV_NAME, "UnsupportedType", I0)
+               << "Cannot SLP vectorize list: type "
+               << rso.str() + " is unsupported by vectorizer";
       });
       return false;
     }

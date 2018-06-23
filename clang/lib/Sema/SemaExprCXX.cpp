@@ -82,10 +82,19 @@ ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
 
 ParsedType Sema::getConstructorName(IdentifierInfo &II,
                                     SourceLocation NameLoc,
-                                    Scope *S, CXXScopeSpec &SS) {
+                                    Scope *S, CXXScopeSpec &SS,
+                                    bool EnteringContext) {
   CXXRecordDecl *CurClass = getCurrentClass(S, &SS);
   assert(CurClass && &II == CurClass->getIdentifier() &&
          "not a constructor name");
+
+  // When naming a constructor as a member of a dependent context (eg, in a
+  // friend declaration or an inherited constructor declaration), form an
+  // unresolved "typename" type.
+  if (CurClass->isDependentContext() && !EnteringContext) {
+    QualType T = Context.getDependentNameType(ETK_None, SS.getScopeRep(), &II);
+    return ParsedType::make(T);
+  }
 
   if (SS.isNotEmpty() && RequireCompleteDeclContext(SS, CurClass))
     return ParsedType();

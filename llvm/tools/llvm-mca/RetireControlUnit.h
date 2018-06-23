@@ -23,15 +23,14 @@
 
 namespace mca {
 
-class DispatchStage;
-
 /// This class tracks which instructions are in-flight (i.e., dispatched but not
 /// retired) in the OoO backend.
 //
 /// This class checks on every cycle if/which instructions can be retired.
 /// Instructions are retired in program order.
-/// In the event of instruction retired, the DispatchStage object that owns
+/// In the event of an instruction being retired, the pipeline that owns
 /// this RetireControlUnit (RCU) gets notified.
+///
 /// On instruction retired, register updates are all architecturally
 /// committed, and any temporary registers originally allocated for the
 /// retired instruction are freed.
@@ -39,7 +38,7 @@ struct RetireControlUnit {
   // A RUToken is created by the RCU for every instruction dispatched to the
   // schedulers.  These "tokens" are managed by the RCU in its token Queue.
   //
-  // On evey cycle ('cycleEvent'), the RCU iterates through the token queue
+  // On every cycle ('cycleEvent'), the RCU iterates through the token queue
   // looking for any token with its 'Executed' flag set.  If a token has that
   // flag set, then the instruction has reached the write-back stage and will
   // be retired by the RCU.

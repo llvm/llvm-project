@@ -15,14 +15,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_BACKEND_H
 #define LLVM_TOOLS_LLVM_MCA_BACKEND_H
 
-#include "DispatchStage.h"
-#include "ExecuteStage.h"
-#include "FetchStage.h"
-#include "InstrBuilder.h"
-#include "RegisterFile.h"
-#include "RetireControlUnit.h"
-#include "RetireStage.h"
 #include "Scheduler.h"
+#include "Stage.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace mca {
 
@@ -55,40 +50,22 @@ class HWStallEvent;
 /// histograms. For example, it tracks how the dispatch group size changes
 /// over time.
 class Backend {
-  // The following are the simulated hardware components of the backend.
-  RetireControlUnit RCU;
-  RegisterFile PRF;
-  Scheduler HWS;
-
-  /// TODO: Eventually this will become a list of unique Stage* that this
-  /// backend pipeline executes.
-  std::unique_ptr<FetchStage> Fetch;
-  std::unique_ptr<DispatchStage> Dispatch;
-  std::unique_ptr<ExecuteStage> Execute;
-  std::unique_ptr<RetireStage> Retire;
-
+  /// An ordered list of stages that define this backend's instruction pipeline.
+  llvm::SmallVector<std::unique_ptr<Stage>, 8> Stages;
   std::set<HWEventListener *> Listeners;
   unsigned Cycles;
 
+  bool executeStages(InstRef &IR);
+  void postExecuteStages(const InstRef &IR);
+  bool hasWorkToProcess();
   void runCycle(unsigned Cycle);
 
 public:
-  Backend(const llvm::MCSubtargetInfo &Subtarget,
-          const llvm::MCRegisterInfo &MRI,
-          std::unique_ptr<FetchStage> InitialStage, unsigned DispatchWidth = 0,
-          unsigned RegisterFileSize = 0, unsigned LoadQueueSize = 0,
-          unsigned StoreQueueSize = 0, bool AssumeNoAlias = false)
-      : RCU(Subtarget.getSchedModel()),
-        PRF(Subtarget.getSchedModel(), MRI, RegisterFileSize),
-        HWS(Subtarget.getSchedModel(), LoadQueueSize, StoreQueueSize,
-            AssumeNoAlias),
-        Fetch(std::move(InitialStage)),
-        Dispatch(llvm::make_unique<DispatchStage>(
-            this, Subtarget, MRI, RegisterFileSize, DispatchWidth, RCU, PRF,
-            HWS)),
-        Execute(llvm::make_unique<ExecuteStage>(this, RCU, HWS)),
-        Retire(llvm::make_unique<RetireStage>(this, RCU, PRF)), Cycles(0) {}
-
+  Backend(unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
+          unsigned LoadQueueSize = 0, unsigned StoreQueueSize = 0,
+          bool AssumeNoAlias = false)
+      : Cycles(0) {}
+  void appendStage(std::unique_ptr<Stage> S) { Stages.push_back(std::move(S)); }
   void run();
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);

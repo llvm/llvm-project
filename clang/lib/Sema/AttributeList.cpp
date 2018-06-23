@@ -40,6 +40,8 @@ size_t AttributeList::allocated_size() const {
     return AttributeFactory::TypeTagForDatatypeAllocSize;
   else if (IsProperty)
     return AttributeFactory::PropertyAllocSize;
+  else if (HasParsedType)
+    return sizeof(AttributeList) + sizeof(void *);
   return (sizeof(AttributeList) + NumArgs * sizeof(ArgsUnion));
 }
 

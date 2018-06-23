@@ -110,9 +110,10 @@ bool ExecuteStage::execute(InstRef &IR) {
   HWS.reserveBuffers(Desc.Buffers);
   notifyReservedBuffers(Desc.Buffers);
 
-  // Obtain a slot in the LSU.
+  // Obtain a slot in the LSU.  If we cannot reserve resources, return true, so
+  // that succeeding stages can make progress.
   if (!HWS.reserveResources(IR))
-    return false;
+    return true;
 
   // If we did not return early, then the scheduler is ready for execution.
   notifyInstructionReady(IR);

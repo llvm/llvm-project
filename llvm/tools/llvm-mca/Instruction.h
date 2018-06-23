@@ -31,39 +31,11 @@ class ReadState;
 
 constexpr int UNKNOWN_CYCLES = -512;
 
-class Instruction;
-
-/// An InstRef contains both a SourceMgr index and Instruction pair.  The index
-/// is used as a unique identifier for the instruction.  MCA will make use of
-/// this index as a key throughout MCA.
-class InstRef : public std::pair<unsigned, Instruction *> {
-public:
-  InstRef() : std::pair<unsigned, Instruction *>(0, nullptr) {}
-  InstRef(unsigned Index, Instruction *I)
-      : std::pair<unsigned, Instruction *>(Index, I) {}
-
-  unsigned getSourceIndex() const { return first; }
-  Instruction *getInstruction() { return second; }
-  const Instruction *getInstruction() const { return second; }
-
-  /// Returns true if  this InstRef has been populated.
-  bool isValid() const { return second != nullptr; }
-
-#ifndef NDEBUG
-  void print(llvm::raw_ostream &OS) const { OS << getSourceIndex(); }
-#endif
-};
-
-#ifndef NDEBUG
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InstRef &IR) {
-  IR.print(OS);
-  return OS;
-}
-#endif
-
 /// A register write descriptor.
 struct WriteDescriptor {
-  // Operand index. -1 if this is an implicit write.
+  // Operand index. The index is negative for implicit writes only.
+  // For implicit writes, the actual operand index is computed performing
+  // a bitwise not of the OpIndex.
   int OpIndex;
   // Write latency. Number of cycles before write-back stage.
   int Latency;
@@ -83,12 +55,15 @@ struct WriteDescriptor {
   // Optional definitions are allowed to reference regID zero (i.e. "no
   // register").
   bool IsOptionalDef;
+
+  bool isImplicitWrite() const { return OpIndex < 0; };
 };
 
 /// A register read descriptor.
 struct ReadDescriptor {
   // A MCOperand index. This is used by the Dispatch logic to identify register
-  // reads. This field defaults to -1 if this is an implicit read.
+  // reads. Implicit reads have negative indices. The actual operand index of an
+  // implicit read is the bitwise not of field OpIndex.
   int OpIndex;
   // The actual "UseIdx". This is used to query the ReadAdvance table. Explicit
   // uses always come first in the sequence of uses.
@@ -103,6 +78,8 @@ struct ReadDescriptor {
   // used to dynamically check at Instruction creation time, if the input
   // operands can benefit from a ReadAdvance bonus.
   bool HasReadAdvanceEntries;
+
+  bool isImplicitRead() const { return OpIndex < 0; };
 };
 
 /// Tracks uses of a register definition (e.g. register write).
@@ -198,6 +175,7 @@ public:
   const ReadDescriptor &getDescriptor() const { return RD; }
   unsigned getSchedClass() const { return RD.SchedClassID; }
   unsigned getRegisterID() const { return RegisterID; }
+
   void cycleEvent();
   void writeStartEvent(unsigned Cycles);
   void setDependentWrites(unsigned Writes) { DependentWrites = Writes; }
@@ -368,6 +346,35 @@ public:
 
   void cycleEvent();
 };
+
+/// An InstRef contains both a SourceMgr index and Instruction pair.  The index
+/// is used as a unique identifier for the instruction.  MCA will make use of
+/// this index as a key throughout MCA.
+class InstRef : public std::pair<unsigned, Instruction *> {
+public:
+  InstRef() : std::pair<unsigned, Instruction *>(0, nullptr) {}
+  InstRef(unsigned Index, Instruction *I)
+      : std::pair<unsigned, Instruction *>(Index, I) {}
+
+  unsigned getSourceIndex() const { return first; }
+  Instruction *getInstruction() { return second; }
+  const Instruction *getInstruction() const { return second; }
+
+  /// Returns true if  this InstRef has been populated.
+  bool isValid() const { return second != nullptr; }
+
+#ifndef NDEBUG
+  void print(llvm::raw_ostream &OS) const { OS << getSourceIndex(); }
+#endif
+};
+
+#ifndef NDEBUG
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InstRef &IR) {
+  IR.print(OS);
+  return OS;
+}
+#endif
+
 } // namespace mca
 
 #endif

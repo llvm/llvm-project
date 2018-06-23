@@ -23,13 +23,19 @@
 
 #include "BackendPrinter.h"
 #include "CodeRegion.h"
+#include "DispatchStage.h"
 #include "DispatchStatistics.h"
+#include "ExecuteStage.h"
 #include "FetchStage.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
+#include "RegisterFile.h"
 #include "RegisterFileStatistics.h"
 #include "ResourcePressureView.h"
+#include "RetireControlUnit.h"
 #include "RetireControlUnitStatistics.h"
+#include "RetireStage.h"
+#include "Scheduler.h"
 #include "SchedulerStatistics.h"
 #include "SummaryView.h"
 #include "TimelineView.h"
@@ -65,15 +71,13 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
 static cl::opt<std::string>
-    ArchName("march",
-             cl::desc("Target arch to assemble for, "
-                      "see -version for available targets"),
+    ArchName("march", cl::desc("Target arch to assemble for, "
+                               "see -version for available targets"),
              cl::cat(ToolOptions));
 
 static cl::opt<std::string>
-    TripleName("mtriple",
-               cl::desc("Target triple to assemble for, "
-                        "see -version for available targets"),
+    TripleName("mtriple", cl::desc("Target triple to assemble for, "
+                                   "see -version for available targets"),
                cl::cat(ToolOptions));
 
 static cl::opt<std::string>
@@ -483,7 +487,7 @@ int main(int argc, char **argv) {
                      PrintInstructionTables ? 1 : Iterations);
 
     if (PrintInstructionTables) {
-      mca::InstructionTables IT(STI->getSchedModel(), IB, S);
+      mca::InstructionTables IT(SM, IB, S);
 
       if (PrintInstructionInfoView) {
         IT.addView(
@@ -496,14 +500,20 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    // Ideally, I'd like to expose the pipeline building here,
-    // by registering all of the Stage instances.
-    // But for now, it's just this single puppy.
-    std::unique_ptr<mca::FetchStage> Fetch =
-        llvm::make_unique<mca::FetchStage>(IB, S);
-    mca::Backend B(*STI, *MRI, std::move(Fetch), Width, RegisterFileSize,
-                   LoadQueueSize, StoreQueueSize, AssumeNoAlias);
-    mca::BackendPrinter Printer(B);
+    // Create the hardware components required for the pipeline.
+    mca::RetireControlUnit RCU(SM);
+    mca::RegisterFile PRF(SM, *MRI, RegisterFileSize);
+    mca::Scheduler HWS(SM, LoadQueueSize, StoreQueueSize, AssumeNoAlias);
+
+    // Create the pipeline and add stages to it.
+    auto B = llvm::make_unique<mca::Backend>(
+        Width, RegisterFileSize, LoadQueueSize, StoreQueueSize, AssumeNoAlias);
+    B->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
+    B->appendStage(llvm::make_unique<mca::DispatchStage>(
+        B.get(), *STI, *MRI, RegisterFileSize, Width, RCU, PRF, HWS));
+    B->appendStage(llvm::make_unique<mca::RetireStage>(B.get(), RCU, PRF));
+    B->appendStage(llvm::make_unique<mca::ExecuteStage>(B.get(), RCU, HWS));
+    mca::BackendPrinter Printer(*B);
 
     if (PrintSummaryView)
       Printer.addView(llvm::make_unique<mca::SummaryView>(SM, S, Width));
@@ -533,7 +543,7 @@ int main(int argc, char **argv) {
           *STI, *IP, S, TimelineMaxIterations, TimelineMaxCycles));
     }
 
-    B.run();
+    B->run();
     Printer.printReport(TOF->os());
   }
 

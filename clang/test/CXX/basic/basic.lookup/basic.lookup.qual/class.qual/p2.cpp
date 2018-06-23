@@ -199,5 +199,20 @@ namespace InhCtor {
     using T::T; // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
   };
   UsingIntTemplate<int> uit; // expected-note {{here}}
+
+  // This case is odd: we don't name the constructor of a dependent base as
+  // Base::Base, but we still happen to have enough information to identify
+  // when parsing the template that we're inheriting constructors.
+  //
+  // FIXME: Once CWG 2070 is resolved, check whether this case should be
+  // accepted or not.
+  namespace DependentCtorName {
+    template <typename T> struct B { B(int); };
+    template <typename T> struct A : B<T> {
+      using X = B<T>;
+      using X::B;
+    };
+    A<int> ab = 0;
+  }
 #endif
 }
