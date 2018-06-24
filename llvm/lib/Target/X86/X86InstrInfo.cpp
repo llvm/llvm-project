@@ -1007,8 +1007,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VEXPANDPSZrr,     X86::VEXPANDPSZrm,       TB_NO_REVERSE },
     { X86::VFPCLASSPDZrr,    X86::VFPCLASSPDZrm,      0 },
     { X86::VFPCLASSPSZrr,    X86::VFPCLASSPSZrm,      0 },
-    { X86::VFPCLASSSDrr,     X86::VFPCLASSSDrm,       TB_NO_REVERSE },
-    { X86::VFPCLASSSSrr,     X86::VFPCLASSSSrm,       TB_NO_REVERSE },
+    { X86::VFPCLASSSDZrr,    X86::VFPCLASSSDZrm,      TB_NO_REVERSE },
+    { X86::VFPCLASSSSZrr,    X86::VFPCLASSSSZrm,      TB_NO_REVERSE },
     { X86::VGETEXPPDZr,      X86::VGETEXPPDZm,        0 },
     { X86::VGETEXPPSZr,      X86::VGETEXPPSZm,        0 },
     { X86::VGETMANTPDZrri,   X86::VGETMANTPDZrmi,     0 },
@@ -3147,8 +3147,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VFPCLASSPSZ128rrk, X86::VFPCLASSPSZ128rmk,   0 },
     { X86::VFPCLASSPSZ256rrk, X86::VFPCLASSPSZ256rmk,   0 },
     { X86::VFPCLASSPSZrrk,    X86::VFPCLASSPSZrmk,      0 },
-    { X86::VFPCLASSSDrrk,     X86::VFPCLASSSDrmk,       TB_NO_REVERSE },
-    { X86::VFPCLASSSSrrk,     X86::VFPCLASSSSrmk,       TB_NO_REVERSE },
+    { X86::VFPCLASSSDZrrk,    X86::VFPCLASSSDZrmk,      TB_NO_REVERSE },
+    { X86::VFPCLASSSSZrrk,    X86::VFPCLASSSSZrmk,      TB_NO_REVERSE },
 
     // AES foldable instructions
     { X86::AESDECLASTrr,      X86::AESDECLASTrm,        TB_ALIGN_16 },

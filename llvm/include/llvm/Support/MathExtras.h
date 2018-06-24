@@ -34,6 +34,8 @@
 extern "C" {
 unsigned char _BitScanForward(unsigned long *_Index, unsigned long _Mask);
 unsigned char _BitScanForward64(unsigned long *_Index, unsigned __int64 _Mask);
+unsigned char _BitScanReverse(unsigned long * _Index, unsigned long _Mask);
+unsigned char _BitScanReverse64(unsigned long * _Index, unsigned __int64 _Mask);
 }
 #endif
 

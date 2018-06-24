@@ -858,10 +858,7 @@ template <typename T> struct SmallVectorStorage<T, 0> {};
 /// Note that this does not attempt to be exception safe.
 ///
 template <typename T, unsigned N>
-class SmallVector : public SmallVectorImpl<T> {
-  /// Inline space for elements which aren't stored in the base class.
-  SmallVectorStorage<T, N> Storage;
-
+class SmallVector : public SmallVectorImpl<T>, SmallVectorStorage<T, N> {
 public:
   SmallVector() : SmallVectorImpl<T>(N) {}
 

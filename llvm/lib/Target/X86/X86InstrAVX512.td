@@ -2803,12 +2803,12 @@ multiclass avx512_fp_fpclass_all<string OpcodeStr, bits<8> opcVec,
   defm PD : avx512_vector_fpclass_all<OpcodeStr,  avx512vl_f64_info, opcVec,
                                       VecOpNode, sched, prd, "{q}">,
                                       EVEX_CD8<64, CD8VF> , VEX_W;
-  defm SS : avx512_scalar_fpclass<opcScalar, OpcodeStr, ScalarOpNode,
-                                  sched.Scl, f32x_info, prd>,
-                                  EVEX_CD8<32, CD8VT1>;
-  defm SD : avx512_scalar_fpclass<opcScalar, OpcodeStr, ScalarOpNode,
-                                  sched.Scl, f64x_info, prd>,
-                                  EVEX_CD8<64, CD8VT1>, VEX_W;
+  defm SSZ : avx512_scalar_fpclass<opcScalar, OpcodeStr, ScalarOpNode,
+                                   sched.Scl, f32x_info, prd>,
+                                   EVEX_CD8<32, CD8VT1>;
+  defm SDZ : avx512_scalar_fpclass<opcScalar, OpcodeStr, ScalarOpNode,
+                                   sched.Scl, f64x_info, prd>,
+                                   EVEX_CD8<64, CD8VT1>, VEX_W;
 }
 
 defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, X86Vfpclass,
