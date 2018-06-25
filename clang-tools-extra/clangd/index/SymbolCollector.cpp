@@ -75,8 +75,9 @@ llvm::Optional<std::string> toURI(const SourceManager &SM, StringRef Path,
     }
   } else if (!Opts.FallbackDir.empty()) {
     llvm::sys::fs::make_absolute(Opts.FallbackDir, AbsolutePath);
-    llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
   }
+
+  llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
 
   std::string ErrMsg;
   for (const auto &Scheme : Opts.URISchemes) {
