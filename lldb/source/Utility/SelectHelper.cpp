@@ -109,8 +109,8 @@ lldb_private::Status SelectHelper::Select() {
     pair.second.PrepareForSelect();
     const lldb::socket_t fd = pair.first;
 #if !defined(__APPLE__) && !defined(_MSC_VER)
-    lldbassert(fd < FD_SETSIZE);
-    if (fd >= FD_SETSIZE) {
+    lldbassert(fd < static_cast<int>(FD_SETSIZE));
+    if (fd >= static_cast<int>(FD_SETSIZE)) {
       error.SetErrorStringWithFormat("%i is too large for select()", fd);
       return error;
     }
