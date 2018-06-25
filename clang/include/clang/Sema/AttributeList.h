@@ -764,11 +764,8 @@ public:
   void add(AttributeList *newAttr) {
     assert(newAttr);
     assert(newAttr->getNext() == nullptr);
-
-    // FIXME: AttributeList is a singly linked list, i.e. appending to the end
-    // requires walking to the last element. For adding n attributes, this
-    // requires O(n^2) time. However, AttributeLists should be very short.
-    addAllAtEnd(newAttr);
+    newAttr->setNext(list);
+    list = newAttr;
   }
 
   void addAll(AttributeList *newList) {
