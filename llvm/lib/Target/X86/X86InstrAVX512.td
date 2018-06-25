@@ -8859,55 +8859,30 @@ defm : avx512_masked_scalar<fsqrt, "SQRTSDZ", X86Movsd,
                             fp64imm0, (COPY_TO_REGCLASS  $mask, VK1WM), HasAVX512>;
 
 multiclass avx512_masked_scalar_imm<SDNode OpNode, string OpcPrefix, SDNode Move,
-                                    dag Mask, X86VectorVTInfo _, PatLeaf ZeroFP,
-                                    bits<8> ImmV, dag OutMask,
-                                    Predicate BasePredicate> {
+                                    X86VectorVTInfo _, PatLeaf ZeroFP,
+                                    bits<8> ImmV, Predicate BasePredicate> {
   let Predicates = [BasePredicate] in {
-    def : Pat<(Move _.VT:$src1, (scalar_to_vector (X86selects Mask,
+    def : Pat<(Move _.VT:$src1, (scalar_to_vector (X86selects VK1WM:$mask,
                (OpNode (extractelt _.VT:$src2, (iPTR 0))),
                (extractelt _.VT:$dst, (iPTR 0))))),
               (!cast<Instruction>("V"#OpcPrefix#Zr_Intk)
-               _.VT:$dst, OutMask, _.VT:$src1, _.VT:$src2, (i32 ImmV))>;
+               _.VT:$dst, VK1WM:$mask, _.VT:$src1, _.VT:$src2, (i32 ImmV))>;
 
-    def : Pat<(Move _.VT:$src1, (scalar_to_vector (X86selects Mask,
+    def : Pat<(Move _.VT:$src1, (scalar_to_vector (X86selects VK1WM:$mask,
                (OpNode (extractelt _.VT:$src2, (iPTR 0))), ZeroFP))),
               (!cast<Instruction>("V"#OpcPrefix#Zr_Intkz)
-               OutMask, _.VT:$src1, _.VT:$src2, (i32 ImmV))>;
+               VK1WM:$mask, _.VT:$src1, _.VT:$src2, (i32 ImmV))>;
   }
 }
 
 defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESS", X86Movss,
-                                (v1i1 (scalar_to_vector GR32:$mask)),
-                                v4f32x_info, fp32imm0, 0x01,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
-defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESS", X86Movss,
-                                (v1i1 (scalar_to_vector GR8:$mask)),
-                                v4f32x_info, fp32imm0, 0x01,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
+                                v4f32x_info, fp32imm0, 0x01, HasAVX512>;
 defm : avx512_masked_scalar_imm<fceil, "RNDSCALESS", X86Movss,
-                                (v1i1 (scalar_to_vector GR32:$mask)),
-                                v4f32x_info, fp32imm0, 0x02,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
-defm : avx512_masked_scalar_imm<fceil, "RNDSCALESS", X86Movss,
-                                (v1i1 (scalar_to_vector GR8:$mask)),
-                                v4f32x_info, fp32imm0, 0x02,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
+                                v4f32x_info, fp32imm0, 0x02, HasAVX512>;
 defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESD", X86Movsd,
-                                (v1i1 (scalar_to_vector GR32:$mask)),
-                                v2f64x_info, fp64imm0, 0x01,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
-defm : avx512_masked_scalar_imm<ffloor, "RNDSCALESD", X86Movsd,
-                                (v1i1 (scalar_to_vector GR8:$mask)),
-                                v2f64x_info, fp64imm0, 0x01,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
+                                v2f64x_info, fp64imm0, 0x01, HasAVX512>;
 defm : avx512_masked_scalar_imm<fceil, "RNDSCALESD", X86Movsd,
-                                (v1i1 (scalar_to_vector GR32:$mask)),
-                                v2f64x_info, fp64imm0, 0x02,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
-defm : avx512_masked_scalar_imm<fceil, "RNDSCALESD", X86Movsd,
-                                (v1i1 (scalar_to_vector GR8:$mask)),
-                                v2f64x_info, fp64imm0, 0x02,
-                                (COPY_TO_REGCLASS $mask, VK1WM), HasAVX512>;
+                                v2f64x_info, fp64imm0, 0x02,  HasAVX512>;
 
 
 //-------------------------------------------------

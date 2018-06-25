@@ -1949,6 +1949,45 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   return DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF);
 }
 
+static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB &&
+         "Expecting add or sub");
+
+  // Match a constant operand and a zext operand for the math instruction:
+  // add Z, C
+  // sub C, Z
+  bool IsAdd = N->getOpcode() == ISD::ADD;
+  SDValue C = IsAdd ? N->getOperand(1) : N->getOperand(0);
+  SDValue Z = IsAdd ? N->getOperand(0) : N->getOperand(1);
+  auto *CN = dyn_cast<ConstantSDNode>(C);
+  if (!CN || Z.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  // Match the zext operand as a setcc of a boolean.
+  if (Z.getOperand(0).getOpcode() != ISD::SETCC ||
+      Z.getOperand(0).getValueType() != MVT::i1)
+    return SDValue();
+
+  // Match the compare as: setcc (X & 1), 0, eq.
+  SDValue SetCC = Z.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
+  if (CC != ISD::SETEQ || !isNullConstant(SetCC.getOperand(1)) ||
+      SetCC.getOperand(0).getOpcode() != ISD::AND ||
+      !isOneConstant(SetCC.getOperand(0).getOperand(1)))
+    return SDValue();
+
+  // We are adding/subtracting a constant and an inverted low bit. Turn that
+  // into a subtract/add of the low bit with incremented/decremented constant:
+  // add (zext i1 (seteq (X & 1), 0)), C --> sub C+1, (zext (X & 1))
+  // sub C, (zext i1 (seteq (X & 1), 0)) --> add C-1, (zext (X & 1))
+  EVT VT = C.getValueType();
+  SDLoc DL(N);
+  SDValue LowBit = DAG.getZExtOrTrunc(SetCC.getOperand(0), DL, VT);
+  SDValue C1 = IsAdd ? DAG.getConstant(CN->getAPIntValue() + 1, DL, VT) :
+                       DAG.getConstant(CN->getAPIntValue() - 1, DL, VT);
+  return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, C1, LowBit);
+}
+
 SDValue DAGCombiner::visitADD(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -2079,6 +2118,9 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
                          DAG.getNode(ISD::ADD, SDLoc(N0), VT, N00, N10),
                          DAG.getNode(ISD::ADD, SDLoc(N1), VT, N01, N11));
   }
+
+  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+    return V;
 
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
@@ -2578,6 +2620,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return N0;
   if (N1.isUndef())
     return N1;
+
+  if (SDValue V = foldAddSubBoolOfMaskedVal(N, DAG))
+    return V;
 
   // fold Y = sra (X, size(X)-1); sub (xor (X, Y), Y) -> (abs X)
   if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {

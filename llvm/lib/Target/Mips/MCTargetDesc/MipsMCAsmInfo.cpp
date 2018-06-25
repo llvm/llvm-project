@@ -65,4 +65,9 @@ MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple) {
   // Enable IAS by default for Android mips64el that uses N64 ABI.
   if (TheTriple.getArch() == Triple::mips64el && TheTriple.isAndroid())
     UseIntegratedAssembler = true;
+
+  // Enable IAS by default for FreeBSD / OpenBSD mips64/mips64el.
+  if (TheTriple.isOSFreeBSD() ||
+      TheTriple.isOSOpenBSD())
+    UseIntegratedAssembler = true;
 }

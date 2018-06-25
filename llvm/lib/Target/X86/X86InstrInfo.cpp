@@ -6763,34 +6763,14 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 /// Case 0 - Possible to commute the first and second operands.
 /// Case 1 - Possible to commute the first and third operands.
 /// Case 2 - Possible to commute the second and third operands.
-static int getThreeSrcCommuteCase(uint64_t TSFlags, unsigned SrcOpIdx1,
-                                  unsigned SrcOpIdx2) {
+static unsigned getThreeSrcCommuteCase(uint64_t TSFlags, unsigned SrcOpIdx1,
+                                       unsigned SrcOpIdx2) {
   // Put the lowest index to SrcOpIdx1 to simplify the checks below.
   if (SrcOpIdx1 > SrcOpIdx2)
     std::swap(SrcOpIdx1, SrcOpIdx2);
 
   unsigned Op1 = 1, Op2 = 2, Op3 = 3;
   if (X86II::isKMasked(TSFlags)) {
-    // The k-mask operand cannot be commuted.
-    if (SrcOpIdx1 == 2)
-      return -1;
-
-    // For k-zero-masked operations it is Ok to commute the first vector
-    // operand.
-    // For regular k-masked operations a conservative choice is done as the
-    // elements of the first vector operand, for which the corresponding bit
-    // in the k-mask operand is set to 0, are copied to the result of the
-    // instruction.
-    // TODO/FIXME: The commute still may be legal if it is known that the
-    // k-mask operand is set to either all ones or all zeroes.
-    // It is also Ok to commute the 1st operand if all users of MI use only
-    // the elements enabled by the k-mask operand. For example,
-    //   v4 = VFMADD213PSZrk v1, k, v2, v3; // v1[i] = k[i] ? v2[i]*v1[i]+v3[i]
-    //                                                     : v1[i];
-    //   VMOVAPSZmrk <mem_addr>, k, v4; // this is the ONLY user of v4 ->
-    //                                  // Ok, to commute v1 in FMADD213PSZrk.
-    if (X86II::isKMergeMasked(TSFlags) && SrcOpIdx1 == Op1)
-      return -1;
     Op2++;
     Op3++;
   }
@@ -6801,7 +6781,7 @@ static int getThreeSrcCommuteCase(uint64_t TSFlags, unsigned SrcOpIdx1,
     return 1;
   if (SrcOpIdx1 == Op2 && SrcOpIdx2 == Op3)
     return 2;
-  return -1;
+  llvm_unreachable("Unknown three src commute case.");
 }
 
 unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
@@ -6810,23 +6790,19 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
 
   unsigned Opc = MI.getOpcode();
 
-  // Put the lowest index to SrcOpIdx1 to simplify the checks below.
-  if (SrcOpIdx1 > SrcOpIdx2)
-    std::swap(SrcOpIdx1, SrcOpIdx2);
-
   // TODO: Commuting the 1st operand of FMA*_Int requires some additional
   // analysis. The commute optimization is legal only if all users of FMA*_Int
   // use only the lowest element of the FMA*_Int instruction. Such analysis are
   // not implemented yet. So, just return 0 in that case.
   // When such analysis are available this place will be the right place for
   // calling it.
-  if (FMA3Group.isIntrinsic() && SrcOpIdx1 == 1)
-    return 0;
+  assert(!(FMA3Group.isIntrinsic() && (SrcOpIdx1 == 1 || SrcOpIdx2 == 1)) &&
+         "Intrinsic instructions can't commute operand 1");
 
   // Determine which case this commute is or if it can't be done.
-  int Case = getThreeSrcCommuteCase(MI.getDesc().TSFlags, SrcOpIdx1, SrcOpIdx2);
-  if (Case < 0)
-    return 0;
+  unsigned Case = getThreeSrcCommuteCase(MI.getDesc().TSFlags, SrcOpIdx1,
+                                         SrcOpIdx2);
+  assert(Case < 3 && "Unexpected case number!");
 
   // Define the FMA forms mapping array that helps to map input FMA form
   // to output FMA form to preserve the operation semantics after
@@ -6874,12 +6850,10 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
 
 static bool commuteVPTERNLOG(MachineInstr &MI, unsigned SrcOpIdx1,
                              unsigned SrcOpIdx2) {
-  uint64_t TSFlags = MI.getDesc().TSFlags;
-
   // Determine which case this commute is or if it can't be done.
-  int Case = getThreeSrcCommuteCase(TSFlags, SrcOpIdx1, SrcOpIdx2);
-  if (Case < 0)
-    return false;
+  unsigned Case = getThreeSrcCommuteCase(MI.getDesc().TSFlags, SrcOpIdx1,
+                                         SrcOpIdx2);
+  assert(Case < 3 && "Unexpected case value!");
 
   // For each case we need to swap two pairs of bits in the final immediate.
   static const uint8_t SwapMasks[3][4] = {
@@ -7343,27 +7317,32 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   }
 }
 
-bool X86InstrInfo::findFMA3CommutedOpIndices(
-    const MachineInstr &MI, unsigned &SrcOpIdx1, unsigned &SrcOpIdx2,
-    const X86InstrFMA3Group &FMA3Group) const {
-
-  if (!findThreeSrcCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2))
-    return false;
-
-  // Check if we can adjust the opcode to preserve the semantics when
-  // commute the register operands.
-  return getFMA3OpcodeToCommuteOperands(MI, SrcOpIdx1, SrcOpIdx2, FMA3Group) != 0;
-}
-
-bool X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
-                                                 unsigned &SrcOpIdx1,
-                                                 unsigned &SrcOpIdx2) const {
+bool
+X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
+                                            unsigned &SrcOpIdx1,
+                                            unsigned &SrcOpIdx2,
+                                            bool IsIntrinsic) const {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
   unsigned FirstCommutableVecOp = 1;
   unsigned LastCommutableVecOp = 3;
-  unsigned KMaskOp = 0;
+  unsigned KMaskOp = -1U;
   if (X86II::isKMasked(TSFlags)) {
+    // For k-zero-masked operations it is Ok to commute the first vector
+    // operand.
+    // For regular k-masked operations a conservative choice is done as the
+    // elements of the first vector operand, for which the corresponding bit
+    // in the k-mask operand is set to 0, are copied to the result of the
+    // instruction.
+    // TODO/FIXME: The commute still may be legal if it is known that the
+    // k-mask operand is set to either all ones or all zeroes.
+    // It is also Ok to commute the 1st operand if all users of MI use only
+    // the elements enabled by the k-mask operand. For example,
+    //   v4 = VFMADD213PSZrk v1, k, v2, v3; // v1[i] = k[i] ? v2[i]*v1[i]+v3[i]
+    //                                                     : v1[i];
+    //   VMOVAPSZmrk <mem_addr>, k, v4; // this is the ONLY user of v4 ->
+    //                                  // Ok, to commute v1 in FMADD213PSZrk.
+
     // The k-mask operand has index = 2 for masked and zero-masked operations.
     KMaskOp = 2;
 
@@ -7373,6 +7352,10 @@ bool X86InstrInfo::findThreeSrcCommutedOpIndices(const MachineInstr &MI,
       FirstCommutableVecOp = 3;
 
     LastCommutableVecOp++;
+  } else if (IsIntrinsic) {
+    // Commuting the first operand of an intrinsic instruction isn't possible
+    // unless we can prove that only the lowest element of the result is used.
+    FirstCommutableVecOp = 2;
   }
 
   if (isMem(MI, LastCommutableVecOp))
@@ -7535,7 +7518,7 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   case X86::VPMADD52LUQZrkz: {
     unsigned CommutableOpIdx1 = 2;
     unsigned CommutableOpIdx2 = 3;
-    if (Desc.TSFlags & X86II::EVEX_K) {
+    if (X86II::isKMasked(Desc.TSFlags)) {
       // Skip the mask register.
       ++CommutableOpIdx1;
       ++CommutableOpIdx2;
@@ -7554,11 +7537,12 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
     const X86InstrFMA3Group *FMA3Group =
         X86InstrFMA3Info::getFMA3Group(MI.getOpcode());
     if (FMA3Group)
-      return findFMA3CommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2, *FMA3Group);
+      return findThreeSrcCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2,
+                                           FMA3Group->isIntrinsic());
 
     // Handled masked instructions since we need to skip over the mask input
     // and the preserved input.
-    if (Desc.TSFlags & X86II::EVEX_K) {
+    if (X86II::isKMasked(Desc.TSFlags)) {
       // First assume that the first input is the mask operand and skip past it.
       unsigned CommutableOpIdx1 = Desc.getNumDefs() + 1;
       unsigned CommutableOpIdx2 = Desc.getNumDefs() + 2;
@@ -7571,11 +7555,11 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
         // be a 3 input instruction and we want the first two non-mask inputs.
         // Otherwise this is a 2 input instruction with a preserved input and
         // mask, so we need to move the indices to skip one more input.
-        if (Desc.TSFlags & X86II::EVEX_Z)
-          --CommutableOpIdx1;
-        else {
+        if (X86II::isKMergeMasked(Desc.TSFlags)) {
           ++CommutableOpIdx1;
           ++CommutableOpIdx2;
+        } else {
+          --CommutableOpIdx1;
         }
       }
 
