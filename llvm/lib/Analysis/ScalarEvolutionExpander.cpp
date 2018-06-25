@@ -162,7 +162,8 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 
   // Cast the instruction immediately after the instruction.
   Instruction *I = cast<Instruction>(V);
-  BasicBlock::iterator IP = findInsertPointAfter(I, Builder.GetInsertBlock());
+  BasicBlock::iterator IP = skipDebugInfo(
+      findInsertPointAfter(I, Builder.GetInsertBlock()));
   return ReuseOrCreateCast(I, Ty, Op, IP);
 }
 
@@ -1480,8 +1481,8 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
       NewOps[i] = SE.getAnyExtendExpr(S->op_begin()[i], CanonicalIV->getType());
     Value *V = expand(SE.getAddRecExpr(NewOps, S->getLoop(),
                                        S->getNoWrapFlags(SCEV::FlagNW)));
-    BasicBlock::iterator NewInsertPt =
-        findInsertPointAfter(cast<Instruction>(V), Builder.GetInsertBlock());
+    BasicBlock::iterator NewInsertPt = skipDebugInfo(
+        findInsertPointAfter(cast<Instruction>(V), Builder.GetInsertBlock()));
     V = expandCodeFor(SE.getTruncateExpr(SE.getUnknown(V), Ty), nullptr,
                       &*NewInsertPt);
     return V;

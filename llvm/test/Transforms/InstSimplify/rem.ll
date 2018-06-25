@@ -97,9 +97,7 @@ define <2 x i1> @urem_bool_vec(<2 x i1> %x, <2 x i1> %y) {
 
 define <2 x i32> @zext_bool_urem_divisor_vec(<2 x i1> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @zext_bool_urem_divisor_vec(
-; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = urem <2 x i32> [[Y:%.*]], [[EXT]]
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %ext = zext <2 x i1> %x to <2 x i32>
   %r = urem <2 x i32> %y, %ext
@@ -108,9 +106,7 @@ define <2 x i32> @zext_bool_urem_divisor_vec(<2 x i1> %x, <2 x i32> %y) {
 
 define i32 @zext_bool_srem_divisor(i1 %x, i32 %y) {
 ; CHECK-LABEL: @zext_bool_srem_divisor(
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = srem i32 [[Y:%.*]], [[EXT]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %ext = zext i1 %x to i32
   %r = srem i32 %y, %ext

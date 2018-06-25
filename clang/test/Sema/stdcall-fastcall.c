@@ -5,7 +5,7 @@ int __attribute__((stdcall)) var1; // expected-warning{{'stdcall' only applies t
 int __attribute__((fastcall)) var2; // expected-warning{{'fastcall' only applies to function types; type here is 'int'}}
 
 // Different CC qualifiers are not compatible
-void __attribute__((stdcall, fastcall)) foo3(void); // expected-error{{stdcall and fastcall attributes are not compatible}}
+void __attribute__((stdcall, fastcall)) foo3(void); // expected-error{{fastcall and stdcall attributes are not compatible}}
 void __attribute__((stdcall)) foo4(); // expected-note{{previous declaration is here}} expected-warning{{function with no prototype cannot use the stdcall calling convention}}
 void __attribute__((fastcall)) foo4(void); // expected-error{{function declared 'fastcall' here was previously declared 'stdcall'}}
 

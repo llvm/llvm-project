@@ -97,8 +97,8 @@
 # CHECK-BE: eieio                           # encoding: [0x7c,0x00,0x06,0xac]
 # CHECK-LE: eieio                           # encoding: [0xac,0x06,0x00,0x7c]
             eieio
-# CHECK-BE: waitimpl                        # encoding: [0x7c,0x40,0x00,0x7c]
-# CHECK-LE: waitimpl                        # encoding: [0x7c,0x00,0x40,0x7c]
+# CHECK-BE: waitimpl                        # encoding: [0x7c,0x40,0x00,0x3c]
+# CHECK-LE: waitimpl                        # encoding: [0x3c,0x00,0x40,0x7c]
             wait 2
 # CHECK-BE: mbar 1                          # encoding: [0x7c,0x20,0x06,0xac]
 # CHECK-LE: mbar 1                          # encoding: [0xac,0x06,0x20,0x7c]
@@ -171,14 +171,14 @@
 # CHECK-LE: ptesync                         # encoding: [0xac,0x04,0x40,0x7c]
             ptesync
 
-# CHECK-BE: wait                            # encoding: [0x7c,0x00,0x00,0x7c]
-# CHECK-LE: wait                            # encoding: [0x7c,0x00,0x00,0x7c]
+# CHECK-BE: wait                            # encoding: [0x7c,0x00,0x00,0x3c]
+# CHECK-LE: wait                            # encoding: [0x3c,0x00,0x00,0x7c]
             wait
-# CHECK-BE: waitrsv                         # encoding: [0x7c,0x20,0x00,0x7c]
-# CHECK-LE: waitrsv                         # encoding: [0x7c,0x00,0x20,0x7c]
+# CHECK-BE: waitrsv                         # encoding: [0x7c,0x20,0x00,0x3c]
+# CHECK-LE: waitrsv                         # encoding: [0x3c,0x00,0x20,0x7c]
             waitrsv
-# CHECK-BE: waitimpl                        # encoding: [0x7c,0x40,0x00,0x7c]
-# CHECK-LE: waitimpl                        # encoding: [0x7c,0x00,0x40,0x7c]
+# CHECK-BE: waitimpl                        # encoding: [0x7c,0x40,0x00,0x3c]
+# CHECK-LE: waitimpl                        # encoding: [0x3c,0x00,0x40,0x7c]
             waitimpl
 
 # Time base instructions

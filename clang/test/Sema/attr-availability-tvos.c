@@ -27,8 +27,10 @@ void test_transcribed_availability() {
   f9(0);
 }
 
-__attribute__((availability(ios,introduced=9_0,deprecated=9_0,message="" ))) // expected-warning 2{{availability does not match previous declaration}}
-__attribute__((availability(ios,introduced=7_0)))                            // expected-note 2{{previous attribute is here}}
+__attribute__((availability(ios,introduced=9_0,deprecated=9_0,message="" ))) // expected-note{{previous attribute is here}} \
+  // expected-note{{previous attribute is here}}
+__attribute__((availability(ios,introduced=7_0))) // expected-warning{{availability does not match previous declaration}} \
+  // expected-warning{{availability does not match previous declaration}}
 void f10(int);
 
 // Test tvOS specific attributes.

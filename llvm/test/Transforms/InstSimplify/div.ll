@@ -97,9 +97,7 @@ define <2 x i1> @udiv_bool_vec(<2 x i1> %x, <2 x i1> %y) {
 
 define i32 @zext_bool_udiv_divisor(i1 %x, i32 %y) {
 ; CHECK-LABEL: @zext_bool_udiv_divisor(
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[Y:%.*]], [[EXT]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
 ;
   %ext = zext i1 %x to i32
   %r = udiv i32 %y, %ext
@@ -108,9 +106,7 @@ define i32 @zext_bool_udiv_divisor(i1 %x, i32 %y) {
 
 define <2 x i32> @zext_bool_sdiv_divisor_vec(<2 x i1> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @zext_bool_sdiv_divisor_vec(
-; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i32> [[Y:%.*]], [[EXT]]
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> [[Y:%.*]]
 ;
   %ext = zext <2 x i1> %x to <2 x i32>
   %r = sdiv <2 x i32> %y, %ext
