@@ -2031,7 +2031,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                /*ParamsToSkip*/ 0, Order);
 
   EmitCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args,
-                         Overlap);
+                         Overlap, E->getExprLoc());
 }
 
 static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
@@ -2064,14 +2064,14 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              bool Delegating,
                                              Address This,
                                              CallArgList &Args,
-                                             AggValueSlot::Overlap_t Overlap) {
+                                             AggValueSlot::Overlap_t Overlap,
+                                             SourceLocation Loc) {
   const CXXRecordDecl *ClassDecl = D->getParent();
 
   // C++11 [class.mfct.non-static]p2:
   //   If a non-static member function of a class X is called for an object that
   //   is not of type X, or of a type derived from X, the behavior is undefined.
-  // FIXME: Provide a source location here.
-  EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall, SourceLocation(),
+  EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall, Loc,
                 This.getPointer(), getContext().getRecordType(ClassDecl));
 
   if (D->isTrivial() && D->isDefaultConstructor()) {
@@ -2180,7 +2180,8 @@ void CodeGenFunction::EmitInheritedCXXConstructorCall(
   }
 
   EmitCXXConstructorCall(D, Ctor_Base, ForVirtualBase, /*Delegating*/false,
-                         This, Args, AggValueSlot::MayOverlap);
+                         This, Args, AggValueSlot::MayOverlap,
+                         E->getLocation());
 }
 
 void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
@@ -2277,7 +2278,7 @@ CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
                /*ParamsToSkip*/ 1);
 
   EmitCXXConstructorCall(D, Ctor_Complete, false, false, This, Args,
-                         AggValueSlot::MayOverlap);
+                         AggValueSlot::MayOverlap, E->getExprLoc());
 }
 
 void
@@ -2313,7 +2314,7 @@ CodeGenFunction::EmitDelegateCXXConstructorCall(const CXXConstructorDecl *Ctor,
 
   EmitCXXConstructorCall(Ctor, CtorType, /*ForVirtualBase=*/false,
                          /*Delegating=*/true, This, DelegateArgs,
-                         AggValueSlot::MayOverlap);
+                         AggValueSlot::MayOverlap, Loc);
 }
 
 namespace {

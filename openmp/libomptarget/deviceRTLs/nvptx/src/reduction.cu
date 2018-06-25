@@ -161,6 +161,11 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                      kmp_InterWarpCopyFctPtr cpyFct,
                                      bool isSPMDExecutionMode,
                                      bool isRuntimeUninitialized = false) {
+  uint32_t BlockThreadId = GetLogicalThreadIdInBlock();
+  uint32_t NumThreads = GetNumberOfOmpThreads(
+      BlockThreadId, isSPMDExecutionMode, isRuntimeUninitialized);
+  if (NumThreads == 1)
+    return 1;
   /*
    * This reduce function handles reduction within a team. It handles
    * parallel regions in both L1 and L2 parallelism levels. It also
@@ -173,9 +178,6 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
    */
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
-  uint32_t BlockThreadId = GetLogicalThreadIdInBlock();
-  uint32_t NumThreads = GetNumberOfOmpThreads(
-      BlockThreadId, isSPMDExecutionMode, isRuntimeUninitialized);
   uint32_t WarpsNeeded = (NumThreads + WARPSIZE - 1) / WARPSIZE;
   uint32_t WarpId = BlockThreadId / WARPSIZE;
 
@@ -218,10 +220,6 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
                                     // parallel region may enter here; return
                                     // early.
     return gpu_irregular_simd_reduce(reduce_data, shflFct);
-
-  uint32_t BlockThreadId = GetLogicalThreadIdInBlock();
-  uint32_t NumThreads = GetNumberOfOmpThreads(
-      BlockThreadId, isSPMDExecutionMode, isRuntimeUninitialized);
 
   // When we have more than [warpsize] number of threads
   // a block reduction is performed here.

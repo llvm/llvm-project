@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements a few helper functions used by various backend
+/// This file implements a few helper functions used by various pipeline
 /// components.
 ///
 //===----------------------------------------------------------------------===//

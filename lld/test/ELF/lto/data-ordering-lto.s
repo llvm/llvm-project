@@ -8,7 +8,7 @@
 # RUN: echo "pat " >> %t_order_lto.txt
 
 # RUN: ld.lld --symbol-ordering-file %t_order_lto.txt %t.o %t.bc -o %t2.out
-# RUN: llvm-readobj -elf-output-style=GNU -t %t2.out| FileCheck %s
+# RUN: llvm-readelf -t %t2.out| FileCheck %s
 
 # Check that the order is tin -> dipsy -> pat.
 

@@ -11,7 +11,7 @@
 /// This file implements method InstructionTables::run().
 /// Method run() prints a theoretical resource pressure distribution based on
 /// the information available in the scheduling model, and without running
-/// the backend pipeline.
+/// the pipeline.
 ///
 //===----------------------------------------------------------------------===//
 

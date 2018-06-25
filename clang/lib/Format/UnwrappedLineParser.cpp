@@ -303,6 +303,18 @@ void UnwrappedLineParser::parseFile() {
   else
     parseLevel(/*HasOpeningBrace=*/false);
   // Make sure to format the remaining tokens.
+  //
+  // LK_TextProto is special since its top-level is parsed as the body of a
+  // braced list, which does not necessarily have natural line separators such
+  // as a semicolon. Comments after the last entry that have been determined to
+  // not belong to that line, as in:
+  //   key: value
+  //   // endfile comment
+  // do not have a chance to be put on a line of their own until this point.
+  // Here we add this newline before end-of-file comments.
+  if (Style.Language == FormatStyle::LK_TextProto &&
+      !CommentsBeforeNextToken.empty())
+    addUnwrappedLine();
   flushComments(true);
   addUnwrappedLine();
 }

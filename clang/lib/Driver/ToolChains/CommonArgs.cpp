@@ -1030,10 +1030,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   if ((ROPI || RWPI) && (PIC || PIE))
     ToolChain.getDriver().Diag(diag::err_drv_ropi_rwpi_incompatible_with_pic);
 
-  if (Triple.getArch() == llvm::Triple::mips ||
-       Triple.getArch() == llvm::Triple::mipsel ||
-       Triple.getArch() == llvm::Triple::mips64 ||
-       Triple.getArch() == llvm::Triple::mips64el) {
+  if (Triple.isMIPS()) {
     StringRef CPUName;
     StringRef ABIName;
     mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);

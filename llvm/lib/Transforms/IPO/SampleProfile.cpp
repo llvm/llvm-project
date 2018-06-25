@@ -111,6 +111,11 @@ static cl::opt<unsigned> SampleProfileSampleCoverage(
     cl::desc("Emit a warning if less than N% of samples in the input profile "
              "are matched to the IR."));
 
+static cl::opt<bool> NoWarnSampleUnused(
+    "no-warn-sample-unused", cl::init(false), cl::Hidden,
+    cl::desc("Use this option to turn off/on warnings about function with "
+             "samples but without debug information to use those samples. "));
+
 namespace {
 
 using BlockWeightMap = DenseMap<const BasicBlock *, uint64_t>;
@@ -1359,6 +1364,9 @@ void SampleProfileLoader::propagateWeights(Function &F) {
 unsigned SampleProfileLoader::getFunctionLoc(Function &F) {
   if (DISubprogram *S = F.getSubprogram())
     return S->getLine();
+
+  if (NoWarnSampleUnused)
+    return 0;
 
   // If the start of \p F is missing, emit a diagnostic to inform the user
   // about the missed opportunity.

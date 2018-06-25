@@ -152,6 +152,8 @@ public:
   /// Retrieve the module that corresponds to the given module ID.
   Module *getModule(unsigned ID) override;
 
+  bool DeclIsFromPCHWithObjectFile(const Decl *D) override;
+
   /// Perform layout on the given record.
   ///
   /// This routine allows the external AST source to provide an specific 

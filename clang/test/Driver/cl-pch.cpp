@@ -7,6 +7,7 @@
 // 1. Build .pch file.
 // CHECK-YC: cc1
 // CHECK-YC: -emit-pch
+// CHECK-YC: -building-pch-with-obj
 // CHECK-YC: -o
 // CHECK-YC: pchfile.pch
 // CHECK-YC: -x
@@ -14,6 +15,7 @@
 // 2. Use .pch file.
 // CHECK-YC: cc1
 // CHECK-YC: -emit-obj
+// CHECK-YC: -building-pch-with-obj
 // CHECK-YC: -include-pch
 // CHECK-YC: pchfile.pch
 
@@ -24,11 +26,13 @@
 // 1. Build .pch file.
 // CHECK-YCO: cc1
 // CHECK-YCO: -emit-pch
+// CHECK-YCO: -building-pch-with-obj
 // CHECK-YCO: -o
 // CHECK-YCO: pchfile.pch
 // 2. Use .pch file.
 // CHECK-YCO: cc1
 // CHECK-YCO: -emit-obj
+// CHECK-YCO: -building-pch-with-obj
 // CHECK-YCO: -include-pch
 // CHECK-YCO: pchfile.pch
 // CHECK-YCO: -o
@@ -46,6 +50,7 @@
 // RUN:   | FileCheck -check-prefix=CHECK-YU %s
 // Use .pch file, but don't build it.
 // CHECK-YU-NOT: -emit-pch
+// CHECK-YU-NOT: -building-pch-with-obj
 // CHECK-YU: cc1
 // CHECK-YU: -emit-obj
 // CHECK-YU: -include-pch
@@ -63,6 +68,7 @@
 // 1. Build .pch file.
 // CHECK-YC-YU: cc1
 // CHECK-YC-YU: -emit-pch
+// CHECK-YC-YU: -building-pch-with-obj
 // CHECK-YC-YU: -o
 // CHECK-YC-YU: pchfile.pch
 // 2. Use .pch file.

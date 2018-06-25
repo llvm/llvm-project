@@ -21,7 +21,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BackendPrinter.h"
 #include "CodeRegion.h"
 #include "DispatchStage.h"
 #include "DispatchStatistics.h"
@@ -29,6 +28,8 @@
 #include "FetchStage.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
+#include "Pipeline.h"
+#include "PipelinePrinter.h"
 #include "RegisterFile.h"
 #include "RegisterFileStatistics.h"
 #include "ResourcePressureView.h"
@@ -506,14 +507,14 @@ int main(int argc, char **argv) {
     mca::Scheduler HWS(SM, LoadQueueSize, StoreQueueSize, AssumeNoAlias);
 
     // Create the pipeline and add stages to it.
-    auto B = llvm::make_unique<mca::Backend>(
+    auto P = llvm::make_unique<mca::Pipeline>(
         Width, RegisterFileSize, LoadQueueSize, StoreQueueSize, AssumeNoAlias);
-    B->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
-    B->appendStage(llvm::make_unique<mca::DispatchStage>(
-        B.get(), *STI, *MRI, RegisterFileSize, Width, RCU, PRF, HWS));
-    B->appendStage(llvm::make_unique<mca::RetireStage>(B.get(), RCU, PRF));
-    B->appendStage(llvm::make_unique<mca::ExecuteStage>(B.get(), RCU, HWS));
-    mca::BackendPrinter Printer(*B);
+    P->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
+    P->appendStage(llvm::make_unique<mca::DispatchStage>(
+        P.get(), *STI, *MRI, RegisterFileSize, Width, RCU, PRF, HWS));
+    P->appendStage(llvm::make_unique<mca::RetireStage>(P.get(), RCU, PRF));
+    P->appendStage(llvm::make_unique<mca::ExecuteStage>(P.get(), RCU, HWS));
+    mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)
       Printer.addView(llvm::make_unique<mca::SummaryView>(SM, S, Width));
@@ -543,7 +544,7 @@ int main(int argc, char **argv) {
           *STI, *IP, S, TimelineMaxIterations, TimelineMaxCycles));
     }
 
-    B->run();
+    P->run();
     Printer.printReport(TOF->os());
   }
 

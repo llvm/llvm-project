@@ -324,13 +324,26 @@ void MetadataStreamer::emitKernelArg(const Argument &Arg) {
   if (Node && ArgNo < Node->getNumOperands())
     TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
-  emitKernelArg(Func->getParent()->getDataLayout(), Arg.getType(),
-                getValueKind(Arg.getType(), TypeQual, BaseTypeName), Name,
-                TypeName, BaseTypeName, AccQual, TypeQual);
+  Type *Ty = Arg.getType();
+  const DataLayout &DL = Func->getParent()->getDataLayout();
+
+  unsigned PointeeAlign = 0;
+  if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
+    if (PtrTy->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS) {
+      PointeeAlign = Arg.getParamAlignment();
+      if (PointeeAlign == 0)
+        PointeeAlign = DL.getABITypeAlignment(PtrTy->getElementType());
+    }
+  }
+
+  emitKernelArg(DL, Ty, getValueKind(Arg.getType(), TypeQual, BaseTypeName),
+                PointeeAlign, Name, TypeName, BaseTypeName, AccQual, TypeQual);
 }
 
 void MetadataStreamer::emitKernelArg(const DataLayout &DL, Type *Ty,
-                                     ValueKind ValueKind, StringRef Name,
+                                     ValueKind ValueKind,
+                                     unsigned PointeeAlign,
+                                     StringRef Name,
                                      StringRef TypeName, StringRef BaseTypeName,
                                      StringRef AccQual, StringRef TypeQual) {
   HSAMetadata.mKernels.back().mArgs.push_back(Kernel::Arg::Metadata());
@@ -342,12 +355,7 @@ void MetadataStreamer::emitKernelArg(const DataLayout &DL, Type *Ty,
   Arg.mAlign = DL.getABITypeAlignment(Ty);
   Arg.mValueKind = ValueKind;
   Arg.mValueType = getValueType(Ty, BaseTypeName);
-
-  if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
-    auto ElTy = PtrTy->getElementType();
-    if (PtrTy->getAddressSpace() == AMDGPUASI.LOCAL_ADDRESS && ElTy->isSized())
-      Arg.mPointeeAlign = DL.getABITypeAlignment(ElTy);
-  }
+  Arg.mPointeeAlign = PointeeAlign;
 
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     Arg.mAddrSpaceQual = getAddressSpaceQualifer(PtrTy->getAddressSpace());

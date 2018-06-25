@@ -2144,6 +2144,10 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
   return GuessedLanguage;
 }
 
+const char *DefaultFormatStyle = "file";
+
+const char *DefaultFallbackStyle = "LLVM";
+
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyleName,
                                      StringRef Code, vfs::FileSystem *FS) {

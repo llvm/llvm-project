@@ -1982,6 +1982,41 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
 
+  case X86::MOVGOT64r: {
+    // Materializes the GOT for the 64-bit large code model.
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(DotSym);
+
+    unsigned DstReg = MI->getOperand(0).getReg();
+    unsigned ScratchReg = MI->getOperand(1).getReg();
+    MCSymbol *GOTSym = MCInstLowering.GetSymbolFromOperand(MI->getOperand(2));
+
+    // .LtmpN: leaq .LtmpN(%rip), %dst
+    const MCExpr *DotExpr = MCSymbolRefExpr::create(DotSym, OutContext);
+    EmitAndCountInstruction(MCInstBuilder(X86::LEA64r)
+                                .addReg(DstReg)   // dest
+                                .addReg(X86::RIP) // base
+                                .addImm(1)        // scale
+                                .addReg(0)        // index
+                                .addExpr(DotExpr) // disp
+                                .addReg(0));      // seg
+
+    // movq $_GLOBAL_OFFSET_TABLE_ - .LtmpN, %scratch
+    const MCExpr *GOTSymExpr = MCSymbolRefExpr::create(GOTSym, OutContext);
+    const MCExpr *GOTDiffExpr =
+        MCBinaryExpr::createSub(GOTSymExpr, DotExpr, OutContext);
+    EmitAndCountInstruction(MCInstBuilder(X86::MOV64ri)
+                                .addReg(ScratchReg)     // dest
+                                .addExpr(GOTDiffExpr)); // disp
+
+    // addq %scratch, %dst
+    EmitAndCountInstruction(MCInstBuilder(X86::ADD64rr)
+                                .addReg(DstReg)       // dest
+                                .addReg(DstReg)       // dest
+                                .addReg(ScratchReg)); // src
+    return;
+  }
+
   case X86::ADD32ri: {
     // Lower the MO_GOT_ABSOLUTE_ADDRESS form of ADD32ri.
     if (MI->getOperand(2).getTargetFlags() != X86II::MO_GOT_ABSOLUTE_ADDRESS)

@@ -10,8 +10,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-mca
-  Backend.cpp
-  BackendPrinter.cpp
   CodeRegion.cpp
   DispatchStage.cpp
   DispatchStatistics.cpp
@@ -24,6 +22,8 @@ add_llvm_tool(llvm-mca
   InstructionTables.cpp
   LSUnit.cpp
   llvm-mca.cpp
+  Pipeline.cpp
+  PipelinePrinter.cpp
   RegisterFile.cpp
   RegisterFileStatistics.cpp
   ResourcePressureView.cpp

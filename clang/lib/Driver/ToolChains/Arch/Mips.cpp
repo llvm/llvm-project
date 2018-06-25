@@ -20,11 +20,6 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-bool tools::isMipsArch(llvm::Triple::ArchType Arch) {
-  return Arch == llvm::Triple::mips || Arch == llvm::Triple::mipsel ||
-         Arch == llvm::Triple::mips64 || Arch == llvm::Triple::mips64el;
-}
-
 // Get CPU and ABI names. They are not independent
 // so we have to calculate them together.
 void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
@@ -106,11 +101,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
 
   if (ABIName.empty()) {
     // Deduce ABI name from the target triple.
-    if (Triple.getArch() == llvm::Triple::mips ||
-        Triple.getArch() == llvm::Triple::mipsel)
-      ABIName = "o32";
-    else
-      ABIName = "n64";
+    ABIName = Triple.isMIPS32() ? "o32" : "n64";
   }
 
   if (CPUName.empty()) {

@@ -1883,6 +1883,17 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
       (IndexReg == X86::ESP || IndexReg == X86::RSP))
     std::swap(BaseReg, IndexReg);
 
+  // If BaseReg is a vector register and IndexReg is not, swap them unless
+  // Scale was specified in which case it would be an error.
+  if (Scale == 0 &&
+      !(X86MCRegisterClasses[X86::VR128XRegClassID].contains(IndexReg) ||
+        X86MCRegisterClasses[X86::VR256XRegClassID].contains(IndexReg) ||
+        X86MCRegisterClasses[X86::VR512RegClassID].contains(IndexReg)) &&
+      (X86MCRegisterClasses[X86::VR128XRegClassID].contains(BaseReg) ||
+       X86MCRegisterClasses[X86::VR256XRegClassID].contains(BaseReg) ||
+       X86MCRegisterClasses[X86::VR512RegClassID].contains(BaseReg)))
+    std::swap(BaseReg, IndexReg);
+
   if (Scale != 0 &&
       X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg))
     return ErrorOperand(Start, "16-bit addresses cannot have a scale");

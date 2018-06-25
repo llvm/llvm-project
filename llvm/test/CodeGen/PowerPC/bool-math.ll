@@ -4,9 +4,9 @@
 define i32 @sub_zext_cmp_mask_same_size_result(i32 %x) {
 ; CHECK-LABEL: sub_zext_cmp_mask_same_size_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nor 3, 3, 3
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    subfic 3, 3, -27
+; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    ori 3, 3, 65508
+; CHECK-NEXT:    oris 3, 3, 65535
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0
@@ -18,9 +18,8 @@ define i32 @sub_zext_cmp_mask_same_size_result(i32 %x) {
 define i32 @sub_zext_cmp_mask_wider_result(i8 %x) {
 ; CHECK-LABEL: sub_zext_cmp_mask_wider_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nor 3, 3, 3
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    subfic 3, 3, 27
+; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    ori 3, 3, 26
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -32,9 +31,8 @@ define i32 @sub_zext_cmp_mask_wider_result(i8 %x) {
 define i8 @sub_zext_cmp_mask_narrower_result(i32 %x) {
 ; CHECK-LABEL: sub_zext_cmp_mask_narrower_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nor 3, 3, 3
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    subfic 3, 3, 47
+; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    ori 3, 3, 46
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0
@@ -46,10 +44,8 @@ define i8 @sub_zext_cmp_mask_narrower_result(i32 %x) {
 define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_same_size_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori 3, 3, 65535
-; CHECK-NEXT:    xoris 3, 3, 65535
-; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    ori 3, 3, 26
+; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    subfic 3, 3, 27
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -61,10 +57,8 @@ define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 define i32 @add_zext_cmp_mask_wider_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_wider_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori 3, 3, 65535
-; CHECK-NEXT:    xoris 3, 3, 65535
-; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    ori 3, 3, 26
+; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    subfic 3, 3, 27
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -76,10 +70,8 @@ define i32 @add_zext_cmp_mask_wider_result(i8 %x) {
 define i8 @add_zext_cmp_mask_narrower_result(i32 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_narrower_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori 3, 3, 65535
-; CHECK-NEXT:    xoris 3, 3, 65535
-; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    ori 3, 3, 42
+; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    subfic 3, 3, 43
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0
@@ -130,11 +122,8 @@ define i16 @low_bit_select_constants_bigger_false_narrower_result(i32 %x) {
 define i8 @low_bit_select_constants_bigger_true_same_size_result(i8 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_same_size_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori 3, 3, 65535
-; CHECK-NEXT:    xoris 3, 3, 65535
-; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    ori 3, 3, 65506
-; CHECK-NEXT:    oris 3, 3, 65535
+; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    subfic 3, 3, -29
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -145,9 +134,8 @@ define i8 @low_bit_select_constants_bigger_true_same_size_result(i8 %x) {
 define i32 @low_bit_select_constants_bigger_true_wider_result(i8 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_wider_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    not 3, 3
 ; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    ori 3, 3, 226
+; CHECK-NEXT:    subfic 3, 3, 227
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -158,10 +146,8 @@ define i32 @low_bit_select_constants_bigger_true_wider_result(i8 %x) {
 define i8 @low_bit_select_constants_bigger_true_narrower_result(i16 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_narrower_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori 3, 3, 65535
-; CHECK-NEXT:    xoris 3, 3, 65535
-; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    ori 3, 3, 40
+; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    subfic 3, 3, 41
 ; CHECK-NEXT:    blr
   %a = and i16 %x, 1
   %c = icmp eq i16 %a, 0

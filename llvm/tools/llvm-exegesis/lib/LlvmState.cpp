@@ -29,6 +29,7 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
   TargetMachine.reset(static_cast<llvm::LLVMTargetMachine *>(
       TheTarget->createTargetMachine(Triple, CpuName, /*Features*/ "", Options,
                                      llvm::Reloc::Model::Static)));
+  TheExegesisTarget = ExegesisTarget::lookup(TargetMachine->getTargetTriple());
 }
 
 LLVMState::LLVMState()

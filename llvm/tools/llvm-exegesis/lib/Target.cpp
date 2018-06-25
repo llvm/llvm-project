@@ -10,19 +10,19 @@
 
 namespace exegesis {
 
-ExegesisTarget::~ExegesisTarget() {}  // anchor.
+ExegesisTarget::~ExegesisTarget() {} // anchor.
 
-static ExegesisTarget* FirstTarget = nullptr;
+static ExegesisTarget *FirstTarget = nullptr;
 
 const ExegesisTarget *ExegesisTarget::lookup(llvm::Triple TT) {
-  for (const ExegesisTarget* T = FirstTarget; T != nullptr; T = T->Next) {
+  for (const ExegesisTarget *T = FirstTarget; T != nullptr; T = T->Next) {
     if (T->matchesArch(TT.getArch()))
       return T;
   }
   return nullptr;
 }
 
-void ExegesisTarget::registerTarget(ExegesisTarget *Target){
+void ExegesisTarget::registerTarget(ExegesisTarget *Target) {
   if (FirstTarget == nullptr) {
     FirstTarget = Target;
     return;
@@ -33,4 +33,4 @@ void ExegesisTarget::registerTarget(ExegesisTarget *Target){
   Target->Next = FirstTarget;
   FirstTarget = Target;
 }
-}  // namespace exegesis
+} // namespace exegesis

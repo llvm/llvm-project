@@ -157,6 +157,9 @@ public:
   /// Whether timestamps are included in this module file.
   bool HasTimestamps = false;
 
+  /// Whether the PCH has a corresponding object file.
+  bool PCHHasObjectFile = false;
+
   /// The file entry for the module file.
   const FileEntry *File = nullptr;
 

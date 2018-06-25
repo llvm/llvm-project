@@ -1498,9 +1498,8 @@ class ConstantSDNode : public SDNode {
 
   const ConstantInt *Value;
 
-  ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val,
-                 const DebugLoc &DL, EVT VT)
-      : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DL,
+  ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val, EVT VT)
+      : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
                getSDVTList(VT)),
         Value(val) {
     ConstantSDNodeBits.IsOpaque = isOpaque;
@@ -1536,10 +1535,9 @@ class ConstantFPSDNode : public SDNode {
 
   const ConstantFP *Value;
 
-  ConstantFPSDNode(bool isTarget, const ConstantFP *val, const DebugLoc &DL,
-                   EVT VT)
-      : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0, DL,
-               getSDVTList(VT)),
+  ConstantFPSDNode(bool isTarget, const ConstantFP *val, EVT VT)
+      : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0,
+               DebugLoc(), getSDVTList(VT)),
         Value(val) {}
 
 public:

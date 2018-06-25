@@ -22,7 +22,6 @@ namespace clang {
 namespace ast_matchers {
 
 typedef std::vector<std::string> ArgVector;
-typedef std::vector<ArgVector> RunOptions;
 
 enum Language {
     Lang_C,
@@ -34,12 +33,7 @@ enum Language {
     Lang_OBJCXX
 };
 
-inline bool isCXX(Language Lang) {
-  return Lang == Lang_CXX || Lang == Lang_CXX11 || Lang == Lang_CXX14;
-}
-
 ArgVector getBasicRunOptionsForLanguage(Language Lang);
-RunOptions getRunOptionsForLanguage(Language Lang);
 
 } // end namespace ast_matchers
 } // end namespace clang

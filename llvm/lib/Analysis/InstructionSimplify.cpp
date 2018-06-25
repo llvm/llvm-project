@@ -902,7 +902,10 @@ static Value *simplifyDivRem(Value *Op0, Value *Op1, bool IsDiv) {
   // X % 1 -> 0
   // If this is a boolean op (single-bit element type), we can't have
   // division-by-zero or remainder-by-zero, so assume the divisor is 1.
-  if (match(Op1, m_One()) || Ty->isIntOrIntVectorTy(1))
+  // Similarly, if we're zero-extending a boolean divisor, then assume it's a 1.
+  Value *X;
+  if (match(Op1, m_One()) || Ty->isIntOrIntVectorTy(1) ||
+      (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
     return IsDiv ? Op0 : Constant::getNullValue(Ty);
 
   return nullptr;

@@ -1112,12 +1112,10 @@ SDValue SITargetLowering::lowerKernargMemParameter(
   PointerType *PtrTy = PointerType::get(Ty, AMDGPUASI.CONSTANT_ADDRESS);
   MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
 
-
   // Try to avoid using an extload by loading earlier than the argument address,
   // and extracting the relevant bits. The load should hopefully be merged with
   // the previous argument.
   if (Align < 4) {
-    //if (MemVT.getStoreSize() < 4) {
     assert(MemVT.getStoreSize() < 4);
     int64_t AlignDownOffset = alignDown(Offset, 4);
     int64_t OffsetDiff = Offset - AlignDownOffset;

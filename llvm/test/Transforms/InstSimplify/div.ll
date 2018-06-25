@@ -95,6 +95,24 @@ define <2 x i1> @udiv_bool_vec(<2 x i1> %x, <2 x i1> %y) {
   ret <2 x i1> %div
 }
 
+define i32 @zext_bool_udiv_divisor(i1 %x, i32 %y) {
+; CHECK-LABEL: @zext_bool_udiv_divisor(
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
+;
+  %ext = zext i1 %x to i32
+  %r = udiv i32 %y, %ext
+  ret i32 %r
+}
+
+define <2 x i32> @zext_bool_sdiv_divisor_vec(<2 x i1> %x, <2 x i32> %y) {
+; CHECK-LABEL: @zext_bool_sdiv_divisor_vec(
+; CHECK-NEXT:    ret <2 x i32> [[Y:%.*]]
+;
+  %ext = zext <2 x i1> %x to <2 x i32>
+  %r = sdiv <2 x i32> %y, %ext
+  ret <2 x i32> %r
+}
+
 define i32 @udiv_dividend_known_smaller_than_constant_divisor(i32 %x) {
 ; CHECK-LABEL: @udiv_dividend_known_smaller_than_constant_divisor(
 ; CHECK-NEXT:    ret i32 0
