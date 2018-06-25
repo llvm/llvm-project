@@ -177,10 +177,6 @@ void __hwasan_init() {
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
-  InitializeInterceptors();
-  InstallDeadlySignalHandlers(HwasanOnDeadlySignal);
-  InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
-
   DisableCoreDumperIfNecessary();
   if (!InitShadow()) {
     Printf("FATAL: HWAddressSanitizer cannot mmap the shadow memory.\n");
@@ -193,6 +189,10 @@ void __hwasan_init() {
     DumpProcessMap();
     Die();
   }
+
+  InitializeInterceptors();
+  InstallDeadlySignalHandlers(HwasanOnDeadlySignal);
+  InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
 
   Symbolizer::GetOrInit()->AddHooks(EnterSymbolizer, ExitSymbolizer);
 

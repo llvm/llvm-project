@@ -72,13 +72,13 @@ LatencyBenchmarkRunner::generateTwoInstructionPrototype(
     const Instruction &Instr,
     const AliasingConfigurations &SelfAliasing) const {
   std::vector<unsigned> Opcodes;
-  Opcodes.resize(MCInstrInfo.getNumOpcodes());
+  Opcodes.resize(State.getInstrInfo().getNumOpcodes());
   std::iota(Opcodes.begin(), Opcodes.end(), 0U);
   std::shuffle(Opcodes.begin(), Opcodes.end(), randomGenerator());
   for (const unsigned OtherOpcode : Opcodes) {
     if (OtherOpcode == Instr.Description->Opcode)
       continue;
-    const auto &OtherInstrDesc = MCInstrInfo.get(OtherOpcode);
+    const auto &OtherInstrDesc = State.getInstrInfo().get(OtherOpcode);
     if (auto E = isInfeasible(OtherInstrDesc)) {
       llvm::consumeError(std::move(E));
       continue;
@@ -96,7 +96,7 @@ LatencyBenchmarkRunner::generateTwoInstructionPrototype(
       setRandomAliasing(Back, OtherII, ThisII);
     SnippetPrototype Prototype;
     Prototype.Explanation = llvm::formatv("creating cycle through {0}.",
-                                          MCInstrInfo.getName(OtherOpcode));
+                                          State.getInstrInfo().getName(OtherOpcode));
     Prototype.Snippet.push_back(std::move(ThisII));
     Prototype.Snippet.push_back(std::move(OtherII));
     return std::move(Prototype);
@@ -107,7 +107,7 @@ LatencyBenchmarkRunner::generateTwoInstructionPrototype(
 
 llvm::Expected<SnippetPrototype>
 LatencyBenchmarkRunner::generatePrototype(unsigned Opcode) const {
-  const auto &InstrDesc = MCInstrInfo.get(Opcode);
+  const auto &InstrDesc = State.getInstrInfo().get(Opcode);
   if (auto E = isInfeasible(InstrDesc))
     return std::move(E);
   const Instruction Instr(InstrDesc, RATC);

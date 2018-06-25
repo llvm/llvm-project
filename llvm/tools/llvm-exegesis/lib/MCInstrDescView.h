@@ -61,9 +61,9 @@ struct Operand {
   bool IsExplicit = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const llvm::MCOperandInfo *Info = nullptr;        // Set for Explicit Op.
-  int TiedToIndex = -1;                             // Set for Reg/Explicit Op.
+  int TiedToIndex = -1;                             // Set for Reg&Explicit Op.
   const llvm::MCPhysReg *ImplicitReg = nullptr;     // Set for Implicit Op.
-  int VariableIndex = -1;                           // Set for Reg/Explicit Op.
+  int VariableIndex = -1;                           // Set for Explicit Op.
 };
 
 // A view over an MCInstrDesc offering a convenient interface to compute
@@ -93,12 +93,17 @@ struct InstructionInstance {
 
   unsigned getOpcode() const;
   llvm::MCOperand &getValueFor(const Variable &Var);
+  const llvm::MCOperand &getValueFor(const Variable &Var) const;
   llvm::MCOperand &getValueFor(const Operand &Op);
+  const llvm::MCOperand &getValueFor(const Operand &Op) const;
   bool hasImmediateVariables() const;
 
-  // Assigns a Random Value to all Variables that are still Invalid and returns
-  // the instance as an llvm::MCInst.
-  llvm::MCInst randomizeUnsetVariablesAndBuild();
+  // Assigns a Random Value to all Variables that are still Invalid.
+  void randomizeUnsetVariables();
+
+  // Returns the instance as an llvm::MCInst. The InstructionInstance must be
+  // fully allocated (no invalid variables).
+  llvm::MCInst build() const;
 
   Instruction Instr;
   llvm::SmallVector<llvm::MCOperand, 4> VariableValues;

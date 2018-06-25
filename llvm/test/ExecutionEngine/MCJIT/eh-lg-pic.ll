@@ -1,6 +1,6 @@
-; REQUIRES: cxx-shared-library
+; REQUIRES: cxx-shared-library, system-linux
 ; RUN: %lli -relocation-model=pic -code-model=large %s
-; XFAIL: cygwin, win32, mingw, mips-, mipsel-, i686, i386, aarch64, arm
+; XFAIL: mips-, mipsel-, i686, i386, aarch64, arm
 declare i8* @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(i8*, i8*, i8*)
 declare i32 @__gxx_personality_v0(...)
@@ -15,8 +15,14 @@ define void @throwException() {
   unreachable
 }
 
+; Make an internal function so we exercise R_X86_64_GOTOFF64 relocations.
+define internal dso_local void @use_gotoff() {
+  ret void
+}
+
 define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
+  call void @use_gotoff()
   invoke void @throwException()
           to label %try.cont unwind label %lpad
 

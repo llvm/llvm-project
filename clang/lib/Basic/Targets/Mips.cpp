@@ -200,9 +200,7 @@ ArrayRef<Builtin::Info> MipsTargetInfo::getTargetBuiltins() const {
 
 bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   // microMIPS64R6 backend was removed.
-  if ((getTriple().getArch() == llvm::Triple::mips64 ||
-       getTriple().getArch() == llvm::Triple::mips64el) &&
-       IsMicromips && (ABI == "n32" || ABI == "n64")) {
+  if (getTriple().isMIPS64() && IsMicromips && (ABI == "n32" || ABI == "n64")) {
     Diags.Report(diag::err_target_unsupported_cpu_for_micromips) << CPU;
     return false;
   }
@@ -222,9 +220,7 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   // FIXME: It's valid to use O32 on a mips64/mips64el triple but the backend
   //        can't handle this yet. It's better to fail here than on the
   //        backend assertion.
-  if ((getTriple().getArch() == llvm::Triple::mips64 ||
-       getTriple().getArch() == llvm::Triple::mips64el) &&
-      ABI == "o32") {
+  if (getTriple().isMIPS64() && ABI == "o32") {
     Diags.Report(diag::err_target_unsupported_abi_for_triple)
         << ABI << getTriple().str();
     return false;
@@ -233,9 +229,7 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   // FIXME: It's valid to use N32/N64 on a mips/mipsel triple but the backend
   //        can't handle this yet. It's better to fail here than on the
   //        backend assertion.
-  if ((getTriple().getArch() == llvm::Triple::mips ||
-       getTriple().getArch() == llvm::Triple::mipsel) &&
-      (ABI == "n32" || ABI == "n64")) {
+  if (getTriple().isMIPS32() && (ABI == "n32" || ABI == "n64")) {
     Diags.Report(diag::err_target_unsupported_abi_for_triple)
         << ABI << getTriple().str();
     return false;

@@ -47,7 +47,7 @@ using namespace llvm;
 /// FIXME: Merge with the copy in MipsSubtarget.cpp
 StringRef MIPS_MC::selectMipsCPU(const Triple &TT, StringRef CPU) {
   if (CPU.empty() || CPU == "generic") {
-    if (TT.getArch() == Triple::mips || TT.getArch() == Triple::mipsel)
+    if (TT.isMIPS32())
       CPU = "mips32";
     else
       CPU = "mips64";

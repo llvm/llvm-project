@@ -60,17 +60,18 @@ LineRanges("lines", cl::desc("<start line>:<end line> - format a range of\n"
                              "Can only be used with one input file."),
            cl::cat(ClangFormatCategory));
 static cl::opt<std::string>
-    Style("style",
-          cl::desc(clang::format::StyleOptionHelpDescription),
-          cl::init("file"), cl::cat(ClangFormatCategory));
+    Style("style", cl::desc(clang::format::StyleOptionHelpDescription),
+          cl::init(clang::format::DefaultFormatStyle),
+          cl::cat(ClangFormatCategory));
 static cl::opt<std::string>
-FallbackStyle("fallback-style",
-              cl::desc("The name of the predefined style used as a\n"
-                       "fallback in case clang-format is invoked with\n"
-                       "-style=file, but can not find the .clang-format\n"
-                       "file to use.\n"
-                       "Use -fallback-style=none to skip formatting."),
-              cl::init("LLVM"), cl::cat(ClangFormatCategory));
+    FallbackStyle("fallback-style",
+                  cl::desc("The name of the predefined style used as a\n"
+                           "fallback in case clang-format is invoked with\n"
+                           "-style=file, but can not find the .clang-format\n"
+                           "file to use.\n"
+                           "Use -fallback-style=none to skip formatting."),
+                  cl::init(clang::format::DefaultFallbackStyle),
+                  cl::cat(ClangFormatCategory));
 
 static cl::opt<std::string>
 AssumeFileName("assume-filename",

@@ -233,9 +233,11 @@ namespace {
     void addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
                       MachineOperand &MO, unsigned SubRegIdx);
 
-    /// Handle copies of undef values.
-    /// Returns true if @p CopyMI was a copy of an undef value and eliminated.
-    bool eliminateUndefCopy(MachineInstr *CopyMI);
+    /// Handle copies of undef values. If the undef value is an incoming
+    /// PHI value, it will convert @p CopyMI to an IMPLICIT_DEF.
+    /// Returns nullptr if @p CopyMI was not in any way eliminable. Otherwise,
+    /// it returns @p CopyMI (which could be an IMPLICIT_DEF at this point).
+    MachineInstr *eliminateUndefCopy(MachineInstr *CopyMI);
 
     /// Check whether or not we should apply the terminal rule on the
     /// destination (Dst) of \p Copy.
@@ -1367,7 +1369,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   return true;
 }
 
-bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
+MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   // ProcessImplicitDefs may leave some copies of <undef> values, it only
   // removes local variables. When we have a copy like:
   //
@@ -1391,16 +1393,34 @@ bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
       if ((SR.LaneMask & SrcMask).none())
         continue;
       if (SR.liveAt(Idx))
-        return false;
+        return nullptr;
     }
   } else if (SrcLI.liveAt(Idx))
-    return false;
+    return nullptr;
 
-  LLVM_DEBUG(dbgs() << "\tEliminating copy of <undef> value\n");
-
-  // Remove any DstReg segments starting at the instruction.
+  // If the undef copy defines a live-out value (i.e. an input to a PHI def),
+  // then replace it with an IMPLICIT_DEF.
   LiveInterval &DstLI = LIS->getInterval(DstReg);
   SlotIndex RegIndex = Idx.getRegSlot();
+  LiveRange::Segment *Seg = DstLI.getSegmentContaining(RegIndex);
+  assert(Seg != nullptr && "No segment for defining instruction");
+  if (VNInfo *V = DstLI.getVNInfoAt(Seg->end)) {
+    if (V->isPHIDef()) {
+      CopyMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
+      for (unsigned i = CopyMI->getNumOperands(); i != 0; --i) {
+        MachineOperand &MO = CopyMI->getOperand(i-1);
+        if (MO.isReg() && MO.isUse())
+          CopyMI->RemoveOperand(i-1);
+      }
+      LLVM_DEBUG(dbgs() << "\tReplaced copy of <undef> value with an "
+                           "implicit def\n");
+      return CopyMI;
+    }
+  }
+
+  // Remove any DstReg segments starting at the instruction.
+  LLVM_DEBUG(dbgs() << "\tEliminating copy of <undef> value\n");
+
   // Remove value or merge with previous one in case of a subregister def.
   if (VNInfo *PrevVNI = DstLI.getVNInfoAt(Idx)) {
     VNInfo *VNI = DstLI.getVNInfoAt(RegIndex);
@@ -1456,7 +1476,7 @@ bool RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
       MO.setIsUndef(true);
   LIS->shrinkToUses(&DstLI);
 
-  return true;
+  return CopyMI;
 }
 
 void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
@@ -1622,9 +1642,14 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
   }
 
   // Eliminate undefs.
-  if (!CP.isPhys() && eliminateUndefCopy(CopyMI)) {
-    deleteInstr(CopyMI);
-    return false;  // Not coalescable.
+  if (!CP.isPhys()) {
+    // If this is an IMPLICIT_DEF, leave it alone, but don't try to coalesce.
+    if (MachineInstr *UndefMI = eliminateUndefCopy(CopyMI)) {
+      if (UndefMI->isImplicitDef())
+        return false;
+      deleteInstr(CopyMI);
+      return false;  // Not coalescable.
+    }
   }
 
   // Coalesced copies are normally removed immediately, but transformations
@@ -2078,6 +2103,13 @@ class JoinVals {
     /// True once Pruned above has been computed.
     bool PrunedComputed = false;
 
+    /// True if this value is determined to be identical to OtherVNI
+    /// (in valuesIdentical). This is used with CR_Erase where the erased
+    /// copy is redundant, i.e. the source value is already the same as
+    /// the destination. In such cases the subranges need to be updated
+    /// properly. See comment at pruneSubRegValues for more info.
+    bool Identical = false;
+
     Val() = default;
 
     bool isAnalyzed() const { return WriteLanes.any(); }
@@ -2212,17 +2244,17 @@ LaneBitmask JoinVals::computeWriteLanes(const MachineInstr *DefMI, bool &Redef)
 
 std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
     const VNInfo *VNI) const {
-  unsigned Reg = this->Reg;
+  unsigned TrackReg = Reg;
 
   while (!VNI->isPHIDef()) {
     SlotIndex Def = VNI->def;
     MachineInstr *MI = Indexes->getInstructionFromIndex(Def);
     assert(MI && "No defining instruction");
     if (!MI->isFullCopy())
-      return std::make_pair(VNI, Reg);
+      return std::make_pair(VNI, TrackReg);
     unsigned SrcReg = MI->getOperand(1).getReg();
     if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
-      return std::make_pair(VNI, Reg);
+      return std::make_pair(VNI, TrackReg);
 
     const LiveInterval &LI = LIS->getInterval(SrcReg);
     const VNInfo *ValueIn;
@@ -2243,12 +2275,19 @@ std::pair<const VNInfo*, unsigned> JoinVals::followCopyChain(
         break;
       }
     }
-    if (ValueIn == nullptr)
-      break;
+    if (ValueIn == nullptr) {
+      // Reaching an undefined value is legitimate, for example:
+      //
+      // 1   undef %0.sub1 = ...  ;; %0.sub0 == undef
+      // 2   %1 = COPY %0         ;; %1 is defined here.
+      // 3   %0 = COPY %1         ;; Now %0.sub0 has a definition,
+      //                          ;; but it's equivalent to "undef".
+      return std::make_pair(nullptr, SrcReg);
+    }
     VNI = ValueIn;
-    Reg = SrcReg;
+    TrackReg = SrcReg;
   }
-  return std::make_pair(VNI, Reg);
+  return std::make_pair(VNI, TrackReg);
 }
 
 bool JoinVals::valuesIdentical(VNInfo *Value0, VNInfo *Value1,
@@ -2256,12 +2295,17 @@ bool JoinVals::valuesIdentical(VNInfo *Value0, VNInfo *Value1,
   const VNInfo *Orig0;
   unsigned Reg0;
   std::tie(Orig0, Reg0) = followCopyChain(Value0);
-  if (Orig0 == Value1)
+  if (Orig0 == Value1 && Reg0 == Other.Reg)
     return true;
 
   const VNInfo *Orig1;
   unsigned Reg1;
   std::tie(Orig1, Reg1) = Other.followCopyChain(Value1);
+  // If both values are undefined, and the source registers are the same
+  // register, the values are identical. Filter out cases where only one
+  // value is defined.
+  if (Orig0 == nullptr || Orig1 == nullptr)
+    return Orig0 == Orig1 && Reg0 == Reg1;
 
   // The values are equal if they are defined at the same place and use the
   // same register. Note that we cannot compare VNInfos directly as some of
@@ -2437,9 +2481,11 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   //   %other = COPY %ext
   //   %this  = COPY %ext <-- Erase this copy
   //
-  if (DefMI->isFullCopy() && !CP.isPartial()
-      && valuesIdentical(VNI, V.OtherVNI, Other))
+  if (DefMI->isFullCopy() && !CP.isPartial() &&
+      valuesIdentical(VNI, V.OtherVNI, Other)) {
+    V.Identical = true;
     return CR_Erase;
+  }
 
   // If the lanes written by this instruction were all undef in OtherVNI, it is
   // still safe to join the live ranges. This can't be done with a simple value
@@ -2743,19 +2789,62 @@ void JoinVals::pruneValues(JoinVals &Other,
   }
 }
 
+/// Consider the following situation when coalescing the copy between
+/// %31 and %45 at 800. (The vertical lines represent live range segments.)
+///
+///                              Main range         Subrange 0004 (sub2)
+///                              %31    %45           %31    %45
+///  544    %45 = COPY %28               +                    +
+///                                      | v1                 | v1
+///  560B bb.1:                          +                    +
+///  624        = %45.sub2               | v2                 | v2
+///  800    %31 = COPY %45        +      +             +      +
+///                               | v0                 | v0
+///  816    %31.sub1 = ...        +                    |
+///  880    %30 = COPY %31        | v1                 +
+///  928    %45 = COPY %30        |      +                    +
+///                               |      | v0                 | v0  <--+
+///  992B   ; backedge -> bb.1    |      +                    +        |
+/// 1040        = %31.sub0        +                                    |
+///                                                 This value must remain
+///                                                 live-out!
+///
+/// Assuming that %31 is coalesced into %45, the copy at 928 becomes
+/// redundant, since it copies the value from %45 back into it. The
+/// conflict resolution for the main range determines that %45.v0 is
+/// to be erased, which is ok since %31.v1 is identical to it.
+/// The problem happens with the subrange for sub2: it has to be live
+/// on exit from the block, but since 928 was actually a point of
+/// definition of %45.sub2, %45.sub2 was not live immediately prior
+/// to that definition. As a result, when 928 was erased, the value v0
+/// for %45.sub2 was pruned in pruneSubRegValues. Consequently, an
+/// IMPLICIT_DEF was inserted as a "backedge" definition for %45.sub2,
+/// providing an incorrect value to the use at 624.
+///
+/// Since the main-range values %31.v1 and %45.v0 were proved to be
+/// identical, the corresponding values in subranges must also be the
+/// same. A redundant copy is removed because it's not needed, and not
+/// because it copied an undefined value, so any liveness that originated
+/// from that copy cannot disappear. When pruning a value that started
+/// at the removed copy, the corresponding identical value must be
+/// extended to replace it.
 void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
   // Look for values being erased.
   bool DidPrune = false;
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
+    Val &V = Vals[i];
     // We should trigger in all cases in which eraseInstrs() does something.
     // match what eraseInstrs() is doing, print a message so
-    if (Vals[i].Resolution != CR_Erase &&
-        (Vals[i].Resolution != CR_Keep || !Vals[i].ErasableImplicitDef ||
-         !Vals[i].Pruned))
+    if (V.Resolution != CR_Erase &&
+        (V.Resolution != CR_Keep || !V.ErasableImplicitDef || !V.Pruned))
       continue;
 
     // Check subranges at the point where the copy will be removed.
     SlotIndex Def = LR.getValNumInfo(i)->def;
+    SlotIndex OtherDef;
+    if (V.Identical)
+      OtherDef = V.OtherVNI->def;
+
     // Print message so mismatches with eraseInstrs() can be diagnosed.
     LLVM_DEBUG(dbgs() << "\t\tExpecting instruction removal at " << Def
                       << '\n');
@@ -2768,10 +2857,18 @@ void JoinVals::pruneSubRegValues(LiveInterval &LI, LaneBitmask &ShrinkMask) {
       if (ValueOut != nullptr && Q.valueIn() == nullptr) {
         LLVM_DEBUG(dbgs() << "\t\tPrune sublane " << PrintLaneMask(S.LaneMask)
                           << " at " << Def << "\n");
-        LIS->pruneValue(S, Def, nullptr);
+        SmallVector<SlotIndex,8> EndPoints;
+        LIS->pruneValue(S, Def, &EndPoints);
         DidPrune = true;
         // Mark value number as unused.
         ValueOut->markUnused();
+
+        if (V.Identical && S.Query(OtherDef).valueOut()) {
+          // If V is identical to V.OtherVNI (and S was live at OtherDef),
+          // then we can't simply prune V from S. V needs to be replaced
+          // with V.OtherVNI.
+          LIS->extendToIndices(S, EndPoints);
+        }
         continue;
       }
       // If a subrange ends at the copy, then a value was copied but only
@@ -2964,7 +3061,8 @@ void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
   LRange.join(RRange, LHSVals.getAssignments(), RHSVals.getAssignments(),
               NewVNInfo);
 
-  LLVM_DEBUG(dbgs() << "\t\tjoined lanes: " << LRange << "\n");
+  LLVM_DEBUG(dbgs() << "\t\tjoined lanes: " << PrintLaneMask(LaneMask)
+                    << ' ' << LRange << "\n");
   if (EndPoints.empty())
     return;
 

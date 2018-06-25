@@ -21,8 +21,8 @@
 
 #include <pthread.h>
 
-#if defined(__FreeBSD__)
-#include <pthread_np.h> // For pthread_getthreadid_np()
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread_np.h> // For pthread_getthreadid_np() / pthread_set_name_np()
 #endif
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
@@ -117,6 +117,8 @@ static constexpr uint32_t get_max_thread_name_length_impl() {
 #endif
 #elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
   return 16;
+#elif defined(__OpenBSD__)
+  return 32;
 #else
   return 0;
 #endif
@@ -146,7 +148,7 @@ void llvm::set_thread_name(const Twine &Name) {
   ::pthread_setname_np(::pthread_self(), NameStr.data());
 #endif
 #endif
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__OpenBSD__)
   ::pthread_set_name_np(::pthread_self(), NameStr.data());
 #elif defined(__NetBSD__)
   ::pthread_setname_np(::pthread_self(), "%s",

@@ -3088,6 +3088,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         // The driver currently exits after the first failed command.  This
         // relies on that behavior, to make sure if the pch generation fails,
         // the main compilation won't run.
+        // FIXME: If the main compilation fails, the PCH generation should
+        // probably not be considered successful either.
       }
     }
 

@@ -504,7 +504,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // Verify module immediately to catch problems before doInitialization() is
   // called on any passes.
   if (!NoVerify && verifyModule(*M, &errs())) {
-    StringRef Prefix =
+    std::string Prefix =
         (Twine(argv[0]) + Twine(": ") + Twine(InputFilename)).str();
     WithColor::error(errs(), Prefix) << "input module is broken!\n";
     return 1;

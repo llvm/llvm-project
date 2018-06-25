@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines abstractions used by the Backend to model register reads,
+// This file defines abstractions used by the Pipeline to model register reads,
 // register writes and instructions.
 //
 //===----------------------------------------------------------------------===//

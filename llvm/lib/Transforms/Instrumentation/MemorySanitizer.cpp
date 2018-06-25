@@ -3980,8 +3980,7 @@ static VarArgHelper *CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
   Triple TargetTriple(Func.getParent()->getTargetTriple());
   if (TargetTriple.getArch() == Triple::x86_64)
     return new VarArgAMD64Helper(Func, Msan, Visitor);
-  else if (TargetTriple.getArch() == Triple::mips64 ||
-           TargetTriple.getArch() == Triple::mips64el)
+  else if (TargetTriple.isMIPS64())
     return new VarArgMIPS64Helper(Func, Msan, Visitor);
   else if (TargetTriple.getArch() == Triple::aarch64)
     return new VarArgAArch64Helper(Func, Msan, Visitor);

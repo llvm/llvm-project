@@ -70,7 +70,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
 
   getActionDefinitionsBuilder(G_FCONSTANT)
     .legalFor({S32, S64});
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_CONSTANT})
+  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+    .legalFor({S1, S32, S64,
+               GlobalPtr, ConstantPtr, LocalPtr, FlatPtr, PrivatePtr});
+
+  getActionDefinitionsBuilder(G_CONSTANT)
     .legalFor({S1, S32, S64});
 
   // FIXME: i1 operands to intrinsics should always be legal, but other i1

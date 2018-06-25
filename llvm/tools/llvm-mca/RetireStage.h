@@ -23,17 +23,17 @@
 
 namespace mca {
 
-class Backend;
+class Pipeline;
 
 class RetireStage : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
-  Backend *Owner;
+  Pipeline *Owner;
   RetireControlUnit &RCU;
   RegisterFile &PRF;
 
 public:
-  RetireStage(Backend *B, RetireControlUnit &R, RegisterFile &F)
-      : Stage(), Owner(B), RCU(R), PRF(F) {}
+  RetireStage(Pipeline *P, RetireControlUnit &R, RegisterFile &F)
+      : Stage(), Owner(P), RCU(R), PRF(F) {}
   RetireStage(const RetireStage &Other) = delete;
   RetireStage &operator=(const RetireStage &Other) = delete;
 

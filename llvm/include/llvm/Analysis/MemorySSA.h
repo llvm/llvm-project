@@ -722,6 +722,7 @@ protected:
   void verifyDefUses(Function &F) const;
   void verifyDomination(Function &F) const;
   void verifyOrdering(Function &F) const;
+  void verifyDominationNumbers(const Function &F) const;
 
   // This is used by the use optimizer and updater.
   AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {

@@ -279,7 +279,7 @@ void TracePC::PrintCoverage() {
     std::string FunctionStr = DescribePC("%F", VisualizePC);
     std::string LineStr = DescribePC("%l", VisualizePC);
     size_t Line = std::stoul(LineStr);
-    std::vector<uintptr_t> UncoveredPCs;
+    Vector<uintptr_t> UncoveredPCs;
     for (auto TE = First; TE < Last; TE++)
       if (!ObservedPCs.count(TE->PC))
         UncoveredPCs.push_back(TE->PC);
