@@ -403,9 +403,6 @@ public:
 
   const swift::irgen::TypeInfo *GetSwiftTypeInfo(void *type);
 
-  const swift::irgen::TypeInfo *GetSwiftTypeInfo(swift::Type container_type,
-                                                 swift::VarDecl *item_decl);
-
   const swift::irgen::FixedTypeInfo *GetSwiftFixedTypeInfo(void *type);
 
   DWARFASTParser *GetDWARFParser() override;

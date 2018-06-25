@@ -1,3 +1,4 @@
+// REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // Use Linker script without .ARM.exidx Output Section so it is treated as
 // an orphan. We must still add the sentinel table entry
@@ -6,7 +7,6 @@
 // RUN:          } " > %t.script
 // RUN: ld.lld --no-merge-exidx-entries --script %t.script %t -o %t2
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
-// REQUIRES: arm
 
  .syntax unified
  .text

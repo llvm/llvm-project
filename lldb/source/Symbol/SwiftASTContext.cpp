@@ -5927,25 +5927,6 @@ CompilerType SwiftASTContext::GetFloatTypeFromBitSize(size_t bit_size) {
 // Exploring the type
 //----------------------------------------------------------------------
 
-const swift::irgen::TypeInfo *
-SwiftASTContext::GetSwiftTypeInfo(swift::Type container_type,
-                                  swift::VarDecl *item_decl) {
-  VALID_OR_RETURN(nullptr);
-
-  if (container_type && item_decl) {
-    auto &irgen_module = GetIRGenModule();
-    swift::CanType container_can_type(
-        GetCanonicalSwiftType(container_type.getPointer()));
-    swift::SILType lowered_container_type =
-        irgen_module.getLoweredType(container_can_type);
-    swift::SILType lowered_field_type =
-        lowered_container_type.getFieldType(item_decl, *GetSILModule());
-    return &irgen_module.getTypeInfo(lowered_field_type);
-  }
-
-  return nullptr;
-}
-
 const swift::irgen::TypeInfo *SwiftASTContext::GetSwiftTypeInfo(void *type) {
   VALID_OR_RETURN(nullptr);
 
