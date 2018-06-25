@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 
 #include "AMDGPU.h"
+#include "AMDGPUArgumentUsageInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -34,6 +35,7 @@ class MachineInstr;
 class MachineOperand;
 class MachineRegisterInfo;
 class SIInstrInfo;
+class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class SISubtarget;
 

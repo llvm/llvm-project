@@ -1084,6 +1084,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Twine("-find-pch-source=") +
                                          Inputs[0].second->getValue()));
   }
+  if (YcIndex != -1 && JA.getKind() >= Action::PrecompileJobClass &&
+      JA.getKind() <= Action::AssembleJobClass) {
+    CmdArgs.push_back(Args.MakeArgString("-building-pch-with-obj"));
+  }
 
   bool RenderedImplicitInclude = false;
   int AI = -1;

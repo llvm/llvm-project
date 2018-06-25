@@ -15,8 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RetireStage.h"
-#include "Backend.h"
 #include "HWEventListener.h"
+#include "Pipeline.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;

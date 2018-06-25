@@ -112,14 +112,14 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (!CI.getFrontendOpts().RelocatablePCH)
     Sysroot.clear();
 
+  const auto &FrontendOpts = CI.getFrontendOpts();
   auto Buffer = std::make_shared<PCHBuffer>();
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   Consumers.push_back(llvm::make_unique<PCHGenerator>(
                         CI.getPreprocessor(), OutputFile, Sysroot,
-                        Buffer, CI.getFrontendOpts().ModuleFileExtensions,
-      /*AllowASTWithErrors*/CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
-                        /*IncludeTimestamps*/
-                          +CI.getFrontendOpts().IncludeTimestamps));
+                        Buffer, FrontendOpts.ModuleFileExtensions,
+                        CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
+                        FrontendOpts.IncludeTimestamps));
   Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
       CI, InFile, OutputFile, std::move(OS), Buffer));
 

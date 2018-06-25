@@ -86,7 +86,7 @@ public:
 
     T inputUb = ub;
     ub = lb + chunk - 1; // Clang uses i <= ub
-    last = ub == inputUb;
+    last = lb <= inputUb && inputUb <= ub;
     stride = loopSize; // make sure we only do 1 chunk per warp
   }
 

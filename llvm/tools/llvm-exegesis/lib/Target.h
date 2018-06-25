@@ -20,6 +20,8 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegisterInfo.h"
 
 namespace exegesis {
 
@@ -27,6 +29,11 @@ class ExegesisTarget {
 public:
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(llvm::PassManagerBase &PM) const {}
+
+  // Generates code to move a constant into a the given register.
+  virtual std::vector<llvm::MCInst> setRegToConstant(unsigned Reg) const {
+    return {};
+  }
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
@@ -38,9 +45,9 @@ public:
 
 private:
   virtual bool matchesArch(llvm::Triple::ArchType Arch) const = 0;
-  const ExegesisTarget* Next = nullptr;
+  const ExegesisTarget *Next = nullptr;
 };
 
-}  // namespace exegesis
+} // namespace exegesis
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_TARGET_H

@@ -39,7 +39,10 @@ struct BenchmarkConfiguration {
   // This code is run before the Snippet is iterated. Since it is part of the
   // measurement it should be as short as possible. It is usually used to setup
   // the content of the Registers.
-  std::vector<llvm::MCInst> SnippetSetup;
+  struct Setup {
+    std::vector<unsigned> RegsToDef;
+  };
+  Setup SnippetSetup;
 
   // The sequence of instructions that are to be repeated.
   std::vector<llvm::MCInst> Snippet;
@@ -71,10 +74,12 @@ public:
   run(unsigned Opcode, const InstructionFilter &Filter,
       unsigned NumRepetitions);
 
+  // Given a snippet, computes which registers the setup code needs to define.
+  std::vector<unsigned>
+  computeRegsToDef(const std::vector<InstructionInstance> &Snippet) const;
+
 protected:
   const LLVMState &State;
-  const llvm::MCInstrInfo &MCInstrInfo;
-  const llvm::MCRegisterInfo &MCRegisterInfo;
   const RegisterAliasingTrackerCache RATC;
 
 private:
@@ -96,9 +101,8 @@ private:
                   const unsigned NumRepetitions) const = 0;
 
   llvm::Expected<std::string>
-  writeObjectFile(llvm::ArrayRef<llvm::MCInst> Code) const;
-  llvm::Expected<ExecutableFunction>
-  createExecutableFunction(llvm::ArrayRef<llvm::MCInst> Code) const;
+  writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
+                  llvm::ArrayRef<llvm::MCInst> Code) const;
 };
 
 } // namespace exegesis

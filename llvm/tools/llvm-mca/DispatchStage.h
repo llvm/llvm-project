@@ -30,7 +30,7 @@ namespace mca {
 
 class WriteState;
 class Scheduler;
-class Backend;
+class Pipeline;
 
 // Implements the hardware dispatch logic.
 //
@@ -54,7 +54,7 @@ class DispatchStage : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;
   unsigned CarryOver;
-  Backend *Owner;
+  Pipeline *Owner;
   const llvm::MCSubtargetInfo &STI;
   RetireControlUnit &RCU;
   RegisterFile &PRF;
@@ -84,12 +84,12 @@ class DispatchStage : public Stage {
   }
 
 public:
-  DispatchStage(Backend *B, const llvm::MCSubtargetInfo &Subtarget,
+  DispatchStage(Pipeline *P, const llvm::MCSubtargetInfo &Subtarget,
                 const llvm::MCRegisterInfo &MRI, unsigned RegisterFileSize,
                 unsigned MaxDispatchWidth, RetireControlUnit &R,
                 RegisterFile &F, Scheduler &Sched)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
-        CarryOver(0U), Owner(B), STI(Subtarget), RCU(R), PRF(F), SC(Sched) {}
+        CarryOver(0U), Owner(P), STI(Subtarget), RCU(R), PRF(F), SC(Sched) {}
 
   // We can always try to dispatch, so returning false is okay in this case.
   // The retire stage, which controls the RCU, might have items to complete but

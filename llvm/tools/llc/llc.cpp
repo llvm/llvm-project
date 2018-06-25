@@ -48,6 +48,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
@@ -231,7 +232,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
     OpenFlags |= sys::fs::F_Text;
   auto FDOut = llvm::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
   if (EC) {
-    errs() << EC.message() << '\n';
+    WithColor::error() << EC.message() << '\n';
     return nullptr;
   }
 
@@ -267,7 +268,7 @@ static void InlineAsmDiagHandler(const SMDiagnostic &SMD, void *Context,
 
   // For testing purposes, we print the LocCookie here.
   if (LocCookie)
-    errs() << "note: !srcloc = " << LocCookie << "\n";
+    WithColor::note() << "!srcloc = " << LocCookie << "\n";
 }
 
 // main - Entry point for the llc compiler.
@@ -330,7 +331,7 @@ int main(int argc, char **argv) {
     YamlFile =
         llvm::make_unique<ToolOutputFile>(RemarksFilename, EC, sys::fs::F_None);
     if (EC) {
-      errs() << EC.message() << '\n';
+      WithColor::error(errs(), argv[0]) << EC.message() << '\n';
       return 1;
     }
     Context.setDiagnosticsOutputFile(
@@ -339,7 +340,8 @@ int main(int argc, char **argv) {
 
   if (InputLanguage != "" && InputLanguage != "ir" &&
       InputLanguage != "mir") {
-    errs() << argv[0] << "Input language must be '', 'IR' or 'MIR'\n";
+    WithColor::error(errs(), argv[0])
+        << "input language must be '', 'IR' or 'MIR'\n";
     return 1;
   }
 
@@ -362,7 +364,8 @@ static bool addPass(PassManagerBase &PM, const char *argv0,
   const PassRegistry *PR = PassRegistry::getPassRegistry();
   const PassInfo *PI = PR->getPassInfo(PassName);
   if (!PI) {
-    errs() << argv0 << ": run-pass " << PassName << " is not registered.\n";
+    WithColor::error(errs(), argv0)
+        << "run-pass " << PassName << " is not registered.\n";
     return true;
   }
 
@@ -370,7 +373,8 @@ static bool addPass(PassManagerBase &PM, const char *argv0,
   if (PI->getNormalCtor())
     P = PI->getNormalCtor()();
   else {
-    errs() << argv0 << ": cannot create pass: " << PI->getPassName() << "\n";
+    WithColor::error(errs(), argv0)
+        << "cannot create pass: " << PI->getPassName() << "\n";
     return true;
   }
   std::string Banner = std::string("After ") + std::string(P->getPassName());
@@ -400,7 +404,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     } else
       M = parseIRFile(InputFilename, Err, Context, false);
     if (!M) {
-      Err.print(argv[0], errs());
+      Err.print(argv[0], WithColor::error(errs(), argv[0]));
       return 1;
     }
 
@@ -420,7 +424,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   const Target *TheTarget = TargetRegistry::lookupTarget(MArch, TheTriple,
                                                          Error);
   if (!TheTarget) {
-    errs() << argv[0] << ": " << Error;
+    WithColor::error(errs(), argv[0]) << Error;
     return 1;
   }
 
@@ -429,7 +433,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   CodeGenOpt::Level OLvl = CodeGenOpt::Default;
   switch (OptLevel) {
   default:
-    errs() << argv[0] << ": invalid optimization level.\n";
+    WithColor::error(errs(), argv[0]) << "invalid optimization level.\n";
     return 1;
   case ' ': break;
   case '0': OLvl = CodeGenOpt::None; break;
@@ -474,7 +478,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     DwoOut = llvm::make_unique<ToolOutputFile>(SplitDwarfOutputFile, EC,
                                                sys::fs::F_None);
     if (EC) {
-      errs() << EC.message() << '\n';
+      WithColor::error(errs(), argv[0]) << EC.message() << '\n';
       return 1;
     }
   }
@@ -500,8 +504,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // Verify module immediately to catch problems before doInitialization() is
   // called on any passes.
   if (!NoVerify && verifyModule(*M, &errs())) {
-    errs() << argv[0] << ": " << InputFilename
-           << ": error: input module is broken!\n";
+    std::string Prefix =
+        (Twine(argv[0]) + Twine(": ") + Twine(InputFilename)).str();
+    WithColor::error(errs(), Prefix) << "input module is broken!\n";
     return 1;
   }
 
@@ -511,8 +516,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   if (RelaxAll.getNumOccurrences() > 0 &&
       FileType != TargetMachine::CGFT_ObjectFile)
-    errs() << argv[0]
-             << ": warning: ignoring -mc-relax-all because filetype != obj";
+    WithColor::warning(errs(), argv[0])
+        << ": warning: ignoring -mc-relax-all because filetype != obj";
 
   {
     raw_pwrite_stream *OS = &Out->os();
@@ -536,13 +541,15 @@ static int compileModule(char **argv, LLVMContext &Context) {
     // selection.
     if (!RunPassNames->empty()) {
       if (!MIR) {
-        errs() << argv0 << ": run-pass is for .mir file only.\n";
+        WithColor::warning(errs(), argv[0])
+            << "run-pass is for .mir file only.\n";
         return 1;
       }
       TargetPassConfig &TPC = *LLVMTM.createPassConfig(PM);
       if (TPC.hasLimitedCodeGenPipeline()) {
-        errs() << argv0 << ": run-pass cannot be used with "
-               << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
+        WithColor::warning(errs(), argv[0])
+            << "run-pass cannot be used with "
+            << TPC.getLimitedCodeGenPipelineReason(" and ") << ".\n";
         return 1;
       }
 
@@ -560,8 +567,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
     } else if (Target->addPassesToEmitFile(PM, *OS,
                                            DwoOut ? &DwoOut->os() : nullptr,
                                            FileType, NoVerify, MMI)) {
-      errs() << argv0 << ": target does not support generation of this"
-             << " file type!\n";
+      WithColor::warning(errs(), argv[0])
+          << "target does not support generation of this"
+          << " file type!\n";
       return 1;
     }
 

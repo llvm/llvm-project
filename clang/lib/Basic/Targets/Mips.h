@@ -69,10 +69,7 @@ public:
         UseIndirectJumpHazard(false), HasFP64(false) {
     TheCXXABI.set(TargetCXXABI::GenericMIPS);
 
-    setABI((getTriple().getArch() == llvm::Triple::mips ||
-            getTriple().getArch() == llvm::Triple::mipsel)
-               ? "o32"
-               : "n64");
+    setABI(getTriple().isMIPS32() ? "o32" : "n64");
 
     CPU = ABI == "o32" ? "mips32r2" : "mips64r2";
 

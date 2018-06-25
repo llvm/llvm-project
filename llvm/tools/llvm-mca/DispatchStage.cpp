@@ -17,8 +17,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DispatchStage.h"
-#include "Backend.h"
 #include "HWEventListener.h"
+#include "Pipeline.h"
 #include "Scheduler.h"
 #include "llvm/Support/Debug.h"
 

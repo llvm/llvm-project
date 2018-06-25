@@ -27,8 +27,8 @@
 
 // RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -static-libstdc++ 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
-// CHECK-STATIC-NOT: "-Bstatic"
+// CHECK-STATIC: "-Bstatic"
 // CHECK-STATIC: "-lc++"
-// CHECK-STATIC-NOT: "-Bdynamic"
+// CHECK-STATIC: "-Bdynamic"
 // CHECK-STATIC: "-lm"
 // CHECK-STATIC: "-lc"

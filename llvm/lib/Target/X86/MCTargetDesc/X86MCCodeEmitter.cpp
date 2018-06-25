@@ -219,6 +219,8 @@ static bool Is32BitMemOperand(const MCInst &MI, unsigned Op) {
     assert(IndexReg.getReg() == 0 && "Invalid eip-based address.");
     return true;
   }
+  if (IndexReg.getReg() == X86::EIZ)
+    return true;
   return false;
 }
 

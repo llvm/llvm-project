@@ -14,6 +14,10 @@
 #include "llvm/ADT/SmallVector.h"
 using namespace llvm;
 
+// Check that no bytes are wasted.
+static_assert(sizeof(SmallVector<void *, 1>) == sizeof(void *) * 4,
+              "wasted space in SmallVector size 1; missing EBO?");
+
 /// grow_pod - This is an implementation of the grow() method which only works
 /// on POD-like datatypes and is out of line to reduce code duplication.
 void SmallVectorBase::grow_pod(void *FirstEl, size_t MinSizeInBytes,

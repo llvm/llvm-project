@@ -563,6 +563,11 @@ template <typename T> class ArrayRef;
     /// bounds.
     bool isKnownLessThan(const SCEV *S, const SCEV *Size) const;
 
+    /// isKnownNonNegative - Compare to see if S is known not to be negative
+    /// Uses the fact that S comes from Ptr, which may be an inbound GEP,
+    /// Proving there is no wrapping going on.
+    bool isKnownNonNegative(const SCEV *S, const Value *Ptr) const;
+
     /// collectUpperBound - All subscripts are the same type (on my machine,
     /// an i64). The loop bound may be a smaller type. collectUpperBound
     /// find the bound, if available, and zero extends it to the Type T.

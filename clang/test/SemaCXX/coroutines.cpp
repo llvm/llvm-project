@@ -1,3 +1,6 @@
+// This file contains references to sections of the Coroutines TS, which can be
+// found at http://wg21.link/coroutines.
+
 // RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -verify %s -fcxx-exceptions -fexceptions -Wunused-result
 
 void no_coroutine_traits_bad_arg_await() {
@@ -319,6 +322,11 @@ void unevaluated() {
   sizeof(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
   typeid(co_yield a); // expected-error {{cannot be used in an unevaluated context}}
 }
+
+// [expr.await]p2: "An await-expression shall not appear in a default argument."
+// FIXME: A better diagnostic would explicitly state that default arguments are
+// not allowed. A user may not understand that this is "outside a function."
+void default_argument(int arg = co_await 0) {} // expected-error {{'co_await' cannot be used outside a function}}
 
 constexpr auto constexpr_deduced_return_coroutine() {
   co_yield 0; // expected-error {{'co_yield' cannot be used in a constexpr function}}

@@ -82,14 +82,14 @@ namespace {
     // AllColors - If index is set, it's a spill slot, i.e. color.
     // FIXME: This assumes PEI locate spill slot with smaller indices
     // closest to stack pointer / frame pointer. Therefore, smaller
-    // index == better color.
-    BitVector AllColors;
+    // index == better color. This is per stack ID.
+    SmallVector<BitVector, 2> AllColors;
 
-    // NextColor - Next "color" that's not yet used.
-    int NextColor = -1;
+    // NextColor - Next "color" that's not yet used. This is per stack ID.
+    SmallVector<int, 2> NextColors = { -1 };
 
-    // UsedColors - "Colors" that have been assigned.
-    BitVector UsedColors;
+    // UsedColors - "Colors" that have been assigned. This is per stack ID
+    SmallVector<BitVector, 2> UsedColors;
 
     // Assignments - Color to intervals mapping.
     SmallVector<SmallVector<LiveInterval*,4>, 16> Assignments;
@@ -196,10 +196,15 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
 /// to a sorted (by weight) list.
 void StackSlotColoring::InitializeSlots() {
   int LastFI = MFI->getObjectIndexEnd();
+
+  // There is always at least one stack ID.
+  AllColors.resize(1);
+  UsedColors.resize(1);
+
   OrigAlignments.resize(LastFI);
   OrigSizes.resize(LastFI);
-  AllColors.resize(LastFI);
-  UsedColors.resize(LastFI);
+  AllColors[0].resize(LastFI);
+  UsedColors[0].resize(LastFI);
   Assignments.resize(LastFI);
 
   using Pair = std::iterator_traits<LiveStacks::iterator>::value_type;
@@ -220,18 +225,31 @@ void StackSlotColoring::InitializeSlots() {
     int FI = TargetRegisterInfo::stackSlot2Index(li.reg);
     if (MFI->isDeadObjectIndex(FI))
       continue;
+
     SSIntervals.push_back(&li);
     OrigAlignments[FI] = MFI->getObjectAlignment(FI);
     OrigSizes[FI]      = MFI->getObjectSize(FI);
-    AllColors.set(FI);
+
+    auto StackID = MFI->getStackID(FI);
+    if (StackID != 0) {
+      AllColors.resize(StackID + 1);
+      UsedColors.resize(StackID + 1);
+      AllColors[StackID].resize(LastFI);
+      UsedColors[StackID].resize(LastFI);
+    }
+
+    AllColors[StackID].set(FI);
   }
   LLVM_DEBUG(dbgs() << '\n');
 
   // Sort them by weight.
   std::stable_sort(SSIntervals.begin(), SSIntervals.end(), IntervalSorter());
 
+  NextColors.resize(AllColors.size());
+
   // Get first "color".
-  NextColor = AllColors.find_first();
+  for (unsigned I = 0, E = AllColors.size(); I != E; ++I)
+    NextColors[I] = AllColors[I].find_first();
 }
 
 /// OverlapWithAssignments - Return true if LiveInterval overlaps with any
@@ -252,17 +270,19 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int Color = -1;
   bool Share = false;
   int FI = TargetRegisterInfo::stackSlot2Index(li->reg);
+  uint8_t StackID = MFI->getStackID(FI);
 
   if (!DisableSharing) {
+
     // Check if it's possible to reuse any of the used colors.
-    Color = UsedColors.find_first();
+    Color = UsedColors[StackID].find_first();
     while (Color != -1) {
       if (!OverlapWithAssignments(li, Color)) {
         Share = true;
         ++NumEliminated;
         break;
       }
-      Color = UsedColors.find_next(Color);
+      Color = UsedColors[StackID].find_next(Color);
     }
   }
 
@@ -274,11 +294,13 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   // Assign it to the first available color (assumed to be the best) if it's
   // not possible to share a used color with other objects.
   if (!Share) {
-    assert(NextColor != -1 && "No more spill slots?");
-    Color = NextColor;
-    UsedColors.set(Color);
-    NextColor = AllColors.find_next(NextColor);
+    assert(NextColors[StackID] != -1 && "No more spill slots?");
+    Color = NextColors[StackID];
+    UsedColors[StackID].set(Color);
+    NextColors[StackID] = AllColors[StackID].find_next(NextColors[StackID]);
   }
+
+  assert(MFI->getStackID(Color) == MFI->getStackID(FI));
 
   // Record the assignment.
   Assignments[Color].push_back(li);
@@ -357,11 +379,13 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   }
 
   // Delete unused stack slots.
-  while (NextColor != -1) {
-    LLVM_DEBUG(dbgs() << "Removing unused stack object fi#" << NextColor
-                      << "\n");
-    MFI->RemoveStackObject(NextColor);
-    NextColor = AllColors.find_next(NextColor);
+  for (int StackID = 0, E = AllColors.size(); StackID != E; ++StackID) {
+    int NextColor = NextColors[StackID];
+    while (NextColor != -1) {
+      LLVM_DEBUG(dbgs() << "Removing unused stack object fi#" << NextColor << "\n");
+      MFI->RemoveStackObject(NextColor);
+      NextColor = AllColors[StackID].find_next(NextColor);
+    }
   }
 
   return true;
@@ -383,6 +407,8 @@ void StackSlotColoring::RewriteInstruction(MachineInstr &MI,
     int NewFI = SlotMapping[OldFI];
     if (NewFI == -1 || NewFI == OldFI)
       continue;
+
+    assert(MFI->getStackID(OldFI) == MFI->getStackID(NewFI));
     MO.setIndex(NewFI);
   }
 
@@ -487,7 +513,9 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   InitializeSlots();
   Changed = ColorSlots(MF);
 
-  NextColor = -1;
+  for (int &Next : NextColors)
+    Next = -1;
+
   SSIntervals.clear();
   for (unsigned i = 0, e = SSRefs.size(); i != e; ++i)
     SSRefs[i].clear();

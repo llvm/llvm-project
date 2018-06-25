@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Scheduler.h"
-#include "Backend.h"
 #include "HWEventListener.h"
+#include "Pipeline.h"
 #include "Support.h"
 #include "llvm/Support/raw_ostream.h"
 

@@ -1027,6 +1027,25 @@ bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
   return SE->isKnownNegative(LimitedBound);
 }
 
+bool DependenceInfo::isKnownNonNegative(const SCEV *S, const Value *Ptr) const {
+  bool Inbounds = false;
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Inbounds = SrcGEP->isInBounds();
+  if (Inbounds) {
+    if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+      if (AddRec->isAffine()) {
+        // We know S is for Ptr, the operand on a load/store, so doesn't wrap.
+        // If both parts are NonNegative, the end result will be NonNegative
+        if (SE->isKnownNonNegative(AddRec->getStart()) &&
+            SE->isKnownNonNegative(AddRec->getOperand(1)))
+          return true;
+      }
+    }
+  }
+
+  return SE->isKnownNonNegative(S);
+}
+
 // All subscripts are all the same type.
 // Loop bound may be smaller (e.g., a char).
 // Should zero extend loop bound, since it's always >= 0.
@@ -3292,13 +3311,13 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   // FIXME: It may be better to record these sizes and add them as constraints
   // to the dependency checks.
   for (int i = 1; i < size; ++i) {
-    if (!SE->isKnownNonNegative(SrcSubscripts[i]))
+    if (!isKnownNonNegative(SrcSubscripts[i], SrcPtr))
       return false;
 
     if (!isKnownLessThan(SrcSubscripts[i], Sizes[i - 1]))
       return false;
 
-    if (!SE->isKnownNonNegative(DstSubscripts[i]))
+    if (!isKnownNonNegative(DstSubscripts[i], DstPtr))
       return false;
 
     if (!isKnownLessThan(DstSubscripts[i], Sizes[i - 1]))

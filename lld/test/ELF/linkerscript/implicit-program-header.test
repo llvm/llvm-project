@@ -3,9 +3,8 @@
 # RUN: echo '.section .text,"ax"; .quad 0' > %t.s
 # RUN: echo '.section .foo,"ax"; .quad 0' >> %t.s
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %t.s -o %t.o
-# RUN: ld.lld --hash-style=sysv -o %t1 --script %s  \
-# RUN:   %t.o -shared
-# RUN: llvm-readobj -elf-output-style=GNU -l %t1 | FileCheck %s
+# RUN: ld.lld --hash-style=sysv -o %t1 --script %s %t.o -shared
+# RUN: llvm-readelf -l %t1 | FileCheck %s
 
 # CHECK:      Segment Sections...
 # CHECK-NEXT:   00     .text .hash .dynamic
