@@ -96,7 +96,7 @@ _start:
 // DSOREL-NEXT:    AddressAlignment: 4
 // DSOREL-NEXT:    EntrySize:
 // DSOREL:  Relocations [
-// DSOREL-NEXT:  Section (4) .rel.plt {
+// DSOREL-NEXT:  Section {{.*}} .rel.plt {
 // DSOREL-NEXT:    0x200C R_ARM_JUMP_SLOT func1 0x0
 // DSOREL-NEXT:    0x2010 R_ARM_JUMP_SLOT func2 0x0
 // DSOREL-NEXT:    0x2014 R_ARM_JUMP_SLOT func3 0x0
@@ -162,7 +162,7 @@ _start:
 // DSORELHIGH-NEXT:     ]
 // DSORELHIGH-NEXT:     Address: 0x1100000
 // DSORELHIGH: Relocations [
-// DSORELHIGH-NEXT:   Section (6) .rel.plt {
+// DSORELHIGH-NEXT:   Section {{.*}} .rel.plt {
 // DSORELHIGH-NEXT:     0x110000C R_ARM_JUMP_SLOT func1 0x0
 // DSORELHIGH-NEXT:     0x1100010 R_ARM_JUMP_SLOT func2 0x0
 // DSORELHIGH-NEXT:     0x1100014 R_ARM_JUMP_SLOT func3 0x0
@@ -227,7 +227,7 @@ _start:
 // DSORELLONG-NEXT:     ]
 // DSORELLONG-NEXT:     Address: 0x11111100
 // DSORELLONG: Relocations [
-// DSORELLONG-NEXT:   Section (6) .rel.plt {
+// DSORELLONG-NEXT:   Section {{.*}} .rel.plt {
 // DSORELLONG-NEXT:     0x1111110C R_ARM_JUMP_SLOT func1 0x0
 // DSORELLONG-NEXT:     0x11111110 R_ARM_JUMP_SLOT func2 0x0
 // DSORELLONG-NEXT:     0x11111114 R_ARM_JUMP_SLOT func3 0x0
@@ -292,7 +292,7 @@ _start:
 // DSORELMIX-NEXT:       SHF_WRITE
 // DSORELMIX-NEXT:     ]
 // DSORELMIX-NEXT:     Address: 0x8002020
-// DSORELMIX:   Section (6) .rel.plt {
+// DSORELMIX:   Section {{.*}} .rel.plt {
 // DSORELMIX-NEXT:     0x800202C R_ARM_JUMP_SLOT func1 0x0
 // DSORELMIX-NEXT:     0x8002030 R_ARM_JUMP_SLOT func2 0x0
 // DSORELMIX-NEXT:     0x8002034 R_ARM_JUMP_SLOT func3 0x0
