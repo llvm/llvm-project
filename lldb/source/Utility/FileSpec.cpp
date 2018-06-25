@@ -57,10 +57,6 @@ char GetPreferredPathSeparator(FileSpec::Style style) {
   return GetPathSeparators(style)[0];
 }
 
-bool IsPathSeparator(char value, FileSpec::Style style) {
-  return value == '/' || (!PathStyleIsPosix(style) && value == '\\');
-}
-
 void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
   if (PathStyleIsPosix(style))
     return;
@@ -123,100 +119,6 @@ FileSpec::FileSpec(const FileSpec *rhs) : m_directory(), m_filename() {
 //------------------------------------------------------------------
 FileSpec::~FileSpec() {}
 
-namespace {
-//------------------------------------------------------------------
-/// Safely get a character at the specified index.
-///
-/// @param[in] path
-///     A full, partial, or relative path to a file.
-///
-/// @param[in] i
-///     An index into path which may or may not be valid.
-///
-/// @return
-///   The character at index \a i if the index is valid, or 0 if
-///   the index is not valid.
-//------------------------------------------------------------------
-inline char safeCharAtIndex(const llvm::StringRef &path, size_t i) {
-  if (i < path.size())
-    return path[i];
-  return 0;
-}
-
-//------------------------------------------------------------------
-/// Check if a path needs to be normalized.
-///
-/// Check if a path needs to be normalized. We currently consider a
-/// path to need normalization if any of the following are true
-///  - path contains "/./"
-///  - path contains "/../"
-///  - path contains "//"
-///  - path ends with "/"
-/// Paths that start with "./" or with "../" are not considered to
-/// need normalization since we aren't trying to resolve the path,
-/// we are just trying to remove redundant things from the path.
-///
-/// @param[in] path
-///     A full, partial, or relative path to a file.
-///
-/// @return
-///   Returns \b true if the path needs to be normalized.
-//------------------------------------------------------------------
-bool needsNormalization(const llvm::StringRef &path) {
-  if (path.empty())
-    return false;
-  // We strip off leading "." values so these paths need to be normalized
-  if (path[0] == '.')
-    return true;
-  for (auto i = path.find_first_of("\\/"); i != llvm::StringRef::npos;
-       i = path.find_first_of("\\/", i + 1)) {
-    const auto next = safeCharAtIndex(path, i+1);
-    switch (next) {
-      case 0:
-        // path separator char at the end of the string which should be
-        // stripped unless it is the one and only character
-        return i > 0;
-      case '/':
-      case '\\':
-        // two path separator chars in the middle of a path needs to be
-        // normalized
-        if (i > 0)
-          return true;
-        ++i;
-        break;
-
-      case '.': {
-          const auto next_next = safeCharAtIndex(path, i+2);
-          switch (next_next) {
-            default: break;
-            case 0: return true; // ends with "/."
-            case '/':
-            case '\\':
-              return true; // contains "/./"
-            case '.': {
-              const auto next_next_next = safeCharAtIndex(path, i+3);
-              switch (next_next_next) {
-                default: break;
-                case 0: return true; // ends with "/.."
-                case '/':
-                case '\\':
-                  return true; // contains "/../"
-              }
-              break;
-            }
-          }
-        }
-        break;
-
-      default:
-        break;
-    }
-  }
-  return false;
-}
-
-
-}
 //------------------------------------------------------------------
 // Assignment operator.
 //------------------------------------------------------------------
@@ -256,8 +158,7 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve, Style style) {
   }
 
   // Normalize the path by removing ".", ".." and other redundant components.
-  if (needsNormalization(resolved))
-    llvm::sys::path::remove_dots(resolved, true, m_style);
+  llvm::sys::path::remove_dots(resolved, true, m_style);
 
   // Normalize back slashes to forward slashes
   if (m_style == Style::windows)
@@ -274,10 +175,10 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve, Style style) {
   // Split path into filename and directory. We rely on the underlying char
   // pointer to be nullptr when the components are empty.
   llvm::StringRef filename = llvm::sys::path::filename(resolved, m_style);
-  if(!filename.empty())
+  if (!filename.empty())
     m_filename.SetString(filename);
   llvm::StringRef directory = llvm::sys::path::parent_path(resolved, m_style);
-  if(!directory.empty())
+  if (!directory.empty())
     m_directory.SetString(directory);
 }
 
@@ -428,9 +329,8 @@ bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
   // case sensitivity of equality test
   const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
 
-  const bool filenames_equal = ConstString::Equals(a.m_filename,
-                                                   b.m_filename,
-                                                   case_sensitive);
+  const bool filenames_equal =
+      ConstString::Equals(a.m_filename, b.m_filename, case_sensitive);
 
   if (!filenames_equal)
     return false;
@@ -646,91 +546,28 @@ FileSpec::CopyByAppendingPathComponent(llvm::StringRef component) const {
 }
 
 FileSpec FileSpec::CopyByRemovingLastPathComponent() const {
-  // CLEANUP: Use StringRef for string handling.
-  const bool resolve = false;
-  if (m_filename.IsEmpty() && m_directory.IsEmpty())
-    return FileSpec("", resolve);
-  if (m_directory.IsEmpty())
-    return FileSpec("", resolve);
-  if (m_filename.IsEmpty()) {
-    const char *dir_cstr = m_directory.GetCString();
-    const char *last_slash_ptr = ::strrchr(dir_cstr, '/');
-
-    // check for obvious cases before doing the full thing
-    if (!last_slash_ptr)
-      return FileSpec("", resolve);
-    if (last_slash_ptr == dir_cstr)
-      return FileSpec("/", resolve);
-
-    size_t last_slash_pos = last_slash_ptr - dir_cstr + 1;
-    ConstString new_path(dir_cstr, last_slash_pos);
-    return FileSpec(new_path.GetCString(), resolve);
-  } else
-    return FileSpec(m_directory.GetCString(), resolve);
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  if (llvm::sys::path::has_parent_path(current_path, m_style))
+    return FileSpec(llvm::sys::path::parent_path(current_path, m_style), false,
+                    m_style);
+  return *this;
 }
 
 ConstString FileSpec::GetLastPathComponent() const {
-  // CLEANUP: Use StringRef for string handling.
-  if (m_filename)
-    return m_filename;
-  if (m_directory) {
-    const char *dir_cstr = m_directory.GetCString();
-    const char *last_slash_ptr = ::strrchr(dir_cstr, '/');
-    if (last_slash_ptr == NULL)
-      return m_directory;
-    if (last_slash_ptr == dir_cstr) {
-      if (last_slash_ptr[1] == 0)
-        return ConstString(last_slash_ptr);
-      else
-        return ConstString(last_slash_ptr + 1);
-    }
-    if (last_slash_ptr[1] != 0)
-      return ConstString(last_slash_ptr + 1);
-    const char *penultimate_slash_ptr = last_slash_ptr;
-    while (*penultimate_slash_ptr) {
-      --penultimate_slash_ptr;
-      if (penultimate_slash_ptr == dir_cstr)
-        break;
-      if (*penultimate_slash_ptr == '/')
-        break;
-    }
-    ConstString result(penultimate_slash_ptr + 1,
-                       last_slash_ptr - penultimate_slash_ptr);
-    return result;
-  }
-  return ConstString();
-}
-
-static std::string
-join_path_components(FileSpec::Style style,
-                     const std::vector<llvm::StringRef> components) {
-  std::string result;
-  for (size_t i = 0; i < components.size(); ++i) {
-    if (components[i].empty())
-      continue;
-    result += components[i];
-    if (i != components.size() - 1 &&
-        !IsPathSeparator(components[i].back(), style))
-      result += GetPreferredPathSeparator(style);
-  }
-
-  return result;
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  return ConstString(llvm::sys::path::filename(current_path, m_style));
 }
 
 void FileSpec::PrependPathComponent(llvm::StringRef component) {
-  if (component.empty())
-    return;
-
-  const bool resolve = false;
-  if (m_filename.IsEmpty() && m_directory.IsEmpty()) {
-    SetFile(component, resolve);
-    return;
-  }
-
-  std::string result =
-      join_path_components(m_style, {component, m_directory.GetStringRef(),
-                                     m_filename.GetStringRef()});
-  SetFile(result, resolve);
+  llvm::SmallString<64> new_path(component);
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  llvm::sys::path::append(new_path,
+                          llvm::sys::path::begin(current_path, m_style),
+                          llvm::sys::path::end(current_path), m_style);
+  SetFile(new_path, false, m_style);
 }
 
 void FileSpec::PrependPathComponent(const FileSpec &new_path) {
@@ -738,17 +575,10 @@ void FileSpec::PrependPathComponent(const FileSpec &new_path) {
 }
 
 void FileSpec::AppendPathComponent(llvm::StringRef component) {
-  if (component.empty())
-    return;
-
-  component = component.drop_while(
-      [this](char c) { return IsPathSeparator(c, m_style); });
-
-  std::string result =
-      join_path_components(m_style, {m_directory.GetStringRef(),
-                                     m_filename.GetStringRef(), component});
-
-  SetFile(result, false);
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  llvm::sys::path::append(current_path, m_style, component);
+  SetFile(current_path, false, m_style);
 }
 
 void FileSpec::AppendPathComponent(const FileSpec &new_path) {
@@ -786,9 +616,7 @@ bool FileSpec::IsSourceImplementationFile() const {
   return g_source_file_regex.Execute(extension.GetStringRef());
 }
 
-bool FileSpec::IsRelative() const {
-  return !IsAbsolute();
-}
+bool FileSpec::IsRelative() const { return !IsAbsolute(); }
 
 bool FileSpec::IsAbsolute() const {
   llvm::SmallString<64> current_path;

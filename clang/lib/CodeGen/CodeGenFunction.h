@@ -2362,7 +2362,8 @@ public:
   void EmitCXXConstructorCall(const CXXConstructorDecl *D, CXXCtorType Type,
                               bool ForVirtualBase, bool Delegating,
                               Address This, CallArgList &Args,
-                              AggValueSlot::Overlap_t Overlap);
+                              AggValueSlot::Overlap_t Overlap,
+                              SourceLocation Loc);
 
   /// Emit assumption load for all bases. Requires to be be called only on
   /// most-derived class and not under construction of the object.
