@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines abstractions used by the Backend to model register reads,
+/// This file defines abstractions used by the Pipeline to model register reads,
 /// register writes and instructions.
 ///
 //===----------------------------------------------------------------------===//
@@ -264,10 +264,10 @@ struct InstrDesc {
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }
 };
 
-/// An instruction dispatched to the out-of-order backend.
+/// An instruction propagated through the simulated instruction pipeline.
 ///
-/// This class is used to monitor changes in the internal state of instructions
-/// that are dispatched by the DispatchUnit to the hardware schedulers.
+/// This class is used to monitor changes to the internal state of instructions
+/// that are sent to the various components of the simulated hardware pipeline.
 class Instruction {
   const InstrDesc &Desc;
 

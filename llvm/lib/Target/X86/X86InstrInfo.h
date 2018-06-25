@@ -168,26 +168,13 @@ class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
-  /// RegOp2MemOpTable3Addr, RegOp2MemOpTable0, RegOp2MemOpTable1,
-  /// RegOp2MemOpTable2, RegOp2MemOpTable3 - Load / store folding opcode maps.
-  ///
-  typedef DenseMap<unsigned, std::pair<uint16_t, uint16_t>>
-      RegOp2MemOpTableType;
-  RegOp2MemOpTableType RegOp2MemOpTable2Addr;
-  RegOp2MemOpTableType RegOp2MemOpTable0;
-  RegOp2MemOpTableType RegOp2MemOpTable1;
-  RegOp2MemOpTableType RegOp2MemOpTable2;
-  RegOp2MemOpTableType RegOp2MemOpTable3;
-  RegOp2MemOpTableType RegOp2MemOpTable4;
-
   /// MemOp2RegOpTable - Load / store unfolding opcode map.
   ///
   typedef DenseMap<unsigned, std::pair<uint16_t, uint16_t>>
       MemOp2RegOpTableType;
   MemOp2RegOpTableType MemOp2RegOpTable;
 
-  static void AddTableEntry(RegOp2MemOpTableType &R2MTable,
-                            MemOp2RegOpTableType &M2RTable, uint16_t RegOp,
+  static void AddTableEntry(MemOp2RegOpTableType &M2RTable, uint16_t RegOp,
                             uint16_t MemOp, uint16_t Flags);
 
   virtual void anchor();
@@ -313,34 +300,6 @@ public:
   /// commutable with the operand#1.
   bool findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
-
-  /// Returns true if the routine could find two commutable operands
-  /// in the given FMA instruction \p MI. Otherwise, returns false.
-  ///
-  /// \p SrcOpIdx1 and \p SrcOpIdx2 are INPUT and OUTPUT arguments.
-  /// The output indices of the commuted operands are returned in these
-  /// arguments. Also, the input values of these arguments may be preset either
-  /// to indices of operands that must be commuted or be equal to a special
-  /// value 'CommuteAnyOperandIndex' which means that the corresponding
-  /// operand index is not set and this method is free to pick any of
-  /// available commutable operands.
-  /// The parameter \p FMA3Group keeps the reference to the group of relative
-  /// FMA3 opcodes including register/memory forms of 132/213/231 opcodes.
-  ///
-  /// For example, calling this method this way:
-  ///     unsigned Idx1 = 1, Idx2 = CommuteAnyOperandIndex;
-  ///     findFMA3CommutedOpIndices(MI, Idx1, Idx2, FMA3Group);
-  /// can be interpreted as a query asking if the operand #1 can be swapped
-  /// with any other available operand (e.g. operand #2, operand #3, etc.).
-  ///
-  /// The returned FMA opcode may differ from the opcode in the given MI.
-  /// For example, commuting the operands #1 and #3 in the following FMA
-  ///     FMA213 #1, #2, #3
-  /// results into instruction with adjusted opcode:
-  ///     FMA231 #3, #2, #1
-  bool findFMA3CommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
-                                 unsigned &SrcOpIdx2,
-                                 const X86InstrFMA3Group &FMA3Group) const;
 
   /// Returns an adjusted FMA opcode that must be used in FMA instruction that
   /// performs the same computations as the given \p MI but which has the
@@ -664,9 +623,12 @@ private:
   ///     findThreeSrcCommutedOpIndices(MI, Op1, Op2);
   /// can be interpreted as a query asking to find an operand that would be
   /// commutable with the operand#1.
+  ///
+  /// If IsIntrinsic is set, operand 1 will be ignored for commuting.
   bool findThreeSrcCommutedOpIndices(const MachineInstr &MI,
                                      unsigned &SrcOpIdx1,
-                                     unsigned &SrcOpIdx2) const;
+                                     unsigned &SrcOpIdx2,
+                                     bool IsIntrinsic = false) const;
 };
 
 } // namespace llvm

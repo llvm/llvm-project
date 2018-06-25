@@ -3807,7 +3807,7 @@ def ICBI : XForm_1a<31, 982, (outs), (ins memrr:$src),
 def EnforceIEIO : XForm_24_eieio<31, 854, (outs), (ins),
                            "eieio", IIC_LdStLoad, []>;
 
-def WAIT : XForm_24_sync<31, 62, (outs), (ins i32imm:$L),
+def WAIT : XForm_24_sync<31, 30, (outs), (ins i32imm:$L),
                          "wait $L", IIC_LdStLoad, []>;
 
 def MBAR : XForm_mbar<31, 854, (outs), (ins u5imm:$MO),

@@ -949,7 +949,7 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
     for (unsigned SrcIdx = 0; SrcIdx < 4; ++SrcIdx) {
       const unsigned Bit = 1 << SrcIdx;
       if (!!(DMaskVal & Bit)) {
-        if (!!(DemandedElts & (1 << OrigLoadIdx)))
+        if (!!DemandedElts[OrigLoadIdx])
           NewDMaskVal |= Bit;
         OrigLoadIdx++;
       }
@@ -1012,7 +1012,7 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
   SmallVector<uint32_t, 8> EltMask;
   unsigned NewLoadIdx = 0;
   for (unsigned OrigLoadIdx = 0; OrigLoadIdx < VWidth; ++OrigLoadIdx) {
-    if (!!(DemandedElts & (1 << OrigLoadIdx)))
+    if (!!DemandedElts[OrigLoadIdx])
       EltMask.push_back(NewLoadIdx++);
     else
       EltMask.push_back(NewNumElts);

@@ -163,6 +163,10 @@ public:
   /// Retrieve the module that corresponds to the given module ID.
   virtual Module *getModule(unsigned ID) { return nullptr; }
 
+  /// Determine whether D comes from a PCH which was built with a corresponding
+  /// object file.
+  virtual bool DeclIsFromPCHWithObjectFile(const Decl *D) { return false; }
+
   /// Abstracts clang modules and precompiled header files and holds
   /// everything needed to generate debug info for an imported module
   /// or PCH.

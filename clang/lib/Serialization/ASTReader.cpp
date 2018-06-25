@@ -2482,7 +2482,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         return VersionMismatch;
       }
 
-      bool hasErrors = Record[6];
+      bool hasErrors = Record[7];
       if (hasErrors && !DisableValidation && !AllowASTWithCompilerErrors) {
         Diag(diag::err_pch_with_compiler_errors);
         return HadErrors;
@@ -2499,6 +2499,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         F.BaseDirectory = isysroot.empty() ? "/" : isysroot;
 
       F.HasTimestamps = Record[5];
+
+      F.PCHHasObjectFile = Record[6];
 
       const std::string &CurBranch = getClangFullRepositoryVersion();
       StringRef ASTBranch = Blob;
@@ -8446,6 +8448,11 @@ Module *ASTReader::getSubmodule(SubmoduleID GlobalID) {
 
 Module *ASTReader::getModule(unsigned ID) {
   return getSubmodule(ID);
+}
+
+bool ASTReader::DeclIsFromPCHWithObjectFile(const Decl *D) {
+  ModuleFile *MF = getOwningModuleFile(D);
+  return MF && MF->PCHHasObjectFile;
 }
 
 ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &F, unsigned ID) {

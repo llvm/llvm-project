@@ -1633,7 +1633,46 @@ void MemorySSA::verifyMemorySSA() const {
   verifyDefUses(F);
   verifyDomination(F);
   verifyOrdering(F);
+  verifyDominationNumbers(F);
   Walker->verify(this);
+}
+
+/// Verify that all of the blocks we believe to have valid domination numbers
+/// actually have valid domination numbers.
+void MemorySSA::verifyDominationNumbers(const Function &F) const {
+#ifndef NDEBUG
+  if (BlockNumberingValid.empty())
+    return;
+
+  SmallPtrSet<const BasicBlock *, 16> ValidBlocks = BlockNumberingValid;
+  for (const BasicBlock &BB : F) {
+    if (!ValidBlocks.count(&BB))
+      continue;
+
+    ValidBlocks.erase(&BB);
+
+    const AccessList *Accesses = getBlockAccesses(&BB);
+    // It's correct to say an empty block has valid numbering.
+    if (!Accesses)
+      continue;
+
+    // Block numbering starts at 1.
+    unsigned long LastNumber = 0;
+    for (const MemoryAccess &MA : *Accesses) {
+      auto ThisNumberIter = BlockNumbering.find(&MA);
+      assert(ThisNumberIter != BlockNumbering.end() &&
+             "MemoryAccess has no domination number in a valid block!");
+
+      unsigned long ThisNumber = ThisNumberIter->second;
+      assert(ThisNumber > LastNumber &&
+             "Domination numbers should be strictly increasing!");
+      LastNumber = ThisNumber;
+    }
+  }
+
+  assert(ValidBlocks.empty() &&
+         "All valid BasicBlocks should exist in F -- dangling pointers?");
+#endif
 }
 
 /// Verify that the order and existence of MemoryAccesses matches the

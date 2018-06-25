@@ -156,7 +156,7 @@ static std::string getMultiarchTriple(const Driver &D,
 }
 
 static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
-  if (tools::isMipsArch(Triple.getArch())) {
+  if (Triple.isMIPS()) {
     if (Triple.isAndroid()) {
       StringRef CPUName;
       StringRef ABIName;
@@ -242,7 +242,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     ExtraOpts.push_back("-X");
 
   const bool IsAndroid = Triple.isAndroid();
-  const bool IsMips = tools::isMipsArch(Arch);
+  const bool IsMips = Triple.isMIPS();
   const bool IsHexagon = Arch == llvm::Triple::hexagon;
   const bool IsRISCV =
       Arch == llvm::Triple::riscv32 || Arch == llvm::Triple::riscv64;
@@ -438,7 +438,7 @@ std::string Linux::computeSysRoot() const {
       return AndroidSysRootPath;
   }
 
-  if (!GCCInstallation.isValid() || !tools::isMipsArch(getTriple().getArch()))
+  if (!GCCInstallation.isValid() || !getTriple().isMIPS())
     return std::string();
 
   // Standalone MIPS toolchains use different names for sysroot folder
@@ -530,8 +530,6 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el: {
-    bool LE = (Triple.getArch() == llvm::Triple::mipsel) ||
-              (Triple.getArch() == llvm::Triple::mips64el);
     bool IsNaN2008 = tools::mips::isNaN2008(Args, Triple);
 
     LibDir = "lib" + tools::mips::getMipsABILibSuffix(Args, Triple);
@@ -540,7 +538,8 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
       Loader = IsNaN2008 ? "ld-uClibc-mipsn8.so.0" : "ld-uClibc.so.0";
     else if (!Triple.hasEnvironment() &&
              Triple.getVendor() == llvm::Triple::VendorType::MipsTechnologies)
-      Loader = LE ? "ld-musl-mipsel.so.1" : "ld-musl-mips.so.1";
+      Loader =
+          Triple.isLittleEndian() ? "ld-musl-mipsel.so.1" : "ld-musl-mips.so.1";
     else
       Loader = IsNaN2008 ? "ld-linux-mipsn8.so.1" : "ld.so.1";
 
@@ -894,10 +893,8 @@ bool Linux::isPIEDefault() const {
 SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  const bool IsMIPS = getTriple().getArch() == llvm::Triple::mips ||
-                      getTriple().getArch() == llvm::Triple::mipsel;
-  const bool IsMIPS64 = getTriple().getArch() == llvm::Triple::mips64 ||
-                        getTriple().getArch() == llvm::Triple::mips64el;
+  const bool IsMIPS = getTriple().isMIPS32();
+  const bool IsMIPS64 = getTriple().isMIPS64();
   const bool IsPowerPC64 = getTriple().getArch() == llvm::Triple::ppc64 ||
                            getTriple().getArch() == llvm::Triple::ppc64le;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||

@@ -1,4 +1,4 @@
-//===--------------------- BackendPrinter.cpp -------------------*- C++ -*-===//
+//===--------------------- PipelinePrinter.cpp ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements the BackendPrinter interface.
+/// This file implements the PipelinePrinter interface.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "BackendPrinter.h"
+#include "PipelinePrinter.h"
 #include "View.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
@@ -20,7 +20,7 @@ namespace mca {
 
 using namespace llvm;
 
-void BackendPrinter::printReport(llvm::raw_ostream &OS) const {
+void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
   for (const auto &V : Views)
     V->printView(OS);
 }

@@ -109,9 +109,13 @@ OPTIONS
 
  Generate subtarget enumerations.
 
-.. option:: -gen-intrinsic
+.. option:: -gen-intrinsic-enums
 
- Generate intrinsic information.
+ Generate intrinsic enums.
+
+.. option:: -gen-intrinsic-impl
+
+ Generate intrinsic implementation.
 
 .. option:: -gen-tgt-intrinsic
 

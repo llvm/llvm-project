@@ -123,6 +123,9 @@ class MachineFrameInfo {
     /// necessarily reside in the same contiguous memory block as other stack
     /// objects. Objects with differing stack IDs should not be merged or
     /// replaced substituted for each other.
+    //
+    /// It is assumed a target uses consecutive, increasing stack IDs starting
+    /// from 1.
     uint8_t StackID;
 
     /// If this stack object is originated from an Alloca instruction

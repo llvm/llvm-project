@@ -13,7 +13,7 @@ nop
 .section foo, "a"
 .byte 0
 
-# CHECK: Id
+# CHECK: Idx
 # CHECK-NEXT: 0
 # CHECK-NEXT: 1 .dynsym
 # CHECK-NEXT: 2 .dynstr

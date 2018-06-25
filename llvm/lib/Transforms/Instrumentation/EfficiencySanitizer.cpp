@@ -537,7 +537,7 @@ void EfficiencySanitizer::createDestructor(Module &M, Constant *ToolInfoArg) {
 bool EfficiencySanitizer::initOnModule(Module &M) {
 
   Triple TargetTriple(M.getTargetTriple());
-  if (TargetTriple.getArch() == Triple::mips64 || TargetTriple.getArch() == Triple::mips64el)
+  if (TargetTriple.isMIPS64())
     ShadowParams = ShadowParams40;
   else
     ShadowParams = ShadowParams47;
