@@ -114,18 +114,9 @@ UUID MinidumpParser::GetModuleUUID(const MinidumpModule *module) {
     const CvRecordPdb70 *pdb70_uuid = nullptr;
     Status error = consumeObject(cv_record, pdb70_uuid);
     if (!error.Fail())
-      return UUID(pdb70_uuid, sizeof(*pdb70_uuid));
-  } else if (cv_signature == CvSignature::ElfBuildId) {
-    // ELF BuildID (found in Breakpad/Crashpad generated minidumps)
-    //
-    // This is variable-length, but usually 20 bytes
-    // as the binutils ld default is a SHA-1 hash.
-    // (We'll handle only 16 and 20 bytes signatures,
-    // matching LLDB support for UUIDs)
-    //
-    if (cv_record.size() == 16 || cv_record.size() == 20)
-      return UUID(cv_record.data(), cv_record.size());
-  }
+      return UUID::fromData(pdb70_uuid, sizeof(*pdb70_uuid));
+  } else if (cv_signature == CvSignature::ElfBuildId)
+    return UUID::fromData(cv_record);
 
   return UUID();
 }

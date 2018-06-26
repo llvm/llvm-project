@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check less-significant bit setup for microMIPS PLT.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -8,8 +9,6 @@
 # RUN: ld.lld %t-exe.o %t.so -o %t.exe
 # RUN: llvm-readobj -t -dt -mips-plt-got %t.exe | FileCheck %s
 # RUN: llvm-objdump -d -mattr=micromips %t.exe | FileCheck --check-prefix=ASM %s
-
-# REQUIRES: mips
 
 # CHECK:      Symbols [
 # CHECK:        Symbol {

@@ -1015,7 +1015,7 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
   m_use_alt_disaasm = false;
 
   if (EmulateInstruction::SetInstruction(insn_opcode, inst_addr, target)) {
-    if (inst_addr.GetAddressClass() == eAddressClassCodeAlternateISA) {
+    if (inst_addr.GetAddressClass() == AddressClass::eCodeAlternateISA) {
       Status error;
       lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
 
@@ -1044,7 +1044,7 @@ bool EmulateInstructionMIPS::SetInstruction(const Opcode &insn_opcode,
       return true;
     } else {
       /*
-       * If the address class is not eAddressClassCodeAlternateISA then
+       * If the address class is not AddressClass::eCodeAlternateISA then
        * the function is not microMIPS. In this case instruction size is
        * always 4 bytes.
       */

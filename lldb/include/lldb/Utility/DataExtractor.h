@@ -223,22 +223,6 @@ public:
                           const char *type_format = nullptr) const;
 
   //------------------------------------------------------------------
-  /// Dump a UUID value at \a offset.
-  ///
-  /// Dump a UUID starting at \a offset bytes into this object's data. If the
-  /// stream \a s is nullptr, the output will be sent to Log().
-  ///
-  /// @param[in] s
-  ///     The stream to dump the output to. If nullptr the output will
-  ///     be dumped to Log().
-  ///
-  /// @param[in] offset
-  ///     The offset into the data at which to extract and dump a
-  ///     UUID value.
-  //------------------------------------------------------------------
-  void DumpUUID(Stream *s, lldb::offset_t offset) const;
-
-  //------------------------------------------------------------------
   /// Extract an arbitrary number of bytes in the specified byte order.
   ///
   /// Attemps to extract \a length bytes starting at \a offset bytes into this

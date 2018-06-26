@@ -2,7 +2,8 @@
 #
 # TODO: don't require linux.
 # REQUIRES: linux
-#
+UNSUPPORTED: aarch64
+
 RUN: %cpp_compiler %S/OnlySomeBytesTest.cpp -o %t-exe
 
 RUN: %t-exe -runs=100 2>&1 | FileCheck %s --check-prefix=FOCUS_NONE

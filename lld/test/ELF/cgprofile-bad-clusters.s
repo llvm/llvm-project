@@ -1,7 +1,6 @@
+# REQUIRES: x86
 # This test checks that CallGraphSort ignores edges that would form "bad"
 # clusters.
-
-# REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: echo "A C 1" > %t.call_graph

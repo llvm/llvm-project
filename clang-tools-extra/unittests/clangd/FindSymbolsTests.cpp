@@ -31,9 +31,10 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
 };
 
 // GMock helpers for matching SymbolInfos items.
-MATCHER_P(Named, Name, "") { return arg.name == Name; }
-MATCHER_P(InContainer, ContainerName, "") {
-  return arg.containerName == ContainerName;
+MATCHER_P(QName, Name, "") {
+  if (arg.containerName.empty())
+    return arg.name == Name;
+  return (arg.containerName + "::" + arg.name) == Name;
 }
 MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
 
@@ -106,12 +107,10 @@ TEST_F(WorkspaceSymbolsTest, Globals) {
       #include "foo.h"
       )cpp");
   EXPECT_THAT(getSymbols("global"),
-              UnorderedElementsAre(AllOf(Named("GlobalStruct"), InContainer(""),
-                                         WithKind(SymbolKind::Struct)),
-                                   AllOf(Named("global_func"), InContainer(""),
-                                         WithKind(SymbolKind::Function)),
-                                   AllOf(Named("global_var"), InContainer(""),
-                                         WithKind(SymbolKind::Variable))));
+              UnorderedElementsAre(
+                  AllOf(QName("GlobalStruct"), WithKind(SymbolKind::Struct)),
+                  AllOf(QName("global_func"), WithKind(SymbolKind::Function)),
+                  AllOf(QName("global_var"), WithKind(SymbolKind::Variable))));
 }
 
 TEST_F(WorkspaceSymbolsTest, Unnamed) {
@@ -123,12 +122,11 @@ TEST_F(WorkspaceSymbolsTest, Unnamed) {
       #include "foo.h"
       )cpp");
   EXPECT_THAT(getSymbols("UnnamedStruct"),
-              ElementsAre(AllOf(Named("UnnamedStruct"),
+              ElementsAre(AllOf(QName("UnnamedStruct"),
                                 WithKind(SymbolKind::Variable))));
-  EXPECT_THAT(
-      getSymbols("InUnnamed"),
-      ElementsAre(AllOf(Named("InUnnamed"), InContainer("(anonymous struct)"),
-                        WithKind(SymbolKind::Field))));
+  EXPECT_THAT(getSymbols("InUnnamed"),
+              ElementsAre(AllOf(QName("(anonymous struct)::InUnnamed"),
+                                WithKind(SymbolKind::Field))));
 }
 
 TEST_F(WorkspaceSymbolsTest, InMainFile) {
@@ -151,28 +149,20 @@ TEST_F(WorkspaceSymbolsTest, Namespaces) {
   addFile("foo.cpp", R"cpp(
       #include "foo.h"
       )cpp");
-  EXPECT_THAT(
-      getSymbols("a"),
-      UnorderedElementsAre(AllOf(Named("ans1"), InContainer("")),
-                           AllOf(Named("ai1"), InContainer("ans1")),
-                           AllOf(Named("ans2"), InContainer("ans1")),
-                           AllOf(Named("ai2"), InContainer("ans1::ans2"))));
-  EXPECT_THAT(getSymbols("::"),
-              ElementsAre(AllOf(Named("ans1"), InContainer(""))));
-  EXPECT_THAT(getSymbols("::a"),
-              ElementsAre(AllOf(Named("ans1"), InContainer(""))));
+  EXPECT_THAT(getSymbols("a"),
+              UnorderedElementsAre(QName("ans1"), QName("ans1::ai1"),
+                                   QName("ans1::ans2"),
+                                   QName("ans1::ans2::ai2")));
+  EXPECT_THAT(getSymbols("::"), ElementsAre(QName("ans1")));
+  EXPECT_THAT(getSymbols("::a"), ElementsAre(QName("ans1")));
   EXPECT_THAT(getSymbols("ans1::"),
-              UnorderedElementsAre(AllOf(Named("ai1"), InContainer("ans1")),
-                                   AllOf(Named("ans2"), InContainer("ans1"))));
-  EXPECT_THAT(getSymbols("::ans1"),
-              ElementsAre(AllOf(Named("ans1"), InContainer(""))));
+              UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2")));
+  EXPECT_THAT(getSymbols("::ans1"), ElementsAre(QName("ans1")));
   EXPECT_THAT(getSymbols("::ans1::"),
-              UnorderedElementsAre(AllOf(Named("ai1"), InContainer("ans1")),
-                                   AllOf(Named("ans2"), InContainer("ans1"))));
-  EXPECT_THAT(getSymbols("::ans1::ans2"),
-              ElementsAre(AllOf(Named("ans2"), InContainer("ans1"))));
+              UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2")));
+  EXPECT_THAT(getSymbols("::ans1::ans2"), ElementsAre(QName("ans1::ans2")));
   EXPECT_THAT(getSymbols("::ans1::ans2::"),
-              ElementsAre(AllOf(Named("ai2"), InContainer("ans1::ans2"))));
+              ElementsAre(QName("ans1::ans2::ai2")));
 }
 
 TEST_F(WorkspaceSymbolsTest, AnonymousNamespace) {
@@ -201,8 +191,7 @@ TEST_F(WorkspaceSymbolsTest, MultiFile) {
       #include "foo2.h"
       )cpp");
   EXPECT_THAT(getSymbols("foo"),
-              UnorderedElementsAre(AllOf(Named("foo"), InContainer("")),
-                                   AllOf(Named("foo2"), InContainer(""))));
+              UnorderedElementsAre(QName("foo"), QName("foo2")));
 }
 
 TEST_F(WorkspaceSymbolsTest, GlobalNamespaceQueries) {
@@ -220,13 +209,11 @@ TEST_F(WorkspaceSymbolsTest, GlobalNamespaceQueries) {
   addFile("foo.cpp", R"cpp(
       #include "foo.h"
       )cpp");
-  EXPECT_THAT(
-      getSymbols("::"),
-      UnorderedElementsAre(
-          AllOf(Named("Foo"), InContainer(""), WithKind(SymbolKind::Class)),
-          AllOf(Named("foo"), InContainer(""), WithKind(SymbolKind::Function)),
-          AllOf(Named("ns"), InContainer(""),
-                WithKind(SymbolKind::Namespace))));
+  EXPECT_THAT(getSymbols("::"),
+              UnorderedElementsAre(
+                  AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
+                  AllOf(QName("foo"), WithKind(SymbolKind::Function)),
+                  AllOf(QName("ns"), WithKind(SymbolKind::Namespace))));
   EXPECT_THAT(getSymbols(":"), IsEmpty());
   EXPECT_THAT(getSymbols(""), IsEmpty());
 }
@@ -257,16 +244,18 @@ TEST_F(WorkspaceSymbolsTest, Enums) {
   addFile("foo.cpp", R"cpp(
       #include "foo.h"
       )cpp");
-  EXPECT_THAT(getSymbols("Red"), ElementsAre(Named("Red")));
-  EXPECT_THAT(getSymbols("::Red"), ElementsAre(Named("Red")));
-  EXPECT_THAT(getSymbols("Green"), ElementsAre(Named("Green")));
-  EXPECT_THAT(getSymbols("Green"), ElementsAre(Named("Green")));
-  EXPECT_THAT(getSymbols("Color2::Yellow"), ElementsAre(Named("Yellow")));
-  EXPECT_THAT(getSymbols("Yellow"), ElementsAre(Named("Yellow")));
+  EXPECT_THAT(getSymbols("Red"), ElementsAre(QName("Red")));
+  EXPECT_THAT(getSymbols("::Red"), ElementsAre(QName("Red")));
+  EXPECT_THAT(getSymbols("Green"), ElementsAre(QName("Green")));
+  EXPECT_THAT(getSymbols("Green"), ElementsAre(QName("Green")));
+  EXPECT_THAT(getSymbols("Color2::Yellow"),
+              ElementsAre(QName("Color2::Yellow")));
+  EXPECT_THAT(getSymbols("Yellow"), ElementsAre(QName("Color2::Yellow")));
 
-  EXPECT_THAT(getSymbols("ns::Black"), ElementsAre(Named("Black")));
-  EXPECT_THAT(getSymbols("ns::Blue"), ElementsAre(Named("Blue")));
-  EXPECT_THAT(getSymbols("ns::Color4::White"), ElementsAre(Named("White")));
+  EXPECT_THAT(getSymbols("ns::Black"), ElementsAre(QName("ns::Black")));
+  EXPECT_THAT(getSymbols("ns::Blue"), ElementsAre(QName("ns::Blue")));
+  EXPECT_THAT(getSymbols("ns::Color4::White"),
+              ElementsAre(QName("ns::Color4::White")));
 }
 
 TEST_F(WorkspaceSymbolsTest, Ranking) {
@@ -277,7 +266,7 @@ TEST_F(WorkspaceSymbolsTest, Ranking) {
   addFile("foo.cpp", R"cpp(
       #include "foo.h"
       )cpp");
-  EXPECT_THAT(getSymbols("::"), ElementsAre(Named("func"), Named("ns")));
+  EXPECT_THAT(getSymbols("::"), ElementsAre(QName("func"), QName("ns")));
 }
 
 TEST_F(WorkspaceSymbolsTest, WithLimit) {
@@ -290,13 +279,12 @@ TEST_F(WorkspaceSymbolsTest, WithLimit) {
       )cpp");
   // Foo is higher ranked because of exact name match.
   EXPECT_THAT(getSymbols("foo"),
-              UnorderedElementsAre(AllOf(Named("foo"), InContainer(""),
-                                         WithKind(SymbolKind::Variable)),
-                                   AllOf(Named("foo2"), InContainer(""),
-                                         WithKind(SymbolKind::Variable))));
+              UnorderedElementsAre(
+                  AllOf(QName("foo"), WithKind(SymbolKind::Variable)),
+                  AllOf(QName("foo2"), WithKind(SymbolKind::Variable))));
 
   Limit = 1;
-  EXPECT_THAT(getSymbols("foo"), ElementsAre(Named("foo")));
+  EXPECT_THAT(getSymbols("foo"), ElementsAre(QName("foo")));
 }
 
 } // namespace clangd
