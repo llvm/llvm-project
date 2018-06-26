@@ -518,10 +518,11 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
          "CanonicalIV does not belong to header");
   assert(isa<DetachInst>(Header->getTerminator()) &&
          "Cloned header is not terminated by a detach.");
+
   DetachInst *DI = dyn_cast<DetachInst>(Header->getTerminator());
-  SerializeDetachedCFG(DI, DT);
 
   // Convert the cloned loop into the strip-mined loop body.
+  SerializeDetachedCFG(DI, DT);
 
   BasicBlock *DACHead = Preheader;
   if (&(Helper->getEntryBlock()) == Preheader)
@@ -829,6 +830,7 @@ bool DACLoopSpawning::processLoop() {
   // don't require all IV's to be canonical.
   {
     SmallVector<PHINode*, 8> IVsToRemove;
+    Exp.setInsertPoint(&*Header->getFirstInsertionPt());
     for (PHINode &PN : Header->phis()) {
       if (&PN == CanonicalIV) continue;
       const SCEV *S = SE.getSCEV(&PN);
@@ -836,7 +838,7 @@ bool DACLoopSpawning::processLoop() {
       ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "RemoveIV", &PN)
                << "removing the IV "
                << NV("PHINode", &PN));
-      Value *NewIV = Exp.expandCodeFor(S, S->getType(), CanonicalIV);
+      Value *NewIV = Exp.expandCodeFor(S, S->getType());
       PN.replaceAllUsesWith(NewIV);
       IVsToRemove.push_back(&PN);
     }
