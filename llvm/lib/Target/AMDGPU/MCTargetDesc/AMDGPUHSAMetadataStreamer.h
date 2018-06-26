@@ -68,6 +68,7 @@ private:
   void emitKernelArg(const Argument &Arg);
 
   void emitKernelArg(const DataLayout &DL, Type *Ty, ValueKind ValueKind,
+                     unsigned PointeeAlign = 0,
                      StringRef Name = "", StringRef TypeName = "",
                      StringRef BaseTypeName = "", StringRef AccQual = "",
                      StringRef TypeQual = "");

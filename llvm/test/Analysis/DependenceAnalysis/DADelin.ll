@@ -554,3 +554,37 @@ for.inc10:                                        ; preds = %for.body5, %for.bod
 for.end12:                                        ; preds = %for.inc10, %entry
   ret double undef
 }
+
+
+; CHECK-LABEL: nonnegative
+define void @nonnegative(i32* nocapture %A, i32 %N) {
+; CHECK: da analyze - none!
+; CHECK: da analyze - consistent output [0 0|<]!
+; CHECK: da analyze - none!
+entry:
+  %cmp44 = icmp eq i32 %N, 0
+  br i1 %cmp44, label %exit, label %for.outer
+
+for.outer:
+  %h.045 = phi i32 [ %add19, %for.latch ], [ 0, %entry ]
+  %mul = mul i32 %h.045, %N
+  br label %for.inner
+
+for.inner:
+  %i.043 = phi i32 [ 0, %for.outer ], [ %add16, %for.inner ]
+  %add = add i32 %i.043, %mul
+  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
+  store i32 1, i32* %arrayidx, align 4
+  store i32 2, i32* %arrayidx, align 4
+  %add16 = add nuw i32 %i.043, 1
+  %exitcond46 = icmp eq i32 %add16, %N
+  br i1 %exitcond46, label %for.latch, label %for.inner
+
+for.latch:
+  %add19 = add nuw i32 %h.045, 1
+  %exitcond47 = icmp eq i32 %add19, %N
+  br i1 %exitcond47, label %exit, label %for.outer
+
+exit:
+  ret void
+}

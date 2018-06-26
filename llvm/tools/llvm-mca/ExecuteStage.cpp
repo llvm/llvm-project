@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExecuteStage.h"
-#include "Backend.h"
+#include "Pipeline.h"
 #include "Scheduler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"

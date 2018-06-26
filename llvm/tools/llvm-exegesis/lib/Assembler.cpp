@@ -28,6 +28,21 @@ namespace exegesis {
 static constexpr const char ModuleID[] = "ExegesisInfoTest";
 static constexpr const char FunctionID[] = "foo";
 
+static std::vector<llvm::MCInst>
+generateSnippetSetupCode(const llvm::ArrayRef<unsigned> RegsToDef,
+                         const ExegesisTarget &ET, bool &IsComplete) {
+  IsComplete = true;
+  std::vector<llvm::MCInst> Result;
+  for (const unsigned Reg : RegsToDef) {
+    // Load a constant in the register.
+    const auto Code = ET.setRegToConstant(Reg);
+    if (Code.empty())
+      IsComplete = false;
+    Result.insert(Result.end(), Code.begin(), Code.end());
+  }
+  return Result;
+}
+
 // Small utility function to add named passes.
 static bool addPass(llvm::PassManagerBase &PM, llvm::StringRef PassName,
                     llvm::TargetPassConfig &TPC) {
@@ -123,7 +138,9 @@ llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM) {
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
 
-void assembleToStream(std::unique_ptr<llvm::LLVMTargetMachine> TM,
+void assembleToStream(const ExegesisTarget &ET,
+                      std::unique_ptr<llvm::LLVMTargetMachine> TM,
+                      llvm::ArrayRef<unsigned> RegsToDef,
                       llvm::ArrayRef<llvm::MCInst> Instructions,
                       llvm::raw_pwrite_stream &AsmStream) {
   std::unique_ptr<llvm::LLVMContext> Context =
@@ -140,9 +157,19 @@ void assembleToStream(std::unique_ptr<llvm::LLVMTargetMachine> TM,
   auto &Properties = MF.getProperties();
   Properties.set(llvm::MachineFunctionProperties::Property::NoVRegs);
   Properties.reset(llvm::MachineFunctionProperties::Property::IsSSA);
-  // FIXME: Remove this when we assign all used registers as config step. This
-  // essentially disables checks that used registers are def'ed somewhere.
-  Properties.reset(llvm::MachineFunctionProperties::Property::TracksLiveness);
+  bool IsSnippetSetupComplete = false;
+  std::vector<llvm::MCInst> SnippetWithSetup =
+      generateSnippetSetupCode(RegsToDef, ET, IsSnippetSetupComplete);
+  if (!SnippetWithSetup.empty()) {
+    SnippetWithSetup.insert(SnippetWithSetup.end(), Instructions.begin(),
+                            Instructions.end());
+    Instructions = SnippetWithSetup;
+  }
+  // If the snippet setup is not complete, we disable liveliness tracking. This
+  // means that we won't know what values are in the registers.
+  if (!IsSnippetSetupComplete)
+    Properties.reset(llvm::MachineFunctionProperties::Property::TracksLiveness);
+
   // prologue/epilogue pass needs the reserved registers to be frozen, this
   // is usually done by the SelectionDAGISel pass.
   MF.getRegInfo().freezeReservedRegs(MF);
@@ -162,10 +189,8 @@ void assembleToStream(std::unique_ptr<llvm::LLVMTargetMachine> TM,
   PM.add(MMI.release());
   TPC->printAndVerify("MachineFunctionGenerator::assemble");
   // Add target-specific passes.
-  if (const auto *ET = ExegesisTarget::lookup(TM->getTargetTriple())) {
-    ET->addTargetSpecificPasses(PM);
-    TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
-  }
+  ET.addTargetSpecificPasses(PM);
+  TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
   // Adding the following passes:
   // - machineverifier: checks that the MachineFunction is well formed.
   // - prologepilog: saves and restore callee saved registers.

@@ -20,7 +20,6 @@
 namespace llvm {
 
 enum IntrinsicType : uint16_t {
-  INTR_NO_TYPE,
   GATHER, SCATTER, PREFETCH, RDSEED, RDRAND, RDPMC, RDTSC, XTEST, XGETBV, ADX, FPCLASS, FPCLASSS,
   INTR_TYPE_1OP, INTR_TYPE_2OP, INTR_TYPE_3OP, INTR_TYPE_4OP,
   INTR_TYPE_3OP_RM, INTR_TYPE_3OP_IMM8,
@@ -52,6 +51,9 @@ struct IntrinsicData {
   }
   bool operator==(const IntrinsicData &RHS) const {
     return RHS.Id == Id;
+  }
+  friend bool operator<(const IntrinsicData &LHS, unsigned Id) {
+    return LHS.Id < Id;
   }
 };
 
@@ -279,13 +281,11 @@ static const IntrinsicData IntrinsicsWithChain[] = {
 /*
  * Find Intrinsic data by intrinsic ID
  */
-static const IntrinsicData* getIntrinsicWithChain(uint16_t IntNo) {
-
-  IntrinsicData IntrinsicToFind = {IntNo, INTR_NO_TYPE, 0, 0 };
+static const IntrinsicData* getIntrinsicWithChain(unsigned IntNo) {
   const IntrinsicData *Data =  std::lower_bound(std::begin(IntrinsicsWithChain),
                                                 std::end(IntrinsicsWithChain),
-                                                IntrinsicToFind);
-  if (Data != std::end(IntrinsicsWithChain) && *Data == IntrinsicToFind)
+                                                IntNo);
+  if (Data != std::end(IntrinsicsWithChain) && Data->Id == IntNo)
     return Data;
   return nullptr;
 }
@@ -1423,12 +1423,11 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
  * Retrieve data for Intrinsic without chain.
  * Return nullptr if intrinsic is not defined in the table.
  */
-static const IntrinsicData* getIntrinsicWithoutChain(uint16_t IntNo) {
-  IntrinsicData IntrinsicToFind = { IntNo, INTR_NO_TYPE, 0, 0 };
+static const IntrinsicData* getIntrinsicWithoutChain(unsigned IntNo) {
   const IntrinsicData *Data = std::lower_bound(std::begin(IntrinsicsWithoutChain),
                                                std::end(IntrinsicsWithoutChain),
-                                               IntrinsicToFind);
-  if (Data != std::end(IntrinsicsWithoutChain) && *Data == IntrinsicToFind)
+                                               IntNo);
+  if (Data != std::end(IntrinsicsWithoutChain) && Data->Id == IntNo)
     return Data;
   return nullptr;
 }

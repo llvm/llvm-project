@@ -25,6 +25,7 @@ using testing::ElementsAre;
 using testing::HasSubstr;
 using testing::Not;
 using testing::SizeIs;
+using testing::UnorderedElementsAre;
 
 MATCHER(IsInvalid, "") { return !arg.isValid(); }
 MATCHER(IsReg, "") { return arg.isReg(); }
@@ -212,6 +213,72 @@ TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   EXPECT_THAT(II.VariableValues[0].getReg(), Not(II.VariableValues[2].getReg()))
       << "Def is different from second Use";
   EXPECT_THAT(II.VariableValues[3], IsInvalid());
+}
+
+class FakeBenchmarkRunner : public BenchmarkRunner {
+public:
+  FakeBenchmarkRunner(const LLVMState &State)
+      : BenchmarkRunner(State, InstructionBenchmark::Unknown) {}
+
+  Instruction createInstruction(unsigned Opcode) {
+    return Instruction(State.getInstrInfo().get(Opcode), RATC);
+  }
+
+private:
+  llvm::Expected<SnippetPrototype>
+  generatePrototype(unsigned Opcode) const override {
+    return llvm::make_error<llvm::StringError>("not implemented",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  std::vector<BenchmarkMeasure>
+  runMeasurements(const ExecutableFunction &EF,
+                  const unsigned NumRepetitions) const override {
+    return {};
+  }
+};
+
+using FakeSnippetGeneratorTest = SnippetGeneratorTest<FakeBenchmarkRunner>;
+
+TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd16ri) {
+  // ADD16ri:
+  // explicit def 0       : reg RegClass=GR16
+  // explicit use 1       : reg RegClass=GR16 | TIED_TO:0
+  // explicit use 2       : imm
+  // implicit def         : EFLAGS
+  InstructionInstance II(Runner.createInstruction(llvm::X86::ADD16ri));
+  II.getValueFor(II.Instr.Variables[0]) =
+      llvm::MCOperand::createReg(llvm::X86::AX);
+  std::vector<InstructionInstance> Snippet;
+  Snippet.push_back(std::move(II));
+  const auto RegsToDef = Runner.computeRegsToDef(Snippet);
+  EXPECT_THAT(RegsToDef, UnorderedElementsAre(llvm::X86::AX));
+}
+
+TEST_F(FakeSnippetGeneratorTest, ComputeRegsToDefAdd64rr) {
+  // ADD64rr:
+  //  mov64ri rax, 42
+  //  add64rr rax, rax, rbx
+  // -> only rbx needs defining.
+  std::vector<InstructionInstance> Snippet;
+  {
+    InstructionInstance Mov(Runner.createInstruction(llvm::X86::MOV64ri));
+    Mov.getValueFor(Mov.Instr.Variables[0]) =
+        llvm::MCOperand::createReg(llvm::X86::RAX);
+    Mov.getValueFor(Mov.Instr.Variables[1]) = llvm::MCOperand::createImm(42);
+    Snippet.push_back(std::move(Mov));
+  }
+  {
+    InstructionInstance Add(Runner.createInstruction(llvm::X86::ADD64rr));
+    Add.getValueFor(Add.Instr.Variables[0]) =
+        llvm::MCOperand::createReg(llvm::X86::RAX);
+    Add.getValueFor(Add.Instr.Variables[1]) =
+        llvm::MCOperand::createReg(llvm::X86::RBX);
+    Snippet.push_back(std::move(Add));
+  }
+
+  const auto RegsToDef = Runner.computeRegsToDef(Snippet);
+  EXPECT_THAT(RegsToDef, UnorderedElementsAre(llvm::X86::RBX));
 }
 
 } // namespace

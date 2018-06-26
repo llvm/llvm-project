@@ -40,7 +40,7 @@ public:
   const llvm::TargetMachine &getTargetMachine() const { return *TargetMachine; }
   std::unique_ptr<llvm::LLVMTargetMachine> createTargetMachine() const;
 
-  const ExegesisTarget *getExegesisTarget() const { return TheExegesisTarget; }
+  const ExegesisTarget &getExegesisTarget() const { return *TheExegesisTarget; }
 
   bool canAssemble(const llvm::MCInst &mc_inst) const;
 
@@ -56,7 +56,7 @@ public:
   }
 
 private:
-  const ExegesisTarget *TheExegesisTarget = nullptr;
+  const ExegesisTarget *TheExegesisTarget;
   std::unique_ptr<const llvm::TargetMachine> TargetMachine;
 };
 

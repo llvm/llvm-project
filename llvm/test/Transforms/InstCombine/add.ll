@@ -23,6 +23,28 @@ define <2 x i32> @select_0_or_1_from_bool_vec(<2 x i1> %x) {
   ret <2 x i32> %add
 }
 
+define i32 @select_C_minus_1_or_C_from_bool(i1 %x) {
+; CHECK-LABEL: @select_C_minus_1_or_C_from_bool(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[EXT]], 42
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %ext = sext i1 %x to i32
+  %add = add i32 %ext, 42
+  ret i32 %add
+}
+
+define <2 x i32> @select_C_minus_1_or_C_from_bool_vec(<2 x i1> %x) {
+; CHECK-LABEL: @select_C_minus_1_or_C_from_bool_vec(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i32> [[EXT]], <i32 42, i32 43>
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %add = add <2 x i32> %ext, <i32 42, i32 43>
+  ret <2 x i32> %add
+}
+
 ; This is an 'andn' of the low bit.
 
 define i32 @flip_and_mask(i32 %x) {
@@ -780,3 +802,40 @@ final:
   %value = add <2 x i32> <i32 123, i32 333>, %A
   ret <2 x i32> %value
 }
+
+; E = (A + 1) + ~B = A - B
+define i32 @add_not_increment(i32 %A, i32 %B) {
+; CHECK-LABEL: @add_not_increment(
+; CHECK-NEXT:    [[E:%.*]] = sub i32 %A, %B
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %C = xor i32 %B, -1
+  %D = add i32 %A, 1
+  %E = add i32 %D, %C
+  ret i32 %E
+}
+
+; E = (A + 1) + ~B = A - B
+define <2 x i32> @add_not_increment_vec(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @add_not_increment_vec(
+; CHECK-NEXT:    [[E:%.*]] = sub <2 x i32> %A, %B
+; CHECK-NEXT:    ret <2 x i32> [[E]]
+;
+  %C = xor <2 x i32> %B, <i32 -1, i32 -1>
+  %D = add <2 x i32> %A, <i32 1, i32 1>
+  %E = add <2 x i32> %D, %C
+  ret <2 x i32> %E
+}
+
+; E = ~B + (1 + A) = A - B
+define i32 @add_not_increment_commuted(i32 %A, i32 %B) {
+; CHECK-LABEL: @add_not_increment_commuted(
+; CHECK-NEXT:    [[E:%.*]] = sub i32 %A, %B
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %C = xor i32 %B, -1
+  %D = add i32 %A, 1
+  %E = add i32 %C, %D
+  ret i32 %E
+}
+

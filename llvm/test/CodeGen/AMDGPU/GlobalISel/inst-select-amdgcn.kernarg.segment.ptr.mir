@@ -1,0 +1,19 @@
+# XFAIL: *
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+
+# FIXME: This requires additional context for what input registers are special inputs not present in MIR.
+
+---
+
+name:            kernarg_segment_Ptr
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    %0:vgpr(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+    %1:sgpr(s32) = G_LOAD %0 :: (load 4)
+    %2:vgpr(p1) = G_IMPLICIT_DEF
+    G_STORE %1, %2 :: (store 4)
+...
+---

@@ -98,6 +98,10 @@ public:
     return cast<PointerType>(Instruction::getType());
   }
 
+  /// Get allocation size in bits. Returns None if size can't be determined,
+  /// e.g. in case of a VLA.
+  Optional<uint64_t> getAllocationSizeInBits(const DataLayout &DL) const;
+
   /// Return the type that is being allocated by the instruction.
   Type *getAllocatedType() const { return AllocatedType; }
   /// for use only in special circumstances that need to generically
@@ -2584,12 +2588,12 @@ public:
   /// For example, a simple 2x2 matrix can be transposed with:
   ///
   ///   ; Original matrix
-  ///   m0 = <a, b>
-  ///   m1 = <c, d>
+  ///   m0 = < a, b >
+  ///   m1 = < c, d >
   ///
   ///   ; Transposed matrix
-  ///   t0 = <a, c> = shufflevector m0, m1, <0, 2>
-  ///   t1 = <b, d> = shufflevector m0, m1, <1, 3>
+  ///   t0 = < a, c > = shufflevector m0, m1, < 0, 2 >
+  ///   t1 = < b, d > = shufflevector m0, m1, < 1, 3 >
   ///
   /// For matrices having greater than n columns, the resulting nx2 transposed
   /// matrix is stored in two result vectors such that one vector contains
@@ -2598,12 +2602,12 @@ public:
   /// a 2x4 matrix can be transposed with:
   ///
   ///   ; Original matrix
-  ///   m0 = <a, b, c, d>
-  ///   m1 = <e, f, g, h>
+  ///   m0 = < a, b, c, d >
+  ///   m1 = < e, f, g, h >
   ///
   ///   ; Transposed matrix
-  ///   t0 = <a, e, c, g> = shufflevector m0, m1 <0, 4, 2, 6>
-  ///   t1 = <b, f, d, h> = shufflevector m0, m1 <1, 5, 3, 7>
+  ///   t0 = < a, e, c, g > = shufflevector m0, m1 < 0, 4, 2, 6 >
+  ///   t1 = < b, f, d, h > = shufflevector m0, m1 < 1, 5, 3, 7 >
   static bool isTransposeMask(ArrayRef<int> Mask);
   static bool isTransposeMask(const Constant *Mask) {
     assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");

@@ -1,4 +1,4 @@
-//===--------------------- BackendPrinter.h ---------------------*- C++ -*-===//
+//===--------------------- PipelinePrinter.h --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,16 +8,16 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements class BackendPrinter.
+/// This file implements class PipelinePrinter.
 ///
-/// BackendPrinter allows the customization of the performance report.
+/// PipelinePrinter allows the customization of the performance report.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_MCA_BACKENDPRINTER_H
-#define LLVM_TOOLS_LLVM_MCA_BACKENDPRINTER_H
+#ifndef LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
+#define LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 
-#include "Backend.h"
+#include "Pipeline.h"
 #include "View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,15 +33,15 @@ namespace mca {
 /// during the execution of the code. Internally, it delegates to other
 /// classes the task of printing out timeline information as well as
 /// resource pressure.
-class BackendPrinter {
-  Backend &B;
+class PipelinePrinter {
+  Pipeline &P;
   llvm::SmallVector<std::unique_ptr<View>, 8> Views;
 
 public:
-  BackendPrinter(Backend &backend) : B(backend) {}
+  PipelinePrinter(Pipeline &pipeline) : P(pipeline) {}
 
   void addView(std::unique_ptr<View> V) {
-    B.addEventListener(V.get());
+    P.addEventListener(V.get());
     Views.emplace_back(std::move(V));
   }
 
@@ -49,4 +49,4 @@ public:
 };
 } // namespace mca
 
-#endif
+#endif // LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H

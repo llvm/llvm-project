@@ -10,3 +10,8 @@ src:*bits/stl_tree.h
 # data() on an empty vector: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59829
 src:*bits/stl_iterator.h
 src:*bits/stl_vector.h
+
+# These auto-generated functions compile down to ~50k basic blocks with inlining
+# and UBSan enabled, causing long builds that lead to bot timeouts.
+# https://bugs.llvm.org/show_bug.cgi?id=37929
+fun:*AArch64*InstPrinter*printAliasInstr*

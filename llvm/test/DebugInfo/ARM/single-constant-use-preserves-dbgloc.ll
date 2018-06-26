@@ -9,9 +9,6 @@
 ;     return -1;
 ; }
 
-; CHECK: .loc 1 6 7
-; CHECK: mvn
-
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"
 
@@ -33,7 +30,17 @@ if.then:                                          ; preds = %entry
   br label %return, !dbg !18
 
 if.end:                                           ; preds = %entry
+; Materialize the constant.
+; CHECK:      .loc    1 0
+; CHECK-NEXT: mvn     r0, #0
+
+; The backend performs the store to %retval first, for some reason.
+; CHECK-NEXT: .loc    1 7 5
+; CHECK-NEXT: str     r0, [sp, #4]
   store i32 -1, i32* %x, align 4, !dbg !19
+
+; CHECK-NEXT: .loc    1 6 7
+; CHECK-NEXT: str     r0, [sp]
   store i32 -1, i32* %retval, !dbg !20
   br label %return, !dbg !20
 

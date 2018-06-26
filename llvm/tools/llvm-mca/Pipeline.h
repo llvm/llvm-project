@@ -1,4 +1,4 @@
-//===--------------------- Backend.h ----------------------------*- C++ -*-===//
+//===--------------------- Pipeline.h ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,12 +8,13 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements an OoO backend for the llvm-mca tool.
+/// This file implements an ordered container of stages that simulate the
+/// pipeline of a hardware backend.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_MCA_BACKEND_H
-#define LLVM_TOOLS_LLVM_MCA_BACKEND_H
+#ifndef LLVM_TOOLS_LLVM_MCA_PIPELINE_H
+#define LLVM_TOOLS_LLVM_MCA_PIPELINE_H
 
 #include "Scheduler.h"
 #include "Stage.h"
@@ -25,7 +26,7 @@ class HWEventListener;
 class HWInstructionEvent;
 class HWStallEvent;
 
-/// An out of order backend for a specific subtarget.
+/// A pipeline for a specific subtarget.
 ///
 /// It emulates an out-of-order execution of instructions. Instructions are
 /// fetched from a MCInst sequence managed by an initial 'Fetch' stage.
@@ -42,15 +43,15 @@ class HWStallEvent;
 /// is defined by the SourceMgr object, which is managed by the initial stage
 /// of the instruction pipeline.
 ///
-/// The Backend entry point is method 'run()' which executes cycles in a loop
+/// The Pipeline entry point is method 'run()' which executes cycles in a loop
 /// until there are new instructions to dispatch, and not every instruction
 /// has been retired.
 ///
-/// Internally, the Backend collects statistical information in the form of
+/// Internally, the Pipeline collects statistical information in the form of
 /// histograms. For example, it tracks how the dispatch group size changes
 /// over time.
-class Backend {
-  /// An ordered list of stages that define this backend's instruction pipeline.
+class Pipeline {
+  /// An ordered list of stages that define this instruction pipeline.
   llvm::SmallVector<std::unique_ptr<Stage>, 8> Stages;
   std::set<HWEventListener *> Listeners;
   unsigned Cycles;
@@ -61,9 +62,9 @@ class Backend {
   void runCycle(unsigned Cycle);
 
 public:
-  Backend(unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
-          unsigned LoadQueueSize = 0, unsigned StoreQueueSize = 0,
-          bool AssumeNoAlias = false)
+  Pipeline(unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
+           unsigned LoadQueueSize = 0, unsigned StoreQueueSize = 0,
+           bool AssumeNoAlias = false)
       : Cycles(0) {}
   void appendStage(std::unique_ptr<Stage> S) { Stages.push_back(std::move(S)); }
   void run();
@@ -78,4 +79,4 @@ public:
 };
 } // namespace mca
 
-#endif
+#endif // LLVM_TOOLS_LLVM_MCA_PIPELINE_H

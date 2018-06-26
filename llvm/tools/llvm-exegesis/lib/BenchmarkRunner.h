@@ -39,7 +39,10 @@ struct BenchmarkConfiguration {
   // This code is run before the Snippet is iterated. Since it is part of the
   // measurement it should be as short as possible. It is usually used to setup
   // the content of the Registers.
-  std::vector<llvm::MCInst> SnippetSetup;
+  struct Setup {
+    std::vector<unsigned> RegsToDef;
+  };
+  Setup SnippetSetup;
 
   // The sequence of instructions that are to be repeated.
   std::vector<llvm::MCInst> Snippet;
@@ -51,33 +54,31 @@ struct BenchmarkConfiguration {
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
-  explicit BenchmarkRunner(const LLVMState &State);
-
-  // Subtargets can disable running benchmarks for some instructions by
-  // returning an error here.
-  class InstructionFilter {
-  public:
-    virtual ~InstructionFilter();
-
-    virtual llvm::Error shouldRun(const LLVMState &State,
-                                  unsigned Opcode) const {
-      return llvm::ErrorSuccess();
-    }
-  };
+  explicit BenchmarkRunner(const LLVMState &State, InstructionBenchmark::ModeE Mode);
 
   virtual ~BenchmarkRunner();
 
   llvm::Expected<std::vector<InstructionBenchmark>>
-  run(unsigned Opcode, const InstructionFilter &Filter,
-      unsigned NumRepetitions);
+  run(unsigned Opcode, unsigned NumRepetitions);
+
+  // Given a snippet, computes which registers the setup code needs to define.
+  std::vector<unsigned>
+  computeRegsToDef(const std::vector<InstructionInstance> &Snippet) const;
 
 protected:
   const LLVMState &State;
-  const llvm::MCInstrInfo &MCInstrInfo;
-  const llvm::MCRegisterInfo &MCRegisterInfo;
   const RegisterAliasingTrackerCache RATC;
 
 private:
+  // API to be implemented by subclasses.
+  virtual llvm::Expected<SnippetPrototype>
+    generatePrototype(unsigned Opcode) const = 0;
+
+  virtual std::vector<BenchmarkMeasure>
+    runMeasurements(const ExecutableFunction &EF,
+                    const unsigned NumRepetitions) const = 0;
+
+  // Internal helpers.
   InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
                               unsigned Opcode, unsigned NumRepetitions) const;
 
@@ -86,19 +87,12 @@ private:
   llvm::Expected<std::vector<BenchmarkConfiguration>>
   generateConfigurations(unsigned Opcode) const;
 
-  virtual InstructionBenchmark::ModeE getMode() const = 0;
-
-  virtual llvm::Expected<SnippetPrototype>
-  generatePrototype(unsigned Opcode) const = 0;
-
-  virtual std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF,
-                  const unsigned NumRepetitions) const = 0;
 
   llvm::Expected<std::string>
-  writeObjectFile(llvm::ArrayRef<llvm::MCInst> Code) const;
-  llvm::Expected<ExecutableFunction>
-  createExecutableFunction(llvm::ArrayRef<llvm::MCInst> Code) const;
+  writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
+                  llvm::ArrayRef<llvm::MCInst> Code) const;
+
+  const InstructionBenchmark::ModeE Mode;
 };
 
 } // namespace exegesis

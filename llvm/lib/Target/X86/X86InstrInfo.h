@@ -168,26 +168,13 @@ class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
-  /// RegOp2MemOpTable3Addr, RegOp2MemOpTable0, RegOp2MemOpTable1,
-  /// RegOp2MemOpTable2, RegOp2MemOpTable3 - Load / store folding opcode maps.
-  ///
-  typedef DenseMap<unsigned, std::pair<uint16_t, uint16_t>>
-      RegOp2MemOpTableType;
-  RegOp2MemOpTableType RegOp2MemOpTable2Addr;
-  RegOp2MemOpTableType RegOp2MemOpTable0;
-  RegOp2MemOpTableType RegOp2MemOpTable1;
-  RegOp2MemOpTableType RegOp2MemOpTable2;
-  RegOp2MemOpTableType RegOp2MemOpTable3;
-  RegOp2MemOpTableType RegOp2MemOpTable4;
-
   /// MemOp2RegOpTable - Load / store unfolding opcode map.
   ///
   typedef DenseMap<unsigned, std::pair<uint16_t, uint16_t>>
       MemOp2RegOpTableType;
   MemOp2RegOpTableType MemOp2RegOpTable;
 
-  static void AddTableEntry(RegOp2MemOpTableType &R2MTable,
-                            MemOp2RegOpTableType &M2RTable, uint16_t RegOp,
+  static void AddTableEntry(MemOp2RegOpTableType &M2RTable, uint16_t RegOp,
                             uint16_t MemOp, uint16_t Flags);
 
   virtual void anchor();

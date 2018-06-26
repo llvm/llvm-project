@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Assembler.h"
+#include "Target.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -36,9 +37,16 @@ protected:
   }
 
   template <class... Bs> inline void Check(llvm::MCInst MCInst, Bs... Bytes) {
-    ExecutableFunction Function = (MCInst.getOpcode() == 0)
-                                      ? assembleToFunction({})
-                                      : assembleToFunction({MCInst});
+    CheckWithSetup(ExegesisTarget::getDefault(), {}, MCInst, Bytes...);
+  }
+
+  template <class... Bs>
+  inline void CheckWithSetup(const ExegesisTarget &ET,
+                             llvm::ArrayRef<unsigned> RegsToDef,
+                             llvm::MCInst MCInst, Bs... Bytes) {
+    ExecutableFunction Function =
+        (MCInst.getOpcode() == 0) ? assembleToFunction(ET, RegsToDef, {})
+                                  : assembleToFunction(ET, RegsToDef, {MCInst});
     ASSERT_THAT(Function.getFunctionBytes().str(),
                 testing::ElementsAre(Bytes...));
     if (CanExecute)
@@ -60,10 +68,13 @@ private:
   }
 
   ExecutableFunction
-  assembleToFunction(llvm::ArrayRef<llvm::MCInst> Instructions) {
+  assembleToFunction(const ExegesisTarget &ET,
+                     llvm::ArrayRef<unsigned> RegsToDef,
+                     llvm::ArrayRef<llvm::MCInst> Instructions) {
     llvm::SmallString<256> Buffer;
     llvm::raw_svector_ostream AsmStream(Buffer);
-    assembleToStream(createTargetMachine(), Instructions, AsmStream);
+    assembleToStream(ET, createTargetMachine(), RegsToDef, Instructions,
+                     AsmStream);
     return ExecutableFunction(createTargetMachine(),
                               getObjectFromBuffer(AsmStream.str()));
   }

@@ -1950,7 +1950,7 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
 }
 
 static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB &&
+  assert((N->getOpcode() == ISD::ADD || N->getOpcode() == ISD::SUB) &&
          "Expecting add or sub");
 
   // Match a constant operand and a zext operand for the math instruction:

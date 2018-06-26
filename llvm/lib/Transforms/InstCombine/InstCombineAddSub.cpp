@@ -1212,6 +1212,11 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (Value *V = checkForNegativeOperand(I, Builder))
     return replaceInstUsesWith(I, V);
 
+  // (A + 1) + ~B --> A - B
+  // ~B + (A + 1) --> A - B
+  if (match(&I, m_c_BinOp(m_Add(m_Value(A), m_One()), m_Not(m_Value(B)))))
+    return BinaryOperator::CreateSub(A, B);
+
   // X % C0 + (( X / C0 ) % C1) * C0 => X % (C0 * C1)
   if (Value *V = SimplifyAddWithRemainder(I)) return replaceInstUsesWith(I, V);
 

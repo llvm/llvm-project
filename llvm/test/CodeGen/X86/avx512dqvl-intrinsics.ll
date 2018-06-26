@@ -734,126 +734,75 @@ define <8 x float>@test_int_x86_avx512_mask_range_ps_256(<8 x float> %x0, <8 x f
   ret <8 x float> %res2
 }
 
-declare i8 @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float>, i32, i8)
+declare <4 x i1> @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float>, i32)
 
-define i8 @test_int_x86_avx512_mask_fpclass_ps_128(<4 x float> %x0, i8 %x1) {
-; X86-LABEL: test_int_x86_avx512_mask_fpclass_ps_128:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfpclassps $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x66,0xc0,0x02]
-; X86-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X86-NEXT:    vfpclassps $4, %xmm0, %k0 # encoding: [0x62,0xf3,0x7d,0x08,0x66,0xc0,0x04]
-; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X86-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    retl # encoding: [0xc3]
-;
-; X64-LABEL: test_int_x86_avx512_mask_fpclass_ps_128:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vfpclassps $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x66,0xc0,0x02]
-; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    vfpclassps $4, %xmm0, %k0 # encoding: [0x62,0xf3,0x7d,0x08,0x66,0xc0,0x04]
-; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X64-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call i8 @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %x0, i32 2, i8 %x1)
-  %res1 = call i8 @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %x0, i32 4, i8 -1)
-  %res2 = add i8 %res, %res1
-  ret i8 %res2
+define i8 @test_int_x86_avx512_mask_fpclass_ps_128(<4 x float> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ps_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassps $4, %xmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x08,0x66,0xc8,0x04]
+; CHECK-NEXT:    vfpclassps $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x66,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <4 x i1> @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %x0, i32 2)
+  %res1 = call <4 x i1> @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %x0, i32 4)
+  %1 = and <4 x i1> %res1, %res
+  %2 = shufflevector <4 x i1> %1, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %3 = bitcast <8 x i1> %2 to i8
+  ret i8 %3
 }
 
-declare i8 @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float>, i32, i8)
+declare <8 x i1> @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float>, i32)
 
-define i8 @test_int_x86_avx512_mask_fpclass_ps_256(<8 x float> %x0, i8 %x1) {
-; X86-LABEL: test_int_x86_avx512_mask_fpclass_ps_256:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfpclassps $2, %ymm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x29,0x66,0xc0,0x02]
-; X86-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X86-NEXT:    vfpclassps $4, %ymm0, %k0 # encoding: [0x62,0xf3,0x7d,0x28,0x66,0xc0,0x04]
-; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X86-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; X86-NEXT:    retl # encoding: [0xc3]
-;
-; X64-LABEL: test_int_x86_avx512_mask_fpclass_ps_256:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vfpclassps $2, %ymm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x29,0x66,0xc0,0x02]
-; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    vfpclassps $4, %ymm0, %k0 # encoding: [0x62,0xf3,0x7d,0x28,0x66,0xc0,0x04]
-; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X64-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call i8 @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %x0, i32 2, i8 %x1)
-  %res1 = call i8 @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %x0, i32 4, i8 -1)
-  %res2 = add i8 %res, %res1
-  ret i8 %res2
+define i8 @test_int_x86_avx512_mask_fpclass_ps_256(<8 x float> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ps_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassps $4, %ymm0, %k1 # encoding: [0x62,0xf3,0x7d,0x28,0x66,0xc8,0x04]
+; CHECK-NEXT:    vfpclassps $2, %ymm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x29,0x66,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <8 x i1> @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %x0, i32 2)
+  %res1 = call <8 x i1> @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %x0, i32 4)
+  %1 = and <8 x i1> %res1, %res
+  %2 = bitcast <8 x i1> %1 to i8
+  ret i8 %2
 }
 
-declare i8 @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double>, i32, i8)
+declare <2 x i1> @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double>, i32)
 
-define i8 @test_int_x86_avx512_mask_fpclass_pd_128(<2 x double> %x0, i8 %x1) {
-; X86-LABEL: test_int_x86_avx512_mask_fpclass_pd_128:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfpclasspd $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x66,0xc0,0x04]
-; X86-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X86-NEXT:    vfpclasspd $2, %xmm0, %k0 # encoding: [0x62,0xf3,0xfd,0x08,0x66,0xc0,0x02]
-; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X86-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    retl # encoding: [0xc3]
-;
-; X64-LABEL: test_int_x86_avx512_mask_fpclass_pd_128:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vfpclasspd $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x66,0xc0,0x04]
-; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    vfpclasspd $2, %xmm0, %k0 # encoding: [0x62,0xf3,0xfd,0x08,0x66,0xc0,0x02]
-; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X64-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq # encoding: [0xc3]
-  %res =  call i8 @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %x0, i32 4, i8 %x1)
-  %res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %x0, i32 2, i8 -1)
-  %res2 = add i8 %res, %res1
-  ret i8 %res2
+define i8 @test_int_x86_avx512_mask_fpclass_pd_128(<2 x double> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_pd_128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclasspd $2, %xmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x08,0x66,0xc8,0x02]
+; CHECK-NEXT:    vfpclasspd $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x66,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <2 x i1> @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %x0, i32 4)
+  %res1 = call <2 x i1> @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %x0, i32 2)
+  %1 = and <2 x i1> %res1, %res
+  %2 = shufflevector <2 x i1> %1, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %3 = bitcast <8 x i1> %2 to i8
+  ret i8 %3
 }
 
-declare i8 @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double>, i32, i8)
+declare <4 x i1> @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double>, i32)
 
-define i8 @test_int_x86_avx512_mask_fpclass_pd_256(<4 x double> %x0, i8 %x1) {
-; X86-LABEL: test_int_x86_avx512_mask_fpclass_pd_256:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vfpclasspd $2, %ymm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x29,0x66,0xc0,0x02]
-; X86-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X86-NEXT:    vfpclasspd $4, %ymm0, %k0 # encoding: [0x62,0xf3,0xfd,0x28,0x66,0xc0,0x04]
-; X86-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X86-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; X86-NEXT:    retl # encoding: [0xc3]
-;
-; X64-LABEL: test_int_x86_avx512_mask_fpclass_pd_256:
-; X64:       # %bb.0:
-; X64-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vfpclasspd $2, %ymm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x29,0x66,0xc0,0x02]
-; X64-NEXT:    kmovw %k0, %ecx # encoding: [0xc5,0xf8,0x93,0xc8]
-; X64-NEXT:    vfpclasspd $4, %ymm0, %k0 # encoding: [0x62,0xf3,0xfd,0x28,0x66,0xc0,0x04]
-; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
-; X64-NEXT:    addb %cl, %al # encoding: [0x00,0xc8]
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
-; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call i8 @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %x0, i32 2, i8 %x1)
-  %res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %x0, i32 4, i8 -1)
-  %res2 = add i8 %res, %res1
-  ret i8 %res2
+define i8 @test_int_x86_avx512_mask_fpclass_pd_256(<4 x double> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_pd_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclasspd $4, %ymm0, %k1 # encoding: [0x62,0xf3,0xfd,0x28,0x66,0xc8,0x04]
+; CHECK-NEXT:    vfpclasspd $2, %ymm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x29,0x66,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <4 x i1> @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %x0, i32 2)
+  %res1 = call <4 x i1> @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %x0, i32 4)
+  %1 = and <4 x i1> %res1, %res
+  %2 = shufflevector <4 x i1> %1, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %3 = bitcast <8 x i1> %2 to i8
+  ret i8 %3
 }

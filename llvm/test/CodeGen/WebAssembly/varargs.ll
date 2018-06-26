@@ -143,6 +143,27 @@ bb1:
   ret void
 }
 
+; Test a call to a varargs function with a non-legal fixed argument.
+
+declare void @callee_with_nonlegal_fixed(fp128, ...) nounwind
+
+; CHECK-LABEL: call_nonlegal_fixed:
+; CHECK: i64.const       $push[[L0:[0-9]+]]=, 0
+; CHECK: i64.const       $push[[L1:[0-9]+]]=, 0
+; CHECK: i32.const       $push[[L2:[0-9]+]]=, 0
+; CHECK: call            callee_with_nonlegal_fixed@FUNCTION, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
+define void @call_nonlegal_fixed() nounwind {
+  call void (fp128, ...) @callee_with_nonlegal_fixed(fp128 0xL00000000000000000000000000000000)
+  ret void
+}
+
+; Test a definition a varargs function with a non-legal fixed argument.
+
+; CHECK-LABEL: nonlegal_fixed:
+; CHECK-NEXT: .param          i64, i64, i32{{$}}
+define void @nonlegal_fixed(fp128 %x, ...) nounwind {
+  ret void
+}
 
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)

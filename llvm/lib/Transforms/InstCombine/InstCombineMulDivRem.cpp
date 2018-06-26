@@ -826,14 +826,6 @@ static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
   return LShr;
 }
 
-// X udiv C, where C >= signbit
-static Instruction *foldUDivNegCst(Value *Op0, Value *Op1,
-                                   const BinaryOperator &I, InstCombiner &IC) {
-  Value *ICI = IC.Builder.CreateICmpULT(Op0, cast<Constant>(Op1));
-  return SelectInst::Create(ICI, Constant::getNullValue(I.getType()),
-                            ConstantInt::get(I.getType(), 1));
-}
-
 // X udiv (C1 << N), where C1 is "1<<C2"  -->  X >> (N+C2)
 // X udiv (zext (C1 << N)), where C1 is "1<<C2"  -->  X >> (N+C2)
 static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
@@ -869,12 +861,6 @@ static size_t visitUDivOperand(Value *Op0, Value *Op1, const BinaryOperator &I,
   // if so, convert to a right shift.
   if (match(Op1, m_Power2())) {
     Actions.push_back(UDivFoldAction(foldUDivPow2Cst, Op1));
-    return Actions.size();
-  }
-
-  // X udiv C, where C >= signbit
-  if (match(Op1, m_Negative())) {
-    Actions.push_back(UDivFoldAction(foldUDivNegCst, Op1));
     return Actions.size();
   }
 
@@ -949,24 +935,28 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
   if (Instruction *Common = commonIDivTransforms(I))
     return Common;
 
-  // (x lshr C1) udiv C2 --> x udiv (C2 << C1)
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  {
-    Value *X;
-    const APInt *C1, *C2;
-    if (match(Op0, m_LShr(m_Value(X), m_APInt(C1))) &&
-        match(Op1, m_APInt(C2))) {
-      bool Overflow;
-      APInt C2ShlC1 = C2->ushl_ov(*C1, Overflow);
-      if (!Overflow) {
-        bool IsExact = I.isExact() && match(Op0, m_Exact(m_Value()));
-        BinaryOperator *BO = BinaryOperator::CreateUDiv(
-            X, ConstantInt::get(X->getType(), C2ShlC1));
-        if (IsExact)
-          BO->setIsExact();
-        return BO;
-      }
+  Value *X;
+  const APInt *C1, *C2;
+  if (match(Op0, m_LShr(m_Value(X), m_APInt(C1))) && match(Op1, m_APInt(C2))) {
+    // (X lshr C1) udiv C2 --> X udiv (C2 << C1)
+    bool Overflow;
+    APInt C2ShlC1 = C2->ushl_ov(*C1, Overflow);
+    if (!Overflow) {
+      bool IsExact = I.isExact() && match(Op0, m_Exact(m_Value()));
+      BinaryOperator *BO = BinaryOperator::CreateUDiv(
+          X, ConstantInt::get(X->getType(), C2ShlC1));
+      if (IsExact)
+        BO->setIsExact();
+      return BO;
     }
+  }
+
+  // Op0 / C where C is large (negative) --> zext (Op0 >= C)
+  // TODO: Could use isKnownNegative() to handle non-constant values.
+  if (match(Op1, m_Negative())) {
+    Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
+    return CastInst::CreateZExtOrBitCast(Cmp, I.getType());
   }
 
   if (Instruction *NarrowDiv = narrowUDivURem(I, Builder))
@@ -1019,12 +1009,15 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
     return Common;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Value *X;
+  // sdiv Op0, -1 --> -Op0
+  // sdiv Op0, (sext i1 X) --> -Op0 (because if X is 0, the op is undefined)
+  if (match(Op1, m_AllOnes()) ||
+      (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
+    return BinaryOperator::CreateNeg(Op0);
+
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
-    // sdiv X, -1 == -X
-    if (Op1C->isAllOnesValue())
-      return BinaryOperator::CreateNeg(Op0);
-
     // sdiv exact X, C  -->  ashr exact X, log2(C)
     if (I.isExact() && Op1C->isNonNegative() && Op1C->isPowerOf2()) {
       Value *ShAmt = ConstantInt::get(Op1->getType(), Op1C->exactLogBase2());
