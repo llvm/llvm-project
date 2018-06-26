@@ -16,11 +16,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_LSUNIT_H
 #define LLVM_TOOLS_LLVM_MCA_LSUNIT_H
 
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include <set>
-
-#define DEBUG_TYPE "llvm-mca"
 
 namespace mca {
 
@@ -145,6 +141,7 @@ public:
   bool isReady(const InstRef &IR) const;
   void onInstructionExecuted(const InstRef &IR);
 };
+
 } // namespace mca
 
 #endif

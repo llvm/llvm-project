@@ -802,3 +802,40 @@ final:
   %value = add <2 x i32> <i32 123, i32 333>, %A
   ret <2 x i32> %value
 }
+
+; E = (A + 1) + ~B = A - B
+define i32 @add_not_increment(i32 %A, i32 %B) {
+; CHECK-LABEL: @add_not_increment(
+; CHECK-NEXT:    [[E:%.*]] = sub i32 %A, %B
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %C = xor i32 %B, -1
+  %D = add i32 %A, 1
+  %E = add i32 %D, %C
+  ret i32 %E
+}
+
+; E = (A + 1) + ~B = A - B
+define <2 x i32> @add_not_increment_vec(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @add_not_increment_vec(
+; CHECK-NEXT:    [[E:%.*]] = sub <2 x i32> %A, %B
+; CHECK-NEXT:    ret <2 x i32> [[E]]
+;
+  %C = xor <2 x i32> %B, <i32 -1, i32 -1>
+  %D = add <2 x i32> %A, <i32 1, i32 1>
+  %E = add <2 x i32> %D, %C
+  ret <2 x i32> %E
+}
+
+; E = ~B + (1 + A) = A - B
+define i32 @add_not_increment_commuted(i32 %A, i32 %B) {
+; CHECK-LABEL: @add_not_increment_commuted(
+; CHECK-NEXT:    [[E:%.*]] = sub i32 %A, %B
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %C = xor i32 %B, -1
+  %D = add i32 %A, 1
+  %E = add i32 %C, %D
+  ret i32 %E
+}
+

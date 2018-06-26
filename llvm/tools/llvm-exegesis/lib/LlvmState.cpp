@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LlvmState.h"
+#include "Target.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -30,6 +31,10 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
       TheTarget->createTargetMachine(Triple, CpuName, /*Features*/ "", Options,
                                      llvm::Reloc::Model::Static)));
   TheExegesisTarget = ExegesisTarget::lookup(TargetMachine->getTargetTriple());
+  if (!TheExegesisTarget) {
+    llvm::errs() << "no exegesis target for " << Triple << ", using default\n";
+    TheExegesisTarget = &ExegesisTarget::getDefault();
+  }
 }
 
 LLVMState::LLVMState()

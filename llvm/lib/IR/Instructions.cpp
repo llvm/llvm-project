@@ -45,6 +45,22 @@
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
+//                            AllocaInst Class
+//===----------------------------------------------------------------------===//
+
+Optional<uint64_t>
+AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
+  uint64_t Size = DL.getTypeAllocSizeInBits(getAllocatedType());
+  if (isArrayAllocation()) {
+    auto C = dyn_cast<ConstantInt>(getArraySize());
+    if (!C)
+      return None;
+    Size *= C->getZExtValue();
+  }
+  return Size;
+}
+
+//===----------------------------------------------------------------------===//
 //                            CallSite Class
 //===----------------------------------------------------------------------===//
 

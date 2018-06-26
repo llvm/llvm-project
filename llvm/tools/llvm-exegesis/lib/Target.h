@@ -17,6 +17,9 @@
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_TARGET_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_TARGET_H
 
+#include "BenchmarkResult.h"
+#include "BenchmarkRunner.h"
+#include "LlvmState.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -35,9 +38,16 @@ public:
     return {};
   }
 
+  // Creates a benchmark runner for the given mode.
+  std::unique_ptr<BenchmarkRunner>
+  createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
+                        const LLVMState &State) const;
+
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
   static const ExegesisTarget *lookup(llvm::Triple TT);
+  // Returns the default (unspecialized) ExegesisTarget.
+  static const ExegesisTarget &getDefault();
   // Registers a target. Not thread safe.
   static void registerTarget(ExegesisTarget *T);
 
@@ -45,6 +55,14 @@ public:
 
 private:
   virtual bool matchesArch(llvm::Triple::ArchType Arch) const = 0;
+
+  // Targets can implement their own Latency/Uops benchmarks runners by
+  // implementing these.
+  std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
+      const LLVMState &State) const;
+  std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
+      const LLVMState &State) const;
+
   const ExegesisTarget *Next = nullptr;
 };
 

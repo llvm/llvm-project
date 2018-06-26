@@ -91,8 +91,6 @@ static bool hasMemoryOperand(const llvm::MCOperandInfo &OpInfo) {
 
 llvm::Error
 UopsBenchmarkRunner::isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const {
-  if (MCInstrDesc.isPseudo())
-    return llvm::make_error<BenchmarkFailure>("Infeasible : is pseudo");
   if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
     return llvm::make_error<BenchmarkFailure>(
         "Infeasible : has unknown operands");
@@ -132,10 +130,6 @@ static void remove(llvm::BitVector &a, const llvm::BitVector &b) {
 }
 
 UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
-
-InstructionBenchmark::ModeE UopsBenchmarkRunner::getMode() const {
-  return InstructionBenchmark::Uops;
-}
 
 llvm::Expected<SnippetPrototype>
 UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
