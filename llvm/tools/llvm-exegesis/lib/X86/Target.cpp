@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 #include "../Target.h"
 
+#include "../Latency.h"
+#include "../Uops.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
 #include "X86RegisterInfo.h"
@@ -15,7 +17,45 @@
 
 namespace exegesis {
 
+// Test whether we can generate a snippet for this instruction.
+static llvm::Error shouldRun(const LLVMState &State, const unsigned Opcode) {
+  const auto &InstrInfo = State.getInstrInfo();
+  const auto OpcodeName = InstrInfo.getName(Opcode);
+  if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
+      OpcodeName.startswith("ADJCALLSTACK")) {
+    return llvm::make_error<BenchmarkFailure>(
+        "Unsupported opcode: Push/Pop/AdjCallStack");
+  }
+  return llvm::ErrorSuccess();
+}
+
 namespace {
+
+class X86LatencyBenchmarkRunner : public LatencyBenchmarkRunner {
+private:
+  using LatencyBenchmarkRunner::LatencyBenchmarkRunner;
+
+  llvm::Expected<SnippetPrototype>
+  generatePrototype(unsigned Opcode) const override {
+    if (llvm::Error E = shouldRun(State, Opcode)) {
+      return std::move(E);
+    }
+    return LatencyBenchmarkRunner::generatePrototype(Opcode);
+  }
+};
+
+class X86UopsBenchmarkRunner : public UopsBenchmarkRunner {
+private:
+  using UopsBenchmarkRunner::UopsBenchmarkRunner;
+
+  llvm::Expected<SnippetPrototype>
+  generatePrototype(unsigned Opcode) const override {
+    if (llvm::Error E = shouldRun(State, Opcode)) {
+      return std::move(E);
+    }
+    return UopsBenchmarkRunner::generatePrototype(Opcode);
+  }
+};
 
 class ExegesisX86Target : public ExegesisTarget {
   void addTargetSpecificPasses(llvm::PassManagerBase &PM) const override {
@@ -53,6 +93,16 @@ class ExegesisX86Target : public ExegesisTarget {
       return setVectorRegToConstant(Reg, 64, llvm::X86::VMOVDQU64Zrm);
     }
     return {};
+  }
+
+  std::unique_ptr<BenchmarkRunner>
+  createLatencyBenchmarkRunner(const LLVMState &State) const override {
+    return llvm::make_unique<X86LatencyBenchmarkRunner>(State);
+  }
+
+  std::unique_ptr<BenchmarkRunner>
+  createUopsBenchmarkRunner(const LLVMState &State) const override {
+    return llvm::make_unique<X86UopsBenchmarkRunner>(State);
   }
 
   bool matchesArch(llvm::Triple::ArchType Arch) const override {

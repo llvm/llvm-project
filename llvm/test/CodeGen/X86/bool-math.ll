@@ -47,8 +47,8 @@ define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_same_size_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movb $27, %al
-; CHECK-NEXT:    subb %dil, %al
+; CHECK-NEXT:    xorb $27, %dil
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -61,8 +61,8 @@ define i32 @add_zext_cmp_mask_wider_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_wider_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movl $27, %eax
-; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    xorl $27, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -75,8 +75,8 @@ define i8 @add_zext_cmp_mask_narrower_result(i32 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_narrower_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movb $43, %al
-; CHECK-NEXT:    subb %dil, %al
+; CHECK-NEXT:    xorb $43, %dil
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0
@@ -129,8 +129,8 @@ define i8 @low_bit_select_constants_bigger_true_same_size_result(i8 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_same_size_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movb $-29, %al
-; CHECK-NEXT:    subb %dil, %al
+; CHECK-NEXT:    xorb $-29, %dil
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -142,8 +142,8 @@ define i32 @low_bit_select_constants_bigger_true_wider_result(i8 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_wider_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movl $227, %eax
-; CHECK-NEXT:    subl %edi, %eax
+; CHECK-NEXT:    xorl $227, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -155,8 +155,8 @@ define i8 @low_bit_select_constants_bigger_true_narrower_result(i16 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_narrower_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    movb $41, %al
-; CHECK-NEXT:    subb %dil, %al
+; CHECK-NEXT:    xorb $41, %dil
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %a = and i16 %x, 1
   %c = icmp eq i16 %a, 0

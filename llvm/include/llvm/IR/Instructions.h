@@ -98,6 +98,10 @@ public:
     return cast<PointerType>(Instruction::getType());
   }
 
+  /// Get allocation size in bits. Returns None if size can't be determined,
+  /// e.g. in case of a VLA.
+  Optional<uint64_t> getAllocationSizeInBits(const DataLayout &DL) const;
+
   /// Return the type that is being allocated by the instruction.
   Type *getAllocatedType() const { return AllocatedType; }
   /// for use only in special circumstances that need to generically

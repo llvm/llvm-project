@@ -2688,7 +2688,9 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
     SSK = llvm::SanStat_CFI_UnrelatedCast;
     break;
   case CFITCK_ICall:
-    llvm_unreachable("not expecting CFITCK_ICall");
+  case CFITCK_NVMFCall:
+  case CFITCK_VMFCall:
+    llvm_unreachable("unexpected sanitizer kind");
   }
 
   std::string TypeName = RD->getQualifiedNameAsString();

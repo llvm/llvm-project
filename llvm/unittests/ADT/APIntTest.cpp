@@ -2258,4 +2258,71 @@ TEST(APIntTest, multiply) {
   EXPECT_EQ(64U, i96.countTrailingZeros());
 }
 
+TEST(APIntTest, RoundingUDiv) {
+  for (uint64_t Ai = 1; Ai <= 255; Ai++) {
+    APInt A(8, Ai);
+    APInt Zero(8, 0);
+    EXPECT_EQ(0, APIntOps::RoundingUDiv(Zero, A, APInt::Rounding::UP));
+    EXPECT_EQ(0, APIntOps::RoundingUDiv(Zero, A, APInt::Rounding::DOWN));
+    EXPECT_EQ(0, APIntOps::RoundingUDiv(Zero, A, APInt::Rounding::TOWARD_ZERO));
+
+    for (uint64_t Bi = 1; Bi <= 255; Bi++) {
+      APInt B(8, Bi);
+      {
+        APInt Quo = APIntOps::RoundingUDiv(A, B, APInt::Rounding::UP);
+        auto Prod = Quo.zext(16) * B.zext(16);
+        EXPECT_TRUE(Prod.uge(Ai));
+        if (Prod.ugt(Ai)) {
+          EXPECT_TRUE(((Quo - 1).zext(16) * B.zext(16)).ult(Ai));
+        }
+      }
+      {
+        APInt Quo = A.udiv(B);
+        EXPECT_EQ(Quo, APIntOps::RoundingUDiv(A, B, APInt::Rounding::TOWARD_ZERO));
+        EXPECT_EQ(Quo, APIntOps::RoundingUDiv(A, B, APInt::Rounding::DOWN));
+      }
+    }
+  }
+}
+
+TEST(APIntTest, RoundingSDiv) {
+  for (int64_t Ai = -128; Ai <= 127; Ai++) {
+    APInt A(8, Ai);
+
+    if (Ai != 0) {
+      APInt Zero(8, 0);
+      EXPECT_EQ(0, APIntOps::RoundingSDiv(Zero, A, APInt::Rounding::UP));
+      EXPECT_EQ(0, APIntOps::RoundingSDiv(Zero, A, APInt::Rounding::DOWN));
+      EXPECT_EQ(0, APIntOps::RoundingSDiv(Zero, A, APInt::Rounding::TOWARD_ZERO));
+    }
+
+    for (uint64_t Bi = -128; Bi <= 127; Bi++) {
+      if (Bi == 0)
+        continue;
+
+      APInt B(8, Bi);
+      {
+        APInt Quo = APIntOps::RoundingSDiv(A, B, APInt::Rounding::UP);
+        auto Prod = Quo.sext(16) * B.sext(16);
+        EXPECT_TRUE(Prod.uge(A));
+        if (Prod.ugt(A)) {
+          EXPECT_TRUE(((Quo - 1).sext(16) * B.sext(16)).ult(A));
+        }
+      }
+      {
+        APInt Quo = APIntOps::RoundingSDiv(A, B, APInt::Rounding::DOWN);
+        auto Prod = Quo.sext(16) * B.sext(16);
+        EXPECT_TRUE(Prod.ule(A));
+        if (Prod.ult(A)) {
+          EXPECT_TRUE(((Quo + 1).sext(16) * B.sext(16)).ugt(A));
+        }
+      }
+      {
+        APInt Quo = A.sdiv(B);
+        EXPECT_EQ(Quo, APIntOps::RoundingSDiv(A, B, APInt::Rounding::TOWARD_ZERO));
+      }
+    }
+  }
+}
+
 } // end anonymous namespace

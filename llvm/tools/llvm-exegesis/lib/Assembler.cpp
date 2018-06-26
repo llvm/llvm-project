@@ -138,7 +138,7 @@ llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM) {
   return MF.getSubtarget().getRegisterInfo()->getReservedRegs(MF);
 }
 
-void assembleToStream(const ExegesisTarget *ET,
+void assembleToStream(const ExegesisTarget &ET,
                       std::unique_ptr<llvm::LLVMTargetMachine> TM,
                       llvm::ArrayRef<unsigned> RegsToDef,
                       llvm::ArrayRef<llvm::MCInst> Instructions,
@@ -157,11 +157,10 @@ void assembleToStream(const ExegesisTarget *ET,
   auto &Properties = MF.getProperties();
   Properties.set(llvm::MachineFunctionProperties::Property::NoVRegs);
   Properties.reset(llvm::MachineFunctionProperties::Property::IsSSA);
-  std::vector<llvm::MCInst> SnippetWithSetup;
-  bool IsSnippetSetupComplete = RegsToDef.empty();
-  if (ET) {
-    SnippetWithSetup =
-        generateSnippetSetupCode(RegsToDef, *ET, IsSnippetSetupComplete);
+  bool IsSnippetSetupComplete = false;
+  std::vector<llvm::MCInst> SnippetWithSetup =
+      generateSnippetSetupCode(RegsToDef, ET, IsSnippetSetupComplete);
+  if (!SnippetWithSetup.empty()) {
     SnippetWithSetup.insert(SnippetWithSetup.end(), Instructions.begin(),
                             Instructions.end());
     Instructions = SnippetWithSetup;
@@ -190,10 +189,8 @@ void assembleToStream(const ExegesisTarget *ET,
   PM.add(MMI.release());
   TPC->printAndVerify("MachineFunctionGenerator::assemble");
   // Add target-specific passes.
-  if (ET) {
-    ET->addTargetSpecificPasses(PM);
-    TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
-  }
+  ET.addTargetSpecificPasses(PM);
+  TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
   // Adding the following passes:
   // - machineverifier: checks that the MachineFunction is well formed.
   // - prologepilog: saves and restore callee saved registers.

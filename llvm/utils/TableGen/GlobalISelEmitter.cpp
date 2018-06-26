@@ -4110,8 +4110,8 @@ void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
   return emitCxxPredicateFns(
       OS, "GISelPredicateCode", "MI", "const MachineInstr &", "MI",
       "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
-      "  const LLVM_ATTRIBUTE_UNUSED MachineRegisterInfo &MRI = "
-      "MF.getRegInfo();",
+      "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
+      "  (void)MRI;",
       [](const Record *R) { return true; });
 }
 

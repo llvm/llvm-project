@@ -637,7 +637,7 @@ void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
 
 static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                               ReportOptions Opts) {
-  if (Data->CheckKind != CFITCK_ICall)
+  if (Data->CheckKind != CFITCK_ICall && Data->CheckKind != CFITCK_NVMFCall)
     Die();
 
   SourceLocation Loc = Data->Loc.acquire();
@@ -648,10 +648,12 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
 
   ScopedReport R(Opts, Loc, ET);
 
+  const char *CheckKindStr = Data->CheckKind == CFITCK_NVMFCall
+                                 ? "non-virtual pointer to member function call"
+                                 : "indirect function call";
   Diag(Loc, DL_Error, ET,
-       "control flow integrity check for type %0 failed during "
-       "indirect function call")
-      << Data->Type;
+       "control flow integrity check for type %0 failed during %1")
+      << Data->Type << CheckKindStr;
 
   SymbolizedStackHolder FLoc(getSymbolizedLocation(Function));
   const char *FName = FLoc.get()->info.function;
@@ -693,7 +695,7 @@ void __ubsan::__ubsan_handle_cfi_check_fail(CFICheckFailData *Data,
                                             ValueHandle Value,
                                             uptr ValidVtable) {
   GET_REPORT_OPTIONS(false);
-  if (Data->CheckKind == CFITCK_ICall)
+  if (Data->CheckKind == CFITCK_ICall || Data->CheckKind == CFITCK_NVMFCall)
     handleCFIBadIcall(Data, Value, Opts);
   else
     __ubsan_handle_cfi_bad_type(Data, Value, ValidVtable, Opts);
@@ -703,7 +705,7 @@ void __ubsan::__ubsan_handle_cfi_check_fail_abort(CFICheckFailData *Data,
                                                   ValueHandle Value,
                                                   uptr ValidVtable) {
   GET_REPORT_OPTIONS(true);
-  if (Data->CheckKind == CFITCK_ICall)
+  if (Data->CheckKind == CFITCK_ICall || Data->CheckKind == CFITCK_NVMFCall)
     handleCFIBadIcall(Data, Value, Opts);
   else
     __ubsan_handle_cfi_bad_type(Data, Value, ValidVtable, Opts);

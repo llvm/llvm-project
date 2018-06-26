@@ -188,7 +188,7 @@ private:
                                PHINode *CntPhi, Value *Var);
   bool recognizeAndInsertCTLZ();
   void transformLoopToCountable(BasicBlock *PreCondBB, Instruction *CntInst,
-                                PHINode *CntPhi, Value *Var, const DebugLoc DL,
+                                PHINode *CntPhi, Value *Var, const DebugLoc &DL,
                                 bool ZeroCheck, bool IsCntPhiUsedOutsideLoop);
 
   /// @}
@@ -1433,9 +1433,8 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
           TargetTransformInfo::TCC_Basic)
     return false;
 
-  const DebugLoc DL = DefX->getDebugLoc();
-  transformLoopToCountable(PH, CntInst, CntPhi, InitX, DL, ZeroCheck,
-                           IsCntPhiUsedOutsideLoop);
+  transformLoopToCountable(PH, CntInst, CntPhi, InitX, DefX->getDebugLoc(),
+                           ZeroCheck, IsCntPhiUsedOutsideLoop);
   return true;
 }
 
@@ -1548,7 +1547,7 @@ static CallInst *createCTLZIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
 /// If CntInst and DefX are not used in LOOP_BODY they will be removed.
 void LoopIdiomRecognize::transformLoopToCountable(
     BasicBlock *Preheader, Instruction *CntInst, PHINode *CntPhi, Value *InitX,
-    const DebugLoc DL, bool ZeroCheck, bool IsCntPhiUsedOutsideLoop) {
+    const DebugLoc &DL, bool ZeroCheck, bool IsCntPhiUsedOutsideLoop) {
   BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
 
   // Step 1: Insert the CTLZ instruction at the end of the preheader block
@@ -1635,7 +1634,7 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
                                                  PHINode *CntPhi, Value *Var) {
   BasicBlock *PreHead = CurLoop->getLoopPreheader();
   auto *PreCondBr = cast<BranchInst>(PreCondBB->getTerminator());
-  const DebugLoc DL = CntInst->getDebugLoc();
+  const DebugLoc &DL = CntInst->getDebugLoc();
 
   // Assuming before transformation, the loop is following:
   //  if (x) // the precondition

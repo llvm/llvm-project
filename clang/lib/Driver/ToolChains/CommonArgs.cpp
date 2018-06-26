@@ -416,6 +416,12 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back(Args.MakeArgString(Twine("-plugin-opt=O") + OOpt));
   }
 
+  if (Args.hasArg(options::OPT_gsplit_dwarf)) {
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-plugin-opt=dwo_dir=") +
+            Output.getFilename() + "_dwo"));
+  }
+
   if (IsThinLTO)
     CmdArgs.push_back("-plugin-opt=thinlto");
 

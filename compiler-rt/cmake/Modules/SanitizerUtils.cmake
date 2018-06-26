@@ -81,7 +81,7 @@ macro(add_sanitizer_rt_version_list name)
 endmacro()
 
 # Add target to check code style for sanitizer runtimes.
-if(CMAKE_HOST_UNIX)
+if(CMAKE_HOST_UNIX AND NOT OS_NAME MATCHES "OpenBSD")
   add_custom_target(SanitizerLintCheck
     COMMAND env LLVM_CHECKOUT=${LLVM_MAIN_SRC_DIR} SILENT=1 TMPDIR=
       PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}
@@ -90,5 +90,8 @@ if(CMAKE_HOST_UNIX)
     DEPENDS ${SANITIZER_LINT_SCRIPT}
     COMMENT "Running lint check for sanitizer sources..."
     VERBATIM)
+else()
+  add_custom_target(SanitizerLintCheck
+    COMMAND echo "No lint check")
 endif()
 

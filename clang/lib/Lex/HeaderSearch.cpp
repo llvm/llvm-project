@@ -621,11 +621,12 @@ static const char *copyString(StringRef Str, llvm::BumpPtrAllocator &Alloc) {
   return CopyStr;
 }
 
-static bool isFrameworkStylePath(StringRef Path,
+static bool isFrameworkStylePath(StringRef Path, bool &IsPrivateHeader,
                                  SmallVectorImpl<char> &FrameworkName) {
   using namespace llvm::sys;
   path::const_iterator I = path::begin(Path);
   path::const_iterator E = path::end(Path);
+  IsPrivateHeader = false;
 
   // Detect different types of framework style paths:
   //
@@ -637,12 +638,16 @@ static bool isFrameworkStylePath(StringRef Path,
   // and some other variations among these lines.
   int FoundComp = 0;
   while (I != E) {
+    if (*I == "Headers")
+      ++FoundComp;
     if (I->endswith(".framework")) {
       FrameworkName.append(I->begin(), I->end());
       ++FoundComp;
     }
-    if (*I == "Headers" || *I == "PrivateHeaders")
+    if (*I == "PrivateHeaders") {
       ++FoundComp;
+      IsPrivateHeader = true;
+    }
     ++I;
   }
 
@@ -654,11 +659,13 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
                          StringRef Includer, StringRef IncludeFilename,
                          const FileEntry *IncludeFE, bool isAngled = false,
                          bool FoundByHeaderMap = false) {
+  bool IsIncluderPrivateHeader = false;
   SmallString<128> FromFramework, ToFramework;
-  if (!isFrameworkStylePath(Includer, FromFramework))
+  if (!isFrameworkStylePath(Includer, IsIncluderPrivateHeader, FromFramework))
     return;
-  bool IsIncludeeInFramework =
-      isFrameworkStylePath(IncludeFE->getName(), ToFramework);
+  bool IsIncludeePrivateHeader = false;
+  bool IsIncludeeInFramework = isFrameworkStylePath(
+      IncludeFE->getName(), IsIncludeePrivateHeader, ToFramework);
 
   if (!isAngled && !FoundByHeaderMap) {
     SmallString<128> NewInclude("<");
@@ -672,6 +679,14 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
         << IncludeFilename
         << FixItHint::CreateReplacement(IncludeLoc, NewInclude);
   }
+
+  // Headers in Foo.framework/Headers should not include headers
+  // from Foo.framework/PrivateHeaders, since this violates public/private
+  // API boundaries and can cause modular dependency cycles.
+  if (!IsIncluderPrivateHeader && IsIncludeeInFramework &&
+      IsIncludeePrivateHeader && FromFramework == ToFramework)
+    Diags.Report(IncludeLoc, diag::warn_framework_include_private_from_public)
+        << IncludeFilename;
 }
 
 /// LookupFile - Given a "foo" or \<foo> reference, look up the indicated file,

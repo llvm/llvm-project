@@ -54,25 +54,12 @@ struct BenchmarkConfiguration {
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
-  explicit BenchmarkRunner(const LLVMState &State);
-
-  // Subtargets can disable running benchmarks for some instructions by
-  // returning an error here.
-  class InstructionFilter {
-  public:
-    virtual ~InstructionFilter();
-
-    virtual llvm::Error shouldRun(const LLVMState &State,
-                                  unsigned Opcode) const {
-      return llvm::ErrorSuccess();
-    }
-  };
+  explicit BenchmarkRunner(const LLVMState &State, InstructionBenchmark::ModeE Mode);
 
   virtual ~BenchmarkRunner();
 
   llvm::Expected<std::vector<InstructionBenchmark>>
-  run(unsigned Opcode, const InstructionFilter &Filter,
-      unsigned NumRepetitions);
+  run(unsigned Opcode, unsigned NumRepetitions);
 
   // Given a snippet, computes which registers the setup code needs to define.
   std::vector<unsigned>
@@ -83,6 +70,15 @@ protected:
   const RegisterAliasingTrackerCache RATC;
 
 private:
+  // API to be implemented by subclasses.
+  virtual llvm::Expected<SnippetPrototype>
+    generatePrototype(unsigned Opcode) const = 0;
+
+  virtual std::vector<BenchmarkMeasure>
+    runMeasurements(const ExecutableFunction &EF,
+                    const unsigned NumRepetitions) const = 0;
+
+  // Internal helpers.
   InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
                               unsigned Opcode, unsigned NumRepetitions) const;
 
@@ -91,18 +87,12 @@ private:
   llvm::Expected<std::vector<BenchmarkConfiguration>>
   generateConfigurations(unsigned Opcode) const;
 
-  virtual InstructionBenchmark::ModeE getMode() const = 0;
-
-  virtual llvm::Expected<SnippetPrototype>
-  generatePrototype(unsigned Opcode) const = 0;
-
-  virtual std::vector<BenchmarkMeasure>
-  runMeasurements(const ExecutableFunction &EF,
-                  const unsigned NumRepetitions) const = 0;
 
   llvm::Expected<std::string>
   writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
                   llvm::ArrayRef<llvm::MCInst> Code) const;
+
+  const InstructionBenchmark::ModeE Mode;
 };
 
 } // namespace exegesis
