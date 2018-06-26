@@ -1,9 +1,8 @@
+# REQUIRES: amdgpu
 # RUN: llvm-mc -filetype=obj -triple=amdgcn--amdhsa -mcpu=fiji %s -o %t.o
 # RUN: ld.lld --hash-style=sysv -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s
 # RUN: llvm-objdump -s %t.so | FileCheck %s --check-prefix=OBJDUMP
-
-# REQUIRES: amdgpu
 
 .text
 

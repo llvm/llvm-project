@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check EI_ABIVERSION flags
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
@@ -9,8 +10,6 @@
 # RUN: llvm-readobj -h %t.pie | FileCheck -check-prefix=PIE %s
 # RUN: ld.lld -r -o %t.rel %t.o
 # RUN: llvm-readobj -h %t.rel | FileCheck -check-prefix=REL %s
-
-# REQUIRES: mips
 
 # DSO: ABIVersion: 0
 # EXE: ABIVersion: 1

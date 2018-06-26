@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check that the linker use a value of _gp symbol defined
 # in a linker script to calculate GOT relocations.
 
@@ -23,8 +24,6 @@
 # RUN:          .got  : { *(.got) } }" > %t.abs.script
 # RUN: ld.lld -shared -o %t.abs.so --script %t.abs.script %t.o
 # RUN: llvm-objdump -s -t %t.abs.so | FileCheck --check-prefix=ABS %s
-
-# REQUIRES: mips
 
 # REL:      Contents of section .text:
 # REL-NEXT:  0030 3c080000 2108010c 8f82ffcc
