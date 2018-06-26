@@ -97,6 +97,7 @@ enum CheckType {
   CheckNot,
   CheckDAG,
   CheckLabel,
+  CheckEmpty,
 
   /// Indicates the pattern only matches the end of file. This is used for
   /// trailing CHECK-NOTs.
@@ -184,10 +185,23 @@ bool Pattern::ParsePattern(StringRef PatternStr, StringRef Prefix,
       PatternStr = PatternStr.substr(0, PatternStr.size() - 1);
 
   // Check that there is something on the line.
-  if (PatternStr.empty()) {
+  if (PatternStr.empty() && CheckTy != Check::CheckEmpty) {
     SM.PrintMessage(PatternLoc, SourceMgr::DK_Error,
                     "found empty check string with prefix '" + Prefix + ":'");
     return true;
+  }
+
+  if (!PatternStr.empty() && CheckTy == Check::CheckEmpty) {
+    SM.PrintMessage(
+        PatternLoc, SourceMgr::DK_Error,
+        "found non-empty check string for empty check with prefix '" + Prefix +
+            ":'");
+    return true;
+  }
+
+  if (CheckTy == Check::CheckEmpty) {
+    RegExStr = "(\n$)";
+    return false;
   }
 
   // Check to see if this is a fixed string, or if it has regex pieces.
@@ -709,6 +723,9 @@ static size_t CheckTypeSize(Check::CheckType Ty) {
   case Check::CheckLabel:
     return sizeof("-LABEL:") - 1;
 
+  case Check::CheckEmpty:
+    return sizeof("-EMPTY:") - 1;
+
   case Check::CheckEOF:
     llvm_unreachable("Should not be using EOF size");
   }
@@ -745,10 +762,14 @@ static Check::CheckType FindCheckType(StringRef Buffer, StringRef Prefix) {
   if (Rest.startswith("LABEL:"))
     return Check::CheckLabel;
 
+  if (Rest.startswith("EMPTY:"))
+    return Check::CheckEmpty;
+
   // You can't combine -NOT with another suffix.
   if (Rest.startswith("DAG-NOT:") || Rest.startswith("NOT-DAG:") ||
       Rest.startswith("NEXT-NOT:") || Rest.startswith("NOT-NEXT:") ||
-      Rest.startswith("SAME-NOT:") || Rest.startswith("NOT-SAME:"))
+      Rest.startswith("SAME-NOT:") || Rest.startswith("NOT-SAME:") ||
+      Rest.startswith("EMPTY-NOT:") || Rest.startswith("NOT-EMPTY:"))
     return Check::CheckBadNot;
 
   return Check::CheckNone;
@@ -908,10 +929,13 @@ static bool ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
 
     Buffer = Buffer.substr(EOL);
 
-    // Verify that CHECK-NEXT lines have at least one CHECK line before them.
-    if ((CheckTy == Check::CheckNext || CheckTy == Check::CheckSame) &&
+    // Verify that CHECK-NEXT/SAME/EMPTY lines have at least one CHECK line before them.
+    if ((CheckTy == Check::CheckNext || CheckTy == Check::CheckSame ||
+         CheckTy == Check::CheckEmpty) &&
         CheckStrings.empty()) {
-      StringRef Type = CheckTy == Check::CheckNext ? "NEXT" : "SAME";
+      StringRef Type = CheckTy == Check::CheckNext
+                           ? "NEXT"
+                           : CheckTy == Check::CheckEmpty ? "EMPTY" : "SAME";
       SM.PrintMessage(SMLoc::getFromPointer(UsedPrefixStart),
                       SourceMgr::DK_Error,
                       "found '" + UsedPrefix + "-" + Type +
@@ -1057,22 +1081,32 @@ size_t CheckString::Check(const SourceMgr &SM, StringRef Buffer,
 
 /// Verify there is a single line in the given buffer.
 bool CheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
-  if (Pat.getCheckTy() != Check::CheckNext)
+  if (Pat.getCheckTy() != Check::CheckNext &&
+      Pat.getCheckTy() != Check::CheckEmpty)
     return false;
+
+  Twine CheckName =
+      Prefix +
+      Twine(Pat.getCheckTy() == Check::CheckEmpty ? "-EMPTY" : "-NEXT");
 
   // Count the number of newlines between the previous match and this one.
   assert(Buffer.data() !=
              SM.getMemoryBuffer(SM.FindBufferContainingLoc(
                                     SMLoc::getFromPointer(Buffer.data())))
                  ->getBufferStart() &&
-         "CHECK-NEXT can't be the first check in a file");
+         "CHECK-NEXT and CHECK-EMPTY can't be the first check in a file");
 
   const char *FirstNewLine = nullptr;
   unsigned NumNewLines = CountNumNewlinesBetween(Buffer, FirstNewLine);
 
+  // For CHECK-EMPTY, the preceding new line is consumed by the pattern, so
+  // this needs to be re-added.
+  if (Pat.getCheckTy() == Check::CheckEmpty)
+    ++NumNewLines;
+
   if (NumNewLines == 0) {
     SM.PrintMessage(Loc, SourceMgr::DK_Error,
-                    Prefix + "-NEXT: is on the same line as previous match");
+                    CheckName + ": is on the same line as previous match");
     SM.PrintMessage(SMLoc::getFromPointer(Buffer.end()), SourceMgr::DK_Note,
                     "'next' match was here");
     SM.PrintMessage(SMLoc::getFromPointer(Buffer.data()), SourceMgr::DK_Note,
@@ -1082,8 +1116,8 @@ bool CheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
 
   if (NumNewLines != 1) {
     SM.PrintMessage(Loc, SourceMgr::DK_Error,
-                    Prefix +
-                        "-NEXT: is not on the line after the previous match");
+                    CheckName +
+                        ": is not on the line after the previous match");
     SM.PrintMessage(SMLoc::getFromPointer(Buffer.end()), SourceMgr::DK_Note,
                     "'next' match was here");
     SM.PrintMessage(SMLoc::getFromPointer(Buffer.data()), SourceMgr::DK_Note,

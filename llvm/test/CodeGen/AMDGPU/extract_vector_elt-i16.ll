@@ -27,7 +27,7 @@ define amdgpu_kernel void @extract_vector_elt_v2i16(i16 addrspace(1)* %out, <2 x
 ; GCN: v_mov_b32_e32 [[VELT1:v[0-9]+]], [[ELT1]]
 ; GCN: buffer_store_short [[VELT1]]
 ; GCN: ScratchSize: 0
-define amdgpu_kernel void @extract_vector_elt_v2i16_dynamic_sgpr(i16 addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, i32 %idx) #0 {
+define amdgpu_kernel void @extract_vector_elt_v2i16_dynamic_sgpr(i16 addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, [8 x i32], i32 %idx) #0 {
   %vec = load <2 x i16>, <2 x i16> addrspace(4)* %vec.ptr
   %elt = extractelement <2 x i16> %vec, i32 %idx
   store i16 %elt, i16 addrspace(1)* %out, align 2
@@ -58,12 +58,8 @@ define amdgpu_kernel void @extract_vector_elt_v2i16_dynamic_vgpr(i16 addrspace(1
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v3i16:
-; SI: s_load_dword s
-; SI: s_load_dwordx2 s
-; SI: s_load_dword s
-
-; GFX89: s_load_dwordx2
-; GFX89: s_load_dwordx2
+; GCN: s_load_dwordx2
+; GCN: s_load_dwordx2
 
 ; GCN-NOT: {{buffer|flat|global}}_load
 
@@ -79,8 +75,7 @@ define amdgpu_kernel void @extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x
 }
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v4i16:
-; SI: s_load_dword s
-; SI: s_load_dword s
+; SI: s_load_dwordx2
 ; SI: buffer_store_short
 ; SI: buffer_store_short
 
@@ -100,12 +95,12 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x
 
 ; GCN-LABEL: {{^}}dynamic_extract_vector_elt_v3i16:
 ; SI: s_load_dword s
-; SI: s_load_dword s
-; SI: s_load_dword s
+; SI: s_load_dwordx2 s
+; SI: s_load_dwordx2 s
 
-; GFX89-DAG: s_load_dwordx2
-; GFX89-DAG: s_load_dwordx2 s{{\[}}[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]{{\]}}, s[0:1], 0x2c
-; GFX89-DAG: s_load_dword s
+; GFX89-DAG: s_load_dwordx2 s{{\[}}[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]{{\]}}, s[0:1], 0x24
+; GFX89-DAG: s_load_dwordx2 s{{\[}}[[LOAD0:[0-9]+]]:[[LOAD1:[0-9]+]]{{\]}}, s[0:1], 0x4c
+; GFX89-DAG: s_load_dword s{{[0-9]+}}, s[0:1], 0x54
 
 ; GCN-NOT: {{buffer|flat|global}}
 
@@ -113,17 +108,13 @@ define amdgpu_kernel void @extract_vector_elt_v4i16(i16 addrspace(1)* %out, <4 x
 ; SICI: buffer_store_short
 ; SICI: buffer_store_short
 
-; SICI: buffer_load_ushort
-; SICI: buffer_store_short
-
 ; GFX9-NOT: s_pack_ll_b32_b16
 ; GFX9-NOT: s_pack_lh_b32_b16
 
 ; GCN-DAG: s_lshl_b32 s{{[0-9]+}}, s{{[0-9]+}}, 4
-; GFX89: s_lshr_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[LOAD0]]:[[LOAD1]]{{\]}}, s{{[0-9]+}}
-
+; GCN: s_lshr_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s
 ; GCN: {{buffer|global}}_store_short
-define amdgpu_kernel void @dynamic_extract_vector_elt_v3i16(i16 addrspace(1)* %out, <3 x i16> %foo, i32 %idx) #0 {
+define amdgpu_kernel void @dynamic_extract_vector_elt_v3i16(i16 addrspace(1)* %out, [8 x i32], <3 x i16> %foo, i32 %idx) #0 {
   %p0 = extractelement <3 x i16> %foo, i32 %idx
   %out1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
   store i16 %p0, i16 addrspace(1)* %out

@@ -73,6 +73,10 @@ ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;
 
+FunctionPass *createAMDGPULowerKernelArgumentsPass();
+void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
+extern char &AMDGPULowerKernelArgumentsID;
+
 ModulePass *createAMDGPULowerKernelAttributesPass();
 void initializeAMDGPULowerKernelAttributesPass(PassRegistry &);
 extern char &AMDGPULowerKernelAttributesID;

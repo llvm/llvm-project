@@ -6348,6 +6348,21 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
 
   const unsigned Opcode = Inst.getOpcode();
   switch (Opcode) {
+  case ARM::t2IT: {
+    // Encoding is unpredictable if it ever results in a notional 'NV'
+    // predicate. Since we don't parse 'NV' directly this means an 'AL'
+    // predicate with an "else" mask bit.
+    unsigned Cond = Inst.getOperand(0).getImm();
+    unsigned Mask = Inst.getOperand(1).getImm();
+
+    // Mask hasn't been modified to the IT instruction encoding yet so
+    // conditions only allowing a 't' are a block of 1s starting at bit 3
+    // followed by all 0s. Easiest way is to just list the 4 possibilities.
+    if (Cond == ARMCC::AL && Mask != 8 && Mask != 12 && Mask != 14 &&
+        Mask != 15)
+      return Error(Loc, "unpredictable IT predicate sequence");
+    break;
+  }
   case ARM::LDRD:
   case ARM::LDRD_PRE:
   case ARM::LDRD_POST: {

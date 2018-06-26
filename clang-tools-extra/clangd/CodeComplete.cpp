@@ -825,10 +825,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     // Initialize Includes if provided.
 
     // FIXME(ioeric): needs more consistent style support in clangd server.
-    auto Style = format::getStyle("file", Input.FileName, "LLVM",
-                                  Input.Contents, Input.VFS.get());
+    auto Style = format::getStyle(format::DefaultFormatStyle, Input.FileName,
+                                  format::DefaultFallbackStyle, Input.Contents,
+                                  Input.VFS.get());
     if (!Style) {
-      log("Failed to get FormatStyle for file" + Input.FileName +
+      log("ERROR: failed to get FormatStyle for file " + Input.FileName +
           ". Fall back to use LLVM style. Error: " +
           llvm::toString(Style.takeError()));
       Style = format::getLLVMStyle();

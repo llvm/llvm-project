@@ -137,16 +137,25 @@ void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
       << Data->Type << CheckKindStr << (void *)Vtable;
 
   // If possible, say what type it actually points to.
-  if (!DTI.isValid()) {
-    const char *module = Symbolizer::GetOrInit()->GetModuleNameForPc(Vtable);
-    if (module)
-      Diag(Vtable, DL_Note, ET, "invalid vtable in module %0") << module;
-    else
-      Diag(Vtable, DL_Note, ET, "invalid vtable");
-  } else {
+  if (!DTI.isValid())
+    Diag(Vtable, DL_Note, ET, "invalid vtable");
+  else
     Diag(Vtable, DL_Note, ET, "vtable is of type %0")
         << TypeName(DTI.getMostDerivedTypeName());
-  }
+
+  // If the failure involved different DSOs for the check location and vtable,
+  // report the DSO names.
+  const char *DstModule = Symbolizer::GetOrInit()->GetModuleNameForPc(Vtable);
+  if (!DstModule)
+    DstModule = "(unknown)";
+
+  const char *SrcModule = Symbolizer::GetOrInit()->GetModuleNameForPc(Opts.pc);
+  if (!SrcModule)
+    SrcModule = "(unknown)";
+
+  if (internal_strcmp(SrcModule, DstModule))
+    Diag(Loc, DL_Note, ET, "check failed in %0, vtable located in %1")
+        << SrcModule << DstModule;
 }
 }  // namespace __ubsan
 

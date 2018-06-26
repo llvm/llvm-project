@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check microMIPS thunk generation.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -35,8 +36,6 @@
 # RUN: ld.lld -o %t-el-r6.exe %t-el-r6.o %t-el-pic-r6.o
 # RUN: llvm-objdump -d -mattr=+micromips %t-el-r6.exe \
 # RUN:   | FileCheck --check-prefix=EL-R6 %s
-
-# REQUIRES: mips
 
 # EB-R2: __start:
 # EB-R2-NEXT:    20000:       f4 01 00 04  jal   131080 <__microLA25Thunk_foo>

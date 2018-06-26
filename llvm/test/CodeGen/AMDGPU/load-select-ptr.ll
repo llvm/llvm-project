@@ -17,7 +17,7 @@
 ; GCN-NOT: load_dword
 
 ; GCN: flat_store_dwordx2
-define amdgpu_kernel void @select_ptr_crash_i64_flat(i32 %tmp, i64* %ptr0, i64* %ptr1, i64 addrspace(1)* %ptr2) {
+define amdgpu_kernel void @select_ptr_crash_i64_flat(i32 %tmp, [8 x i32], i64* %ptr0, [8 x i32], i64* %ptr1, [8 x i32], i64 addrspace(1)* %ptr2) {
   %tmp2 = icmp eq i32 %tmp, 0
   %tmp3 = load i64, i64* %ptr0, align 8
   %tmp4 = load i64, i64* %ptr1, align 8
@@ -38,7 +38,7 @@ define amdgpu_kernel void @select_ptr_crash_i64_flat(i32 %tmp, i64* %ptr0, i64* 
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32
 ; GCN: flat_store_dwordx2
-define amdgpu_kernel void @select_ptr_crash_i64_global(i32 %tmp, i64 addrspace(1)* %ptr0, i64 addrspace(1)* %ptr1, i64 addrspace(1)* %ptr2) {
+define amdgpu_kernel void @select_ptr_crash_i64_global(i32 %tmp, [8 x i32], i64 addrspace(1)* %ptr0, [8 x i32], i64 addrspace(1)* %ptr1, [8 x i32], i64 addrspace(1)* %ptr2) {
   %tmp2 = icmp eq i32 %tmp, 0
   %tmp3 = load i64, i64 addrspace(1)* %ptr0, align 8
   %tmp4 = load i64, i64 addrspace(1)* %ptr1, align 8

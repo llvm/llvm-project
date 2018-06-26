@@ -255,6 +255,64 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                           APInt::getSignedMinValue(BitWidth) + SignedMin));
     }
     return Result;
+  case Instruction::Mul: {
+    if (NoWrapKind == (OBO::NoSignedWrap | OBO::NoUnsignedWrap)) {
+      return SubsetIntersect(
+          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoSignedWrap),
+          makeGuaranteedNoWrapRegion(BinOp, Other, OBO::NoUnsignedWrap));
+    }
+
+    // Equivalent to calling makeGuaranteedNoWrapRegion() on [V, V+1).
+    const bool Unsigned = NoWrapKind == OBO::NoUnsignedWrap;
+    const auto makeSingleValueRegion = [Unsigned,
+                                        BitWidth](APInt V) -> ConstantRange {
+      // Handle special case for 0, -1 and 1. See the last for reason why we
+      // specialize -1 and 1.
+      if (V == 0 || V.isOneValue())
+        return ConstantRange(BitWidth, true);
+
+      APInt MinValue, MaxValue;
+      if (Unsigned) {
+        MinValue = APInt::getMinValue(BitWidth);
+        MaxValue = APInt::getMaxValue(BitWidth);
+      } else {
+        MinValue = APInt::getSignedMinValue(BitWidth);
+        MaxValue = APInt::getSignedMaxValue(BitWidth);
+      }
+      // e.g. Returning [-127, 127], represented as [-127, -128).
+      if (!Unsigned && V.isAllOnesValue())
+        return ConstantRange(-MaxValue, MinValue);
+
+      APInt Lower, Upper;
+      if (!Unsigned && V.isNegative()) {
+        Lower = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::UP);
+        Upper = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::DOWN);
+      } else if (Unsigned) {
+        Lower = APIntOps::RoundingUDiv(MinValue, V, APInt::Rounding::UP);
+        Upper = APIntOps::RoundingUDiv(MaxValue, V, APInt::Rounding::DOWN);
+      } else {
+        Lower = APIntOps::RoundingSDiv(MinValue, V, APInt::Rounding::UP);
+        Upper = APIntOps::RoundingSDiv(MaxValue, V, APInt::Rounding::DOWN);
+      }
+      if (Unsigned) {
+        Lower = Lower.zextOrSelf(BitWidth);
+        Upper = Upper.zextOrSelf(BitWidth);
+      } else {
+        Lower = Lower.sextOrSelf(BitWidth);
+        Upper = Upper.sextOrSelf(BitWidth);
+      }
+      // ConstantRange ctor take a half inclusive interval [Lower, Upper + 1).
+      // Upper + 1 is guanranteed not to overflow, because |divisor| > 1. 0, -1,
+      // and 1 are already handled as special cases.
+      return ConstantRange(Lower, Upper + 1);
+    };
+
+    if (Unsigned)
+      return makeSingleValueRegion(Other.getUnsignedMax());
+
+    return SubsetIntersect(makeSingleValueRegion(Other.getSignedMin()),
+                           makeSingleValueRegion(Other.getSignedMax()));
+  }
   }
 }
 

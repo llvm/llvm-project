@@ -5,7 +5,7 @@
 ; CHECK: s_load_dwordx4
 ; CHECK-NOT: flat_load_dword
 
-define amdgpu_kernel void @uniform_load(float addrspace(1)* %arg, float addrspace(1)*  %arg1) {
+define amdgpu_kernel void @uniform_load(float addrspace(1)* %arg, [8 x i32], float addrspace(1)* %arg1) {
 bb:
   %tmp2 = load float, float addrspace(1)* %arg, align 4, !tbaa !8
   %tmp3 = fadd float %tmp2, 0.000000e+00
@@ -28,7 +28,7 @@ bb:
 ; CHECK: flat_load_dword
 ; CHECK-NOT: s_load_dwordx4
 
-define amdgpu_kernel void @non-uniform_load(float addrspace(1)* %arg, float addrspace(1)* %arg1) #0 {
+define amdgpu_kernel void @non-uniform_load(float addrspace(1)* %arg, [8 x i32], float addrspace(1)* %arg1) #0 {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tmp2 = getelementptr inbounds float, float addrspace(1)* %arg, i32 %tmp
@@ -59,7 +59,7 @@ bb:
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
 
-define amdgpu_kernel void @no_memdep_alias_arg(i32 addrspace(1)* noalias %in, i32 addrspace(1)* %out0, i32 addrspace(1)* %out1) {
+define amdgpu_kernel void @no_memdep_alias_arg(i32 addrspace(1)* noalias %in, [8 x i32], i32 addrspace(1)* %out0, [8 x i32], i32 addrspace(1)* %out1) {
   store i32 0, i32 addrspace(1)* %out0
   %val = load i32, i32 addrspace(1)* %in
   store i32 %val, i32 addrspace(1)* %out1
@@ -71,7 +71,7 @@ define amdgpu_kernel void @no_memdep_alias_arg(i32 addrspace(1)* noalias %in, i3
 ; CHECK: flat_store_dword
 ; CHECK: flat_load_dword [[VVAL:v[0-9]+]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
-define amdgpu_kernel void @memdep(i32 addrspace(1)* %in, i32 addrspace(1)* %out0, i32 addrspace(1)* %out1) {
+define amdgpu_kernel void @memdep(i32 addrspace(1)* %in, [8 x i32], i32 addrspace(1)* %out0, [8 x i32], i32 addrspace(1)* %out1) {
   store i32 0, i32 addrspace(1)* %out0
   %val = load i32, i32 addrspace(1)* %in
   store i32 %val, i32 addrspace(1)* %out1
@@ -80,19 +80,20 @@ define amdgpu_kernel void @memdep(i32 addrspace(1)* %in, i32 addrspace(1)* %out0
 
 ; uniform load from global array
 ; CHECK-LABEL:  @global_array
-; CHECK: s_load_dwordx2 [[A_ADDR:s\[[0-9]+:[0-9]+\]]]
+; CHECK: s_getpc_b64 [[GET_PC:s\[[0-9]+:[0-9]+\]]]
+; CHECK: s_load_dwordx2 [[OUT:s\[[0-9]+:[0-9]+\]]], s[4:5], 0x0
+; CHECK: s_load_dwordx2 [[A_ADDR:s\[[0-9]+:[0-9]+\]]], [[GET_PC]], 0x0
 ; CHECK: s_load_dwordx2 [[A_ADDR1:s\[[0-9]+:[0-9]+\]]], [[A_ADDR]], 0x0
 ; CHECK: s_load_dword [[SVAL:s[0-9]+]], [[A_ADDR1]], 0x0
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
-
 @A = common local_unnamed_addr addrspace(1) global i32 addrspace(1)* null, align 4
 
 define amdgpu_kernel void @global_array(i32 addrspace(1)* nocapture %out) {
 entry:
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* @A, align 4
-  %1 = load i32, i32 addrspace(1)* %0, align 4
-  store i32 %1, i32 addrspace(1)* %out, align 4
+  %load0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* @A, align 4
+  %load1 = load i32, i32 addrspace(1)* %load0, align 4
+  store i32 %load1, i32 addrspace(1)* %out, align 4
   ret void
 }
 
@@ -105,13 +106,13 @@ entry:
 ; CHECK: flat_load_dwordx2 [[A_ADDR:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[ADDR_LO]]:[[ADDR_HI]]{{\]}}
 ; CHECK: flat_load_dword [[VVAL:v[0-9]+]], [[A_ADDR]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
-define amdgpu_kernel void @global_array_alias_store(i32 addrspace(1)* nocapture %out, i32 %n) {
+define amdgpu_kernel void @global_array_alias_store(i32 addrspace(1)* nocapture %out, [8 x i32], i32 %n) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1) * %out, i32 %n
   store i32 12, i32 addrspace(1) * %gep
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* @A, align 4
-  %1 = load i32, i32 addrspace(1)* %0, align 4
-  store i32 %1, i32 addrspace(1)* %out, align 4
+  %load0 = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* @A, align 4
+  %load1 = load i32, i32 addrspace(1)* %load0, align 4
+  store i32 %load1, i32 addrspace(1)* %out, align 4
   ret void
 }
 

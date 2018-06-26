@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check R_MIPS_26 relocation handling in case of N64 ABIs.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
@@ -10,8 +11,6 @@
 # RUN: ld.lld %t.o %t.so -o %t.exe -z hazardplt
 # RUN: llvm-objdump -d %t.exe | FileCheck %s --check-prefixes=CHECK,HAZARDPLT
 
-
-# REQUIRES: mips
 
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: __start:

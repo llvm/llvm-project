@@ -70,7 +70,7 @@ entry:
 ; GCN-DAG: v_mul_i32_i24_e32
 
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, i32 %a, i32 %b) #0 {
+define amdgpu_kernel void @test_smul24_i64(i64 addrspace(1)* %out, [8 x i32], i32 %a, [8 x i32], i32 %b) #0 {
   %shl.i = shl i32 %a, 8
   %shr.i = ashr i32 %shl.i, 8
   %conv.i = sext i32 %shr.i to i64

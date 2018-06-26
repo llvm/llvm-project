@@ -14,9 +14,11 @@
 ; VI: s_lshr_b32
 ; VI: s_and_b32
 ; VI: s_and_b32
+; VI: s_lshl_b32
+; VI: s_lshl_b32
+; VI: s_lshl_b32
 ; VI: s_and_b32
 ; VI: s_or_b32
-
 
 ; CI: s_load_dword s
 ; CI: s_load_dword s

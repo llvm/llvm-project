@@ -466,7 +466,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
       lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
-                      eAddressClassCodeAlternateISA;
+                      AddressClass::eCodeAlternateISA;
     }
     if (bp_is_thumb) {
       trap_opcode = g_thumb_breakpooint_opcode;

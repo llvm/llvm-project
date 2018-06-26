@@ -1,6 +1,6 @@
-; XUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-DENORM %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-FLUSH %s
+; XUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=+fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-DENORM %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -mattr=-fp64-fp16-denormals,-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=VI-FLUSH %s
 
 
 ; Make sure (fmul (fadd x, x), c) -> (fmul x, (fmul 2.0, c)) doesn't
@@ -44,7 +44,7 @@ define amdgpu_kernel void @multiple_fadd_use_test_f32(float addrspace(1)* %out, 
 ; GCN-DAG: buffer_store_dword [[MUL2]]
 ; GCN-DAG: buffer_store_dword [[MAD]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, float %x, float %y) #0 {
+define amdgpu_kernel void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, float %x, [8 x i32], float %y) #0 {
   %out.gep.1 = getelementptr float, float addrspace(1)* %out, i32 1
   %mul2 = fmul fast float %x, 2.0
   %mad = fadd fast float %mul2, %y

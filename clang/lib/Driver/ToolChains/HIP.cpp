@@ -75,12 +75,12 @@ const char *AMDGCN::Linker::constructLLVMLinkCommand(
     std::string ISAVerBC =
         "oclc_isa_version_" + SubArchName.drop_front(3).str() + ".amdgcn.bc";
 
-    BCLibs.append({"hip.amdgcn.bc", "hc.amdgcn.bc", "opencl.amdgcn.bc",
+    BCLibs.append({"opencl.amdgcn.bc",
                    "ockl.amdgcn.bc", "irif.amdgcn.bc", "ocml.amdgcn.bc",
                    "oclc_finite_only_off.amdgcn.bc",
                    "oclc_daz_opt_off.amdgcn.bc",
                    "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
-                   "oclc_unsafe_math_off.amdgcn.bc", "hc.amdgcn.bc", ISAVerBC});
+                   "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC});
   }
   for (auto Lib : BCLibs)
     addBCLib(C, Args, CmdArgs, LibraryPaths, Lib);
@@ -254,7 +254,7 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   for (Arg *A : Args) {
     if (A->getOption().matches(options::OPT_Xarch__)) {
-      // Skip this argument unless the architecture matches BoundArch
+      // Skip this argument unless the architecture matches BoundArch.
       if (BoundArch.empty() || A->getValue(0) != BoundArch)
         continue;
 

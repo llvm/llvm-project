@@ -3,7 +3,6 @@ set(LIBFUZZER_UNITTEST_CFLAGS
   ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/lib/fuzzer
   -fno-rtti
-  -Werror
   -O2)
 
 if (APPLE)

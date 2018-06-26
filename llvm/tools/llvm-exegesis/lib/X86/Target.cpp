@@ -66,7 +66,7 @@ class ExegesisX86Target : public ExegesisTarget {
   }
 
   std::vector<llvm::MCInst>
-  setRegToConstant(const unsigned Reg) const override {
+  setRegToConstant(unsigned Reg) const override {
     // FIXME: Handle FP stack:
     // llvm::X86::RFP32RegClass
     // llvm::X86::RFP64RegClass

@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check microMIPS GOT relocations for N64 ABI.
 
 # microMIPS 64-bit is unsupported by LLVM starting from r335057.
@@ -13,8 +14,6 @@
 # RUN: ld.lld %t2.o -shared -o %t.so
 # RUN: ld.lld %t1.o %t.so -o %t.exe
 # RUN: llvm-readobj -mips-plt-got %t.exe | FileCheck %s
-
-# REQUIRES: mips
 
 # CHECK:      Local entries [
 # CHECK-NEXT:   Entry {

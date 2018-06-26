@@ -18,8 +18,11 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}test_umul24_i16_sext:
-; GCN: v_mul_u32_u24_e{{(32|64)}} [[VI_MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
-; GCN: v_bfe_i32 v{{[0-9]}}, [[VI_MUL]], 0, 16
+; SI: v_mul_u32_u24_e{{(32|64)}} [[VI_MUL:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; SI: v_bfe_i32 v{{[0-9]}}, [[VI_MUL]], 0, 16
+
+; VI: s_mul_i32 [[MUL:s[0-9]+]]
+; VI: s_sext_i32_i16 s{{[0-9]+}}, [[MUL]]
 define amdgpu_kernel void @test_umul24_i16_sext(i32 addrspace(1)* %out, i16 %a, i16 %b) {
 entry:
   %mul = mul i16 %a, %b
@@ -46,9 +49,12 @@ define amdgpu_kernel void @test_umul24_i16_vgpr_sext(i32 addrspace(1)* %out, i16
 }
 
 ; FUNC-LABEL: {{^}}test_umul24_i16:
-; GCN: s_and_b32
-; GCN: v_mul_u32_u24_e32
-; GCN: v_and_b32_e32
+; SI: s_and_b32
+; SI: v_mul_u32_u24_e32
+; SI: v_and_b32_e32
+
+; VI: s_mul_i32
+; VI: s_and_b32
 define amdgpu_kernel void @test_umul24_i16(i32 addrspace(1)* %out, i16 %a, i16 %b) {
 entry:
   %mul = mul i16 %a, %b
@@ -147,7 +153,7 @@ entry:
 ; GCN-NOT: s_and_b32
 ; GCN-DAG: v_mul_hi_u32_u24_e64 v{{[0-9]+}}, [[A]], [[A]]
 ; GCN-DAG: v_mul_u32_u24_e64 v{{[0-9]+}}, [[A]], [[A]]
-define amdgpu_kernel void @test_umul24_i64_square(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @test_umul24_i64_square(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
 entry:
   %tmp0 = shl i64 %a, 40
   %a.24 = lshr i64 %tmp0, 40

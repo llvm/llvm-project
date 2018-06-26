@@ -954,9 +954,15 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
 
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)
   // TODO: Could use isKnownNegative() to handle non-constant values.
+  Type *Ty = I.getType();
   if (match(Op1, m_Negative())) {
     Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
-    return CastInst::CreateZExtOrBitCast(Cmp, I.getType());
+    return CastInst::CreateZExtOrBitCast(Cmp, Ty);
+  }
+  // Op0 / (sext i1 X) --> zext (Op0 == -1) (if X is 0, the div is undefined)
+  if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+    Value *Cmp = Builder.CreateICmpEQ(Op0, ConstantInt::getAllOnesValue(Ty));
+    return CastInst::CreateZExtOrBitCast(Cmp, Ty);
   }
 
   if (Instruction *NarrowDiv = narrowUDivURem(I, Builder))
@@ -1289,24 +1295,32 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
 
   // X urem Y -> X and Y-1, where Y is a power of 2,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Type *Ty = I.getType();
   if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
-    Constant *N1 = Constant::getAllOnesValue(I.getType());
+    Constant *N1 = Constant::getAllOnesValue(Ty);
     Value *Add = Builder.CreateAdd(Op1, N1);
     return BinaryOperator::CreateAnd(Op0, Add);
   }
 
   // 1 urem X -> zext(X != 1)
-  if (match(Op0, m_One())) {
-    Value *Cmp = Builder.CreateICmpNE(Op1, Op0);
-    Value *Ext = Builder.CreateZExt(Cmp, I.getType());
-    return replaceInstUsesWith(I, Ext);
-  }
+  if (match(Op0, m_One()))
+    return CastInst::CreateZExtOrBitCast(Builder.CreateICmpNE(Op1, Op0), Ty);
 
   // X urem C -> X < C ? X : X - C, where C >= signbit.
   if (match(Op1, m_Negative())) {
     Value *Cmp = Builder.CreateICmpULT(Op0, Op1);
     Value *Sub = Builder.CreateSub(Op0, Op1);
     return SelectInst::Create(Cmp, Op0, Sub);
+  }
+
+  // If the divisor is a sext of a boolean, then the divisor must be max
+  // unsigned value (-1). Therefore, the remainder is Op0 unless Op0 is also
+  // max unsigned value. In that case, the remainder is 0:
+  // urem Op0, (sext i1 X) --> (Op0 == -1) ? 0 : Op0
+  Value *X;
+  if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+    Value *Cmp = Builder.CreateICmpEQ(Op0, ConstantInt::getAllOnesValue(Ty));
+    return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Op0);
   }
 
   return nullptr;

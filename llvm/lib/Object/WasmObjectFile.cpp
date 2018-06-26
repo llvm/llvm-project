@@ -975,7 +975,7 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
     if (Error Err = readInitExpr(Segment.Data.Offset, Ctx))
       return Err;
     uint32_t Size = readVaruint32(Ctx);
-    if (Size > Ctx.End - Ctx.Ptr)
+    if (Size > (size_t)(Ctx.End - Ctx.Ptr))
       return make_error<GenericBinaryError>("Invalid segment size",
                                             object_error::parse_failed);
     Segment.Data.Content = ArrayRef<uint8_t>(Ctx.Ptr, Size);

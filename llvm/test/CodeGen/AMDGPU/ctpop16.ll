@@ -308,7 +308,9 @@ define amdgpu_kernel void @v_ctpop_i16_add_vvar_inv(i16 addrspace(1)* noalias %o
 ; FUNC-LABEL: {{^}}ctpop_i16_in_br:
 ; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xd
 ; VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x34
-; GCN: s_bcnt1_i32_b32  [[SRESULT:s[0-9]+]], [[VAL]]
+
+; GCN: s_and_b32 [[CTPOP_ARG:s[0-9]+]], [[VAL]], 0xffff
+; GCN: s_bcnt1_i32_b32  [[SRESULT:s[0-9]+]], [[CTPOP_ARG]]
 ; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_short [[RESULT]],
 ; GCN: s_endpgm
