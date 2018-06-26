@@ -31,8 +31,6 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
-//#define DICTIONARY_IS_BROKEN_AGAIN 1
-
 size_t SwiftHashedContainerSyntheticFrontEndBufferHandler::GetCount() {
   return m_frontend->CalculateNumChildren();
 }
@@ -91,10 +89,6 @@ SwiftHashedContainerNativeBufferHandler::GetElementAtIndex(size_t idx) {
     if (!used)
       continue;
     if (++found_idx == idx) {
-#ifdef DICTIONARY_IS_BROKEN_AGAIN
-      printf("found idx = %zu at cell_idx = %" PRIu64 "\n", idx, cell_idx);
-#endif
-
       // you found it!!!
       DataBufferSP full_buffer_sp(
           new DataBufferHeap(m_key_stride_padded + m_value_stride, 0));
@@ -123,13 +117,6 @@ bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i,
   const size_t word = i / (8 * m_ptr_size);
   const size_t offset = i % (8 * m_ptr_size);
   const lldb::addr_t effective_ptr = m_bitmask_ptr + (word * m_ptr_size);
-#ifdef DICTIONARY_IS_BROKEN_AGAIN
-  printf("for idx = %" PRIu64
-         ", reading at word = %zu offset = %zu, effective_ptr = 0x%" PRIx64
-         "\n",
-         i, word, offset, effective_ptr);
-#endif
-
   uint64_t data = 0;
 
   auto cached = m_bitmask_cache.find(effective_ptr);
@@ -145,10 +132,6 @@ bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i,
 
   const uint64_t mask = static_cast<uint64_t>(1UL << offset);
   const uint64_t value = (data & mask);
-#ifdef DICTIONARY_IS_BROKEN_AGAIN
-  printf("data = 0x%" PRIx64 ", mask = 0x%" PRIx64 ", value = 0x%" PRIx64 "\n",
-         data, mask, value);
-#endif
   return (0 != value);
 }
 
