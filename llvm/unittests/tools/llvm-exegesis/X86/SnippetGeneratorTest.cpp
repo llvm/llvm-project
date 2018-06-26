@@ -217,17 +217,14 @@ TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
 
 class FakeBenchmarkRunner : public BenchmarkRunner {
 public:
-  using BenchmarkRunner::BenchmarkRunner;
+  FakeBenchmarkRunner(const LLVMState &State)
+      : BenchmarkRunner(State, InstructionBenchmark::Unknown) {}
 
   Instruction createInstruction(unsigned Opcode) {
     return Instruction(State.getInstrInfo().get(Opcode), RATC);
   }
 
 private:
-  InstructionBenchmark::ModeE getMode() const override {
-    return InstructionBenchmark::Unknown;
-  }
-
   llvm::Expected<SnippetPrototype>
   generatePrototype(unsigned Opcode) const override {
     return llvm::make_error<llvm::StringError>("not implemented",

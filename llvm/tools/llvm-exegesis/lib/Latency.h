@@ -22,7 +22,8 @@ namespace exegesis {
 
 class LatencyBenchmarkRunner : public BenchmarkRunner {
 public:
-  using BenchmarkRunner::BenchmarkRunner;
+  LatencyBenchmarkRunner(const LLVMState &State)
+      : BenchmarkRunner(State, InstructionBenchmark::Latency) {}
   ~LatencyBenchmarkRunner() override;
 
   llvm::Expected<SnippetPrototype>
@@ -38,8 +39,6 @@ private:
   llvm::Expected<SnippetPrototype> generateTwoInstructionPrototype(
       const Instruction &Instr,
       const AliasingConfigurations &SelfAliasing) const;
-
-  InstructionBenchmark::ModeE getMode() const override;
 
   std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

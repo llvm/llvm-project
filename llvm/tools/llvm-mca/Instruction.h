@@ -17,7 +17,11 @@
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTION_H
 
 #include "llvm/Support/MathExtras.h"
+
+#ifndef NDEBUG
 #include "llvm/Support/raw_ostream.h"
+#endif
+
 #include <memory>
 #include <set>
 #include <vector>

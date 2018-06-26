@@ -31,14 +31,8 @@ static bool hasMemoryOperand(const llvm::MCOperandInfo &OpInfo) {
 
 LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
-InstructionBenchmark::ModeE LatencyBenchmarkRunner::getMode() const {
-  return InstructionBenchmark::Latency;
-}
-
 llvm::Error LatencyBenchmarkRunner::isInfeasible(
     const llvm::MCInstrDesc &MCInstrDesc) const {
-  if (MCInstrDesc.isPseudo())
-    return llvm::make_error<BenchmarkFailure>("Infeasible : is pseudo");
   if (llvm::any_of(MCInstrDesc.operands(), hasUnknownOperand))
     return llvm::make_error<BenchmarkFailure>(
         "Infeasible : has unknown operands");

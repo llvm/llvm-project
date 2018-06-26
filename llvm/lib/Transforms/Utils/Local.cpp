@@ -1242,6 +1242,14 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgInfoIntrinsic *DII) {
   uint64_t ValueSize = DL.getTypeAllocSizeInBits(ValTy);
   if (auto FragmentSize = DII->getFragmentSizeInBits())
     return ValueSize >= *FragmentSize;
+  // We can't always calculate the size of the DI variable (e.g. if it is a
+  // VLA). Try to use the size of the alloca that the dbg intrinsic describes
+  // intead.
+  if (DII->isAddressOfVariable())
+    if (auto *AI = dyn_cast_or_null<AllocaInst>(DII->getVariableLocation()))
+      if (auto FragmentSize = AI->getAllocationSizeInBits(DL))
+        return ValueSize >= *FragmentSize;
+  // Could not determine size of variable. Conservatively return false.
   return false;
 }
 
@@ -1313,6 +1321,15 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
   if (LdStHasDebugValue(DIVar, DIExpr, LI))
     return;
 
+  if (!valueCoversEntireFragment(LI->getType(), DII)) {
+    // FIXME: If only referring to a part of the variable described by the
+    // dbg.declare, then we want to insert a dbg.value for the corresponding
+    // fragment.
+    LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: "
+                      << *DII << '\n');
+    return;
+  }
+
   // We are now tracking the loaded value instead of the address. In the
   // future if multi-location support is added to the IR, it might be
   // preferable to keep tracking both the loaded value and the original
@@ -1332,6 +1349,15 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgInfoIntrinsic *DII,
 
   if (PhiHasDebugValue(DIVar, DIExpr, APN))
     return;
+
+  if (!valueCoversEntireFragment(APN->getType(), DII)) {
+    // FIXME: If only referring to a part of the variable described by the
+    // dbg.declare, then we want to insert a dbg.value for the corresponding
+    // fragment.
+    LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: "
+                      << *DII << '\n');
+    return;
+  }
 
   BasicBlock *BB = APN->getParent();
   auto InsertionPt = BB->getFirstInsertionPt();

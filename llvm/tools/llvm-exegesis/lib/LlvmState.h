@@ -15,7 +15,6 @@
 #ifndef LLVM_TOOLS_LLVM_EXEGESIS_LLVMSTATE_H
 #define LLVM_TOOLS_LLVM_EXEGESIS_LLVMSTATE_H
 
-#include "Target.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -41,7 +40,7 @@ public:
   const llvm::TargetMachine &getTargetMachine() const { return *TargetMachine; }
   std::unique_ptr<llvm::LLVMTargetMachine> createTargetMachine() const;
 
-  const ExegesisTarget *getExegesisTarget() const { return TheExegesisTarget; }
+  const ExegesisTarget &getExegesisTarget() const { return *TheExegesisTarget; }
 
   bool canAssemble(const llvm::MCInst &mc_inst) const;
 
@@ -57,7 +56,7 @@ public:
   }
 
 private:
-  const ExegesisTarget *TheExegesisTarget = nullptr;
+  const ExegesisTarget *TheExegesisTarget;
   std::unique_ptr<const llvm::TargetMachine> TargetMachine;
 };
 

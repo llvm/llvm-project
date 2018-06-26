@@ -16,7 +16,6 @@ add_library(LLVMExegesis
   RegisterAliasing.cpp
   Target.cpp
   Uops.cpp
-  X86.cpp
   )
 
 llvm_update_compile_flags(LLVMExegesis)

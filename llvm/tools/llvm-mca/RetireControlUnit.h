@@ -17,8 +17,6 @@
 
 #include "Instruction.h"
 #include "llvm/MC/MCSchedule.h"
-
-#include <algorithm>
 #include <vector>
 
 namespace mca {
