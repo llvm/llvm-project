@@ -173,7 +173,7 @@ public:
       if (disasm_sp->m_alternate_disasm_up) {
         const AddressClass address_class = GetAddressClass();
 
-        if (address_class == eAddressClassCodeAlternateISA) {
+        if (address_class == AddressClass::eCodeAlternateISA) {
           is_alternate_isa = true;
           return disasm_sp->m_alternate_disasm_up.get();
         }
@@ -300,7 +300,7 @@ public:
       if (disasm_sp) {
         DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr;
 
-        if (address_class == eAddressClassCodeAlternateISA)
+        if (address_class == AddressClass::eCodeAlternateISA)
           mc_disasm_ptr = disasm_sp->m_alternate_disasm_up.get();
         else
           mc_disasm_ptr = disasm_sp->m_disasm_up.get();
@@ -1257,7 +1257,7 @@ size_t DisassemblerLLVMC::DecodeInstructions(const Address &base_addr,
   while (data_cursor < data_byte_size &&
          instructions_parsed < num_instructions) {
 
-    AddressClass address_class = eAddressClassCode;
+    AddressClass address_class = AddressClass::eCode;
 
     if (m_alternate_disasm_up)
       address_class = inst_addr.GetAddressClass();

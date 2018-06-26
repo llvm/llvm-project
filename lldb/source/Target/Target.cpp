@@ -2358,16 +2358,16 @@ lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
     switch (addr_class) {
-    case eAddressClassData:
-    case eAddressClassDebug:
+    case AddressClass::eData:
+    case AddressClass::eDebug:
       return LLDB_INVALID_ADDRESS;
 
-    case eAddressClassUnknown:
-    case eAddressClassInvalid:
-    case eAddressClassCode:
-    case eAddressClassCodeAlternateISA:
-    case eAddressClassRuntime:
-      if ((code_addr & 2ull) || (addr_class == eAddressClassCodeAlternateISA))
+    case AddressClass::eUnknown:
+    case AddressClass::eInvalid:
+    case AddressClass::eCode:
+    case AddressClass::eCodeAlternateISA:
+    case AddressClass::eRuntime:
+      if ((code_addr & 2ull) || (addr_class == AddressClass::eCodeAlternateISA))
         code_addr |= 1ull;
       break;
     }
@@ -2376,22 +2376,22 @@ lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     switch (addr_class) {
-    case eAddressClassData:
-    case eAddressClassDebug:
+    case AddressClass::eData:
+    case AddressClass::eDebug:
       return LLDB_INVALID_ADDRESS;
 
-    case eAddressClassUnknown:
-    case eAddressClassInvalid:
-    case eAddressClassCode:
-    case eAddressClassCodeAlternateISA:
-    case eAddressClassRuntime:
+    case AddressClass::eUnknown:
+    case AddressClass::eInvalid:
+    case AddressClass::eCode:
+    case AddressClass::eCodeAlternateISA:
+    case AddressClass::eRuntime:
       // Check if bit zero it no set?
       if ((code_addr & 1ull) == 0) {
         // Bit zero isn't set, check if the address is a multiple of 2?
         if (code_addr & 2ull) {
           // The address is a multiple of 2 so it must be thumb, set bit zero
           code_addr |= 1ull;
-        } else if (addr_class == eAddressClassCodeAlternateISA) {
+        } else if (addr_class == AddressClass::eCodeAlternateISA) {
           // We checked the address and the address claims to be the alternate
           // ISA which means thumb, so set bit zero.
           code_addr |= 1ull;
@@ -2418,15 +2418,15 @@ lldb::addr_t Target::GetOpcodeLoadAddress(lldb::addr_t load_addr,
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     switch (addr_class) {
-    case eAddressClassData:
-    case eAddressClassDebug:
+    case AddressClass::eData:
+    case AddressClass::eDebug:
       return LLDB_INVALID_ADDRESS;
 
-    case eAddressClassInvalid:
-    case eAddressClassUnknown:
-    case eAddressClassCode:
-    case eAddressClassCodeAlternateISA:
-    case eAddressClassRuntime:
+    case AddressClass::eInvalid:
+    case AddressClass::eUnknown:
+    case AddressClass::eCode:
+    case AddressClass::eCodeAlternateISA:
+    case AddressClass::eRuntime:
       opcode_addr &= ~(1ull);
       break;
     }

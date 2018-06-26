@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check handling of N32 ABI relocation records.
 
 # For now llvm-mc generates incorrect object files for N32 ABI.
@@ -7,8 +8,6 @@
 # RUN: ld.lld %S/Inputs/mips-n32-rels.o -o %t.exe
 # RUN: llvm-objdump -t -d -s %t.exe | FileCheck %s
 # RUN: llvm-readobj -h %t.exe | FileCheck -check-prefix=ELF %s
-
-# REQUIRES: mips
 
 #   .text
 #   .type   __start, @function

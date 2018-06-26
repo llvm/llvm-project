@@ -324,9 +324,9 @@ void StackFrameList::GetFramesUpTo(uint32_t end_idx) {
             // case resolve the address again to the correct section plus
             // offset form.
             addr_t load_addr = curr_frame_address.GetOpcodeLoadAddress(
-                target_sp.get(), eAddressClassCode);
+                target_sp.get(), AddressClass::eCode);
             curr_frame_address.SetOpcodeLoadAddress(
-                load_addr - 1, target_sp.get(), eAddressClassCode);
+                load_addr - 1, target_sp.get(), AddressClass::eCode);
           } else {
             curr_frame_address.Slide(-1);
           }

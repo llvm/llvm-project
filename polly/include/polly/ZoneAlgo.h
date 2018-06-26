@@ -154,6 +154,9 @@ protected:
   /// Cache for computePerPHI(const ScopArrayInfo *)
   llvm::SmallDenseMap<llvm::PHINode *, isl::union_map> PerPHIMaps;
 
+  /// A cache for getDefToTarget().
+  llvm::DenseMap<std::pair<ScopStmt *, ScopStmt *>, isl::map> DefToTargetCache;
+
   /// Prepare the object before computing the zones of @p S.
   ///
   /// @param PassName Name of the pass using this analysis.
@@ -191,6 +194,15 @@ private:
   isl::union_map getWrittenValue(MemoryAccess *MA, isl::map AccRel);
 
   void addArrayWriteAccess(MemoryAccess *MA);
+
+  /// For an llvm::Value defined in @p DefStmt, compute the RAW dependency for a
+  /// use in every instance of @p UseStmt.
+  ///
+  /// @param UseStmt Statement a scalar is used in.
+  /// @param DefStmt Statement a scalar is defined in.
+  ///
+  /// @return { DomainUse[] -> DomainDef[] }
+  isl::map computeUseToDefFlowDependency(ScopStmt *UseStmt, ScopStmt *DefStmt);
 
 protected:
   isl::union_set makeEmptyUnionSet() const;
@@ -235,6 +247,28 @@ protected:
   ///
   /// The domain of the result is as narrow as possible.
   isl::map getAccessRelationFor(MemoryAccess *MA) const;
+
+  /// Get a domain translation map from a (scalar) definition to the statement
+  /// where the definition is being moved to.
+  ///
+  /// @p TargetStmt can also be seen at an llvm::Use of an llvm::Value in
+  /// @p DefStmt. In addition, we allow transitive uses:
+  ///
+  /// DefStmt -> MiddleStmt -> TargetStmt
+  ///
+  /// where an operand tree of instructions in DefStmt and MiddleStmt are to be
+  /// moved to TargetStmt. To be generally correct, we also need to know all the
+  /// intermediate statements. However, we make use of the fact that
+  /// ForwardOpTree currently does not support a move from a loop body across
+  /// its header such that only the first definition and the target statement
+  /// are relevant.
+  ///
+  /// @param DefStmt    Statement from where a definition might be moved from.
+  /// @param TargetStmt Statement where the definition is potentially being
+  ///                   moved to (should contain a use of that definition).
+  ///
+  /// @return { DomainDef[] -> DomainTarget[] }
+  isl::map getDefToTarget(ScopStmt *DefStmt, ScopStmt *TargetStmt);
 
   /// Get the reaching definition of a scalar defined in @p Stmt.
   ///

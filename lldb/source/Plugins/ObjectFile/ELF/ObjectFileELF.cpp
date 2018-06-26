@@ -733,13 +733,13 @@ size_t ObjectFileELF::GetModuleSpecifications(
             if (gnu_debuglink_crc) {
               // Use 4 bytes of crc from the .gnu_debuglink section.
               uint32_t uuidt[4] = {gnu_debuglink_crc, 0, 0, 0};
-              uuid.SetBytes(uuidt, sizeof(uuidt));
+              uuid = UUID::fromData(uuidt, sizeof(uuidt));
             } else if (core_notes_crc) {
               // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make
               // it look different form .gnu_debuglink crc followed by 4 bytes
               // of note segments crc.
               uint32_t uuidt[4] = {g_core_uuid_magic, core_notes_crc, 0, 0};
-              uuid.SetBytes(uuidt, sizeof(uuidt));
+              uuid = UUID::fromData(uuidt, sizeof(uuidt));
             }
           }
 
@@ -865,7 +865,7 @@ uint32_t ObjectFileELF::GetAddressByteSize() const {
 AddressClass ObjectFileELF::GetAddressClass(addr_t file_addr) {
   Symtab *symtab = GetSymtab();
   if (!symtab)
-    return eAddressClassUnknown;
+    return AddressClass::eUnknown;
 
   // The address class is determined based on the symtab. Ask it from the
   // object file what contains the symtab information.
@@ -874,14 +874,14 @@ AddressClass ObjectFileELF::GetAddressClass(addr_t file_addr) {
     return symtab_objfile->GetAddressClass(file_addr);
 
   auto res = ObjectFile::GetAddressClass(file_addr);
-  if (res != eAddressClassCode)
+  if (res != AddressClass::eCode)
     return res;
 
   auto ub = m_address_class_map.upper_bound(file_addr);
   if (ub == m_address_class_map.begin()) {
     // No entry in the address class map before the address. Return default
     // address class for an address in a code section.
-    return eAddressClassCode;
+    return AddressClass::eCode;
   }
 
   // Move iterator to the address class entry preceding address
@@ -926,7 +926,7 @@ bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
       // different form .gnu_debuglink crc - followed by 4 bytes of note
       // segments crc.
       uint32_t uuidt[4] = {g_core_uuid_magic, core_notes_crc, 0, 0};
-      m_uuid.SetBytes(uuidt, sizeof(uuidt));
+      m_uuid = UUID::fromData(uuidt, sizeof(uuidt));
     }
   } else {
     if (!m_gnu_debuglink_crc)
@@ -935,7 +935,7 @@ bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
     if (m_gnu_debuglink_crc) {
       // Use 4 bytes of crc from the .gnu_debuglink section.
       uint32_t uuidt[4] = {m_gnu_debuglink_crc, 0, 0, 0};
-      m_uuid.SetBytes(uuidt, sizeof(uuidt));
+      m_uuid = UUID::fromData(uuidt, sizeof(uuidt));
     }
   }
 
@@ -1284,7 +1284,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             }
 
             // Save the build id as the UUID for the module.
-            uuid.SetBytes(uuidbuf, note.n_descsz);
+            uuid = UUID::fromData(uuidbuf, note.n_descsz);
           }
         }
         break;
@@ -2167,18 +2167,18 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             switch (mapping_symbol) {
             case 'a':
               // $a[.<any>]* - marks an ARM instruction sequence
-              m_address_class_map[symbol.st_value] = eAddressClassCode;
+              m_address_class_map[symbol.st_value] = AddressClass::eCode;
               break;
             case 'b':
             case 't':
               // $b[.<any>]* - marks a THUMB BL instruction sequence
               // $t[.<any>]* - marks a THUMB instruction sequence
               m_address_class_map[symbol.st_value] =
-                  eAddressClassCodeAlternateISA;
+                  AddressClass::eCodeAlternateISA;
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
-              m_address_class_map[symbol.st_value] = eAddressClassData;
+              m_address_class_map[symbol.st_value] = AddressClass::eData;
               break;
             }
           }
@@ -2192,11 +2192,11 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             switch (mapping_symbol) {
             case 'x':
               // $x[.<any>]* - marks an A64 instruction sequence
-              m_address_class_map[symbol.st_value] = eAddressClassCode;
+              m_address_class_map[symbol.st_value] = AddressClass::eCode;
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
-              m_address_class_map[symbol.st_value] = eAddressClassData;
+              m_address_class_map[symbol.st_value] = AddressClass::eData;
               break;
             }
           }
@@ -2215,10 +2215,10 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             // symbol_value that we store in the symtab.
             symbol_value_offset = -1;
             m_address_class_map[symbol.st_value ^ 1] =
-                eAddressClassCodeAlternateISA;
+                AddressClass::eCodeAlternateISA;
           } else {
             // This address is ARM
-            m_address_class_map[symbol.st_value] = eAddressClassCode;
+            m_address_class_map[symbol.st_value] = AddressClass::eCode;
           }
         }
       }
@@ -2243,17 +2243,17 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
           llvm_arch == llvm::Triple::mips64 ||
           llvm_arch == llvm::Triple::mips64el) {
         if (IS_MICROMIPS(symbol.st_other))
-          m_address_class_map[symbol.st_value] = eAddressClassCodeAlternateISA;
+          m_address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
         else if ((symbol.st_value & 1) && (symbol_type == eSymbolTypeCode)) {
           symbol.st_value = symbol.st_value & (~1ull);
-          m_address_class_map[symbol.st_value] = eAddressClassCodeAlternateISA;
+          m_address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
         } else {
           if (symbol_type == eSymbolTypeCode)
-            m_address_class_map[symbol.st_value] = eAddressClassCode;
+            m_address_class_map[symbol.st_value] = AddressClass::eCode;
           else if (symbol_type == eSymbolTypeData)
-            m_address_class_map[symbol.st_value] = eAddressClassData;
+            m_address_class_map[symbol.st_value] = AddressClass::eData;
           else
-            m_address_class_map[symbol.st_value] = eAddressClassUnknown;
+            m_address_class_map[symbol.st_value] = AddressClass::eUnknown;
         }
       }
     }

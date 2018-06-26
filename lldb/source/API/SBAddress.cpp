@@ -244,5 +244,5 @@ SBLineEntry SBAddress::GetLineEntry() {
 AddressClass SBAddress::GetAddressClass() {
   if (m_opaque_ap->IsValid())
     return m_opaque_ap->GetAddressClass();
-  return eAddressClassInvalid;
+  return AddressClass::eInvalid;
 }

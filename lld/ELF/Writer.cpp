@@ -751,8 +751,7 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   // considerations:
   // * Read-only sections come first such that they go in the
   //   PT_LOAD covering the program headers at the start of the file.
-  // * Read-only, executable sections come next, unless the
-  //   -no-rosegment option is used.
+  // * Read-only, executable sections come next.
   // * Writable, executable sections follow such that .plt on
   //   architectures where it needs to be writable will be placed
   //   between .text and .data.
@@ -764,7 +763,7 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   if (IsExec) {
     if (IsWrite)
       Rank |= RF_EXEC_WRITE;
-    else if (!Config->SingleRoRx)
+    else
       Rank |= RF_EXEC;
   } else {
     if (IsWrite)
