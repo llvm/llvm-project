@@ -113,8 +113,7 @@ NonLocalizedStringChecker::NonLocalizedStringChecker() {
 }
 
 namespace {
-class NonLocalizedStringBRVisitor final
-    : public BugReporterVisitorImpl<NonLocalizedStringBRVisitor> {
+class NonLocalizedStringBRVisitor final : public BugReporterVisitor {
 
   const MemRegion *NonLocalizedString;
   bool Satisfied;

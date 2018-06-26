@@ -823,7 +823,7 @@ enum FrameComparison {
 // relative data and the object file might be able to tell us that an address
 // in code is data.
 //----------------------------------------------------------------------
-enum class AddressClass {
+enum AddressClass {
   eInvalid,
   eUnknown,
   eCode,

@@ -431,8 +431,7 @@ private:
   /// The bug visitor which allows us to print extra diagnostics along the
   /// BugReport path. For example, showing the allocation site of the leaked
   /// region.
-  class MallocBugVisitor final
-      : public BugReporterVisitorImpl<MallocBugVisitor> {
+  class MallocBugVisitor final : public BugReporterVisitor {
   protected:
     enum NotificationMode {
       Normal,
@@ -511,7 +510,7 @@ private:
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
-    std::unique_ptr<PathDiagnosticPiece>
+    std::shared_ptr<PathDiagnosticPiece>
     getEndPath(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
                BugReport &BR) override {
       if (!IsLeak)
@@ -521,7 +520,7 @@ private:
         PathDiagnosticLocation::createEndOfPath(EndPathNode,
                                                 BRC.getSourceManager());
       // Do not add the statement itself as a range in case of leak.
-      return llvm::make_unique<PathDiagnosticEventPiece>(L, BR.getDescription(),
+      return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                          false);
     }
 

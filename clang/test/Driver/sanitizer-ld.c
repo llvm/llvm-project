@@ -153,7 +153,8 @@
 //
 // CHECK-ASAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan-arm-android.a"
-// CHECK-ASAN-ANDROID-STATICLIBASAN: "-lpthread"
+// CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
+// CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi -fuse-ld=ld -fsanitize=undefined \
@@ -175,7 +176,8 @@
 //
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-UBSAN-ANDROID-STATICLIBASAN: libclang_rt.ubsan_standalone-arm-android.a"
-// CHECK-UBSAN-ANDROID-STATICLIBASAN: "-lpthread"
+// CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
+// CHECK-UBSAN-ANDROID-STATICLIBASAN-NOT: "-lrt"
 
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
@@ -735,7 +737,8 @@
 // CHECK-SCUDO-ANDROID-STATIC: "-pie"
 // CHECK-SCUDO-ANDROID-STATIC: "--whole-archive" "{{.*}}libclang_rt.scudo-arm-android.a" "--no-whole-archive"
 // CHECK-SCUDO-ANDROID-STATIC-NOT: "-lstdc++"
-// CHECK-SCUDO-ANDROID-STATIC: "-lpthread"
+// CHECK-SCUDO-ANDROID-STATIC-NOT: "-lpthread"
+// CHECK-SCUDO-ANDROID-STATIC-NOT: "-lrt"
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux -fuse-ld=ld -fsanitize=hwaddress \

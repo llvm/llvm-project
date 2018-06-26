@@ -39,7 +39,7 @@ class DeleteWithNonVirtualDtorChecker
     : public Checker<check::PreStmt<CXXDeleteExpr>> {
   mutable std::unique_ptr<BugType> BT;
 
-  class DeleteBugVisitor : public BugReporterVisitorImpl<DeleteBugVisitor> {
+  class DeleteBugVisitor : public BugReporterVisitor {
   public:
     DeleteBugVisitor() : Satisfied(false) {}
     void Profile(llvm::FoldingSetNodeID &ID) const override {

@@ -23,6 +23,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -64,6 +65,11 @@ class SValBuilder;
 //===----------------------------------------------------------------------===//
 // Interface for individual bug reports.
 //===----------------------------------------------------------------------===//
+
+/// A mapping from diagnostic consumers to the diagnostics they should
+/// consume.
+using DiagnosticForConsumerMapTy =
+    llvm::DenseMap<PathDiagnosticConsumer *, std::unique_ptr<PathDiagnostic>>;
 
 /// This class provides an interface through which checkers can create
 /// individual bug reports.
@@ -130,10 +136,6 @@ protected:
   /// Used for ensuring the visitors are only added once.
   llvm::FoldingSet<BugReporterVisitor> CallbacksSet;
 
-  /// Used for clients to tell if the report's configuration has changed
-  /// since the last time they checked.
-  unsigned ConfigurationChangeToken = 0;
-  
   /// When set, this flag disables all callstack pruning from a diagnostic
   /// path.  This is useful for some reports that want maximum fidelty
   /// when reporting an issue.
@@ -228,10 +230,6 @@ public:
   bool isInteresting(const MemRegion *R);
   bool isInteresting(SVal V);
   bool isInteresting(const LocationContext *LC);
-
-  unsigned getConfigurationChangeToken() const {
-    return ConfigurationChangeToken;
-  }
 
   /// Returns whether or not this report should be considered valid.
   ///
@@ -345,6 +343,9 @@ public:
   /// registerVarDeclsLastStore().
   void addVisitor(std::unique_ptr<BugReporterVisitor> visitor);
 
+  /// Remove all visitors attached to this bug report.
+  void clearVisitors();
+
   /// Iterators through the custom diagnostic visitors.
   visitor_iterator visitor_begin() { return Callbacks.begin(); }
   visitor_iterator visitor_end() { return Callbacks.end(); }
@@ -406,6 +407,8 @@ public:
 /// BugReporter is a utility class for generating PathDiagnostics for analysis.
 /// It collects the BugReports and BugTypes and knows how to generate
 /// and flush the corresponding diagnostics.
+///
+/// The base class is used for generating path-insensitive
 class BugReporter {
 public:
   enum Kind { BaseBRKind, GRBugReporterKind };
@@ -422,11 +425,11 @@ private:
   /// Generate and flush the diagnostics for the given bug report.
   void FlushReport(BugReportEquivClass& EQ);
 
-  /// Generate and flush the diagnostics for the given bug report
-  /// and PathDiagnosticConsumer.
-  void FlushReport(BugReport *exampleReport,
-                   PathDiagnosticConsumer &PD,
-                   ArrayRef<BugReport*> BugReports);
+  /// Generate the diagnostics for the given bug report.
+  std::unique_ptr<DiagnosticForConsumerMapTy>
+  generateDiagnosticForConsumerMap(BugReport *exampleReport,
+                                   ArrayRef<PathDiagnosticConsumer *> consumers,
+                                   ArrayRef<BugReport *> bugReports);
 
   /// The set of bug reports tracked by the BugReporter.
   llvm::FoldingSet<BugReportEquivClass> EQClasses;
@@ -472,10 +475,10 @@ public:
 
   AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
 
-  virtual bool generatePathDiagnostic(PathDiagnostic& pathDiagnostic,
-                                      PathDiagnosticConsumer &PC,
-                                      ArrayRef<BugReport *> &bugReports) {
-    return true;
+  virtual std::unique_ptr<DiagnosticForConsumerMapTy>
+  generatePathDiagnostics(ArrayRef<PathDiagnosticConsumer *> consumers,
+                          ArrayRef<BugReport *> &bugReports) {
+    return {};
   }
 
   void Register(BugType *BT);
@@ -506,7 +509,7 @@ private:
                              StringRef category);
 };
 
-// FIXME: Get rid of GRBugReporter.  It's the wrong abstraction.
+/// GRBugReporter is used for generating path-sensitive reports.
 class GRBugReporter : public BugReporter {
   ExprEngine& Eng;
 
@@ -528,16 +531,14 @@ public:
   ///  engine.
   ProgramStateManager &getStateManager();
 
-  /// Generates a path corresponding to one of the given bug reports.
+  /// \p bugReports A set of bug reports within a *single* equivalence class
   ///
-  /// Which report is used for path generation is not specified. The
-  /// bug reporter will try to pick the shortest path, but this is not
-  /// guaranteed.
-  ///
-  /// \return True if the report was valid and a path was generated,
-  ///         false if the reports should be considered invalid.
-  bool generatePathDiagnostic(PathDiagnostic &PD, PathDiagnosticConsumer &PC,
-                              ArrayRef<BugReport*> &bugReports) override;
+  /// \return A mapping from consumers to the corresponding diagnostics.
+  /// Iterates through the bug reports within a single equivalence class,
+  /// stops at a first non-invalidated report.
+  std::unique_ptr<DiagnosticForConsumerMapTy>
+  generatePathDiagnostics(ArrayRef<PathDiagnosticConsumer *> consumers,
+                          ArrayRef<BugReport *> &bugReports) override;
 
   /// classof - Used by isa<>, cast<>, and dyn_cast<>.
   static bool classof(const BugReporter* R) {
@@ -545,13 +546,27 @@ public:
   }
 };
 
+
+class NodeMapClosure : public BugReport::NodeResolver {
+  InterExplodedGraphMap &M;
+
+public:
+  NodeMapClosure(InterExplodedGraphMap &m) : M(m) {}
+
+  const ExplodedNode *getOriginalNode(const ExplodedNode *N) override {
+    return M.lookup(N);
+  }
+};
+
 class BugReporterContext {
   GRBugReporter &BR;
+  NodeMapClosure NMC;
 
   virtual void anchor();
 
 public:
-  BugReporterContext(GRBugReporter& br) : BR(br) {}
+  BugReporterContext(GRBugReporter &br, InterExplodedGraphMap &Backmap)
+      : BR(br), NMC(Backmap) {}
 
   virtual ~BugReporterContext() = default;
 
@@ -575,7 +590,7 @@ public:
     return BR.getSourceManager();
   }
 
-  virtual BugReport::NodeResolver& getNodeResolver() = 0;
+  NodeMapClosure& getNodeResolver() { return NMC; }
 };
 
 } // namespace ento

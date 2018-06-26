@@ -393,7 +393,7 @@ public:
   /// Whether this pointer is currently stored as an offset.
   bool isOffset() const { return Ptr & 0x01; }
 
-  /// Retrieve the pointer to the AST node that this lazy pointer
+  /// Retrieve the pointer to the AST node that this lazy pointer points to.
   ///
   /// \param Source the external AST source.
   ///

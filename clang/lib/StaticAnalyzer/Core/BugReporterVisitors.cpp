@@ -177,7 +177,7 @@ const Stmt *bugreporter::GetRetValExpr(const ExplodedNode *N) {
 // Definitions for bug reporter visitors.
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<PathDiagnosticPiece>
+std::shared_ptr<PathDiagnosticPiece>
 BugReporterVisitor::getEndPath(BugReporterContext &BRC,
                                const ExplodedNode *EndPathNode, BugReport &BR) {
   return nullptr;
@@ -188,7 +188,7 @@ BugReporterVisitor::finalizeVisitor(BugReporterContext &BRC,
                                     const ExplodedNode *EndPathNode,
                                     BugReport &BR) {}
 
-std::unique_ptr<PathDiagnosticPiece> BugReporterVisitor::getDefaultEndPath(
+std::shared_ptr<PathDiagnosticPiece> BugReporterVisitor::getDefaultEndPath(
     BugReporterContext &BRC, const ExplodedNode *EndPathNode, BugReport &BR) {
   PathDiagnosticLocation L =
     PathDiagnosticLocation::createEndOfPath(EndPathNode,BRC.getSourceManager());
@@ -197,12 +197,12 @@ std::unique_ptr<PathDiagnosticPiece> BugReporterVisitor::getDefaultEndPath(
 
   // Only add the statement itself as a range if we didn't specify any
   // special ranges for this report.
-  auto P = llvm::make_unique<PathDiagnosticEventPiece>(
+  auto P = std::make_shared<PathDiagnosticEventPiece>(
       L, BR.getDescription(), Ranges.begin() == Ranges.end());
   for (SourceRange Range : Ranges)
     P->addRange(Range);
 
-  return std::move(P);
+  return P;
 }
 
 /// \return name of the macro inside the location \p Loc.
@@ -234,8 +234,7 @@ namespace {
 /// for which  the region of interest \p RegionOfInterest was passed into,
 /// but not written inside, and it has caused an undefined read or a null
 /// pointer dereference outside.
-class NoStoreFuncVisitor final
-    : public BugReporterVisitorImpl<NoStoreFuncVisitor> {
+class NoStoreFuncVisitor final : public BugReporterVisitor {
   const SubRegion *RegionOfInterest;
   static constexpr const char *DiagnosticsMsg =
       "Returning without writing to '";
@@ -526,8 +525,7 @@ private:
   }
 };
 
-class MacroNullReturnSuppressionVisitor final
-    : public BugReporterVisitorImpl<MacroNullReturnSuppressionVisitor> {
+class MacroNullReturnSuppressionVisitor final : public BugReporterVisitor {
   const SubRegion *RegionOfInterest;
 
 public:
@@ -609,7 +607,7 @@ private:
 ///
 /// This visitor is intended to be used when another visitor discovers that an
 /// interesting value comes from an inlined function call.
-class ReturnVisitor : public BugReporterVisitorImpl<ReturnVisitor> {
+class ReturnVisitor : public BugReporterVisitor {
   const StackFrameContext *StackFrame;
   enum {
     Initial,

@@ -87,3 +87,16 @@ __attribute__((overloadable)) void func_overloadable(float);
 void overloadable_callexpr(int arg) {
 	func_overloadable(ar); //expected-error{{use of undeclared identifier}}
 }
+
+// rdar://problem/38642201
+struct rdar38642201 {
+  int fieldName;
+};
+
+void rdar38642201_callee(int x, int y);
+void rdar38642201_caller() {
+  struct rdar38642201 structVar;
+  rdar38642201_callee(
+      structVar1.fieldName1.member1, //expected-error{{use of undeclared identifier 'structVar1'}}
+      structVar2.fieldName2.member2); //expected-error{{use of undeclared identifier 'structVar2'}}
+}

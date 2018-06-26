@@ -62,9 +62,7 @@ private:
 REGISTER_SET_WITH_PROGRAMSTATE(CalledSuperDealloc, SymbolRef)
 
 namespace {
-class SuperDeallocBRVisitor final
-    : public BugReporterVisitorImpl<SuperDeallocBRVisitor> {
-
+class SuperDeallocBRVisitor final : public BugReporterVisitor {
   SymbolRef ReceiverSymbol;
   bool Satisfied;
 

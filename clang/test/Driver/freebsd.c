@@ -148,3 +148,17 @@
 // RUN: %clang -target mips-unknown-freebsd %s -### -G0 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS-G %s
 // CHECK-MIPS-G: ld{{.*}}" "-G0"
+
+// Check CPU type for MIPS
+// RUN: %clang -target mips-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS-CPU %s
+// RUN: %clang -target mipsel-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS-CPU %s
+// CHECK-MIPS-CPU: "-target-cpu" "mips2"
+
+// Check CPU type for MIPS64
+// RUN: %clang -target mips64-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS64-CPU %s
+// RUN: %clang -target mips64el-unknown-freebsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-MIPS64-CPU %s
+// CHECK-MIPS64-CPU: "-target-cpu" "mips3"

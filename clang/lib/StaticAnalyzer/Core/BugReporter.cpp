@@ -343,21 +343,9 @@ static void removePiecesWithInvalidLocations(PathPieces &Pieces) {
 
 namespace {
 
-class NodeMapClosure : public BugReport::NodeResolver {
-  InterExplodedGraphMap &M;
-
-public:
-  NodeMapClosure(InterExplodedGraphMap &m) : M(m) {}
-
-  const ExplodedNode *getOriginalNode(const ExplodedNode *N) override {
-    return M.lookup(N);
-  }
-};
-
 class PathDiagnosticBuilder : public BugReporterContext {
   BugReport *R;
   PathDiagnosticConsumer *PDC;
-  NodeMapClosure NMC;
 
 public:
   const LocationContext *LC;
@@ -365,7 +353,7 @@ public:
   PathDiagnosticBuilder(GRBugReporter &br,
                         BugReport *r, InterExplodedGraphMap &Backmap,
                         PathDiagnosticConsumer *pdc)
-      : BugReporterContext(br), R(r), PDC(pdc), NMC(Backmap),
+      : BugReporterContext(br, Backmap), R(r), PDC(pdc),
         LC(r->getErrorNode()->getLocationContext()) {}
 
   PathDiagnosticLocation ExecutionContinues(const ExplodedNode *N);
@@ -382,8 +370,6 @@ public:
   const Stmt *getParent(const Stmt *S) {
     return getParentMap().getParent(S);
   }
-
-  NodeMapClosure& getNodeResolver() override { return NMC; }
 
   PathDiagnosticLocation getEnclosingStmtLocation(const Stmt *S);
 
@@ -1021,6 +1007,9 @@ static const char StrLoopRangeEmpty[] =
 static const char StrLoopCollectionEmpty[] =
   "Loop body skipped when collection is empty";
 
+static std::unique_ptr<FilesToLineNumsMap>
+findExecutedLines(SourceManager &SM, const ExplodedNode *N);
+
 /// Generate diagnostics for the node \p N,
 /// and write it into \p PD.
 /// \p AddPathEdges Whether diagnostic consumer can generate path arrows
@@ -1259,83 +1248,15 @@ static void generatePathDiagnosticsForNode(const ExplodedNode *N,
   }
 }
 
-/// There are two path diagnostics generation modes: with adding edges (used
-/// for plists) and without  (used for HTML and text).
-/// When edges are added (\p ActiveScheme is Extensive),
-/// the path is modified to insert artificially generated
-/// edges.
-/// Otherwise, more detailed diagnostics is emitted for block edges, explaining
-/// the transitions in words.
-static bool generatePathDiagnostics(
-    PathDiagnostic &PD, PathDiagnosticBuilder &PDB, const ExplodedNode *N,
-    LocationContextMap &LCM,
-    ArrayRef<std::unique_ptr<BugReporterVisitor>> visitors,
-    BugReport *R,
-    PathDiagnosticConsumer::PathGenerationScheme ActiveScheme) {
-  const ExplodedNode *LastNode = N;
-  BugReport *report = PDB.getBugReport();
-  StackDiagVector CallStack;
-  InterestingExprs IE;
-  bool AddPathEdges = (ActiveScheme == PathDiagnosticConsumer::Extensive);
-  bool GenerateDiagnostics = (ActiveScheme != PathDiagnosticConsumer::None);
-
-  PathDiagnosticLocation PrevLoc = GenerateDiagnostics ?
-    PD.getLocation() : PathDiagnosticLocation();
-
-  const ExplodedNode *NextNode = N->getFirstPred();
-  while (NextNode) {
-    N = NextNode;
-    NextNode = N->getFirstPred();
-
-    if (GenerateDiagnostics)
-      generatePathDiagnosticsForNode(
-          N, PD, PrevLoc, PDB, LCM, CallStack, IE, AddPathEdges);
-
-    if (!NextNode) {
-      for (auto &V : visitors) {
-        V->finalizeVisitor(PDB, LastNode, *R);
-      }
-      continue;
-    }
-
-    // Add pieces from custom visitors.
-    llvm::FoldingSet<PathDiagnosticPiece> DeduplicationSet;
-    for (auto &V : visitors) {
-      if (auto p = V->VisitNode(N, NextNode, PDB, *report)) {
-
-        if (!GenerateDiagnostics)
-          continue;
-
-        if (DeduplicationSet.GetOrInsertNode(p.get()) != p.get())
-          continue;
-
-        if (AddPathEdges)
-          addEdgeToPath(PD.getActivePath(), PrevLoc, p->getLocation(), PDB.LC);
-        updateStackPiecesWithMessage(*p, CallStack);
-        PD.getActivePath().push_front(std::move(p));
-      }
-    }
-  }
-
-  if (AddPathEdges) {
-    // Add an edge to the start of the function.
-    // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrameContext *CalleeLC = PDB.LC->getCurrentStackFrame();
-    const Decl *D = CalleeLC->getDecl();
-    addEdgeToPath(PD.getActivePath(), PrevLoc,
-                  PathDiagnosticLocation::createBegin(D, PDB.getSourceManager()),
-                  CalleeLC);
-  }
-
-  if (!report->isValid())
-    return false;
-
-  // After constructing the full PathDiagnostic, do a pass over it to compact
-  // PathDiagnosticPieces that occur within a macro.
-  if (!AddPathEdges && GenerateDiagnostics)
-    CompactPathDiagnostic(PD.getMutablePieces(), PDB.getSourceManager());
-
-  return true;
+static std::unique_ptr<PathDiagnostic>
+generateEmptyDiagnosticForReport(BugReport *R, SourceManager &SM) {
+  BugType &BT = R->getBugType();
+  return llvm::make_unique<PathDiagnostic>(
+      R->getBugType().getCheckName(), R->getDeclWithIssue(),
+      R->getBugType().getName(), R->getDescription(),
+      R->getShortDescription(/*Fallback=*/false), BT.getCategory(),
+      R->getUniqueingLocation(), R->getUniqueingDecl(),
+      findExecutedLines(SM, R->getErrorNode()));
 }
 
 static const Stmt *getStmtParent(const Stmt *S, const ParentMap &PM) {
@@ -1957,6 +1878,129 @@ static void dropFunctionEntryEdge(PathPieces &Path, LocationContextMap &LCM,
   Path.pop_front();
 }
 
+using VisitorsDiagnosticsTy = llvm::DenseMap<const ExplodedNode *,
+                   std::vector<std::shared_ptr<PathDiagnosticPiece>>>;
+
+/// This function is responsible for generating diagnostic pieces that are
+/// *not* provided by bug report visitors.
+/// These diagnostics may differ depending on the consumer's settings,
+/// and are therefore constructed separately for each consumer.
+///
+/// There are two path diagnostics generation modes: with adding edges (used
+/// for plists) and without  (used for HTML and text).
+/// When edges are added (\p ActiveScheme is Extensive),
+/// the path is modified to insert artificially generated
+/// edges.
+/// Otherwise, more detailed diagnostics is emitted for block edges, explaining
+/// the transitions in words.
+static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
+    PathDiagnosticConsumer::PathGenerationScheme ActiveScheme,
+    PathDiagnosticBuilder &PDB,
+    const ExplodedNode *ErrorNode,
+    const VisitorsDiagnosticsTy &VisitorsDiagnostics) {
+
+  bool GenerateDiagnostics = (ActiveScheme != PathDiagnosticConsumer::None);
+  bool AddPathEdges = (ActiveScheme == PathDiagnosticConsumer::Extensive);
+  SourceManager &SM = PDB.getSourceManager();
+  BugReport *R = PDB.getBugReport();
+  AnalyzerOptions &Opts = PDB.getBugReporter().getAnalyzerOptions();
+  StackDiagVector CallStack;
+  InterestingExprs IE;
+  LocationContextMap LCM;
+  std::unique_ptr<PathDiagnostic> PD = generateEmptyDiagnosticForReport(R, SM);
+
+  if (GenerateDiagnostics) {
+    auto EndNotes = VisitorsDiagnostics.find(ErrorNode);
+    std::shared_ptr<PathDiagnosticPiece> LastPiece;
+    if (EndNotes != VisitorsDiagnostics.end()) {
+      assert(!EndNotes->second.empty());
+      LastPiece = EndNotes->second[0];
+    } else {
+      LastPiece = BugReporterVisitor::getDefaultEndPath(PDB, ErrorNode, *R);
+    }
+    PD->setEndOfPath(LastPiece);
+  }
+
+  PathDiagnosticLocation PrevLoc = PD->getLocation();
+  const ExplodedNode *NextNode = ErrorNode->getFirstPred();
+  while (NextNode) {
+    if (GenerateDiagnostics)
+      generatePathDiagnosticsForNode(
+          NextNode, *PD, PrevLoc, PDB, LCM, CallStack, IE, AddPathEdges);
+
+    auto VisitorNotes = VisitorsDiagnostics.find(NextNode);
+    NextNode = NextNode->getFirstPred();
+    if (!GenerateDiagnostics || VisitorNotes == VisitorsDiagnostics.end())
+      continue;
+
+    // This is a workaround due to inability to put shared PathDiagnosticPiece
+    // into a FoldingSet.
+    std::set<llvm::FoldingSetNodeID> DeduplicationSet;
+
+    // Add pieces from custom visitors.
+    for (const auto &Note : VisitorNotes->second) {
+      llvm::FoldingSetNodeID ID;
+      Note->Profile(ID);
+      auto P = DeduplicationSet.insert(ID);
+      if (!P.second)
+        continue;
+
+      if (AddPathEdges)
+        addEdgeToPath(PD->getActivePath(), PrevLoc, Note->getLocation(),
+                      PDB.LC);
+      updateStackPiecesWithMessage(*Note, CallStack);
+      PD->getActivePath().push_front(Note);
+    }
+  }
+
+  if (AddPathEdges) {
+    // Add an edge to the start of the function.
+    // We'll prune it out later, but it helps make diagnostics more uniform.
+    const StackFrameContext *CalleeLC = PDB.LC->getCurrentStackFrame();
+    const Decl *D = CalleeLC->getDecl();
+    addEdgeToPath(PD->getActivePath(), PrevLoc,
+                  PathDiagnosticLocation::createBegin(D, SM), CalleeLC);
+  }
+
+  if (!AddPathEdges && GenerateDiagnostics)
+    CompactPathDiagnostic(PD->getMutablePieces(), SM);
+
+  // Finally, prune the diagnostic path of uninteresting stuff.
+  if (!PD->path.empty()) {
+    if (R->shouldPrunePath() && Opts.shouldPrunePaths()) {
+      bool stillHasNotes =
+          removeUnneededCalls(PD->getMutablePieces(), R, LCM);
+      assert(stillHasNotes);
+      (void)stillHasNotes;
+    }
+
+    // Redirect all call pieces to have valid locations.
+    adjustCallLocations(PD->getMutablePieces());
+    removePiecesWithInvalidLocations(PD->getMutablePieces());
+
+    if (AddPathEdges) {
+
+      // Reduce the number of edges from a very conservative set
+      // to an aesthetically pleasing subset that conveys the
+      // necessary information.
+      OptimizedCallsSet OCS;
+      while (optimizeEdges(PD->getMutablePieces(), SM, OCS, LCM)) {}
+
+      // Drop the very first function-entry edge. It's not really necessary
+      // for top-level functions.
+      dropFunctionEntryEdge(PD->getMutablePieces(), LCM, SM);
+    }
+
+    // Remove messages that are basically the same, and edges that may not
+    // make sense.
+    // We have to do this after edge optimization in the Extensive mode.
+    removeRedundantMsgs(PD->getMutablePieces());
+    removeEdgesToDefaultInitializers(PD->getMutablePieces());
+  }
+  return PD;
+}
+
+
 //===----------------------------------------------------------------------===//
 // Methods for BugType and subclasses.
 //===----------------------------------------------------------------------===//
@@ -1979,14 +2023,17 @@ void BugReport::addVisitor(std::unique_ptr<BugReporterVisitor> visitor) {
 
   llvm::FoldingSetNodeID ID;
   visitor->Profile(ID);
-  void *InsertPos;
 
-  if (CallbacksSet.FindNodeOrInsertPos(ID, InsertPos))
+  void *InsertPos = nullptr;
+  if (CallbacksSet.FindNodeOrInsertPos(ID, InsertPos)) {
     return;
+  }
 
-  CallbacksSet.InsertNode(visitor.get(), InsertPos);
   Callbacks.push_back(std::move(visitor));
-  ++ConfigurationChangeToken;
+}
+
+void BugReport::clearVisitors() {
+  Callbacks.clear();
 }
 
 BugReport::~BugReport() {
@@ -2032,9 +2079,7 @@ void BugReport::markInteresting(SymbolRef sym) {
   if (!sym)
     return;
 
-  // If the symbol wasn't already in our set, note a configuration change.
-  if (getInterestingSymbols().insert(sym).second)
-    ++ConfigurationChangeToken;
+  getInterestingSymbols().insert(sym);
 
   if (const auto *meta = dyn_cast<SymbolMetadata>(sym))
     getInterestingRegions().insert(meta->getRegion());
@@ -2044,10 +2089,8 @@ void BugReport::markInteresting(const MemRegion *R) {
   if (!R)
     return;
 
-  // If the base region wasn't already in our set, note a configuration change.
   R = R->getBaseRegion();
-  if (getInterestingRegions().insert(R).second)
-    ++ConfigurationChangeToken;
+  getInterestingRegions().insert(R);
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
     getInterestingSymbols().insert(SR->getSymbol());
@@ -2487,36 +2530,70 @@ static void CompactPathDiagnostic(PathPieces &path, const SourceManager& SM) {
   path.insert(path.end(), Pieces.begin(), Pieces.end());
 }
 
-bool GRBugReporter::generatePathDiagnostic(PathDiagnostic& PD,
-                                           PathDiagnosticConsumer &PC,
-                                           ArrayRef<BugReport *> &bugReports) {
-  assert(!bugReports.empty());
+/// Generate notes from all visitors.
+/// Notes associated with {@code ErrorNode} are generated using
+/// {@code getEndPath}, and the rest are generated with {@code VisitNode}.
+static std::unique_ptr<VisitorsDiagnosticsTy>
+generateVisitorsDiagnostics(BugReport *R, const ExplodedNode *ErrorNode,
+                            BugReporterContext &BRC) {
+  auto Notes = llvm::make_unique<VisitorsDiagnosticsTy>();
+  BugReport::VisitorList visitors;
 
-  bool HasValid = false;
-  bool HasInvalid = false;
-  SmallVector<const ExplodedNode *, 32> errorNodes;
-  for (const auto I : bugReports) {
-    if (I->isValid()) {
-      HasValid = true;
-      errorNodes.push_back(I->getErrorNode());
-    } else {
-      // Keep the errorNodes list in sync with the bugReports list.
-      HasInvalid = true;
-      errorNodes.push_back(nullptr);
+  // Run visitors on all nodes starting from the node *before* the last one.
+  // The last node is reserved for notes generated with {@code getEndPath}.
+  const ExplodedNode *NextNode = ErrorNode->getFirstPred();
+  while (NextNode) {
+
+    // At each iteration, move all visitors from report to visitor list.
+    for (BugReport::visitor_iterator I = R->visitor_begin(),
+                                     E = R->visitor_end();
+         I != E; ++I) {
+      visitors.push_back(std::move(*I));
     }
+    R->clearVisitors();
+
+    const ExplodedNode *Pred = NextNode->getFirstPred();
+    if (!Pred) {
+      std::shared_ptr<PathDiagnosticPiece> LastPiece;
+      for (auto &V : visitors) {
+        V->finalizeVisitor(BRC, ErrorNode, *R);
+
+        if (auto Piece = V->getEndPath(BRC, ErrorNode, *R)) {
+          assert(!LastPiece &&
+                 "There can only be one final piece in a diagnostic.");
+          LastPiece = std::move(Piece);
+          llvm::errs() << "Writing to last piece" << "\n";
+          (*Notes)[ErrorNode].push_back(LastPiece);
+        }
+      }
+      break;
+    }
+
+    for (auto &V : visitors) {
+      auto P = V->VisitNode(NextNode, Pred, BRC, *R);
+      if (P)
+        (*Notes)[NextNode].push_back(std::move(P));
+    }
+
+    if (!R->isValid())
+      break;
+
+    NextNode = Pred;
   }
 
-  // If all the reports have been marked invalid by a previous path generation,
-  // we're done.
-  if (!HasValid)
-    return false;
+  return Notes;
+}
 
-  using PathGenerationScheme = PathDiagnosticConsumer::PathGenerationScheme;
-
-  PathGenerationScheme ActiveScheme = PC.getGenerationScheme();
-
-  TrimmedGraph TrimG(&getGraph(), errorNodes);
-  ReportGraph ErrorGraph;
+/// Find a non-invalidated report for a given equivalence class,
+/// and return together with a cache of visitors notes.
+/// If none found, return a nullptr paired with an empty cache.
+static
+std::pair<BugReport*, std::unique_ptr<VisitorsDiagnosticsTy>> findValidReport(
+  TrimmedGraph &TrimG,
+  ReportGraph &ErrorGraph,
+  ArrayRef<BugReport *> &bugReports,
+  AnalyzerOptions &Opts,
+  GRBugReporter &Reporter) {
 
   while (TrimG.popNextReportGraph(ErrorGraph)) {
     // Find the BugReport with the original location.
@@ -2524,15 +2601,12 @@ bool GRBugReporter::generatePathDiagnostic(PathDiagnostic& PD,
     BugReport *R = bugReports[ErrorGraph.Index];
     assert(R && "No original report found for sliced graph.");
     assert(R->isValid() && "Report selected by trimmed graph marked invalid.");
-
-    // Start building the path diagnostic...
-    PathDiagnosticBuilder PDB(*this, R, ErrorGraph.BackMap, &PC);
-    const ExplodedNode *N = ErrorGraph.ErrorNode;
+    const ExplodedNode *ErrorNode = ErrorGraph.ErrorNode;
 
     // Register refutation visitors first, if they mark the bug invalid no
     // further analysis is required
     R->addVisitor(llvm::make_unique<LikelyFalsePositiveSuppressionBRVisitor>());
-    if (getAnalyzerOptions().shouldCrosscheckWithZ3())
+    if (Opts.shouldCrosscheckWithZ3())
       R->addVisitor(llvm::make_unique<FalsePositiveRefutationBRVisitor>());
 
     // Register additional node visitors.
@@ -2540,101 +2614,59 @@ bool GRBugReporter::generatePathDiagnostic(PathDiagnostic& PD,
     R->addVisitor(llvm::make_unique<ConditionBRVisitor>());
     R->addVisitor(llvm::make_unique<CXXSelfAssignmentBRVisitor>());
 
-    BugReport::VisitorList visitors;
-    unsigned origReportConfigToken, finalReportConfigToken;
-    LocationContextMap LCM;
+    BugReporterContext BRC(Reporter, ErrorGraph.BackMap);
 
-    // While generating diagnostics, it's possible the visitors will decide
-    // new symbols and regions are interesting, or add other visitors based on
-    // the information they find. If they do, we need to regenerate the path
-    // based on our new report configuration.
-    do {
-      // Get a clean copy of all the visitors.
-      for (BugReport::visitor_iterator I = R->visitor_begin(),
-                                       E = R->visitor_end(); I != E; ++I)
-        visitors.push_back((*I)->clone());
+    // Run all visitors on a given graph, once.
+    std::unique_ptr<VisitorsDiagnosticsTy> visitorNotes =
+        generateVisitorsDiagnostics(R, ErrorNode, BRC);
 
-      // Clear out the active path from any previous work.
-      PD.resetPath();
-      origReportConfigToken = R->getConfigurationChangeToken();
+    if (R->isValid())
+      return std::make_pair(R, std::move(visitorNotes));
+  }
+  return std::make_pair(nullptr, llvm::make_unique<VisitorsDiagnosticsTy>());
+}
 
-      // Generate the very last diagnostic piece - the piece is visible before
-      // the trace is expanded.
-      std::unique_ptr<PathDiagnosticPiece> LastPiece;
-      for (BugReport::visitor_iterator I = visitors.begin(), E = visitors.end();
-          I != E; ++I) {
-        if (std::unique_ptr<PathDiagnosticPiece> Piece =
-                (*I)->getEndPath(PDB, N, *R)) {
-          assert(!LastPiece &&
-                 "There can only be one final piece in a diagnostic.");
-          LastPiece = std::move(Piece);
-        }
-      }
+std::unique_ptr<DiagnosticForConsumerMapTy>
+GRBugReporter::generatePathDiagnostics(
+    ArrayRef<PathDiagnosticConsumer *> consumers,
+    ArrayRef<BugReport *> &bugReports) {
+  assert(!bugReports.empty());
 
-      if (ActiveScheme != PathDiagnosticConsumer::None) {
-        if (!LastPiece)
-          LastPiece = BugReporterVisitor::getDefaultEndPath(PDB, N, *R);
-        assert(LastPiece);
-        PD.setEndOfPath(std::move(LastPiece));
-      }
-
-      // Make sure we get a clean location context map so we don't
-      // hold onto old mappings.
-      LCM.clear();
-
-      generatePathDiagnostics(PD, PDB, N, LCM, visitors, R, ActiveScheme);
-
-      // Clean up the visitors we used.
-      visitors.clear();
-
-      // Did anything change while generating this path?
-      finalReportConfigToken = R->getConfigurationChangeToken();
-    } while (finalReportConfigToken != origReportConfigToken);
-
-    if (!R->isValid())
-      continue;
-
-    // Finally, prune the diagnostic path of uninteresting stuff.
-    if (!PD.path.empty()) {
-      if (R->shouldPrunePath() && getAnalyzerOptions().shouldPrunePaths()) {
-        bool stillHasNotes = removeUnneededCalls(PD.getMutablePieces(), R, LCM);
-        assert(stillHasNotes);
-        (void)stillHasNotes;
-      }
-
-      // Redirect all call pieces to have valid locations.
-      adjustCallLocations(PD.getMutablePieces());
-      removePiecesWithInvalidLocations(PD.getMutablePieces());
-
-      if (ActiveScheme == PathDiagnosticConsumer::Extensive) {
-        SourceManager &SM = getSourceManager();
-
-        // Reduce the number of edges from a very conservative set
-        // to an aesthetically pleasing subset that conveys the
-        // necessary information.
-        OptimizedCallsSet OCS;
-        while (optimizeEdges(PD.getMutablePieces(), SM, OCS, LCM)) {}
-
-        // Drop the very first function-entry edge. It's not really necessary
-        // for top-level functions.
-        dropFunctionEntryEdge(PD.getMutablePieces(), LCM, SM);
-      }
-
-      // Remove messages that are basically the same, and edges that may not
-      // make sense.
-      // We have to do this after edge optimization in the Extensive mode.
-      removeRedundantMsgs(PD.getMutablePieces());
-      removeEdgesToDefaultInitializers(PD.getMutablePieces());
+  auto Out = llvm::make_unique<DiagnosticForConsumerMapTy>();
+  bool HasValid = false;
+  SmallVector<const ExplodedNode *, 32> errorNodes;
+  for (const auto I : bugReports) {
+    if (I->isValid()) {
+      HasValid = true;
+      errorNodes.push_back(I->getErrorNode());
+    } else {
+      // Keep the errorNodes list in sync with the bugReports list.
+      errorNodes.push_back(nullptr);
     }
-
-    // We found a report and didn't suppress it.
-    return true;
   }
 
-  // We suppressed all the reports in this equivalence class.
-  assert(!HasInvalid && "Inconsistent suppression");
-  (void)HasInvalid;
-  return false;
+  // If all the reports have been marked invalid by a previous path generation,
+  // we're done.
+  if (!HasValid)
+    return Out;
+
+  TrimmedGraph TrimG(&getGraph(), errorNodes);
+  ReportGraph ErrorGraph;
+  auto ReportInfo = findValidReport(TrimG, ErrorGraph, bugReports,
+                  getAnalyzerOptions(), *this);
+  BugReport *R = ReportInfo.first;
+
+  if (R && R->isValid()) {
+    const ExplodedNode *ErrorNode = ErrorGraph.ErrorNode;
+    for (PathDiagnosticConsumer *PC : consumers) {
+      PathDiagnosticBuilder PDB(*this, R, ErrorGraph.BackMap, PC);
+      std::unique_ptr<PathDiagnostic> PD = generatePathDiagnosticForConsumer(
+          PC->getGenerationScheme(), PDB, ErrorNode, *ReportInfo.second);
+      (*Out)[PC] = std::move(PD);
+    }
+  }
+
+  return Out;
 }
 
 void BugReporter::Register(BugType *BT) {
@@ -2893,11 +2925,55 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
 
 void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   SmallVector<BugReport*, 10> bugReports;
-  BugReport *exampleReport = FindReportInEquivalenceClass(EQ, bugReports);
-  if (exampleReport) {
-    for (PathDiagnosticConsumer *PDC : getPathDiagnosticConsumers()) {
-      FlushReport(exampleReport, *PDC, bugReports);
+  BugReport *report = FindReportInEquivalenceClass(EQ, bugReports);
+  if (!report)
+    return;
+
+  ArrayRef<PathDiagnosticConsumer*> Consumers = getPathDiagnosticConsumers();
+  std::unique_ptr<DiagnosticForConsumerMapTy> Diagnostics =
+      generateDiagnosticForConsumerMap(report, Consumers, bugReports);
+
+  for (auto &P : *Diagnostics) {
+    PathDiagnosticConsumer *Consumer = P.first;
+    std::unique_ptr<PathDiagnostic> &PD = P.second;
+
+    // If the path is empty, generate a single step path with the location
+    // of the issue.
+    if (PD->path.empty()) {
+      PathDiagnosticLocation L = report->getLocation(getSourceManager());
+      auto piece = llvm::make_unique<PathDiagnosticEventPiece>(
+        L, report->getDescription());
+      for (SourceRange Range : report->getRanges())
+        piece->addRange(Range);
+      PD->setEndOfPath(std::move(piece));
     }
+
+    PathPieces &Pieces = PD->getMutablePieces();
+    if (getAnalyzerOptions().shouldDisplayNotesAsEvents()) {
+      // For path diagnostic consumers that don't support extra notes,
+      // we may optionally convert those to path notes.
+      for (auto I = report->getNotes().rbegin(),
+           E = report->getNotes().rend(); I != E; ++I) {
+        PathDiagnosticNotePiece *Piece = I->get();
+        auto ConvertedPiece = std::make_shared<PathDiagnosticEventPiece>(
+          Piece->getLocation(), Piece->getString());
+        for (const auto &R: Piece->getRanges())
+          ConvertedPiece->addRange(R);
+
+        Pieces.push_front(std::move(ConvertedPiece));
+      }
+    } else {
+      for (auto I = report->getNotes().rbegin(),
+           E = report->getNotes().rend(); I != E; ++I)
+        Pieces.push_front(*I);
+    }
+
+    // Get the meta data.
+    const BugReport::ExtraTextList &Meta = report->getExtraText();
+    for (const auto &i : Meta)
+      PD->addMeta(i);
+
+    Consumer->HandlePathDiagnostic(std::move(PD));
   }
 }
 
@@ -2974,79 +3050,41 @@ findExecutedLines(SourceManager &SM, const ExplodedNode *N) {
   return ExecutedLines;
 }
 
-void BugReporter::FlushReport(BugReport *exampleReport,
-                              PathDiagnosticConsumer &PD,
-                              ArrayRef<BugReport*> bugReports) {
-  // FIXME: Make sure we use the 'R' for the path that was actually used.
-  // Probably doesn't make a difference in practice.
-  BugType& BT = exampleReport->getBugType();
+std::unique_ptr<DiagnosticForConsumerMapTy>
+BugReporter::generateDiagnosticForConsumerMap(
+    BugReport *report, ArrayRef<PathDiagnosticConsumer *> consumers,
+    ArrayRef<BugReport *> bugReports) {
 
-  auto D = llvm::make_unique<PathDiagnostic>(
-      exampleReport->getBugType().getCheckName(),
-      exampleReport->getDeclWithIssue(), exampleReport->getBugType().getName(),
-      exampleReport->getDescription(),
-      exampleReport->getShortDescription(/*Fallback=*/false), BT.getCategory(),
-      exampleReport->getUniqueingLocation(), exampleReport->getUniqueingDecl(),
-      findExecutedLines(getSourceManager(), exampleReport->getErrorNode()));
+  if (!report->isPathSensitive()) {
+    auto Out = llvm::make_unique<DiagnosticForConsumerMapTy>();
+    for (auto *Consumer : consumers)
+      (*Out)[Consumer] = generateEmptyDiagnosticForReport(report,
+                                                          getSourceManager());
+    return Out;
+  }
 
-  if (exampleReport->isPathSensitive()) {
-    // Generate the full path diagnostic, using the generation scheme
-    // specified by the PathDiagnosticConsumer. Note that we have to generate
-    // path diagnostics even for consumers which do not support paths, because
-    // the BugReporterVisitors may mark this bug as a false positive.
-    assert(!bugReports.empty());
+  // Generate the full path sensitive diagnostic, using the generation scheme
+  // specified by the PathDiagnosticConsumer. Note that we have to generate
+  // path diagnostics even for consumers which do not support paths, because
+  // the BugReporterVisitors may mark this bug as a false positive.
+  assert(!bugReports.empty());
+  MaxBugClassSize.updateMax(bugReports.size());
+  std::unique_ptr<DiagnosticForConsumerMapTy> Out =
+    generatePathDiagnostics(consumers, bugReports);
 
-    MaxBugClassSize.updateMax(bugReports.size());
+  if (Out->empty())
+    return Out;
 
-    if (!generatePathDiagnostic(*D.get(), PD, bugReports))
-      return;
+  MaxValidBugClassSize.updateMax(bugReports.size());
 
-    MaxValidBugClassSize.updateMax(bugReports.size());
-
-    // Examine the report and see if the last piece is in a header. Reset the
-    // report location to the last piece in the main source file.
-    AnalyzerOptions &Opts = getAnalyzerOptions();
+  // Examine the report and see if the last piece is in a header. Reset the
+  // report location to the last piece in the main source file.
+  AnalyzerOptions &Opts = getAnalyzerOptions();
+  for (auto const &P : *Out)
     if (Opts.shouldReportIssuesInMainSourceFile() && !Opts.AnalyzeAll)
-      D->resetDiagnosticLocationToMainFile();
-  }
+      P.second->resetDiagnosticLocationToMainFile();
 
-  // If the path is empty, generate a single step path with the location
-  // of the issue.
-  if (D->path.empty()) {
-    PathDiagnosticLocation L = exampleReport->getLocation(getSourceManager());
-    auto piece = llvm::make_unique<PathDiagnosticEventPiece>(
-        L, exampleReport->getDescription());
-    for (SourceRange Range : exampleReport->getRanges())
-      piece->addRange(Range);
-    D->setEndOfPath(std::move(piece));
-  }
-
-  PathPieces &Pieces = D->getMutablePieces();
-  if (getAnalyzerOptions().shouldDisplayNotesAsEvents()) {
-    // For path diagnostic consumers that don't support extra notes,
-    // we may optionally convert those to path notes.
-    for (auto I = exampleReport->getNotes().rbegin(),
-              E = exampleReport->getNotes().rend(); I != E; ++I) {
-      PathDiagnosticNotePiece *Piece = I->get();
-      auto ConvertedPiece = std::make_shared<PathDiagnosticEventPiece>(
-          Piece->getLocation(), Piece->getString());
-      for (const auto &R: Piece->getRanges())
-        ConvertedPiece->addRange(R);
-
-      Pieces.push_front(std::move(ConvertedPiece));
-    }
-  } else {
-    for (auto I = exampleReport->getNotes().rbegin(),
-              E = exampleReport->getNotes().rend(); I != E; ++I)
-      Pieces.push_front(*I);
-  }
-
-  // Get the meta data.
-  const BugReport::ExtraTextList &Meta = exampleReport->getExtraText();
-  for (const auto &i : Meta)
-    D->addMeta(i);
-
-  PD.HandlePathDiagnostic(std::move(D));
+  return Out;
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,

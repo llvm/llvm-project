@@ -57,7 +57,7 @@ private:
   void reportBug(StringRef Msg, bool PureError, const MemRegion *Reg,
                  CheckerContext &C) const;
 
-  class VirtualBugVisitor : public BugReporterVisitorImpl<VirtualBugVisitor> {
+  class VirtualBugVisitor : public BugReporterVisitor {
   private:
     const MemRegion *ObjectRegion;
     bool Found;
