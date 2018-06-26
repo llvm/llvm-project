@@ -375,7 +375,8 @@ ClangdServer::formatCode(llvm::StringRef Code, PathRef File,
                          ArrayRef<tooling::Range> Ranges) {
   // Call clang-format.
   auto FS = FSProvider.getFileSystem();
-  auto Style = format::getStyle("file", File, "LLVM", Code, FS.get());
+  auto Style = format::getStyle(format::DefaultFormatStyle, File,
+                                format::DefaultFallbackStyle, Code, FS.get());
   if (!Style)
     return Style.takeError();
 
