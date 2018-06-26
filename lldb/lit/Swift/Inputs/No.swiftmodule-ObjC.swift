@@ -1,13 +1,15 @@
 import Darwin
 import Foundation
+import ObjCStuff
 
 func f() {
-  // This works only through a weird side-effect with the NSURL below.
-  // CHECK-DAG: (size_t) ctype = 1024
+  // We never imported Darwin, so this is all we get.
+  // CHECK-DAG: (Builtin.RawPointer) ctype = 0x0000000000000400
   let ctype = size_t(1024)
   // This works as a Clang type via the Objective-C runtime.
-  // CHECK-DAG: (URL) object = "file:///dev/null"
-  let object = URL(fileURLWithPath: "/dev/null")
+  // CHECK-DAG: (Class) object = 0x{{[0-9a-f]+$}}
+  // CHECK-DAG: (Class) object = {{.*}}Hello from Objective-C!
+  let object = ObjCClass()
   // The Objective-C runtime recognizes this as a tagged pointer.
   // CHECK-DAG: (__NSCFNumber) inlined = 0x0000000000002a37 42
   let inlined = NSNumber(value: 42)
