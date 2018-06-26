@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Assembler.h"
+#include "Target.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -36,11 +37,11 @@ protected:
   }
 
   template <class... Bs> inline void Check(llvm::MCInst MCInst, Bs... Bytes) {
-    CheckWithSetup(nullptr, {}, MCInst, Bytes...);
+    CheckWithSetup(ExegesisTarget::getDefault(), {}, MCInst, Bytes...);
   }
 
   template <class... Bs>
-  inline void CheckWithSetup(const ExegesisTarget *ET,
+  inline void CheckWithSetup(const ExegesisTarget &ET,
                              llvm::ArrayRef<unsigned> RegsToDef,
                              llvm::MCInst MCInst, Bs... Bytes) {
     ExecutableFunction Function =
@@ -67,7 +68,7 @@ private:
   }
 
   ExecutableFunction
-  assembleToFunction(const ExegesisTarget *ET,
+  assembleToFunction(const ExegesisTarget &ET,
                      llvm::ArrayRef<unsigned> RegsToDef,
                      llvm::ArrayRef<llvm::MCInst> Instructions) {
     llvm::SmallString<256> Buffer;

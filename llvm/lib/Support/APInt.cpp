@@ -2674,6 +2674,7 @@ APInt llvm::APIntOps::RoundingUDiv(const APInt &A, const APInt &B,
     return Quo + 1;
   }
   }
+  llvm_unreachable("Unknown APInt::Rounding enum");
 }
 
 APInt llvm::APIntOps::RoundingSDiv(const APInt &A, const APInt &B,
@@ -2703,4 +2704,5 @@ APInt llvm::APIntOps::RoundingSDiv(const APInt &A, const APInt &B,
   case APInt::Rounding::TOWARD_ZERO:
     return A.sdiv(B);
   }
+  llvm_unreachable("Unknown APInt::Rounding enum");
 }
