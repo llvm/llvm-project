@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check MIPS specific .dynamic section entries.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
@@ -19,8 +20,6 @@
 # RUN: ld.lld -shared %t.o %td.so -o %t.so
 # RUN: llvm-readobj -sections -dyn-symbols -dynamic-table %t.so \
 # RUN:   | FileCheck -check-prefix=DSO %s
-
-# REQUIRES: mips
 
 # EXE:      Sections [
 # EXE:          Name: .dynamic

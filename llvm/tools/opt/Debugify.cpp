@@ -226,8 +226,7 @@ bool checkDebugifyMetadata(Module &M,
     dbg() << "WARNING: Missing line " << Idx + 1 << "\n";
 
   for (unsigned Idx : MissingVars.set_bits())
-    dbg() << "ERROR: Missing variable " << Idx + 1 << "\n";
-  HasErrors |= MissingVars.count() > 0;
+    dbg() << "WARNING: Missing variable " << Idx + 1 << "\n";
 
   dbg() << Banner;
   if (!NameOfWrappedPass.empty())

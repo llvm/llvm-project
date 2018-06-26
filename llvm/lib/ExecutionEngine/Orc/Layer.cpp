@@ -15,18 +15,6 @@
 namespace llvm {
 namespace orc {
 
-MangleAndInterner::MangleAndInterner(ExecutionSession &ES, const DataLayout &DL)
-    : ES(ES), DL(DL) {}
-
-SymbolStringPtr MangleAndInterner::operator()(StringRef Name) {
-  std::string MangledName;
-  {
-    raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
-  }
-  return ES.getSymbolStringPool().intern(MangledName);
-}
-
 IRLayer::IRLayer(ExecutionSession &ES) : ES(ES) {}
 IRLayer::~IRLayer() {}
 

@@ -309,6 +309,7 @@ static bool isCPUValid(std::string CPU)
 {
   std::vector<std::string> table
   {
+    "generic",
     "hexagonv4",
     "hexagonv5",
     "hexagonv55",

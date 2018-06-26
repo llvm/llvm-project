@@ -189,11 +189,11 @@ define amdgpu_kernel void @lshr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> ad
 
 ; Make sure load width gets reduced to i32 load.
 ; GCN-LABEL: {{^}}s_lshr_32_i64:
-; GCN-DAG: s_load_dword [[HI_A:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc{{$}}
+; GCN-DAG: s_load_dword [[HI_A:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x14{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], [[HI_A]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
-define amdgpu_kernel void @s_lshr_32_i64(i64 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @s_lshr_32_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
   %result = lshr i64 %a, 32
   store i64 %result, i64 addrspace(1)* %out
   ret void

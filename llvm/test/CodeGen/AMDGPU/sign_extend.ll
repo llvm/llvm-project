@@ -55,6 +55,7 @@ define amdgpu_kernel void @v_sext_i32_to_i64(i64 addrspace(1)* %out, i32 addrspa
 }
 
 ; GCN-LABEL: {{^}}s_sext_i16_to_i64:
+; GCN: s_load_dword [[VAL:s[0-9]+]]
 ; GCN: s_bfe_i64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x100000
 define amdgpu_kernel void @s_sext_i16_to_i64(i64 addrspace(1)* %out, i16 %a) nounwind {
   %sext = sext i16 %a to i64

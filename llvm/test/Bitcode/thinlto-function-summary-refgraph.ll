@@ -2,6 +2,8 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
 ; RUN: llvm-dis -o - %t.o | FileCheck %s --check-prefix=DIS
+; Round trip it through llvm-as
+; RUN: llvm-dis -o - %t.o | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=DIS
 
 ; CHECK: <SOURCE_FILENAME
 ; "bar"
@@ -145,7 +147,7 @@ entry:
 ; Don't try to match summary IDs. The numbering depends on the map iteration
 ; order, which depends on GUID, and the private function Y GUID will depend
 ; on the path to the test.
-; DIS: ^0 = module: (path: "{{.*}}thinlto-function-summary-refgraph.ll.tmp.o", hash: (0, 0, 0, 0, 0))
+; DIS: ^0 = module: (path: "{{.*}}", hash: (0, 0, 0, 0, 0))
 ; DIS-DAG: = gv: (name: "Z", summaries: (function: (module: ^0, flags: (linkage: linkonce_odr, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2, calls: ((callee: ^{{.*}}))))) ; guid = 104084381700047393
 ; DIS-DAG: = gv: (name: "X", summaries: (function: (module: ^0, flags: (linkage: available_externally, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2, calls: ((callee: ^{{.*}})), refs: (^{{.*}})))) ; guid = 1881667236089500162
 ; DIS-DAG: = gv: (name: "W", summaries: (function: (module: ^0, flags: (linkage: weak_odr, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 2, calls: ((callee: ^{{.*}})), refs: (^{{.*}})))) ; guid = 5790125716599269729

@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check MIPS ELF ISA flag calculation if input files have different ISAs.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -56,8 +57,6 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %s -o %t2.o
 # RUN: not ld.lld %t1.o %t2.o -o %t.exe 2>&1 | FileCheck -check-prefix=NAN %s
-
-# REQUIRES: mips
 
   .option pic0
   .text

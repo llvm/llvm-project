@@ -1,9 +1,13 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-bcanalyzer -dump %t.o | FileCheck %s
 ; RUN: llvm-dis -o - %t.o | FileCheck %s --check-prefix=DIS
+; Round trip it through llvm-as
+; RUN: llvm-dis -o - %t.o | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=DIS
 ; RUN: llvm-lto -thinlto -o %t2 %t.o
 ; RUN: llvm-bcanalyzer -dump %t2.thinlto.bc | FileCheck --check-prefix=COMBINED %s
 ; RUN: llvm-dis -o - %t2.thinlto.bc | FileCheck %s --check-prefix=COMBINED-DIS
+; Round trip it through llvm-as
+; RUN: llvm-dis -o - %t2.thinlto.bc | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=COMBINED-DIS
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -106,7 +110,7 @@ declare i1 @llvm.type.test(i8*, metadata) nounwind readnone
 declare void @llvm.assume(i1)
 declare {i8*, i1} @llvm.type.checked.load(i8*, i32, metadata)
 
-; DIS: ^0 = module: (path: "{{.*}}thinlto-type-vcalls.ll.tmp.o", hash: (0, 0, 0, 0, 0))
+; DIS: ^0 = module: (path: "{{.*}}", hash: (0, 0, 0, 0, 0))
 ; DIS: ^1 = gv: (name: "llvm.type.test") ; guid = 608142985856744218
 ; DIS: ^2 = gv: (name: "f1", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 8, typeIdInfo: (typeTestAssumeVCalls: (vFuncId: (guid: 6699318081062747564, offset: 16)))))) ; guid = 2072045998141807037
 ; DIS: ^3 = gv: (name: "f3", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 5, typeIdInfo: (typeCheckedLoadVCalls: (vFuncId: (guid: 6699318081062747564, offset: 16)))))) ; guid = 4197650231481825559

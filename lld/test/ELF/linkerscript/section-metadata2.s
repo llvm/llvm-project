@@ -7,9 +7,9 @@
 # RUN: ld.lld --symbol-ordering-file %t.ord -o %t --script %t.script %t.o
 # RUN: llvm-objdump -s %t | FileCheck %s
 
-# CHECK:      Contents of section .text:
-# CHECK-NEXT: 02000000 00000000 01000000 00000000
 # CHECK:      Contents of section .rodata:
+# CHECK-NEXT: 02000000 00000000 01000000 00000000
+# CHECK:      Contents of section .text:
 # CHECK-NEXT: 02000000 00000000 01000000 00000000
 
 # RUN: echo "_foo" > %t.ord
@@ -17,9 +17,9 @@
 # RUN: ld.lld --symbol-ordering-file %t.ord -o %t --script %t.script %t.o
 # RUN: llvm-objdump -s %t | FileCheck %s --check-prefix=INV
 
-# INV:      Contents of section .text:
-# INV-NEXT: 01000000 00000000 02000000 00000000
 # INV:      Contents of section .rodata:
+# INV-NEXT: 01000000 00000000 02000000 00000000
+# INV:      Contents of section .text:
 # INV-NEXT: 01000000 00000000 02000000 00000000
 
 .section .text.foo,"a",@progbits

@@ -462,6 +462,10 @@ class VirtRegMap;
     void computeRegUnitRange(LiveRange&, unsigned Unit);
     void computeVirtRegInterval(LiveInterval&);
 
+    using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo*>, 16>;
+    void extendSegmentsToUses(LiveRange &Segments,
+                              ShrinkToUsesWorkList &WorkList, unsigned Reg,
+                              LaneBitmask LaneMask);
 
     /// Helper function for repairIntervalsInRange(), walks backwards and
     /// creates/modifies live segments in \p LR to match the operands found.

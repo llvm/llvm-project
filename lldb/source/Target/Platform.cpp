@@ -1834,16 +1834,16 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
     lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
-    AddressClass addr_class = eAddressClassUnknown;
+    AddressClass addr_class = AddressClass::eUnknown;
 
     if (bp_loc_sp) {
       addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == eAddressClassUnknown &&
+      if (addr_class == AddressClass::eUnknown &&
           (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = eAddressClassCodeAlternateISA;
+        addr_class = AddressClass::eCodeAlternateISA;
     }
 
-    if (addr_class == eAddressClassCodeAlternateISA) {
+    if (addr_class == AddressClass::eCodeAlternateISA) {
       trap_opcode = g_thumb_breakpoint_opcode;
       trap_opcode_size = sizeof(g_thumb_breakpoint_opcode);
     } else {

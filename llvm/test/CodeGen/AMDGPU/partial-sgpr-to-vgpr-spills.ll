@@ -10,26 +10,26 @@
 
 ; GCN-LABEL: {{^}}spill_sgprs_to_multiple_vgprs:
 
-; GCN: def s[8:15]
-; GCN: def s[16:23]
-; GCN: def s[24:31]
-; GCN: def s[32:39]
-; GCN: def s[40:47]
-; GCN: def s[48:55]
-; GCN: def s[56:63]
-; GCN: def s[64:71]
-; GCN: def s[72:79]
-; GCN: def s[80:87]
-; GCN: def s[88:95]
+; GCN: def s[4:11]
+; GCN: def s[12:19]
+; GCN: def s[20:27]
+; GCN: def s[28:35]
+; GCN: def s[36:43]
+; GCN: def s[44:51]
+; GCN: def s[52:59]
+; GCN: def s[60:67]
+; GCN: def s[68:75]
+; GCN: def s[76:83]
+; GCN: def s[84:91]
 
-; GCN: v_writelane_b32 v0, s8, 0
-; GCN-NEXT: v_writelane_b32 v0, s9, 1
-; GCN-NEXT: v_writelane_b32 v0, s10, 2
-; GCN-NEXT: v_writelane_b32 v0, s11, 3
-; GCN-NEXT: v_writelane_b32 v0, s12, 4
-; GCN-NEXT: v_writelane_b32 v0, s13, 5
-; GCN-NEXT: v_writelane_b32 v0, s14, 6
-; GCN-NEXT: v_writelane_b32 v0, s15, 7
+; GCN: v_writelane_b32 v0, s4, 0
+; GCN-NEXT: v_writelane_b32 v0, s5, 1
+; GCN-NEXT: v_writelane_b32 v0, s6, 2
+; GCN-NEXT: v_writelane_b32 v0, s7, 3
+; GCN-NEXT: v_writelane_b32 v0, s8, 4
+; GCN-NEXT: v_writelane_b32 v0, s9, 5
+; GCN-NEXT: v_writelane_b32 v0, s10, 6
+; GCN-NEXT: v_writelane_b32 v0, s11, 7
 
 ; GCN: def s{{\[}}[[TMP_LO:[0-9]+]]:[[TMP_HI:[0-9]+]]{{\]}}
 ; GCN: v_writelane_b32 v0, s[[TMP_LO]], 8
@@ -37,8 +37,8 @@
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 10
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 11
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 12
-; GCN-NEXT: v_writelane_b32 v0, s13, 13
-; GCN-NEXT: v_writelane_b32 v0, s14, 14
+; GCN-NEXT: v_writelane_b32 v0, s9, 13
+; GCN-NEXT: v_writelane_b32 v0, s10, 14
 ; GCN-NEXT: v_writelane_b32 v0, s[[TMP_HI]], 15
 
 ; GCN: def s{{\[}}[[TMP_LO]]:[[TMP_HI]]{{\]}}
@@ -47,8 +47,8 @@
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 18
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 19
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 20
-; GCN-NEXT: v_writelane_b32 v0, s13, 21
-; GCN-NEXT: v_writelane_b32 v0, s14, 22
+; GCN-NEXT: v_writelane_b32 v0, s9, 21
+; GCN-NEXT: v_writelane_b32 v0, s10, 22
 ; GCN-NEXT: v_writelane_b32 v0, s[[TMP_HI]], 23
 
 ; GCN: def s{{\[}}[[TMP_LO]]:[[TMP_HI]]{{\]}}
@@ -57,8 +57,8 @@
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 26
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 27
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 28
-; GCN-NEXT: v_writelane_b32 v0, s13, 29
-; GCN-NEXT: v_writelane_b32 v0, s14, 30
+; GCN-NEXT: v_writelane_b32 v0, s9, 29
+; GCN-NEXT: v_writelane_b32 v0, s10, 30
 ; GCN-NEXT: v_writelane_b32 v0, s[[TMP_HI]], 31
 
 ; GCN: def s{{\[}}[[TMP_LO]]:[[TMP_HI]]{{\]}}
@@ -67,8 +67,8 @@
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 34
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 35
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 36
-; GCN-NEXT: v_writelane_b32 v0, s13, 37
-; GCN-NEXT: v_writelane_b32 v0, s14, 38
+; GCN-NEXT: v_writelane_b32 v0, s9, 37
+; GCN-NEXT: v_writelane_b32 v0, s10, 38
 ; GCN-NEXT: v_writelane_b32 v0, s[[TMP_HI]], 39
 
 ; GCN: def s{{\[}}[[TMP_LO]]:[[TMP_HI]]{{\]}}
@@ -77,8 +77,8 @@
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 42
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 43
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 44
-; GCN-NEXT: v_writelane_b32 v0, s13, 45
-; GCN-NEXT: v_writelane_b32 v0, s14, 46
+; GCN-NEXT: v_writelane_b32 v0, s9, 45
+; GCN-NEXT: v_writelane_b32 v0, s10, 46
 ; GCN-NEXT: v_writelane_b32 v0, s[[TMP_HI]], 47
 
 ; GCN: def s{{\[}}[[TMP_LO]]:[[TMP_HI]]{{\]}}
@@ -87,90 +87,90 @@
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 50
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 51
 ; GCN-NEXT: v_writelane_b32 v0, s{{[0-9]+}}, 52
-; GCN-NEXT: v_writelane_b32 v0, s13, 53
-; GCN-NEXT: v_writelane_b32 v0, s14, 54
+; GCN-NEXT: v_writelane_b32 v0, s9, 53
+; GCN-NEXT: v_writelane_b32 v0, s10, 54
 ; GCN-NEXT: v_writelane_b32 v0, s[[TMP_HI]], 55
 
-; GCN-NEXT: v_writelane_b32 v0, s88, 56
-; GCN-NEXT: v_writelane_b32 v0, s89, 57
-; GCN-NEXT: v_writelane_b32 v0, s90, 58
-; GCN-NEXT: v_writelane_b32 v0, s91, 59
-; GCN-NEXT: v_writelane_b32 v0, s92, 60
-; GCN-NEXT: v_writelane_b32 v0, s93, 61
-; GCN-NEXT: v_writelane_b32 v0, s94, 62
-; GCN-NEXT: v_writelane_b32 v0, s95, 63
-; GCN-NEXT: v_writelane_b32 v1, s16, 0
-; GCN-NEXT: v_writelane_b32 v1, s17, 1
-; GCN-NEXT: v_writelane_b32 v1, s18, 2
-; GCN-NEXT: v_writelane_b32 v1, s19, 3
-; GCN-NEXT: v_writelane_b32 v1, s20, 4
-; GCN-NEXT: v_writelane_b32 v1, s21, 5
-; GCN-NEXT: v_writelane_b32 v1, s22, 6
-; GCN-NEXT: v_writelane_b32 v1, s23, 7
-; GCN-NEXT: v_writelane_b32 v1, s24, 8
-; GCN-NEXT: v_writelane_b32 v1, s25, 9
-; GCN-NEXT: v_writelane_b32 v1, s26, 10
-; GCN-NEXT: v_writelane_b32 v1, s27, 11
-; GCN-NEXT: v_writelane_b32 v1, s28, 12
-; GCN-NEXT: v_writelane_b32 v1, s29, 13
-; GCN-NEXT: v_writelane_b32 v1, s30, 14
-; GCN-NEXT: v_writelane_b32 v1, s31, 15
-; GCN-NEXT: v_writelane_b32 v1, s32, 16
-; GCN-NEXT: v_writelane_b32 v1, s33, 17
-; GCN-NEXT: v_writelane_b32 v1, s34, 18
-; GCN-NEXT: v_writelane_b32 v1, s35, 19
-; GCN-NEXT: v_writelane_b32 v1, s36, 20
-; GCN-NEXT: v_writelane_b32 v1, s37, 21
-; GCN-NEXT: v_writelane_b32 v1, s38, 22
-; GCN-NEXT: v_writelane_b32 v1, s39, 23
-; GCN-NEXT: v_writelane_b32 v1, s40, 24
-; GCN-NEXT: v_writelane_b32 v1, s41, 25
-; GCN-NEXT: v_writelane_b32 v1, s42, 26
-; GCN-NEXT: v_writelane_b32 v1, s43, 27
-; GCN-NEXT: v_writelane_b32 v1, s44, 28
-; GCN-NEXT: v_writelane_b32 v1, s45, 29
-; GCN-NEXT: v_writelane_b32 v1, s46, 30
-; GCN-NEXT: v_writelane_b32 v1, s47, 31
-; GCN-NEXT: v_writelane_b32 v1, s48, 32
-; GCN-NEXT: v_writelane_b32 v1, s49, 33
-; GCN-NEXT: v_writelane_b32 v1, s50, 34
-; GCN-NEXT: v_writelane_b32 v1, s51, 35
-; GCN-NEXT: v_writelane_b32 v1, s52, 36
-; GCN-NEXT: v_writelane_b32 v1, s53, 37
-; GCN-NEXT: v_writelane_b32 v1, s54, 38
-; GCN-NEXT: v_writelane_b32 v1, s55, 39
-; GCN-NEXT: v_writelane_b32 v1, s56, 40
-; GCN-NEXT: v_writelane_b32 v1, s57, 41
-; GCN-NEXT: v_writelane_b32 v1, s58, 42
-; GCN-NEXT: v_writelane_b32 v1, s59, 43
-; GCN-NEXT: v_writelane_b32 v1, s60, 44
-; GCN-NEXT: v_writelane_b32 v1, s61, 45
-; GCN-NEXT: v_writelane_b32 v1, s62, 46
-; GCN-NEXT: v_writelane_b32 v1, s63, 47
-; GCN-NEXT: v_writelane_b32 v1, s64, 48
-; GCN-NEXT: v_writelane_b32 v1, s65, 49
-; GCN-NEXT: v_writelane_b32 v1, s66, 50
-; GCN-NEXT: v_writelane_b32 v1, s67, 51
-; GCN-NEXT: v_writelane_b32 v1, s68, 52
-; GCN-NEXT: v_writelane_b32 v1, s69, 53
-; GCN-NEXT: v_writelane_b32 v1, s70, 54
-; GCN-NEXT: v_writelane_b32 v1, s71, 55
-; GCN-NEXT: v_writelane_b32 v1, s72, 56
-; GCN-NEXT: v_writelane_b32 v1, s73, 57
-; GCN-NEXT: v_writelane_b32 v1, s74, 58
-; GCN-NEXT: v_writelane_b32 v1, s75, 59
-; GCN-NEXT: v_writelane_b32 v1, s76, 60
-; GCN-NEXT: v_writelane_b32 v1, s77, 61
-; GCN-NEXT: v_writelane_b32 v1, s78, 62
-; GCN-NEXT: v_writelane_b32 v1, s79, 63
-; GCN-NEXT: v_writelane_b32 v2, s80, 0
-; GCN-NEXT: v_writelane_b32 v2, s81, 1
-; GCN-NEXT: v_writelane_b32 v2, s82, 2
-; GCN-NEXT: v_writelane_b32 v2, s83, 3
-; GCN-NEXT: v_writelane_b32 v2, s84, 4
-; GCN-NEXT: v_writelane_b32 v2, s85, 5
-; GCN-NEXT: v_writelane_b32 v2, s86, 6
-; GCN-NEXT: v_writelane_b32 v2, s87, 7
+; GCN-NEXT: v_writelane_b32 v0, s84, 56
+; GCN-NEXT: v_writelane_b32 v0, s85, 57
+; GCN-NEXT: v_writelane_b32 v0, s86, 58
+; GCN-NEXT: v_writelane_b32 v0, s87, 59
+; GCN-NEXT: v_writelane_b32 v0, s88, 60
+; GCN-NEXT: v_writelane_b32 v0, s89, 61
+; GCN-NEXT: v_writelane_b32 v0, s90, 62
+; GCN-NEXT: v_writelane_b32 v0, s91, 63
+; GCN-NEXT: v_writelane_b32 v1, s12, 0
+; GCN-NEXT: v_writelane_b32 v1, s13, 1
+; GCN-NEXT: v_writelane_b32 v1, s14, 2
+; GCN-NEXT: v_writelane_b32 v1, s15, 3
+; GCN-NEXT: v_writelane_b32 v1, s16, 4
+; GCN-NEXT: v_writelane_b32 v1, s17, 5
+; GCN-NEXT: v_writelane_b32 v1, s18, 6
+; GCN-NEXT: v_writelane_b32 v1, s19, 7
+; GCN-NEXT: v_writelane_b32 v1, s20, 8
+; GCN-NEXT: v_writelane_b32 v1, s21, 9
+; GCN-NEXT: v_writelane_b32 v1, s22, 10
+; GCN-NEXT: v_writelane_b32 v1, s23, 11
+; GCN-NEXT: v_writelane_b32 v1, s24, 12
+; GCN-NEXT: v_writelane_b32 v1, s25, 13
+; GCN-NEXT: v_writelane_b32 v1, s26, 14
+; GCN-NEXT: v_writelane_b32 v1, s27, 15
+; GCN-NEXT: v_writelane_b32 v1, s28, 16
+; GCN-NEXT: v_writelane_b32 v1, s29, 17
+; GCN-NEXT: v_writelane_b32 v1, s30, 18
+; GCN-NEXT: v_writelane_b32 v1, s31, 19
+; GCN-NEXT: v_writelane_b32 v1, s32, 20
+; GCN-NEXT: v_writelane_b32 v1, s33, 21
+; GCN-NEXT: v_writelane_b32 v1, s34, 22
+; GCN-NEXT: v_writelane_b32 v1, s35, 23
+; GCN-NEXT: v_writelane_b32 v1, s36, 24
+; GCN-NEXT: v_writelane_b32 v1, s37, 25
+; GCN-NEXT: v_writelane_b32 v1, s38, 26
+; GCN-NEXT: v_writelane_b32 v1, s39, 27
+; GCN-NEXT: v_writelane_b32 v1, s40, 28
+; GCN-NEXT: v_writelane_b32 v1, s41, 29
+; GCN-NEXT: v_writelane_b32 v1, s42, 30
+; GCN-NEXT: v_writelane_b32 v1, s43, 31
+; GCN-NEXT: v_writelane_b32 v1, s44, 32
+; GCN-NEXT: v_writelane_b32 v1, s45, 33
+; GCN-NEXT: v_writelane_b32 v1, s46, 34
+; GCN-NEXT: v_writelane_b32 v1, s47, 35
+; GCN-NEXT: v_writelane_b32 v1, s48, 36
+; GCN-NEXT: v_writelane_b32 v1, s49, 37
+; GCN-NEXT: v_writelane_b32 v1, s50, 38
+; GCN-NEXT: v_writelane_b32 v1, s51, 39
+; GCN-NEXT: v_writelane_b32 v1, s52, 40
+; GCN-NEXT: v_writelane_b32 v1, s53, 41
+; GCN-NEXT: v_writelane_b32 v1, s54, 42
+; GCN-NEXT: v_writelane_b32 v1, s55, 43
+; GCN-NEXT: v_writelane_b32 v1, s56, 44
+; GCN-NEXT: v_writelane_b32 v1, s57, 45
+; GCN-NEXT: v_writelane_b32 v1, s58, 46
+; GCN-NEXT: v_writelane_b32 v1, s59, 47
+; GCN-NEXT: v_writelane_b32 v1, s60, 48
+; GCN-NEXT: v_writelane_b32 v1, s61, 49
+; GCN-NEXT: v_writelane_b32 v1, s62, 50
+; GCN-NEXT: v_writelane_b32 v1, s63, 51
+; GCN-NEXT: v_writelane_b32 v1, s64, 52
+; GCN-NEXT: v_writelane_b32 v1, s65, 53
+; GCN-NEXT: v_writelane_b32 v1, s66, 54
+; GCN-NEXT: v_writelane_b32 v1, s67, 55
+; GCN-NEXT: v_writelane_b32 v1, s68, 56
+; GCN-NEXT: v_writelane_b32 v1, s69, 57
+; GCN-NEXT: v_writelane_b32 v1, s70, 58
+; GCN-NEXT: v_writelane_b32 v1, s71, 59
+; GCN-NEXT: v_writelane_b32 v1, s72, 60
+; GCN-NEXT: v_writelane_b32 v1, s73, 61
+; GCN-NEXT: v_writelane_b32 v1, s74, 62
+; GCN-NEXT: v_writelane_b32 v1, s75, 63
+; GCN-NEXT: v_writelane_b32 v2, s76, 0
+; GCN-NEXT: v_writelane_b32 v2, s77, 1
+; GCN-NEXT: v_writelane_b32 v2, s78, 2
+; GCN-NEXT: v_writelane_b32 v2, s79, 3
+; GCN-NEXT: v_writelane_b32 v2, s80, 4
+; GCN-NEXT: v_writelane_b32 v2, s81, 5
+; GCN-NEXT: v_writelane_b32 v2, s82, 6
+; GCN-NEXT: v_writelane_b32 v2, s83, 7
 ; GCN: s_cbranch_scc1
 
 
@@ -393,24 +393,25 @@ ret:
 ; into the next available VGPR.
 
 ; GCN-LABEL: {{^}}split_sgpr_spill_2_vgprs:
-; GCN: def s[24:39]
+; GCN: def s[4:19]
+; GCN: def s[20:35]
 
-; GCN: v_writelane_b32 v0, s24, 50
-; GCN-NEXT: v_writelane_b32 v0, s25, 51
-; GCN-NEXT: v_writelane_b32 v0, s26, 52
-; GCN-NEXT: v_writelane_b32 v0, s27, 53
-; GCN-NEXT: v_writelane_b32 v0, s28, 54
-; GCN-NEXT: v_writelane_b32 v0, s29, 55
-; GCN-NEXT: v_writelane_b32 v0, s30, 56
-; GCN-NEXT: v_writelane_b32 v0, s31, 57
-; GCN-NEXT: v_writelane_b32 v0, s32, 58
-; GCN-NEXT: v_writelane_b32 v0, s33, 59
-; GCN-NEXT: v_writelane_b32 v0, s34, 60
-; GCN-NEXT: v_writelane_b32 v0, s35, 61
-; GCN-NEXT: v_writelane_b32 v0, s36, 62
-; GCN-NEXT: v_writelane_b32 v0, s37, 63
-; GCN-NEXT: v_writelane_b32 v1, s38, 0
-; GCN-NEXT: v_writelane_b32 v1, s39, 1
+; GCN: v_writelane_b32 v0, s4, 50
+; GCN-NEXT: v_writelane_b32 v0, s5, 51
+; GCN-NEXT: v_writelane_b32 v0, s6, 52
+; GCN-NEXT: v_writelane_b32 v0, s7, 53
+; GCN-NEXT: v_writelane_b32 v0, s8, 54
+; GCN-NEXT: v_writelane_b32 v0, s9, 55
+; GCN-NEXT: v_writelane_b32 v0, s10, 56
+; GCN-NEXT: v_writelane_b32 v0, s11, 57
+; GCN-NEXT: v_writelane_b32 v0, s12, 58
+; GCN-NEXT: v_writelane_b32 v0, s13, 59
+; GCN-NEXT: v_writelane_b32 v0, s14, 60
+; GCN-NEXT: v_writelane_b32 v0, s15, 61
+; GCN-NEXT: v_writelane_b32 v0, s16, 62
+; GCN-NEXT: v_writelane_b32 v0, s17, 63
+; GCN-NEXT: v_writelane_b32 v1, s18, 0
+; GCN-NEXT: v_writelane_b32 v1, s19, 1
 
 ; GCN: v_readlane_b32 s4, v0, 50
 ; GCN-NEXT: v_readlane_b32 s5, v0, 51

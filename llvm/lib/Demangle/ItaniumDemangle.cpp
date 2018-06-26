@@ -332,7 +332,7 @@ public:
   // Print the "right". This distinction is necessary to represent C++ types
   // that appear on the RHS of their subtype, such as arrays or functions.
   // Since most types don't have such a component, provide a default
-  // implemenation.
+  // implementation.
   virtual void printRight(OutputStream &) const {}
 
   virtual StringView getBaseName() const { return StringView(); }
@@ -808,7 +808,7 @@ public:
   bool hasRHSComponentSlow(OutputStream &) const override { return true; }
   bool hasFunctionSlow(OutputStream &) const override { return true; }
 
-  // Handle C++'s ... quirky decl grammer by using the left & right
+  // Handle C++'s ... quirky decl grammar by using the left & right
   // distinction. Consider:
   //   int (*f(float))(char) {}
   // f is a function that takes a float and returns a pointer to a function
@@ -1117,7 +1117,7 @@ public:
   }
 };
 
-/// A variadic template argument. This node represents an occurance of
+/// A variadic template argument. This node represents an occurrence of
 /// J<something>E in some <template-args>. It isn't itself unexpanded, unless
 /// one of it's Elements is. The parser inserts a ParameterPack into the
 /// TemplateParams table if the <template-args> this pack belongs to apply to an
@@ -2113,7 +2113,7 @@ struct Db {
   const char *Last;
 
   // Name stack, this is used by the parser to hold temporary names that were
-  // parsed. The parser colapses multiple names into new nodes to construct
+  // parsed. The parser collapses multiple names into new nodes to construct
   // the AST. Once the parser is finished, names.size() == 1.
   PODSmallVector<Node *, 32> Names;
 

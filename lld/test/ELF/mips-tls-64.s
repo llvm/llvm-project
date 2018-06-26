@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check MIPS TLS 64-bit relocations handling.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux \
@@ -12,8 +13,6 @@
 # RUN: ld.lld -shared %t.o %t.so -o %t-out.so
 # RUN: llvm-objdump -d -s -t %t-out.so | FileCheck -check-prefix=DIS-SO %s
 # RUN: llvm-readobj -r -mips-plt-got %t-out.so | FileCheck -check-prefix=SO %s
-
-# REQUIRES: mips
 
 # DIS:      __start:
 # DIS-NEXT:    20000:   24 62 80 30   addiu   $2, $3, -32720

@@ -267,13 +267,9 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
       // The first cast (CSrc) is eliminable so we need to fix up or replace
       // the second cast (CI). CSrc will then have a good chance of being dead.
       auto *Res = CastInst::Create(NewOpc, CSrc->getOperand(0), CI.getType());
-
       // Replace debug users of the eliminable cast by emitting debug values
       // which refer to the new cast.
-      insertReplacementDbgValues(
-          *CSrc, *Res, *std::next(CI.getIterator()),
-          [](DbgInfoIntrinsic &OldDII) { return OldDII.getExpression(); });
-
+      insertReplacementDbgValues(*CSrc, *Res, *std::next(CI.getIterator()));
       return Res;
     }
   }

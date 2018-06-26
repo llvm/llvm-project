@@ -346,6 +346,11 @@ void insertReplacementDbgValues(
     Value &From, Value &To, Instruction &InsertBefore,
     function_ref<DIExpression *(DbgInfoIntrinsic &OldDII)> RewriteExpr);
 
+/// An overload of insertReplacementDbgValues() for the common case where
+/// the replacement dbg.values have the same DIExpressions as the originals.
+void insertReplacementDbgValues(Value &From, Value &To,
+                                Instruction &InsertBefore);
+
 /// Remove all instructions from a basic block other than it's terminator
 /// and any present EH pad instructions.
 unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);

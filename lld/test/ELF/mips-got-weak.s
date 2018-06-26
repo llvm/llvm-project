@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check R_MIPS_GOT16 relocation against weak symbols.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
@@ -7,8 +8,6 @@
 # RUN: ld.lld %t.o -shared -Bsymbolic -o %t2.so
 # RUN: llvm-readobj -r -dt -dynamic-table -mips-plt-got %t2.so \
 # RUN:   | FileCheck -check-prefixes=CHECK,SYM %s
-
-# REQUIRES: mips
 
 # CHECK:      Relocations [
 # CHECK-NEXT: ]

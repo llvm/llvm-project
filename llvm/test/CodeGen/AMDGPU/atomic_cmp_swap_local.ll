@@ -7,16 +7,16 @@
 ; GFX9-NOT: m0
 ; SICIVI-DAG: s_mov_b32 m0
 
-; SICI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; SICI-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
-; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
-; GFX89-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x30
+; SICI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
+; SICI-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x4c
+; GFX89-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x70
 ; GCN-DAG: v_mov_b32_e32 [[VCMP:v[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GCN-DAG: v_mov_b32_e32 [[VSWAP:v[0-9]+]], [[SWAP]]
 ; GCN: ds_cmpst_rtn_b32 [[RESULT:v[0-9]+]], [[VPTR]], [[VCMP]], [[VSWAP]] offset:16
 ; GCN: s_endpgm
-define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_offset(i32 addrspace(1)* %out, i32 addrspace(3)* %ptr, i32 %swap) nounwind {
+define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_offset(i32 addrspace(1)* %out, [8 x i32], i32 addrspace(3)* %ptr, [8 x i32], i32 %swap) nounwind {
   %gep = getelementptr i32, i32 addrspace(3)* %ptr, i32 4
   %pair = cmpxchg i32 addrspace(3)* %gep, i32 7, i32 %swap seq_cst monotonic
   %result = extractvalue { i32, i1 } %pair, 0
@@ -70,15 +70,15 @@ define amdgpu_kernel void @lds_atomic_cmpxchg_ret_i32_bad_si_offset(i32 addrspac
 
 
 ; SICI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x9
-; SICI-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xa
+; SICI-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x12
 ; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x24
-; GFX89-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x28
+; GFX89-DAG: s_load_dword [[SWAP:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x48
 ; GCN-DAG: v_mov_b32_e32 [[VCMP:v[0-9]+]], 7
 ; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GCN-DAG: v_mov_b32_e32 [[VSWAP:v[0-9]+]], [[SWAP]]
 ; GCN: ds_cmpst_b32 [[VPTR]], [[VCMP]], [[VSWAP]] offset:16
 ; GCN: s_endpgm
-define amdgpu_kernel void @lds_atomic_cmpxchg_noret_i32_offset(i32 addrspace(3)* %ptr, i32 %swap) nounwind {
+define amdgpu_kernel void @lds_atomic_cmpxchg_noret_i32_offset(i32 addrspace(3)* %ptr, [8 x i32], i32 %swap) nounwind {
   %gep = getelementptr i32, i32 addrspace(3)* %ptr, i32 4
   %pair = cmpxchg i32 addrspace(3)* %gep, i32 7, i32 %swap seq_cst monotonic
   %result = extractvalue { i32, i1 } %pair, 0

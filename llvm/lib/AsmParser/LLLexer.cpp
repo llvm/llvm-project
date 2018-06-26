@@ -159,7 +159,8 @@ static const char *isLabelTail(const char *CurPtr) {
 
 LLLexer::LLLexer(StringRef StartBuf, SourceMgr &sm, SMDiagnostic &Err,
                  LLVMContext &C)
-  : CurBuf(StartBuf), ErrorInfo(Err), SM(sm), Context(C), APFloatVal(0.0) {
+    : CurBuf(StartBuf), ErrorInfo(Err), SM(sm), Context(C), APFloatVal(0.0),
+      IgnoreColonInIdentifiers(false) {
   CurPtr = CurBuf.begin();
 }
 
@@ -221,6 +222,8 @@ lltok::Kind LLLexer::LexToken() {
     case '!': return LexExclaim();
     case '^':
       return LexCaret();
+    case ':':
+      return lltok::colon;
     case '#': return LexHash();
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
@@ -461,8 +464,9 @@ lltok::Kind LLLexer::LexIdentifier() {
       KeywordEnd = CurPtr;
   }
 
-  // If we stopped due to a colon, this really is a label.
-  if (*CurPtr == ':') {
+  // If we stopped due to a colon, unless we were directed to ignore it,
+  // this really is a label.
+  if (!IgnoreColonInIdentifiers && *CurPtr == ':') {
     StrVal.assign(StartChar-1, CurPtr++);
     return lltok::LabelStr;
   }
@@ -714,6 +718,73 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(cleanup);
   KEYWORD(catch);
   KEYWORD(filter);
+
+  // Summary index keywords.
+  KEYWORD(path);
+  KEYWORD(hash);
+  KEYWORD(gv);
+  KEYWORD(guid);
+  KEYWORD(name);
+  KEYWORD(summaries);
+  KEYWORD(flags);
+  KEYWORD(linkage);
+  KEYWORD(notEligibleToImport);
+  KEYWORD(live);
+  KEYWORD(dsoLocal);
+  KEYWORD(function);
+  KEYWORD(insts);
+  KEYWORD(funcFlags);
+  KEYWORD(readNone);
+  KEYWORD(readOnly);
+  KEYWORD(noRecurse);
+  KEYWORD(returnDoesNotAlias);
+  KEYWORD(calls);
+  KEYWORD(callee);
+  KEYWORD(hotness);
+  KEYWORD(unknown);
+  KEYWORD(hot);
+  KEYWORD(critical);
+  KEYWORD(relbf);
+  KEYWORD(variable);
+  KEYWORD(aliasee);
+  KEYWORD(refs);
+  KEYWORD(typeIdInfo);
+  KEYWORD(typeTests);
+  KEYWORD(typeTestAssumeVCalls);
+  KEYWORD(typeCheckedLoadVCalls);
+  KEYWORD(typeTestAssumeConstVCalls);
+  KEYWORD(typeCheckedLoadConstVCalls);
+  KEYWORD(vFuncId);
+  KEYWORD(offset);
+  KEYWORD(args);
+  KEYWORD(typeid);
+  KEYWORD(summary);
+  KEYWORD(typeTestRes);
+  KEYWORD(kind);
+  KEYWORD(unsat);
+  KEYWORD(byteArray);
+  KEYWORD(inline);
+  KEYWORD(single);
+  KEYWORD(allOnes);
+  KEYWORD(sizeM1BitWidth);
+  KEYWORD(alignLog2);
+  KEYWORD(sizeM1);
+  KEYWORD(bitMask);
+  KEYWORD(inlineBits);
+  KEYWORD(wpdResolutions);
+  KEYWORD(wpdRes);
+  KEYWORD(indir);
+  KEYWORD(singleImpl);
+  KEYWORD(branchFunnel);
+  KEYWORD(singleImplName);
+  KEYWORD(resByArg);
+  KEYWORD(byArg);
+  KEYWORD(uniformRetVal);
+  KEYWORD(uniqueRetVal);
+  KEYWORD(virtualConstProp);
+  KEYWORD(info);
+  KEYWORD(byte);
+  KEYWORD(bit);
 
 #undef KEYWORD
 

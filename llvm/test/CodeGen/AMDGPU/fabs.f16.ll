@@ -39,9 +39,9 @@ define amdgpu_kernel void @s_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half
 }
 
 ; GCN-LABEL: {{^}}s_fabs_v4f16:
-; CI: s_load_dword s[[LO:[0-9]+]]
-; CI: s_load_dword s[[HI:[0-9]+]]
+; CI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x2
 ; GFX89: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x8
+
 ; GCN: s_mov_b32 [[MASK:s[0-9]+]], 0x7fff7fff
 ; GCN-DAG: s_and_b32 s{{[0-9]+}}, s[[LO]], [[MASK]]
 ; GCN-DAG: s_and_b32 s{{[0-9]+}}, s[[HI]], [[MASK]]
@@ -54,7 +54,7 @@ define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half
 
 ; GCN-LABEL: {{^}}fabs_fold_f16:
 ; GCN: s_load_dword [[IN0:s[0-9]+]]
-; GCN: s_lshr_b32 [[IN1:s[0-9]+]], [[IN0]], 16
+; GCN-DAG: s_lshr_b32 [[IN1:s[0-9]+]], [[IN0]], 16
 
 ; CI-DAG: v_cvt_f32_f16_e64 [[CVT0:v[0-9]+]], |[[IN0]]|
 ; CI-DAG: v_cvt_f32_f16_e32 [[ABS_CVT1:v[0-9]+]], [[IN1]]
@@ -62,6 +62,7 @@ define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half
 ; CI-DAG: v_cvt_f16_f32_e32 [[CVTRESULT:v[0-9]+]], [[RESULT]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[CVTRESULT]]
 
+; GFX89-NOT: and
 ; GFX89: v_mov_b32_e32 [[V_IN1:v[0-9]+]], [[IN1]]
 ; GFX89: v_mul_f16_e64 [[RESULT:v[0-9]+]], |[[IN0]]|, [[V_IN1]]
 ; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]

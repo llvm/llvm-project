@@ -1093,24 +1093,6 @@ lldb::offset_t DataExtractor::PutToLog(Log *log, offset_t start_offset,
   return offset; // Return the offset at which we ended up
 }
 
-//----------------------------------------------------------------------
-// DumpUUID
-//
-// Dump out a UUID starting at 'offset' bytes into the buffer
-//----------------------------------------------------------------------
-void DataExtractor::DumpUUID(Stream *s, offset_t offset) const {
-  if (s) {
-    const uint8_t *uuid_data = PeekData(offset, 16);
-    if (uuid_data) {
-      lldb_private::UUID uuid(uuid_data, 16);
-      uuid.Dump(s);
-    } else {
-      s->Printf("<not enough data for UUID at offset 0x%8.8" PRIx64 ">",
-                offset);
-    }
-  }
-}
-
 size_t DataExtractor::Copy(DataExtractor &dest_data) const {
   if (m_data_sp) {
     // we can pass along the SP to the data
