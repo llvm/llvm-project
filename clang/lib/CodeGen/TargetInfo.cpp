@@ -747,6 +747,15 @@ class WebAssemblyTargetCodeGenInfo final : public TargetCodeGenInfo {
 public:
   explicit WebAssemblyTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(new WebAssemblyABIInfo(CGT)) {}
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &CGM) const override {
+    if (auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+      llvm::Function *Fn = cast<llvm::Function>(GV);
+      if (!FD->doesThisDeclarationHaveABody() && !FD->hasPrototype())
+        Fn->addFnAttr("no-prototype");
+    }
+  }
 };
 
 /// Classify argument of given type \p Ty.

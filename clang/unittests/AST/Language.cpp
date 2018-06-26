@@ -42,19 +42,5 @@ ArgVector getBasicRunOptionsForLanguage(Language Lang) {
   return BasicArgs;
 }
 
-RunOptions getRunOptionsForLanguage(Language Lang) {
-  ArgVector BasicArgs = getBasicRunOptionsForLanguage(Lang);
-
-  // For C++, test with "-fdelayed-template-parsing" enabled to handle MSVC
-  // default behaviour.
-  if (isCXX(Lang)) {
-    ArgVector ArgsForDelayedTemplateParse = BasicArgs;
-    ArgsForDelayedTemplateParse.emplace_back("-fdelayed-template-parsing");
-    return {BasicArgs, ArgsForDelayedTemplateParse};
-  }
-
-  return {BasicArgs};
-}
-
 } // end namespace ast_matchers
 } // end namespace clang

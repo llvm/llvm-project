@@ -14,16 +14,25 @@
 
 // ITANIUM: @_ZTV1A = {{[^!]*}}, !type [[A16:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL16:![0-9]+]]
+// ITANIUM-SAME: !type [[AF16:![0-9]+]]
 
 // ITANIUM: @_ZTV1B = {{[^!]*}}, !type [[A32:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL32:![0-9]+]]
+// ITANIUM-SAME: !type [[AF32:![0-9]+]]
+// ITANIUM-SAME: !type [[AF40:![0-9]+]]
+// ITANIUM-SAME: !type [[AF48:![0-9]+]]
 // ITANIUM-SAME: !type [[B32:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
+// ITANIUM-SAME: !type [[BF32:![0-9]+]]
+// ITANIUM-SAME: !type [[BF40:![0-9]+]]
+// ITANIUM-SAME: !type [[BF48:![0-9]+]]
 
 // ITANIUM: @_ZTV1C = {{[^!]*}}, !type [[A32]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
+// ITANIUM-SAME: !type [[AF32]]
 // ITANIUM-SAME: !type [[C32:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
+// ITANIUM-SAME: !type [[CF32:![0-9]+]]
 
 // DIAG: @[[SRC:.*]] = private unnamed_addr constant [{{.*}} x i8] c"{{.*}}type-metadata.cpp\00", align 1
 // DIAG: @[[TYPE:.*]] = private unnamed_addr constant { i16, i16, [4 x i8] } { i16 -1, i16 0, [4 x i8] c"'A'\00" }
@@ -31,12 +40,24 @@
 
 // ITANIUM: @_ZTVN12_GLOBAL__N_11DE = {{[^!]*}}, !type [[A32]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
+// ITANIUM-SAME: !type [[AF32]]
+// ITANIUM-SAME: !type [[AF40]]
+// ITANIUM-SAME: !type [[AF48]]
 // ITANIUM-SAME: !type [[B32]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
+// ITANIUM-SAME: !type [[BF32]]
+// ITANIUM-SAME: !type [[BF40]]
+// ITANIUM-SAME: !type [[BF48]]
 // ITANIUM-SAME: !type [[C88:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL88:![0-9]+]]
+// ITANIUM-SAME: !type [[CF32]]
+// ITANIUM-SAME: !type [[CF40:![0-9]+]]
+// ITANIUM-SAME: !type [[CF48:![0-9]+]]
 // ITANIUM-SAME: !type [[D32:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
+// ITANIUM-SAME: !type [[DF32:![0-9]+]]
+// ITANIUM-SAME: !type [[DF40:![0-9]+]]
+// ITANIUM-SAME: !type [[DF48:![0-9]+]]
 
 // ITANIUM: @_ZTCN12_GLOBAL__N_11DE0_1B = {{[^!]*}}, !type [[A32]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
@@ -45,13 +66,17 @@
 
 // ITANIUM: @_ZTCN12_GLOBAL__N_11DE8_1C = {{[^!]*}}, !type [[A64:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL64:![0-9]+]]
+// ITANIUM-SAME: !type [[AF64:![0-9]+]]
 // ITANIUM-SAME: !type [[C32]]
 // ITANIUM-DIAG-SAME: !type [[ALL32]]
+// ITANIUM-SAME: !type [[CF64:![0-9]+]]
 
 // ITANIUM: @_ZTVZ3foovE2FA = {{[^!]*}}, !type [[A16]]
 // ITANIUM-DIAG-SAME: !type [[ALL16]]
+// ITANIUM-SAME: !type [[AF16]]
 // ITANIUM-SAME: !type [[FA16:![0-9]+]]
 // ITANIUM-DIAG-SAME: !type [[ALL16]]
+// ITANIUM-SAME: !type [[FAF16:![0-9]+]]
 
 // MS: comdat($"??_7A@@6B@"), !type [[A8:![0-9]+]]
 // MS: comdat($"??_7B@@6B0@@"), !type [[B8:![0-9]+]]
@@ -227,18 +252,36 @@ void f(D *d) {
 
 // ITANIUM: [[A16]] = !{i64 16, !"_ZTS1A"}
 // ITANIUM-DIAG: [[ALL16]] = !{i64 16, !"all-vtables"}
+// ITANIUM: [[AF16]] = !{i64 16, !"_ZTSM1AFvvE.virtual"}
 // ITANIUM: [[A32]] = !{i64 32, !"_ZTS1A"}
 // ITANIUM-DIAG: [[ALL32]] = !{i64 32, !"all-vtables"}
+// ITANIUM: [[AF32]] = !{i64 32, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM: [[AF40]] = !{i64 40, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM: [[AF48]] = !{i64 48, !"_ZTSM1AFvvE.virtual"}
 // ITANIUM: [[B32]] = !{i64 32, !"_ZTS1B"}
+// ITANIUM: [[BF32]] = !{i64 32, !"_ZTSM1BFvvE.virtual"}
+// ITANIUM: [[BF40]] = !{i64 40, !"_ZTSM1BFvvE.virtual"}
+// ITANIUM: [[BF48]] = !{i64 48, !"_ZTSM1BFvvE.virtual"}
 // ITANIUM: [[C32]] = !{i64 32, !"_ZTS1C"}
+// ITANIUM: [[CF32]] = !{i64 32, !"_ZTSM1CFvvE.virtual"}
 // ITANIUM: [[C88]] = !{i64 88, !"_ZTS1C"}
 // ITANIUM-DIAG: [[ALL88]] = !{i64 88, !"all-vtables"}
+// ITANIUM: [[CF40]] = !{i64 40, !"_ZTSM1CFvvE.virtual"}
+// ITANIUM: [[CF48]] = !{i64 48, !"_ZTSM1CFvvE.virtual"}
 // ITANIUM: [[D32]] = !{i64 32, [[D_ID:![0-9]+]]}
 // ITANIUM: [[D_ID]] = distinct !{}
+// ITANIUM: [[DF32]] = !{i64 32, [[DF_ID:![0-9]+]]}
+// ITANIUM: [[DF_ID]] = distinct !{}
+// ITANIUM: [[DF40]] = !{i64 40, [[DF_ID]]}
+// ITANIUM: [[DF48]] = !{i64 48, [[DF_ID]]}
 // ITANIUM: [[A64]] = !{i64 64, !"_ZTS1A"}
 // ITANIUM-DIAG: [[ALL64]] = !{i64 64, !"all-vtables"}
+// ITANIUM: [[AF64]] = !{i64 64, !"_ZTSM1AFvvE.virtual"}
+// ITANIUM: [[CF64]] = !{i64 64, !"_ZTSM1CFvvE.virtual"}
 // ITANIUM: [[FA16]] = !{i64 16, [[FA_ID:![0-9]+]]}
 // ITANIUM: [[FA_ID]] = distinct !{}
+// ITANIUM: [[FAF16]] = !{i64 16, [[FAF_ID:![0-9]+]]}
+// ITANIUM: [[FAF_ID]] = distinct !{}
 
 // MS: [[A8]] = !{i64 8, !"?AUA@@"}
 // MS: [[B8]] = !{i64 8, !"?AUB@@"}

@@ -707,11 +707,10 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     if (ABIName != "64" && !Args.hasArg(options::OPT_mno_abicalls))
       CmdArgs.push_back("-call_nonpic");
 
-    if (getToolChain().getArch() == llvm::Triple::mips ||
-        getToolChain().getArch() == llvm::Triple::mips64)
-      CmdArgs.push_back("-EB");
-    else
+    if (getToolChain().getTriple().isLittleEndian())
       CmdArgs.push_back("-EL");
+    else
+      CmdArgs.push_back("-EB");
 
     if (Arg *A = Args.getLastArg(options::OPT_mnan_EQ)) {
       if (StringRef(A->getValue()) == "2008")
@@ -833,14 +832,6 @@ static void addMultilibFlag(bool Enabled, const char *const Flag,
 
 static bool isArmOrThumbArch(llvm::Triple::ArchType Arch) {
   return Arch == llvm::Triple::arm || Arch == llvm::Triple::thumb;
-}
-
-static bool isMips32(llvm::Triple::ArchType Arch) {
-  return Arch == llvm::Triple::mips || Arch == llvm::Triple::mipsel;
-}
-
-static bool isMips64(llvm::Triple::ArchType Arch) {
-  return Arch == llvm::Triple::mips64 || Arch == llvm::Triple::mips64el;
 }
 
 static bool isMipsEL(llvm::Triple::ArchType Arch) {
@@ -1305,8 +1296,8 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
 
   Multilib::flags_list Flags;
-  addMultilibFlag(isMips32(TargetArch), "m32", Flags);
-  addMultilibFlag(isMips64(TargetArch), "m64", Flags);
+  addMultilibFlag(TargetTriple.isMIPS32(), "m32", Flags);
+  addMultilibFlag(TargetTriple.isMIPS64(), "m64", Flags);
   addMultilibFlag(isMips16(Args), "mips16", Flags);
   addMultilibFlag(CPUName == "mips32", "march=mips32", Flags);
   addMultilibFlag(CPUName == "mips32r2" || CPUName == "mips32r3" ||
@@ -2151,7 +2142,7 @@ bool Generic_GCC::GCCInstallationDetector::ScanGCCForMultilibs(
   if (isArmOrThumbArch(TargetArch) && TargetTriple.isAndroid()) {
     // It should also work without multilibs in a simplified toolchain.
     findAndroidArmMultilibs(D, TargetTriple, Path, Args, Detected);
-  } else if (tools::isMipsArch(TargetArch)) {
+  } else if (TargetTriple.isMIPS()) {
     if (!findMIPSMultilibs(D, TargetTriple, Path, Args, Detected))
       return false;
   } else if (isRISCV(TargetArch)) {

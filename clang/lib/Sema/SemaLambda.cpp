@@ -692,9 +692,7 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
   }
 
   // Third case: only one return statement. Don't bother doing extra work!
-  SmallVectorImpl<ReturnStmt*>::iterator I = CSI.Returns.begin(),
-                                         E = CSI.Returns.end();
-  if (I+1 == E)
+  if (CSI.Returns.size() == 1)
     return;
 
   // General case: many return statements.
@@ -703,15 +701,22 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
   // We require the return types to strictly match here.
   // Note that we've already done the required promotions as part of
   // processing the return statement.
-  for (; I != E; ++I) {
-    const ReturnStmt *RS = *I;
+  for (const ReturnStmt *RS : CSI.Returns) {
     const Expr *RetE = RS->getRetValue();
 
     QualType ReturnType =
         (RetE ? RetE->getType() : Context.VoidTy).getUnqualifiedType();
     if (Context.getCanonicalFunctionResultType(ReturnType) ==
-          Context.getCanonicalFunctionResultType(CSI.ReturnType))
+          Context.getCanonicalFunctionResultType(CSI.ReturnType)) {
+      // Use the return type with the strictest possible nullability annotation.
+      auto RetTyNullability = ReturnType->getNullability(Ctx);
+      auto BlockNullability = CSI.ReturnType->getNullability(Ctx);
+      if (BlockNullability &&
+          (!RetTyNullability ||
+           hasWeakerNullability(*RetTyNullability, *BlockNullability)))
+        CSI.ReturnType = ReturnType;
       continue;
+    }
 
     // FIXME: This is a poor diagnostic for ReturnStmts without expressions.
     // TODO: It's possible that the *first* return is the divergent one.
