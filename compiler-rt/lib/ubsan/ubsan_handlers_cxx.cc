@@ -123,7 +123,11 @@ void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
   case CFITCK_UnrelatedCast:
     CheckKindStr = "cast to unrelated type";
     break;
+  case CFITCK_VMFCall:
+    CheckKindStr = "virtual pointer to member function call";
+    break;
   case CFITCK_ICall:
+  case CFITCK_NVMFCall:
     Die();
   }
 

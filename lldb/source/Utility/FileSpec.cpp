@@ -119,6 +119,100 @@ FileSpec::FileSpec(const FileSpec *rhs) : m_directory(), m_filename() {
 //------------------------------------------------------------------
 FileSpec::~FileSpec() {}
 
+namespace {
+//------------------------------------------------------------------
+/// Safely get a character at the specified index.
+///
+/// @param[in] path
+///     A full, partial, or relative path to a file.
+///
+/// @param[in] i
+///     An index into path which may or may not be valid.
+///
+/// @return
+///   The character at index \a i if the index is valid, or 0 if
+///   the index is not valid.
+//------------------------------------------------------------------
+inline char safeCharAtIndex(const llvm::StringRef &path, size_t i) {
+  if (i < path.size())
+    return path[i];
+  return 0;
+}
+
+//------------------------------------------------------------------
+/// Check if a path needs to be normalized.
+///
+/// Check if a path needs to be normalized. We currently consider a
+/// path to need normalization if any of the following are true
+///  - path contains "/./"
+///  - path contains "/../"
+///  - path contains "//"
+///  - path ends with "/"
+/// Paths that start with "./" or with "../" are not considered to
+/// need normalization since we aren't trying to resolve the path,
+/// we are just trying to remove redundant things from the path.
+///
+/// @param[in] path
+///     A full, partial, or relative path to a file.
+///
+/// @return
+///   Returns \b true if the path needs to be normalized.
+//------------------------------------------------------------------
+bool needsNormalization(const llvm::StringRef &path) {
+  if (path.empty())
+    return false;
+  // We strip off leading "." values so these paths need to be normalized
+  if (path[0] == '.')
+    return true;
+  for (auto i = path.find_first_of("\\/"); i != llvm::StringRef::npos;
+       i = path.find_first_of("\\/", i + 1)) {
+    const auto next = safeCharAtIndex(path, i+1);
+    switch (next) {
+      case 0:
+        // path separator char at the end of the string which should be
+        // stripped unless it is the one and only character
+        return i > 0;
+      case '/':
+      case '\\':
+        // two path separator chars in the middle of a path needs to be
+        // normalized
+        if (i > 0)
+          return true;
+        ++i;
+        break;
+
+      case '.': {
+          const auto next_next = safeCharAtIndex(path, i+2);
+          switch (next_next) {
+            default: break;
+            case 0: return true; // ends with "/."
+            case '/':
+            case '\\':
+              return true; // contains "/./"
+            case '.': {
+              const auto next_next_next = safeCharAtIndex(path, i+3);
+              switch (next_next_next) {
+                default: break;
+                case 0: return true; // ends with "/.."
+                case '/':
+                case '\\':
+                  return true; // contains "/../"
+              }
+              break;
+            }
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+  return false;
+}
+
+
+}
 //------------------------------------------------------------------
 // Assignment operator.
 //------------------------------------------------------------------
@@ -158,7 +252,8 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve, Style style) {
   }
 
   // Normalize the path by removing ".", ".." and other redundant components.
-  llvm::sys::path::remove_dots(resolved, true, m_style);
+  if (needsNormalization(resolved))
+    llvm::sys::path::remove_dots(resolved, true, m_style);
 
   // Normalize back slashes to forward slashes
   if (m_style == Style::windows)
@@ -175,10 +270,10 @@ void FileSpec::SetFile(llvm::StringRef pathname, bool resolve, Style style) {
   // Split path into filename and directory. We rely on the underlying char
   // pointer to be nullptr when the components are empty.
   llvm::StringRef filename = llvm::sys::path::filename(resolved, m_style);
-  if (!filename.empty())
+  if(!filename.empty())
     m_filename.SetString(filename);
   llvm::StringRef directory = llvm::sys::path::parent_path(resolved, m_style);
-  if (!directory.empty())
+  if(!directory.empty())
     m_directory.SetString(directory);
 }
 
@@ -329,8 +424,9 @@ bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
   // case sensitivity of equality test
   const bool case_sensitive = a.IsCaseSensitive() || b.IsCaseSensitive();
 
-  const bool filenames_equal =
-      ConstString::Equals(a.m_filename, b.m_filename, case_sensitive);
+  const bool filenames_equal = ConstString::Equals(a.m_filename,
+                                                   b.m_filename,
+                                                   case_sensitive);
 
   if (!filenames_equal)
     return false;
@@ -616,7 +712,9 @@ bool FileSpec::IsSourceImplementationFile() const {
   return g_source_file_regex.Execute(extension.GetStringRef());
 }
 
-bool FileSpec::IsRelative() const { return !IsAbsolute(); }
+bool FileSpec::IsRelative() const {
+  return !IsAbsolute();
+}
 
 bool FileSpec::IsAbsolute() const {
   llvm::SmallString<64> current_path;

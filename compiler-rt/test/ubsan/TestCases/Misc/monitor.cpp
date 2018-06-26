@@ -1,6 +1,11 @@
 // RUN: %clangxx -w -fsanitize=bool %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// __ubsan_on_report is not defined as weak. Redefining it here isn't supported
+// on Windows.
+//
+// UNSUPPORTED: win32
+
 #include <iostream>
 
 extern "C" {
@@ -10,8 +15,8 @@ void __ubsan_get_current_report_data(const char **OutIssueKind,
                                      unsigned *OutLine, unsigned *OutCol,
                                      char **OutMemoryAddr);
 
-// Override the weak definition of __ubsan_on_report from the runtime, just
-// for testing purposes.
+// Override the definition of __ubsan_on_report from the runtime, just for
+// testing purposes.
 void __ubsan_on_report(void) {
   const char *IssueKind, *Message, *Filename;
   unsigned Line, Col;
