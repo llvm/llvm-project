@@ -406,6 +406,24 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
   if (Name == "avx512.mask.cmp.ps.512") // Added in 7.0
     return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_512,
                                      NewFn);
+  if (Name == "avx512.mask.fpclass.pd.128") // Added in 7.0
+    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_pd_128,
+                                     NewFn);
+  if (Name == "avx512.mask.fpclass.pd.256") // Added in 7.0
+    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_pd_256,
+                                     NewFn);
+  if (Name == "avx512.mask.fpclass.pd.512") // Added in 7.0
+    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_pd_512,
+                                     NewFn);
+  if (Name == "avx512.mask.fpclass.ps.128") // Added in 7.0
+    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_ps_128,
+                                     NewFn);
+  if (Name == "avx512.mask.fpclass.ps.256") // Added in 7.0
+    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_ps_256,
+                                     NewFn);
+  if (Name == "avx512.mask.fpclass.ps.512") // Added in 7.0
+    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_ps_512,
+                                     NewFn);
 
   // frcz.ss/sd may need to have an argument dropped. Added in 3.2
   if (Name.startswith("xop.vfrcz.ss") && F->arg_size() == 2) {
@@ -3113,6 +3131,31 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     unsigned NumElts = Args[0]->getType()->getVectorNumElements();
     Value *Res = ApplyX86MaskOn1BitsVec(Builder, NewCall, CI->getArgOperand(3),
+                                        NumElts);
+
+    std::string Name = CI->getName();
+    if (!Name.empty()) {
+      CI->setName(Name + ".old");
+      NewCall->setName(Name);
+    }
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+
+  case Intrinsic::x86_avx512_mask_fpclass_pd_128:
+  case Intrinsic::x86_avx512_mask_fpclass_pd_256:
+  case Intrinsic::x86_avx512_mask_fpclass_pd_512:
+  case Intrinsic::x86_avx512_mask_fpclass_ps_128:
+  case Intrinsic::x86_avx512_mask_fpclass_ps_256:
+  case Intrinsic::x86_avx512_mask_fpclass_ps_512: {
+    SmallVector<Value *, 4> Args;
+    Args.push_back(CI->getArgOperand(0));
+    Args.push_back(CI->getArgOperand(1));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    unsigned NumElts = Args[0]->getType()->getVectorNumElements();
+    Value *Res = ApplyX86MaskOn1BitsVec(Builder, NewCall, CI->getArgOperand(2),
                                         NumElts);
 
     std::string Name = CI->getName();

@@ -12,7 +12,7 @@
 //
 /// LiveIntervals normally runs before register allocation when the code is
 /// only recently lowered out of SSA form, so it's uncommon for registers to
-/// have multiple defs, and then they do, the defs are usually closely related.
+/// have multiple defs, and when they do, the defs are usually closely related.
 /// Later, after coalescing, tail duplication, and other optimizations, it's
 /// more common to see registers with multiple unrelated defs. This pass
 /// updates LiveIntervals to distribute the value numbers across separate

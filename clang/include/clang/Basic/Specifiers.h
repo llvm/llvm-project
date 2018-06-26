@@ -294,6 +294,12 @@ namespace clang {
     Unspecified
   };
 
+  /// Return true if \p L has a weaker nullability annotation than \p R. The
+  /// ordering is: Unspecified < Nullable < NonNull.
+  inline bool hasWeakerNullability(NullabilityKind L, NullabilityKind R) {
+    return uint8_t(L) > uint8_t(R);
+  }
+
   /// Retrieve the spelling of the given nullability kind.
   llvm::StringRef getNullabilitySpelling(NullabilityKind kind,
                                          bool isContextSensitive = false);

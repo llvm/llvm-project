@@ -1,4 +1,19 @@
 import gdb.printing
+
+class Iterator:
+  def __iter__(self):
+    return self
+
+  # Python 2 compatibility
+  def next(self):
+    return self.__next__()
+
+  def children(self):
+    return self
+
+def escape_bytes(val, l):
+  return '"' + val.string(encoding='Latin-1', length=l).encode('unicode_escape').decode() + '"'
+
 class SmallStringPrinter:
   """Print an llvm::SmallString object."""
 
@@ -8,10 +23,7 @@ class SmallStringPrinter:
   def to_string(self):
     begin = self.val['BeginX']
     end = self.val['EndX']
-    return begin.cast(gdb.lookup_type("char").pointer()).string(length = end - begin)
-
-  def display_hint (self):
-    return 'string'
+    return escape_bytes(begin.cast(gdb.lookup_type('char').pointer()), end - begin)
 
 class StringRefPrinter:
   """Print an llvm::StringRef object."""
@@ -20,10 +32,7 @@ class StringRefPrinter:
     self.val = val
 
   def to_string(self):
-    return self.val['Data'].string(encoding='Latin-1', length=self.val['Length'])
-
-  def display_hint (self):
-    return 'string'
+    return escape_bytes(self.val['Data'], self.val['Length'])
 
 class SmallVectorPrinter:
   """Print an llvm::SmallVector object."""
@@ -103,34 +112,44 @@ class ArrayRefPrinter:
   def display_hint (self):
     return 'array'
 
-class OptionalPrinter:
-  """Print an llvm::Optional object."""
+class ExpectedPrinter(Iterator):
+  """Print an llvm::Expected object."""
 
-  def __init__(self, value):
-    self.value = value
+  def __init__(self, val):
+    self.val = val
 
-  class _iterator:
-    def __init__(self, member, empty):
-      self.member = member
-      self.done = empty
-
-    def __iter__(self):
-      return self
-
-    def next(self):
-      if self.done:
-        raise StopIteration
-      self.done = True
-      return ('value', self.member.dereference())
-
-  def children(self):
-    if not self.value['Storage']['hasVal']:
-      return self._iterator('', True)
-    return self._iterator(self.value['Storage']['storage']['buffer'].address.cast(
-        self.value.type.template_argument(0).pointer()), False)
+  def __next__(self):
+    val = self.val
+    if val is None:
+      raise StopIteration
+    self.val = None
+    if val['HasError']:
+      return ('error', val['ErrorStorage'].address.cast(
+          gdb.lookup_type('llvm::ErrorInfoBase').pointer()).dereference())
+    return ('value', val['TStorage'].address.cast(
+        val.type.template_argument(0).pointer()).dereference())
 
   def to_string(self):
-    return 'llvm::Optional is %sinitialized' % ('' if self.value['Storage']['hasVal'] else 'not ')
+    return 'llvm::Expected{}'.format(' is error' if self.val['HasError'] else '')
+
+class OptionalPrinter(Iterator):
+  """Print an llvm::Optional object."""
+
+  def __init__(self, val):
+    self.val = val
+
+  def __next__(self):
+    val = self.val
+    if val is None:
+      raise StopIteration
+    self.val = None
+    if not val['Storage']['hasVal']:
+      raise StopIteration
+    return ('value', val['Storage']['storage']['buffer'].address.cast(
+        val.type.template_argument(0).pointer()).dereference())
+
+  def to_string(self):
+    return 'llvm::Optional{}'.format('' if self.val['Storage']['hasVal'] else ' is not initialized')
 
 class DenseMapPrinter:
   "Print a DenseMap"
@@ -315,6 +334,7 @@ pp.add_printer('llvm::SmallString', '^llvm::SmallString<.*>$', SmallStringPrinte
 pp.add_printer('llvm::StringRef', '^llvm::StringRef$', StringRefPrinter)
 pp.add_printer('llvm::SmallVectorImpl', '^llvm::SmallVector(Impl)?<.*>$', SmallVectorPrinter)
 pp.add_printer('llvm::ArrayRef', '^llvm::(Const)?ArrayRef<.*>$', ArrayRefPrinter)
+pp.add_printer('llvm::Expected', '^llvm::Expected<.*>$', ExpectedPrinter)
 pp.add_printer('llvm::Optional', '^llvm::Optional<.*>$', OptionalPrinter)
 pp.add_printer('llvm::DenseMap', '^llvm::DenseMap<.*>$', DenseMapPrinter)
 pp.add_printer('llvm::Twine', '^llvm::Twine$', TwinePrinter)
