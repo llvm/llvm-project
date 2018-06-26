@@ -2241,8 +2241,10 @@ void X86FrameLowering::adjustForSegmentedStacks(
   // prologue.
   StackSize = MFI.getStackSize();
 
-  // Do not generate a prologue for functions with a stack of size zero
-  if (StackSize == 0)
+  // Do not generate a prologue for leaf functions with a stack of size zero.
+  // For non-leaf functions we have to allow for the possibility that the
+  // call is to a non-split function, as in PR37807.
+  if (StackSize == 0 && !MFI.hasTailCall())
     return;
 
   MachineBasicBlock *allocMBB = MF.CreateMachineBasicBlock();

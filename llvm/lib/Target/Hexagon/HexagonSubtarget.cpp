@@ -92,6 +92,7 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   static std::map<StringRef, Hexagon::ArchEnum> CpuTable{
+      {"generic", Hexagon::ArchEnum::V60},
       {"hexagonv4", Hexagon::ArchEnum::V4},
       {"hexagonv5", Hexagon::ArchEnum::V5},
       {"hexagonv55", Hexagon::ArchEnum::V55},

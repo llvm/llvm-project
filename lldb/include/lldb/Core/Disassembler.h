@@ -78,7 +78,7 @@ namespace lldb_private {
 class Instruction {
 public:
   Instruction(const Address &address,
-              lldb::AddressClass addr_class = lldb::eAddressClassInvalid);
+              lldb::AddressClass addr_class = lldb::AddressClass::eInvalid);
 
   virtual ~Instruction();
 
@@ -106,7 +106,7 @@ public:
 
   void SetAddress(const Address &addr) {
     // Invalidate the address class to lazily discover it if we need to.
-    m_address_class = lldb::eAddressClassInvalid;
+    m_address_class = lldb::AddressClass::eInvalid;
     m_address = addr;
   }
 
@@ -235,9 +235,9 @@ protected:
   Address m_address; // The section offset address of this instruction
                      // We include an address class in the Instruction class to
                      // allow the instruction specify the
-                     // eAddressClassCodeAlternateISA (currently used for
-                     // thumb), and also to specify data (eAddressClassData).
-                     // The usual value will be eAddressClassCode, but often
+                     // AddressClass::eCodeAlternateISA (currently used for
+                     // thumb), and also to specify data (AddressClass::eData).
+                     // The usual value will be AddressClass::eCode, but often
                      // when disassembling memory, you might run into data.
                      // This can help us to disassemble appropriately.
 private:

@@ -20,19 +20,6 @@
 namespace llvm {
 namespace orc {
 
-/// Mangles symbol names then uniques them in the context of an
-/// ExecutionSession.
-//
-// FIXME: This may be more at home in Core.h.
-class MangleAndInterner {
-public:
-  MangleAndInterner(ExecutionSession &ES, const DataLayout &DL);
-  SymbolStringPtr operator()(StringRef Name);
-private:
-  ExecutionSession &ES;
-  const DataLayout &DL;
-};
-
 /// Interface for layers that accept LLVM IR.
 class IRLayer {
 public:

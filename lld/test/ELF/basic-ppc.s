@@ -1,7 +1,7 @@
+# REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc-unknown-freebsd %s -o %t
 # RUN: ld.lld --hash-style=sysv -discard-all -shared %t -o %t2
 # RUN: llvm-readobj -file-headers -sections -section-data -program-headers %t2 | FileCheck %s
-# REQUIRES: ppc
 
 # exits with return code 42 on FreeBSD
 .text

@@ -20,4 +20,4 @@ _start:
 // CHECK: Contents of section .ARM.exidx:
 // 11004 - 4 = 0x11000 = _start
 // 1100c - 8 = 0x11004 = _start + sizeof(_start)
-// CHECK-NEXT: 11004 fcffff7f 01000000 f8ffff7f 01000000
+// CHECK-NEXT: 0000 00100100 01000000 fc0f0100 01000000

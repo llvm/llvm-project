@@ -322,6 +322,10 @@ class Proc<string Name, SchedMachineModel Model,
            list<SubtargetFeature> Features>
  : ProcessorModel<Name, Model, Features>;
 
+def : Proc<"generic", HexagonModelV60,
+           [ArchV4, ArchV5, ArchV55, ArchV60,
+            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
+            FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv4",  HexagonModelV4,
            [ArchV4,
             FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,

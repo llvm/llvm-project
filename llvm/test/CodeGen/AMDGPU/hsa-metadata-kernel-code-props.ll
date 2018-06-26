@@ -8,7 +8,7 @@
 ; CHECK:  Version: [ 1, 0 ]
 ; CHECK:  Kernels:
 
-; CHECK: - Name:       test
+; CHECK-LABEL: - Name:       test
 ; CHECK:   SymbolName: 'test@kd'
 ; CHECK:   CodeProps:
 ; CHECK:     KernargSegmentSize:      24
@@ -16,8 +16,8 @@
 ; CHECK:     PrivateSegmentFixedSize: 0
 ; CHECK:     KernargSegmentAlign:     8
 ; CHECK:     WavefrontSize:           64
-; CHECK:     NumSGPRs:                6
-; CHECK:     NumVGPRs:                3
+; CHECK:     NumSGPRs:                8
+; CHECK:     NumVGPRs:                6
 ; CHECK:     MaxFlatWorkGroupSize:    256
 define amdgpu_kernel void @test(
     half addrspace(1)* %r,
@@ -31,18 +31,24 @@ entry:
   ret void
 }
 
-; CHECK: - Name:       num_spilled_sgprs
+; CHECK-LABEL: - Name:       num_spilled_sgprs
 ; CHECK:   SymbolName: 'num_spilled_sgprs@kd'
 ; CHECK:   CodeProps:
-; CHECK:     NumSpilledSGPRs: 41
+; GFX700:     NumSpilledSGPRs: 40
+; GFX803:     NumSpilledSGPRs: 24
+; GFX900:     NumSpilledSGPRs: 24
 define amdgpu_kernel void @num_spilled_sgprs(
-    i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %out2,
-    i32 addrspace(1)* %out3, i32 addrspace(1)* %out4, i32 addrspace(1)* %out5,
-    i32 addrspace(1)* %out6, i32 addrspace(1)* %out7, i32 addrspace(1)* %out8,
-    i32 addrspace(1)* %out9, i32 addrspace(1)* %outa, i32 addrspace(1)* %outb,
-    i32 addrspace(1)* %outc, i32 addrspace(1)* %outd, i32 addrspace(1)* %oute,
-    i32 addrspace(1)* %outf, i32 %in0, i32 %in1, i32 %in2, i32 %in3, i32 %in4,
-    i32 %in5, i32 %in6, i32 %in7, i32 %in8, i32 %in9, i32 %ina, i32 %inb,
+    i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, [8 x i32],
+    i32 addrspace(1)* %out2, i32 addrspace(1)* %out3, [8 x i32],
+    i32 addrspace(1)* %out4, i32 addrspace(1)* %out5, [8 x i32],
+    i32 addrspace(1)* %out6, i32 addrspace(1)* %out7, [8 x i32],
+    i32 addrspace(1)* %out8, i32 addrspace(1)* %out9, [8 x i32],
+    i32 addrspace(1)* %outa, i32 addrspace(1)* %outb, [8 x i32],
+    i32 addrspace(1)* %outc, i32 addrspace(1)* %outd, [8 x i32],
+    i32 addrspace(1)* %oute, i32 addrspace(1)* %outf, [8 x i32],
+    i32 %in0, i32 %in1, i32 %in2, i32 %in3, [8 x i32],
+    i32 %in4, i32 %in5, i32 %in6, i32 %in7, [8 x i32],
+    i32 %in8, i32 %in9, i32 %ina, i32 %inb, [8 x i32],
     i32 %inc, i32 %ind, i32 %ine, i32 %inf) #0 {
 entry:
   store i32 %in0, i32 addrspace(1)* %out0
@@ -64,7 +70,7 @@ entry:
   ret void
 }
 
-; CHECK: - Name:       num_spilled_vgprs
+; CHECK-LABEL: - Name:       num_spilled_vgprs
 ; CHECK:   SymbolName: 'num_spilled_vgprs@kd'
 ; CHECK:   CodeProps:
 ; CHECK:     NumSpilledVGPRs: 14

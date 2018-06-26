@@ -442,7 +442,7 @@ define amdgpu_kernel void @constant_align2_load_i32(i32 addrspace(4)* %p, i32 ad
 ; ALIGNED: buffer_load_ushort
 ; ALIGNED: buffer_load_ushort
 
-; UNALIGNED: s_load_dwordx2
+; UNALIGNED: s_load_dwordx4
 ; UNALIGNED: buffer_store_dwordx2
 define amdgpu_kernel void @constant_align2_load_i64(i64 addrspace(4)* %p, i64 addrspace(1)* %r) #0 {
   %v = load i64, i64 addrspace(4)* %p, align 2

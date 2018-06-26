@@ -748,10 +748,10 @@ public:
   /// operations don't trap except for integer divide and remainder.
   virtual bool canOpTrap(unsigned Op, EVT VT) const;
 
-  /// Similar to isShuffleMaskLegal. This is used by Targets can use this to
-  /// indicate if there is a suitable VECTOR_SHUFFLE that can be used to replace
-  /// a VAND with a constant pool entry.
-  virtual bool isVectorClearMaskLegal(const SmallVectorImpl<int> &/*Mask*/,
+  /// Similar to isShuffleMaskLegal. Targets can use this to indicate if there
+  /// is a suitable VECTOR_SHUFFLE that can be used to replace a VAND with a
+  /// constant pool entry.
+  virtual bool isVectorClearMaskLegal(ArrayRef<int> /*Mask*/,
                                       EVT /*VT*/) const {
     return false;
   }

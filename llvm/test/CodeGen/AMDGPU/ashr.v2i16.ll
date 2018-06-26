@@ -12,25 +12,17 @@
 ; CIVI: s_load_dword [[LHS:s[0-9]+]]
 ; CIVI: s_load_dword [[RHS:s[0-9]+]]
 
-; VI: s_ashr_i32
-; VI: s_ashr_i32
-; VI: s_sext_i32_i16
-; VI: s_sext_i32_i16
-; VI: s_ashr_i32
-; VI: s_ashr_i32
-; VI: s_lshl_b32
-; VI: s_and_b32
-; VI: s_or_b32
+; CIVI-DAG: s_ashr_i32
+; CIVI-DAG: s_ashr_i32
+; CIVI-DAG: s_sext_i32_i16
+; CIVI-DAG: s_sext_i32_i16
+; CIVI-DAG: s_ashr_i32
+; CIVI-DAG: s_ashr_i32
+; CIVI-DAG: s_lshl_b32
+; CIVI: s_and_b32
+; CIVI: s_or_b32
 
-; CI: s_ashr_i32
-; CI: s_and_b32
-; CI: s_lshr_b32
-; CI: s_sext_i32_i16
-; CI: s_ashr_i32
-; CI: s_ashr_i32
-; CI: s_lshl_b32
-; CI: s_and_b32
-define amdgpu_kernel void @s_ashr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
+define amdgpu_kernel void @s_ashr_v2i16(<2 x i16> addrspace(1)* %out, i32, <2 x i16> %lhs, i32, <2 x i16> %rhs) #0 {
   %result = ashr <2 x i16> %lhs, %rhs
   store <2 x i16> %result, <2 x i16> addrspace(1)* %out
   ret void

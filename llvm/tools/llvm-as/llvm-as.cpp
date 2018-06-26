@@ -19,6 +19,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -63,7 +64,7 @@ static cl::opt<std::string> ClDataLayout("data-layout",
                                          cl::value_desc("layout-string"),
                                          cl::init(""));
 
-static void WriteOutputFile(const Module *M) {
+static void WriteOutputFile(const Module *M, const ModuleSummaryIndex *Index) {
   // Infer the output filename if needed.
   if (OutputFilename.empty()) {
     if (InputFilename == "-") {
@@ -83,9 +84,24 @@ static void WriteOutputFile(const Module *M) {
     exit(1);
   }
 
-  if (Force || !CheckBitcodeOutputToConsole(Out->os(), true))
-    WriteBitcodeToFile(*M, Out->os(), PreserveBitcodeUseListOrder, nullptr,
-                       EmitModuleHash);
+  if (Force || !CheckBitcodeOutputToConsole(Out->os(), true)) {
+    const ModuleSummaryIndex *IndexToWrite = nullptr;
+    // Don't attempt to write a summary index unless it contains any entries.
+    // Otherwise we get an empty summary section.
+    if (Index && Index->begin() != Index->end())
+      IndexToWrite = Index;
+    if (!IndexToWrite || (M && (!M->empty() || !M->global_empty())))
+      // If we have a non-empty Module, then we write the Module plus
+      // any non-null Index along with it as a per-module Index.
+      // If both are empty, this will give an empty module block, which is
+      // the expected behavior.
+      WriteBitcodeToFile(*M, Out->os(), PreserveBitcodeUseListOrder,
+                         IndexToWrite, EmitModuleHash);
+    else
+      // Otherwise, with an empty Module but non-empty Index, we write a
+      // combined index.
+      WriteIndexToFile(*IndexToWrite, Out->os());
+  }
 
   // Declare success.
   Out->keep();
@@ -98,12 +114,14 @@ int main(int argc, char **argv) {
 
   // Parse the file now...
   SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyFile(
+  auto ModuleAndIndex = parseAssemblyFileWithIndex(
       InputFilename, Err, Context, nullptr, !DisableVerify, ClDataLayout);
+  std::unique_ptr<Module> M = std::move(ModuleAndIndex.Mod);
   if (!M.get()) {
     Err.print(argv[0], errs());
     return 1;
   }
+  std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 
   if (!DisableVerify) {
     std::string ErrorStr;
@@ -114,13 +132,17 @@ int main(int argc, char **argv) {
       errs() << OS.str();
       return 1;
     }
+    // TODO: Implement and call summary index verifier.
   }
 
-  if (DumpAsm)
+  if (DumpAsm) {
     errs() << "Here's the assembly:\n" << *M.get();
+    if (Index.get() && Index->begin() != Index->end())
+      Index->print(errs());
+  }
 
   if (!DisableOutput)
-    WriteOutputFile(M.get());
+    WriteOutputFile(M.get(), Index.get());
 
   return 0;
 }

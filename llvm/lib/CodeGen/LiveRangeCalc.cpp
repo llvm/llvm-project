@@ -584,3 +584,24 @@ void LiveRangeCalc::updateSSA() {
     }
   } while (Changed);
 }
+
+bool LiveRangeCalc::isJointlyDominated(const MachineBasicBlock *MBB,
+                                       ArrayRef<SlotIndex> Defs,
+                                       const SlotIndexes &Indexes) {
+  const MachineFunction &MF = *MBB->getParent();
+  BitVector DefBlocks(MF.getNumBlockIDs());
+  for (SlotIndex I : Defs)
+    DefBlocks.set(Indexes.getMBBFromIndex(I)->getNumber());
+
+  SetVector<unsigned> PredQueue;
+  PredQueue.insert(MBB->getNumber());
+  for (unsigned i = 0; i != PredQueue.size(); ++i) {
+    unsigned BN = PredQueue[i];
+    if (DefBlocks[BN])
+      return true;
+    const MachineBasicBlock *B = MF.getBlockNumbered(BN);
+    for (const MachineBasicBlock *P : B->predecessors())
+      PredQueue.insert(P->getNumber());
+  }
+  return false;
+}

@@ -358,26 +358,40 @@ static void createSegmentsForValues(LiveRange &LR,
   }
 }
 
-using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo*>, 16>;
-
-static void extendSegmentsToUses(LiveRange &LR, const SlotIndexes &Indexes,
-                                 ShrinkToUsesWorkList &WorkList,
-                                 const LiveRange &OldRange) {
+void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
+                                         ShrinkToUsesWorkList &WorkList,
+                                         unsigned Reg, LaneBitmask LaneMask) {
   // Keep track of the PHIs that are in use.
   SmallPtrSet<VNInfo*, 8> UsedPHIs;
   // Blocks that have already been added to WorkList as live-out.
   SmallPtrSet<const MachineBasicBlock*, 16> LiveOut;
+
+  auto getSubRange = [](const LiveInterval &I, LaneBitmask M)
+        -> const LiveRange& {
+    if (M.none())
+      return I;
+    for (const LiveInterval::SubRange &SR : I.subranges()) {
+      if ((SR.LaneMask & M).any()) {
+        assert(SR.LaneMask == M && "Expecting lane masks to match exactly");
+        return SR;
+      }
+    }
+    llvm_unreachable("Subrange for mask not found");
+  };
+
+  const LiveInterval &LI = getInterval(Reg);
+  const LiveRange &OldRange = getSubRange(LI, LaneMask);
 
   // Extend intervals to reach all uses in WorkList.
   while (!WorkList.empty()) {
     SlotIndex Idx = WorkList.back().first;
     VNInfo *VNI = WorkList.back().second;
     WorkList.pop_back();
-    const MachineBasicBlock *MBB = Indexes.getMBBFromIndex(Idx.getPrevSlot());
-    SlotIndex BlockStart = Indexes.getMBBStartIdx(MBB);
+    const MachineBasicBlock *MBB = Indexes->getMBBFromIndex(Idx.getPrevSlot());
+    SlotIndex BlockStart = Indexes->getMBBStartIdx(MBB);
 
     // Extend the live range for VNI to be live at Idx.
-    if (VNInfo *ExtVNI = LR.extendInBlock(BlockStart, Idx)) {
+    if (VNInfo *ExtVNI = Segments.extendInBlock(BlockStart, Idx)) {
       assert(ExtVNI == VNI && "Unexpected existing value number");
       (void)ExtVNI;
       // Is this a PHIDef we haven't seen before?
@@ -388,7 +402,7 @@ static void extendSegmentsToUses(LiveRange &LR, const SlotIndexes &Indexes,
       for (const MachineBasicBlock *Pred : MBB->predecessors()) {
         if (!LiveOut.insert(Pred).second)
           continue;
-        SlotIndex Stop = Indexes.getMBBEndIdx(Pred);
+        SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
         // A predecessor is not required to have a live-out value for a PHI.
         if (VNInfo *PVNI = OldRange.getVNInfoBefore(Stop))
           WorkList.push_back(std::make_pair(Stop, PVNI));
@@ -398,16 +412,29 @@ static void extendSegmentsToUses(LiveRange &LR, const SlotIndexes &Indexes,
 
     // VNI is live-in to MBB.
     LLVM_DEBUG(dbgs() << " live-in at " << BlockStart << '\n');
-    LR.addSegment(LiveRange::Segment(BlockStart, Idx, VNI));
+    Segments.addSegment(LiveRange::Segment(BlockStart, Idx, VNI));
 
     // Make sure VNI is live-out from the predecessors.
     for (const MachineBasicBlock *Pred : MBB->predecessors()) {
       if (!LiveOut.insert(Pred).second)
         continue;
-      SlotIndex Stop = Indexes.getMBBEndIdx(Pred);
-      assert(OldRange.getVNInfoBefore(Stop) == VNI &&
-             "Wrong value out of predecessor");
-      WorkList.push_back(std::make_pair(Stop, VNI));
+      SlotIndex Stop = Indexes->getMBBEndIdx(Pred);
+      if (VNInfo *OldVNI = OldRange.getVNInfoBefore(Stop)) {
+        assert(OldVNI == VNI && "Wrong value out of predecessor");
+        (void)OldVNI;
+        WorkList.push_back(std::make_pair(Stop, VNI));
+      } else {
+#ifndef NDEBUG
+        // There was no old VNI. Verify that Stop is jointly dominated
+        // by <undef>s for this live range.
+        assert(LaneMask.any() &&
+               "Missing value out of predecessor for main range");
+        SmallVector<SlotIndex,8> Undefs;
+        LI.computeSubRangeUndefs(Undefs, LaneMask, *MRI, *Indexes);
+        assert(LiveRangeCalc::isJointlyDominated(Pred, Undefs, *Indexes) &&
+               "Missing value out of predecessor for subrange");
+#endif
+      }
     }
   }
 }
@@ -460,7 +487,7 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
   // Create new live ranges with only minimal live segments per def.
   LiveRange NewLR;
   createSegmentsForValues(NewLR, make_range(li->vni_begin(), li->vni_end()));
-  extendSegmentsToUses(NewLR, *Indexes, WorkList, *li);
+  extendSegmentsToUses(NewLR, WorkList, Reg, LaneBitmask::getNone());
 
   // Move the trimmed segments back.
   li->segments.swap(NewLR.segments);
@@ -558,7 +585,7 @@ void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, unsigned Reg) {
   // Create a new live ranges with only minimal live segments per def.
   LiveRange NewLR;
   createSegmentsForValues(NewLR, make_range(SR.vni_begin(), SR.vni_end()));
-  extendSegmentsToUses(NewLR, *Indexes, WorkList, SR);
+  extendSegmentsToUses(NewLR, WorkList, Reg, SR.LaneMask);
 
   // Move the trimmed ranges back.
   SR.segments.swap(NewLR.segments);

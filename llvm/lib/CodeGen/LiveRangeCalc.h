@@ -282,6 +282,15 @@ public:
   /// Every predecessor of a live-in block must have been given a value with
   /// setLiveOutValue, the value may be null for live-trough blocks.
   void calculateValues();
+
+  /// A diagnostic function to check if the end of the block @p MBB is
+  /// jointly dominated by the blocks corresponding to the slot indices
+  /// in @p Defs. This function is mainly for use in self-verification
+  /// checks.
+  LLVM_ATTRIBUTE_UNUSED
+  static bool isJointlyDominated(const MachineBasicBlock *MBB,
+                                 ArrayRef<SlotIndex> Defs,
+                                 const SlotIndexes &Indexes);
 };
 
 } // end namespace llvm

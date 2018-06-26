@@ -640,6 +640,52 @@ define void @test_nosplitstck() {
 	ret void
 }
 
+; Test to make sure that a morestack call is generated if there is a
+; sibling call, even if the function in question has no stack frame
+; (PR37807).
+
+declare i32 @callee(i32)
+
+define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
+  %call = tail call i32 @callee(i32 %x) #0
+  ret i32 %call
+
+; X32-Linux-LABEL:       test_sibling_call_empty_frame:
+; X32-Linux:  calll __morestack
+
+; X64-Linux-LABEL:       test_sibling_call_empty_frame:
+; X64-Linux:  callq __morestack
+
+; X64-Linux-Large-LABEL:       test_sibling_call_empty_frame:
+; X64-Linux-Large:  callq *__morestack_addr(%rip)
+
+; X32ABI-LABEL:       test_sibling_call_empty_frame:
+; X32ABI:  callq __morestack
+
+; X32-Darwin-LABEL:      test_sibling_call_empty_frame:
+; X32-Darwin: calll ___morestack
+
+; X64-Darwin-LABEL:      test_sibling_call_empty_frame:
+; X64-Darwin: callq ___morestack
+
+; X32-MinGW-LABEL:       test_sibling_call_empty_frame:
+; X32-MinGW:  calll ___morestack
+
+; X64-MinGW-LABEL:       test_sibling_call_empty_frame:
+; X64-MinGW:  callq __morestack
+
+; X64-FreeBSD-LABEL:       test_sibling_call_empty_frame:
+; X64-FreeBSD:  callq __morestack
+
+; X32-DFlyBSD-LABEL:       test_sibling_call_empty_frame:
+; X32-DFlyBSD:  calll __morestack
+; X32-DFlyBSD-NEXT:  ret
+
+; X64-DFlyBSD-LABEL:       test_sibling_call_empty_frame:
+; X64-DFlyBSD:  callq __morestack
+
+}
+
 attributes #0 = { "split-stack" }
 
 ; X64-Linux-Large: .rodata

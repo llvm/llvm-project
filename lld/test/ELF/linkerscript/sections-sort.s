@@ -15,9 +15,9 @@ nop
 
 # CHECK: Idx
 # CHECK-NEXT: 0
-# CHECK-NEXT: 1 .dynsym
-# CHECK-NEXT: 2 .dynstr
-# CHECK-NEXT: 3 .text
+# CHECK-NEXT: 1 .text
+# CHECK-NEXT: 2 .dynsym
+# CHECK-NEXT: 3 .dynstr
 # CHECK-NEXT: 4 foo
 # CHECK-NEXT: 5 .hash
 # CHECK-NEXT: 6 .dynamic

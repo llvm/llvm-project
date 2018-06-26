@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check PLT entries generation in case of R6 ABI version.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -10,8 +11,6 @@
 # RUN: ld.lld %t2.o -shared -o %t.so -z hazardplt
 # RUN: ld.lld %t1.o %t.so -o %t.exe -z hazardplt
 # RUN: llvm-objdump -d %t.exe | FileCheck %s --check-prefixes=HAZARDPLT,CHECK
-
-# REQUIRES: mips
 
 # CHECK:      Disassembly of section .text:
 # CHECK-NEXT: __start:

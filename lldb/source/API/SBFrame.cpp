@@ -419,7 +419,7 @@ addr_t SBFrame::GetPC() const {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
         addr = frame->GetFrameCodeAddress().GetOpcodeLoadAddress(
-            target, eAddressClassCode);
+            target, AddressClass::eCode);
       } else {
         if (log)
           log->Printf("SBFrame::GetPC () => error: could not reconstruct frame "

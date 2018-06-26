@@ -373,6 +373,8 @@ public:
   void setAliasee(GlobalValueSummary *Aliasee) { AliaseeSummary = Aliasee; }
   void setAliaseeGUID(GlobalValue::GUID GUID) { AliaseeGUID = GUID; }
 
+  bool hasAliasee() const { return !!AliaseeSummary; }
+
   const GlobalValueSummary &getAliasee() const {
     assert(AliaseeSummary && "Unexpected missing aliasee summary");
     return *AliaseeSummary;
