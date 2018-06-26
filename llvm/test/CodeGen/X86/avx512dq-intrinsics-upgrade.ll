@@ -536,3 +536,34 @@ define i8@test_int_x86_avx512_cvtq2mask_512(<8 x i64> %x0) {
   %res = call i8 @llvm.x86.avx512.cvtq2mask.512(<8 x i64> %x0)
   ret i8 %res
 }
+
+declare i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double>, i32, i8)
+
+define i8 @test_int_x86_avx512_mask_fpclass_pd_512(<8 x double> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_pd_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclasspd $2, %zmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x48,0x66,0xc8,0x02]
+; CHECK-NEXT:    vfpclasspd $4, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x49,0x66,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+    %res = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 4, i8 -1)
+    %res1 = call i8 @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %x0, i32 2, i8 %res)
+    ret i8 %res1
+}
+declare i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float>, i32, i16)
+
+define i16@test_int_x86_avx512_mask_fpclass_ps_512(<16 x float> %x0) {
+; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ps_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vfpclassps $2, %zmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x48,0x66,0xc8,0x02]
+; CHECK-NEXT:    vfpclassps $4, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x49,0x66,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+    %res = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 4, i16 -1)
+    %res1 = call i16 @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %x0, i32 2, i16 %res)
+    ret i16 %res1
+}

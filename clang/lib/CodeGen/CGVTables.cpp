@@ -1012,30 +1012,29 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
   CharUnits PointerWidth =
       Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
 
-  typedef std::pair<const CXXRecordDecl *, unsigned> TypeMetadata;
-  std::vector<TypeMetadata> TypeMetadatas;
-  // Create type metadata for each address point.
+  typedef std::pair<const CXXRecordDecl *, unsigned> AddressPoint;
+  std::vector<AddressPoint> AddressPoints;
   for (auto &&AP : VTLayout.getAddressPoints())
-    TypeMetadatas.push_back(std::make_pair(
+    AddressPoints.push_back(std::make_pair(
         AP.first.getBase(), VTLayout.getVTableOffset(AP.second.VTableIndex) +
                                 AP.second.AddressPointIndex));
 
-  // Sort the type metadata for determinism.
-  llvm::sort(TypeMetadatas.begin(), TypeMetadatas.end(),
-             [this](const TypeMetadata &M1, const TypeMetadata &M2) {
-    if (&M1 == &M2)
+  // Sort the address points for determinism.
+  llvm::sort(AddressPoints.begin(), AddressPoints.end(),
+             [this](const AddressPoint &AP1, const AddressPoint &AP2) {
+    if (&AP1 == &AP2)
       return false;
 
     std::string S1;
     llvm::raw_string_ostream O1(S1);
     getCXXABI().getMangleContext().mangleTypeName(
-        QualType(M1.first->getTypeForDecl(), 0), O1);
+        QualType(AP1.first->getTypeForDecl(), 0), O1);
     O1.flush();
 
     std::string S2;
     llvm::raw_string_ostream O2(S2);
     getCXXABI().getMangleContext().mangleTypeName(
-        QualType(M2.first->getTypeForDecl(), 0), O2);
+        QualType(AP2.first->getTypeForDecl(), 0), O2);
     O2.flush();
 
     if (S1 < S2)
@@ -1043,10 +1042,26 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
     if (S1 != S2)
       return false;
 
-    return M1.second < M2.second;
+    return AP1.second < AP2.second;
   });
 
-  for (auto TypeMetadata : TypeMetadatas)
-    AddVTableTypeMetadata(VTable, PointerWidth * TypeMetadata.second,
-                          TypeMetadata.first);
+  ArrayRef<VTableComponent> Comps = VTLayout.vtable_components();
+  for (auto AP : AddressPoints) {
+    // Create type metadata for the address point.
+    AddVTableTypeMetadata(VTable, PointerWidth * AP.second, AP.first);
+
+    // The class associated with each address point could also potentially be
+    // used for indirect calls via a member function pointer, so we need to
+    // annotate the address of each function pointer with the appropriate member
+    // function pointer type.
+    for (unsigned I = 0; I != Comps.size(); ++I) {
+      if (Comps[I].getKind() != VTableComponent::CK_FunctionPointer)
+        continue;
+      llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
+          Context.getMemberPointerType(
+              Comps[I].getFunctionDecl()->getType(),
+              Context.getRecordType(AP.first).getTypePtr()));
+      VTable->addTypeMetadata((PointerWidth * I).getQuantity(), MD);
+    }
+  }
 }

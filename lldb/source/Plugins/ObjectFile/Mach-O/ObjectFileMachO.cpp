@@ -5757,20 +5757,29 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
             m_sdk_versions.push_back(xxxx);
             m_sdk_versions.push_back(yy);
             m_sdk_versions.push_back(zz);
+            success = true;
+          } else {
+            GetModule()->ReportWarning(
+                "minimum OS version load command with invalid (0) version found.");
           }
-          success = true;
         }
       }
       offset = load_cmd_offset + lc.cmdsize;
     }
 
     if (success == false) {
-      // Push an invalid value so we don't keep trying to
+      // Push an invalid value so we don't try to find
+      // the version # again on the next call to this
+      // method.
       m_sdk_versions.push_back(UINT32_MAX);
     }
   }
 
-  if (m_sdk_versions.size() > 1 || m_sdk_versions[0] != UINT32_MAX) {
+  // Legitimate version numbers will have 3 entries pushed
+  // on to m_sdk_versions.  If we only have one value, it's
+  // the sentinel value indicating that this object file
+  // does not have a valid minimum os version #.
+  if (m_sdk_versions.size() > 1) {
     if (versions != NULL && num_versions > 0) {
       for (size_t i = 0; i < num_versions; ++i) {
         if (i < m_sdk_versions.size())

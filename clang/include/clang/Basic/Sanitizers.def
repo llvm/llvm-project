@@ -104,12 +104,13 @@ SANITIZER("dataflow", DataFlow)
 SANITIZER("cfi-cast-strict", CFICastStrict)
 SANITIZER("cfi-derived-cast", CFIDerivedCast)
 SANITIZER("cfi-icall", CFIICall)
+SANITIZER("cfi-mfcall", CFIMFCall)
 SANITIZER("cfi-unrelated-cast", CFIUnrelatedCast)
 SANITIZER("cfi-nvcall", CFINVCall)
 SANITIZER("cfi-vcall", CFIVCall)
 SANITIZER_GROUP("cfi", CFI,
-                CFIDerivedCast | CFIICall | CFIUnrelatedCast | CFINVCall |
-                CFIVCall)
+                CFIDerivedCast | CFIICall | CFIMFCall | CFIUnrelatedCast |
+                    CFINVCall | CFIVCall)
 
 // Safe Stack
 SANITIZER("safe-stack", SafeStack)

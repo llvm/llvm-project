@@ -503,6 +503,7 @@ private:
   /// MDNodes.
   typedef llvm::DenseMap<QualType, llvm::Metadata *> MetadataTypeMap;
   MetadataTypeMap MetadataIdMap;
+  MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
 
 public:
@@ -1232,13 +1233,18 @@ public:
   /// internal identifiers).
   llvm::Metadata *CreateMetadataIdentifierForType(QualType T);
 
+  /// Create a metadata identifier that is intended to be used to check virtual
+  /// calls via a member function pointer.
+  llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
+
   /// Create a metadata identifier for the generalization of the given type.
   /// This may either be an MDString (for external identifiers) or a distinct
   /// unnamed MDNode (for internal identifiers).
   llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
-  void CreateFunctionTypeMetadata(const FunctionDecl *FD, llvm::Function *F);
+  void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+                                          llvm::Function *F);
 
   /// Returns whether this module needs the "all-vtables" type identifier.
   bool NeedAllVtablesTypeId() const;
@@ -1246,6 +1252,14 @@ public:
   /// Create and attach type metadata for the given vtable.
   void AddVTableTypeMetadata(llvm::GlobalVariable *VTable, CharUnits Offset,
                              const CXXRecordDecl *RD);
+
+  /// Return a vector of most-base classes for RD. This is used to implement
+  /// control flow integrity checks for member function pointers.
+  ///
+  /// A most-base class of a class C is defined as a recursive base class of C,
+  /// including C itself, that does not have any bases.
+  std::vector<const CXXRecordDecl *>
+  getMostBaseClasses(const CXXRecordDecl *RD);
 
   /// Get the declaration of std::terminate for the platform.
   llvm::Constant *getTerminateFn();
@@ -1408,6 +1422,9 @@ private:
   void ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
                                   bool AttrOnCallSite,
                                   llvm::AttrBuilder &FuncAttrs);
+
+  llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
+                                               StringRef Suffix);
 };
 
 }  // end namespace CodeGen
