@@ -37,7 +37,7 @@ TEST_F(X86TargetTest, SetRegToConstantGPR) {
 
 TEST_F(X86TargetTest, SetRegToConstantXMM) {
   const auto Insts = Target_->setRegToConstant(llvm::X86::XMM1);
-  EXPECT_THAT(Insts, SizeIs(Gt(0)));
+  EXPECT_THAT(Insts, SizeIs(Gt(0U)));
 }
 
 } // namespace

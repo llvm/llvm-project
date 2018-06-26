@@ -1477,19 +1477,16 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_moutline,
-                               options::OPT_mno_outline)) {
-    if (A->getOption().matches(options::OPT_moutline)) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-machine-outliner");
+  if (Args.hasFlag(options::OPT_moutline, options::OPT_mno_outline, false)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-enable-machine-outliner");
 
-      // The outliner shouldn't compete with linkers that dedupe linkonceodr
-      // functions in LTO. Enable that behaviour by default when compiling with
-      // LTO.
-      if (getToolChain().getDriver().isUsingLTO()) {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-enable-linkonceodr-outlining");
-      }
+    // The outliner shouldn't compete with linkers that dedupe linkonceodr
+    // functions in LTO. Enable that behaviour by default when compiling with
+    // LTO.
+    if (getToolChain().getDriver().isUsingLTO()) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-enable-linkonceodr-outlining");
     }
   }
 }

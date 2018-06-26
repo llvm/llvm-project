@@ -487,6 +487,7 @@ SDValue WebAssemblyTargetLowering::LowerCall(
 
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  unsigned NumFixedArgs = 0;
   for (unsigned i = 0; i < Outs.size(); ++i) {
     const ISD::OutputArg &Out = Outs[i];
     SDValue &OutVal = OutVals[i];
@@ -512,11 +513,11 @@ SDValue WebAssemblyTargetLowering::LowerCall(
           /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
       OutVal = FINode;
     }
+    // Count the number of fixed args *after* legalization.
+    NumFixedArgs += Out.IsFixed;
   }
 
   bool IsVarArg = CLI.IsVarArg;
-  unsigned NumFixedArgs = CLI.NumFixedArgs;
-
   auto PtrVT = getPointerTy(Layout);
 
   // Analyze operands of the call, assigning locations to each operand.

@@ -344,6 +344,69 @@ AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
   return Flags;
 }
 
+SymbolAliasesMaterializationUnit::SymbolAliasesMaterializationUnit(
+    SymbolAliasMap Aliases)
+    : MaterializationUnit(extractFlags(Aliases)), Aliases(std::move(Aliases)) {}
+
+void SymbolAliasesMaterializationUnit::materialize(
+    MaterializationResponsibility R) {
+  auto &V = R.getTargetVSO();
+  auto &ES = V.getExecutionSession();
+
+  // FIXME: Use a unique_ptr when we move to C++14 and have generalized lambda
+  // capture.
+  auto SharedR = std::make_shared<MaterializationResponsibility>(std::move(R));
+
+  auto OnResolve = [this, SharedR](
+                       Expected<AsynchronousSymbolQuery::ResolutionResult> RR) {
+    if (RR) {
+      SymbolMap ResolutionMap;
+      for (auto &KV : Aliases) {
+        assert(RR->Symbols.count(KV.second.Aliasee) &&
+               "Result map missing entry?");
+        ResolutionMap[KV.first] = JITEvaluatedSymbol(
+            RR->Symbols[KV.second.Aliasee].getAddress(), KV.second.AliasFlags);
+      }
+
+      SharedR->resolve(ResolutionMap);
+      SharedR->finalize();
+    } else {
+      auto &ES = SharedR->getTargetVSO().getExecutionSession();
+      ES.reportError(RR.takeError());
+      SharedR->failMaterialization();
+    }
+  };
+
+  auto OnReady = [&ES](Error Err) { ES.reportError(std::move(Err)); };
+
+  SymbolNameSet Aliasees;
+  for (auto &KV : Aliases)
+    Aliasees.insert(KV.second.Aliasee);
+
+  auto Q = std::make_shared<AsynchronousSymbolQuery>(
+      Aliasees, std::move(OnResolve), std::move(OnReady));
+  auto Unresolved = V.lookup(Q, Aliasees);
+
+  if (!Unresolved.empty())
+    ES.failQuery(*Q, make_error<SymbolsNotFound>(std::move(Unresolved)));
+}
+
+void SymbolAliasesMaterializationUnit::discard(const VSO &V,
+                                               SymbolStringPtr Name) {
+  assert(Aliases.count(Name) &&
+         "Symbol not covered by this MaterializationUnit");
+  Aliases.erase(Name);
+}
+
+SymbolFlagsMap
+SymbolAliasesMaterializationUnit::extractFlags(const SymbolAliasMap &Aliases) {
+  SymbolFlagsMap SymbolFlags;
+  for (auto &KV : Aliases)
+    SymbolFlags[KV.first] = KV.second.AliasFlags;
+
+  return SymbolFlags;
+}
+
 Error VSO::defineMaterializing(const SymbolFlagsMap &SymbolFlags) {
   return ES.runSessionLocked([&]() -> Error {
     std::vector<SymbolMap::iterator> AddedSyms;
@@ -858,7 +921,13 @@ void VSO::dump(raw_ostream &OS) {
 Error VSO::defineImpl(MaterializationUnit &MU) {
   SymbolNameSet Duplicates;
   SymbolNameSet MUDefsOverridden;
-  std::vector<SymbolMap::iterator> ExistingDefsOverridden;
+
+  struct ExistingDefOverriddenEntry {
+    SymbolMap::iterator ExistingDefItr;
+    JITSymbolFlags NewFlags;
+  };
+  std::vector<ExistingDefOverriddenEntry> ExistingDefsOverridden;
+
   for (auto &KV : MU.getSymbols()) {
     assert(!KV.second.isLazy() && "Lazy flag should be managed internally.");
     assert(!KV.second.isMaterializing() &&
@@ -879,7 +948,7 @@ Error VSO::defineImpl(MaterializationUnit &MU) {
             (EntryItr->second.getFlags() & JITSymbolFlags::Materializing))
           Duplicates.insert(KV.first);
         else
-          ExistingDefsOverridden.push_back(EntryItr);
+          ExistingDefsOverridden.push_back({EntryItr, NewFlags});
       } else
         MUDefsOverridden.insert(KV.first);
     }
@@ -892,8 +961,8 @@ Error VSO::defineImpl(MaterializationUnit &MU) {
         continue;
 
       bool Found = false;
-      for (const auto &I : ExistingDefsOverridden)
-        if (I->first == KV.first)
+      for (const auto &EDO : ExistingDefsOverridden)
+        if (EDO.ExistingDefItr->first == KV.first)
           Found = true;
 
       if (!Found)
@@ -905,16 +974,18 @@ Error VSO::defineImpl(MaterializationUnit &MU) {
   }
 
   // Update flags on existing defs and call discard on their materializers.
-  for (auto &ExistingDefItr : ExistingDefsOverridden) {
-    assert(ExistingDefItr->second.getFlags().isLazy() &&
-           !ExistingDefItr->second.getFlags().isMaterializing() &&
+  for (auto &EDO : ExistingDefsOverridden) {
+    assert(EDO.ExistingDefItr->second.getFlags().isLazy() &&
+           !EDO.ExistingDefItr->second.getFlags().isMaterializing() &&
            "Overridden existing def should be in the Lazy state");
 
-    auto UMII = UnmaterializedInfos.find(ExistingDefItr->first);
+    EDO.ExistingDefItr->second.setFlags(EDO.NewFlags);
+
+    auto UMII = UnmaterializedInfos.find(EDO.ExistingDefItr->first);
     assert(UMII != UnmaterializedInfos.end() &&
            "Overridden existing def should have an UnmaterializedInfo");
 
-    UMII->second->MU->doDiscard(*this, ExistingDefItr->first);
+    UMII->second->MU->doDiscard(*this, EDO.ExistingDefItr->first);
   }
 
   // Discard overridden symbols povided by MU.

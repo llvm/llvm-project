@@ -78,6 +78,12 @@ public:
     APINT_BITS_PER_WORD = APINT_WORD_SIZE * CHAR_BIT
   };
 
+  enum class Rounding {
+    DOWN,
+    TOWARD_ZERO,
+    UP,
+  };
+
   static const WordType WORD_MAX = ~WordType(0);
 
 private:
@@ -1039,13 +1045,16 @@ public:
   /// Perform an unsigned divide operation on this APInt by RHS. Both this and
   /// RHS are treated as unsigned quantities for purposes of this division.
   ///
-  /// \returns a new APInt value containing the division result
+  /// \returns a new APInt value containing the division result, rounded towards
+  /// zero.
   APInt udiv(const APInt &RHS) const;
   APInt udiv(uint64_t RHS) const;
 
   /// Signed division function for APInt.
   ///
   /// Signed divide this APInt by APInt RHS.
+  ///
+  /// The result is rounded towards zero.
   APInt sdiv(const APInt &RHS) const;
   APInt sdiv(int64_t RHS) const;
 
@@ -2150,6 +2159,12 @@ APInt RoundDoubleToAPInt(double Double, unsigned width);
 inline APInt RoundFloatToAPInt(float Float, unsigned width) {
   return RoundDoubleToAPInt(double(Float), width);
 }
+
+/// Return A unsign-divided by B, rounded by the given rounding mode.
+APInt RoundingUDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
+
+/// Return A sign-divided by B, rounded by the given rounding mode.
+APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 
 } // End of APIntOps namespace
 

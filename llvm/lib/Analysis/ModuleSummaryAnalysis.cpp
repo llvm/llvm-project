@@ -361,7 +361,7 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       TypeCheckedLoadConstVCalls.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(F.getGUID());
-  Index.addGlobalValueSummary(F.getName(), std::move(FuncSummary));
+  Index.addGlobalValueSummary(F, std::move(FuncSummary));
 }
 
 static void
@@ -377,7 +377,7 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
       llvm::make_unique<GlobalVarSummary>(Flags, RefEdges.takeVector());
   if (NonRenamableLocal)
     CantBePromoted.insert(V.getGUID());
-  Index.addGlobalValueSummary(V.getName(), std::move(GVarSummary));
+  Index.addGlobalValueSummary(V, std::move(GVarSummary));
 }
 
 static void
@@ -393,7 +393,7 @@ computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   AS->setAliasee(AliaseeSummary);
   if (NonRenamableLocal)
     CantBePromoted.insert(A.getGUID());
-  Index.addGlobalValueSummary(A.getName(), std::move(AS));
+  Index.addGlobalValueSummary(A, std::move(AS));
 }
 
 // Set LiveRoot flag on entries matching the given value name.
@@ -455,7 +455,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                                               /* NotEligibleToImport = */ true,
                                               /* Live = */ true,
                                               /* Local */ GV->isDSOLocal());
-          CantBePromoted.insert(GlobalValue::getGUID(Name));
+          CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {
             std::unique_ptr<FunctionSummary> Summary =
@@ -472,12 +472,12 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
                     ArrayRef<FunctionSummary::ConstVCall>{});
-            Index.addGlobalValueSummary(Name, std::move(Summary));
+            Index.addGlobalValueSummary(*GV, std::move(Summary));
           } else {
             std::unique_ptr<GlobalVarSummary> Summary =
                 llvm::make_unique<GlobalVarSummary>(GVFlags,
                                                     ArrayRef<ValueInfo>{});
-            Index.addGlobalValueSummary(Name, std::move(Summary));
+            Index.addGlobalValueSummary(*GV, std::move(Summary));
           }
         });
   }
@@ -607,14 +607,14 @@ ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
   auto &PSI = *getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  Index = buildModuleSummaryIndex(
+  Index.emplace(buildModuleSummaryIndex(
       M,
       [this](const Function &F) {
         return &(this->getAnalysis<BlockFrequencyInfoWrapperPass>(
                          *const_cast<Function *>(&F))
                      .getBFI());
       },
-      &PSI);
+      &PSI));
   return false;
 }
 

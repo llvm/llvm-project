@@ -245,6 +245,46 @@ absoluteSymbols(SymbolMap Symbols) {
       std::move(Symbols));
 }
 
+struct SymbolAliasMapEntry {
+  SymbolStringPtr Aliasee;
+  JITSymbolFlags AliasFlags;
+};
+
+/// A map of Symbols to (Symbol, Flags) pairs.
+using SymbolAliasMap = std::map<SymbolStringPtr, SymbolAliasMapEntry>;
+
+/// A materialization unit for symbol aliases. Allows existing symbols to be
+/// aliased with alternate flags.
+class SymbolAliasesMaterializationUnit : public MaterializationUnit {
+public:
+  SymbolAliasesMaterializationUnit(SymbolAliasMap Aliases);
+
+private:
+  void materialize(MaterializationResponsibility R) override;
+  void discard(const VSO &V, SymbolStringPtr Name) override;
+  static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
+
+  SymbolAliasMap Aliases;
+};
+
+/// Create a SymbolAliasesMaterializationUnit with the given aliases.
+/// Useful for defining symbol aliases.: E.g., given a VSO V containing symbols
+/// "foo" and "bar", we can define aliases "baz" (for "foo") and "qux" (for
+/// "bar") with:
+/// \code{.cpp}
+///   SymbolStringPtr Baz = ...;
+///   SymbolStringPtr Qux = ...;
+///   if (auto Err = V.define(symbolAliases({
+///       {Baz, { Foo, JITSymbolFlags::Exported }},
+///       {Qux, { Bar, JITSymbolFlags::Weak }}}))
+///     return Err;
+/// \endcode
+inline std::unique_ptr<SymbolAliasesMaterializationUnit>
+symbolAliases(SymbolAliasMap Aliases) {
+  return llvm::make_unique<SymbolAliasesMaterializationUnit>(
+      std::move(Aliases));
+}
+
 /// Base utilities for ExecutionSession.
 class ExecutionSessionBase {
 public:

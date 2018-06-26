@@ -194,9 +194,9 @@ define i32 @shl_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: shl_constant_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movb $3, %cl
-; CHECK-NEXT:    subb %dil, %cl
+; CHECK-NEXT:    xorb $3, %dil
 ; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
@@ -208,9 +208,9 @@ define i32 @lshr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: lshr_constant_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movb $3, %cl
-; CHECK-NEXT:    subb %dil, %cl
+; CHECK-NEXT:    xorb $3, %dil
 ; CHECK-NEXT:    movl $64, %eax
+; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
@@ -222,9 +222,9 @@ define i32 @ashr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: ashr_constant_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    movb $3, %cl
-; CHECK-NEXT:    subb %dil, %cl
+; CHECK-NEXT:    xorb $3, %dil
 ; CHECK-NEXT:    movl $128, %eax
+; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shrl %cl, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 2, i32 3
