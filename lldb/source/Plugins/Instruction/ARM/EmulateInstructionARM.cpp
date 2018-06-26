@@ -13888,10 +13888,10 @@ bool EmulateInstructionARM::SetInstruction(const Opcode &insn_opcode,
     else {
       AddressClass addr_class = inst_addr.GetAddressClass();
 
-      if ((addr_class == eAddressClassCode) ||
-          (addr_class == eAddressClassUnknown))
+      if ((addr_class == AddressClass::eCode) ||
+          (addr_class == AddressClass::eUnknown))
         m_opcode_mode = eModeARM;
-      else if (addr_class == eAddressClassCodeAlternateISA)
+      else if (addr_class == AddressClass::eCodeAlternateISA)
         m_opcode_mode = eModeThumb;
       else
         return false;

@@ -24,14 +24,14 @@ void f2(char *source) {
 }
 
 void f3(char *source) {
-  char *destination = 0; // FIXME: There should be a note here as well.
+  char *destination = 0; // expected-note{{'destination' initialized to a null pointer value}}
   destination = destination + 0; // expected-note{{Null pointer value stored to 'destination'}}
   memcpy(destination, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
                                    // expected-note@-1{{Null pointer argument in call to memory copy function}}
 }
 
 void f4(char *source) {
-  char *destination = 0; // FIXME: There should be a note here as well.
+  char *destination = 0; // expected-note{{'destination' initialized to a null pointer value}}
   destination = destination - 0; // expected-note{{Null pointer value stored to 'destination'}}
   memcpy(destination, source, 10); // expected-warning{{Null pointer argument in call to memory copy function}}
                                    // expected-note@-1{{Null pointer argument in call to memory copy function}}

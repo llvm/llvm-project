@@ -1161,19 +1161,19 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           const lldb::SectionType section_type = section_sp->GetType();
           switch (section_type) {
           case eSectionTypeInvalid:
-            return eAddressClassUnknown;
+            return AddressClass::eUnknown;
 
           case eSectionTypeCode:
             if (m_header.cputype == llvm::MachO::CPU_TYPE_ARM) {
               // For ARM we have a bit in the n_desc field of the symbol that
               // tells us ARM/Thumb which is bit 0x0008.
               if (symbol->GetFlags() & MACHO_NLIST_ARM_SYMBOL_IS_THUMB)
-                return eAddressClassCodeAlternateISA;
+                return AddressClass::eCodeAlternateISA;
             }
-            return eAddressClassCode;
+            return AddressClass::eCode;
 
           case eSectionTypeContainer:
-            return eAddressClassUnknown;
+            return AddressClass::eUnknown;
 
           case eSectionTypeData:
           case eSectionTypeDataCString:
@@ -1187,7 +1187,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDataObjCMessageRefs:
           case eSectionTypeDataObjCCFStrings:
           case eSectionTypeGoSymtab:
-            return eAddressClassData;
+            return AddressClass::eData;
 
           case eSectionTypeDebug:
           case eSectionTypeDWARFDebugAbbrev:
@@ -1212,13 +1212,13 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDWARFAppleNamespaces:
           case eSectionTypeDWARFAppleObjC:
           case eSectionTypeDWARFGNUDebugAltLink:
-            return eAddressClassDebug;
+            return AddressClass::eDebug;
 
           case eSectionTypeEHFrame:
           case eSectionTypeARMexidx:
           case eSectionTypeARMextab:
           case eSectionTypeCompactUnwind:
-            return eAddressClassRuntime;
+            return AddressClass::eRuntime;
 
           case eSectionTypeAbsoluteAddress:
           case eSectionTypeELFSymbolTable:
@@ -1226,7 +1226,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeELFRelocationEntries:
           case eSectionTypeELFDynamicLinkInfo:
           case eSectionTypeOther:
-            return eAddressClassUnknown;
+            return AddressClass::eUnknown;
           }
         }
       }
@@ -1234,9 +1234,9 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
       const SymbolType symbol_type = symbol->GetType();
       switch (symbol_type) {
       case eSymbolTypeAny:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
       case eSymbolTypeAbsolute:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
 
       case eSymbolTypeCode:
       case eSymbolTypeTrampoline:
@@ -1245,62 +1245,62 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           // For ARM we have a bit in the n_desc field of the symbol that tells
           // us ARM/Thumb which is bit 0x0008.
           if (symbol->GetFlags() & MACHO_NLIST_ARM_SYMBOL_IS_THUMB)
-            return eAddressClassCodeAlternateISA;
+            return AddressClass::eCodeAlternateISA;
         }
-        return eAddressClassCode;
+        return AddressClass::eCode;
 
       case eSymbolTypeData:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeRuntime:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeException:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeSourceFile:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeHeaderFile:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeObjectFile:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeCommonBlock:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeBlock:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeLocal:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeParam:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeVariable:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeVariableType:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeLineEntry:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeLineHeader:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeScopeBegin:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeScopeEnd:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeAdditional:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
       case eSymbolTypeCompiler:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeInstrumentation:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeUndefined:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
       case eSymbolTypeObjCClass:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeObjCMetaClass:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeObjCIVar:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeReExported:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       }
     }
   }
-  return eAddressClassUnknown;
+  return AddressClass::eUnknown;
 }
 
 Symtab *ObjectFileMachO::GetSymtab() {
@@ -2087,10 +2087,8 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   version_str[6] = '\0';
   if (strcmp(version_str, "dyld_v") == 0) {
     offset = offsetof(struct lldb_copy_dyld_cache_header_v1, uuid);
-    uint8_t uuid_bytes[sizeof(uuid_t)];
-    memcpy(uuid_bytes, dsc_header_data.GetData(&offset, sizeof(uuid_t)),
-           sizeof(uuid_t));
-    dsc_uuid.SetBytes(uuid_bytes);
+    dsc_uuid = UUID::fromOptionalData(
+        dsc_header_data.GetData(&offset, sizeof(uuid_t)), sizeof(uuid_t));
   }
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
   if (log && dsc_uuid.IsValid()) {
@@ -4861,7 +4859,7 @@ bool ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
         if (!memcmp(uuid_bytes, opencl_uuid, 16))
           return false;
 
-        uuid.SetBytes(uuid_bytes);
+        uuid = UUID::fromOptionalData(uuid_bytes, 16);
         return true;
       }
       return false;
@@ -5392,12 +5390,11 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo (addr_t &address, UUID &uuid) {
                   uuid_t raw_uuid;
                   memset (raw_uuid, 0, sizeof (uuid_t));
 
-                  if (m_data.GetU32 (&offset, &type, 1)
-                      && m_data.GetU64 (&offset, &address, 1)
-                      && m_data.CopyData (offset, sizeof (uuid_t), raw_uuid) != 0
-                      && uuid.SetBytes (raw_uuid, sizeof (uuid_t)))
-                  {
-                      return true;
+                  if (m_data.GetU32(&offset, &type, 1) &&
+                      m_data.GetU64(&offset, &address, 1) &&
+                      m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
+                    uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
+                    return true;
                   }
               }
           }
@@ -5660,7 +5657,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
                           + 100); // sharedCacheBaseAddress <mach-o/dyld_images.h>
           }
         }
-        uuid.SetBytes(sharedCacheUUID_address);
+        uuid = UUID::fromOptionalData(sharedCacheUUID_address, sizeof(uuid_t));
       }
     }
   } else {
@@ -5685,7 +5682,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
         dyld_process_info_get_cache (process_info, &sc_info);
         if (sc_info.cacheBaseAddress != 0) {
           base_addr = sc_info.cacheBaseAddress;
-          uuid.SetBytes (sc_info.cacheUUID);
+          uuid = UUID::fromOptionalData(sc_info.cacheUUID, sizeof(uuid_t));
         }
         dyld_process_info_release (process_info);
       }

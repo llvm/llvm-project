@@ -206,14 +206,14 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(float addrspace(1)* noalia
 ; SIFoldOperands should not fold the SGPR copy into the instruction
 ; because the implicit immediate already uses the constant bus.
 ; GCN-LABEL: {{^}}madak_constant_bus_violation:
-; GCN:    s_load_dword [[SGPR0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
+; GCN:    s_load_dword [[SGPR0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x12|0x48}}
 ; GCN:    v_mov_b32_e32 [[SGPR0_VCOPY:v[0-9]+]], [[SGPR0]]
 ; GCN:    {{buffer|flat|global}}_load_dword [[VGPR:v[0-9]+]]
 ; GCN:    v_madak_f32 [[MADAK:v[0-9]+]], 0.5, [[SGPR0_VCOPY]], 0x42280000
 ; GCN:    v_mul_f32_e32 [[MUL:v[0-9]+]], [[MADAK]], [[VGPR]]
 ; GFX6:   buffer_store_dword [[MUL]]
 ; GFX8_9: {{flat|global}}_store_dword v[{{[0-9:]+}}], [[MUL]]
-define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, float %sgpr0, float %sgpr1) #0 {
+define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, [8 x i32], float %sgpr0, float %sgpr1) #0 {
 bb:
   %tmp = icmp eq i32 %arg1, 0
   br i1 %tmp, label %bb3, label %bb4

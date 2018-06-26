@@ -61,7 +61,7 @@ public:
 
 private:
   enum MisuseKind {MK_FunCall, MK_Copy, MK_Move};
-  class MovedBugVisitor : public BugReporterVisitorImpl<MovedBugVisitor> {
+  class MovedBugVisitor : public BugReporterVisitor {
   public:
     MovedBugVisitor(const MemRegion *R) : Region(R), Found(false) {}
 

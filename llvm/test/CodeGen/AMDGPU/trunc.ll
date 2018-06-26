@@ -1,10 +1,10 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs< %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs< %s | FileCheck -check-prefix=GCN -check-prefix=VI  %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI  %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=cypress < %s | FileCheck -enable-var-scope -check-prefix=EG %s
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
-define amdgpu_kernel void @trunc_i64_to_i32_store(i32 addrspace(1)* %out, i64 %in) {
+define amdgpu_kernel void @trunc_i64_to_i32_store(i32 addrspace(1)* %out, [8 x i32], i64 %in) {
 ; GCN-LABEL: {{^}}trunc_i64_to_i32_store:
 ; GCN: s_load_dword [[SLOAD:s[0-9]+]], s[0:1],
 ; GCN: v_mov_b32_e32 [[VLOAD:v[0-9]+]], [[SLOAD]]
@@ -28,7 +28,7 @@ define amdgpu_kernel void @trunc_i64_to_i32_store(i32 addrspace(1)* %out, i64 %i
 ; SI: buffer_store_dword [[VSHL]]
 ; VI: flat_store_dword v[{{[0-9:]+}}], [[VSHL]]
 
-define amdgpu_kernel void @trunc_load_shl_i64(i32 addrspace(1)* %out, i64 %a) {
+define amdgpu_kernel void @trunc_load_shl_i64(i32 addrspace(1)* %out, [8 x i32], i64 %a) {
   %b = shl i64 %a, 2
   %result = trunc i64 %b to i32
   store i32 %result, i32 addrspace(1)* %out, align 4
@@ -94,12 +94,12 @@ define amdgpu_kernel void @sgpr_trunc_i32_to_i1(i32 addrspace(1)* %out, i32 %a) 
 }
 
 ; GCN-LABEL: {{^}}s_trunc_i64_to_i1:
-; SI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0xb
-; VI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x2c
+; SI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x13
+; VI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x4c
 ; GCN: s_and_b32 [[MASKED:s[0-9]+]], 1, s[[SLO]]
 ; GCN: v_cmp_eq_u32_e64 s{{\[}}[[VLO:[0-9]+]]:[[VHI:[0-9]+]]], [[MASKED]], 1{{$}}
 ; GCN: v_cndmask_b32_e64 {{v[0-9]+}}, -12, 63, s{{\[}}[[VLO]]:[[VHI]]]
-define amdgpu_kernel void @s_trunc_i64_to_i1(i32 addrspace(1)* %out, i64 %x) {
+define amdgpu_kernel void @s_trunc_i64_to_i1(i32 addrspace(1)* %out, [8 x i32], i64 %x) {
   %trunc = trunc i64 %x to i1
   %sel = select i1 %trunc, i32 63, i32 -12
   store i32 %sel, i32 addrspace(1)* %out

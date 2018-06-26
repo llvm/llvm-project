@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check creating of R_MIPS_COPY and R_MIPS_JUMP_SLOT dynamic relocations
 # and corresponding PLT entries.
 
@@ -7,8 +8,6 @@
 # RUN: ld.lld %t.so.o -shared -o %t.so
 # RUN: ld.lld %t.o %t.so -o %t.exe
 # RUN: llvm-readobj -r -mips-plt-got %t.exe | FileCheck %s
-
-# REQUIRES: mips
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rel.dyn {

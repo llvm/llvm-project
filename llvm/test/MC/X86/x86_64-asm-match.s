@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown  -debug-only=asm-matcher  %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
+// RUN: llvm-mc -triple x86_64-unknown-unknown  -debug-only=asm-matcher  %s 2>&1 | FileCheck %s
 
 // CHECK: AsmMatcher: found 4 encodings with mnemonic 'pshufb'
 // CHECK: Trying to match opcode MMX_PSHUFBrr

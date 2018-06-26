@@ -677,7 +677,7 @@ Instruction::Instruction(const Address &address, AddressClass addr_class)
 Instruction::~Instruction() = default;
 
 AddressClass Instruction::GetAddressClass() {
-  if (m_address_class == eAddressClassInvalid)
+  if (m_address_class == AddressClass::eInvalid)
     m_address_class = m_address.GetAddressClass();
   return m_address_class;
 }
@@ -1279,7 +1279,7 @@ const InstructionList &Disassembler::GetInstructionList() const {
 //----------------------------------------------------------------------
 
 PseudoInstruction::PseudoInstruction()
-    : Instruction(Address(), eAddressClassUnknown), m_description() {}
+    : Instruction(Address(), AddressClass::eUnknown), m_description() {}
 
 PseudoInstruction::~PseudoInstruction() = default;
 

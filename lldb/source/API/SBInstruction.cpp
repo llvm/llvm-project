@@ -279,5 +279,5 @@ lldb::AddressClass SBInstruction::GetAddressClass() {
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp)
     return inst_sp->GetAddressClass();
-  return eAddressClassInvalid;
+  return AddressClass::eInvalid;
 }

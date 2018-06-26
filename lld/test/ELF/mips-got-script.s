@@ -1,11 +1,10 @@
+# REQUIRES: mips
 # Check number of got entries is adjusted for linker script-added space.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: echo "SECTIONS { .data : { *(.data.1); . += 0x10000; *(.data.2) } }" > %t.script
 # RUN: ld.lld %t.o -shared -o %t.so -T %t.script
 # RUN: llvm-readobj -mips-plt-got -dynamic-table %t.so | FileCheck %s
-
-# REQUIRES: mips
 
 # CHECK: 0x7000000A MIPS_LOCAL_GOTNO 4
 #                                    ^-- 2 * header + 2 local entries

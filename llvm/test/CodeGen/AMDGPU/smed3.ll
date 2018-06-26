@@ -370,7 +370,7 @@ bb:
 ; GCN: s_sext_i32_i16
 ; GCN: s_sext_i32_i16
 ; GCN: v_med3_i32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define amdgpu_kernel void @s_test_smed3_i16_pat_0(i16 addrspace(1)* %arg, i16 %x, i16 %y, i16 %z) #1 {
+define amdgpu_kernel void @s_test_smed3_i16_pat_0(i16 addrspace(1)* %arg, [8 x i32], i16 %x, [8 x i32], i16 %y, [8 x i32], i16 %z) #1 {
 bb:
   %tmp0 = call i16 @smin16(i16 %x, i16 %y)
   %tmp1 = call i16 @smax16(i16 %x, i16 %y)
@@ -385,7 +385,7 @@ bb:
 ; GCN: s_sext_i32_i8
 ; GCN: s_sext_i32_i8
 ; GCN: v_med3_i32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-define amdgpu_kernel void @s_test_smed3_i8_pat_0(i8 addrspace(1)* %arg, i8 %x, i8 %y, i8 %z) #1 {
+define amdgpu_kernel void @s_test_smed3_i8_pat_0(i8 addrspace(1)* %arg, [8 x i32], i8 %x, [8 x i32], i8 %y, [8 x i32], i8 %z) #1 {
 bb:
   %tmp0 = call i8 @smin8(i8 %x, i8 %y)
   %tmp1 = call i8 @smax8(i8 %x, i8 %y)

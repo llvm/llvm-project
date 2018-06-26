@@ -6,17 +6,23 @@
 
 ; Make sure the assembler doesn't error when parsing the summary
 ; RUN: llvm-as %t.o.ll
-; RUN: ls %t.o.bc
+
+; Check assembled summary.
+; RUN: llvm-dis %t.o.bc -o - | FileCheck %s --check-prefix=DIS
 
 ; RUN: opt -module-summary %p/Inputs/thinlto-function-summary-callgraph-profile-summary.ll -o %t2.o
 ; RUN: llvm-lto -thinlto -o %t3 %t.o %t2.o
 ; RUN: llvm-bcanalyzer -dump %t3.thinlto.bc | FileCheck %s --check-prefix=COMBINED
 ; RUN: llvm-dis %t3.thinlto.bc
 ; RUN: cat %t3.thinlto.ll | FileCheck %s --check-prefix=COMBINED-DIS
+; Round trip it through llvm-as
+; RUN: cat %t3.thinlto.ll | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=COMBINED-DIS
 
 ; Make sure the assembler doesn't error when parsing the combined summary
 ; RUN: llvm-as %t3.thinlto.ll -o %t3.thinlto.o
-; RUN: ls %t3.thinlto.o
+
+; Check assembled combined summary.
+; RUN: llvm-dis %t3.thinlto.o -o - | FileCheck %s --check-prefix=COMBINED-DIS
 
 
 ; CHECK: <SOURCE_FILENAME
@@ -134,7 +140,7 @@ declare void @none3() #1
 !14 = !{i32 999999, i64 1, i32 2}
 !15 = !{!"branch_weights", i32 100}
 
-; DIS: ^0 = module: (path: "{{.*}}thinlto-function-summary-callgraph-profile-summary.ll.tmp.o", hash: (0, 0, 0, 0, 0))
+; DIS: ^0 = module: (path: "{{.*}}thinlto-function-summary-callgraph-profile-summary.ll.tmp.o{{.*}}", hash: (0, 0, 0, 0, 0))
 ; DIS: ^1 = gv: (guid: 123)
 ; DIS: ^2 = gv: (name: "none2") ; guid = 3741006263754194003
 ; DIS: ^3 = gv: (name: "hot3") ; guid = 5026609803865204483

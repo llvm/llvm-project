@@ -32,6 +32,10 @@ if (CLANG_BUILT_STANDALONE)
   set(codegen_deps)
 endif()
 
+if (MSVC)
+  set_source_files_properties(CodeGenModule.cpp PROPERTIES COMPILE_FLAGS /bigobj)
+endif()
+
 add_clang_library(clangCodeGen
   BackendUtil.cpp
   CGAtomic.cpp

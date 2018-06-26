@@ -1,10 +1,9 @@
+# REQUIRES: mips
 # Check R_MIPS_GOT16 relocation against merge section.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -o %t.o %s
 # RUN: ld.lld -shared -o %t.so %t.o
 # RUN: llvm-readobj -t -mips-plt-got %t.so | FileCheck %s
-
-# REQUIRES: mips
 
 # CHECK:      Symbol {
 # CHECK:        Name: $.str

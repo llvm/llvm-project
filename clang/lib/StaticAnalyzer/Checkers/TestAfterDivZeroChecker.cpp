@@ -55,7 +55,7 @@ public:
   }
 };
 
-class DivisionBRVisitor : public BugReporterVisitorImpl<DivisionBRVisitor> {
+class DivisionBRVisitor : public BugReporterVisitor {
 private:
   SymbolRef ZeroSymbol;
   const StackFrameContext *SFC;

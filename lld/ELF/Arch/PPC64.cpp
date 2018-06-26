@@ -51,6 +51,9 @@ public:
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   uint64_t BranchAddr, const Symbol &S) const override;
+  RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
+                          RelExpr Expr) const override;
+  void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
 };
 } // namespace
 
@@ -214,6 +217,7 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_DTPREL64:
     return R_ABS;
   case R_PPC64_TLSGD:
+    return R_TLSDESC_CALL;
   case R_PPC64_TLSLD:
   case R_PPC64_TLS:
     return R_HINT;
@@ -403,6 +407,55 @@ bool PPC64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
   // If a function is in the plt it needs to be called through
   // a call stub.
   return Type == R_PPC64_REL24 && S.isInPlt();
+}
+
+RelExpr PPC64::adjustRelaxExpr(RelType Type, const uint8_t *Data,
+                               RelExpr Expr) const {
+  if (Expr == R_RELAX_TLS_GD_TO_IE)
+    return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
+  return Expr;
+}
+
+// Reference: 3.7.4.1 of the 64-bit ELF V2 abi supplement.
+// The general dynamic code sequence for a global `x` uses 4 instructions.
+// Instruction                    Relocation                Symbol
+// addis r3, r2, x@got@tlsgd@ha   R_PPC64_GOT_TLSGD16_HA      x
+// addi  r3, r3, x@got@tlsgd@l    R_PPC64_GOT_TLSGD16_LO      x
+// bl __tls_get_addr(x@tlsgd)     R_PPC64_TLSGD               x
+//                                R_PPC64_REL24               __tls_get_addr
+// nop                            None                       None
+//
+// Relaxing to initial-exec entails:
+// 1) Convert the addis/addi pair that builds the address of the tls_index
+//    struct for 'x' to an addis/ld pair that loads an offset from a got-entry.
+// 2) Convert the call to __tls_get_addr to a nop.
+// 3) Convert the nop following the call to an add of the loaded offset to the
+//    thread pointer.
+// Since the nop must directly follow the call, the R_PPC64_TLSGD relocation is
+// used as the relaxation hint for both steps 2 and 3.
+void PPC64::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
+  switch (Type) {
+  case R_PPC64_GOT_TLSGD16_HA:
+    // This is relaxed from addis rT, r2, sym@got@tlsgd@ha to
+    //                      addis rT, r2, sym@got@tprel@ha.
+    relocateOne(Loc, R_PPC64_GOT_TPREL16_HA, Val);
+    return;
+  case R_PPC64_GOT_TLSGD16_LO: {
+    // Relax from addi  r3, rA, sym@got@tlsgd@l to
+    //            ld r3, sym@got@tprel@l(rA)
+    uint32_t EndianOffset = Config->EKind == ELF64BEKind ? 2U : 0U;
+    uint32_t InputRegister = (read32(Loc - EndianOffset) & (0x1f << 16));
+    write32(Loc - EndianOffset, 0xE8600000 | InputRegister);
+    relocateOne(Loc, R_PPC64_GOT_TPREL16_LO_DS, Val);
+    return;
+  }
+  case R_PPC64_TLSGD:
+    write32(Loc, 0x60000000);     // bl __tls_get_addr(sym@tlsgd) --> nop
+    write32(Loc + 4, 0x7c636A14); // nop --> add r3, r3, r13
+    return;
+  default:
+    llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
+  }
 }
 
 TargetInfo *elf::getPPC64TargetInfo() {

@@ -194,7 +194,7 @@ const Address &StackFrame::GetFrameCodeAddress() {
         const bool allow_section_end = true;
         if (m_frame_code_addr.SetOpcodeLoadAddress(
                 m_frame_code_addr.GetOffset(), target_sp.get(),
-                eAddressClassCode, allow_section_end)) {
+                AddressClass::eCode, allow_section_end)) {
           ModuleSP module_sp(m_frame_code_addr.GetModule());
           if (module_sp) {
             m_sc.module_sp = module_sp;

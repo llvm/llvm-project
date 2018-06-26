@@ -1,9 +1,9 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=fiji -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,VI,GFX89 %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=hawaii -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,CI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global,-fp64-fp16-denormals < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,VI,GFX89 %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-amdgpu-aa=0 -mattr=+flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,CI %s
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0:
-; GCN: s_load_dword [[VEC:s[0-9]+]]
+; GCN: s_load_dword [[VEC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 
 ; CIVI: s_and_b32 [[ELT1:s[0-9]+]], [[VEC]], 0xffff0000{{$}}
 ; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT1]], 0x3e7{{$}}
@@ -18,17 +18,17 @@ define amdgpu_kernel void @s_insertelement_v2i16_0(<2 x i16> addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0_reg:
-; GCN: s_load_dword [[ELT0:s[0-9]+]]
-; GCN: s_load_dword [[VEC:s[0-9]+]]
+; GCN-DAG: s_load_dword [[ELT_LOAD:s[0-9]+]], s[4:5],
+; GCN-DAG: s_load_dword [[VEC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 
-; CIVI-DAG: s_and_b32 [[ELT0]], [[ELT0]], 0xffff{{$}}
+; CIVI-DAG: s_and_b32 [[ELT0:s[0-9]+]], [[ELT_LOAD]], 0xffff{{$}}
 ; CIVI-DAG: s_and_b32 [[ELT1:s[0-9]+]], [[VEC]], 0xffff0000{{$}}
 ; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
 
 ; GFX9-NOT: [[ELT0]]
 ; GFX9-NOT: [[VEC]]
-; GFX9: s_pack_lh_b32_b16 s{{[0-9]+}}, [[ELT0]], [[VEC]]
-define amdgpu_kernel void @s_insertelement_v2i16_0_reg(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, i16 %elt) #0 {
+; GFX9: s_pack_lh_b32_b16 s{{[0-9]+}}, [[ELT_LOAD]], [[VEC]]
+define amdgpu_kernel void @s_insertelement_v2i16_0_reg(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, [8 x i32], i16 %elt) #0 {
   %vec = load <2 x i16>, <2 x i16> addrspace(4)* %vec.ptr
   %vecins = insertelement <2 x i16> %vec, i16 %elt, i32 0
   store <2 x i16> %vecins, <2 x i16> addrspace(1)* %out
@@ -36,29 +36,29 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reg(<2 x i16> addrspace(1)* %
 }
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0_multi_use_hi_reg:
-; GCN: s_load_dword [[ELT0:s[0-9]+]]
-; GCN: s_load_dword [[VEC:s[0-9]+]]
+; GCN-DAG: s_load_dword [[ELT_LOAD:s[0-9]+]], s[4:5],
+; GCN-DAG: s_load_dword [[VEC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 
-; CI-DAG: s_and_b32 [[ELT0]], [[ELT0]], 0xffff{{$}}
+; CI-DAG: s_and_b32 [[ELT0_MASKED:s[0-9]+]], [[ELT_LOAD]], 0xffff{{$}}
 ; CI: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
 ; CI: s_lshl_b32 [[ELT1:s[0-9]+]], [[SHR]], 16
-; CI-DAG: s_or_b32 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
+; CI-DAG: s_or_b32 s{{[0-9]+}}, [[ELT0_MASKED]], [[ELT1]]
 ; CI-DAG: ; use [[SHR]]
 
 
 ; FIXME: Should be able to void mask of upper bits
-; VI-DAG: s_and_b32 [[ELT0]], [[ELT0]], 0xffff{{$}}
+; VI-DAG: s_and_b32 [[ELT_MASKED:s[0-9]+]], [[ELT_LOAD]], 0xffff{{$}}
 ; VI-DAG: s_and_b32 [[VEC_HIMASK:s[0-9]+]], [[VEC]], 0xffff0000{{$}}
-; VI: s_or_b32 [[OR:s[0-9]+]], [[ELT0]], [[VEC_HIMASK]]
-; VI: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
+; VI-DAG: s_or_b32 [[OR:s[0-9]+]], [[ELT_MASKED]], [[VEC_HIMASK]]
+; VI-DAG: s_lshr_b32 [[SHR:s[0-9]+]], [[VEC]], 16
 
 ; VI-DAG: ; use [[SHR]]
 
 
 ; GFX9: s_lshr_b32 [[ELT1:s[0-9]+]], [[VEC]], 16
-; GFX9-DAG: s_pack_ll_b32_b16 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
+; GFX9-DAG: s_pack_ll_b32_b16 s{{[0-9]+}}, [[ELT_LOAD]], [[ELT1]]
 ; GFX9-DAG: ; use [[ELT1]]
-define amdgpu_kernel void @s_insertelement_v2i16_0_multi_use_hi_reg(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, i16 %elt) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0_multi_use_hi_reg(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, [8 x i32], i16 %elt) #0 {
   %vec = load <2 x i16>, <2 x i16> addrspace(4)* %vec.ptr
   %elt1 = extractelement <2 x i16> %vec, i32 1
   %vecins = insertelement <2 x i16> %vec, i16 %elt, i32 0
@@ -69,16 +69,17 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_multi_use_hi_reg(<2 x i16> ad
 }
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0_reghi:
-; GCN: s_load_dword [[ELT_ARG:s[0-9]+]], s[0:1]
-; GCN: s_load_dword [[VEC:s[0-9]+]]
+; GCN-DAG: s_load_dword [[ELT_ARG:s[0-9]+]], s[4:5],
+; GCN-DAG: s_load_dword [[VEC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 
+; CIVI: s_lshr_b32 [[ELT_HI:s[0-9]+]], [[ELT_ARG]], 16
 ; CIVI-DAG: s_and_b32 [[ELT1:s[0-9]+]], [[VEC]], 0xffff0000{{$}}
-; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT_ARG]], [[ELT1]]
+; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT_HI]], [[ELT1]]
 
 ; GFX9-NOT: [[ELT0]]
 ; GFX9-NOT: [[VEC]]
 ; GFX9: s_pack_hh_b32_b16 s{{[0-9]+}}, [[ELT_ARG]], [[VEC]]
-define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, i32 %elt.arg) #0 {
+define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, [8 x i32], i32 %elt.arg) #0 {
   %vec = load <2 x i16>, <2 x i16> addrspace(4)* %vec.ptr
   %elt.hi = lshr i32 %elt.arg, 16
   %elt = trunc i32 %elt.hi to i16
@@ -88,7 +89,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(<2 x i16> addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0_reghi_multi_use_1:
-; GCN: s_load_dword [[ELT_ARG:s[0-9]+]], s[0:1]
+; GCN: s_load_dword [[ELT_ARG:s[0-9]+]],
 ; GCN: s_load_dword [[VEC:s[0-9]+]],
 
 ; CIVI-DAG: s_lshr_b32 [[ELT1:s[0-9]+]], [[ELT_ARG]], 16
@@ -110,7 +111,7 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_multi_use_1(<2 x i16> a
 }
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_0_reghi_both_multi_use_1:
-; GCN: s_load_dword [[ELT_ARG:s[0-9]+]], s[0:1]
+; GCN: s_load_dword [[ELT_ARG:s[0-9]+]],
 ; GCN: s_load_dword [[VEC:s[0-9]+]],
 
 ; CI-DAG: s_lshr_b32 [[ELT_HI:s[0-9]+]], [[ELT_ARG]], 16
@@ -161,15 +162,16 @@ define amdgpu_kernel void @s_insertelement_v2i16_1(<2 x i16> addrspace(1)* %out,
 }
 
 ; GCN-LABEL: {{^}}s_insertelement_v2i16_1_reg:
-; GCN: s_load_dword [[ELT1:s[0-9]+]]
-; GCN: s_load_dword [[VEC:s[0-9]+]]
+; GCN-DAG: s_load_dword [[ELT1_LOAD:s[0-9]+]], s[4:5],
+; GCN-DAG: s_load_dword [[VEC:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x0
 
+; CIVI: s_lshl_b32 [[ELT1:s[0-9]+]], [[ELT1_LOAD]], 16
 ; CIVI: s_and_b32 [[ELT0:s[0-9]+]], [[VEC]], 0xffff{{$}}
 ; CIVI: s_or_b32 s{{[0-9]+}}, [[ELT0]], [[ELT1]]
 
 ; GCN-NOT: shlr
-; GFX9: s_pack_ll_b32_b16 s{{[0-9]+}}, [[VEC]], [[ELT1]]
-define amdgpu_kernel void @s_insertelement_v2i16_1_reg(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, i16 %elt) #0 {
+; GFX9: s_pack_ll_b32_b16 s{{[0-9]+}}, [[VEC]], [[ELT1_LOAD]]
+define amdgpu_kernel void @s_insertelement_v2i16_1_reg(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr, [8 x i32], i16 %elt) #0 {
   %vec = load <2 x i16>, <2 x i16> addrspace(4)* %vec.ptr
   %vecins = insertelement <2 x i16> %vec, i16 %elt, i32 1
   store <2 x i16> %vecins, <2 x i16> addrspace(1)* %out
@@ -444,12 +446,11 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_sgpr(<2 x i16> addrspac
 
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_dynamic_vgpr:
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
-; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
 
 ; GCN: {{flat|global}}_load_dword [[IDX:v[0-9]+]]
 ; GCN: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
 
-; GFX89-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7
 ; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
 ; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
 
@@ -473,12 +474,11 @@ define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(<2 x i16> addrspac
 
 ; GCN-LABEL: {{^}}v_insertelement_v2f16_dynamic_vgpr:
 ; GFX89-DAG: s_mov_b32 [[MASKK:s[0-9]+]], 0xffff{{$}}
-; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x1234
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x1234
 
 ; GCN: {{flat|global}}_load_dword [[IDX:v[0-9]+]]
 ; GCN: {{flat|global}}_load_dword [[VEC:v[0-9]+]]
 
-; GFX89-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x1234
 ; GFX89-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
 ; GFX89-DAG: v_lshlrev_b32_e64 [[MASK:v[0-9]+]], [[SCALED_IDX]], [[MASKK]]
 
@@ -501,17 +501,18 @@ define amdgpu_kernel void @v_insertelement_v2f16_dynamic_vgpr(<2 x half> addrspa
 }
 
 ; GCN-LABEL: {{^}}v_insertelement_v4f16_0:
-; GCN-DAG: s_load_dword [[VAL:s[0-9]+]]
+; GCN-DAG: s_load_dword [[VAL:s[0-9]+]], s[4:5],
 ; GCN-DAG: {{flat|global}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 
 ; GFX9-DAG: v_mov_b32_e32 [[BFI_MASK:v[0-9]+]], 0xffff{{$}}
 ; GFX9: v_bfi_b32 v[[INS_LO:[0-9]+]], [[BFI_MASK]], [[VAL]], v[[LO]]
 
+; CIVI: s_and_b32 [[VAL_MASKED:s[0-9]+]], [[VAL]], 0xffff{{$}}
 ; CIVI: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff0000, v[[LO]]
-; CIVI: v_or_b32_e32 v[[INS_LO:[0-9]+]], [[VAL]], [[AND]]
+; CIVI: v_or_b32_e32 v[[INS_LO:[0-9]+]], [[VAL_MASKED]], [[AND]]
 
 ; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[INS_LO]]:[[HI]]{{\]}}
-define amdgpu_kernel void @v_insertelement_v4f16_0(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in, i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_0(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in, [8 x i32], i32 %val) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, <4 x half> addrspace(1)* %in, i64 %tid.ext
@@ -531,12 +532,13 @@ define amdgpu_kernel void @v_insertelement_v4f16_0(<4 x half> addrspace(1)* %out
 ; GFX9: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, v[[LO]]
 ; GFX9: v_lshl_or_b32 v[[INS_HALF:[0-9]+]], [[VAL]], 16, [[AND]]
 
-; VI: s_lshl_b32 [[VAL]], [[VAL]], 16
-; VI-DAG: v_mov_b32_e32 [[COPY_VAL:v[0-9]+]], [[VAL]]
+; VI: s_lshl_b32 [[VAL_HI:s[0-9]+]], [[VAL]], 16
+; VI-DAG: v_mov_b32_e32 [[COPY_VAL:v[0-9]+]], [[VAL_HI]]
 ; VI: v_or_b32_sdwa v[[INS_HALF:[0-9]+]], v[[LO]], [[COPY_VAL]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
+; CI: s_lshl_b32 [[VAL_HI:s[0-9]+]], [[VAL]], 16
 ; CI: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, v[[LO]]
-; CI: v_or_b32_e32 v[[INS_HALF:[0-9]+]], [[VAL]], [[AND]]
+; CI: v_or_b32_e32 v[[INS_HALF:[0-9]+]], [[VAL_HI]], [[AND]]
 
 ; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[INS_HALF]]:[[HI]]{{\]}}
 define amdgpu_kernel void @v_insertelement_v4f16_1(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in, i32 %val) #0 {
@@ -553,17 +555,18 @@ define amdgpu_kernel void @v_insertelement_v4f16_1(<4 x half> addrspace(1)* %out
 }
 
 ; GCN-LABEL: {{^}}v_insertelement_v4f16_2:
-; GCN-DAG: s_load_dword [[VAL:s[0-9]+]]
+; GCN-DAG: s_load_dword [[VAL:s[0-9]+]], s[4:5],
 ; GCN-DAG: {{flat|global}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
 
 ; GFX9-DAG: v_mov_b32_e32 [[BFI_MASK:v[0-9]+]], 0xffff{{$}}
 ; GFX9: v_bfi_b32 v[[INS_HI:[0-9]+]], [[BFI_MASK]], [[VAL]], v[[HI]]
 
+; CIVI: s_and_b32 [[VAL_MASKED:s[0-9]+]], [[VAL]], 0xffff{{$}}
 ; CIVI: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff0000, v[[HI]]
-; CIVI: v_or_b32_e32 v[[INS_HI:[0-9]+]], [[VAL]], [[AND]]
+; CIVI: v_or_b32_e32 v[[INS_HI:[0-9]+]], [[VAL_MASKED]], [[AND]]
 
 ; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[INS_HI]]{{\]}}
-define amdgpu_kernel void @v_insertelement_v4f16_2(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in, i32 %val) #0 {
+define amdgpu_kernel void @v_insertelement_v4f16_2(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in, [8 x i32], i32 %val) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, <4 x half> addrspace(1)* %in, i64 %tid.ext
@@ -583,12 +586,13 @@ define amdgpu_kernel void @v_insertelement_v4f16_2(<4 x half> addrspace(1)* %out
 ; GFX9: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, v[[HI]]
 ; GFX9: v_lshl_or_b32 v[[INS_HI:[0-9]+]], [[VAL]], 16, [[AND]]
 
-; VI: s_lshl_b32 [[VAL]], [[VAL]], 16
-; VI-DAG: v_mov_b32_e32 [[COPY_VAL:v[0-9]+]], [[VAL]]
+; VI: s_lshl_b32 [[VAL_HI:s[0-9]+]], [[VAL]], 16
+; VI-DAG: v_mov_b32_e32 [[COPY_VAL:v[0-9]+]], [[VAL_HI]]
 ; VI: v_or_b32_sdwa v[[INS_HI:[0-9]+]], v[[HI]], [[COPY_VAL]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
+; CI: s_lshl_b32 [[VAL_HI:s[0-9]+]], [[VAL]], 16
 ; CI: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff, v[[HI]]
-; CI: v_or_b32_e32 v[[INS_HI:[0-9]+]], [[VAL]], [[AND]]
+; CI: v_or_b32_e32 v[[INS_HI:[0-9]+]], [[VAL_HI]], [[AND]]
 
 ; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[INS_HI]]{{\]}}
 define amdgpu_kernel void @v_insertelement_v4f16_3(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in, i32 %val) #0 {
@@ -611,8 +615,9 @@ define amdgpu_kernel void @v_insertelement_v4f16_3(<4 x half> addrspace(1)* %out
 ; GFX9-DAG: v_mov_b32_e32 [[BFI_MASK:v[0-9]+]], 0xffff{{$}}
 ; GFX9: v_bfi_b32 v[[INS_HI:[0-9]+]], [[BFI_MASK]], [[VAL]], v[[HI]]
 
+; CIVI: s_and_b32 [[VAL_MASKED:s[0-9]+]], [[VAL]], 0xffff{{$}}
 ; CIVI: v_and_b32_e32 [[AND:v[0-9]+]], 0xffff0000, v[[HI]]
-; CIVI: v_or_b32_e32 v[[INS_HI:[0-9]+]], [[VAL]], [[AND]]
+; CIVI: v_or_b32_e32 v[[INS_HI:[0-9]+]], [[VAL_MASKED]], [[AND]]
 
 ; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[INS_HI]]{{\]}}
 define amdgpu_kernel void @v_insertelement_v4i16_2(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %in, i32 %val) #0 {

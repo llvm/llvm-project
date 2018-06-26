@@ -94,7 +94,7 @@ define i32 @boom() {
 ; CHECK-FAIL: WARNING: Missing line 2
 ; CHECK-FAIL: WARNING: Missing line 3
 ; CHECK-FAIL: WARNING: Missing line 4
-; CHECK-FAIL: ERROR: Missing variable 1
+; CHECK-FAIL: WARNING: Missing variable 1
 ; CHECK-FAIL: CheckModuleDebugify: FAIL
 
 ; PASS: CheckModuleDebugify: PASS

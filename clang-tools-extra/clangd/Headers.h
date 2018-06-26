@@ -71,8 +71,7 @@ public:
   /// \param DeclaringHeader is the original header corresponding to \p
   /// InsertedHeader e.g. the header that declares a symbol.
   /// \param InsertedHeader The preferred header to be inserted. This could be
-  /// the same as DeclaringHeader but must be provided. \param Inclusions
-  /// Existing includes in the main file.
+  /// the same as DeclaringHeader but must be provided.
   bool shouldInsertInclude(const HeaderFile &DeclaringHeader,
                            const HeaderFile &InsertedHeader) const;
 

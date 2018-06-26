@@ -8,28 +8,14 @@
 ; GFX9: v_mov_b32_e32 [[VLHS:v[0-9]+]], [[LHS]]
 ; GFX9: v_pk_lshrrev_b16 [[RESULT:v[0-9]+]], [[RHS]], [[VLHS]]
 
-
-; VI: s_load_dword [[LHS:s[0-9]+]]
-; VI: s_load_dword [[RHS:s[0-9]+]]
-; VI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
-; VI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
-; VI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; VI-DAG: v_bfe_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, 16
-; VI-DAG: s_lshl_b32
-; VI: v_or_b32_e32
-
-; CI: s_load_dword s
-; CI-NEXT: s_load_dword s
-; CI-NOT: {{buffer|flat}}
-; CI: s_mov_b32 [[MASK:s[0-9]+]], 0xffff{{$}}
-; CI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
-; CI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
-; CI: s_and_b32
-; CI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; CI: s_and_b32
-; CI: v_bfe_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, 16
-; CI: s_lshl_b32
-; CI: v_or_b32_e32
+; CIVI: s_load_dword [[LHS:s[0-9]+]]
+; CIVI: s_load_dword [[RHS:s[0-9]+]]
+; CIVI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; CIVI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; CIVI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; CIVI-DAG: v_bfe_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, 16
+; CIVI-DAG: s_lshl_b32
+; CIVI: v_or_b32_e32
 define amdgpu_kernel void @s_lshr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
   %result = lshr <2 x i16> %lhs, %rhs
   store <2 x i16> %result, <2 x i16> addrspace(1)* %out

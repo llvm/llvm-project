@@ -58,6 +58,28 @@ define i5 @biggest_divisor(i5 %x) {
   ret i5 %rem
 }
 
+define i8 @urem_with_sext_bool_divisor(i1 %x, i8 %y) {
+; CHECK-LABEL: @urem_with_sext_bool_divisor(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[REM:%.*]] = select i1 [[TMP1]], i8 0, i8 [[Y]]
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %s = sext i1 %x to i8
+  %rem = urem i8 %y, %s
+  ret i8 %rem
+}
+
+define <2 x i8> @urem_with_sext_bool_divisor_vec(<2 x i1> %x, <2 x i8> %y) {
+; CHECK-LABEL: @urem_with_sext_bool_divisor_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[REM:%.*]] = select <2 x i1> [[TMP1]], <2 x i8> zeroinitializer, <2 x i8> [[Y]]
+; CHECK-NEXT:    ret <2 x i8> [[REM]]
+;
+  %s = sext <2 x i1> %x to <2 x i8>
+  %rem = urem <2 x i8> %y, %s
+  ret <2 x i8> %rem
+}
+
 define <2 x i4> @big_divisor_vec(<2 x i4> %x) {
 ; CHECK-LABEL: @big_divisor_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i4> [[X:%.*]], <i4 -3, i4 -3>

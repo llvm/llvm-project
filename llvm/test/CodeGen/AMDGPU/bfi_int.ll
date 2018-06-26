@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck -check-prefixes=R600,FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefixes=R600,FUNC %s
 
 ; BFI_INT Definition pattern from ISA docs
 ; (y & x) | (z & ~x)
@@ -119,10 +119,10 @@ entry:
 ; FUNC-LABEL: {{^}}s_bitselect_i64_pat_0:
 ; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
 ; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_bfi_b32
 ; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_bfi_b32
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
+; GCN-DAG: v_bfi_b32
+; GCN-DAG: v_bfi_b32
 define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -136,10 +136,10 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; FUNC-LABEL: {{^}}s_bitselect_i64_pat_1:
 ; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
 ; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_bfi_b32
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_bfi_b32
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
+; GCN-DAG: v_bfi_b32
+; GCN-DAG: v_bfi_b32
 define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
@@ -155,8 +155,8 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
 ; GCN-DAG: v_bfi_b32
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_bfi_b32
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
+; GCN-DAG: v_bfi_b32
 define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b

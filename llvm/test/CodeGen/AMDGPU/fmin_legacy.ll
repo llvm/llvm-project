@@ -25,14 +25,12 @@ define amdgpu_kernel void @s_test_fmin_legacy_subreg_inputs_f32(<4 x float> addr
 }
 
 ; FUNC-LABEL: {{^}}s_test_fmin_legacy_ule_f32:
-; SI-DAG: s_load_dword [[A:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; SI-DAG: s_load_dword [[B:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xc
+; SI-DAG: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0xb
 
-; SI-SAFE-DAG: v_mov_b32_e32 [[VA:v[0-9]+]], [[A]]
-; SI-NONAN-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], [[B]]
+; SI-DAG: v_mov_b32_e32 [[VB:v[0-9]+]], s[[B]]
 
-; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[VA]]
-; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[VB]]
+; SI-SAFE: v_min_legacy_f32_e64 {{v[0-9]+}}, [[VB]], s[[A]]
+; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, s[[A]], [[VB]]
 
 define amdgpu_kernel void @s_test_fmin_legacy_ule_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %cmp = fcmp ule float %a, %b

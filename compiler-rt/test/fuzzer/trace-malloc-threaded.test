@@ -1,6 +1,6 @@
 // FIXME: This test infinite loops on darwin because it crashes
 // printing a stack trace repeatedly
-UNSUPPORTED: darwin
+UNSUPPORTED: darwin, aarch64
 
 RUN: %cpp_compiler %S/TraceMallocThreadedTest.cpp -o \
 RUN:   %t-TraceMallocThreadedTest

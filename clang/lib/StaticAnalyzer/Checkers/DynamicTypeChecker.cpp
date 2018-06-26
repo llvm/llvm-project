@@ -38,8 +38,7 @@ class DynamicTypeChecker : public Checker<check::PostStmt<ImplicitCastExpr>> {
           new BugType(this, "Dynamic and static type mismatch", "Type Error"));
   }
 
-  class DynamicTypeBugVisitor
-      : public BugReporterVisitorImpl<DynamicTypeBugVisitor> {
+  class DynamicTypeBugVisitor : public BugReporterVisitor {
   public:
     DynamicTypeBugVisitor(const MemRegion *Reg) : Reg(Reg) {}
 

@@ -1788,8 +1788,7 @@ namespace {
   //===---------===//
   // Bug Reports.  //
   //===---------===//
-
-  class CFRefReportVisitor : public BugReporterVisitorImpl<CFRefReportVisitor> {
+  class CFRefReportVisitor : public BugReporterVisitor {
   protected:
     SymbolRef Sym;
     const SummaryLogTy &SummaryLog;
@@ -1810,7 +1809,7 @@ namespace {
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
-    std::unique_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
+    std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
                                                     const ExplodedNode *N,
                                                     BugReport &BR) override;
   };
@@ -1821,18 +1820,9 @@ namespace {
                            const SummaryLogTy &log)
        : CFRefReportVisitor(sym, GCEnabled, log) {}
 
-    std::unique_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
+    std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
                                                     const ExplodedNode *N,
                                                     BugReport &BR) override;
-
-    std::unique_ptr<BugReporterVisitor> clone() const override {
-      // The curiously-recurring template pattern only works for one level of
-      // subclassing. Rather than make a new template base for
-      // CFRefReportVisitor, we simply override clone() to do the right thing.
-      // This could be trouble someday if BugReporterVisitorImpl is ever
-      // used for something else besides a convenient implementation of clone().
-      return llvm::make_unique<CFRefLeakReportVisitor>(*this);
-    }
   };
 
   class CFRefReport : public BugReport {
@@ -2365,14 +2355,14 @@ GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
                         InterestingMethodContext);
 }
 
-std::unique_ptr<PathDiagnosticPiece>
+std::shared_ptr<PathDiagnosticPiece>
 CFRefReportVisitor::getEndPath(BugReporterContext &BRC,
                                const ExplodedNode *EndN, BugReport &BR) {
   BR.markInteresting(Sym);
   return BugReporterVisitor::getDefaultEndPath(BRC, EndN, BR);
 }
 
-std::unique_ptr<PathDiagnosticPiece>
+std::shared_ptr<PathDiagnosticPiece>
 CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
                                    const ExplodedNode *EndN, BugReport &BR) {
 
@@ -2459,7 +2449,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
     os << " is not referenced later in this execution path and has a retain "
           "count of +" << RV->getCount();
 
-  return llvm::make_unique<PathDiagnosticEventPiece>(L, os.str());
+  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
 
 void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
