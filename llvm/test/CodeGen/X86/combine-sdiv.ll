@@ -52,6 +52,43 @@ define <4 x i32> @combine_vec_sdiv_by_negone(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; TODO fold (sdiv x, INT_MIN) -> select((icmp eq x, INT_MIN), 1, 0)
+define i32 @combine_sdiv_by_minsigned(i32 %x) {
+; CHECK-LABEL: combine_sdiv_by_minsigned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    leal (%rax,%rdi), %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    retq
+  %1 = sdiv i32 %x, -2147483648
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_sdiv_by_minsigned(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_sdiv_by_minsigned:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    psrld $1, %xmm1
+; SSE-NEXT:    paddd %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_sdiv_by_minsigned:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX-NEXT:    vpsrld $1, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = sdiv <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  ret <4 x i32> %1
+}
+
 ; TODO fold (sdiv x, x) -> 1
 define i32 @combine_sdiv_dupe(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_dupe:
@@ -4293,8 +4330,203 @@ define <16 x i8> @non_splat_minus_one_divisor_0(<16 x i8> %A) {
   ret <16 x i8> %div
 }
 
-define <4 x i32> @non_splat_minus_one_divisor_1(<4 x i32> %A) {
+define <16 x i8> @non_splat_minus_one_divisor_1(<16 x i8> %A) {
 ; SSE-LABEL: non_splat_minus_one_divisor_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pextrb $1, %xmm0, %eax
+; SSE-NEXT:    negb %al
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    pextrb $0, %xmm0, %ecx
+; SSE-NEXT:    negb %cl
+; SSE-NEXT:    movzbl %cl, %ecx
+; SSE-NEXT:    movd %ecx, %xmm1
+; SSE-NEXT:    pinsrb $1, %eax, %xmm1
+; SSE-NEXT:    pextrb $2, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $2, %eax, %xmm1
+; SSE-NEXT:    pextrb $3, %xmm0, %eax
+; SSE-NEXT:    negb %al
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    pinsrb $3, %eax, %xmm1
+; SSE-NEXT:    pextrb $4, %xmm0, %eax
+; SSE-NEXT:    negb %al
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    pinsrb $4, %eax, %xmm1
+; SSE-NEXT:    pextrb $5, %xmm0, %eax
+; SSE-NEXT:    negb %al
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    pinsrb $5, %eax, %xmm1
+; SSE-NEXT:    pextrb $6, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $6, %eax, %xmm1
+; SSE-NEXT:    pextrb $7, %xmm0, %eax
+; SSE-NEXT:    negb %al
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    pinsrb $7, %eax, %xmm1
+; SSE-NEXT:    pextrb $8, %xmm0, %eax
+; SSE-NEXT:    negb %al
+; SSE-NEXT:    movzbl %al, %eax
+; SSE-NEXT:    pinsrb $8, %eax, %xmm1
+; SSE-NEXT:    pextrb $9, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $9, %eax, %xmm1
+; SSE-NEXT:    pextrb $10, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $10, %eax, %xmm1
+; SSE-NEXT:    pextrb $11, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $11, %eax, %xmm1
+; SSE-NEXT:    pextrb $12, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $12, %eax, %xmm1
+; SSE-NEXT:    pextrb $13, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $13, %eax, %xmm1
+; SSE-NEXT:    pextrb $14, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $14, %eax, %xmm1
+; SSE-NEXT:    pextrb $15, %xmm0, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    shrb $7, %cl
+; SSE-NEXT:    addb %al, %cl
+; SSE-NEXT:    sarb %cl
+; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    pinsrb $15, %eax, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: non_splat_minus_one_divisor_1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpextrb $1, %xmm0, %eax
+; AVX-NEXT:    negb %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    vpextrb $0, %xmm0, %ecx
+; AVX-NEXT:    negb %cl
+; AVX-NEXT:    movzbl %cl, %ecx
+; AVX-NEXT:    vmovd %ecx, %xmm1
+; AVX-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $2, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $3, %xmm0, %eax
+; AVX-NEXT:    negb %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $4, %xmm0, %eax
+; AVX-NEXT:    negb %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $5, %xmm0, %eax
+; AVX-NEXT:    negb %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $6, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $7, %xmm0, %eax
+; AVX-NEXT:    negb %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $8, %xmm0, %eax
+; AVX-NEXT:    negb %al
+; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    vpinsrb $8, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $9, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $10, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $11, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $12, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $13, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $13, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $14, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrb $15, %xmm0, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    shrb $7, %cl
+; AVX-NEXT:    addb %al, %cl
+; AVX-NEXT:    sarb %cl
+; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    vpinsrb $15, %eax, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %div = sdiv <16 x i8> %A, <i8 -1, i8 -1, i8 2, i8 -1, i8 -1, i8 -1, i8 2, i8 -1, i8 -1, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  ret <16 x i8> %div
+}
+
+define <4 x i32> @non_splat_minus_one_divisor_2(<4 x i32> %A) {
+; SSE-LABEL: non_splat_minus_one_divisor_2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pextrd $1, %xmm0, %eax
 ; SSE-NEXT:    movd %xmm0, %ecx
@@ -4317,7 +4549,7 @@ define <4 x i32> @non_splat_minus_one_divisor_1(<4 x i32> %A) {
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: non_splat_minus_one_divisor_1:
+; AVX-LABEL: non_splat_minus_one_divisor_2:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX-NEXT:    vmovd %xmm0, %ecx

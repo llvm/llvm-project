@@ -42,6 +42,17 @@ target datalayout = "p:32:32"
 @empty.2 = external global [0 x i8], align 1
 @empty.cmp = global i1 icmp eq ([0 x i8]* @empty.1, [0 x i8]* @empty.2)
 
+@addrspace3 = internal addrspace(3) global i32 undef
+
+; CHECK: @no.fold.addrspace.icmp.eq.gv.null = global i1 icmp eq (i32 addrspace(3)* @addrspace3, i32 addrspace(3)* null)
+; CHECK: @no.fold.addrspace.icmp.eq.null.gv = global i1 icmp eq (i32 addrspace(3)* @addrspace3, i32 addrspace(3)* null)
+; CHECK: @no.fold.addrspace.icmp.ne.gv.null = global i1 icmp ne (i32 addrspace(3)* @addrspace3, i32 addrspace(3)* null)
+; CHECK: @no.fold.addrspace.icmp.ne.null.gv = global i1 icmp ne (i32 addrspace(3)* @addrspace3, i32 addrspace(3)* null)
+@no.fold.addrspace.icmp.eq.gv.null = global i1 icmp eq (i32 addrspace(3)* @addrspace3, i32 addrspace(3)* null)
+@no.fold.addrspace.icmp.eq.null.gv = global i1 icmp eq (i32 addrspace(3)* null, i32 addrspace(3)* @addrspace3)
+@no.fold.addrspace.icmp.ne.gv.null = global i1 icmp ne (i32 addrspace(3)* @addrspace3, i32 addrspace(3)* null)
+@no.fold.addrspace.icmp.ne.null.gv = global i1 icmp ne (i32 addrspace(3)* null, i32 addrspace(3)* @addrspace3)
+
 ; Don't add an inbounds on @glob.a3, since it's not inbounds.
 ; CHECK: @glob.a3 = alias i32, getelementptr (i32, i32* @glob.a2, i32 1)
 @glob = global i32 0

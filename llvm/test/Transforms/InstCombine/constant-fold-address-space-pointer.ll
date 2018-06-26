@@ -118,14 +118,14 @@ define i1 @constant_fold_inttoptr_null(i16 %i) {
 
 define i1 @constant_fold_ptrtoint_null() {
 ; CHECK-LABEL: @constant_fold_ptrtoint_null(
-; CHECK-NEXT: ret i1 false
+; CHECK-NEXT: ret i1 icmp eq (i32 addrspace(3)* @g, i32 addrspace(3)* null)
   %x = icmp eq i16 ptrtoint (i32 addrspace(3)* @g to i16), ptrtoint (i32 addrspace(3)* null to i16)
   ret i1 %x
 }
 
 define i1 @constant_fold_ptrtoint_null_2() {
 ; CHECK-LABEL: @constant_fold_ptrtoint_null_2(
-; CHECK-NEXT: ret i1 false
+; CHECK-NEXT: ret i1 icmp eq (i32 addrspace(3)* @g, i32 addrspace(3)* null)
   %x = icmp eq i16 ptrtoint (i32 addrspace(3)* null to i16), ptrtoint (i32 addrspace(3)* @g to i16)
   ret i1 %x
 }

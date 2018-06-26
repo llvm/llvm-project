@@ -16,7 +16,8 @@ define i16 @v_mul_i16(i16 %a, i16 %b) {
 
 ; FIXME: Should emit scalar mul or maybe i16 v_mul here
 ; GCN-LABEL: {{^}}s_mul_i16:
-; GCN: v_mul_u32_u24
+; SI: v_mul_u32_u24
+; VI: s_mul_i16
 define amdgpu_kernel void @s_mul_i16(i16 %a, i16 %b) {
   %r.val = mul i16 %a, %b
   store volatile i16 %r.val, i16 addrspace(1)* null

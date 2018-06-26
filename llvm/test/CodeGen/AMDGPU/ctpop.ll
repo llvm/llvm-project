@@ -305,14 +305,14 @@ define amdgpu_kernel void @v_ctpop_i32_add_vvar_inv(i32 addrspace(1)* noalias %o
 ; but there are some cases when the should be allowed.
 
 ; FUNC-LABEL: {{^}}ctpop_i32_in_br:
-; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xd
-; VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x34
+; SI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x16
+; VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x58
 ; GCN: s_bcnt1_i32_b32  [[SRESULT:s[0-9]+]], [[VAL]]
 ; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[SRESULT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 ; EG: BCNT_INT
-define amdgpu_kernel void @ctpop_i32_in_br(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %ctpop_arg, i32 %cond) {
+define amdgpu_kernel void @ctpop_i32_in_br(i32 addrspace(1)* %out, i32 addrspace(1)* %in, i32 %ctpop_arg, [8 x i32], i32 %cond) {
 entry:
   %tmp0 = icmp eq i32 %cond, 0
   br i1 %tmp0, label %if, label %else

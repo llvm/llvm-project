@@ -7,6 +7,7 @@ add_llvm_library(LLVMOrcJIT
   IRTransformLayer.cpp
   Legacy.cpp
   Layer.cpp
+  LLJIT.cpp
   NullResolver.cpp
   ObjectTransformLayer.cpp
   OrcABISupport.cpp

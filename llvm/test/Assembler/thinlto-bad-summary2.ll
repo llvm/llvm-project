@@ -1,6 +1,6 @@
 ; Test that we get appropriate error when parsing summary that doesn't
 ; have a '(' after the summary type label.
-; RUN: not llvm-as %s 2>&1 | FileCheck %s
+; RUN: not opt %s 2>&1 | FileCheck %s
 
 ; CHECK: error: expected '(' at start of summary entry
 

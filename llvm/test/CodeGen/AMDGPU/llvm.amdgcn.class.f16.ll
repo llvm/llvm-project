@@ -4,8 +4,8 @@ declare half @llvm.fabs.f16(half %a)
 declare i1 @llvm.amdgcn.class.f16(half %a, i32 %b)
 
 ; GCN-LABEL: {{^}}class_f16:
-; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
-; GCN: buffer_load_dword v[[B_I32:[0-9]+]]
+; GCN-DAG: buffer_load_ushort v[[A_F16:[0-9]+]]
+; GCN-DAG: buffer_load_dword v[[B_I32:[0-9]+]]
 ; VI:  v_cmp_class_f16_e32 vcc, v[[A_F16]], v[[B_I32]]
 ; GCN: v_cndmask_b32_e64 v[[R_I32:[0-9]+]]
 ; GCN: buffer_store_dword v[[R_I32]]
@@ -33,7 +33,9 @@ entry:
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_fabs(
   i32 addrspace(1)* %r,
+  [8 x i32],
   half %a.val,
+  [8 x i32],
   i32 %b.val) {
 entry:
   %a.val.fabs = call half @llvm.fabs.f16(half %a.val)
@@ -53,7 +55,9 @@ entry:
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_fneg(
   i32 addrspace(1)* %r,
+  [8 x i32],
   half %a.val,
+  [8 x i32],
   i32 %b.val) {
 entry:
   %a.val.fneg = fsub half -0.0, %a.val
@@ -73,7 +77,9 @@ entry:
 ; GCN: s_endpgm
 define amdgpu_kernel void @class_f16_fabs_fneg(
   i32 addrspace(1)* %r,
+  [8 x i32],
   half %a.val,
+  [8 x i32],
   i32 %b.val) {
 entry:
   %a.val.fabs = call half @llvm.fabs.f16(half %a.val)

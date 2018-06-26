@@ -1,6 +1,6 @@
 ; Test that we get appropriate error when parsing summary with unbalanced
 ; parentheses.
-; RUN: not llvm-as %s 2>&1 | FileCheck %s
+; RUN: not opt %s 2>&1 | FileCheck %s
 
 ; CHECK: error: found end of file while parsing summary entry
 

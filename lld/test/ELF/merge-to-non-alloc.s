@@ -15,11 +15,11 @@
 // CHECK-NEXT: AddressAlignment:
 // CHECK-NEXT: EntrySize:
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: E4010000 00000000 EC010000 00000000  |
+// CHECK-NEXT:   0000: 10020000 00000000 18020000 00000000  |
 // CHECK-NEXT: )
 
 // CHECK:      Name: foo
-// CHECK-NEXT: Value: 0x1E4
+// CHECK-NEXT: Value: 0x210
 
         .section        .foo,"aM",@progbits,4
         .align  4

@@ -1,4 +1,4 @@
-;===- ./lib/ExecutionEngine/MCJIT/LLVMBuild.txt ----------------*- Conf -*--===;
+;===- ./lib/ExecutionEngine/Orc/LLVMBuild.txt ----------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -19,4 +19,4 @@
 type = Library
 name = OrcJIT
 parent = ExecutionEngine
-required_libraries = Core ExecutionEngine Object RuntimeDyld Support TransformUtils
+required_libraries = Core ExecutionEngine Object MC RuntimeDyld Support Target TransformUtils

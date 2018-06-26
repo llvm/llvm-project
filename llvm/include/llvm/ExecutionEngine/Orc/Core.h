@@ -445,6 +445,9 @@ private:
 ///        and addresses using the AsynchronousSymbolQuery type. It will
 ///        eventually replace the LegacyJITSymbolResolver interface as the
 ///        stardard ORC symbol resolver type.
+///
+/// FIXME: SymbolResolvers should go away and be replaced with VSOs with
+///        defenition generators.
 class SymbolResolver {
 public:
   virtual ~SymbolResolver() = default;
@@ -525,8 +528,6 @@ public:
 
   using MaterializationUnitList =
       std::vector<std::unique_ptr<MaterializationUnit>>;
-
-  using VSOList = std::vector<VSO *>;
 
   VSO(const VSO &) = delete;
   VSO &operator=(const VSO &) = delete;
@@ -621,13 +622,6 @@ private:
   VSO(ExecutionSessionBase &ES, std::string Name)
       : ES(ES), VSOName(std::move(Name)) {}
 
-  ExecutionSessionBase &ES;
-  std::string VSOName;
-  SymbolMap Symbols;
-  UnmaterializedInfosMap UnmaterializedInfos;
-  MaterializingInfosMap MaterializingInfos;
-  FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator;
-
   Error defineImpl(MaterializationUnit &MU);
 
   SymbolNameSet lookupFlagsImpl(SymbolFlagsMap &Flags,
@@ -659,6 +653,20 @@ private:
   void finalize(const SymbolFlagsMap &Finalized);
 
   void notifyFailed(const SymbolNameSet &FailedSymbols);
+
+  void runOutstandingMUs();
+
+  ExecutionSessionBase &ES;
+  std::string VSOName;
+  SymbolMap Symbols;
+  UnmaterializedInfosMap UnmaterializedInfos;
+  MaterializingInfosMap MaterializingInfos;
+  FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator;
+
+  // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
+  //        with callbacks from asynchronous queries.
+  mutable std::recursive_mutex OutstandingMUsMutex;
+  std::vector<std::unique_ptr<MaterializationUnit>> OutstandingMUs;
 };
 
 /// An ExecutionSession represents a running JIT program.
@@ -691,15 +699,28 @@ Expected<SymbolMap> blockingLookup(ExecutionSessionBase &ES,
                                    SymbolNameSet Names, bool WaiUntilReady,
                                    MaterializationResponsibility *MR = nullptr);
 
+using VSOList = std::vector<VSO *>;
+
 /// Look up the given names in the given VSOs.
 /// VSOs will be searched in order and no VSO pointer may be null.
 /// All symbols must be found within the given VSOs or an error
 /// will be returned.
-Expected<SymbolMap> lookup(const VSO::VSOList &VSOs, SymbolNameSet Names);
+Expected<SymbolMap> lookup(const VSOList &VSOs, SymbolNameSet Names);
 
 /// Look up a symbol by searching a list of VSOs.
-Expected<JITEvaluatedSymbol> lookup(const VSO::VSOList &VSOs,
-                                    SymbolStringPtr Name);
+Expected<JITEvaluatedSymbol> lookup(const VSOList &VSOs, SymbolStringPtr Name);
+
+/// Mangles symbol names then uniques them in the context of an
+/// ExecutionSession.
+class MangleAndInterner {
+public:
+  MangleAndInterner(ExecutionSessionBase &ES, const DataLayout &DL);
+  SymbolStringPtr operator()(StringRef Name);
+
+private:
+  ExecutionSessionBase &ES;
+  const DataLayout &DL;
+};
 
 } // End namespace orc
 } // End namespace llvm

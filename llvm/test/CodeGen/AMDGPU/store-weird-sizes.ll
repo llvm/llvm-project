@@ -18,9 +18,9 @@ define void @local_store_i56(i56 addrspace(3)* %ptr, i56 %arg) #0 {
 }
 
 ; GCN-LABEL: {{^}}local_store_i55:
-; CIVI-DAG: ds_write_b8 v0, v{{[0-9]+}} offset:6
-; CIVI-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4
-; CIVI-DAG: ds_write_b32 v0, v{{[0-9]+$}}
+; CIVI-DAG: ds_write_b8 v{{[0-9]+}}, v{{[0-9]+}} offset:6
+; CIVI-DAG: ds_write_b16 v{{[0-9]+}}, v{{[0-9]+}} offset:4
+; CIVI-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+$}}
 
 ; GFX9-DAG: ds_write_b8_d16_hi v0, v{{[0-9]+}} offset:6
 ; GFX9-DAG: ds_write_b16 v0, v{{[0-9]+}} offset:4

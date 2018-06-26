@@ -1,6 +1,6 @@
+// REQUIRES: default_triple
 // RUN: not llvm-mc %s 2> %t
 // RUN: FileCheck < %t %s
-// REQUIRES: default_triple
 
 .macro M a a
 .endm

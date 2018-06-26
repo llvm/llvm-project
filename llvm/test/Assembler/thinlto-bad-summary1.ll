@@ -1,8 +1,8 @@
 ; Test that we get appropriate error when parsing summary with a missing
 ; summary type label.
-; RUN: not llvm-as %s 2>&1 | FileCheck %s
+; RUN: not opt %s 2>&1 | FileCheck %s
 
-; CHECK: error: expected 'label' at start of summary entry
+; CHECK: error: Expected 'gv', 'module', or 'typeid' at the start of summary entry
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

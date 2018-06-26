@@ -241,6 +241,25 @@ For example, the following works like you'd expect:
 it and the previous directive.  A "``CHECK-SAME:``" cannot be the first
 directive in a file.
 
+The "CHECK-EMPTY:" directive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you need to check that the next line has nothing on it, not even whitespace,
+you can use the "``CHECK-EMPTY:``" directive.
+
+.. code-block:: llvm
+
+   foo
+
+   bar
+   ; CHECK: foo
+   ; CHECK-EMPTY:
+   ; CHECK-NEXT: bar
+
+Just like "``CHECK-NEXT:``" the directive will fail if there is more than one
+newline before it finds the next blank line, and it cannot be the first
+directive in a file.
+
 The "CHECK-NOT:" directive
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 

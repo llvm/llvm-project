@@ -64,9 +64,9 @@ define amdgpu_kernel void @fma_v2f32(<2 x float> addrspace(1)* %out, <2 x float>
 ; SI: v_fma_f32
 ; SI: v_fma_f32
 ; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
 ; GFX906: v_fmac_f32_e32 {{v[0-9]+, v[0-9]+, v[0-9]+$}}
-; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
-; GFX906: v_fma_f32 {{v[0-9]+, v[0-9]+, v[0-9]+, v[0-9]+}}
 
 ; EG: MEM_RAT_{{.*}} STORE_{{.*}} [[RES:T[0-9]]].{{[XYZW][XYZW][XYZW][XYZW]}}, {{T[0-9]\.[XYZW]}},
 ; EG-DAG: FMA {{\*? *}}[[RES]].X

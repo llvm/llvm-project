@@ -1,6 +1,6 @@
+// REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: not ld.lld %t -o %t2 2>&1 | FileCheck %s
-// REQUIRES: arm
  .syntax unified
  .balign 0x1000
  .thumb

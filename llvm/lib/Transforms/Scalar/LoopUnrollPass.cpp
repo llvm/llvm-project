@@ -515,8 +515,13 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
         // Can't properly model a cost of a call.
         // FIXME: With a proper cost model we should be able to do it.
-        if(isa<CallInst>(&I))
-          return None;
+        if (auto *CI = dyn_cast<CallInst>(&I)) {
+          const Function *Callee = CI->getCalledFunction();
+          if (!Callee || TTI.isLoweredToCall(Callee)) {
+            LLVM_DEBUG(dbgs() << "Can't analyze cost of loop with call\n");
+            return None;
+          }
+        }
 
         // If the instruction might have a side-effect recursively account for
         // the cost of it and all the instructions leading up to it.
