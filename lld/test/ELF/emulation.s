@@ -1,3 +1,4 @@
+# REQUIRES: x86,ppc,mips,aarch64
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-freebsd %s -o %tx64
 # RUN: ld.lld -m elf_amd64_fbsd %tx64 -o %t2x64
 # RUN: llvm-readobj -file-headers %t2x64 | FileCheck --check-prefix=AMD64 %s
@@ -390,8 +391,6 @@
 # AARCH64-NEXT:   SectionHeaderOffset:
 # AARCH64-NEXT:   Flags [ (0x0)
 # AARCH64-NEXT:   ]
-
-# REQUIRES: x86,ppc,mips,aarch64
 
 .globl _start
 _start:

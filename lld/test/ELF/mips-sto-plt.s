@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check assigning STO_MIPS_PLT flag to symbol needs a pointer equality.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
@@ -6,8 +7,6 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o %t.so -o %t.exe
 # RUN: llvm-readobj -dt -mips-plt-got %t.exe | FileCheck %s
-
-# REQUIRES: mips
 
 # CHECK:      Symbol {
 # CHECK:        Name: foo0@

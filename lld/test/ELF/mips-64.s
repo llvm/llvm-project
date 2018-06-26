@@ -1,11 +1,10 @@
+# REQUIRES: mips
 # Check R_MIPS_64 relocation calculation.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-objdump -t %t.so | FileCheck -check-prefix=SYM %s
 # RUN: llvm-readobj -r -dynamic-table -mips-plt-got %t.so | FileCheck %s
-
-# REQUIRES: mips
 
   .global  __start
 __start:
