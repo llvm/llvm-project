@@ -32,8 +32,10 @@ void ReadState::writeStartEvent(unsigned Cycles) {
   --DependentWrites;
   TotalCycles = std::max(TotalCycles, Cycles);
 
-  if (!DependentWrites)
+  if (!DependentWrites) {
     CyclesLeft = TotalCycles;
+    IsReady = !CyclesLeft;
+  }
 }
 
 void WriteState::onInstructionIssued() {
@@ -83,8 +85,10 @@ void ReadState::cycleEvent() {
   if (CyclesLeft == UNKNOWN_CYCLES)
     return;
 
-  if (CyclesLeft)
+  if (CyclesLeft) {
     --CyclesLeft;
+    IsReady = !CyclesLeft;
+  }
 }
 
 #ifndef NDEBUG
@@ -119,9 +123,7 @@ void Instruction::execute() {
 }
 
 void Instruction::update() {
-  if (!isDispatched())
-    return;
-
+  assert(isDispatched() && "Unexpected instruction stage found!");
   if (llvm::all_of(Uses, [](const UniqueUse &Use) { return Use->isReady(); }))
     Stage = IS_READY;
 }
@@ -131,9 +133,14 @@ void Instruction::cycleEvent() {
     return;
 
   if (isDispatched()) {
-    for (UniqueUse &Use : Uses)
+    bool IsReady = true;
+    for (UniqueUse &Use : Uses) {
       Use->cycleEvent();
-    update();
+      IsReady &= Use->isReady();
+    }
+
+    if (IsReady)
+      Stage = IS_READY;
     return;
   }
 

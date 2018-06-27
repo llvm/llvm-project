@@ -282,7 +282,7 @@ ProgramStateRef ExprEngine::getInitialState(const LocationContext *InitLoc) {
       // Precondition: 'this' is always non-null upon entry to the
       // top-level function.  This is our starting assumption for
       // analyzing an "open" program.
-      const StackFrameContext *SFC = InitLoc->getCurrentStackFrame();
+      const StackFrameContext *SFC = InitLoc->getStackFrame();
       if (SFC->getParent() == nullptr) {
         loc::MemRegionVal L = svalBuilder.getCXXThis(MD, SFC);
         SVal V = state->getSVal(L);
@@ -450,7 +450,7 @@ ProgramStateRef ExprEngine::addObjectUnderConstruction(
     ProgramStateRef State,
     llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
     const LocationContext *LC, SVal V) {
-  ConstructedObjectKey Key(P, LC->getCurrentStackFrame());
+  ConstructedObjectKey Key(P, LC->getStackFrame());
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
   assert(!State->get<ObjectsUnderConstruction>(Key) ||
@@ -462,7 +462,7 @@ Optional<SVal> ExprEngine::getObjectUnderConstruction(
     ProgramStateRef State,
     llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
     const LocationContext *LC) {
-  ConstructedObjectKey Key(P, LC->getCurrentStackFrame());
+  ConstructedObjectKey Key(P, LC->getStackFrame());
   return Optional<SVal>::create(State->get<ObjectsUnderConstruction>(Key));
 }
 
@@ -470,7 +470,7 @@ ProgramStateRef ExprEngine::finishObjectConstruction(
     ProgramStateRef State,
     llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
     const LocationContext *LC) {
-  ConstructedObjectKey Key(P, LC->getCurrentStackFrame());
+  ConstructedObjectKey Key(P, LC->getStackFrame());
   assert(State->contains<ObjectsUnderConstruction>(Key));
   return State->remove<ObjectsUnderConstruction>(Key);
 }
@@ -640,7 +640,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
     LC = LC->getParent();
   }
 
-  const StackFrameContext *SFC = LC ? LC->getCurrentStackFrame() : nullptr;
+  const StackFrameContext *SFC = LC ? LC->getStackFrame() : nullptr;
   SymbolReaper SymReaper(SFC, ReferenceStmt, SymMgr, getStoreManager());
 
   for (auto I : CleanedState->get<ObjectsUnderConstruction>()) {
@@ -963,7 +963,7 @@ void ExprEngine::ProcessBaseDtor(const CFGBaseDtor D,
 
   const auto *CurDtor = cast<CXXDestructorDecl>(LCtx->getDecl());
   Loc ThisPtr = getSValBuilder().getCXXThis(CurDtor,
-                                            LCtx->getCurrentStackFrame());
+                                            LCtx->getStackFrame());
   SVal ThisVal = Pred->getState()->getSVal(ThisPtr);
 
   // Create the base object region.
@@ -985,7 +985,7 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
 
   const auto *CurDtor = cast<CXXDestructorDecl>(LCtx->getDecl());
   Loc ThisVal = getSValBuilder().getCXXThis(CurDtor,
-                                            LCtx->getCurrentStackFrame());
+                                            LCtx->getStackFrame());
   SVal FieldVal =
       State->getLValue(Member, State->getSVal(ThisVal).castAs<Loc>());
 
@@ -1758,8 +1758,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
 bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
                                        const LocationContext *CalleeLC) {
-  const StackFrameContext *CalleeSF = CalleeLC->getCurrentStackFrame();
-  const StackFrameContext *CallerSF = CalleeSF->getParent()->getCurrentStackFrame();
+  const StackFrameContext *CalleeSF = CalleeLC->getStackFrame();
+  const StackFrameContext *CallerSF = CalleeSF->getParent()->getStackFrame();
   assert(CalleeSF && CallerSF);
   ExplodedNode *BeforeProcessingCall = nullptr;
   const Stmt *CE = CalleeSF->getCallSite();
@@ -1771,7 +1771,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
 
     // Skip the nodes corresponding to the inlined code.
-    if (L.getLocationContext()->getCurrentStackFrame() != CallerSF)
+    if (L.getStackFrame() != CallerSF)
       continue;
     // We reached the caller. Find the node right before we started
     // processing the call.
@@ -1870,10 +1870,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // Check if we stopped at the top level function or not.
     // Root node should have the location context of the top most function.
     const LocationContext *CalleeLC = Pred->getLocation().getLocationContext();
-    const LocationContext *CalleeSF = CalleeLC->getCurrentStackFrame();
+    const LocationContext *CalleeSF = CalleeLC->getStackFrame();
     const LocationContext *RootLC =
                         (*G.roots_begin())->getLocation().getLocationContext();
-    if (RootLC->getCurrentStackFrame() != CalleeSF) {
+    if (RootLC->getStackFrame() != CalleeSF) {
       Engine.FunctionSummaries->markReachedMaxBlockCount(CalleeSF->getDecl());
 
       // Re-run the call evaluation without inlining it, by storing the
@@ -2190,7 +2190,7 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
     NodeBuilder Bldr(Pred, CleanUpObjects, BC);
     ProgramStateRef State = Pred->getState();
     const LocationContext *FromLC = Pred->getLocationContext();
-    const LocationContext *ToLC = FromLC->getCurrentStackFrame()->getParent();
+    const LocationContext *ToLC = FromLC->getStackFrame()->getParent();
     const LocationContext *LC = FromLC;
     while (LC != ToLC) {
       assert(LC && "ToLC must be a parent of FromLC!");
@@ -2353,7 +2353,7 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
       // variable should be captured.
       if (const FieldDecl *FD = LambdaCaptureFields[VD]) {
         Loc CXXThis =
-            svalBuilder.getCXXThis(MD, LocCtxt->getCurrentStackFrame());
+            svalBuilder.getCXXThis(MD, LocCtxt->getStackFrame());
         SVal CXXThisVal = state->getSVal(CXXThis);
         VInfo = std::make_pair(state->getLValue(FD, CXXThisVal), FD->getType());
       }

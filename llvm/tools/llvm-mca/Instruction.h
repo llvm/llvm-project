@@ -162,17 +162,16 @@ class ReadState {
   // dependent writes (i.e. field DependentWrite) is zero, this value is
   // propagated to field CyclesLeft.
   unsigned TotalCycles;
+  // This field is set to true only if there are no dependent writes, and
+  // there are no `CyclesLeft' to wait.
+  bool IsReady;
 
 public:
-  bool isReady() const {
-    if (DependentWrites)
-      return false;
-    return (CyclesLeft == UNKNOWN_CYCLES || CyclesLeft == 0);
-  }
+  bool isReady() const { return IsReady; }
 
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
       : RD(Desc), RegisterID(RegID), DependentWrites(0),
-        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0) {}
+        CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true) {}
   ReadState(const ReadState &Other) = delete;
   ReadState &operator=(const ReadState &Other) = delete;
 
@@ -182,7 +181,10 @@ public:
 
   void cycleEvent();
   void writeStartEvent(unsigned Cycles);
-  void setDependentWrites(unsigned Writes) { DependentWrites = Writes; }
+  void setDependentWrites(unsigned Writes) {
+    DependentWrites = Writes;
+    IsReady = !Writes;
+  }
 };
 
 /// A sequence of cycles.

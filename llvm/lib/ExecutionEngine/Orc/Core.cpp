@@ -725,6 +725,25 @@ void VSO::notifyFailed(const SymbolNameSet &FailedSymbols) {
     Q->handleFailed(make_error<FailedToMaterialize>(FailedSymbols));
 }
 
+void VSO::runOutstandingMUs() {
+  while (1) {
+    std::unique_ptr<MaterializationUnit> MU;
+
+    {
+      std::lock_guard<std::recursive_mutex> Lock(OutstandingMUsMutex);
+      if (!OutstandingMUs.empty()) {
+        MU = std::move(OutstandingMUs.back());
+        OutstandingMUs.pop_back();
+      }
+    }
+
+    if (MU)
+      ES.dispatchMaterialization(*this, std::move(MU));
+    else
+      break;
+  }
+}
+
 SymbolNameSet VSO::lookupFlags(SymbolFlagsMap &Flags,
                                const SymbolNameSet &Names) {
   return ES.runSessionLocked([&, this]() {
@@ -767,6 +786,8 @@ SymbolNameSet VSO::lookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
                           SymbolNameSet Names) {
   assert(Q && "Query can not be null");
 
+  runOutstandingMUs();
+
   LookupImplActionFlags ActionFlags = None;
   std::vector<std::unique_ptr<MaterializationUnit>> MUs;
 
@@ -796,9 +817,19 @@ SymbolNameSet VSO::lookup(std::shared_ptr<AsynchronousSymbolQuery> Q,
   if (ActionFlags & NotifyFullyReady)
     Q->handleFullyReady();
 
+  // FIXME: Swap back to the old code below once RuntimeDyld works with
+  //        callbacks from asynchronous queries.
+  // Add MUs to the OutstandingMUs list.
+  {
+    std::lock_guard<std::recursive_mutex> Lock(OutstandingMUsMutex);
+    for (auto &MU : MUs)
+      OutstandingMUs.push_back(std::move(MU));
+  }
+  runOutstandingMUs();
+
   // Dispatch any required MaterializationUnits for materialization.
-  for (auto &MU : MUs)
-    ES.dispatchMaterialization(*this, std::move(MU));
+  // for (auto &MU : MUs)
+  //  ES.dispatchMaterialization(*this, std::move(MU));
 
   return Unresolved;
 }

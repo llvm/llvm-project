@@ -56,7 +56,7 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
   //      being so inprecise. When the invalidation is improved, the handling
   //      of nested loops will also need to be improved.
   ASTContext &ASTCtx = LCtx->getAnalysisDeclContext()->getASTContext();
-  const StackFrameContext *STC = LCtx->getCurrentStackFrame();
+  const StackFrameContext *STC = LCtx->getStackFrame();
   MemRegionManager &MRMgr = PrevState->getStateManager().getRegionManager();
   const MemRegion *Regions[] = {MRMgr.getStackLocalsRegion(STC),
                                 MRMgr.getStackArgumentsRegion(STC),

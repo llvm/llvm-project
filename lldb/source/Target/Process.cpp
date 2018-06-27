@@ -725,7 +725,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
     : ProcessProperties(this), UserID(LLDB_INVALID_PROCESS_ID),
       Broadcaster((target_sp->GetDebugger().GetBroadcasterManager()),
                   Process::GetStaticBroadcasterClass().AsCString()),
-      m_target_sp(target_sp), m_public_state(eStateUnloaded),
+      m_target_wp(target_sp), m_public_state(eStateUnloaded),
       m_private_state(eStateUnloaded),
       m_private_state_broadcaster(nullptr,
                                   "lldb.process.internal_state_broadcaster"),
@@ -4377,7 +4377,7 @@ bool Process::ProcessEventData::SetUpdateStateOnRemoval(Event *event_ptr) {
   return false;
 }
 
-lldb::TargetSP Process::CalculateTarget() { return m_target_sp.lock(); }
+lldb::TargetSP Process::CalculateTarget() { return m_target_wp.lock(); }
 
 void Process::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   exe_ctx.SetTargetPtr(&GetTarget());

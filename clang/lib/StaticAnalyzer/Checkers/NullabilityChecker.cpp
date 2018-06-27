@@ -128,8 +128,7 @@ public:
   DefaultBool NeedTracking;
 
 private:
-  class NullabilityBugVisitor
-      : public BugReporterVisitorImpl<NullabilityBugVisitor> {
+  class NullabilityBugVisitor : public BugReporterVisitor {
   public:
     NullabilityBugVisitor(const MemRegion *M) : Region(M) {}
 

@@ -18,7 +18,7 @@
 
 # CHECK:      Section to Segment mapping:
 # CHECK-NEXT:  Segment Sections...
-# CHECK-NEXT:   00     foo .hash .dynsym .dynstr
+# CHECK-NEXT:   00     foo .dynsym .dynstr .hash
 
 .section foo, "a"
 .quad 0

@@ -312,6 +312,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     Actions.ActOnDelayedCXXMethodParameter(getCurScope(), Param);
     std::unique_ptr<CachedTokens> Toks = std::move(LM.DefaultArgs[I].Toks);
     if (Toks) {
+      ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
       // Mark the end of the default argument so that we know when to stop when
       // we parse it later on.
       Token LastDefaultArgToken = Toks->back();
@@ -384,6 +386,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
   // Parse a delayed exception-specification, if there is one.
   if (CachedTokens *Toks = LM.ExceptionSpecTokens) {
+    ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
     // Add the 'stop' token.
     Token LastExceptionSpecToken = Toks->back();
     Token ExceptionSpecEnd;
@@ -488,6 +492,8 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
     Actions.ActOnReenterTemplateScope(getCurScope(), LM.D);
     ++CurTemplateDepthTracker;
   }
+
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
   assert(!LM.Toks.empty() && "Empty body!");
   Token LastBodyToken = LM.Toks.back();
@@ -608,6 +614,8 @@ void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
 void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   if (!MI.Field || MI.Field->isInvalidDecl())
     return;
+
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.

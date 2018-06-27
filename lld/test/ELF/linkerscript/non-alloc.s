@@ -15,7 +15,7 @@
 
 # CHECK:      Section to Segment mapping:
 # CHECK-NEXT:  Segment Sections...
-# CHECK-NEXT:   00     .dynsym .dynstr .hash .text
+# CHECK-NEXT:   00     .dynsym .hash .dynstr .text
 # CHECK-NEXT:   01     .dynamic
 
 nop

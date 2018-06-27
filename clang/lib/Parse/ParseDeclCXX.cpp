@@ -3009,6 +3009,8 @@ void Parser::SkipCXXMemberSpecification(SourceLocation RecordLoc,
 Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     AccessSpecifier &AS, ParsedAttributesWithRange &AccessAttrs,
     DeclSpec::TST TagType, Decl *TagDecl) {
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
   switch (Tok.getKind()) {
   case tok::kw___if_exists:
   case tok::kw___if_not_exists:

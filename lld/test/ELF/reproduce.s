@@ -1,5 +1,5 @@
-# REQUIRES: shell
 # REQUIRES: x86
+# REQUIRES: shell
 
 # Extracting the tar archive can get over the path limit on windows.
 

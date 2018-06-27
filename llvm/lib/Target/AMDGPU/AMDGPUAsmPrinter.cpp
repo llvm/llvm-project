@@ -1,4 +1,4 @@
-//===-- AMDGPUAsmPrinter.cpp - AMDGPU Assebly printer  --------------------===//
+//===-- AMDGPUAsmPrinter.cpp - AMDGPU assembly printer  -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

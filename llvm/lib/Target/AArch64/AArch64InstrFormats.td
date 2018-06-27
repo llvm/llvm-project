@@ -7923,27 +7923,6 @@ class BaseSIMDScalarShiftTied<bit U, bits<5> opc, bits<7> fixed_imm,
 
 multiclass SIMDFPScalarRShift<bit U, bits<5> opc, string asm> {
   let Predicates = [HasNEON, HasFullFP16] in {
-  def HSr : BaseSIMDScalarShift<U, opc, {0,0,1,?,?,?,?},
-                                FPR16, FPR32, vecshiftR16, asm, []> {
-    let Inst{19-16} = imm{3-0};
-    let Inst{23-22} = 0b11;
-  }
-  def SHr : BaseSIMDScalarShift<U, opc, {0,0,1,?,?,?,?},
-                                FPR32, FPR16, vecshiftR32, asm, []> {
-    let Inst{19-16} = imm{3-0};
-    let Inst{22-21} = 0b01;
-  }
-  def HDr : BaseSIMDScalarShift<U, opc, {?,?,?,?,?,?,?},
-                                FPR16, FPR64, vecshiftR32, asm, []> {
-    let Inst{21-16} = imm{5-0};
-    let Inst{23-22} = 0b11;
-  }
-  def DHr : BaseSIMDScalarShift<U, opc, {1,1,1,?,?,?,?},
-                                FPR64, FPR16, vecshiftR64, asm, []> {
-    let Inst{21-16} = imm{5-0};
-    let Inst{23-22} = 0b01;
-    let Inst{31} = 1;
-  }
   def h : BaseSIMDScalarShift<U, opc, {0,0,1,?,?,?,?},
                               FPR16, FPR16, vecshiftR16, asm, []> {
     let Inst{19-16} = imm{3-0};

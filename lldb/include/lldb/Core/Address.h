@@ -11,8 +11,8 @@
 #define liblldb_Address_h_
 
 #include "lldb/lldb-defines.h"      // for LLDB_INVALID_ADDRESS
-#include "lldb/lldb-enumerations.h" // for AddressClass::eInvalid
 #include "lldb/lldb-forward.h"      // for SectionWP, SectionSP, ModuleSP
+#include "lldb/lldb-private-enumerations.h" // for AddressClass
 #include "lldb/lldb-types.h"        // for addr_t
 
 #include <stddef.h> // for size_t
@@ -270,7 +270,7 @@ public:
             DumpStyle fallback_style = DumpStyleInvalid,
             uint32_t addr_byte_size = UINT32_MAX) const;
 
-  lldb::AddressClass GetAddressClass() const;
+  AddressClass GetAddressClass() const;
 
   //------------------------------------------------------------------
   /// Get the file address.
@@ -338,7 +338,7 @@ public:
   //------------------------------------------------------------------
   lldb::addr_t GetOpcodeLoadAddress(
       Target *target,
-      lldb::AddressClass addr_class = lldb::AddressClass::eInvalid) const;
+      AddressClass addr_class = AddressClass::eInvalid) const;
 
   //------------------------------------------------------------------
   /// Get the section relative offset value.
@@ -432,7 +432,7 @@ public:
 
   bool SetOpcodeLoadAddress(
       lldb::addr_t load_addr, Target *target,
-      lldb::AddressClass addr_class = lldb::AddressClass::eInvalid,
+      AddressClass addr_class = AddressClass::eInvalid,
       bool allow_section_end = false);
 
   bool SetCallableLoadAddress(lldb::addr_t load_addr, Target *target);

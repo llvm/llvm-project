@@ -274,7 +274,13 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     SBOptions += "-plist-html -o '%s' " % SBOutputDir
     SBOptions += "-enable-checker " + AllCheckers + " "
     SBOptions += "--keep-empty "
-    SBOptions += "-analyzer-config 'stable-report-filename=true' "
+    AnalyzerConfig = {
+        "stable-report-filename": "true",
+        "serialize-stats": "true"
+    }
+
+    SBOptions += "-analyzer-config '%s' " % (
+        ",".join("%s=%s" for key, value in AnalyzerConfig.iteritems()))
     # Always use ccc-analyze to ensure that we can locate the failures
     # directory.
     SBOptions += "--override-compiler "

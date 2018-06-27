@@ -74,7 +74,7 @@ class DynamicTypePropagation:
           new BugType(this, "Generics", categories::CoreFoundationObjectiveC));
   }
 
-  class GenericsBugVisitor : public BugReporterVisitorImpl<GenericsBugVisitor> {
+  class GenericsBugVisitor : public BugReporterVisitor {
   public:
     GenericsBugVisitor(SymbolRef S) : Sym(S) {}
 

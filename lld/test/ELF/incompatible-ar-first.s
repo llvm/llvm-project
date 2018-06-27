@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/archive.s -o %ta.o
 // RUN: llvm-ar rc %t.a %ta.o
 // RUN: llvm-mc -filetype=obj -triple=i686-linux %s -o %tb.o
@@ -8,4 +9,3 @@
 // * -m was not used.
 // CHECK: .a({{.*}}a.o) is incompatible with {{.*}}b.o
 
-// REQUIRES: x86

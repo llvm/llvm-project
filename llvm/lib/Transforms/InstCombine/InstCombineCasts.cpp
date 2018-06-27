@@ -266,10 +266,13 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
     if (Instruction::CastOps NewOpc = isEliminableCastPair(CSrc, &CI)) {
       // The first cast (CSrc) is eliminable so we need to fix up or replace
       // the second cast (CI). CSrc will then have a good chance of being dead.
-      auto *Res = CastInst::Create(NewOpc, CSrc->getOperand(0), CI.getType());
+      auto *Ty = CI.getType();
+      auto *Res = CastInst::Create(NewOpc, CSrc->getOperand(0), Ty);
       // Replace debug users of the eliminable cast by emitting debug values
       // which refer to the new cast.
-      insertReplacementDbgValues(*CSrc, *Res, *std::next(CI.getIterator()));
+      if (Ty->isIntegerTy() || Ty->isPointerTy())
+        // TODO: Support floats and vectors (see DW_OP_convert, fragment).
+        insertReplacementDbgValues(*CSrc, *Res, *std::next(CI.getIterator()));
       return Res;
     }
   }

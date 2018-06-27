@@ -12,7 +12,14 @@ check_include_file(unwind.h HAVE_UNWIND_H)
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)
 add_custom_target(install-compiler-rt-stripped)
-set_target_properties(compiler-rt PROPERTIES FOLDER "Compiler-RT Misc")
+set_property(
+  TARGET
+    compiler-rt
+    install-compiler-rt
+    install-compiler-rt-stripped
+  PROPERTY
+    FOLDER "Compiler-RT Misc"
+)
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can
 # construct the output paths, so it can behave as if it were in-tree here.

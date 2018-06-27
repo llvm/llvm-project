@@ -22,8 +22,8 @@
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for AddressClass, AddressClass...
 #include "lldb/lldb-forward.h"      // for InstructionSP, DisassemblerSP
+#include "lldb/lldb-private-enumerations.h" // for AddressClass
 #include "lldb/lldb-types.h"        // for addr_t, offset_t
 
 #include "llvm/ADT/StringRef.h" // for StringRef
@@ -78,7 +78,7 @@ namespace lldb_private {
 class Instruction {
 public:
   Instruction(const Address &address,
-              lldb::AddressClass addr_class = lldb::AddressClass::eInvalid);
+              AddressClass addr_class = AddressClass::eInvalid);
 
   virtual ~Instruction();
 
@@ -102,11 +102,11 @@ public:
   virtual void
   CalculateMnemonicOperandsAndComment(const ExecutionContext *exe_ctx) = 0;
 
-  lldb::AddressClass GetAddressClass();
+  AddressClass GetAddressClass();
 
   void SetAddress(const Address &addr) {
     // Invalidate the address class to lazily discover it if we need to.
-    m_address_class = lldb::AddressClass::eInvalid;
+    m_address_class = AddressClass::eInvalid;
     m_address = addr;
   }
 
@@ -241,8 +241,8 @@ protected:
                      // when disassembling memory, you might run into data.
                      // This can help us to disassemble appropriately.
 private:
-  lldb::AddressClass
-      m_address_class; // Use GetAddressClass () accessor function!
+  AddressClass m_address_class; // Use GetAddressClass () accessor function!
+
 protected:
   Opcode m_opcode; // The opcode for this instruction
   std::string m_opcode_name;

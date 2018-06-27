@@ -1,4 +1,5 @@
 ; RUN: opt < %s -ipsccp -S | FileCheck %s
+; RUN: opt < %s -enable-debugify -ipsccp -debugify-quiet -disable-output
 
 ;;======================== test1
 

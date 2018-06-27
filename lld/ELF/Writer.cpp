@@ -701,10 +701,10 @@ enum RankFlags {
   RF_WRITE = 1 << 15,
   RF_EXEC_WRITE = 1 << 14,
   RF_EXEC = 1 << 13,
-  RF_NON_TLS_BSS = 1 << 12,
-  RF_NON_TLS_BSS_RO = 1 << 11,
-  RF_NOT_TLS = 1 << 10,
-  RF_ALLOC_FIRST = 1 << 9,
+  RF_PROGBITS_NOT_EXEC_OR_WRITE = 1 << 12,
+  RF_NON_TLS_BSS = 1 << 11,
+  RF_NON_TLS_BSS_RO = 1 << 10,
+  RF_NOT_TLS = 1 << 9,
   RF_BSS = 1 << 8,
   RF_NOTE = 1 << 7,
   RF_PPC_NOT_TOCBSS = 1 << 6,
@@ -736,16 +736,6 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   if (!(Sec->Flags & SHF_ALLOC))
     return Rank | RF_NOT_ALLOC;
 
-  // Place .dynsym and .dynstr at the beginning of SHF_ALLOC
-  // sections. We want to do this to mitigate the possibility that
-  // huge .dynsym and .dynstr sections placed between ro-data and text
-  // sections cause relocation overflow.  Note: .dynstr has SHT_STRTAB
-  // type and SHF_ALLOC attribute, whereas sections that only have
-  // SHT_STRTAB but without SHF_ALLOC is placed at the end. All "Sec"
-  // reaching here has SHF_ALLOC bit set.
-  if (Sec->Type == SHT_DYNSYM || Sec->Type == SHT_STRTAB)
-    return Rank | RF_ALLOC_FIRST;
-
   // Sort sections based on their access permission in the following
   // order: R, RX, RWX, RW.  This order is based on the following
   // considerations:
@@ -768,6 +758,12 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   } else {
     if (IsWrite)
       Rank |= RF_WRITE;
+    // Make non-executable and non-writable PROGBITS sections (e.g .rodata
+    // .eh_frame) closer to .text . They likely contain PC or GOT relative
+    // relocations and there could be relocation overflow if other huge sections
+    // (.dynstr .dynsym) were placed in between.
+    else if (Sec->Type == SHT_PROGBITS)
+      Rank |= RF_PROGBITS_NOT_EXEC_OR_WRITE;
   }
 
   // If we got here we know that both A and B are in the same PT_LOAD.
@@ -2099,7 +2095,8 @@ struct SectionOffset {
 
 // Check whether sections overlap for a specific address range (file offsets,
 // load and virtual adresses).
-static void checkOverlap(StringRef Name, std::vector<SectionOffset> &Sections) {
+static void checkOverlap(StringRef Name, std::vector<SectionOffset> &Sections,
+                         bool IsVirtualAddr) {
   llvm::sort(Sections.begin(), Sections.end(),
              [=](const SectionOffset &A, const SectionOffset &B) {
                return A.Offset < B.Offset;
@@ -2110,12 +2107,19 @@ static void checkOverlap(StringRef Name, std::vector<SectionOffset> &Sections) {
   for (size_t I = 1, End = Sections.size(); I < End; ++I) {
     SectionOffset A = Sections[I - 1];
     SectionOffset B = Sections[I];
-    if (B.Offset < A.Offset + A.Sec->Size)
-      errorOrWarn(
-          "section " + A.Sec->Name + " " + Name + " range overlaps with " +
-          B.Sec->Name + "\n>>> " + A.Sec->Name + " range is " +
-          rangeToString(A.Offset, A.Sec->Size) + "\n>>> " + B.Sec->Name +
-          " range is " + rangeToString(B.Offset, B.Sec->Size));
+    if (B.Offset >= A.Offset + A.Sec->Size)
+      continue;
+
+    // If both sections are in OVERLAY we allow the overlapping of virtual
+    // addresses, because it is what OVERLAY was designed for.
+    if (IsVirtualAddr && A.Sec->InOverlay && B.Sec->InOverlay)
+      continue;
+
+    errorOrWarn("section " + A.Sec->Name + " " + Name +
+                " range overlaps with " + B.Sec->Name + "\n>>> " + A.Sec->Name +
+                " range is " + rangeToString(A.Offset, A.Sec->Size) + "\n>>> " +
+                B.Sec->Name + " range is " +
+                rangeToString(B.Offset, B.Sec->Size));
   }
 }
 
@@ -2143,7 +2147,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
     if (0 < Sec->Size && Sec->Type != SHT_NOBITS &&
         (!Config->OFormatBinary || (Sec->Flags & SHF_ALLOC)))
       FileOffs.push_back({Sec, Sec->Offset});
-  checkOverlap("file", FileOffs);
+  checkOverlap("file", FileOffs, false);
 
   // When linking with -r there is no need to check for overlapping virtual/load
   // addresses since those addresses will only be assigned when the final
@@ -2160,7 +2164,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *Sec : OutputSections)
     if (0 < Sec->Size && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
       VMAs.push_back({Sec, Sec->Addr});
-  checkOverlap("virtual address", VMAs);
+  checkOverlap("virtual address", VMAs, true);
 
   // Finally, check that the load addresses don't overlap. This will usually be
   // the same as the virtual addresses but can be different when using a linker
@@ -2169,7 +2173,7 @@ template <class ELFT> void Writer<ELFT>::checkSections() {
   for (OutputSection *Sec : OutputSections)
     if (0 < Sec->Size && (Sec->Flags & SHF_ALLOC) && !(Sec->Flags & SHF_TLS))
       LMAs.push_back({Sec, Sec->getLMA()});
-  checkOverlap("load address", LMAs);
+  checkOverlap("load address", LMAs, false);
 }
 
 // The entry point address is chosen in the following ways.

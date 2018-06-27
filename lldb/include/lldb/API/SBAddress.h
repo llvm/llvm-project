@@ -80,8 +80,6 @@ public:
 
   lldb::SBLineEntry GetLineEntry();
 
-  lldb::AddressClass GetAddressClass();
-
 protected:
   friend class SBBlock;
   friend class SBBreakpointLocation;

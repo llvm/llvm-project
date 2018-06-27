@@ -561,10 +561,13 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS, bool isAddressOfOpe
   if (isAddressOfOperand && isPostfixExpressionSuffixStart())
     isAddressOfOperand = false;
 
-  return Actions.ActOnIdExpression(getCurScope(), SS, TemplateKWLoc, Name,
-                                   Tok.is(tok::l_paren), isAddressOfOperand,
-                                   nullptr, /*IsInlineAsmIdentifier=*/false,
-                                   &Replacement);
+  ExprResult E = Actions.ActOnIdExpression(
+      getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
+      isAddressOfOperand, nullptr, /*IsInlineAsmIdentifier=*/false,
+      &Replacement);
+  if (!E.isInvalid() && !E.isUnset() && Tok.is(tok::less))
+    checkPotentialAngleBracket(E);
+  return E;
 }
 
 /// ParseCXXIdExpression - Handle id-expression.
@@ -1735,6 +1738,8 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
                                                 SourceLocation Loc,
                                                 Sema::ConditionKind CK) {
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Condition);
     cutOffParsing();

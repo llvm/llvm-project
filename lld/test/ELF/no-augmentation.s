@@ -1,7 +1,6 @@
+// REQUIRES: mips
 // RUN: llvm-mc -filetype=obj -triple=mips64-unknown-freebsd %s -o %t.o
 // RUN: ld.lld --eh-frame-hdr %t.o -o %t | FileCheck -allow-empty %s
-
-// REQUIRES: mips
 
 // CHECK-NOT: corrupted or unsupported CIE information
 // CHECK-NOT: corrupted CIE

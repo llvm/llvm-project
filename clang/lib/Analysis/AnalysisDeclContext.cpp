@@ -442,7 +442,7 @@ LocationContextManager::getBlockInvocationContext(AnalysisDeclContext *ctx,
 // LocationContext methods.
 //===----------------------------------------------------------------------===//
 
-const StackFrameContext *LocationContext::getCurrentStackFrame() const {
+const StackFrameContext *LocationContext::getStackFrame() const {
   const LocationContext *LC = this;
   while (LC) {
     if (const auto *SFC = dyn_cast<StackFrameContext>(LC))
@@ -453,7 +453,7 @@ const StackFrameContext *LocationContext::getCurrentStackFrame() const {
 }
 
 bool LocationContext::inTopFrame() const {
-  return getCurrentStackFrame()->inTopFrame();
+  return getStackFrame()->inTopFrame();
 }
 
 bool LocationContext::isParentOf(const LocationContext *LC) const {

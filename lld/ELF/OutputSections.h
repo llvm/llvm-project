@@ -102,6 +102,7 @@ public:
   bool NonAlloc = false;
   bool Noload = false;
   bool ExpressionsUseSymbols = false;
+  bool InOverlay = false;
 
   template <class ELFT> void finalize();
   template <class ELFT> void writeTo(uint8_t *Buf);

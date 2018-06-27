@@ -1049,6 +1049,14 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
       }
     }
   }
+
+  // RIP/EIP-relative addressing is only supported in 64-bit mode.
+  if (!Is64BitMode && BaseReg != 0 &&
+      (BaseReg == X86::RIP || BaseReg == X86::EIP)) {
+    ErrMsg = "RIP-relative addressing requires 64-bit mode";
+    return true;
+  }
+
   return checkScale(Scale, ErrMsg);
 }
 
