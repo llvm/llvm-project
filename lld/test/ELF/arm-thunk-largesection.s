@@ -1,3 +1,4 @@
+// REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2 2>&1
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi -start-address=69632 -stop-address=69636 %t2 | FileCheck -check-prefix=CHECK1 %s
@@ -5,7 +6,6 @@
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi -start-address=16850936 -stop-address=16850940 %t2 | FileCheck -check-prefix=CHECK3 %s
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi -start-address=33628152 -stop-address=33628156 %t2 | FileCheck -check-prefix=CHECK4 %s
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi -start-address=50405356 -stop-address=50405376 %t2 | FileCheck -check-prefix=CHECK5 %s
-// REQUIRES: arm
  .syntax unified
  .balign 0x1000
  .thumb

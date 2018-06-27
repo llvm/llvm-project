@@ -480,7 +480,7 @@ Optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   return Optional<uint64_t>();
 }
 
-BasicBlock::iterator llvm::skipDebugInfo(BasicBlock::iterator It) {
+BasicBlock::iterator llvm::skipDebugIntrinsics(BasicBlock::iterator It) {
   while (isa<DbgInfoIntrinsic>(It))
     ++It;
   return It;

@@ -94,4 +94,5 @@ else()
   add_custom_target(SanitizerLintCheck
     COMMAND echo "No lint check")
 endif()
-
+set_target_properties(SanitizerLintCheck
+  PROPERTIES FOLDER "Compiler-RT Misc")

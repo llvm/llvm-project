@@ -872,7 +872,7 @@ TEST(InstructionsTest, SkipDebug) {
   // The first non-debug instruction is the terminator.
   auto *Term = BB.getTerminator();
   EXPECT_EQ(Term, BB.begin()->getNextNonDebugInstruction());
-  EXPECT_EQ(Term->getIterator(), skipDebugInfo(BB.begin()));
+  EXPECT_EQ(Term->getIterator(), skipDebugIntrinsics(BB.begin()));
 
   // After the terminator, there are no non-debug instructions.
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());

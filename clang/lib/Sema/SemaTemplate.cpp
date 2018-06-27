@@ -508,20 +508,41 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
 
   DeclContext *LookupCtx = nullptr;
   NamedDecl *Found = nullptr;
+  bool MissingTemplateKeyword = false;
 
   // Figure out what name we looked up.
-  if (auto *ME = dyn_cast<MemberExpr>(TemplateName.get())) {
+  if (auto *DRE = dyn_cast<DeclRefExpr>(TemplateName.get())) {
+    NameInfo = DRE->getNameInfo();
+    SS.Adopt(DRE->getQualifierLoc());
+    LookupKind = LookupOrdinaryName;
+    Found = DRE->getFoundDecl();
+  } else if (auto *ME = dyn_cast<MemberExpr>(TemplateName.get())) {
     NameInfo = ME->getMemberNameInfo();
     SS.Adopt(ME->getQualifierLoc());
     LookupKind = LookupMemberName;
     LookupCtx = ME->getBase()->getType()->getAsCXXRecordDecl();
     Found = ME->getMemberDecl();
+  } else if (auto *DSDRE =
+                 dyn_cast<DependentScopeDeclRefExpr>(TemplateName.get())) {
+    NameInfo = DSDRE->getNameInfo();
+    SS.Adopt(DSDRE->getQualifierLoc());
+    MissingTemplateKeyword = true;
+  } else if (auto *DSME =
+                 dyn_cast<CXXDependentScopeMemberExpr>(TemplateName.get())) {
+    NameInfo = DSME->getMemberNameInfo();
+    SS.Adopt(DSME->getQualifierLoc());
+    MissingTemplateKeyword = true;
   } else {
-    auto *DRE = cast<DeclRefExpr>(TemplateName.get());
-    NameInfo = DRE->getNameInfo();
-    SS.Adopt(DRE->getQualifierLoc());
-    LookupKind = LookupOrdinaryName;
-    Found = DRE->getFoundDecl();
+    llvm_unreachable("unexpected kind of potential template name");
+  }
+
+  // If this is a dependent-scope lookup, diagnose that the 'template' keyword
+  // was missing.
+  if (MissingTemplateKeyword) {
+    Diag(NameInfo.getLocStart(), diag::err_template_kw_missing)
+        << "" << NameInfo.getName().getAsString()
+        << SourceRange(Less, Greater);
+    return;
   }
 
   // Try to correct the name by looking for templates and C++ named casts.

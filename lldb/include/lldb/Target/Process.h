@@ -1461,7 +1461,7 @@ public:
   ///     A Target object pointer to the target that owns this
   ///     module.
   //------------------------------------------------------------------
-  Target &GetTarget() { return *m_target_sp.lock(); }
+  Target &GetTarget() { return *m_target_wp.lock(); }
 
   //------------------------------------------------------------------
   /// Get the const target object pointer for this module.
@@ -1470,7 +1470,7 @@ public:
   ///     A const Target object pointer to the target that owns this
   ///     module.
   //------------------------------------------------------------------
-  const Target &GetTarget() const { return *m_target_sp.lock(); }
+  const Target &GetTarget() const { return *m_target_wp.lock(); }
 
   //------------------------------------------------------------------
   /// Flush all data in the process.
@@ -2994,7 +2994,7 @@ protected:
   //------------------------------------------------------------------
   // Member variables
   //------------------------------------------------------------------
-  std::weak_ptr<Target> m_target_sp; ///< The target that owns this process.
+  std::weak_ptr<Target> m_target_wp; ///< The target that owns this process.
   ThreadSafeValue<lldb::StateType> m_public_state;
   ThreadSafeValue<lldb::StateType>
       m_private_state;                     // The actual state of our process

@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.4.3)
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE_BUILD)
   project(CompilerRT C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
+  set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
 # Add path for custom compiler-rt modules.
@@ -63,6 +64,11 @@ set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOLEAN
 
 if (COMPILER_RT_STANDALONE_BUILD)
   load_llvm_config()
+  if (TARGET intrinsics_gen)
+    # Loading the llvm config causes this target to be imported so place it
+    # under the appropriate folder in an IDE.
+    set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
+  endif()
 
   # Find Python interpreter.
   set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5)

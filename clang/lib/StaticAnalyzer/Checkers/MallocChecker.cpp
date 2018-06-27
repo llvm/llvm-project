@@ -431,8 +431,7 @@ private:
   /// The bug visitor which allows us to print extra diagnostics along the
   /// BugReport path. For example, showing the allocation site of the leaked
   /// region.
-  class MallocBugVisitor final
-      : public BugReporterVisitorImpl<MallocBugVisitor> {
+  class MallocBugVisitor final : public BugReporterVisitor {
   protected:
     enum NotificationMode {
       Normal,
@@ -511,7 +510,7 @@ private:
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
-    std::unique_ptr<PathDiagnosticPiece>
+    std::shared_ptr<PathDiagnosticPiece>
     getEndPath(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
                BugReport &BR) override {
       if (!IsLeak)
@@ -521,7 +520,7 @@ private:
         PathDiagnosticLocation::createEndOfPath(EndPathNode,
                                                 BRC.getSourceManager());
       // Do not add the statement itself as a range in case of leak.
-      return llvm::make_unique<PathDiagnosticEventPiece>(L, BR.getDescription(),
+      return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                          false);
     }
 
@@ -2259,7 +2258,7 @@ MallocChecker::getAllocationSite(const ExplodedNode *N, SymbolRef Sym,
             // Do not show local variables belonging to a function other than
             // where the error is reported.
             if (!VR ||
-                (VR->getStackFrame() == LeakContext->getCurrentStackFrame()))
+                (VR->getStackFrame() == LeakContext->getStackFrame()))
               ReferenceRegion = MR;
           }
         }
@@ -2920,7 +2919,7 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
             // reference counting operations within it (see the code above),
             // and if so, we'd conclude that it likely is a reference counting
             // pointer destructor.
-            ReleaseDestructorLC = LC->getCurrentStackFrame();
+            ReleaseDestructorLC = LC->getStackFrame();
             // It is unlikely that releasing memory is delegated to a destructor
             // inside a destructor of a shared pointer, because it's fairly hard
             // to pass the information that the pointer indeed needs to be

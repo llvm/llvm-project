@@ -35,11 +35,41 @@ createLambdaValueMaterializer(MaterializerFtor M) {
 }
 } // namespace
 
+static void extractAliases(MaterializationResponsibility &R, Module &M,
+                           MangleAndInterner &Mangle) {
+  SymbolAliasMap Aliases;
+
+  std::vector<GlobalAlias *> ModAliases;
+  for (auto &A : M.aliases())
+    ModAliases.push_back(&A);
+
+  for (auto *A : ModAliases) {
+    Constant *Aliasee = A->getAliasee();
+    assert(A->hasName() && "Anonymous alias?");
+    assert(Aliasee->hasName() && "Anonymous aliasee");
+    std::string AliasName = A->getName();
+
+    Aliases[Mangle(AliasName)] = SymbolAliasMapEntry(
+        {Mangle(Aliasee->getName()), JITSymbolFlags::fromGlobalValue(*A)});
+
+    if (isa<Function>(Aliasee)) {
+      auto *F = cloneFunctionDecl(M, *cast<Function>(Aliasee));
+      A->replaceAllUsesWith(F);
+      A->eraseFromParent();
+      F->setName(AliasName);
+    } else if (isa<GlobalValue>(Aliasee)) {
+      auto *G = cloneGlobalVariableDecl(M, *cast<GlobalVariable>(Aliasee));
+      A->replaceAllUsesWith(G);
+      A->eraseFromParent();
+      G->setName(AliasName);
+    }
+  }
+
+  R.delegate(symbolAliases(std::move(Aliases)));
+}
+
 static std::unique_ptr<Module> extractGlobals(Module &M) {
   // FIXME: Add alias support.
-
-  if (M.global_empty() && M.alias_empty() && !M.getModuleFlagsMetadata())
-    return nullptr;
 
   auto GlobalsModule = llvm::make_unique<Module>(
       (M.getName() + ".globals").str(), M.getContext());
@@ -161,7 +191,6 @@ CompileOnDemandLayer2::CompileOnDemandLayer2(
 
 Error CompileOnDemandLayer2::add(VSO &V, VModuleKey K,
                                  std::unique_ptr<Module> M) {
-  makeAllSymbolsExternallyAccessible(*M);
   return IRLayer::add(V, K, std::move(M));
 }
 
@@ -174,9 +203,11 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
     if (GV.hasWeakLinkage())
       GV.setLinkage(GlobalValue::ExternalLinkage);
 
-  auto GlobalsModule = extractGlobals(*M);
-
   MangleAndInterner Mangle(ES, M->getDataLayout());
+
+  extractAliases(R, *M, Mangle);
+
+  auto GlobalsModule = extractGlobals(*M);
 
   // Delete the bodies of any available externally functions, rename the
   // rest, and build the compile callbacks.
@@ -194,8 +225,12 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
     }
 
     assert(F.hasName() && "Function should have a name");
-    auto StubName = Mangle(F.getName());
+    std::string StubUnmangledName = F.getName();
     F.setName(F.getName() + "$body");
+    auto StubDecl = cloneFunctionDecl(*M, F);
+    StubDecl->setName(StubUnmangledName);
+    F.replaceAllUsesWith(StubDecl);
+    auto StubName = Mangle(StubUnmangledName);
     auto BodyName = Mangle(F.getName());
     if (auto CallbackAddr = CCMgr.getCompileCallback(
             [BodyName, &TargetVSO, &ES]() -> JITTargetAddress {
@@ -223,13 +258,18 @@ void CompileOnDemandLayer2::emit(MaterializationResponsibility R, VModuleKey K,
     StubInits[*KV.first] = KV.second;
 
   // Build the function-body-extracting materialization unit.
+  auto SR = GetSymbolResolver(K);
   if (auto Err = R.getTargetVSO().define(
           llvm::make_unique<ExtractingIRMaterializationUnit>(
-              ES, *this, std::move(M), GetSymbolResolver(K)))) {
+              ES, *this, std::move(M), SR))) {
     ES.reportError(std::move(Err));
     R.failMaterialization();
     return;
   }
+
+  // Replace the fallback symbol resolver: We will re-use M's VModuleKey for
+  // the GlobalsModule.
+  SetSymbolResolver(K, SR);
 
   // Build the stubs.
   // FIXME: Remove function bodies materialization unit if stub creation fails.

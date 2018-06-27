@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   void *handle = dlopen(argv[1], RTLD_NOW);
 
   // CHECK: runtime error: control flow integrity check for type 'void *()' failed during indirect function call
-  // CHECK: dso_symbol defined here
+  // CHECK: {{.*}} defined here
   // CHECK: check failed in {{.*}}_exe_suffix, destination function located in {{.*}}_dso_suffix
   void* (*fp)(void) =
       reinterpret_cast<void*(*)(void)>(dlsym(handle, "dso_symbol"));

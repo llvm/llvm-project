@@ -147,7 +147,7 @@ public:
   }
 
   const StackFrameContext *getStackFrame() const {
-    return getLocationContext()->getCurrentStackFrame();
+    return getLocation().getStackFrame();
   }
 
   const Decl &getCodeDecl() const { return *getLocationContext()->getDecl(); }

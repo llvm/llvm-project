@@ -80,7 +80,9 @@ private:
   uint32_t readFill();
   uint32_t parseFill(StringRef Tok);
   void readSectionAddressType(OutputSection *Cmd);
+  OutputSection *readOverlaySectionDescription();
   OutputSection *readOutputSectionDescription(StringRef OutSec);
+  std::vector<BaseCommand *> readOverlay();
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   StringMatcher readFilePatterns();
@@ -436,6 +438,49 @@ void ScriptParser::readSearchDir() {
   expect(")");
 }
 
+// This reads an overlay description. Overlays are used to describe output
+// sections that use the same virtual memory range and normally would trigger
+// linker's sections sanity check failures.
+// https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
+std::vector<BaseCommand *> ScriptParser::readOverlay() {
+  // VA and LMA expressions are optional, though for simplicity of
+  // implementation we assume they are not. That is what OVERLAY was designed
+  // for first of all: to allow sections with overlapping VAs at different LMAs.
+  Expr AddrExpr = readExpr();
+  expect(":");
+  expect("AT");
+  Expr LMAExpr = readParenExpr();
+  expect("{");
+
+  std::vector<BaseCommand *> V;
+  OutputSection *Prev = nullptr;
+  while (!errorCount() && !consume("}")) {
+    // VA is the same for all sections. The LMAs are consecutive in memory
+    // starting from the base load address specified.
+    OutputSection *OS = readOverlaySectionDescription();
+    OS->AddrExpr = AddrExpr;
+    if (Prev)
+      OS->LMAExpr = [=] { return Prev->getLMA() + Prev->Size; };
+    else
+      OS->LMAExpr = LMAExpr;
+    V.push_back(OS);
+    Prev = OS;
+  }
+
+  // According to the specification, at the end of the overlay, the location
+  // counter should be equal to the overlay base address plus size of the
+  // largest section seen in the overlay.
+  // Here we want to create the Dot assignment command to achieve that.
+  Expr MoveDot = [=] {
+    uint64_t Max = 0;
+    for (BaseCommand *Cmd : V)
+      Max = std::max(Max, cast<OutputSection>(Cmd)->Size);
+    return AddrExpr().getValue() + Max;
+  };
+  V.push_back(make<SymbolAssignment>(".", MoveDot, getCurrentLocation()));
+  return V;
+}
+
 void ScriptParser::readSections() {
   Script->HasSectionsCommand = true;
 
@@ -448,6 +493,12 @@ void ScriptParser::readSections() {
   std::vector<BaseCommand *> V;
   while (!errorCount() && !consume("}")) {
     StringRef Tok = next();
+    if (Tok == "OVERLAY") {
+      for (BaseCommand *Cmd : readOverlay())
+        V.push_back(Cmd);
+      continue;
+    }
+
     if (BaseCommand *Cmd = readAssignment(Tok))
       V.push_back(Cmd);
     else
@@ -671,6 +722,17 @@ static Expr checkAlignment(Expr E, std::string &Loc) {
     }
     return Alignment;
   };
+}
+
+OutputSection *ScriptParser::readOverlaySectionDescription() {
+  OutputSection *Cmd =
+      Script->createOutputSection(next(), getCurrentLocation());
+  Cmd->InOverlay = true;
+  expect("{");
+  while (!errorCount() && !consume("}"))
+    Cmd->SectionCommands.push_back(readInputSectionRules(next()));
+  Cmd->Phdrs = readOutputSectionPhdrs();
+  return Cmd;
 }
 
 OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {

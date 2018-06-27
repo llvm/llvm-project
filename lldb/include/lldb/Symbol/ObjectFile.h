@@ -241,7 +241,7 @@ public:
   ///     architecture (and object for archives). Returns zero if no
   ///     architecture or object has been selected.
   //------------------------------------------------------------------
-  virtual lldb::AddressClass GetAddressClass(lldb::addr_t file_addr);
+  virtual AddressClass GetAddressClass(lldb::addr_t file_addr);
 
   //------------------------------------------------------------------
   /// Extract the dependent modules from an object file.

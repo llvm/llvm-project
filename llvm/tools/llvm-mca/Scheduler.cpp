@@ -293,7 +293,8 @@ void Scheduler::promoteToReadyQueue(SmallVectorImpl<InstRef> &Ready) {
 
     // Check if this instruction is now ready. In case, force
     // a transition in state using method 'update()'.
-    IS->update();
+    if (!IS->isReady())
+      IS->update();
 
     const InstrDesc &Desc = IS->getDesc();
     bool IsMemOp = Desc.MayLoad || Desc.MayStore;

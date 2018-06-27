@@ -1,3 +1,4 @@
+// REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/far-arm-abs.s -o %tfar
 // RUN: ld.lld  %t %tfar -o %t2 2>&1
@@ -5,7 +6,6 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/far-long-arm-abs.s -o %tfarlong
 // RUN: ld.lld  %t %tfarlong -o %t3 2>&1
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=LONG %s
-// REQUIRES: arm
  .syntax unified
  .section .text, "ax",%progbits
  .globl _start
