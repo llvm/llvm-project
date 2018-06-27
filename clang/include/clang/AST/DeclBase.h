@@ -1779,9 +1779,13 @@ public:
 
   /// Removes a declaration from this context.
   void removeDecl(Decl *D);
-    
+
   /// Checks whether a declaration is in this context.
   bool containsDecl(Decl *D) const;
+
+  /// Checks whether a declaration is in this context.
+  /// This also loads the Decls from the external source before the check.
+  bool containsDeclAndLoad(Decl *D) const;
 
   using lookup_result = DeclContextLookupResult;
   using lookup_iterator = lookup_result::iterator;

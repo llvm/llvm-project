@@ -16,7 +16,9 @@
 #ifndef LLVM_MACHINEOUTLINER_H
 #define LLVM_MACHINEOUTLINER_H
 
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 namespace llvm {
 namespace outliner {
@@ -91,6 +93,13 @@ public:
   /// Contains all target-specific information for this \p Candidate.
   TargetCostInfo TCI;
 
+  /// Contains physical register liveness information for the MBB containing
+  /// this \p Candidate.
+  ///
+  /// This is optionally used by the target to calculate more fine-grained
+  /// cost model information.
+  LiveRegUnits LRU;
+
   /// Return the number of instructions in this Candidate.
   unsigned getLength() const { return Len; }
 
@@ -120,11 +129,26 @@ public:
             unsigned FunctionIdx)
       : StartIdx(StartIdx), Len(Len), FirstInst(FirstInst), LastInst(LastInst),
         MBB(MBB), FunctionIdx(FunctionIdx) {}
+  Candidate() {}
 
   /// Used to ensure that \p Candidates are outlined in an order that
   /// preserves the start and end indices of other \p Candidates.
   bool operator<(const Candidate &RHS) const {
     return getStartIdx() > RHS.getStartIdx();
+  }
+
+  /// Compute the registers that are live across this Candidate.
+  /// Used by targets that need this information for cost model calculation.
+  /// If a target does not need this information, then this should not be
+  /// called.
+  void initLRU(const TargetRegisterInfo &TRI) {
+    LRU.init(TRI);
+    LRU.addLiveOuts(*MBB);
+
+    // Compute liveness from the end of the block up to the beginning of the
+    // outlining candidate.
+    std::for_each(MBB->rbegin(), (MachineBasicBlock::reverse_iterator)front(),
+                  [this](MachineInstr &MI) { LRU.stepBackward(MI); });
   }
 };
 

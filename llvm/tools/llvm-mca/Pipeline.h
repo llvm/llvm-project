@@ -70,11 +70,6 @@ public:
   void run();
   void addEventListener(HWEventListener *Listener);
   void notifyCycleBegin(unsigned Cycle);
-  void notifyInstructionEvent(const HWInstructionEvent &Event);
-  void notifyStallEvent(const HWStallEvent &Event);
-  void notifyResourceAvailable(const ResourceRef &RR);
-  void notifyReservedBuffers(llvm::ArrayRef<unsigned> Buffers);
-  void notifyReleasedBuffers(llvm::ArrayRef<unsigned> Buffers);
   void notifyCycleEnd(unsigned Cycle);
 };
 } // namespace mca

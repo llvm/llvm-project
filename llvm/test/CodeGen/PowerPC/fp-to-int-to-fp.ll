@@ -62,5 +62,5 @@ entry:
 ; FPCVT: blr
 }
 
-attributes #0 = { nounwind readnone }
+attributes #0 = { nounwind readnone "no-signed-zeros-fp-math"="true" }
 

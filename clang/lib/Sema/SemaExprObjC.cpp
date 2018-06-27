@@ -3498,6 +3498,7 @@ static void addFixitForObjCARCConversion(Sema &S,
   // We handle C-style and implicit casts here.
   switch (CCK) {
   case Sema::CCK_ImplicitConversion:
+  case Sema::CCK_ForBuiltinOverloadedOp:
   case Sema::CCK_CStyleCast:
   case Sema::CCK_OtherCast:
     break;
@@ -3651,11 +3652,13 @@ diagnoseObjCARCConversion(Sema &S, SourceRange castRange,
   SourceLocation afterLParen = S.getLocForEndOfToken(castRange.getBegin());
   SourceLocation noteLoc = afterLParen.isValid() ? afterLParen : loc;
 
+  unsigned convKindForDiag = Sema::isCast(CCK) ? 0 : 1;
+
   // Bridge from an ARC type to a CF type.
   if (castACTC == ACTC_retainable && isAnyRetainable(exprACTC)) {
 
     S.Diag(loc, diag::err_arc_cast_requires_bridge)
-      << unsigned(CCK == Sema::CCK_ImplicitConversion) // cast|implicit
+      << convKindForDiag
       << 2 // of C pointer type
       << castExprType
       << unsigned(castType->isBlockPointerType()) // to ObjC|block type
@@ -3697,7 +3700,7 @@ diagnoseObjCARCConversion(Sema &S, SourceRange castRange,
   if (exprACTC == ACTC_retainable && isAnyRetainable(castACTC)) {
     bool br = S.isKnownName("CFBridgingRetain");
     S.Diag(loc, diag::err_arc_cast_requires_bridge)
-      << unsigned(CCK == Sema::CCK_ImplicitConversion) // cast|implicit
+      << convKindForDiag
       << unsigned(castExprType->isBlockPointerType()) // of ObjC|block type
       << castExprType
       << 2 // to C pointer type
@@ -3734,7 +3737,7 @@ diagnoseObjCARCConversion(Sema &S, SourceRange castRange,
   }
   
   S.Diag(loc, diag::err_arc_mismatched_cast)
-    << (CCK != Sema::CCK_ImplicitConversion)
+    << !convKindForDiag
     << srcKind << castExprType << castType
     << castRange << castExpr->getSourceRange();
 }
@@ -4187,7 +4190,7 @@ Sema::CheckObjCConversion(SourceRange castRange, QualType castType,
   if (exprACTC == ACTC_indirectRetainable && castACTC == ACTC_voidPtr)
     return ACR_okay;
   if (castACTC == ACTC_indirectRetainable && exprACTC == ACTC_voidPtr &&
-      CCK != CCK_ImplicitConversion)
+      isCast(CCK))
     return ACR_okay;
 
   switch (ARCCastChecker(Context, exprACTC, castACTC, false).Visit(castExpr)) {
@@ -4212,8 +4215,7 @@ Sema::CheckObjCConversion(SourceRange castRange, QualType castType,
   // If this is a non-implicit cast from id or block type to a
   // CoreFoundation type, delay complaining in case the cast is used
   // in an acceptable context.
-  if (exprACTC == ACTC_retainable && isAnyRetainable(castACTC) &&
-      CCK != CCK_ImplicitConversion)
+  if (exprACTC == ACTC_retainable && isAnyRetainable(castACTC) && isCast(CCK))
     return ACR_unbridged;
 
   // Issue a diagnostic about a missing @-sign when implicit casting a cstring

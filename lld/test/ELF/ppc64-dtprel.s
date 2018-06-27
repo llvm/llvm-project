@@ -5,12 +5,14 @@
 // RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
 // RUN: llvm-readelf -relocations --wide %t.so | FileCheck --check-prefix=OutputRelocs %s
 // RUN: llvm-objdump -D %t.so | FileCheck --check-prefix=Dis %s
+// RUN: llvm-objdump -D %t.so | FileCheck --check-prefix=GotDisLE %s
 
 // RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 // RUN: ld.lld -shared %t.o -o %t.so
 // RUN: llvm-readelf -relocations --wide %t.o | FileCheck --check-prefix=InputRelocs %s
 // RUN: llvm-readelf -relocations --wide %t.so | FileCheck --check-prefix=OutputRelocs %s
 // RUN: llvm-objdump -D %t.so | FileCheck --check-prefix=Dis %s
+// RUN: llvm-objdump -D %t.so | FileCheck --check-prefix=GotDisBE %s
 
         .text
         .abiversion 2
@@ -95,6 +97,15 @@ test_not_adjusted:
         mtlr 0
         blr
 
+        .globl test_got_dtprel
+        .p2align 4
+        .type test_got_dtprel,@function
+test_got_dtprel:
+         addis 3, 2, i@got@dtprel@ha
+         ld 3, i@got@dtprel@l(3)
+         addis 3, 2, i@got@dtprel@h
+         addi 3, 2, i@got@dtprel
+
         .section        .debug_addr,"",@progbits
         .quad   i@dtprel+32768
 
@@ -126,6 +137,10 @@ k:
 // InputRelocs: R_PPC64_DTPREL16_HIGHER   {{[0-9a-f]+}} k + 0
 // InputRelocs: R_PPC64_DTPREL16_HI       {{[0-9a-f]+}} k + 0
 // InputRelocs: R_PPC64_DTPREL16_LO       {{[0-9a-f]+}} k + 0
+// InputRelocs: R_PPC64_GOT_DTPREL16_HA    {{[0-9a-f]+}} i + 0
+// InputRelocs: R_PPC64_GOT_DTPREL16_LO_DS {{[0-9a-f]+}} i + 0
+// InputRelocs: R_PPC64_GOT_DTPREL16_HI    {{[0-9a-f]+}} i + 0
+// InputRelocs: R_PPC64_GOT_DTPREL16_DS    {{[0-9a-f]+}} i + 0
 // InputRelocs: Relocation section '.rela.debug_addr'
 // InputRelocs: R_PPC64_DTPREL64          {{[0-9a-f]+}} i + 8000
 
@@ -161,3 +176,29 @@ k:
 // Dis:    ori 4, 4, 0
 // Dis:    oris 4, 4, 63
 // Dis:    ori 4, 4, 33796
+
+// Check for GOT entry for i. There should be a got entry which holds the offset
+// of i relative to the dynamic thread pointer.
+// i@dtprel ->  (1024 - 0x8000) = 0xffff8400
+// GotDisBE: Disassembly of section .got:
+// GotDisBE: 4204f8: 00 00 00 00
+// GotDisBE: 4204fc: 00 42 84 f8
+// GotDisBE: 420510: ff ff ff ff
+// GotDisBE: 420514: ff ff 84 00
+
+// GotDisLE: Disassembly of section .got:
+// GotDisLE: 4204f8: f8 84 42 00
+// GotDisLE: 420510: 00 84 ff ff
+// GotDisLE: 420514: ff ff ff ff
+
+// Check that we have the correct offset to the got entry for i@got@dtprel
+// The got entry for i is 0x420510, and the TOC pointer is 0x4284f8.
+// #ha(i@got@dtprel) --> ((0x420510 - 0x4284f8 + 0x8000) >> 16) & 0xffff = 0
+// #lo(i@got@dtprel) --> (0x420510 - 0x4284f8) & 0xffff = -32744
+// #hi(i@got@dtprel) --> ((0x420510 - 0x4284f8) >> 16) & 0xffff = -1
+// i@got@dtprel --> 0x420510 - 0x4284f8 = -32744
+// Dis: test_got_dtprel:
+// Dis:    addis 3, 2, 0
+// Dis:    ld 3, -32744(3)
+// Dis:    addis 3, 2, -1
+// Dis:    addi 3, 2, -32744

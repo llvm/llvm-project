@@ -75,10 +75,16 @@ const char *AMDGCN::Linker::constructLLVMLinkCommand(
     std::string ISAVerBC =
         "oclc_isa_version_" + SubArchName.drop_front(3).str() + ".amdgcn.bc";
 
+    llvm::StringRef FlushDenormalControlBC;
+    if (Args.hasArg(options::OPT_fcuda_flush_denormals_to_zero))
+      FlushDenormalControlBC = "oclc_daz_opt_on.amdgcn.bc";
+    else
+      FlushDenormalControlBC = "oclc_daz_opt_off.amdgcn.bc";
+
     BCLibs.append({"opencl.amdgcn.bc",
-                   "ockl.amdgcn.bc", "irif.amdgcn.bc", "ocml.amdgcn.bc",
+                   "ocml.amdgcn.bc", "ockl.amdgcn.bc", "irif.amdgcn.bc",
                    "oclc_finite_only_off.amdgcn.bc",
-                   "oclc_daz_opt_off.amdgcn.bc",
+                   FlushDenormalControlBC,
                    "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
                    "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC});
   }

@@ -18,7 +18,6 @@
 
 #include "DispatchStage.h"
 #include "HWEventListener.h"
-#include "Pipeline.h"
 #include "Scheduler.h"
 #include "llvm/Support/Debug.h"
 
@@ -31,7 +30,12 @@ namespace mca {
 void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
                                                 ArrayRef<unsigned> UsedRegs) {
   LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
-  Owner->notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
+  notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
+}
+
+void DispatchStage::notifyStallEvent(const HWStallEvent &Event) {
+  for (HWEventListener *Listener : getListeners())
+    Listener->onStallEvent(Event);
 }
 
 bool DispatchStage::checkPRF(const InstRef &IR) {
@@ -43,7 +47,7 @@ bool DispatchStage::checkPRF(const InstRef &IR) {
   const unsigned RegisterMask = PRF.isAvailable(RegDefs);
   // A mask with all zeroes means: register files are available.
   if (RegisterMask) {
-    Owner->notifyStallEvent(HWStallEvent(HWStallEvent::RegisterFileStall, IR));
+    notifyStallEvent(HWStallEvent(HWStallEvent::RegisterFileStall, IR));
     return false;
   }
 
@@ -54,8 +58,7 @@ bool DispatchStage::checkRCU(const InstRef &IR) {
   const unsigned NumMicroOps = IR.getInstruction()->getDesc().NumMicroOps;
   if (RCU.isAvailable(NumMicroOps))
     return true;
-  Owner->notifyStallEvent(
-      HWStallEvent(HWStallEvent::RetireControlUnitStall, IR));
+  notifyStallEvent(HWStallEvent(HWStallEvent::RetireControlUnitStall, IR));
   return false;
 }
 
@@ -63,7 +66,7 @@ bool DispatchStage::checkScheduler(const InstRef &IR) {
   HWStallEvent::GenericEventType Event;
   const bool Ready = SC.canBeDispatched(IR, Event);
   if (!Ready)
-    Owner->notifyStallEvent(HWStallEvent(Event, IR));
+    notifyStallEvent(HWStallEvent(Event, IR));
   return Ready;
 }
 

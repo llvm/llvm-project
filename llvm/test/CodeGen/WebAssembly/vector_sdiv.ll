@@ -7,11 +7,11 @@ target triple = "wasm32-unknown-unknown-elf"
 
 ; CHECK-LABEL: vector_sdiv:
 ; CHECK-DAG:  i32.store
-; CHECK-DAG:  i32.div_s
+; CHECK-DAG:  i32.shr_u
 ; CHECK-DAG:  i32.store
-; CHECK-DAG:  i32.div_s
+; CHECK-DAG:  i32.shr_u
 ; CHECK-DAG:  i32.store
-; CHECK-DAG:  i32.div_s
+; CHECK-DAG:  i32.shr_u
 ; CHECK-DAG:  i32.store
 define void @vector_sdiv(<4 x i32>* %x, <4 x i32>* readonly %y) {
 entry:

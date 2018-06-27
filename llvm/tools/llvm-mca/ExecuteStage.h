@@ -26,11 +26,8 @@
 
 namespace mca {
 
-class Pipeline;
-
 class ExecuteStage : public Stage {
   // Owner will go away when we move listeners/eventing to the stages.
-  Pipeline *Owner;
   RetireControlUnit &RCU;
   Scheduler &HWS;
 
@@ -40,8 +37,7 @@ class ExecuteStage : public Stage {
   void issueReadyInstructions();
 
 public:
-  ExecuteStage(Pipeline *P, RetireControlUnit &R, Scheduler &S)
-      : Stage(), Owner(P), RCU(R), HWS(S) {}
+  ExecuteStage(RetireControlUnit &R, Scheduler &S) : Stage(), RCU(R), HWS(S) {}
   ExecuteStage(const ExecuteStage &Other) = delete;
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
 

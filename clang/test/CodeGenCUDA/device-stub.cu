@@ -86,8 +86,6 @@ void use_pointers() {
 // HIPRDC-SAME: c"[[MODULE_ID:.+]]\00", section "__hip_module_id", align 32
 // * Make sure our constructor was added to global ctor list.
 // ALL: @llvm.global_ctors = appending global {{.*}}@__[[PREFIX]]_module_ctor
-// * In separate mode we also register a destructor.
-// NORDC: @llvm.global_dtors = appending global {{.*}}@__[[PREFIX]]_module_dtor
 // * Alias to global symbol containing the NVModuleID.
 // RDC: @__fatbinwrap[[MODULE_ID]] = alias { i32, i32, i8*, i8* }
 // RDC-SAME: { i32, i32, i8*, i8* }* @__[[PREFIX]]_fatbin_wrapper
@@ -127,6 +125,8 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // NORDC-NEXT: store{{.*}}__[[PREFIX]]_gpubin_handle
 //   .. and then calls __[[PREFIX]]_register_globals
 // NORDC-NEXT: call void @__[[PREFIX]]_register_globals
+// * In separate mode we also register a destructor.
+// NORDC-NEXT: call i32 @atexit(void (i8*)* @__[[PREFIX]]_module_dtor)
 
 // With relocatable device code we call __[[PREFIX]]RegisterLinkedBinary%NVModuleID%
 // RDC: call{{.*}}__[[PREFIX]]RegisterLinkedBinary[[MODULE_ID]](

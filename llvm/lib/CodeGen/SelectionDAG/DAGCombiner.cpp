@@ -1692,6 +1692,10 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
       return N->getOperand(1);
   }
 
+  // Don't simplify token factors if optnone.
+  if (OptLevel == CodeGenOpt::None)
+    return SDValue();
+
   SmallVector<SDNode *, 8> TFs;     // List of token factors to visit.
   SmallVector<SDValue, 8> Ops;      // Ops for replacing token factor.
   SmallPtrSet<SDNode*, 16> SeenOps;
@@ -11123,9 +11127,14 @@ static SDValue foldFPToIntToFP(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // We only do this if the target has legal ftrunc. Otherwise, we'd likely be
-  // replacing casts with a libcall.
+  // replacing casts with a libcall. We also must be allowed to ignore -0.0
+  // because FTRUNC will return -0.0 for (-1.0, -0.0), but using integer
+  // conversions would return +0.0.
+  // FIXME: We should be able to use node-level FMF here.
+  // TODO: If strict math, should we use FABS (+ range check for signed cast)?
   EVT VT = N->getValueType(0);
-  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT) ||
+      !DAG.getTarget().Options.NoSignedZerosFPMath)
     return SDValue();
 
   // fptosi/fptoui round towards zero, so converting from FP to integer and

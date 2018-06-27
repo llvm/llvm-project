@@ -20,6 +20,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "llvm/Support/Path.h"
 using namespace clang;
 
 
@@ -2123,6 +2124,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
   assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
+  bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
   SourceLocation ImportLoc = ConsumeToken();
   SourceLocation StartLoc = AtLoc.isInvalid() ? ImportLoc : AtLoc;
   
@@ -2145,6 +2147,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc) {
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
   if (Import.isInvalid())
     return nullptr;
+
+  // Using '@import' in framework headers requires modules to be enabled so that
+  // the header is parseable. Emit a warning to make the user aware.
+  if (IsObjCAtImport && AtLoc.isValid()) {
+    auto &SrcMgr = PP.getSourceManager();
+    auto *FE = SrcMgr.getFileEntryForID(SrcMgr.getFileID(AtLoc));
+    if (FE && llvm::sys::path::parent_path(FE->getDir()->getName())
+                  .endswith(".framework"))
+      Diags.Report(AtLoc, diag::warn_atimport_in_framework_header);
+  }
 
   return Import.get();
 }

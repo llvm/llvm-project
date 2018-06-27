@@ -146,6 +146,49 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
   }
 }
 
+void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
+                                                bool must_be_implementation,
+                                                DIEArray &offsets) {
+  m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, offsets);
+
+  // Keep a list of incomplete types as fallback for when we don't find the
+  // complete type.
+  DIEArray incomplete_types;
+
+  for (const DebugNames::Entry &entry :
+       m_debug_names_up->equal_range(class_name.GetStringRef())) {
+    if (entry.tag() != DW_TAG_structure_type &&
+        entry.tag() != DW_TAG_class_type)
+      continue;
+
+    DIERef ref = ToDIERef(entry);
+    if (!ref)
+      continue;
+
+    DWARFUnit *cu = m_debug_info.GetCompileUnit(ref.cu_offset);
+    if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
+      incomplete_types.push_back(ref);
+      continue;
+    }
+
+    // FIXME: We should return DWARFDIEs so we don't have to resolve it twice.
+    DWARFDIE die = m_debug_info.GetDIE(ref);
+    if (!die)
+      continue;
+
+    if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
+      // If we find the complete version we're done.
+      offsets.push_back(ref);
+      return;
+    } else {
+      incomplete_types.push_back(ref);
+    }
+  }
+
+  offsets.insert(offsets.end(), incomplete_types.begin(),
+                 incomplete_types.end());
+}
+
 void DebugNamesDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
   m_fallback.GetTypes(name, offsets);
 
