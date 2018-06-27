@@ -787,7 +787,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
-  TargetSP target = m_target_sp.lock();
+  TargetSP target = CalculateTarget();
   if (target) {
     ModuleSP executable_module = target->GetExecutableModule();
     ModuleList unloaded_modules;

@@ -52,6 +52,43 @@ define <4 x i32> @combine_vec_sdiv_by_negone(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; TODO fold (sdiv x, INT_MIN) -> select((icmp eq x, INT_MIN), 1, 0)
+define i32 @combine_sdiv_by_minsigned(i32 %x) {
+; CHECK-LABEL: combine_sdiv_by_minsigned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    leal (%rax,%rdi), %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    retq
+  %1 = sdiv i32 %x, -2147483648
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_sdiv_by_minsigned(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_sdiv_by_minsigned:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    psrld $1, %xmm1
+; SSE-NEXT:    paddd %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_sdiv_by_minsigned:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX-NEXT:    vpsrld $1, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = sdiv <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  ret <4 x i32> %1
+}
+
 ; TODO fold (sdiv x, x) -> 1
 define i32 @combine_sdiv_dupe(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_dupe:

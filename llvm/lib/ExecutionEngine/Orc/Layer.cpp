@@ -8,24 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Layer.h"
-#include "llvm/IR/Mangler.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace orc {
-
-MangleAndInterner::MangleAndInterner(ExecutionSession &ES, const DataLayout &DL)
-    : ES(ES), DL(DL) {}
-
-SymbolStringPtr MangleAndInterner::operator()(StringRef Name) {
-  std::string MangledName;
-  {
-    raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
-  }
-  return ES.getSymbolStringPool().intern(MangledName);
-}
 
 IRLayer::IRLayer(ExecutionSession &ES) : ES(ES) {}
 IRLayer::~IRLayer() {}
@@ -41,9 +28,8 @@ IRMaterializationUnit::IRMaterializationUnit(ExecutionSession &ES,
 
   MangleAndInterner Mangle(ES, this->M->getDataLayout());
   for (auto &G : this->M->global_values()) {
-    if (G.hasName() && !G.isDeclaration() &&
-        !G.hasLocalLinkage() &&
-        !G.hasAvailableExternallyLinkage()) {
+    if (G.hasName() && !G.isDeclaration() && !G.hasLocalLinkage() &&
+        !G.hasAvailableExternallyLinkage() && !G.hasAppendingLinkage()) {
       auto MangledName = Mangle(G.getName());
       SymbolFlags[MangledName] = JITSymbolFlags::fromGlobalValue(G);
       SymbolToDefinition[MangledName] = &G;

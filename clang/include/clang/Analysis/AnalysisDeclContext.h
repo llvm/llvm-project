@@ -264,7 +264,7 @@ public:
     return Ctx->getSelfDecl();
   }
 
-  const StackFrameContext *getCurrentStackFrame() const;
+  const StackFrameContext *getStackFrame() const;
 
   /// Return true if the current LocationContext has no caller context.
   virtual bool inTopFrame() const;

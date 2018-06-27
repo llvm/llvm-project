@@ -181,6 +181,10 @@ public:
     return L.getPointer();
   }
 
+  const StackFrameContext *getStackFrame() const {
+    return getLocationContext()->getStackFrame();
+  }
+
   // For use with DenseMap.  This hash is probably slow.
   unsigned getHashValue() const {
     llvm::FoldingSetNodeID ID;

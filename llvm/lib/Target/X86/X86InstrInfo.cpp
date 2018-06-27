@@ -6766,15 +6766,9 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
   };
 
   unsigned FMAForms[3];
-  if (FMA3Group.isRegOpcodeFromGroup(Opc)) {
-    FMAForms[0] = FMA3Group.getReg132Opcode();
-    FMAForms[1] = FMA3Group.getReg213Opcode();
-    FMAForms[2] = FMA3Group.getReg231Opcode();
-  } else {
-    FMAForms[0] = FMA3Group.getMem132Opcode();
-    FMAForms[1] = FMA3Group.getMem213Opcode();
-    FMAForms[2] = FMA3Group.getMem231Opcode();
-  }
+  FMAForms[0] = FMA3Group.get132Opcode();
+  FMAForms[1] = FMA3Group.get213Opcode();
+  FMAForms[2] = FMA3Group.get231Opcode();
   unsigned FormIndex;
   for (FormIndex = 0; FormIndex < 3; FormIndex++)
     if (Opc == FMAForms[FormIndex])

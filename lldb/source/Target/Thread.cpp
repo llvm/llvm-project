@@ -439,7 +439,7 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo() {
     if (m_stop_info_override_stop_id != process_stop_id) {
       m_stop_info_override_stop_id = process_stop_id;
       if (m_stop_info_sp) {
-        if (Architecture *arch =
+        if (const Architecture *arch =
                 process_sp->GetTarget().GetArchitecturePlugin())
           arch->OverrideStopInfo(*this);
       }

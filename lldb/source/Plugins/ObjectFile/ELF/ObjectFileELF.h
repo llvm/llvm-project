@@ -113,7 +113,7 @@ public:
 
   uint32_t GetAddressByteSize() const override;
 
-  lldb::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
+  lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
 
   lldb_private::Symtab *GetSymtab() override;
 
@@ -191,7 +191,7 @@ private:
   typedef DynamicSymbolColl::iterator DynamicSymbolCollIter;
   typedef DynamicSymbolColl::const_iterator DynamicSymbolCollConstIter;
 
-  typedef std::map<lldb::addr_t, lldb::AddressClass>
+  typedef std::map<lldb::addr_t, lldb_private::AddressClass>
       FileAddressToAddressClassMap;
 
   /// Version of this reader common to all plugins based on this class.

@@ -739,7 +739,7 @@ public:
   //------------------------------------------------------------------
   lldb::addr_t GetCallableLoadAddress(
       lldb::addr_t load_addr,
-      lldb::AddressClass addr_class = lldb::AddressClass::eInvalid) const;
+      AddressClass addr_class = AddressClass::eInvalid) const;
 
   //------------------------------------------------------------------
   /// Get \a load_addr as an opcode for this target.
@@ -755,7 +755,7 @@ public:
   //------------------------------------------------------------------
   lldb::addr_t GetOpcodeLoadAddress(
       lldb::addr_t load_addr,
-      lldb::AddressClass addr_class = lldb::AddressClass::eInvalid) const;
+      AddressClass addr_class = AddressClass::eInvalid) const;
 
   // Get load_addr as breakable load address for this target. Take a addr and
   // check if for any reason there is a better address than this to put a
@@ -938,7 +938,7 @@ public:
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
 
-  Architecture *GetArchitecturePlugin() { return m_arch.GetPlugin(); }
+  Architecture *GetArchitecturePlugin() const { return m_arch.GetPlugin(); }
 
   Debugger &GetDebugger() { return m_debugger; }
 

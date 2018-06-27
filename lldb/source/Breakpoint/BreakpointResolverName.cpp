@@ -367,7 +367,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
             if (prologue_byte_size)
               break_addr.SetOffset(break_addr.GetOffset() + prologue_byte_size);
             else {
-              Architecture *arch =
+              const Architecture *arch =
                   m_breakpoint->GetTarget().GetArchitecturePlugin();
               if (arch)
                 arch->AdjustBreakpointAddress(*sc.symbol, break_addr);

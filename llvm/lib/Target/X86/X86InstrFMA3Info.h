@@ -24,17 +24,11 @@
 namespace llvm {
 
 /// This class is used to group {132, 213, 231} forms of FMA opcodes together.
-/// Each of the groups has either 3 register opcodes, 3 memory opcodes,
-/// or 6 register and memory opcodes. Also, each group has an attrubutes field
-/// describing it.
+/// Each of the groups has either 3 opcodes, Also, each group has an attributes
+/// field describing it.
 struct X86InstrFMA3Group {
-  /// An array holding 3 forms of register FMA opcodes.
-  /// Entries will be 0 if there are no register opcodes in the group.
-  uint16_t RegOpcodes[3];
-
-  /// An array holding 3 forms of memory FMA opcodes.
-  /// Entries will be 0 if there are no register opcodes in the group.
-  uint16_t MemOpcodes[3];
+  /// An array holding 3 forms of FMA opcodes.
+  uint16_t Opcodes[3];
 
   /// This bitfield specifies the attributes associated with the created
   /// FMA groups of opcodes.
@@ -62,50 +56,19 @@ struct X86InstrFMA3Group {
     X86FMA3KZeroMasked = 0x4,
   };
 
-  /// Returns a memory form opcode that is the equivalent of the given register
-  /// form opcode \p RegOpcode. 0 is returned if the group does not have
-  /// either register of memory opcodes.
-  unsigned getMemOpcode(unsigned RegOpcode) const {
-    for (unsigned Form = 0; Form < 3; Form++)
-      if (RegOpcodes[Form] == RegOpcode)
-        return MemOpcodes[Form];
-    return 0;
+  /// Returns the 132 form of FMA opcode.
+  unsigned get132Opcode() const {
+    return Opcodes[Form132];
   }
 
-  /// Returns the 132 form of FMA register opcode.
-  unsigned getReg132Opcode() const {
-    assert(RegOpcodes[Form132] && "The group does not have register opcodes.");
-    return RegOpcodes[Form132];
+  /// Returns the 213 form of FMA opcode.
+  unsigned get213Opcode() const {
+    return Opcodes[Form213];
   }
 
-  /// Returns the 213 form of FMA register opcode.
-  unsigned getReg213Opcode() const {
-    assert(RegOpcodes[Form213] && "The group does not have register opcodes.");
-    return RegOpcodes[Form213];
-  }
-
-  /// Returns the 231 form of FMA register opcode.
-  unsigned getReg231Opcode() const {
-    assert(RegOpcodes[Form231] && "The group does not have register opcodes.");
-    return RegOpcodes[Form231];
-  }
-
-  /// Returns the 132 form of FMA memory opcode.
-  unsigned getMem132Opcode() const {
-    assert(MemOpcodes[Form132] && "The group does not have memory opcodes.");
-    return MemOpcodes[Form132];
-  }
-
-  /// Returns the 213 form of FMA memory opcode.
-  unsigned getMem213Opcode() const {
-    assert(MemOpcodes[Form213] && "The group does not have memory opcodes.");
-    return MemOpcodes[Form213];
-  }
-
-  /// Returns the 231 form of FMA memory opcode.
-  unsigned getMem231Opcode() const {
-    assert(MemOpcodes[Form231] && "The group does not have memory opcodes.");
-    return MemOpcodes[Form231];
+  /// Returns the 231 form of FMA opcode.
+  unsigned get231Opcode() const {
+    return Opcodes[Form231];
   }
 
   /// Returns true iff the group of FMA opcodes holds intrinsic opcodes.
@@ -122,24 +85,6 @@ struct X86InstrFMA3Group {
   /// Returns true iff the group of FMA opcodes holds any of k-masked opcodes.
   bool isKMasked() const {
     return (Attributes & (X86FMA3KMergeMasked | X86FMA3KZeroMasked)) != 0;
-  }
-
-  /// Returns true iff the given \p Opcode is a register opcode from the
-  /// groups of FMA opcodes.
-  bool isRegOpcodeFromGroup(unsigned Opcode) const {
-    for (unsigned Form = 0; Form < 3; Form++)
-      if (Opcode == RegOpcodes[Form])
-        return true;
-    return false;
-  }
-
-  /// Returns true iff the given \p Opcode is a memory opcode from the
-  /// groups of FMA opcodes.
-  bool isMemOpcodeFromGroup(unsigned Opcode) const {
-    for (unsigned Form = 0; Form < 3; Form++)
-      if (Opcode == MemOpcodes[Form])
-        return true;
-    return false;
   }
 };
 

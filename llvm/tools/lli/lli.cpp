@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcLazyJIT.h"
 #include "RemoteJITUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
@@ -26,6 +25,8 @@
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -177,6 +178,28 @@ namespace {
     cl::desc("Generate software floating point library calls"),
     cl::init(false));
 
+  enum class DumpKind {
+    NoDump,
+    DumpFuncsToStdOut,
+    DumpModsToStdOut,
+    DumpModsToDisk
+  };
+
+  cl::opt<DumpKind> OrcDumpKind(
+      "orc-lazy-debug", cl::desc("Debug dumping for the orc-lazy JIT."),
+      cl::init(DumpKind::NoDump),
+      cl::values(clEnumValN(DumpKind::NoDump, "no-dump",
+                            "Don't dump anything."),
+                 clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
+                            "Dump function names to stdout."),
+                 clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
+                            "Dump modules to stdout."),
+                 clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
+                            "Dump modules to the current "
+                            "working directory. (WARNING: "
+                            "will overwrite existing files).")),
+      cl::Hidden);
+
   ExitOnError ExitOnErr;
 }
 
@@ -313,6 +336,9 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
   exit(1);
 }
 
+int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
+                  const std::vector<std::string> &Args);
+
 //===----------------------------------------------------------------------===//
 // main Driver function
 //
@@ -356,7 +382,7 @@ int main(int argc, char **argv, char * const *envp) {
     Args.push_back(InputFile);
     for (auto &Arg : InputArgv)
       Args.push_back(Arg);
-    return runOrcLazyJIT(std::move(Ms), Args);
+    return runOrcLazyJIT(Context, std::move(Ms), Args);
   }
 
   if (EnableCacheManager) {
@@ -654,6 +680,119 @@ int main(int argc, char **argv, char * const *envp) {
     // Signal the remote target that we're done JITing.
     ExitOnErr(R->terminateSession());
   }
+
+  return Result;
+}
+
+static orc::IRTransformLayer2::TransformFunction createDebugDumper() {
+  switch (OrcDumpKind) {
+  case DumpKind::NoDump:
+    return [](std::unique_ptr<Module> M) { return M; };
+
+  case DumpKind::DumpFuncsToStdOut:
+    return [](std::unique_ptr<Module> M) {
+      printf("[ ");
+
+      for (const auto &F : *M) {
+        if (F.isDeclaration())
+          continue;
+
+        if (F.hasName()) {
+          std::string Name(F.getName());
+          printf("%s ", Name.c_str());
+        } else
+          printf("<anon> ");
+      }
+
+      printf("]\n");
+      return M;
+    };
+
+  case DumpKind::DumpModsToStdOut:
+    return [](std::unique_ptr<Module> M) {
+      outs() << "----- Module Start -----\n"
+             << *M << "----- Module End -----\n";
+
+      return M;
+    };
+
+  case DumpKind::DumpModsToDisk:
+    return [](std::unique_ptr<Module> M) {
+      std::error_code EC;
+      raw_fd_ostream Out(M->getModuleIdentifier() + ".ll", EC, sys::fs::F_Text);
+      if (EC) {
+        errs() << "Couldn't open " << M->getModuleIdentifier()
+               << " for dumping.\nError:" << EC.message() << "\n";
+        exit(1);
+      }
+      Out << *M;
+      return M;
+    };
+  }
+  llvm_unreachable("Unknown DumpKind");
+}
+
+int runOrcLazyJIT(LLVMContext &Ctx, std::vector<std::unique_ptr<Module>> Ms,
+                  const std::vector<std::string> &Args) {
+  // Bail out early if no modules loaded.
+  if (Ms.empty())
+    return 0;
+
+  // Add lli's symbols into the JIT's search space.
+  std::string ErrMsg;
+  sys::DynamicLibrary LibLLI =
+      sys::DynamicLibrary::getPermanentLibrary(nullptr, &ErrMsg);
+  if (!LibLLI.isValid()) {
+    errs() << "Error loading lli symbols: " << ErrMsg << ".\n";
+    return 1;
+  }
+
+  const auto &TT = Ms.front()->getTargetTriple();
+  orc::JITTargetMachineBuilder TMD =
+      TT.empty() ? ExitOnErr(orc::JITTargetMachineBuilder::detectHost())
+                 : orc::JITTargetMachineBuilder(Triple(TT));
+
+  TMD.setArch(MArch)
+      .setCPU(getCPUStr())
+      .addFeatures(getFeatureList())
+      .setRelocationModel(RelocModel.getNumOccurrences()
+                              ? Optional<Reloc::Model>(RelocModel)
+                              : None)
+      .setCodeModel(CMModel.getNumOccurrences()
+                        ? Optional<CodeModel::Model>(CMModel)
+                        : None);
+  auto TM = ExitOnErr(TMD.createTargetMachine());
+  auto DL = TM->createDataLayout();
+  auto ES = llvm::make_unique<orc::ExecutionSession>();
+  auto J =
+      ExitOnErr(orc::LLLazyJIT::Create(std::move(ES), std::move(TM), DL, Ctx));
+
+  J->setLazyCompileTransform(createDebugDumper());
+  J->getMainVSO().setFallbackDefinitionGenerator(
+      orc::DynamicLibraryFallbackGenerator(
+          std::move(LibLLI), DL, [](orc::SymbolStringPtr) { return true; }));
+
+  orc::MangleAndInterner Mangle(J->getExecutionSession(), DL);
+  orc::LocalCXXRuntimeOverrides2 CXXRuntimeOverrides;
+  ExitOnErr(CXXRuntimeOverrides.enable(J->getMainVSO(), Mangle));
+
+  for (auto &M : Ms)
+    ExitOnErr(J->addLazyIRModule(std::move(M)));
+
+  ExitOnErr(J->runConstructors());
+
+  auto MainSym = ExitOnErr(J->lookup("main"));
+  typedef int (*MainFnPtr)(int, const char *[]);
+  std::vector<const char *> ArgV;
+  for (auto &Arg : Args)
+    ArgV.push_back(Arg.c_str());
+  auto Main =
+      reinterpret_cast<MainFnPtr>(static_cast<uintptr_t>(MainSym.getAddress()));
+  auto Result = Main(ArgV.size(), (const char **)ArgV.data());
+
+  ExitOnErr(J->runDestructors());
+
+  CXXRuntimeOverrides.runDestructors();
 
   return Result;
 }
