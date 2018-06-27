@@ -634,14 +634,22 @@ int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     return LT.first * 2 * AmortizationCost;
   }
 
-  if (Ty->isVectorTy() && Ty->getVectorElementType()->isIntegerTy(8) &&
-      Ty->getVectorNumElements() < 8) {
-    // We scalarize the loads/stores because there is not v.4b register and we
-    // have to promote the elements to v.4h.
-    unsigned NumVecElts = Ty->getVectorNumElements();
-    unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
-    // We generate 2 instructions per vector element.
-    return NumVectorizableInstsToAmortize * NumVecElts * 2;
+  if (Ty->isVectorTy() && Ty->getVectorElementType()->isIntegerTy(8)) {
+    unsigned ProfitableNumElements;
+    if (Opcode == Instruction::Store)
+      // We use a custom trunc store lowering so v.4b should be profitable.
+      ProfitableNumElements = 4;
+    else
+      // We scalarize the loads because there is not v.4b register and we
+      // have to promote the elements to v.2.
+      ProfitableNumElements = 8;
+
+    if (Ty->getVectorNumElements() < ProfitableNumElements) {
+      unsigned NumVecElts = Ty->getVectorNumElements();
+      unsigned NumVectorizableInstsToAmortize = NumVecElts * 2;
+      // We generate 2 instructions per vector element.
+      return NumVectorizableInstsToAmortize * NumVecElts * 2;
+    }
   }
 
   return LT.first;

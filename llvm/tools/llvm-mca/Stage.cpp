@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Stage.h"
-#include "llvm/Support/ErrorHandling.h"
 
 namespace mca {
 
@@ -22,7 +21,12 @@ namespace mca {
 Stage::Stage() {}
 
 void Stage::addListener(HWEventListener *Listener) {
-  llvm_unreachable("Stage-based eventing is not implemented.");
+  Listeners.insert(Listener);
+}
+
+void Stage::notifyInstructionEvent(const HWInstructionEvent &Event) {
+  for (HWEventListener *Listener : Listeners)
+    Listener->onInstructionEvent(Event);
 }
 
 } // namespace mca

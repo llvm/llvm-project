@@ -96,6 +96,7 @@ protected:
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
@@ -376,6 +377,7 @@ enum NodeType : unsigned {
   RSQ,
   RCP_LEGACY,
   RSQ_LEGACY,
+  RCP_IFLAG,
   FMUL_LEGACY,
   RSQ_CLAMP,
   LDEXP,

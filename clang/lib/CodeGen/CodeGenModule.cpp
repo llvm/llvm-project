@@ -404,10 +404,9 @@ void CodeGenModule::Release() {
       AddGlobalCtor(ObjCInitFunction);
   if (Context.getLangOpts().CUDA && !Context.getLangOpts().CUDAIsDevice &&
       CUDARuntime) {
-    if (llvm::Function *CudaCtorFunction = CUDARuntime->makeModuleCtorFunction())
+    if (llvm::Function *CudaCtorFunction =
+            CUDARuntime->makeModuleCtorFunction())
       AddGlobalCtor(CudaCtorFunction);
-    if (llvm::Function *CudaDtorFunction = CUDARuntime->makeModuleDtorFunction())
-      AddGlobalDtor(CudaDtorFunction);
   }
   if (OpenMPRuntime) {
     if (llvm::Function *OpenMPRegistrationFunction =

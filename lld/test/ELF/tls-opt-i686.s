@@ -12,11 +12,11 @@
 // LD -> LE:
 // DISASM-NEXT: 11000: 65 a1 00 00 00 00 movl %gs:0, %eax
 // DISASM-NEXT: 11006: 90                nop
-// DISASM-NEXT: 11007: 8d 74 26 00       leal (%esi), %esi
+// DISASM-NEXT: 11007: 8d 74 26 00       leal (%esi,%eiz), %esi
 // DISASM-NEXT: 1100b: 8d 90 f8 ff ff ff leal -8(%eax), %edx
 // DISASM-NEXT: 11011: 65 a1 00 00 00 00 movl %gs:0, %eax
 // DISASM-NEXT: 11017: 90                nop
-// DISASM-NEXT: 11018: 8d 74 26 00       leal (%esi), %esi
+// DISASM-NEXT: 11018: 8d 74 26 00       leal (%esi,%eiz), %esi
 // DISASM-NEXT: 1101c: 8d 90 fc ff ff ff leal -4(%eax), %edx
 // IE -> LE:
 // 4294967288 == 0xFFFFFFF8

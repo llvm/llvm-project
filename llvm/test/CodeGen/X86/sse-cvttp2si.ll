@@ -13,7 +13,7 @@ declare i64 @llvm.x86.sse.cvttss2si64(<4 x float>)
 declare i32 @llvm.x86.sse2.cvttsd2si(<2 x double>)
 declare i64 @llvm.x86.sse2.cvttsd2si64(<2 x double>)
 
-define float @float_to_int_to_float_mem_f32_i32(<4 x float>* %p) {
+define float @float_to_int_to_float_mem_f32_i32(<4 x float>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f32_i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si (%rdi), %eax
@@ -31,7 +31,7 @@ define float @float_to_int_to_float_mem_f32_i32(<4 x float>* %p) {
   ret float %sitofp
 }
 
-define float @float_to_int_to_float_reg_f32_i32(<4 x float> %x) {
+define float @float_to_int_to_float_reg_f32_i32(<4 x float> %x) #0 {
 ; SSE-LABEL: float_to_int_to_float_reg_f32_i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si %xmm0, %eax
@@ -49,7 +49,7 @@ define float @float_to_int_to_float_reg_f32_i32(<4 x float> %x) {
   ret float %sitofp
 }
 
-define float @float_to_int_to_float_mem_f32_i64(<4 x float>* %p) {
+define float @float_to_int_to_float_mem_f32_i64(<4 x float>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f32_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si (%rdi), %rax
@@ -67,7 +67,7 @@ define float @float_to_int_to_float_mem_f32_i64(<4 x float>* %p) {
   ret float %sitofp
 }
 
-define float @float_to_int_to_float_reg_f32_i64(<4 x float> %x) {
+define float @float_to_int_to_float_reg_f32_i64(<4 x float> %x) #0 {
 ; SSE-LABEL: float_to_int_to_float_reg_f32_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
@@ -85,7 +85,7 @@ define float @float_to_int_to_float_reg_f32_i64(<4 x float> %x) {
   ret float %sitofp
 }
 
-define double @float_to_int_to_float_mem_f64_i32(<2 x double>* %p) {
+define double @float_to_int_to_float_mem_f64_i32(<2 x double>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f64_i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si (%rdi), %eax
@@ -103,7 +103,7 @@ define double @float_to_int_to_float_mem_f64_i32(<2 x double>* %p) {
   ret double %sitofp
 }
 
-define double @float_to_int_to_float_reg_f64_i32(<2 x double> %x) {
+define double @float_to_int_to_float_reg_f64_i32(<2 x double> %x) #0 {
 ; SSE-LABEL: float_to_int_to_float_reg_f64_i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %eax
@@ -121,7 +121,7 @@ define double @float_to_int_to_float_reg_f64_i32(<2 x double> %x) {
   ret double %sitofp
 }
 
-define double @float_to_int_to_float_mem_f64_i64(<2 x double>* %p) {
+define double @float_to_int_to_float_mem_f64_i64(<2 x double>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_f64_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si (%rdi), %rax
@@ -139,7 +139,7 @@ define double @float_to_int_to_float_mem_f64_i64(<2 x double>* %p) {
   ret double %sitofp
 }
 
-define double @float_to_int_to_float_reg_f64_i64(<2 x double> %x) {
+define double @float_to_int_to_float_reg_f64_i64(<2 x double> %x) #0 {
 ; SSE-LABEL: float_to_int_to_float_reg_f64_i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
@@ -157,7 +157,7 @@ define double @float_to_int_to_float_reg_f64_i64(<2 x double> %x) {
   ret double %sitofp
 }
 
-define <4 x float> @float_to_int_to_float_mem_v4f32(<4 x float>* %p) {
+define <4 x float> @float_to_int_to_float_mem_v4f32(<4 x float>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttps2dq (%rdi), %xmm0
@@ -175,7 +175,7 @@ define <4 x float> @float_to_int_to_float_mem_v4f32(<4 x float>* %p) {
   ret <4 x float> %sitofp
 }
 
-define <4 x float> @float_to_int_to_float_reg_v4f32(<4 x float> %x) {
+define <4 x float> @float_to_int_to_float_reg_v4f32(<4 x float> %x) #0 {
 ; SSE-LABEL: float_to_int_to_float_reg_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -192,7 +192,7 @@ define <4 x float> @float_to_int_to_float_reg_v4f32(<4 x float> %x) {
   ret <4 x float> %sitofp
 }
 
-define <2 x double> @float_to_int_to_float_mem_v2f64(<2 x double>* %p) {
+define <2 x double> @float_to_int_to_float_mem_v2f64(<2 x double>* %p) #0 {
 ; SSE-LABEL: float_to_int_to_float_mem_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttpd2dq (%rdi), %xmm0
@@ -211,7 +211,7 @@ define <2 x double> @float_to_int_to_float_mem_v2f64(<2 x double>* %p) {
   ret <2 x double> %sitofp
 }
 
-define <2 x double> @float_to_int_to_float_reg_v2f64(<2 x double> %x) {
+define <2 x double> @float_to_int_to_float_reg_v2f64(<2 x double> %x) #0 {
 ; SSE-LABEL: float_to_int_to_float_reg_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
@@ -228,4 +228,6 @@ define <2 x double> @float_to_int_to_float_reg_v2f64(<2 x double> %x) {
   %sitofp = sitofp <2 x i32> %concat to <2 x double>
   ret <2 x double> %sitofp
 }
+
+attributes #0 = { "no-signed-zeros-fp-math"="true" }
 

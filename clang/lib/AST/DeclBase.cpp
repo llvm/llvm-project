@@ -1347,6 +1347,12 @@ bool DeclContext::containsDecl(Decl *D) const {
           (D->NextInContextAndBits.getPointer() || D == LastDecl));
 }
 
+bool DeclContext::containsDeclAndLoad(Decl *D) const {
+  if (hasExternalLexicalStorage())
+    LoadLexicalDeclsFromExternalStorage();
+  return containsDecl(D);
+}
+
 /// shouldBeHidden - Determine whether a declaration which was declared
 /// within its semantic context should be invisible to qualified name lookup.
 static bool shouldBeHidden(NamedDecl *D) {

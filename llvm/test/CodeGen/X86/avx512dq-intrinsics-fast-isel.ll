@@ -23,14 +23,14 @@ define zeroext i8 @test_mm512_mask_fpclass_pd_mask(i8 zeroext %__U, <8 x double>
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i1> @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %__A, i32 4)
+  %0 = tail call <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double> %__A, i32 4)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = and <8 x i1> %0, %1
   %3 = bitcast <8 x i1> %2 to i8
   ret i8 %3
 }
 
-declare <8 x i1> @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double>, i32)
+declare <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double>, i32)
 
 define zeroext i8 @test_mm512_fpclass_pd_mask(<8 x double> %__A) {
 ; CHECK-LABEL: test_mm512_fpclass_pd_mask:
@@ -41,7 +41,7 @@ define zeroext i8 @test_mm512_fpclass_pd_mask(<8 x double> %__A) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <8 x i1> @llvm.x86.avx512.mask.fpclass.pd.512(<8 x double> %__A, i32 4)
+  %0 = tail call <8 x i1> @llvm.x86.avx512.fpclass.pd.512(<8 x double> %__A, i32 4)
   %1 = bitcast <8 x i1> %0 to i8
   ret i8 %1
 }
@@ -65,14 +65,14 @@ define zeroext i16 @test_mm512_mask_fpclass_ps_mask(i16 zeroext %__U, <16 x floa
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <16 x i1> @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %__A, i32 4)
+  %0 = tail call <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float> %__A, i32 4)
   %1 = bitcast i16 %__U to <16 x i1>
   %2 = and <16 x i1> %0, %1
   %3 = bitcast <16 x i1> %2 to i16
   ret i16 %3
 }
 
-declare <16 x i1> @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float>, i32)
+declare <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float>, i32)
 
 define zeroext i16 @test_mm512_fpclass_ps_mask(<16 x float> %__A) {
 ; CHECK-LABEL: test_mm512_fpclass_ps_mask:
@@ -83,7 +83,7 @@ define zeroext i16 @test_mm512_fpclass_ps_mask(<16 x float> %__A) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <16 x i1> @llvm.x86.avx512.mask.fpclass.ps.512(<16 x float> %__A, i32 4)
+  %0 = tail call <16 x i1> @llvm.x86.avx512.fpclass.ps.512(<16 x float> %__A, i32 4)
   %1 = bitcast <16 x i1> %0 to i16
   ret i16 %1
 }

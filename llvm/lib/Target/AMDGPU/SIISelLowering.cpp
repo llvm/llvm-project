@@ -6578,6 +6578,7 @@ static bool fp16SrcZerosHighBits(unsigned Opc) {
   case AMDGPUISD::FMAD_FTZ:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RSQ:
+  case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::LDEXP:
     return true;
   default:
@@ -6628,6 +6629,23 @@ SDValue SITargetLowering::performClassCombine(SDNode *N,
     return DAG.getUNDEF(MVT::i1);
 
   return SDValue();
+}
+
+SDValue SITargetLowering::performRcpCombine(SDNode *N,
+                                            DAGCombinerInfo &DCI) const {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+
+  if (N0.isUndef())
+    return N0;
+
+  if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
+                         N0.getOpcode() == ISD::SINT_TO_FP)) {
+    return DCI.DAG.getNode(AMDGPUISD::RCP_IFLAG, SDLoc(N), VT, N0,
+                           N->getFlags());
+  }
+
+  return AMDGPUTargetLowering::performRcpCombine(N, DCI);
 }
 
 static bool isKnownNeverSNan(SelectionDAG &DAG, SDValue Op) {
@@ -7615,11 +7633,13 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performClassCombine(N, DCI);
   case ISD::FCANONICALIZE:
     return performFCanonicalizeCombine(N, DCI);
-  case AMDGPUISD::FRACT:
   case AMDGPUISD::RCP:
+    return performRcpCombine(N, DCI);
+  case AMDGPUISD::FRACT:
   case AMDGPUISD::RSQ:
   case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RSQ_LEGACY:
+  case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::LDEXP: {
     SDValue Src = N->getOperand(0);

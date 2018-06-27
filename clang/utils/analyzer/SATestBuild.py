@@ -280,7 +280,8 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     }
 
     SBOptions += "-analyzer-config '%s' " % (
-        ",".join("%s=%s" for key, value in AnalyzerConfig.iteritems()))
+        ",".join("%s=%s" % (key, value) for key, value in AnalyzerConfig.iteritems()))
+
     # Always use ccc-analyze to ensure that we can locate the failures
     # directory.
     SBOptions += "--override-compiler "

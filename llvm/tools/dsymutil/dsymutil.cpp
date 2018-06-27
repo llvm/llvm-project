@@ -15,6 +15,7 @@
 #include "dsymutil.h"
 #include "CFBundle.h"
 #include "DebugMap.h"
+#include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"

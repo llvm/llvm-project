@@ -111,16 +111,21 @@ getCheckerOptList(const AnalyzerOptions &opts) {
   return checkerOpts;
 }
 
-std::unique_ptr<CheckerManager>
-ento::createCheckerManager(AnalyzerOptions &opts, const LangOptions &langOpts,
-                           ArrayRef<std::string> plugins,
-                           DiagnosticsEngine &diags) {
+std::unique_ptr<CheckerManager> ento::createCheckerManager(
+    AnalyzerOptions &opts, const LangOptions &langOpts,
+    ArrayRef<std::string> plugins,
+    ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
+    DiagnosticsEngine &diags) {
   std::unique_ptr<CheckerManager> checkerMgr(
       new CheckerManager(langOpts, opts));
 
   SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
 
   ClangCheckerRegistry allCheckers(plugins, &diags);
+
+  for (const auto &Fn : checkerRegistrationFns)
+    Fn(allCheckers);
+
   allCheckers.initializeManager(*checkerMgr, checkerOpts);
   allCheckers.validateCheckerOptions(opts, diags);
   checkerMgr->finishedCheckerRegistration();

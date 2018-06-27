@@ -198,7 +198,7 @@ let SchedRW = [WriteQuarterRate32] in {
 defm V_EXP_F32 : VOP1Inst <"v_exp_f32", VOP_F32_F32, fexp2>;
 defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, flog2>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
-defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32>;
+defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
 defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
 defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, fsqrt>;
 } // End SchedRW = [WriteQuarterRate32]

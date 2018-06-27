@@ -616,6 +616,7 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case ISD::FNEARBYINT:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
+  case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::SIN_HW:
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::FMIN_LEGACY:
@@ -3617,6 +3618,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FSIN:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
+  case AMDGPUISD::RCP_IFLAG:
   case AMDGPUISD::SIN_HW: {
     SDValue CvtSrc = N0.getOperand(0);
     if (CvtSrc.getOpcode() == ISD::FNEG) {
@@ -3691,6 +3693,18 @@ SDValue AMDGPUTargetLowering::performFAbsCombine(SDNode *N,
   default:
     return SDValue();
   }
+}
+
+SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  const auto *CFP = dyn_cast<ConstantFPSDNode>(N->getOperand(0));
+  if (!CFP)
+    return SDValue();
+
+  // XXX - Should this flush denormals?
+  const APFloat &Val = CFP->getValueAPF();
+  APFloat One(Val.getSemantics(), "1.0");
+  return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
@@ -3893,16 +3907,9 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performLoadCombine(N, DCI);
   case ISD::STORE:
     return performStoreCombine(N, DCI);
-  case AMDGPUISD::RCP: {
-    if (const auto *CFP = dyn_cast<ConstantFPSDNode>(N->getOperand(0))) {
-      // XXX - Should this flush denormals?
-      const APFloat &Val = CFP->getValueAPF();
-      APFloat One(Val.getSemantics(), "1.0");
-      return DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
-    }
-
-    break;
-  }
+  case AMDGPUISD::RCP:
+  case AMDGPUISD::RCP_IFLAG:
+    return performRcpCombine(N, DCI);
   case ISD::AssertZext:
   case ISD::AssertSext:
     return performAssertSZExtCombine(N, DCI);
@@ -4040,6 +4047,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RSQ)
   NODE_NAME_CASE(RCP_LEGACY)
   NODE_NAME_CASE(RSQ_LEGACY)
+  NODE_NAME_CASE(RCP_IFLAG)
   NODE_NAME_CASE(FMUL_LEGACY)
   NODE_NAME_CASE(RSQ_CLAMP)
   NODE_NAME_CASE(LDEXP)

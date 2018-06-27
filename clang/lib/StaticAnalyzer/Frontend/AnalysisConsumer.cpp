@@ -164,6 +164,8 @@ class AnalysisConsumer : public AnalysisASTConsumer,
   /// Bug Reporter to use while recursively visiting Decls.
   BugReporter *RecVisitorBR;
 
+  std::vector<std::function<void(CheckerRegistry &)>> CheckerRegistrationFns;
+
 public:
   ASTContext *Ctx;
   const Preprocessor &PP;
@@ -293,8 +295,9 @@ public:
 
   void Initialize(ASTContext &Context) override {
     Ctx = &Context;
-    checkerMgr = createCheckerManager(*Opts, PP.getLangOpts(), Plugins,
-                                      PP.getDiagnostics());
+    checkerMgr =
+        createCheckerManager(*Opts, PP.getLangOpts(), Plugins,
+                             CheckerRegistrationFns, PP.getDiagnostics());
 
     Mgr = llvm::make_unique<AnalysisManager>(
         *Ctx, PP.getDiagnostics(), PP.getLangOpts(), PathConsumers,
@@ -383,6 +386,10 @@ public:
 
   void AddDiagnosticConsumer(PathDiagnosticConsumer *Consumer) override {
     PathConsumers.push_back(Consumer);
+  }
+
+  void AddCheckerRegistrationFn(std::function<void(CheckerRegistry&)> Fn) override {
+    CheckerRegistrationFns.push_back(std::move(Fn));
   }
 
 private:

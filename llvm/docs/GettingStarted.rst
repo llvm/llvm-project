@@ -492,8 +492,16 @@ Git Mirror
 Git mirrors are available for a number of LLVM subprojects. These mirrors sync
 automatically with each Subversion commit and contain all necessary git-svn
 marks (so, you can recreate git-svn metadata locally). Note that right now
-mirrors reflect only ``trunk`` for each project. You can do the read-only Git
-clone of LLVM via:
+mirrors reflect only ``trunk`` for each project.
+
+.. note::
+
+  On Windows, first you will want to do ``git config --global core.autocrlf
+  false`` before you clone. This goes a long way toward ensuring that
+  line-endings will be handled correctly (the LLVM project mostly uses Linux
+  line-endings).
+
+You can do the read-only Git clone of LLVM via:
 
 .. code-block:: console
 

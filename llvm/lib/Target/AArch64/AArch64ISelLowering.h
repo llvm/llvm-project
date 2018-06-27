@@ -524,6 +524,8 @@ private:
                           SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
                           SDValue ThisVal) const;
 
+  SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(

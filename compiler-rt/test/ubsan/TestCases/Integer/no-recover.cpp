@@ -1,5 +1,6 @@
 // RUN: %clangxx -fsanitize=unsigned-integer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=RECOVER
 // RUN: %clangxx -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=all -fsanitize-recover=unsigned-integer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=RECOVER
+// RUN: %env_ubsan_opts=silence_unsigned_overflow=1 %run %t 2>&1 | FileCheck %s --check-prefix=SILENT-RECOVER --allow-empty
 // RUN: %clangxx -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=unsigned-integer-overflow %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=ABORT
 
 #include <stdint.h>
@@ -18,5 +19,6 @@ int main() {
 
   (void)(uint64_t(10000000000000000000ull) + uint64_t(9000000000000000000ull));
   // RECOVER: 10000000000000000000 + 9000000000000000000 cannot be represented in type 'unsigned {{long( long)?}}'
+  // SILENT-RECOVER-NOT: runtime error
   // ABORT-NOT: runtime error
 }

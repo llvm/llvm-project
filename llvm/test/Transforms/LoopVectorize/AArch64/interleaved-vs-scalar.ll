@@ -15,7 +15,6 @@ target triple = "aarch64--linux-gnu"
 ; CHECK: Found an estimated cost of 0 for VF 2 For instruction:   {{.*}} load i8
 ; CHECK: vector.body
 ; CHECK: load i8
-; CHECK: load i8
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body
 
 define void @test(%pair* %p, i64 %n) {

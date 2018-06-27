@@ -176,26 +176,6 @@ entry:
   ret half %vcvth_n_f16_s32
 }
 
-define dso_local half @test_vcvth_n_f16_s64_1(i64 %a) {
-; CHECK-LABEL: test_vcvth_n_f16_s64_1:
-; CHECK:         fmov d0, x0
-; CHECK-NEXT:    scvtf h0, h0, #1
-; CHECK-NEXT:    ret
-entry:
-  %vcvth_n_f16_s64 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i64(i64 %a, i32 1)
-  ret half %vcvth_n_f16_s64
-}
-
-define dso_local half @test_vcvth_n_f16_s64_16(i64 %a) {
-; CHECK-LABEL: test_vcvth_n_f16_s64_16:
-; CHECK:         fmov d0, x0
-; CHECK-NEXT:    scvtf h0, h0, #16
-; CHECK-NEXT:    ret
-entry:
-  %vcvth_n_f16_s64 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i64(i64 %a, i32 16)
-  ret half %vcvth_n_f16_s64
-}
-
 define dso_local i16 @test_vcvth_n_s16_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s16_f16_1:
 ; CHECK:         fcvtzs h0, h0, #1

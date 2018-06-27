@@ -472,6 +472,19 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     CtorBuilder.CreateCall(RegisterLinkedBinaryFunc, Args);
   }
 
+  // Create destructor and register it with atexit() the way NVCC does it. Doing
+  // it during regular destructor phase worked in CUDA before 9.2 but results in
+  // double-free in 9.2.
+  if (llvm::Function *CleanupFn = makeModuleDtorFunction()) {
+    // extern "C" int atexit(void (*f)(void));
+    llvm::FunctionType *AtExitTy =
+        llvm::FunctionType::get(IntTy, CleanupFn->getType(), false);
+    llvm::Constant *AtExitFunc =
+        CGM.CreateRuntimeFunction(AtExitTy, "atexit", llvm::AttributeList(),
+                                  /*Local=*/true);
+    CtorBuilder.CreateCall(AtExitFunc, CleanupFn);
+  }
+
   CtorBuilder.CreateRetVoid();
   return ModuleCtorFunc;
 }

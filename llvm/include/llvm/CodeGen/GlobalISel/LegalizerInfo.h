@@ -122,6 +122,7 @@ struct LegalityQuery {
 
   struct MemDesc {
     uint64_t Size;
+    AtomicOrdering Ordering;
   };
 
   /// Operations which require memory can use this to place requirements on the
@@ -175,7 +176,19 @@ struct TypePairAndMemSize {
 };
 
 /// True iff P0 and P1 are true.
-LegalityPredicate all(LegalityPredicate P0, LegalityPredicate P1);
+template<typename Predicate>
+Predicate all(Predicate P0, Predicate P1) {
+  return [=](const LegalityQuery &Query) {
+    return P0(Query) && P1(Query);
+  };
+}
+/// True iff all given predicates are true.
+template<typename Predicate, typename... Args>
+Predicate all(Predicate P0, Predicate P1, Args... args) {
+  return all(all(P0, P1), args...);
+}
+/// True iff the given type index is the specified types.
+LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
 /// True iff the given type index is one of the specified types.
 LegalityPredicate typeInSet(unsigned TypeIdx,
                             std::initializer_list<LLT> TypesInit);
@@ -205,6 +218,10 @@ LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
 /// True iff the specified type index is a vector whose element count is not a
 /// power of 2.
 LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
+/// True iff the specified MMO index has at an atomic ordering of at Ordering or
+/// stronger.
+LegalityPredicate atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx,
+                                                      AtomicOrdering Ordering);
 } // end namespace LegalityPredicates
 
 namespace LegalizeMutations {

@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2a -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus < 201103L
 // expected-error@+1 {{variadic macro}}
@@ -248,4 +249,23 @@ namespace dr1672 { // dr1672: 7
   static_assert(!__is_standard_layout(Y<G>), "");
   static_assert(!__is_standard_layout(Y<H>), "");
   static_assert(!__is_standard_layout(Y<X>), "");
+}
+
+namespace dr1687 { // dr1687: 7
+  template<typename T> struct To {
+    operator T(); // expected-note 2{{first operand was implicitly converted to type 'int *'}}
+    // expected-note@-1 {{second operand was implicitly converted to type 'double'}}
+#if __cplusplus > 201703L
+    // expected-note@-3 2{{operand was implicitly converted to type 'dr1687::E}}
+#endif
+  };
+
+  int *a = To<int*>() + 100.0; // expected-error {{invalid operands to binary expression ('To<int *>' and 'double')}}
+  int *b = To<int*>() + To<double>(); // expected-error {{invalid operands to binary expression ('To<int *>' and 'To<double>')}}
+
+#if __cplusplus > 201703L
+  enum E1 {};
+  enum E2 {};
+  auto c = To<E1>() <=> To<E2>(); // expected-error {{invalid operands to binary expression ('To<dr1687::E1>' and 'To<dr1687::E2>')}}
+#endif
 }

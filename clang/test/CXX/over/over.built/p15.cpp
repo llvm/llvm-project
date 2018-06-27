@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s -Wno-tautological-compare
 
-struct A { operator decltype(nullptr)(); };
-struct B { operator const int *(); };
+struct A { operator decltype(nullptr)(); }; // expected-note 16{{implicitly converted}}
+struct B { operator const int *(); }; // expected-note 8{{implicitly converted}}
 void f(A a, B b, volatile int *pi) {
   (void)(a == a);
   (void)(a != a);
@@ -12,39 +12,31 @@ void f(A a, B b, volatile int *pi) {
 
   (void)(a == b);
   (void)(a != b);
-  // FIXME: These cases were intended to be made ill-formed by N3624, but it
-  // fails to actually achieve this goal.
-  (void)(a < b);
-  (void)(a > b);
-  (void)(a <= b);
-  (void)(a >= b);
+  (void)(a < b); // expected-error {{invalid operands}}
+  (void)(a > b); // expected-error {{invalid operands}}
+  (void)(a <= b); // expected-error {{invalid operands}}
+  (void)(a >= b); // expected-error {{invalid operands}}
 
   (void)(b == a);
   (void)(b != a);
-  // FIXME: These cases were intended to be made ill-formed by N3624, but it
-  // fails to actually achieve this goal.
-  (void)(b < a);
-  (void)(b > a);
-  (void)(b <= a);
-  (void)(b >= a);
+  (void)(b < a); // expected-error {{invalid operands}}
+  (void)(b > a); // expected-error {{invalid operands}}
+  (void)(b <= a); // expected-error {{invalid operands}}
+  (void)(b >= a); // expected-error {{invalid operands}}
 
   (void)(a == pi);
   (void)(a != pi);
-  // FIXME: These cases were intended to be made ill-formed by N3624, but it
-  // fails to actually achieve this goal.
-  (void)(a < pi);
-  (void)(a > pi);
-  (void)(a <= pi);
-  (void)(a >= pi);
+  (void)(a < pi); // expected-error {{invalid operands}}
+  (void)(a > pi); // expected-error {{invalid operands}}
+  (void)(a <= pi); // expected-error {{invalid operands}}
+  (void)(a >= pi); // expected-error {{invalid operands}}
 
   (void)(pi == a);
   (void)(pi != a);
-  // FIXME: These cases were intended to be made ill-formed by N3624, but it
-  // fails to actually achieve this goal.
-  (void)(pi < a);
-  (void)(pi > a);
-  (void)(pi <= a);
-  (void)(pi >= a);
+  (void)(pi < a); // expected-error {{invalid operands}}
+  (void)(pi > a); // expected-error {{invalid operands}}
+  (void)(pi <= a); // expected-error {{invalid operands}}
+  (void)(pi >= a); // expected-error {{invalid operands}}
 
   (void)(b == pi);
   (void)(b != pi);

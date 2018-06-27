@@ -668,6 +668,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
       CurDAG->DeleteNode(N);
+      continue;
     }
 
     if (OptLevel != CodeGenOpt::None &&

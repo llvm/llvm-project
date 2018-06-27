@@ -1,6 +1,6 @@
 //===- tools/dsymutil/dsymutil.h - dsymutil high-level functionality ------===//
 //
-//                             The LLVM Linker
+//                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
@@ -18,6 +18,7 @@
 #define LLVM_TOOLS_DSYMUTIL_DSYMUTIL_H
 
 #include "DebugMap.h"
+#include "LinkUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -28,34 +29,6 @@
 
 namespace llvm {
 namespace dsymutil {
-
-struct LinkOptions {
-  /// Verbosity
-  bool Verbose = false;
-
-  /// Skip emitting output
-  bool NoOutput = false;
-
-  /// Do not unique types according to ODR
-  bool NoODR = false;
-
-  /// Update
-  bool Update = false;
-
-  /// Minimize
-  bool Minimize = false;
-
-  /// Do not check swiftmodule timestamp
-  bool NoTimestamp = false;
-
-  /// Number of threads.
-  unsigned Threads = 1;
-
-  /// -oso-prepend-path
-  std::string PrependPath;
-
-  LinkOptions() = default;
-};
 
 /// Extract the DebugMaps from the given file.
 /// The file has to be a MachO object file. Multiple debug maps can be
@@ -73,9 +46,6 @@ bool dumpStab(StringRef InputFile, ArrayRef<std::string> Archs,
 /// DwarfFile named \p OutputFilename. \returns false if the link failed.
 bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
                const LinkOptions &Options);
-
-void warn(Twine Warning, Twine Context = {});
-bool error(Twine Error, Twine Context = {});
 
 } // end namespace dsymutil
 } // end namespace llvm

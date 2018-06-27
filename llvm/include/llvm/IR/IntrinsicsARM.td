@@ -652,6 +652,20 @@ def int_arm_neon_vld4lane : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                                        LLVMMatchType<0>, llvm_i32_ty,
                                        llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
 
+// Vector load N-element structure to all lanes.
+// Source operands are the address and alignment.
+def int_arm_neon_vld2dup : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
+                                     [llvm_anyptr_ty, llvm_i32_ty],
+                                     [IntrReadMem, IntrArgMemOnly]>;
+def int_arm_neon_vld3dup : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                                      LLVMMatchType<0>],
+                                     [llvm_anyptr_ty, llvm_i32_ty],
+                                     [IntrReadMem, IntrArgMemOnly]>;
+def int_arm_neon_vld4dup : Intrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
+                                      LLVMMatchType<0>, LLVMMatchType<0>],
+                                     [llvm_anyptr_ty, llvm_i32_ty],
+                                     [IntrReadMem, IntrArgMemOnly]>;
+
 // Interleaving vector stores from N-element structures.
 // Source operands are: the address, the N vectors, and the alignment.
 def int_arm_neon_vst1 : Intrinsic<[],

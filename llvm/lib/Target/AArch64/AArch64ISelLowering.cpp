@@ -742,6 +742,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FTRUNC, Ty, Legal);
       setOperationAction(ISD::FROUND, Ty, Legal);
     }
+
+    setTruncStoreAction(MVT::v4i16, MVT::v4i8, Custom);
   }
 
   PredictableSelectIsExpensive = Subtarget->predictableSelectIsExpensive();
@@ -2673,6 +2675,68 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 }
 
+// Custom lower trunc store for v4i8 vectors, since it is promoted to v4i16.
+static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
+                                        EVT VT, EVT MemVT,
+                                        SelectionDAG &DAG) {
+  assert(VT.isVector() && "VT should be a vector type");
+  assert(MemVT == MVT::v4i8 && VT == MVT::v4i16);
+
+  SDValue Value = ST->getValue();
+
+  // It first extend the promoted v4i16 to v8i16, truncate to v8i8, and extract
+  // the word lane which represent the v4i8 subvector.  It optimizes the store
+  // to:
+  //
+  //   xtn  v0.8b, v0.8h
+  //   str  s0, [x0]
+
+  SDValue Undef = DAG.getUNDEF(MVT::i16);
+  SDValue UndefVec = DAG.getBuildVector(MVT::v4i16, DL,
+                                        {Undef, Undef, Undef, Undef});
+
+  SDValue TruncExt = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16,
+                                 Value, UndefVec);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::v8i8, TruncExt);
+
+  Trunc = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, Trunc);
+  SDValue ExtractTrunc = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                     Trunc, DAG.getConstant(0, DL, MVT::i64));
+
+  return DAG.getStore(ST->getChain(), DL, ExtractTrunc,
+                      ST->getBasePtr(), ST->getMemOperand());
+}
+
+// Custom lowering for any store, vector or scalar and/or default or with
+// a truncate operations.  Currently only custom lower truncate operation
+// from vector v4i16 to v4i8.
+SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
+                                          SelectionDAG &DAG) const {
+  SDLoc Dl(Op);
+  StoreSDNode *StoreNode = cast<StoreSDNode>(Op);
+  assert (StoreNode && "Can only custom lower store nodes");
+
+  SDValue Value = StoreNode->getValue();
+
+  EVT VT = Value.getValueType();
+  EVT MemVT = StoreNode->getMemoryVT();
+
+  assert (VT.isVector() && "Can only custom lower vector store types");
+
+  unsigned AS = StoreNode->getAddressSpace();
+  unsigned Align = StoreNode->getAlignment();
+  if (Align < MemVT.getStoreSize() &&
+      !allowsMisalignedMemoryAccesses(MemVT, AS, Align, nullptr)) {
+    return scalarizeVectorStore(StoreNode, DAG);
+  }
+
+  if (StoreNode->isTruncatingStore()) {
+    return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -2784,6 +2848,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerMULH(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::STORE:
+    return LowerSTORE(Op, DAG);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:
   case ISD::VECREDUCE_SMIN:
