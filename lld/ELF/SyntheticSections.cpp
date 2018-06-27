@@ -633,7 +633,6 @@ void GotSection::writeTo(uint8_t *Buf) {
   // whereas InputSectionBase::relocateAlloc() expects its argument
   // to point to the start of the output section.
   Target->writeGotHeader(Buf);
-  Buf += Target->GotHeaderEntriesNum * Target->GotEntrySize;
   relocateAlloc(Buf - OutSecOff, Buf - OutSecOff + Size);
 }
 
