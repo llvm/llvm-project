@@ -364,7 +364,8 @@ LegalizerInfo::getAction(const MachineInstr &MI,
 
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs;
   for (const auto &MMO : MI.memoperands())
-    MemDescrs.push_back({MMO->getSize() /* in bytes */ * 8});
+    MemDescrs.push_back(
+        {MMO->getSize() /* in bytes */ * 8, MMO->getOrdering()});
 
   return getAction({MI.getOpcode(), Types, MemDescrs});
 }

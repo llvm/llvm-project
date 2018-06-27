@@ -15,6 +15,7 @@
 #if CAN_SANITIZE_UB
 #include "ubsan_handlers.h"
 #include "ubsan_diag.h"
+#include "ubsan_flags.h"
 #include "ubsan_monitor.h"
 
 #include "sanitizer_common/sanitizer_common.h"
@@ -116,6 +117,9 @@ static void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle LHS,
                           : ErrorType::UnsignedIntegerOverflow;
 
   if (ignoreReport(Loc, Opts, ET))
+    return;
+
+  if (!IsSigned && flags()->silence_unsigned_overflow)
     return;
 
   ScopedReport R(Opts, Loc, ET);

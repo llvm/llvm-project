@@ -275,6 +275,8 @@ public:
     ConstantRange NewR = getConstantRange().unionWith(RHS.getConstantRange());
     if (NewR.isFullSet())
       markOverdefined();
+    else if (NewR == getConstantRange())
+      return false;
     else
       markConstantRange(std::move(NewR));
     return true;

@@ -1104,48 +1104,48 @@ __m256i test_mm256_maskz_inserti64x2(__mmask8 __U, __m256i __A, __m128i __B) {
 
 __mmask8 test_mm_mask_fpclass_pd_mask(__mmask8 __U, __m128d __A) {
   // CHECK-LABEL: @test_mm_mask_fpclass_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.pd.128
+  // CHECK: @llvm.x86.avx512.fpclass.pd.128
   return _mm_mask_fpclass_pd_mask(__U, __A, 2); 
 }
 
 __mmask8 test_mm_fpclass_pd_mask(__m128d __A) {
   // CHECK-LABEL: @test_mm_fpclass_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.pd.128
+  // CHECK: @llvm.x86.avx512.fpclass.pd.128
   return _mm_fpclass_pd_mask(__A, 2); 
 }
 
 __mmask8 test_mm256_mask_fpclass_pd_mask(__mmask8 __U, __m256d __A) {
   // CHECK-LABEL: @test_mm256_mask_fpclass_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.pd.256
+  // CHECK: @llvm.x86.avx512.fpclass.pd.256
   return _mm256_mask_fpclass_pd_mask(__U, __A, 2); 
 }
 
 __mmask8 test_mm256_fpclass_pd_mask(__m256d __A) {
   // CHECK-LABEL: @test_mm256_fpclass_pd_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.pd.256
+  // CHECK: @llvm.x86.avx512.fpclass.pd.256
   return _mm256_fpclass_pd_mask(__A, 2); 
 }
 
 __mmask8 test_mm_mask_fpclass_ps_mask(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_mask_fpclass_ps_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.ps.128
+  // CHECK: @llvm.x86.avx512.fpclass.ps.128
   return _mm_mask_fpclass_ps_mask(__U, __A, 2); 
 }
 
 __mmask8 test_mm_fpclass_ps_mask(__m128 __A) {
   // CHECK-LABEL: @test_mm_fpclass_ps_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.ps.128
+  // CHECK: @llvm.x86.avx512.fpclass.ps.128
   return _mm_fpclass_ps_mask(__A, 2); 
 }
 
 __mmask8 test_mm256_mask_fpclass_ps_mask(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_mask_fpclass_ps_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.ps.256
+  // CHECK: @llvm.x86.avx512.fpclass.ps.256
   return _mm256_mask_fpclass_ps_mask(__U, __A, 2); 
 }
 
 __mmask8 test_mm256_fpclass_ps_mask(__m256 __A) {
   // CHECK-LABEL: @test_mm256_fpclass_ps_mask
-  // CHECK: @llvm.x86.avx512.mask.fpclass.ps.256
+  // CHECK: @llvm.x86.avx512.fpclass.ps.256
   return _mm256_fpclass_ps_mask(__A, 2); 
 }

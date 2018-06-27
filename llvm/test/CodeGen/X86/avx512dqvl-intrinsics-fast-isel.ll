@@ -221,7 +221,7 @@ define zeroext i8 @test_mm_mask_fpclass_pd_mask(i8 zeroext %__U, <2 x double> %_
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <2 x i1> @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %__A, i32 2)
+  %0 = tail call <2 x i1> @llvm.x86.avx512.fpclass.pd.128(<2 x double> %__A, i32 2)
   %1 = bitcast i8 %__U to <8 x i1>
   %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <2 x i32> <i32 0, i32 1>
   %2 = and <2 x i1> %0, %extract
@@ -230,7 +230,7 @@ entry:
   ret i8 %4
 }
 
-declare <2 x i1> @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double>, i32)
+declare <2 x i1> @llvm.x86.avx512.fpclass.pd.128(<2 x double>, i32)
 
 define zeroext i8 @test_mm_fpclass_pd_mask(<2 x double> %__A) {
 ; CHECK-LABEL: test_mm_fpclass_pd_mask:
@@ -240,7 +240,7 @@ define zeroext i8 @test_mm_fpclass_pd_mask(<2 x double> %__A) {
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <2 x i1> @llvm.x86.avx512.mask.fpclass.pd.128(<2 x double> %__A, i32 2)
+  %0 = tail call <2 x i1> @llvm.x86.avx512.fpclass.pd.128(<2 x double> %__A, i32 2)
   %1 = shufflevector <2 x i1> %0, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
   %2 = bitcast <8 x i1> %1 to i8
   ret i8 %2
@@ -265,7 +265,7 @@ define zeroext i8 @test_mm256_mask_fpclass_pd_mask(i8 zeroext %__U, <4 x double>
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <4 x i1> @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %__A, i32 2)
+  %0 = tail call <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double> %__A, i32 2)
   %1 = bitcast i8 %__U to <8 x i1>
   %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = and <4 x i1> %0, %extract
@@ -274,7 +274,7 @@ entry:
   ret i8 %4
 }
 
-declare <4 x i1> @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double>, i32)
+declare <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double>, i32)
 
 define zeroext i8 @test_mm256_fpclass_pd_mask(<4 x double> %__A) {
 ; CHECK-LABEL: test_mm256_fpclass_pd_mask:
@@ -285,7 +285,7 @@ define zeroext i8 @test_mm256_fpclass_pd_mask(<4 x double> %__A) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <4 x i1> @llvm.x86.avx512.mask.fpclass.pd.256(<4 x double> %__A, i32 2)
+  %0 = tail call <4 x i1> @llvm.x86.avx512.fpclass.pd.256(<4 x double> %__A, i32 2)
   %1 = shufflevector <4 x i1> %0, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = bitcast <8 x i1> %1 to i8
   ret i8 %2
@@ -308,7 +308,7 @@ define zeroext i8 @test_mm_mask_fpclass_ps_mask(i8 zeroext %__U, <4 x float> %__
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <4 x i1> @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %__A, i32 2)
+  %0 = tail call <4 x i1> @llvm.x86.avx512.fpclass.ps.128(<4 x float> %__A, i32 2)
   %1 = bitcast i8 %__U to <8 x i1>
   %extract = shufflevector <8 x i1> %1, <8 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = and <4 x i1> %0, %extract
@@ -317,7 +317,7 @@ entry:
   ret i8 %4
 }
 
-declare <4 x i1> @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float>, i32)
+declare <4 x i1> @llvm.x86.avx512.fpclass.ps.128(<4 x float>, i32)
 
 define zeroext i8 @test_mm_fpclass_ps_mask(<4 x float> %__A) {
 ; CHECK-LABEL: test_mm_fpclass_ps_mask:
@@ -327,7 +327,7 @@ define zeroext i8 @test_mm_fpclass_ps_mask(<4 x float> %__A) {
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <4 x i1> @llvm.x86.avx512.mask.fpclass.ps.128(<4 x float> %__A, i32 2)
+  %0 = tail call <4 x i1> @llvm.x86.avx512.fpclass.ps.128(<4 x float> %__A, i32 2)
   %1 = shufflevector <4 x i1> %0, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = bitcast <8 x i1> %1 to i8
   ret i8 %2
@@ -352,14 +352,14 @@ define zeroext i8 @test_mm256_mask_fpclass_ps_mask(i8 zeroext %__U, <8 x float> 
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call <8 x i1> @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %__A, i32 2)
+  %0 = tail call <8 x i1> @llvm.x86.avx512.fpclass.ps.256(<8 x float> %__A, i32 2)
   %1 = bitcast i8 %__U to <8 x i1>
   %2 = and <8 x i1> %0, %1
   %3 = bitcast <8 x i1> %2 to i8
   ret i8 %3
 }
 
-declare <8 x i1> @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float>, i32)
+declare <8 x i1> @llvm.x86.avx512.fpclass.ps.256(<8 x float>, i32)
 
 define zeroext i8 @test_mm256_fpclass_ps_mask(<8 x float> %__A) {
 ; CHECK-LABEL: test_mm256_fpclass_ps_mask:
@@ -370,7 +370,7 @@ define zeroext i8 @test_mm256_fpclass_ps_mask(<8 x float> %__A) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
-  %0 = tail call <8 x i1> @llvm.x86.avx512.mask.fpclass.ps.256(<8 x float> %__A, i32 2)
+  %0 = tail call <8 x i1> @llvm.x86.avx512.fpclass.ps.256(<8 x float> %__A, i32 2)
   %1 = bitcast <8 x i1> %0 to i8
   ret i8 %1
 }

@@ -1,0 +1,183 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+
+# Ensure that we don't outline from regions where x16, x17, or nzcv are live
+# across the outlining candidate. These values are allowed to be clobbered by,
+# say, the linker, in the presence of function calls. Thus, we can't outline
+# these, since the insertion of the outlined call could change the values of
+# these registers.
+--- |
+  ; No problematic register appears at all. Safe for outlining.
+  define void @reg_never_defined() #0 { ret void }
+
+  ; A problematic register is live, but after the candidate. Safe for outlining.
+  define void @reg_defined_after_candidate() #0 { ret void }
+
+  ; A problematic register is live before the candidate, but killed before
+  ; entry to the candidate. Safe for outlining.
+  define void @reg_killed_before_candidate() #0 { ret void }
+
+  ; Ensure that we never outline when any of the problematic registers we care
+  ; about are defined across the outlining candidate.
+  define void @x16_live() #0 { ret void }
+  define void @x17_live() #0 { ret void }
+  define void @nzcv_live() #0 { ret void }
+
+  ; Test a combination of the above behaviours.
+  ; [candidate] (1)
+  ; - define a bad register -
+  ; [candidate] (2)
+  ; - kill the bad register -
+  ; [candidate] (3)
+  ;
+  ; (1) and (3) should be outlined, while (2) should not be outlined.
+  define void @multiple_ranges() #0 { ret void }
+
+  attributes #0 = { noredzone }
+...
+---
+
+# There should be two calls to outlined functions here, since we haven't tripped
+# any of the cases above.
+name:           reg_never_defined
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: BL
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+  bb.1:
+    ; CHECK-LABEL: bb.1:
+    ; CHECK: BL
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+  bb.2:
+    RET undef $lr
+...
+---
+
+name:            reg_defined_after_candidate
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: BL
+    ; CHECK-NEXT: $x16 = ORRXri $x8, 5, implicit-def $x16, implicit-def $w16
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    $x16 = ORRXri $x8, 5, implicit-def $x16, implicit-def $w16
+    $w8 = ORRWri $w16, 5
+    RET undef $lr
+...
+---
+
+name:            reg_killed_before_candidate
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: BL
+    liveins: $w8, $wzr, $x16
+    dead $x16 = ORRXri $x8, 6
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    RET undef $lr
+...
+---
+
+name:            x16_live
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK-NOT: BL
+    liveins: $w8, $wzr, $x16
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+  bb.1:
+    liveins: $x16
+    RET undef $lr
+...
+---
+
+name:            x17_live
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK-NOT: BL
+    liveins: $w8, $wzr, $x17
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    $w8 = ORRWri $w17, 5
+    RET undef $lr
+...
+---
+
+name:            nzcv_live
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w8, $wzr, $nzcv
+    ; CHECK-LABEL: bb.0:
+    ; CHECK-NOT: BL
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+  bb.1:
+    liveins: $nzcv
+    RET undef $lr
+...
+---
+
+name:            multiple_ranges
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: bb.0:
+    ; CHECK: BL
+    liveins: $w8, $wzr
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+    $x16 = ORRXri $x8, 5, implicit-def $x16
+  bb.1:
+    ; CHECK-LABEL: bb.1:
+    ; CHECK-NOT: BL
+    liveins: $w8, $x16
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+  bb.2:
+    ; CHECK-LABEL: bb.2:
+    ; CHECK: BL
+    liveins: $w8, $x16
+    dead $x16 = ORRXri $x8, 0
+    $w8 = ORRWri $wzr, 1
+    $w8 = ORRWri $wzr, 2
+    $w8 = ORRWri $wzr, 3
+    $w8 = ORRWri $wzr, 4
+  bb.3:
+    liveins: $w8
+    RET undef $lr
+...
+---

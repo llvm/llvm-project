@@ -204,6 +204,8 @@ function(add_compiler_rt_runtime name type)
     # If the parent targets aren't created we should create them
     if(NOT TARGET ${LIB_PARENT_TARGET})
       add_custom_target(${LIB_PARENT_TARGET})
+      set_target_properties(${LIB_PARENT_TARGET} PROPERTIES
+                            FOLDER "Compiler-RT Misc")
     endif()
     if(NOT TARGET install-${LIB_PARENT_TARGET})
       # The parent install target specifies the parent component to scrape up
@@ -500,6 +502,7 @@ macro(add_custom_libcxx name prefix)
     COMMENT "Clobbering ${name} build and stamp directories"
     USES_TERMINAL
     )
+  set_target_properties(${name}-clear PROPERTIES FOLDER "Compiler-RT Misc")
 
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp
@@ -512,6 +515,7 @@ macro(add_custom_libcxx name prefix)
 
   add_custom_target(${name}-clobber
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
+  set_target_properties(${name}-clobber PROPERTIES FOLDER "Compiler-RT Misc")
 
   set(PASSTHROUGH_VARIABLES
     CMAKE_C_COMPILER_TARGET

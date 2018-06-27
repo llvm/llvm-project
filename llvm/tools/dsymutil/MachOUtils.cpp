@@ -1,4 +1,4 @@
-//===-- MachOUtils.h - Mach-o specific helpers for dsymutil  --------------===//
+//===-- MachOUtils.cpp - Mach-o specific helpers for dsymutil  ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,8 +10,8 @@
 #include "MachOUtils.h"
 #include "BinaryHolder.h"
 #include "DebugMap.h"
+#include "LinkUtils.h"
 #include "NonRelocatableStringpool.h"
-#include "dsymutil.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"

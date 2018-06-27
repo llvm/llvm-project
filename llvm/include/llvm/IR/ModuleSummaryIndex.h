@@ -181,6 +181,13 @@ struct ValueInfo {
   bool isDSOLocal() const;
 };
 
+inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
+  OS << VI.getGUID();
+  if (!VI.name().empty())
+    OS << " (" << VI.name() << ")";
+  return OS;
+}
+
 inline bool operator==(const ValueInfo &A, const ValueInfo &B) {
   assert(A.getRef() && B.getRef() &&
          "Need ValueInfo with non-null Ref for comparison");

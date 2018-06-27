@@ -29,7 +29,7 @@ kernel void float_ops() {
 #if __OPENCL_C_VERSION__ < 120
 // expected-error@-2{{invalid operands}}
 #endif
-  float ibaf = 0 & 0.0f; // expected-error {{invalid operands}}
+  float ibaf = 0 & 0.0f; // expected-error {{invalid operands to binary expression ('int' and 'float')}}
   float ibof = 0 | 0.0f; // expected-error {{invalid operands}}
   float bnf = ~0.0f;// expected-error {{invalid argument type}}
   float lnf = !0.0f;

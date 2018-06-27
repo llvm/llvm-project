@@ -72,6 +72,19 @@ const MCPhysReg *AArch64RegisterInfo::getCalleeSavedRegsViaCopy(
   return nullptr;
 }
 
+const TargetRegisterClass *
+AArch64RegisterInfo::getSubClassWithSubReg(const TargetRegisterClass *RC,
+                                       unsigned Idx) const {
+  // edge case for GPR/FPR register classes
+  if (RC == &AArch64::GPR32allRegClass && Idx == AArch64::hsub)
+    return &AArch64::FPR32RegClass;
+  else if (RC == &AArch64::GPR64allRegClass && Idx == AArch64::hsub)
+    return &AArch64::FPR64RegClass;
+
+  // Forward to TableGen's default version.
+  return AArch64GenRegisterInfo::getSubClassWithSubReg(RC, Idx);
+}
+
 const uint32_t *
 AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {

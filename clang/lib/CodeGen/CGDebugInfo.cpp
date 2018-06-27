@@ -3346,6 +3346,27 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   if (HasDecl && isa<FunctionDecl>(D))
     DeclCache[D->getCanonicalDecl()].reset(SP);
 
+  if (CGM.getCodeGenOpts().DwarfVersion >= 5) {
+    // Starting with DWARF V5 method declarations are emitted as children of
+    // the interface type.
+    if (const auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
+      const ObjCInterfaceDecl *ID = OMD->getClassInterface();
+      QualType QTy(ID->getTypeForDecl(), 0);
+      auto It = TypeCache.find(QTy.getAsOpaquePtr());
+      if (It != TypeCache.end()) {
+        llvm::DICompositeType *InterfaceDecl =
+            cast<llvm::DICompositeType>(It->second);
+        llvm::DISubprogram *FD = DBuilder.createFunction(
+            InterfaceDecl, Name, LinkageName, Unit, LineNo,
+            getOrCreateFunctionType(D, FnType, Unit), Fn->hasLocalLinkage(),
+            false /*definition*/, ScopeLine, Flags, CGM.getLangOpts().Optimize,
+            TParamsArray.get());
+        DBuilder.finalizeSubprogram(FD);
+        ObjCMethodCache[ID].push_back(FD);
+      }
+    }
+  }
+
   // Push the function onto the lexical block stack.
   LexicalBlockStack.emplace_back(SP);
 
@@ -4211,6 +4232,29 @@ void CGDebugInfo::finalize() {
                            ? CreateTypeDefinition(E.Type, E.Unit)
                            : E.Decl;
     DBuilder.replaceTemporary(llvm::TempDIType(E.Decl), Ty);
+  }
+
+  if (CGM.getCodeGenOpts().DwarfVersion >= 5) {
+    // Add methods to interface.
+    for (auto P : ObjCMethodCache) {
+      if (P.second.empty())
+        continue;
+
+      QualType QTy(P.first->getTypeForDecl(), 0);
+      auto It = TypeCache.find(QTy.getAsOpaquePtr());
+      assert(It != TypeCache.end());
+
+      llvm::DICompositeType *InterfaceDecl =
+          cast<llvm::DICompositeType>(It->second);
+
+      SmallVector<llvm::Metadata *, 16> EltTys;
+      auto CurrenetElts = InterfaceDecl->getElements();
+      EltTys.append(CurrenetElts.begin(), CurrenetElts.end());
+      for (auto &MD : P.second)
+        EltTys.push_back(MD);
+      llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
+      DBuilder.replaceArrays(InterfaceDecl, Elements);
+    }
   }
 
   for (auto p : ReplaceMap) {

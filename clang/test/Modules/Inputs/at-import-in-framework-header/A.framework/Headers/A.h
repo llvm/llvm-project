@@ -1,0 +1,2 @@
+@import B;
+int foo();

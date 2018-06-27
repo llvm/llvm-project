@@ -249,6 +249,17 @@ struct ScopExpander : SCEVVisitor<ScopExpander, const SCEV *> {
     return Expander.expandCodeFor(E, Ty, I);
   }
 
+  const SCEV *visit(const SCEV *E) {
+    // Cache the expansion results for intermediate SCEV expressions. A SCEV
+    // expression can refer to an operand multiple times (e.g. "x*x), so
+    // a naive visitor takes exponential time.
+    if (SCEVCache.count(E))
+      return SCEVCache[E];
+    const SCEV *Result = SCEVVisitor::visit(E);
+    SCEVCache[E] = Result;
+    return Result;
+  }
+
 private:
   SCEVExpander Expander;
   ScalarEvolution &SE;
@@ -256,6 +267,7 @@ private:
   const Region &R;
   ValueMapT *VMap;
   BasicBlock *RTCBB;
+  DenseMap<const SCEV *, const SCEV *> SCEVCache;
 
   const SCEV *visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
                                Instruction *IP) {

@@ -50,20 +50,26 @@ TEST_F(ValueLatticeTest, MergeIn) {
 
   // Merge to lattice values with equal integer constant.
   auto LV1 = ValueLatticeElement::get(C1);
-  LV1.mergeIn(ValueLatticeElement::get(C1), M.getDataLayout());
+  EXPECT_FALSE(LV1.mergeIn(ValueLatticeElement::get(C1), M.getDataLayout()));
   EXPECT_TRUE(LV1.isConstantRange());
   EXPECT_EQ(LV1.asConstantInteger().getValue().getLimitedValue(), 1U);
 
   // Merge LV1 with different integer constant.
-  LV1.mergeIn(ValueLatticeElement::get(ConstantInt::get(I32Ty, 99)),
-              M.getDataLayout());
+  EXPECT_TRUE(LV1.mergeIn(ValueLatticeElement::get(ConstantInt::get(I32Ty, 99)),
+                          M.getDataLayout()));
+  EXPECT_TRUE(LV1.isConstantRange());
+  EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 1U);
+  EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 100U);
+
+  // Merge constant range with same constant range.
+  EXPECT_FALSE(LV1.mergeIn(LV1, M.getDataLayout()));
   EXPECT_TRUE(LV1.isConstantRange());
   EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 1U);
   EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 100U);
 
   // Merge LV1 in undefined value.
   ValueLatticeElement LV2;
-  LV2.mergeIn(LV1, M.getDataLayout());
+  EXPECT_TRUE(LV2.mergeIn(LV1, M.getDataLayout()));
   EXPECT_TRUE(LV1.isConstantRange());
   EXPECT_EQ(LV1.getConstantRange().getLower().getLimitedValue(), 1U);
   EXPECT_EQ(LV1.getConstantRange().getUpper().getLimitedValue(), 100U);
@@ -71,8 +77,14 @@ TEST_F(ValueLatticeTest, MergeIn) {
   EXPECT_EQ(LV2.getConstantRange().getLower().getLimitedValue(), 1U);
   EXPECT_EQ(LV2.getConstantRange().getUpper().getLimitedValue(), 100U);
 
-  // Merge with overdefined.
-  LV1.mergeIn(ValueLatticeElement::getOverdefined(), M.getDataLayout());
+  // Merge LV1 with overdefined.
+  EXPECT_TRUE(
+      LV1.mergeIn(ValueLatticeElement::getOverdefined(), M.getDataLayout()));
+  EXPECT_TRUE(LV1.isOverdefined());
+
+  // Merge overdefined with overdefined.
+  EXPECT_FALSE(
+      LV1.mergeIn(ValueLatticeElement::getOverdefined(), M.getDataLayout()));
   EXPECT_TRUE(LV1.isOverdefined());
 }
 
@@ -136,8 +148,9 @@ TEST_F(ValueLatticeTest, getCompareFloat) {
   EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OLT, I1Ty, LV2)->isZeroValue());
   EXPECT_TRUE(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV2)->isZeroValue());
 
-  LV1.mergeIn(ValueLatticeElement::get(ConstantFP::get(FloatTy, 2.2)),
-              M.getDataLayout());
+  EXPECT_TRUE(
+      LV1.mergeIn(ValueLatticeElement::get(ConstantFP::get(FloatTy, 2.2)),
+                  M.getDataLayout()));
   EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OEQ, I1Ty, LV2), nullptr);
   EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGE, I1Ty, LV2), nullptr);
   EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLE, I1Ty, LV2), nullptr);
