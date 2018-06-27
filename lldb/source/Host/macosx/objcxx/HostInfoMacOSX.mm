@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(LLDB_DISABLE_PYTHON)
-#include "Plugins/ScriptInterpreter/Python/lldb-python.h"
-#endif
-
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Utility/Args.h"
@@ -76,32 +72,21 @@ bool HostInfoMacOSX::GetOSKernelDescription(std::string &s) {
   return false;
 }
 
-bool HostInfoMacOSX::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                  uint32_t &update) {
-  static uint32_t g_major = 0;
-  static uint32_t g_minor = 0;
-  static uint32_t g_update = 0;
+llvm::VersionTuple HostInfoMacOSX::GetOSVersion() {
+  static llvm::VersionTuple g_version;
 
-  if (g_major == 0) {
+  if (g_version.empty()) {
     @autoreleasepool {
       NSDictionary *version_info = [NSDictionary
           dictionaryWithContentsOfFile:
               @"/System/Library/CoreServices/SystemVersion.plist"];
       NSString *version_value = [version_info objectForKey:@"ProductVersion"];
       const char *version_str = [version_value UTF8String];
-      if (version_str)
-        Args::StringToVersion(llvm::StringRef(version_str), g_major, g_minor,
-                              g_update);
+      g_version.tryParse(version_str);
     }
   }
 
-  if (g_major != 0) {
-    major = g_major;
-    minor = g_minor;
-    update = g_update;
-    return true;
-  }
-  return false;
+  return g_version;
 }
 
 FileSpec HostInfoMacOSX::GetProgramFileSpec() {
@@ -129,8 +114,8 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
 }
 
 bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -187,8 +172,8 @@ bool HostInfoMacOSX::ComputeSupportFileDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!HostInfo::GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -204,39 +189,9 @@ bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
   return true;
 }
 
-bool HostInfoMacOSX::ComputePythonDirectory(FileSpec &file_spec) {
-#ifndef LLDB_DISABLE_PYTHON
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-
-  std::string raw_path = lldb_file_spec.GetPath();
-
-  size_t framework_pos = raw_path.find("LLDB.framework");
-  if (framework_pos != std::string::npos) {
-    framework_pos += strlen("LLDB.framework");
-    raw_path.resize(framework_pos);
-    raw_path.append("/Resources/Python");
-  } else {
-    llvm::SmallString<256> python_version_dir;
-    llvm::raw_svector_ostream os(python_version_dir);
-    os << "/python" << PY_MAJOR_VERSION << '.' << PY_MINOR_VERSION
-       << "/site-packages";
-
-    // We may get our string truncated. Should we protect this with an assert?
-    raw_path.append(python_version_dir.c_str());
-  }
-  file_spec.GetDirectory().SetString(
-      llvm::StringRef(raw_path.c_str(), raw_path.size()));
-  return true;
-#else
-  return false;
-#endif
-}
-
 bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();
@@ -328,8 +283,8 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 // Swift additions.
 
 bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
+  FileSpec lldb_file_spec = GetShlibDir();
+  if (!lldb_file_spec)
     return false;
 
   std::string raw_path = lldb_file_spec.GetPath();

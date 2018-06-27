@@ -217,9 +217,8 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   }
 
   StreamString command;
-  FileSpec darwin_debug_file_spec;
-  if (!HostInfo::GetLLDBPath(ePathTypeSupportExecutableDir,
-                             darwin_debug_file_spec)) {
+  FileSpec darwin_debug_file_spec = HostInfo::GetSupportExeDir();
+  if (!darwin_debug_file_spec) {
     error.SetErrorString("can't locate the 'darwin-debug' executable");
     return error;
   }
@@ -851,14 +850,11 @@ static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info) {
   if (g_use_close_on_exec_flag == eLazyBoolCalculate) {
     g_use_close_on_exec_flag = eLazyBoolNo;
 
-    uint32_t major, minor, update;
-    if (HostInfo::GetOSVersion(major, minor, update)) {
+    llvm::VersionTuple version = HostInfo::GetOSVersion();
+    if (version > llvm::VersionTuple(10, 7)) {
       // Kernel panic if we use the POSIX_SPAWN_CLOEXEC_DEFAULT on 10.7 or
       // earlier
-      if (major > 10 || (major == 10 && minor > 7)) {
-        // Only enable for 10.8 and later OS versions
-        g_use_close_on_exec_flag = eLazyBoolYes;
-      }
+      g_use_close_on_exec_flag = eLazyBoolYes;
     }
   }
 #else
@@ -1334,9 +1330,8 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
-    FileSpec expand_tool_spec;
-    if (!HostInfo::GetLLDBPath(lldb::ePathTypeSupportExecutableDir,
-                               expand_tool_spec)) {
+    FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
+    if (!expand_tool_spec) {
       error.SetErrorString(
           "could not get support executable directory for lldb-argdumper tool");
       return error;

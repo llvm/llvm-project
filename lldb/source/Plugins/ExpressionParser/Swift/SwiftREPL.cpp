@@ -101,9 +101,9 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
                                                    const char *repl_options) {
   const char *bp_name = "repl_main";
 
-  FileSpec repl_executable;
+  FileSpec repl_executable = HostInfo::GetSupportExeDir();
 
-  if (!HostInfo::GetLLDBPath(ePathTypeSupportExecutableDir, repl_executable)) {
+  if (!repl_executable) {
     err.SetErrorString("unable to locate REPL executable");
     return nullptr;
   }
@@ -123,10 +123,9 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   // Use the most generic sub-architecture.
   target_triple.setArch(target_triple.getArch());
   // Override the stub's minimum deployment target to the host os version.
-  uint32_t major, minor, patch;
-  HostInfo::GetOSVersion(major, minor, patch);
+  llvm::VersionTuple version = HostInfo::GetOSVersion();
   os << llvm::Triple::getOSTypeName(target_triple.getOS());
-  os << major << '.' << minor << '.' << patch;
+  os << version.getAsString();
   target_triple.setOSName(os.str());
 
   bool add_dependent_modules = true;

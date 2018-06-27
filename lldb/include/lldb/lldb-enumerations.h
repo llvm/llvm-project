@@ -837,13 +837,13 @@ enum FrameComparison {
 // in code is data.
 //----------------------------------------------------------------------
 enum AddressClass {
-  eAddressClassInvalid,
-  eAddressClassUnknown,
-  eAddressClassCode,
-  eAddressClassCodeAlternateISA,
-  eAddressClassData,
-  eAddressClassDebug,
-  eAddressClassRuntime
+  eInvalid,
+  eUnknown,
+  eCode,
+  eCodeAlternateISA,
+  eData,
+  eDebug,
+  eRuntime
 };
 
 //----------------------------------------------------------------------

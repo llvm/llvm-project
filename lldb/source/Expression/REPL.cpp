@@ -61,10 +61,8 @@ lldb::REPLSP REPL::Create(Status &err, lldb::LanguageType language,
 
 std::string REPL::GetSourcePath() {
   ConstString file_basename = GetSourceFileBasename();
-
-  FileSpec tmpdir_file_spec;
-  if (HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir,
-                            tmpdir_file_spec)) {
+  FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir();
+  if (tmpdir_file_spec) {
     tmpdir_file_spec.GetFilename().SetCString(file_basename.AsCString());
     m_repl_source_path = tmpdir_file_spec.GetPath();
   } else {

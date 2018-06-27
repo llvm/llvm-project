@@ -466,7 +466,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
       lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
       if (bp_loc_sp)
         bp_is_thumb = bp_loc_sp->GetAddress().GetAddressClass() ==
-                      eAddressClassCodeAlternateISA;
+                      AddressClass::eCodeAlternateISA;
     }
     if (bp_is_thumb) {
       trap_opcode = g_thumb_breakpooint_opcode;
@@ -1132,11 +1132,11 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
   if (m_developer_directory.empty()) {
     bool developer_dir_path_valid = false;
     char developer_dir_path[PATH_MAX];
-    FileSpec temp_file_spec;
 
     // Get the lldb framework's file path, and if it exists, truncate some
     // components to only the developer directory path.
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, temp_file_spec)) {
+    FileSpec temp_file_spec = HostInfo::GetShlibDir();
+    if (temp_file_spec) {
       if (temp_file_spec.GetPath(developer_dir_path,
                                  sizeof(developer_dir_path))) {
         // e.g.
@@ -1382,18 +1382,14 @@ static FileSpec GetXcodeContentsPath() {
   return g_xcode_filespec;
 }
 
-bool PlatformDarwin::SDKSupportsModules(SDKType sdk_type, uint32_t major,
-                                        uint32_t minor, uint32_t micro) {
+bool PlatformDarwin::SDKSupportsModules(SDKType sdk_type,
+                                        llvm::VersionTuple version) {
   switch (sdk_type) {
   case SDKType::MacOSX:
-    if (major > 10 || (major == 10 && minor >= 10))
-      return true;
-    break;
+    return version >= llvm::VersionTuple(10, 10);
   case SDKType::iPhoneOS:
   case SDKType::iPhoneSimulator:
-    if (major >= 8)
-      return true;
-    break;
+    return version >= llvm::VersionTuple(8);
   }
 
   return false;
@@ -1415,32 +1411,10 @@ bool PlatformDarwin::SDKSupportsModules(SDKType desired_type,
       return false;
     }
 
-    const size_t major_dot_offset = version_part.find('.');
-    if (major_dot_offset == llvm::StringRef::npos)
+    llvm::VersionTuple version;
+    if (version.tryParse(version_part))
       return false;
-
-    const llvm::StringRef major_version =
-        version_part.slice(0, major_dot_offset);
-    const llvm::StringRef minor_part =
-        version_part.drop_front(major_dot_offset + 1);
-
-    const size_t minor_dot_offset = minor_part.find('.');
-    if (minor_dot_offset == llvm::StringRef::npos)
-      return false;
-
-    const llvm::StringRef minor_version = minor_part.slice(0, minor_dot_offset);
-
-    unsigned int major = 0;
-    unsigned int minor = 0;
-    unsigned int micro = 0;
-
-    if (major_version.getAsInteger(10, major))
-      return false;
-
-    if (minor_version.getAsInteger(10, minor))
-      return false;
-
-    return SDKSupportsModules(desired_type, major, minor, micro);
+    return SDKSupportsModules(desired_type, version);
   }
 
   return false;
@@ -1512,18 +1486,17 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
   sdks_spec.AppendPathComponent("SDKs");
 
   if (sdk_type == SDKType::MacOSX) {
-    uint32_t major = 0;
-    uint32_t minor = 0;
-    uint32_t micro = 0;
+    llvm::VersionTuple version = HostInfo::GetOSVersion();
 
-    if (HostInfo::GetOSVersion(major, minor, micro)) {
-      if (SDKSupportsModules(SDKType::MacOSX, major, minor, micro)) {
+    if (!version.empty()) {
+      if (SDKSupportsModules(SDKType::MacOSX, version)) {
         // We slightly prefer the exact SDK for this machine.  See if it is
         // there.
 
         FileSpec native_sdk_spec = sdks_spec;
         StreamString native_sdk_name;
-        native_sdk_name.Printf("MacOSX%u.%u.sdk", major, minor);
+        native_sdk_name.Printf("MacOSX%u.%u.sdk", version.getMajor(),
+                               version.getMinor().getValueOr(0));
         native_sdk_spec.AppendPathComponent(native_sdk_name.GetString());
 
         if (native_sdk_spec.Exists()) {
@@ -1536,14 +1509,14 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
   return FindSDKInXcodeForModules(sdk_type, sdks_spec);
 }
 
-std::tuple<uint32_t, uint32_t, uint32_t, llvm::StringRef>
+std::tuple<llvm::VersionTuple, llvm::StringRef>
 PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
-  uint32_t major, minor, update;
   llvm::StringRef build;
   llvm::StringRef version_str;
   llvm::StringRef build_str;
   std::tie(version_str, build_str) = dir.split(' ');
-  if (Args::StringToVersion(version_str, major, minor, update) ||
+  llvm::VersionTuple version;
+  if (!version.tryParse(version_str) ||
       build_str.empty()) {
     if (build_str.consume_front("(")) {
       size_t pos = build_str.find(')');
@@ -1551,7 +1524,7 @@ PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
     }
   }
 
-  return std::make_tuple(major, minor, update, build);
+  return std::make_tuple(version, build);
 }
 
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
@@ -1563,7 +1536,6 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   options.insert(options.end(), apple_arguments.begin(), apple_arguments.end());
 
   StreamString minimum_version_option;
-  uint32_t versions[3] = {0, 0, 0};
   bool use_current_os_version = false;
   switch (sdk_type) {
   case SDKType::iPhoneOS:
@@ -1587,9 +1559,9 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     break;
   }
 
-  bool versions_valid = false;
+  llvm::VersionTuple version;
   if (use_current_os_version)
-    versions_valid = GetOSVersion(versions[0], versions[1], versions[2]);
+    version = GetOSVersion();
   else if (target) {
     // Our OS doesn't match our executable so we need to get the min OS version
     // from the object file
@@ -1597,35 +1569,23 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     if (exe_module_sp) {
       ObjectFile *object_file = exe_module_sp->GetObjectFile();
       if (object_file)
-        versions_valid = object_file->GetMinimumOSVersion(versions, 3) > 0;
+        version = object_file->GetMinimumOSVersion();
     }
   }
   // Only add the version-min options if we got a version from somewhere
-  if (versions_valid && versions[0] != UINT32_MAX) {
-    // Make any invalid versions be zero if needed
-    if (versions[1] == UINT32_MAX)
-      versions[1] = 0;
-    if (versions[2] == UINT32_MAX)
-      versions[2] = 0;
-
+  if (!version.empty()) {
     switch (sdk_type) {
     case SDKType::iPhoneOS:
       minimum_version_option.PutCString("-mios-version-min=");
-      minimum_version_option.PutCString(
-          llvm::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString());
+      minimum_version_option.PutCString(version.getAsString());
       break;
     case SDKType::iPhoneSimulator:
       minimum_version_option.PutCString("-mios-simulator-version-min=");
-      minimum_version_option.PutCString(
-          llvm::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString());
+      minimum_version_option.PutCString(version.getAsString());
       break;
     case SDKType::MacOSX:
       minimum_version_option.PutCString("-mmacosx-version-min=");
-      minimum_version_option.PutCString(
-          llvm::VersionTuple(versions[0], versions[1], versions[2])
-              .getAsString());
+      minimum_version_option.PutCString(version.getAsString());
     }
     options.push_back(minimum_version_option.GetString());
   }
@@ -1652,16 +1612,15 @@ ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
   return ConstString(stream.GetString());
 }
 
-bool PlatformDarwin::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                  uint32_t &update, Process *process) {
+llvm::VersionTuple PlatformDarwin::GetOSVersion(Process *process) {
   if (process && strstr(GetPluginName().GetCString(), "-simulator")) {
     lldb_private::ProcessInstanceInfo proc_info;
     if (Host::GetProcessInfo(process->GetID(), proc_info)) {
       const Environment &env = proc_info.GetEnvironment();
 
-      if (Args::StringToVersion(env.lookup("SIMULATOR_RUNTIME_VERSION"), major,
-                                minor, update))
-        return true;
+      llvm::VersionTuple result;
+      if (!result.tryParse(env.lookup("SIMULATOR_RUNTIME_VERSION")))
+        return result;
 
       std::string dyld_root_path = env.lookup("DYLD_ROOT_PATH");
       if (!dyld_root_path.empty()) {
@@ -1670,17 +1629,18 @@ bool PlatformDarwin::GetOSVersion(uint32_t &major, uint32_t &minor,
         std::string product_version;
         if (system_version_plist.GetValueAsString("ProductVersion",
                                                   product_version)) {
-          return Args::StringToVersion(product_version, major, minor, update);
+          if (!result.tryParse(product_version))
+            return result;
         }
       }
     }
     // For simulator platforms, do NOT call back through
     // Platform::GetOSVersion() as it might call Process::GetHostOSVersion()
     // which we don't want as it will be incorrect
-    return false;
+    return llvm::VersionTuple();
   }
 
-  return Platform::GetOSVersion(major, minor, update, process);
+  return Platform::GetOSVersion(process);
 }
 
 lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {

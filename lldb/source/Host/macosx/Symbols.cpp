@@ -76,8 +76,8 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
   if (uuid && uuid->IsValid()) {
     // Try and locate the dSYM file using DebugSymbols first
-    const UInt8 *module_uuid = (const UInt8 *)uuid->GetBytes();
-    if (module_uuid != NULL) {
+    llvm::ArrayRef<uint8_t> module_uuid = uuid->GetBytes();
+    if (module_uuid.size() == 16) {
       CFCReleaser<CFUUIDRef> module_uuid_ref(::CFUUIDCreateWithBytes(
           NULL, module_uuid[0], module_uuid[1], module_uuid[2], module_uuid[3],
           module_uuid[4], module_uuid[5], module_uuid[6], module_uuid[7],

@@ -9,7 +9,6 @@
 
 #include "lldb/Core/Scalar.h"
 
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
@@ -2254,17 +2253,15 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     error.SetErrorString("Invalid c-string value string.");
     return error;
   }
-  bool success = false;
   switch (encoding) {
   case eEncodingInvalid:
     error.SetErrorString("Invalid encoding.");
     break;
 
   case eEncodingUint:
-    if (byte_size <= sizeof(unsigned long long)) {
-      uint64_t uval64 =
-          StringConvert::ToUInt64(value_str, UINT64_MAX, 0, &success);
-      if (!success)
+    if (byte_size <= sizeof(uint64_t)) {
+      uint64_t uval64;
+      if (!llvm::to_integer(value_str, uval64))
         error.SetErrorStringWithFormat(
             "'%s' is not a valid unsigned integer string value", value_str);
       else if (!UIntValueIsValidForSize(uval64, byte_size))
@@ -2300,10 +2297,9 @@ Status Scalar::SetValueFromCString(const char *value_str, Encoding encoding,
     break;
 
   case eEncodingSint:
-    if (byte_size <= sizeof(long long)) {
-      uint64_t sval64 =
-          StringConvert::ToSInt64(value_str, INT64_MAX, 0, &success);
-      if (!success)
+    if (byte_size <= sizeof(int64_t)) {
+      int64_t sval64;
+      if (!llvm::to_integer(value_str, sval64))
         error.SetErrorStringWithFormat(
             "'%s' is not a valid signed integer string value", value_str);
       else if (!SIntValueIsValidForSize(sval64, byte_size))

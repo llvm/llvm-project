@@ -15,6 +15,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
+#include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {
   class StringRef;
@@ -32,30 +33,51 @@ public:
   //------------------------------------------------------------------
   // Constructors and Destructors
   //------------------------------------------------------------------
-  UUID();
-  UUID(const UUID &rhs);
-  UUID(const void *uuid_bytes, uint32_t num_uuid_bytes);
+  UUID() = default;
 
-  ~UUID();
+  /// Creates a UUID from the data pointed to by the bytes argument. No special
+  /// significance is attached to any of the values.
+  static UUID fromData(const void *bytes, uint32_t num_bytes) {
+    if (bytes)
+      return fromData({reinterpret_cast<const uint8_t *>(bytes), num_bytes});
+    return UUID();
+  }
 
-  const UUID &operator=(const UUID &rhs);
+  /// Creates a uuid from the data pointed to by the bytes argument. No special
+  /// significance is attached to any of the values.
+  static UUID fromData(llvm::ArrayRef<uint8_t> bytes) { return UUID(bytes); }
 
-  void Clear();
+  /// Creates a UUID from the data pointed to by the bytes argument. Data
+  /// consisting purely of zero bytes is treated as an invalid UUID.
+  static UUID fromOptionalData(const void *bytes, uint32_t num_bytes) {
+    if (bytes)
+      return fromOptionalData(
+          {reinterpret_cast<const uint8_t *>(bytes), num_bytes});
+    return UUID();
+  }
+
+  /// Creates a UUID from the data pointed to by the bytes argument. Data
+  /// consisting purely of zero bytes is treated as an invalid UUID.
+  static UUID fromOptionalData(llvm::ArrayRef<uint8_t> bytes) {
+    if (llvm::all_of(bytes, [](uint8_t b) { return b == 0; }))
+      return UUID();
+    return UUID(bytes);
+  }
+
+  void Clear() { m_num_uuid_bytes = 0; }
 
   void Dump(Stream *s) const;
 
-  const void *GetBytes() const;
+  llvm::ArrayRef<uint8_t> GetBytes() const {
+    return {m_uuid, m_num_uuid_bytes};
+  }
 
-  size_t GetByteSize() const;
-
-  bool IsValid() const;
-
-  bool SetBytes(const void *uuid_bytes, uint32_t num_uuid_bytes = 16);
+  explicit operator bool() const { return IsValid(); }
+  bool IsValid() const { return m_num_uuid_bytes > 0; }
 
   std::string GetAsString(const char *separator = nullptr) const;
 
   size_t SetFromStringRef(llvm::StringRef str, uint32_t num_uuid_bytes = 16);
-  size_t SetFromCString(const char *c_str, uint32_t num_uuid_bytes = 16);
 
   // Decode as many UUID bytes (up to 16) as possible from the C string "cstr"
   // This is used for auto completion where a partial UUID might have been
@@ -81,11 +103,10 @@ public:
                             uint32_t &bytes_decoded,
                             uint32_t num_uuid_bytes = 16);
 
-protected:
-  //------------------------------------------------------------------
-  // Classes that inherit from UUID can see and modify these
-  //------------------------------------------------------------------
-  uint32_t m_num_uuid_bytes; // Should be 16 or 20
+private:
+  UUID(llvm::ArrayRef<uint8_t> bytes);
+
+  uint32_t m_num_uuid_bytes = 0; // Should be 0, 16 or 20
   ValueType m_uuid;
 };
 

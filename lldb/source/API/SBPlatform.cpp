@@ -330,27 +330,24 @@ const char *SBPlatform::GetHostname() {
 }
 
 uint32_t SBPlatform::GetOSMajorVersion() {
-  uint32_t major, minor, update;
-  PlatformSP platform_sp(GetSP());
-  if (platform_sp && platform_sp->GetOSVersion(major, minor, update))
-    return major;
-  return UINT32_MAX;
+  llvm::VersionTuple version;
+  if (PlatformSP platform_sp = GetSP())
+    version = platform_sp->GetOSVersion();
+  return version.empty() ? UINT32_MAX : version.getMajor();
 }
 
 uint32_t SBPlatform::GetOSMinorVersion() {
-  uint32_t major, minor, update;
-  PlatformSP platform_sp(GetSP());
-  if (platform_sp && platform_sp->GetOSVersion(major, minor, update))
-    return minor;
-  return UINT32_MAX;
+  llvm::VersionTuple version;
+  if (PlatformSP platform_sp = GetSP())
+    version = platform_sp->GetOSVersion();
+  return version.getMinor().getValueOr(UINT32_MAX);
 }
 
 uint32_t SBPlatform::GetOSUpdateVersion() {
-  uint32_t major, minor, update;
-  PlatformSP platform_sp(GetSP());
-  if (platform_sp && platform_sp->GetOSVersion(major, minor, update))
-    return update;
-  return UINT32_MAX;
+  llvm::VersionTuple version;
+  if (PlatformSP platform_sp = GetSP())
+    version = platform_sp->GetOSVersion();
+  return version.getSubminor().getValueOr(UINT32_MAX);
 }
 
 SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {

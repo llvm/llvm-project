@@ -1162,19 +1162,19 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           const lldb::SectionType section_type = section_sp->GetType();
           switch (section_type) {
           case eSectionTypeInvalid:
-            return eAddressClassUnknown;
+            return AddressClass::eUnknown;
 
           case eSectionTypeCode:
             if (m_header.cputype == llvm::MachO::CPU_TYPE_ARM) {
               // For ARM we have a bit in the n_desc field of the symbol that
               // tells us ARM/Thumb which is bit 0x0008.
               if (symbol->GetFlags() & MACHO_NLIST_ARM_SYMBOL_IS_THUMB)
-                return eAddressClassCodeAlternateISA;
+                return AddressClass::eCodeAlternateISA;
             }
-            return eAddressClassCode;
+            return AddressClass::eCode;
 
           case eSectionTypeContainer:
-            return eAddressClassUnknown;
+            return AddressClass::eUnknown;
 
           case eSectionTypeData:
           case eSectionTypeDataCString:
@@ -1188,7 +1188,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDataObjCMessageRefs:
           case eSectionTypeDataObjCCFStrings:
           case eSectionTypeGoSymtab:
-            return eAddressClassData;
+            return AddressClass::eData;
 
           case eSectionTypeDebug:
           case eSectionTypeDWARFDebugAbbrev:
@@ -1215,13 +1215,13 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDWARFAppleObjC:
           case eSectionTypeSwiftModules:
           case eSectionTypeDWARFGNUDebugAltLink:
-            return eAddressClassDebug;
+            return AddressClass::eDebug;
 
           case eSectionTypeEHFrame:
           case eSectionTypeARMexidx:
           case eSectionTypeARMextab:
           case eSectionTypeCompactUnwind:
-            return eAddressClassRuntime;
+            return AddressClass::eRuntime;
 
           case eSectionTypeAbsoluteAddress:
           case eSectionTypeELFSymbolTable:
@@ -1229,7 +1229,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeELFRelocationEntries:
           case eSectionTypeELFDynamicLinkInfo:
           case eSectionTypeOther:
-            return eAddressClassUnknown;
+            return AddressClass::eUnknown;
           }
         }
       }
@@ -1237,9 +1237,9 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
       const SymbolType symbol_type = symbol->GetType();
       switch (symbol_type) {
       case eSymbolTypeAny:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
       case eSymbolTypeAbsolute:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
 
       case eSymbolTypeCode:
       case eSymbolTypeTrampoline:
@@ -1248,64 +1248,64 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           // For ARM we have a bit in the n_desc field of the symbol that tells
           // us ARM/Thumb which is bit 0x0008.
           if (symbol->GetFlags() & MACHO_NLIST_ARM_SYMBOL_IS_THUMB)
-            return eAddressClassCodeAlternateISA;
+            return AddressClass::eCodeAlternateISA;
         }
-        return eAddressClassCode;
+        return AddressClass::eCode;
 
       case eSymbolTypeData:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeRuntime:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeException:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeSourceFile:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeHeaderFile:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeObjectFile:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeCommonBlock:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeBlock:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeLocal:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeParam:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeVariable:
-        return eAddressClassData;
+        return AddressClass::eData;
       case eSymbolTypeVariableType:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeLineEntry:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeLineHeader:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeScopeBegin:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeScopeEnd:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeAdditional:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
       case eSymbolTypeCompiler:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeInstrumentation:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       case eSymbolTypeUndefined:
-        return eAddressClassUnknown;
+        return AddressClass::eUnknown;
       case eSymbolTypeObjCClass:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeObjCMetaClass:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeObjCIVar:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeReExported:
-        return eAddressClassRuntime;
+        return AddressClass::eRuntime;
       case eSymbolTypeASTFile:
-        return eAddressClassDebug;
+        return AddressClass::eDebug;
       }
     }
   }
-  return eAddressClassUnknown;
+  return AddressClass::eUnknown;
 }
 
 Symtab *ObjectFileMachO::GetSymtab() {
@@ -2139,10 +2139,8 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   version_str[6] = '\0';
   if (strcmp(version_str, "dyld_v") == 0) {
     offset = offsetof(struct lldb_copy_dyld_cache_header_v1, uuid);
-    uint8_t uuid_bytes[sizeof(uuid_t)];
-    memcpy(uuid_bytes, dsc_header_data.GetData(&offset, sizeof(uuid_t)),
-           sizeof(uuid_t));
-    dsc_uuid.SetBytes(uuid_bytes);
+    dsc_uuid = UUID::fromOptionalData(
+        dsc_header_data.GetData(&offset, sizeof(uuid_t)), sizeof(uuid_t));
   }
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
   if (log && dsc_uuid.IsValid()) {
@@ -5061,7 +5059,7 @@ bool ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
         if (!memcmp(uuid_bytes, opencl_uuid, 16))
           return false;
 
-        uuid.SetBytes(uuid_bytes);
+        uuid = UUID::fromOptionalData(uuid_bytes, 16);
         return true;
       }
       return false;
@@ -5592,12 +5590,11 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo (addr_t &address, UUID &uuid) {
                   uuid_t raw_uuid;
                   memset (raw_uuid, 0, sizeof (uuid_t));
 
-                  if (m_data.GetU32 (&offset, &type, 1)
-                      && m_data.GetU64 (&offset, &address, 1)
-                      && m_data.CopyData (offset, sizeof (uuid_t), raw_uuid) != 0
-                      && uuid.SetBytes (raw_uuid, sizeof (uuid_t)))
-                  {
-                      return true;
+                  if (m_data.GetU32(&offset, &type, 1) &&
+                      m_data.GetU64(&offset, &address, 1) &&
+                      m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
+                    uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
+                    return true;
                   }
               }
           }
@@ -5749,8 +5746,7 @@ ObjectFile::Strata ObjectFileMachO::CalculateStrata() {
   return eStrataUnknown;
 }
 
-uint32_t ObjectFileMachO::GetVersion(uint32_t *versions,
-                                     uint32_t num_versions) {
+llvm::VersionTuple ObjectFileMachO::GetVersion() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
@@ -5778,23 +5774,13 @@ uint32_t ObjectFileMachO::GetVersion(uint32_t *versions,
     }
 
     if (version_cmd == LC_ID_DYLIB) {
-      if (versions != NULL && num_versions > 0) {
-        if (num_versions > 0)
-          versions[0] = (version & 0xFFFF0000ull) >> 16;
-        if (num_versions > 1)
-          versions[1] = (version & 0x0000FF00ull) >> 8;
-        if (num_versions > 2)
-          versions[2] = (version & 0x000000FFull);
-        // Fill in an remaining version numbers with invalid values
-        for (i = 3; i < num_versions; ++i)
-          versions[i] = UINT32_MAX;
-      }
-      // The LC_ID_DYLIB load command has a version with 3 version numbers in
-      // it, so always return 3
-      return 3;
+      unsigned major = (version & 0xFFFF0000ull) >> 16;
+      unsigned minor = (version & 0x0000FF00ull) >> 8;
+      unsigned subminor = (version & 0x000000FFull);
+      return llvm::VersionTuple(major, minor, subminor);
     }
   }
-  return false;
+  return llvm::VersionTuple();
 }
 
 bool ObjectFileMachO::GetArchitecture(ArchSpec &arch) {
@@ -5871,7 +5857,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
                           + 100); // sharedCacheBaseAddress <mach-o/dyld_images.h>
           }
         }
-        uuid.SetBytes(sharedCacheUUID_address);
+        uuid = UUID::fromOptionalData(sharedCacheUUID_address, sizeof(uuid_t));
       }
     }
   } else {
@@ -5896,7 +5882,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
         dyld_process_info_get_cache (process_info, &sc_info);
         if (sc_info.cacheBaseAddress != 0) {
           base_addr = sc_info.cacheBaseAddress;
-          uuid.SetBytes (sc_info.cacheUUID);
+          uuid = UUID::fromOptionalData(sc_info.cacheUUID, sizeof(uuid_t));
         }
         dyld_process_info_release (process_info);
       }
@@ -5908,12 +5894,10 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
 #endif
 }
 
-uint32_t ObjectFileMachO::GetMinimumOSVersion(uint32_t *versions,
-                                              uint32_t num_versions) {
-  if (m_min_os_versions.empty()) {
+llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
+  if (!m_min_os_version) {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    bool success = false;
-    for (uint32_t i = 0; success == false && i < m_header.ncmds; ++i) {
+    for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t load_cmd_offset = offset;
 
       version_min_command lc;
@@ -5929,35 +5913,21 @@ uint32_t ObjectFileMachO::GetMinimumOSVersion(uint32_t *versions,
           const uint32_t yy = (lc.version >> 8) & 0xffu;
           const uint32_t zz = lc.version & 0xffu;
           if (xxxx) {
-            m_min_os_versions.push_back(xxxx);
-            m_min_os_versions.push_back(yy);
-            m_min_os_versions.push_back(zz);
+            m_min_os_version = llvm::VersionTuple(xxxx, yy, zz);
+            break;
           }
-          success = true;
         }
       }
       offset = load_cmd_offset + lc.cmdsize;
     }
 
-    if (success == false) {
-      // Push an invalid value so we don't keep trying to
-      m_min_os_versions.push_back(UINT32_MAX);
+    if (!m_min_os_version) {
+      // Set version to an empty value so we don't keep trying to
+      m_min_os_version = llvm::VersionTuple();
     }
   }
 
-  if (m_min_os_versions.size() > 1 || m_min_os_versions[0] != UINT32_MAX) {
-    if (versions != NULL && num_versions > 0) {
-      for (size_t i = 0; i < num_versions; ++i) {
-        if (i < m_min_os_versions.size())
-          versions[i] = m_min_os_versions[i];
-        else
-          versions[i] = 0;
-      }
-    }
-    return m_min_os_versions.size();
-  }
-  // Call the superclasses version that will empty out the data
-  return ObjectFile::GetMinimumOSVersion(versions, num_versions);
+  return *m_min_os_version;
 }
 
 uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
@@ -5984,20 +5954,29 @@ uint32_t ObjectFileMachO::GetSDKVersion(uint32_t *versions,
             m_sdk_versions.push_back(xxxx);
             m_sdk_versions.push_back(yy);
             m_sdk_versions.push_back(zz);
+            success = true;
+          } else {
+            GetModule()->ReportWarning(
+                "minimum OS version load command with invalid (0) version found.");
           }
-          success = true;
         }
       }
       offset = load_cmd_offset + lc.cmdsize;
     }
 
     if (success == false) {
-      // Push an invalid value so we don't keep trying to
+      // Push an invalid value so we don't try to find
+      // the version # again on the next call to this
+      // method.
       m_sdk_versions.push_back(UINT32_MAX);
     }
   }
 
-  if (m_sdk_versions.size() > 1 || m_sdk_versions[0] != UINT32_MAX) {
+  // Legitimate version numbers will have 3 entries pushed
+  // on to m_sdk_versions.  If we only have one value, it's
+  // the sentinel value indicating that this object file
+  // does not have a valid minimum os version #.
+  if (m_sdk_versions.size() > 1) {
     if (versions != NULL && num_versions > 0) {
       for (size_t i = 0; i < num_versions; ++i) {
         if (i < m_sdk_versions.size())

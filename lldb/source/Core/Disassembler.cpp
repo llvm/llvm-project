@@ -112,14 +112,15 @@ static void ResolveAddress(const ExecutionContext &exe_ctx, const Address &addr,
     // it to something
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {
-      if (target->GetSectionLoadList().IsEmpty()) {
-        target->GetImages().ResolveFileAddress(addr.GetOffset(), resolved_addr);
-      } else {
-        target->GetSectionLoadList().ResolveLoadAddress(addr.GetOffset(),
-                                                        resolved_addr);
-      }
+      bool is_resolved =
+          target->GetSectionLoadList().IsEmpty() ?
+              target->GetImages().ResolveFileAddress(addr.GetOffset(),
+                                                     resolved_addr) :
+              target->GetSectionLoadList().ResolveLoadAddress(addr.GetOffset(),
+                                                              resolved_addr);
+
       // We weren't able to resolve the address, just treat it as a raw address
-      if (resolved_addr.IsValid())
+      if (is_resolved && resolved_addr.IsValid())
         return;
     }
   }
@@ -676,7 +677,7 @@ Instruction::Instruction(const Address &address, AddressClass addr_class)
 Instruction::~Instruction() = default;
 
 AddressClass Instruction::GetAddressClass() {
-  if (m_address_class == eAddressClassInvalid)
+  if (m_address_class == AddressClass::eInvalid)
     m_address_class = m_address.GetAddressClass();
   return m_address_class;
 }
@@ -1278,7 +1279,7 @@ const InstructionList &Disassembler::GetInstructionList() const {
 //----------------------------------------------------------------------
 
 PseudoInstruction::PseudoInstruction()
-    : Instruction(Address(), eAddressClassUnknown), m_description() {}
+    : Instruction(Address(), AddressClass::eUnknown), m_description() {}
 
 PseudoInstruction::~PseudoInstruction() = default;
 

@@ -100,11 +100,10 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_curr_pid(LLDB_INVALID_PROCESS_ID), m_curr_tid(LLDB_INVALID_THREAD_ID),
       m_curr_tid_run(LLDB_INVALID_THREAD_ID),
       m_num_supported_hardware_watchpoints(0), m_host_arch(), m_process_arch(),
-      m_os_version_major(UINT32_MAX), m_os_version_minor(UINT32_MAX),
-      m_os_version_update(UINT32_MAX), m_os_build(), m_os_kernel(),
-      m_hostname(), m_gdb_server_name(), m_gdb_server_version(UINT32_MAX),
-      m_default_packet_timeout(0), m_max_packet_size(0),
-      m_qSupported_response(), m_supported_async_json_packets_is_valid(false),
+      m_os_build(), m_os_kernel(), m_hostname(), m_gdb_server_name(),
+      m_gdb_server_version(UINT32_MAX), m_default_packet_timeout(0),
+      m_max_packet_size(0), m_qSupported_response(),
+      m_supported_async_json_packets_is_valid(false),
       m_supported_async_json_packets_sp(), m_qXfer_memory_map(),
       m_qXfer_memory_map_loaded(false) {}
 
@@ -323,9 +322,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_qSymbol_requests_done = false;
     m_supports_qModuleInfo = true;
     m_host_arch.Clear();
-    m_os_version_major = UINT32_MAX;
-    m_os_version_minor = UINT32_MAX;
-    m_os_version_update = UINT32_MAX;
+    m_os_version = llvm::VersionTuple();
     m_os_build.clear();
     m_os_kernel.clear();
     m_hostname.clear();
@@ -944,18 +941,9 @@ int GDBRemoteCommunicationClient::SendLaunchEventDataPacket(
   return -1;
 }
 
-bool GDBRemoteCommunicationClient::GetOSVersion(uint32_t &major,
-                                                uint32_t &minor,
-                                                uint32_t &update) {
-  if (GetHostInfo()) {
-    if (m_os_version_major != UINT32_MAX) {
-      major = m_os_version_major;
-      minor = m_os_version_minor;
-      update = m_os_version_update;
-      return true;
-    }
-  }
-  return false;
+llvm::VersionTuple GDBRemoteCommunicationClient::GetOSVersion() {
+  GetHostInfo();
+  return m_os_version;
 }
 
 bool GDBRemoteCommunicationClient::GetOSBuildString(std::string &s) {
@@ -1218,9 +1206,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                                      // "version" key instead of
                                      // "os_version"...
           {
-            Args::StringToVersion(value, m_os_version_major, m_os_version_minor,
-                                  m_os_version_update);
-            if (m_os_version_major != UINT32_MAX)
+            if (!m_os_version.tryParse(value))
               ++num_keys_decoded;
           } else if (name.equals("watchpoint_exceptions_received")) {
             m_watchpoints_trigger_after_instruction =
@@ -3555,7 +3541,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string uuid;
       extractor.GetHexByteString(uuid);
-      module_spec.GetUUID().SetFromCString(uuid.c_str(), uuid.size() / 2);
+      module_spec.GetUUID().SetFromStringRef(uuid, uuid.size() / 2);
     } else if (name == "triple") {
       StringExtractor extractor(value);
       std::string triple;

@@ -1454,21 +1454,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     // Always run using the Host OS triple...
     bool set_triple = false;
     PlatformSP platform_sp(target.GetPlatform());
-    uint32_t major, minor, update;
     if (platform_sp &&
-        !target.GetArchitecture().GetTriple().hasEnvironment() &&
-        platform_sp->GetOSVersion(major, minor, update,
-                                  target.GetProcessSP().get())) {
+        !target.GetArchitecture().GetTriple().hasEnvironment()) {
+      llvm::VersionTuple version = platform_sp->GetOSVersion(
+                                  target.GetProcessSP().get());
       StreamString full_triple_name;
       full_triple_name.PutCString(target.GetArchitecture().GetTriple().str());
-      if (major != UINT32_MAX) {
-        full_triple_name.Printf("%u", major);
-        if (minor != UINT32_MAX) {
-          full_triple_name.Printf(".%u", minor);
-          if (update != UINT32_MAX)
-            full_triple_name.Printf(".%u", update);
-        }
-      }
+      full_triple_name.PutCString(version.getAsString());
       swift_ast_sp->SetTriple(full_triple_name.GetString().data());
       set_triple = true;
     }
@@ -1804,18 +1796,10 @@ bool SwiftASTContext::SetTriple(const char *triple_cstr, Module *module) {
           ObjectFile *objfile = module->GetObjectFile();
           uint32_t versions[3];
           if (objfile) {
-            uint32_t num_versions = objfile->GetMinimumOSVersion(versions, 3);
             StreamString strm;
-            if (num_versions) {
-              for (uint32_t v = 0; v < 3; ++v) {
-                if (v < num_versions) {
-                  if (versions[v] == UINT32_MAX)
-                    versions[v] = 0;
-                } else
-                  versions[v] = 0;
-              }
-              strm.Printf("%s%u.%u.%u", llvm_triple.getOSName().str().c_str(),
-                          versions[0], versions[1], versions[2]);
+            if (llvm::VersionTuple version = objfile->GetMinimumOSVersion()) {
+              strm.PutCString(llvm_triple.getOSName().str());
+              strm.PutCString(version.getAsString());
               llvm_triple.setOSName(strm.GetString());
               triple = llvm_triple.str();
             }
@@ -1850,9 +1834,7 @@ static std::string GetXcodeContentsPath() {
   // First, try based on the current shlib's location
 
   {
-    FileSpec fspec;
-
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, fspec)) {
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
       std::string path_to_shlib = fspec.GetPath();
       size_t pos = path_to_shlib.rfind(substr);
       if (pos != std::string::npos) {
@@ -1897,9 +1879,7 @@ static std::string GetCurrentToolchainPath() {
   const char substr[] = ".xctoolchain/";
 
   {
-    FileSpec fspec;
-
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, fspec)) {
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
       std::string path_to_shlib = fspec.GetPath();
       size_t pos = path_to_shlib.rfind(substr);
       if (pos != std::string::npos) {
@@ -1916,9 +1896,7 @@ static std::string GetCurrentCLToolsPath() {
   const char substr[] = "/CommandLineTools/";
 
   {
-    FileSpec fspec;
-
-    if (HostInfo::GetLLDBPath(ePathTypeLLDBShlibDir, fspec)) {
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
       std::string path_to_shlib = fspec.GetPath();
       size_t pos = path_to_shlib.rfind(substr);
       if (pos != std::string::npos) {
@@ -2127,12 +2105,14 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
 
   // The SDK type is Mac OS X
 
-  uint32_t major = 0;
-  uint32_t minor = 0;
-  uint32_t update = 0;
+  llvm::VersionTuple version = HostInfo::GetOSVersion();
 
-  if (!HostInfo::GetOSVersion(major, minor, update))
+  if (!version)
     return ConstString();
+
+  uint32_t major = version.getMajor();
+  uint32_t minor = version.getMinor().getValueOr(0);
+  uint32_t update = version.getSubminor().getValueOr(0);
 
   // If there are minimum requirements that exceed the current OS, apply those
 
@@ -2216,7 +2196,7 @@ static ConstString GetResourceDir() {
     // First, check if there's something in our bundle
     {
       FileSpec swift_dir_spec;
-      if (HostInfo::GetLLDBPath(ePathTypeSwiftDir, swift_dir_spec)) {
+      if (FileSpec swift_dir_spec = HostInfo::GetSwiftDir()) {
         if (log)
           log->Printf("%s: trying ePathTypeSwiftDir: %s", __FUNCTION__,
                       swift_dir_spec.GetCString());
@@ -2322,8 +2302,7 @@ static ConstString GetResourceDir() {
     // to the lldb build dir.  This looks much different than the install-
     // dir layout that the previous checks would try.
     {
-      FileSpec faux_swift_dir_spec;
-      if (HostInfo::GetLLDBPath(ePathTypeSwiftDir, faux_swift_dir_spec)) {
+      if (FileSpec faux_swift_dir_spec = HostInfo::GetSwiftDir()) {
 // We can't use a C++11 stdlib regex feature here because it
 // doesn't work on Ubuntu 14.04 x86_64.  Once we don't care
 // about supporting that anymore, let's pull the code below

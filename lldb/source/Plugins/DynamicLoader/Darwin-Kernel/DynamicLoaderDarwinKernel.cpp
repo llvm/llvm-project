@@ -8,8 +8,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/SafeMachO.h"
-
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
@@ -368,9 +366,50 @@ lldb::addr_t DynamicLoaderDarwinKernel::SearchForKernelViaExhaustiveSearch(
 }
 
 //----------------------------------------------------------------------
+// Read the mach_header struct out of memory and return it.
+// Returns true if the mach_header was successfully read,
+// Returns false if there was a problem reading the header, or it was not
+// a Mach-O header.
+//----------------------------------------------------------------------
+
+bool
+DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::MachO::mach_header &header) {
+  Status read_error;
+
+  // Read the mach header and see whether it looks like a kernel
+  if (process->DoReadMemory (addr, &header, sizeof(header), read_error) !=
+      sizeof(header))
+    return false;
+
+  const uint32_t magicks[] = { llvm::MachO::MH_MAGIC_64, llvm::MachO::MH_MAGIC, llvm::MachO::MH_CIGAM, llvm::MachO::MH_CIGAM_64};
+
+  bool found_matching_pattern = false;
+  for (size_t i = 0; i < llvm::array_lengthof (magicks); i++)
+    if (::memcmp (&header.magic, &magicks[i], sizeof (uint32_t)) == 0)
+        found_matching_pattern = true;
+
+  if (found_matching_pattern == false)
+      return false;
+
+  if (header.magic == llvm::MachO::MH_CIGAM ||
+      header.magic == llvm::MachO::MH_CIGAM_64) {
+    header.magic = llvm::ByteSwap_32(header.magic);
+    header.cputype = llvm::ByteSwap_32(header.cputype);
+    header.cpusubtype = llvm::ByteSwap_32(header.cpusubtype);
+    header.filetype = llvm::ByteSwap_32(header.filetype);
+    header.ncmds = llvm::ByteSwap_32(header.ncmds);
+    header.sizeofcmds = llvm::ByteSwap_32(header.sizeofcmds);
+    header.flags = llvm::ByteSwap_32(header.flags);
+  }
+
+  return true;
+}
+
+//----------------------------------------------------------------------
 // Given an address in memory, look to see if there is a kernel image at that
-// address. Returns a UUID; if a kernel was not found at that address,
-// UUID.IsValid() will be false.
+// address.
+// Returns a UUID; if a kernel was not found at that address, UUID.IsValid()
+// will be false.
 //----------------------------------------------------------------------
 lldb_private::UUID
 DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
@@ -384,42 +423,14 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
                 "looking for kernel binary at 0x%" PRIx64,
                 addr);
 
-  // First try a quick test -- read the first 4 bytes and see if there is a
-  // valid Mach-O magic field there (the first field of the
-  // mach_header/mach_header_64 struct).
-
-  Status read_error;
-  uint8_t magicbuf[4];
-  if (process->ReadMemoryFromInferior (addr, magicbuf, sizeof (magicbuf), read_error) != sizeof (magicbuf))
-      return UUID();
-
-  const uint32_t magicks[] = { llvm::MachO::MH_MAGIC_64, llvm::MachO::MH_MAGIC, llvm::MachO::MH_CIGAM, llvm::MachO::MH_CIGAM_64};
-
-  bool found_matching_pattern = false;
-  for (size_t i = 0; i < llvm::array_lengthof (magicks); i++)
-    if (::memcmp (magicbuf, &magicks[i], sizeof (magicbuf)) == 0)
-        found_matching_pattern = true;
-
-  if (found_matching_pattern == false)
-      return UUID();
-
-  // Read the mach header and see whether it looks like a kernel
   llvm::MachO::mach_header header;
-  if (process->DoReadMemory(addr, &header, sizeof(header), read_error) !=
-      sizeof(header))
+
+  if (ReadMachHeader (addr, process, header) == false)
     return UUID();
 
-  if (header.magic == llvm::MachO::MH_CIGAM ||
-      header.magic == llvm::MachO::MH_CIGAM_64) {
-    header.magic = llvm::ByteSwap_32(header.magic);
-    header.cputype = llvm::ByteSwap_32(header.cputype);
-    header.cpusubtype = llvm::ByteSwap_32(header.cpusubtype);
-    header.filetype = llvm::ByteSwap_32(header.filetype);
-    header.ncmds = llvm::ByteSwap_32(header.ncmds);
-    header.sizeofcmds = llvm::ByteSwap_32(header.sizeofcmds);
-    header.flags = llvm::ByteSwap_32(header.flags);
-  }
-
+  // First try a quick test -- read the first 4 bytes and see if there is a
+  // valid Mach-O magic field there
+  // (the first field of the mach_header/mach_header_64 struct).
   // A kernel is an executable which does not have the dynamic link object flag
   // set.
   if (header.filetype == llvm::MachO::MH_EXECUTE &&
@@ -639,8 +650,17 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   FileSpec file_spec;
   file_spec.SetFile(m_name.c_str(), false, FileSpec::Style::native);
 
+  llvm::MachO::mach_header mh;
+  size_t size_to_read = 512;
+  if (ReadMachHeader (m_load_address, process, mh)) {
+    if (mh.magic == llvm::MachO::MH_CIGAM || llvm::MachO::MH_MAGIC)
+      size_to_read = sizeof (llvm::MachO::mach_header) + mh.sizeofcmds;
+    if (mh.magic == llvm::MachO::MH_CIGAM_64 || llvm::MachO::MH_MAGIC_64)
+      size_to_read = sizeof (llvm::MachO::mach_header_64) + mh.sizeofcmds;
+  }
+
   ModuleSP memory_module_sp =
-      process->ReadModuleFromMemory(file_spec, m_load_address);
+      process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
 
   if (memory_module_sp.get() == NULL)
     return false;
@@ -1348,7 +1368,7 @@ uint32_t DynamicLoaderDarwinKernel::ReadKextSummaries(
       if (name_data == NULL)
         break;
       image_infos[i].SetName((const char *)name_data);
-      UUID uuid(extractor.GetData(&offset, 16), 16);
+      UUID uuid = UUID::fromOptionalData(extractor.GetData(&offset, 16), 16);
       image_infos[i].SetUUID(uuid);
       image_infos[i].SetLoadAddress(extractor.GetU64(&offset));
       image_infos[i].SetSize(extractor.GetU64(&offset));
@@ -1383,30 +1403,12 @@ bool DynamicLoaderDarwinKernel::ReadAllKextSummaries() {
 // Dump an image info structure to the file handle provided.
 //----------------------------------------------------------------------
 void DynamicLoaderDarwinKernel::KextImageInfo::PutToLog(Log *log) const {
-  if (log == NULL)
-    return;
-  const uint8_t *u = static_cast<const uint8_t *>(m_uuid.GetBytes());
-
   if (m_load_address == LLDB_INVALID_ADDRESS) {
-    if (u) {
-      log->Printf("\tuuid=%2.2X%2.2X%2.2X%2.2X-%2.2X%2.2X-%2.2X%2.2X-%2.2X%2."
-                  "2X-%2.2X%2.2X%2.2X%2.2X%2.2X%2.2X name=\"%s\" (UNLOADED)",
-                  u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7], u[8], u[9],
-                  u[10], u[11], u[12], u[13], u[14], u[15], m_name.c_str());
-    } else
-      log->Printf("\tname=\"%s\" (UNLOADED)", m_name.c_str());
+    LLDB_LOG(log, "uuid={0} name=\"{1}\" (UNLOADED)", m_uuid.GetAsString(),
+             m_name);
   } else {
-    if (u) {
-      log->Printf("\taddr=0x%16.16" PRIx64 " size=0x%16.16" PRIx64
-                  " uuid=%2.2X%2.2X%2.2X%2.2X-%2.2X%2.2X-%2.2X%2.2X-%2.2X%2.2X-"
-                  "%2.2X%2.2X%2.2X%2.2X%2.2X%2.2X name=\"%s\"",
-                  m_load_address, m_size, u[0], u[1], u[2], u[3], u[4], u[5],
-                  u[6], u[7], u[8], u[9], u[10], u[11], u[12], u[13], u[14],
-                  u[15], m_name.c_str());
-    } else {
-      log->Printf("\t[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ") name=\"%s\"",
-                  m_load_address, m_load_address + m_size, m_name.c_str());
-    }
+    LLDB_LOG(log, "addr={0:x+16} size={1:x+16} uuid={2} name=\"{3}\"",
+        m_load_address, m_size, m_uuid.GetAsString(), m_name);
   }
 }
 

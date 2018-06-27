@@ -314,7 +314,7 @@ Status ProcessMachCore::DoLoadCore() {
       if (corefile_identifier.find("UUID=") != std::string::npos) {
           size_t p = corefile_identifier.find("UUID=") + strlen("UUID=");
           std::string uuid_str = corefile_identifier.substr(p, 36);
-          uuid.SetFromCString(uuid_str.c_str());
+          uuid.SetFromStringRef(uuid_str);
       }
       if (corefile_identifier.find("stext=") != std::string::npos) {
           size_t p = corefile_identifier.find("stext=") + strlen("stext=");

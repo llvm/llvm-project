@@ -42,8 +42,7 @@ size_t HostInfoWindows::GetPageSize() {
   return systemInfo.dwPageSize;
 }
 
-bool HostInfoWindows::GetOSVersion(uint32_t &major, uint32_t &minor,
-                                   uint32_t &update) {
+llvm::VersionTuple HostInfoWindows::GetOSVersion() {
   OSVERSIONINFOEX info;
 
   ZeroMemory(&info, sizeof(OSVERSIONINFOEX));
@@ -54,26 +53,22 @@ bool HostInfoWindows::GetOSVersion(uint32_t &major, uint32_t &minor,
   // in favor of the new Windows Version Helper APIs.  Since we don't specify a
   // minimum SDK version, it's easier to simply disable the warning rather than
   // try to support both APIs.
-  if (GetVersionEx((LPOSVERSIONINFO)&info) == 0) {
-    return false;
-  }
+  if (GetVersionEx((LPOSVERSIONINFO)&info) == 0)
+    return llvm::VersionTuple();
 #pragma warning(pop)
 
-  major = info.dwMajorVersion;
-  minor = info.dwMinorVersion;
-  update = info.wServicePackMajor;
-
-  return true;
+  return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion,
+                            info.wServicePackMajor);
 }
 
 bool HostInfoWindows::GetOSBuildString(std::string &s) {
   s.clear();
-  uint32_t major, minor, update;
-  if (!GetOSVersion(major, minor, update))
+  llvm::VersionTuple version = GetOSVersion();
+  if (version.empty())
     return false;
 
   llvm::raw_string_ostream stream(s);
-  stream << "Windows NT " << major << "." << minor << "." << update;
+  stream << "Windows NT " << version.getAsString();
   return true;
 }
 
@@ -106,18 +101,6 @@ FileSpec HostInfoWindows::GetDefaultShell() {
   std::string shell;
   GetEnvironmentVar("ComSpec", shell);
   return FileSpec(shell, false);
-}
-
-bool HostInfoWindows::ComputePythonDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-  llvm::SmallString<64> path(lldb_file_spec.GetDirectory().AsCString());
-  llvm::sys::path::remove_filename(path);
-  llvm::sys::path::append(path, "lib", "site-packages");
-  std::replace(path.begin(), path.end(), '\\', '/');
-  file_spec.GetDirectory().SetString(path.c_str());
-  return true;
 }
 
 bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,

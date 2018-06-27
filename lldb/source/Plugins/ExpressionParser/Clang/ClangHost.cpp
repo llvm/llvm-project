@@ -115,10 +115,9 @@ bool lldb_private::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
 }
 
 static bool ComputeClangDirectory(FileSpec &file_spec) {
-  FileSpec lldb_file_spec;
-  if (!HostInfo::GetLLDBPath(lldb::ePathTypeLLDBShlibDir, lldb_file_spec))
-    return false;
-  return ComputeClangDirectory(lldb_file_spec, file_spec, true);
+  if (FileSpec lldb_file_spec = HostInfo::GetShlibDir())
+    return ComputeClangDirectory(lldb_file_spec, file_spec, true);
+  return false;
 }
 #else  // __APPLE__
 

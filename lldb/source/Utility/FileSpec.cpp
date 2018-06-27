@@ -57,10 +57,6 @@ char GetPreferredPathSeparator(FileSpec::Style style) {
   return GetPathSeparators(style)[0];
 }
 
-bool IsPathSeparator(char value, FileSpec::Style style) {
-  return value == '/' || (!PathStyleIsPosix(style) && value == '\\');
-}
-
 void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
   if (PathStyleIsPosix(style))
     return;
@@ -646,91 +642,28 @@ FileSpec::CopyByAppendingPathComponent(llvm::StringRef component) const {
 }
 
 FileSpec FileSpec::CopyByRemovingLastPathComponent() const {
-  // CLEANUP: Use StringRef for string handling.
-  const bool resolve = false;
-  if (m_filename.IsEmpty() && m_directory.IsEmpty())
-    return FileSpec("", resolve);
-  if (m_directory.IsEmpty())
-    return FileSpec("", resolve);
-  if (m_filename.IsEmpty()) {
-    const char *dir_cstr = m_directory.GetCString();
-    const char *last_slash_ptr = ::strrchr(dir_cstr, '/');
-
-    // check for obvious cases before doing the full thing
-    if (!last_slash_ptr)
-      return FileSpec("", resolve);
-    if (last_slash_ptr == dir_cstr)
-      return FileSpec("/", resolve);
-
-    size_t last_slash_pos = last_slash_ptr - dir_cstr + 1;
-    ConstString new_path(dir_cstr, last_slash_pos);
-    return FileSpec(new_path.GetCString(), resolve);
-  } else
-    return FileSpec(m_directory.GetCString(), resolve);
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  if (llvm::sys::path::has_parent_path(current_path, m_style))
+    return FileSpec(llvm::sys::path::parent_path(current_path, m_style), false,
+                    m_style);
+  return *this;
 }
 
 ConstString FileSpec::GetLastPathComponent() const {
-  // CLEANUP: Use StringRef for string handling.
-  if (m_filename)
-    return m_filename;
-  if (m_directory) {
-    const char *dir_cstr = m_directory.GetCString();
-    const char *last_slash_ptr = ::strrchr(dir_cstr, '/');
-    if (last_slash_ptr == NULL)
-      return m_directory;
-    if (last_slash_ptr == dir_cstr) {
-      if (last_slash_ptr[1] == 0)
-        return ConstString(last_slash_ptr);
-      else
-        return ConstString(last_slash_ptr + 1);
-    }
-    if (last_slash_ptr[1] != 0)
-      return ConstString(last_slash_ptr + 1);
-    const char *penultimate_slash_ptr = last_slash_ptr;
-    while (*penultimate_slash_ptr) {
-      --penultimate_slash_ptr;
-      if (penultimate_slash_ptr == dir_cstr)
-        break;
-      if (*penultimate_slash_ptr == '/')
-        break;
-    }
-    ConstString result(penultimate_slash_ptr + 1,
-                       last_slash_ptr - penultimate_slash_ptr);
-    return result;
-  }
-  return ConstString();
-}
-
-static std::string
-join_path_components(FileSpec::Style style,
-                     const std::vector<llvm::StringRef> components) {
-  std::string result;
-  for (size_t i = 0; i < components.size(); ++i) {
-    if (components[i].empty())
-      continue;
-    result += components[i];
-    if (i != components.size() - 1 &&
-        !IsPathSeparator(components[i].back(), style))
-      result += GetPreferredPathSeparator(style);
-  }
-
-  return result;
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  return ConstString(llvm::sys::path::filename(current_path, m_style));
 }
 
 void FileSpec::PrependPathComponent(llvm::StringRef component) {
-  if (component.empty())
-    return;
-
-  const bool resolve = false;
-  if (m_filename.IsEmpty() && m_directory.IsEmpty()) {
-    SetFile(component, resolve);
-    return;
-  }
-
-  std::string result =
-      join_path_components(m_style, {component, m_directory.GetStringRef(),
-                                     m_filename.GetStringRef()});
-  SetFile(result, resolve);
+  llvm::SmallString<64> new_path(component);
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  llvm::sys::path::append(new_path,
+                          llvm::sys::path::begin(current_path, m_style),
+                          llvm::sys::path::end(current_path), m_style);
+  SetFile(new_path, false, m_style);
 }
 
 void FileSpec::PrependPathComponent(const FileSpec &new_path) {
@@ -738,17 +671,10 @@ void FileSpec::PrependPathComponent(const FileSpec &new_path) {
 }
 
 void FileSpec::AppendPathComponent(llvm::StringRef component) {
-  if (component.empty())
-    return;
-
-  component = component.drop_while(
-      [this](char c) { return IsPathSeparator(c, m_style); });
-
-  std::string result =
-      join_path_components(m_style, {m_directory.GetStringRef(),
-                                     m_filename.GetStringRef(), component});
-
-  SetFile(result, false);
+  llvm::SmallString<64> current_path;
+  GetPath(current_path, false);
+  llvm::sys::path::append(current_path, m_style, component);
+  SetFile(current_path, false, m_style);
 }
 
 void FileSpec::AppendPathComponent(const FileSpec &new_path) {

@@ -351,7 +351,7 @@ addr_t Address::GetOpcodeLoadAddress(Target *target,
                                      AddressClass addr_class) const {
   addr_t code_addr = GetLoadAddress(target);
   if (code_addr != LLDB_INVALID_ADDRESS) {
-    if (addr_class == eAddressClassInvalid)
+    if (addr_class == AddressClass::eInvalid)
       addr_class = GetAddressClass();
     code_addr = target->GetOpcodeLoadAddress(code_addr, addr_class);
   }
@@ -363,7 +363,7 @@ bool Address::SetOpcodeLoadAddress(lldb::addr_t load_addr, Target *target,
                                    bool allow_section_end) {
   if (SetLoadAddress(load_addr, target, allow_section_end)) {
     if (target) {
-      if (addr_class == eAddressClassInvalid)
+      if (addr_class == AddressClass::eInvalid)
         addr_class = GetAddressClass();
       m_offset = target->GetOpcodeLoadAddress(m_offset, addr_class);
     }
@@ -438,7 +438,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     /*
      * MIPS:
      * Display address in compressed form for MIPS16 or microMIPS
-     * if the address belongs to eAddressClassCodeAlternateISA.
+     * if the address belongs to AddressClass::eCodeAlternateISA.
     */
     if (target) {
       const llvm::Triple::ArchType llvm_arch =
@@ -992,7 +992,7 @@ AddressClass Address::GetAddressClass() const {
       return obj_file->GetAddressClass(GetFileAddress());
     }
   }
-  return eAddressClassUnknown;
+  return AddressClass::eUnknown;
 }
 
 bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,

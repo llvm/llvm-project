@@ -484,11 +484,10 @@ bool ExpressionSourceCode::GetText(
       auto arch_spec = platform->GetSystemArchitecture();
       auto triple = arch_spec.GetTriple();
       if (triple.isOSDarwin()) {
-        uint32_t major, minor, patch;
-        platform->GetOSVersion(major, minor, patch,
+        llvm::VersionTuple version = platform->GetOSVersion(
                                target->GetProcessSP().get());
         os_vers << getAvailabilityName(triple.getOS()) << " ";
-        os_vers << major << "." << minor << "." << patch;
+        os_vers << version.getAsString();
       }
       SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
                                           language_flags, options, generic_info,

@@ -44,10 +44,8 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
   if (platform_sp) {
     interpreter.GetDebugger().GetPlatformList().Append(platform_sp,
                                                        make_selected);
-    if (m_os_version_major != UINT32_MAX) {
-      platform_sp->SetOSVersion(m_os_version_major, m_os_version_minor,
-                                m_os_version_update);
-    }
+    if (!m_os_version.empty())
+      platform_sp->SetOSVersion(m_os_version);
 
     if (m_sdk_sysroot)
       platform_sp->SetSDKRootDirectory(m_sdk_sysroot);
@@ -64,9 +62,7 @@ void OptionGroupPlatform::OptionParsingStarting(
   m_platform_name.clear();
   m_sdk_sysroot.Clear();
   m_sdk_build.Clear();
-  m_os_version_major = UINT32_MAX;
-  m_os_version_minor = UINT32_MAX;
-  m_os_version_update = UINT32_MAX;
+  m_os_version = llvm::VersionTuple();
 }
 
 static OptionDefinition g_option_table[] = {
@@ -108,10 +104,9 @@ OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
     break;
 
   case 'v':
-    if (!Args::StringToVersion(option_arg, m_os_version_major,
-                               m_os_version_minor, m_os_version_update))
-      error.SetErrorStringWithFormat("invalid version string '%s'",
-                                     option_arg.str().c_str());
+    if (m_os_version.tryParse(option_arg))
+      error.SetErrorStringWithFormatv("invalid version string '{0}'",
+                                      option_arg);
     break;
 
   case 'b':
@@ -143,17 +138,8 @@ bool OptionGroupPlatform::PlatformMatches(
     if (m_sdk_sysroot && m_sdk_sysroot != platform_sp->GetSDKRootDirectory())
       return false;
 
-    if (m_os_version_major != UINT32_MAX) {
-      uint32_t major, minor, update;
-      if (platform_sp->GetOSVersion(major, minor, update)) {
-        if (m_os_version_major != major)
-          return false;
-        if (m_os_version_minor != minor)
-          return false;
-        if (m_os_version_update != update)
-          return false;
-      }
-    }
+    if (!m_os_version.empty() && m_os_version != platform_sp->GetOSVersion())
+      return false;
     return true;
   }
   return false;

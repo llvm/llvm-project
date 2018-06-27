@@ -217,8 +217,7 @@ public:
   void PrefetchModuleSpecs(llvm::ArrayRef<FileSpec> module_file_specs,
                            const llvm::Triple &triple) override;
 
-  bool GetHostOSVersion(uint32_t &major, uint32_t &minor,
-                        uint32_t &update) override;
+  llvm::VersionTuple GetHostOSVersion() override;
 
   size_t LoadModules(LoadedModuleInfoList &module_list) override;
 

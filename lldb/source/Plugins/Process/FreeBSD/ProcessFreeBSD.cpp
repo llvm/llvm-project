@@ -661,13 +661,13 @@ ProcessFreeBSD::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
     lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
-    AddressClass addr_class = eAddressClassUnknown;
+    AddressClass addr_class = AddressClass::eUnknown;
 
     if (bp_loc_sp)
       addr_class = bp_loc_sp->GetAddress().GetAddressClass();
 
-    if (addr_class == eAddressClassCodeAlternateISA ||
-        (addr_class == eAddressClassUnknown &&
+    if (addr_class == AddressClass::eCodeAlternateISA ||
+        (addr_class == AddressClass::eUnknown &&
          bp_loc_sp->GetAddress().GetOffset() & 1)) {
       opcode = g_thumb_breakpoint_opcode;
       opcode_size = sizeof(g_thumb_breakpoint_opcode);

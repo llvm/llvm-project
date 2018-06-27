@@ -266,7 +266,7 @@ public:
 
   bool GetDefaultThreadId(lldb::tid_t &tid);
 
-  bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
+  llvm::VersionTuple GetOSVersion();
 
   bool GetOSBuildString(std::string &s);
 
@@ -573,9 +573,7 @@ protected:
 
   ArchSpec m_host_arch;
   ArchSpec m_process_arch;
-  uint32_t m_os_version_major;
-  uint32_t m_os_version_minor;
-  uint32_t m_os_version_update;
+  llvm::VersionTuple m_os_version;
   std::string m_os_build;
   std::string m_os_kernel;
   std::string m_hostname;
