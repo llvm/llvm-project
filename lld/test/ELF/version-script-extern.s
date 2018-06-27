@@ -68,8 +68,8 @@
 # DSO-NEXT:  ]
 # DSO-NEXT:  Version symbols {
 # DSO-NEXT:    Section Name: .gnu.version
-# DSO-NEXT:    Address: 0x2BA
-# DSO-NEXT:    Offset: 0x2BA
+# DSO-NEXT:    Address: 0x258
+# DSO-NEXT:    Offset: 0x258
 # DSO-NEXT:    Link: 1
 # DSO-NEXT:    Symbols [
 # DSO-NEXT:      Symbol {

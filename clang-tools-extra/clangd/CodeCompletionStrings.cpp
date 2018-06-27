@@ -80,8 +80,16 @@ std::string getDocComment(const ASTContext &Ctx,
   if (Result.Kind != CodeCompletionResult::RK_Declaration)
     return "";
   auto *Decl = Result.getDeclaration();
-  if (!Decl || !canRequestComment(Ctx, *Decl, CommentsFromHeaders))
+  if (!Decl || llvm::isa<NamespaceDecl>(Decl)) {
+    // Namespaces often have too many redecls for any particular redecl comment
+    // to be useful. Moreover, we often confuse file headers or generated
+    // comments with namespace comments. Therefore we choose to just ignore
+    // the comments for namespaces.
     return "";
+  }
+  if (!canRequestComment(Ctx, *Decl, CommentsFromHeaders))
+    return "";
+
   const RawComment *RC = getCompletionComment(Ctx, Decl);
   if (!RC)
     return "";

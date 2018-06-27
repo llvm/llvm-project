@@ -15,11 +15,11 @@ nop
 
 # CHECK: Idx
 # CHECK-NEXT: 0
-# CHECK-NEXT: 1 .dynsym
-# CHECK-NEXT: 2 .dynstr
-# CHECK-NEXT: 3 .text
-# CHECK-NEXT: 4 foo
-# CHECK-NEXT: 5 .hash
+# CHECK-NEXT: 1 .text
+# CHECK-NEXT: 2 .dynsym
+# CHECK-NEXT: 3 .hash
+# CHECK-NEXT: 4 .dynstr
+# CHECK-NEXT: 5 foo
 # CHECK-NEXT: 6 .dynamic
 # CHECK-NEXT: 7 .comment
 # CHECK-NEXT: 8 .symtab
