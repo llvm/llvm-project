@@ -40,6 +40,10 @@ cl::opt<bool> Quiet("debugify-quiet",
 
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
+uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
+  return Ty->isSized() ? M.getDataLayout().getTypeAllocSizeInBits(Ty) : 0;
+}
+
 bool isFunctionSkipped(Function &F) {
   return F.isDeclaration() || !F.hasExactDefinition();
 }
@@ -71,8 +75,7 @@ bool applyDebugifyMetadata(Module &M,
   // Get a DIType which corresponds to Ty.
   DenseMap<uint64_t, DIType *> TypeCache;
   auto getCachedDIType = [&](Type *Ty) -> DIType * {
-    uint64_t Size =
-        Ty->isSized() ? M.getDataLayout().getTypeAllocSizeInBits(Ty) : 0;
+    uint64_t Size = getAllocSizeInBits(M, Ty);
     DIType *&DTy = TypeCache[Size];
     if (!DTy) {
       std::string Name = "ty" + utostr(Size);
@@ -163,6 +166,39 @@ bool applyDebugifyMetadata(Module &M,
   return true;
 }
 
+/// Return true if a mis-sized diagnostic is issued for \p DVI.
+bool diagnoseMisSizedDbgValue(Module &M, DbgValueInst *DVI) {
+  // The size of a dbg.value's value operand should match the size of the
+  // variable it corresponds to.
+  //
+  // TODO: This, along with a check for non-null value operands, should be
+  // promoted to verifier failures.
+  Value *V = DVI->getValue();
+  if (!V)
+    return false;
+
+  // For now, don't try to interpret anything more complicated than an empty
+  // DIExpression. Eventually we should try to handle OP_deref and fragments.
+  if (DVI->getExpression()->getNumElements())
+    return false;
+
+  Type *Ty = V->getType();
+  uint64_t ValueOperandSize = getAllocSizeInBits(M, Ty);
+  Optional<uint64_t> DbgVarSize = DVI->getFragmentSizeInBits();
+  if (!ValueOperandSize || !DbgVarSize)
+    return false;
+
+  bool HasBadSize = Ty->isIntegerTy() ? (ValueOperandSize < *DbgVarSize)
+                                      : (ValueOperandSize != *DbgVarSize);
+  if (HasBadSize) {
+    dbg() << "ERROR: dbg.value operand has size " << ValueOperandSize
+          << ", but its variable has size " << *DbgVarSize << ": ";
+    DVI->print(dbg());
+    dbg() << "\n";
+  }
+  return HasBadSize;
+}
+
 bool checkDebugifyMetadata(Module &M,
                            iterator_range<Module::iterator> Functions,
                            StringRef NameOfWrappedPass, StringRef Banner,
@@ -208,7 +244,7 @@ bool checkDebugifyMetadata(Module &M,
       HasErrors = true;
     }
 
-    // Find missing variables.
+    // Find missing variables and mis-sized debug values.
     for (Instruction &I : instructions(F)) {
       auto *DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
@@ -217,7 +253,10 @@ bool checkDebugifyMetadata(Module &M,
       unsigned Var = ~0U;
       (void)to_integer(DVI->getVariable()->getName(), Var, 10);
       assert(Var <= OriginalNumVars && "Unexpected name for DILocalVariable");
-      MissingVars.reset(Var - 1);
+      bool HasBadSize = diagnoseMisSizedDbgValue(M, DVI);
+      if (!HasBadSize)
+        MissingVars.reset(Var - 1);
+      HasErrors |= HasBadSize;
     }
   }
 

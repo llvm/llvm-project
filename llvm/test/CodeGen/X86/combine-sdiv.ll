@@ -56,12 +56,17 @@ define <4 x i32> @combine_vec_sdiv_by_negone(<4 x i32> %x) {
 define i32 @combine_sdiv_by_minsigned(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_by_minsigned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    shrl %eax
-; CHECK-NEXT:    leal (%rax,%rdi), %eax
-; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    movslq %edi, %rcx
+; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    shlq $31, %rax
+; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    sarl $30, %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
   %1 = sdiv i32 %x, -2147483648
   ret i32 %1
@@ -70,21 +75,62 @@ define i32 @combine_sdiv_by_minsigned(i32 %x) {
 define <4 x i32> @combine_vec_sdiv_by_minsigned(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sdiv_by_minsigned:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    psrld $1, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; SSE-NEXT:    pmuldq %xmm1, %xmm2
+; SSE-NEXT:    pmuldq %xmm0, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; SSE-NEXT:    psubd %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psrld $31, %xmm0
+; SSE-NEXT:    psrad $30, %xmm1
 ; SSE-NEXT:    paddd %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_sdiv_by_minsigned:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX-NEXT:    vpsrld $1, %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: combine_vec_sdiv_by_minsigned:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
+; AVX1-NEXT:    vpmuldq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmuldq %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpsrld $31, %xmm0, %xmm1
+; AVX1-NEXT:    vpsrad $30, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2ORLATER-LABEL: combine_vec_sdiv_by_minsigned:
+; AVX2ORLATER:       # %bb.0:
+; AVX2ORLATER-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; AVX2ORLATER-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX2ORLATER-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; AVX2ORLATER-NEXT:    vpmuldq %xmm2, %xmm3, %xmm2
+; AVX2ORLATER-NEXT:    vpmuldq %xmm1, %xmm0, %xmm1
+; AVX2ORLATER-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; AVX2ORLATER-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; AVX2ORLATER-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX2ORLATER-NEXT:    vpsrld $31, %xmm0, %xmm1
+; AVX2ORLATER-NEXT:    vpsrad $30, %xmm0, %xmm0
+; AVX2ORLATER-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2ORLATER-NEXT:    retq
+;
+; XOP-LABEL: combine_vec_sdiv_by_minsigned:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
+; XOP-NEXT:    vpmuldq %xmm2, %xmm1, %xmm1
+; XOP-NEXT:    vpmuldq %xmm2, %xmm0, %xmm2
+; XOP-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; XOP-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    vpsrld $31, %xmm0, %xmm1
+; XOP-NEXT:    vpsrad $30, %xmm0, %xmm0
+; XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
   %1 = sdiv <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   ret <4 x i32> %1
 }

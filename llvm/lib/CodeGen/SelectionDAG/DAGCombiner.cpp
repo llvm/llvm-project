@@ -3053,6 +3053,8 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
       return false;
     if (C->getAPIntValue().isAllOnesValue())
       return false;
+    if (C->getAPIntValue().isMinSignedValue())
+      return false;
 
     if (C->getAPIntValue().isPowerOf2())
       return true;

@@ -45,9 +45,11 @@ public:
   virtual void postExecute(const InstRef &IR) {}
 
   /// The primary action that this stage performs.
+  /// Returning false prevents successor stages from having their 'execute'
+  /// routine called.
   virtual bool execute(InstRef &IR) = 0;
 
-  /// Add a listener to receive callbaks during the execution of this stage.
+  /// Add a listener to receive callbacks during the execution of this stage.
   void addListener(HWEventListener *Listener);
 };
 

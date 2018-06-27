@@ -23,7 +23,7 @@ public:
   ConstString GetPluginName() override;
   uint32_t GetPluginVersion() override;
 
-  void OverrideStopInfo(Thread &thread) override {}
+  void OverrideStopInfo(Thread &thread) const override {}
 
   //------------------------------------------------------------------
   /// This method compares current address with current function's
