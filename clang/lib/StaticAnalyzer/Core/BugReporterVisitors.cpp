@@ -264,7 +264,7 @@ public:
                                                  BugReport &BR) override {
 
     const LocationContext *Ctx = N->getLocationContext();
-    const StackFrameContext *SCtx = Ctx->getCurrentStackFrame();
+    const StackFrameContext *SCtx = Ctx->getStackFrame();
     ProgramStateRef State = N->getState();
     auto CallExitLoc = N->getLocationAs<CallExitBegin>();
 
@@ -319,7 +319,7 @@ private:
   /// The calculation is cached in FramesModifyingRegion.
   bool isRegionOfInterestModifiedInFrame(const ExplodedNode *N) {
     const LocationContext *Ctx = N->getLocationContext();
-    const StackFrameContext *SCtx = Ctx->getCurrentStackFrame();
+    const StackFrameContext *SCtx = Ctx->getStackFrame();
     if (!FramesModifyingCalculated.count(SCtx))
       findModifyingFrames(N);
     return FramesModifyingRegion.count(SCtx);
@@ -333,7 +333,7 @@ private:
     ProgramStateRef LastReturnState = N->getState();
     SVal ValueAtReturn = LastReturnState->getSVal(RegionOfInterest);
     const LocationContext *Ctx = N->getLocationContext();
-    const StackFrameContext *OriginalSCtx = Ctx->getCurrentStackFrame();
+    const StackFrameContext *OriginalSCtx = Ctx->getStackFrame();
 
     do {
       ProgramStateRef State = N->getState();
@@ -344,16 +344,15 @@ private:
       }
 
       FramesModifyingCalculated.insert(
-        N->getLocationContext()->getCurrentStackFrame());
+        N->getLocationContext()->getStackFrame());
 
       if (wasRegionOfInterestModifiedAt(N, LastReturnState, ValueAtReturn)) {
-        const StackFrameContext *SCtx =
-            N->getLocationContext()->getCurrentStackFrame();
+        const StackFrameContext *SCtx = N->getStackFrame();
         while (!SCtx->inTopFrame()) {
           auto p = FramesModifyingRegion.insert(SCtx);
           if (!p.second)
             break; // Frame and all its parents already inserted.
-          SCtx = SCtx->getParent()->getCurrentStackFrame();
+          SCtx = SCtx->getParent()->getStackFrame();
         }
       }
 
@@ -769,8 +768,7 @@ public:
       // If we have counter-suppression enabled, make sure we keep visiting
       // future nodes. We want to emit a path note as well, in case
       // the report is resurrected as valid later on.
-      ExprEngine &Eng = BRC.getBugReporter().getEngine();
-      AnalyzerOptions &Options = Eng.getAnalysisManager().options;
+      AnalyzerOptions &Options = BRC.getAnalyzerOptions();
       if (EnableNullFPSuppression && hasCounterSuppression(Options))
         Mode = MaybeUnsuppress;
 
@@ -808,8 +806,7 @@ public:
   visitNodeMaybeUnsuppress(const ExplodedNode *N, const ExplodedNode *PrevN,
                            BugReporterContext &BRC, BugReport &BR) {
 #ifndef NDEBUG
-    ExprEngine &Eng = BRC.getBugReporter().getEngine();
-    AnalyzerOptions &Options = Eng.getAnalysisManager().options;
+    AnalyzerOptions &Options = BRC.getAnalyzerOptions();
     assert(hasCounterSuppression(Options));
 #endif
 
@@ -915,7 +912,7 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
 
   assert(VR->getDecl()->hasLocalStorage());
   const LocationContext *LCtx = N->getLocationContext();
-  return FrameSpace->getStackFrame() == LCtx->getCurrentStackFrame();
+  return FrameSpace->getStackFrame() == LCtx->getStackFrame();
 }
 
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
@@ -1756,11 +1753,8 @@ ConditionBRVisitor::VisitNodeImpl(const ExplodedNode *N,
   }
 
   if (Optional<PostStmt> PS = progPoint.getAs<PostStmt>()) {
-    // FIXME: Assuming that BugReporter is a GRBugReporter is a layering
-    // violation.
     const std::pair<const ProgramPointTag *, const ProgramPointTag *> &tags =
-      cast<GRBugReporter>(BRC.getBugReporter()).
-        getEngine().geteagerlyAssumeBinOpBifurcationTags();
+        ExprEngine::geteagerlyAssumeBinOpBifurcationTags();
 
     const ProgramPointTag *tag = PS->getTag();
     if (tag == tags.first)
@@ -2152,8 +2146,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
     BugReporterContext &BRC, const ExplodedNode *N, BugReport &BR) {
   // Here we suppress false positives coming from system headers. This list is
   // based on known issues.
-  ExprEngine &Eng = BRC.getBugReporter().getEngine();
-  AnalyzerOptions &Options = Eng.getAnalysisManager().options;
+  AnalyzerOptions &Options = BRC.getAnalyzerOptions();
   const Decl *D = N->getLocationContext()->getDecl();
 
   if (AnalysisDeclContext::isInStdNamespace(D)) {
@@ -2316,7 +2309,7 @@ CXXSelfAssignmentBRVisitor::VisitNode(const ExplodedNode *Succ,
   const auto Param =
       State->getSVal(State->getRegion(Met->getParamDecl(0), LCtx));
   const auto This =
-      State->getSVal(SVB.getCXXThis(Met, LCtx->getCurrentStackFrame()));
+      State->getSVal(SVB.getCXXThis(Met, LCtx->getStackFrame()));
 
   auto L = PathDiagnosticLocation::create(Met, BRC.getSourceManager());
 

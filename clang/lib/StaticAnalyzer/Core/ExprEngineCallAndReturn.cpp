@@ -74,15 +74,14 @@ static std::pair<const Stmt*,
                  const CFGBlock*> getLastStmt(const ExplodedNode *Node) {
   const Stmt *S = nullptr;
   const CFGBlock *Blk = nullptr;
-  const StackFrameContext *SF =
-          Node->getLocation().getLocationContext()->getCurrentStackFrame();
+  const StackFrameContext *SF = Node->getStackFrame();
 
   // Back up through the ExplodedGraph until we reach a statement node in this
   // stack frame.
   while (Node) {
     const ProgramPoint &PP = Node->getLocation();
 
-    if (PP.getLocationContext()->getCurrentStackFrame() == SF) {
+    if (PP.getStackFrame() == SF) {
       if (Optional<StmtPoint> SP = PP.getAs<StmtPoint>()) {
         S = SP->getStmt();
         break;
@@ -204,13 +203,12 @@ static bool wasDifferentDeclUsedForInlining(CallEventRef<> Call,
 void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // Step 1 CEBNode was generated before the call.
   PrettyStackTraceLocationContext CrashInfo(CEBNode->getLocationContext());
-  const StackFrameContext *calleeCtx =
-      CEBNode->getLocationContext()->getCurrentStackFrame();
+  const StackFrameContext *calleeCtx = CEBNode->getStackFrame();
 
   // The parent context might not be a stack frame, so make sure we
   // look up the first enclosing stack frame.
   const StackFrameContext *callerCtx =
-    calleeCtx->getParent()->getCurrentStackFrame();
+    calleeCtx->getParent()->getStackFrame();
 
   const Stmt *CE = calleeCtx->getCallSite();
   ProgramStateRef state = CEBNode->getState();
@@ -418,7 +416,7 @@ bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
   assert(D);
 
   const LocationContext *CurLC = Pred->getLocationContext();
-  const StackFrameContext *CallerSFC = CurLC->getCurrentStackFrame();
+  const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   const LocationContext *ParentOfCallee = CallerSFC;
   if (Call.getKind() == CE_Block &&
       !cast<BlockCall>(Call).isConversionFromLambda()) {
@@ -612,7 +610,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
                               AnalyzerOptions &Opts,
                               const ExprEngine::EvalCallOptions &CallOpts) {
   const LocationContext *CurLC = Pred->getLocationContext();
-  const StackFrameContext *CallerSFC = CurLC->getCurrentStackFrame();
+  const StackFrameContext *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
   case CE_Block:

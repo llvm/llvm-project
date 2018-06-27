@@ -15,6 +15,7 @@
 #define LLVM_CLANG_PARSE_PARSER_H
 
 #include "clang/AST/Availability.h"
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Basic/Specifiers.h"
@@ -247,6 +248,90 @@ class Parser : public CodeCompletionHandler {
   /// Identifiers which have been declared within a tentative parse.
   SmallVector<IdentifierInfo *, 8> TentativelyDeclaredIdentifiers;
 
+  /// Tracker for '<' tokens that might have been intended to be treated as an
+  /// angle bracket instead of a less-than comparison.
+  ///
+  /// This happens when the user intends to form a template-id, but typoes the
+  /// template-name or forgets a 'template' keyword for a dependent template
+  /// name.
+  ///
+  /// We track these locations from the point where we see a '<' with a
+  /// name-like expression on its left until we see a '>' or '>>' that might
+  /// match it.
+  struct AngleBracketTracker {
+    /// Flags used to rank candidate template names when there is more than one
+    /// '<' in a scope.
+    enum Priority : unsigned short {
+      /// A non-dependent name that is a potential typo for a template name.
+      PotentialTypo = 0x0,
+      /// A dependent name that might instantiate to a template-name.
+      DependentName = 0x2,
+
+      /// A space appears before the '<' token.
+      SpaceBeforeLess = 0x0,
+      /// No space before the '<' token
+      NoSpaceBeforeLess = 0x1,
+
+      LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ DependentName)
+    };
+
+    struct Loc {
+      Expr *TemplateName;
+      SourceLocation LessLoc;
+      AngleBracketTracker::Priority Priority;
+      unsigned short ParenCount, BracketCount, BraceCount;
+
+      bool isActive(Parser &P) const {
+        return P.ParenCount == ParenCount && P.BracketCount == BracketCount &&
+               P.BraceCount == BraceCount;
+      }
+
+      bool isActiveOrNested(Parser &P) const {
+        return isActive(P) || P.ParenCount > ParenCount ||
+               P.BracketCount > BracketCount || P.BraceCount > BraceCount;
+      }
+    };
+
+    SmallVector<Loc, 8> Locs;
+
+    /// Add an expression that might have been intended to be a template name.
+    /// In the case of ambiguity, we arbitrarily select the innermost such
+    /// expression, for example in 'foo < bar < baz', 'bar' is the current
+    /// candidate. No attempt is made to track that 'foo' is also a candidate
+    /// for the case where we see a second suspicious '>' token.
+    void add(Parser &P, Expr *TemplateName, SourceLocation LessLoc,
+             Priority Prio) {
+      if (!Locs.empty() && Locs.back().isActive(P)) {
+        if (Locs.back().Priority <= Prio) {
+          Locs.back().TemplateName = TemplateName;
+          Locs.back().LessLoc = LessLoc;
+          Locs.back().Priority = Prio;
+        }
+      } else {
+        Locs.push_back({TemplateName, LessLoc, Prio,
+                        P.ParenCount, P.BracketCount, P.BraceCount});
+      }
+    }
+
+    /// Mark the current potential missing template location as having been
+    /// handled (this happens if we pass a "corresponding" '>' or '>>' token
+    /// or leave a bracket scope).
+    void clear(Parser &P) {
+      while (!Locs.empty() && Locs.back().isActiveOrNested(P))
+        Locs.pop_back();
+    }
+
+    /// Get the current enclosing expression that might hve been intended to be
+    /// a template name.
+    Loc *getCurrent(Parser &P) {
+      if (!Locs.empty() && Locs.back().isActive(P))
+        return &Locs.back();
+      return nullptr;
+    }
+  };
+
+  AngleBracketTracker AngleBrackets;
+
   IdentifierInfo *getSEHExceptKeyword();
 
   /// True if we are within an Objective-C container while parsing C-like decls.
@@ -426,8 +511,10 @@ private:
     assert(isTokenParen() && "wrong consume method");
     if (Tok.getKind() == tok::l_paren)
       ++ParenCount;
-    else if (ParenCount)
+    else if (ParenCount) {
+      AngleBrackets.clear(*this);
       --ParenCount;       // Don't let unbalanced )'s drive the count negative.
+    }
     PrevTokLocation = Tok.getLocation();
     PP.Lex(Tok);
     return PrevTokLocation;
@@ -439,8 +526,10 @@ private:
     assert(isTokenBracket() && "wrong consume method");
     if (Tok.getKind() == tok::l_square)
       ++BracketCount;
-    else if (BracketCount)
+    else if (BracketCount) {
+      AngleBrackets.clear(*this);
       --BracketCount;     // Don't let unbalanced ]'s drive the count negative.
+    }
 
     PrevTokLocation = Tok.getLocation();
     PP.Lex(Tok);
@@ -453,8 +542,10 @@ private:
     assert(isTokenBrace() && "wrong consume method");
     if (Tok.getKind() == tok::l_brace)
       ++BraceCount;
-    else if (BraceCount)
+    else if (BraceCount) {
+      AngleBrackets.clear(*this);
       --BraceCount;     // Don't let unbalanced }'s drive the count negative.
+    }
 
     PrevTokLocation = Tok.getLocation();
     PP.Lex(Tok);
@@ -1516,6 +1607,14 @@ private:
   }
 
   bool diagnoseUnknownTemplateId(ExprResult TemplateName, SourceLocation Less);
+  void checkPotentialAngleBracket(ExprResult &PotentialTemplateName);
+  bool checkPotentialAngleBracketDelimiter(const AngleBracketTracker::Loc &,
+                                           const Token &OpToken);
+  bool checkPotentialAngleBracketDelimiter(const Token &OpToken) {
+    if (auto *Info = AngleBrackets.getCurrent(*this))
+      return checkPotentialAngleBracketDelimiter(*Info, OpToken);
+    return false;
+  }
 
   ExprResult ParsePostfixExpressionSuffix(ExprResult LHS);
   ExprResult ParseUnaryExprOrTypeTraitExpression();

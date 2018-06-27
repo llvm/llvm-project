@@ -211,7 +211,7 @@ struct NodeBuilderContext {
   /// visited on the exploded graph path.
   unsigned blockCount() const {
     return Eng.WList->getBlockCounter().getNumVisited(
-                    LC->getCurrentStackFrame(),
+                    LC->getStackFrame(),
                     Block->getBlockID());
   }
 };

@@ -1621,6 +1621,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
                                                    attrs, attrs.Range.getEnd());
     ForRange = true;
   } else if (isForInitDeclaration()) {  // for (int X = 4;
+    ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
     // Parse declaration, which eats the ';'.
     if (!C99orCXXorObjC)   // Use of C99-style for loops in C90 mode?
       Diag(Tok, diag::ext_c99_variable_decl_in_for_loop);

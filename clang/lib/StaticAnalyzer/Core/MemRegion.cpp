@@ -921,7 +921,7 @@ MemRegionManager::getBlockDataRegion(const BlockCodeRegion *BC,
     if (LC) {
       // FIXME: Once we implement scope handling, we want the parent region
       // to be the scope.
-      const StackFrameContext *STC = LC->getCurrentStackFrame();
+      const StackFrameContext *STC = LC->getStackFrame();
       assert(STC);
       sReg = getStackLocalsRegion(STC);
     }
@@ -949,7 +949,7 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
   if (CL->isFileScope())
     sReg = getGlobalsRegion();
   else {
-    const StackFrameContext *STC = LC->getCurrentStackFrame();
+    const StackFrameContext *STC = LC->getStackFrame();
     assert(STC);
     sReg = getStackLocalsRegion(STC);
   }
@@ -1014,7 +1014,7 @@ MemRegionManager::getObjCIvarRegion(const ObjCIvarDecl *d,
 const CXXTempObjectRegion*
 MemRegionManager::getCXXTempObjectRegion(Expr const *E,
                                          LocationContext const *LC) {
-  const StackFrameContext *SFC = LC->getCurrentStackFrame();
+  const StackFrameContext *SFC = LC->getStackFrame();
   assert(SFC);
   return getSubRegion<CXXTempObjectRegion>(E, getStackLocalsRegion(SFC));
 }
@@ -1078,7 +1078,7 @@ MemRegionManager::getCXXThisRegion(QualType thisPointerTy,
     LC = LC->getParent();
     D = dyn_cast<CXXMethodDecl>(LC->getDecl());
   }
-  const StackFrameContext *STC = LC->getCurrentStackFrame();
+  const StackFrameContext *STC = LC->getStackFrame();
   assert(STC);
   return getSubRegion<CXXThisRegion>(PT, getStackArgumentsRegion(STC));
 }
@@ -1086,7 +1086,7 @@ MemRegionManager::getCXXThisRegion(QualType thisPointerTy,
 const AllocaRegion*
 MemRegionManager::getAllocaRegion(const Expr *E, unsigned cnt,
                                   const LocationContext *LC) {
-  const StackFrameContext *STC = LC->getCurrentStackFrame();
+  const StackFrameContext *STC = LC->getStackFrame();
   assert(STC);
   return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(STC));
 }

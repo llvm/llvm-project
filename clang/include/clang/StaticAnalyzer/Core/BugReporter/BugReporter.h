@@ -519,10 +519,6 @@ public:
 
   ~GRBugReporter() override;
 
-  /// getEngine - Return the analysis engine used to analyze a given
-  ///  function or method.
-  ExprEngine &getEngine() { return Eng; }
-
   /// getGraph - Get the exploded graph created by the analysis engine
   ///  for the analyzed method or function.
   ExplodedGraph &getGraph();
@@ -588,6 +584,10 @@ public:
 
   SourceManager& getSourceManager() {
     return BR.getSourceManager();
+  }
+
+  AnalyzerOptions &getAnalyzerOptions() {
+    return BR.getAnalyzerOptions();
   }
 
   NodeMapClosure& getNodeResolver() { return NMC; }
