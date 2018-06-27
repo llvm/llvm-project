@@ -26,8 +26,8 @@
 # RUN: llvm-objdump -s -t %t.abs.so | FileCheck --check-prefix=ABS %s
 
 # REL:      Contents of section .reginfo:
-# REL-NEXT:  0040 10000104 00000000 00000000 00000000
-# REL-NEXT:  0050 00000000 000001ec
+# REL-NEXT:  0018 10000104 00000000 00000000 00000000
+# REL-NEXT:  0028 00000000 000001ec
 #                          ^-- _gp
 
 # REL:      Contents of section .text:
@@ -47,8 +47,8 @@
 # REL: 000001ec         *ABS*           00000000 .hidden _gp
 
 # ABS:      Contents of section .reginfo:
-# ABS-NEXT:  0040 10000104 00000000 00000000 00000000
-# ABS-NEXT:  0050 00000000 00000200
+# ABS-NEXT:  0018 10000104 00000000 00000000 00000000
+# ABS-NEXT:  0028 00000000 00000200
 #                          ^-- _gp
 
 # ABS:      Contents of section .text:

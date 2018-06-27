@@ -31,7 +31,7 @@ public:
   /// stopped at the current PC. The code is generic and applies to all
   /// ARM CPUs.
   //------------------------------------------------------------------
-  virtual void OverrideStopInfo(Thread &thread) = 0;
+  virtual void OverrideStopInfo(Thread &thread) const = 0;
 
   //------------------------------------------------------------------
   /// This method is used to get the number of bytes that should be

@@ -1,3 +1,4 @@
+// REQUIRES: x86,aarch64
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %ta.o
 // RUN: llvm-mc -filetype=obj -triple=i686-unknown-linux %s -o %tb.o
 // RUN: ld.lld -shared %tb.o -o %ti686.so
@@ -56,4 +57,3 @@ _start:
 .data
         .long foo
 
-// REQUIRES: x86,aarch64

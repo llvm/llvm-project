@@ -33,7 +33,7 @@ _start:
 // CHECK-NEXT:     AddressAlignment: 16
 
 // CHECK: Relocations [
-// CHECK-NEXT:  Section (5) .rel.dyn {
+// CHECK-NEXT:  Section {{.*}} .rel.dyn {
 // CHECK-NEXT:    Relocation {
 // CHECK-NEXT:      Offset: 0x13000
 // CHECK-NEXT:      Type: R_ARM_COPY
@@ -78,4 +78,4 @@ _start:
 
 // RODATA: Contents of section .rodata:
 // S(z) = 0x13004
-// RODATA-NEXT: 10160 04300100
+// RODATA-NEXT: 10190 04300100
