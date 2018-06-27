@@ -1,8 +1,8 @@
+// REQUIRES: aarch64
 // RUN: llvm-mc -triple=aarch64-linux-gnu -filetype=obj %s -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
 // RUN: llvm-readelf --symbols %t | FileCheck -check-prefix CHECK-SYMS %s
-// REQUIRES: aarch64
 
         .text
         .globl _start

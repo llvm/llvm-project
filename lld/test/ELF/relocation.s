@@ -1,10 +1,10 @@
+// REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/shared.s -o %t2
 // RUN: ld.lld %t2 -soname fixed-length-string.so -o %t2.so -shared
 // RUN: ld.lld --hash-style=sysv %t %t2.so -o %t3
 // RUN: llvm-readobj -s  %t3 | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -s -d %t3 | FileCheck %s
-// REQUIRES: x86
 
 // SEC:      Name: .plt
 // SEC-NEXT: Type: SHT_PROGBITS
@@ -113,16 +113,16 @@ R_X86_64_64:
  .quad R_X86_64_64
 
 // CHECK:      Contents of section .R_X86_64_64:
-// CHECK-NEXT:   20024d 4d022000 00000000
+// CHECK-NEXT:   2002c0 c0022000 00000000
 
 .section .R_X86_64_GOTPCREL,"a",@progbits
 .global R_X86_64_GOTPCREL
 R_X86_64_GOTPCREL:
  .long zed@gotpcrel
 
-// 0x2020F0(.got) - 0x200255(.R_X86_64_GOTPCREL) = 0x2e9b
+// 0x2030F0(.got) - 0x2002c8(.R_X86_64_GOTPCREL) = 0x2e28
 // CHECK:      Contents of section .R_X86_64_GOTPCREL
-// CHECK-NEXT:   200255 9b2e0000
+// CHECK-NEXT:   2002c8 282e0000
 
 .section .R_X86_64_GOT32,"a",@progbits
 .global R_X86_64_GOT32

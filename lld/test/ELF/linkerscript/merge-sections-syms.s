@@ -20,7 +20,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: A
-# CHECK-NEXT:     Value: 0x1E2
+# CHECK-NEXT:     Value: 0x226
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Binding:
 # CHECK-NEXT:     Type:
@@ -29,7 +29,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: B
-# CHECK-NEXT:     Value: 0x1E3
+# CHECK-NEXT:     Value: 0x227
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Binding:
 # CHECK-NEXT:     Type:

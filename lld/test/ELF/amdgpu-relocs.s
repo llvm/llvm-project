@@ -110,7 +110,7 @@ foo:
 # CHECK-NEXT: ]
 
 # OBJDUMP: Contents of section .rodata:
-# OBJDUMP: 28fbffff ffffffff
+# OBJDUMP: d0f8ffff ffffffff
 
 # OBJDUMP: Contents of section nonalloc:
 # OBJDUMP-NEXT: 0000 00000000 04480000 00000000 08440000
