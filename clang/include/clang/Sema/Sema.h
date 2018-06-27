@@ -21,6 +21,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/LocInfoType.h"
@@ -1830,13 +1831,19 @@ public:
 
   /// Determine whether it's plausible that E was intended to be a
   /// template-name.
-  bool mightBeIntendedToBeTemplateName(ExprResult E) {
+  bool mightBeIntendedToBeTemplateName(ExprResult E, bool &Dependent) {
     if (!getLangOpts().CPlusPlus || E.isInvalid())
       return false;
+    Dependent = false;
     if (auto *DRE = dyn_cast<DeclRefExpr>(E.get()))
       return !DRE->hasExplicitTemplateArgs();
     if (auto *ME = dyn_cast<MemberExpr>(E.get()))
       return !ME->hasExplicitTemplateArgs();
+    Dependent = true;
+    if (auto *DSDRE = dyn_cast<DependentScopeDeclRefExpr>(E.get()))
+      return !DSDRE->hasExplicitTemplateArgs();
+    if (auto *DSME = dyn_cast<CXXDependentScopeMemberExpr>(E.get()))
+      return !DSME->hasExplicitTemplateArgs();
     // Any additional cases recognized here should also be handled by
     // diagnoseExprIntendedAsTemplateName.
     return false;

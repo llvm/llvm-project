@@ -48,7 +48,7 @@
 namespace llvm {
 namespace amdhsa {
 
-// Floating point rounding modes. Must be kept backwards compatible.
+// Floating point rounding modes. Must match hardware definition.
 enum : uint8_t {
   FLOAT_ROUND_MODE_NEAR_EVEN = 0,
   FLOAT_ROUND_MODE_PLUS_INFINITY = 1,
@@ -56,7 +56,7 @@ enum : uint8_t {
   FLOAT_ROUND_MODE_ZERO = 3,
 };
 
-// Floating point denorm modes. Must be kept backwards compatible.
+// Floating point denorm modes. Must match hardware definition.
 enum : uint8_t {
   FLOAT_DENORM_MODE_FLUSH_SRC_DST = 0,
   FLOAT_DENORM_MODE_FLUSH_DST = 1,
@@ -64,7 +64,7 @@ enum : uint8_t {
   FLOAT_DENORM_MODE_FLUSH_NONE = 3,
 };
 
-// System VGPR workitem IDs. Must be kept backwards compatible.
+// System VGPR workitem IDs. Must match hardware definition.
 enum : uint8_t {
   SYSTEM_VGPR_WORKITEM_ID_X = 0,
   SYSTEM_VGPR_WORKITEM_ID_X_Y = 1,
@@ -72,7 +72,7 @@ enum : uint8_t {
   SYSTEM_VGPR_WORKITEM_ID_UNDEFINED = 3,
 };
 
-// Compute program resource register 1. Must be kept backwards compatible.
+// Compute program resource register 1. Must match hardware definition.
 #define COMPUTE_PGM_RSRC1(NAME, SHIFT, WIDTH) \
   AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC1_ ## NAME, SHIFT, WIDTH)
 enum : int32_t {
@@ -89,12 +89,12 @@ enum : int32_t {
   COMPUTE_PGM_RSRC1(ENABLE_IEEE_MODE, 23, 1),
   COMPUTE_PGM_RSRC1(BULKY, 24, 1),
   COMPUTE_PGM_RSRC1(CDBG_USER, 25, 1),
-  COMPUTE_PGM_RSRC1(FP16_OVFL, 26, 1),
-  COMPUTE_PGM_RSRC1(RESERVED, 27, 5),
+  COMPUTE_PGM_RSRC1(FP16_OVFL, 26, 1), // GFX9+
+  COMPUTE_PGM_RSRC1(RESERVED0, 27, 5),
 };
 #undef COMPUTE_PGM_RSRC1
 
-// Compute program resource register 2. Must be kept backwards compatible.
+// Compute program resource register 2. Must match hardware definition.
 #define COMPUTE_PGM_RSRC2(NAME, SHIFT, WIDTH) \
   AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC2_ ## NAME, SHIFT, WIDTH)
 enum : int32_t {
@@ -116,7 +116,7 @@ enum : int32_t {
   COMPUTE_PGM_RSRC2(ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW, 28, 1),
   COMPUTE_PGM_RSRC2(ENABLE_EXCEPTION_IEEE_754_FP_INEXACT, 29, 1),
   COMPUTE_PGM_RSRC2(ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO, 30, 1),
-  COMPUTE_PGM_RSRC2(RESERVED, 31, 1),
+  COMPUTE_PGM_RSRC2(RESERVED0, 31, 1),
 };
 #undef COMPUTE_PGM_RSRC2
 
@@ -131,7 +131,7 @@ enum : int32_t {
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_DISPATCH_ID, 4, 1),
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_FLAT_SCRATCH_INIT, 5, 1),
   KERNEL_CODE_PROPERTY(ENABLE_SGPR_PRIVATE_SEGMENT_SIZE, 6, 1),
-  KERNEL_CODE_PROPERTY(RESERVED, 7, 9),
+  KERNEL_CODE_PROPERTY(RESERVED0, 7, 9),
 };
 #undef KERNEL_CODE_PROPERTY
 

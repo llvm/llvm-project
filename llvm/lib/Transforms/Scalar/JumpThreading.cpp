@@ -2009,6 +2009,14 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
       PredTerm->setSuccessor(i, NewBB);
     }
 
+  // Enqueue required DT updates.
+  DDT->applyUpdates({{DominatorTree::Insert, NewBB, SuccBB},
+                     {DominatorTree::Insert, PredBB, NewBB},
+                     {DominatorTree::Delete, PredBB, BB}});
+
+  // Apply all updates we queued with DDT and get the updated Dominator Tree.
+  DominatorTree *DT = &DDT->flush();
+
   // If there were values defined in BB that are used outside the block, then we
   // now have to update all uses of the value to use either the original value,
   // the cloned value, or some PHI derived value.  This can require arbitrary
@@ -2018,16 +2026,16 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
   for (Instruction &I : *BB) {
     SmallVector<Use*, 16> UsesToRename;
 
-    // Scan all uses of this instruction to see if it is used outside of its
-    // block, and if so, record them in UsesToRename. Also, skip phi operands
-    // from PredBB - we'll remove them anyway.
+    // Scan all uses of this instruction to see if their uses are no longer
+    // dominated by the previous def and if so, record them in UsesToRename.
+    // Also, skip phi operands from PredBB - we'll remove them anyway.
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
       if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
         if (UserPN->getIncomingBlock(U) == BB ||
             UserPN->getIncomingBlock(U) == PredBB)
           continue;
-      } else if (User->getParent() == BB)
+      } else if (DT->dominates(&I, U))
         continue;
 
       UsesToRename.push_back(&U);
@@ -2046,12 +2054,6 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
       SSAUpdate.AddUse(VarNum, U);
   }
 
-  DDT->applyUpdates({{DominatorTree::Insert, NewBB, SuccBB},
-                     {DominatorTree::Insert, PredBB, NewBB},
-                     {DominatorTree::Delete, PredBB, BB}});
-
-  // Apply all updates we queued with DDT and get the updated Dominator Tree.
-  DominatorTree *DT = &DDT->flush();
   SSAUpdate.RewriteAllUses(DT);
 
   // At this point, the IR is fully up to date and consistent.  Do a quick scan

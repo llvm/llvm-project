@@ -393,7 +393,11 @@ private:
 public:
   static char ID;
 
-  SIInsertWaitcnts() : MachineFunctionPass(ID) {}
+  SIInsertWaitcnts() : MachineFunctionPass(ID) {
+    (void)ForceExpCounter;
+    (void)ForceLgkmCounter;
+    (void)ForceVMCounter;
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

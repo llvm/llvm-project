@@ -136,9 +136,8 @@ declare i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f16(half, i32) #1
 
 define dso_local half @test_vcvth_n_f16_s16_1(i16 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s16_1:
-; CHECK:         sxth w[[wReg:[0-9]+]], w0
-; CHECK-NEXT:    fmov s0, w[[wReg:[0-9]+]]
-; CHECK-NEXT:    scvtf h0, s0, #1
+; CHECK:         fmov s0, w[[wReg:[0-9]+]]
+; CHECK-NEXT:    scvtf h0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %sext = sext i16 %a to i32
@@ -148,9 +147,8 @@ entry:
 
 define dso_local half @test_vcvth_n_f16_s16_16(i16 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s16_16:
-; CHECK:         sxth w[[wReg:[0-9]+]], w0
-; CHECK-NEXT:    fmov s0, w[[wReg:[0-9]+]]
-; CHECK-NEXT:    scvtf h0, s0, #16
+; CHECK:         fmov s0, w[[wReg:[0-9]+]]
+; CHECK-NEXT:    scvtf h0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %sext = sext i16 %a to i32
@@ -161,7 +159,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_s32_1(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s32_1:
 ; CHECK:         fmov s0, w0
-; CHECK-NEXT:    scvtf h0, s0, #1
+; CHECK-NEXT:    scvtf h0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_s32 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i32(i32 %a, i32 1)
@@ -171,7 +169,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_s32_16(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s32_16:
 ; CHECK:         fmov s0, w0
-; CHECK-NEXT:    scvtf h0, s0, #16
+; CHECK-NEXT:    scvtf h0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_s32 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i32(i32 %a, i32 16)
@@ -181,7 +179,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_s64_1(i64 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s64_1:
 ; CHECK:         fmov d0, x0
-; CHECK-NEXT:    fcvtzs h0, d0, #1
+; CHECK-NEXT:    scvtf h0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_s64 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i64(i64 %a, i32 1)
@@ -191,7 +189,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_s64_16(i64 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s64_16:
 ; CHECK:         fmov d0, x0
-; CHECK-NEXT:    fcvtzs h0, d0, #16
+; CHECK-NEXT:    scvtf h0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_s64 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i64(i64 %a, i32 16)
@@ -200,7 +198,7 @@ entry:
 
 define dso_local i16 @test_vcvth_n_s16_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s16_f16_1:
-; CHECK:         fcvtzs s0, h0, #1
+; CHECK:         fcvtzs h0, h0, #1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -211,7 +209,7 @@ entry:
 
 define dso_local i16 @test_vcvth_n_s16_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s16_f16_16:
-; CHECK:         fcvtzs s0, h0, #16
+; CHECK:         fcvtzs h0, h0, #16
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -222,7 +220,7 @@ entry:
 
 define dso_local i32 @test_vcvth_n_s32_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s32_f16_1:
-; CHECK:         fcvtzs s0, h0, #1
+; CHECK:         fcvtzs h0, h0, #1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -232,7 +230,7 @@ entry:
 
 define dso_local i32 @test_vcvth_n_s32_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s32_f16_16:
-; CHECK:         fcvtzs s0, h0, #16
+; CHECK:         fcvtzs h0, h0, #16
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -242,7 +240,7 @@ entry:
 
 define dso_local i64 @test_vcvth_n_s64_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s64_f16_1:
-; CHECK:         fcvtzs d0, h0, #1
+; CHECK:         fcvtzs h0, h0, #1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -252,7 +250,7 @@ entry:
 
 define dso_local i64 @test_vcvth_n_s64_f16_32(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s64_f16_32:
-; CHECK:         fcvtzs d0, h0, #32
+; CHECK:         fcvtzs h0, h0, #32
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
@@ -262,9 +260,7 @@ entry:
 
 define dso_local half @test_vcvth_n_f16_u16_1(i16 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_u16_1:
-; CHECK:         and w[[wReg:[0-9]+]], w0, #0xffff
-; CHECK-NEXT:    fmov s0, w[[wReg:[0-9]+]]
-; CHECK-NEXT:    ucvtf h0, s0, #1
+; CHECK:         ucvtf h0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %0 = zext i16 %a to i32
@@ -274,9 +270,7 @@ entry:
 
 define dso_local half @test_vcvth_n_f16_u16_16(i16 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_u16_16:
-; CHECK:         and w[[wReg:[0-9]+]], w0, #0xffff
-; CHECK-NEXT:    fmov s0, w[[wReg:[0-9]+]]
-; CHECK-NEXT:    ucvtf h0, s0, #16
+; CHECK:         ucvtf h0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %0 = zext i16 %a to i32
@@ -287,7 +281,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_u32_1(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_u32_1:
 ; CHECK:         fmov s0, w0
-; CHECK-NEXT:    ucvtf h0, s0, #1
+; CHECK-NEXT:    ucvtf h0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_u32 = tail call half @llvm.aarch64.neon.vcvtfxu2fp.f16.i32(i32 %a, i32 1)
@@ -296,8 +290,7 @@ entry:
 
 define dso_local half @test_vcvth_n_f16_u32_16(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_u32_16:
-; CHECK:         fmov s0, w0
-; CHECK-NEXT:    ucvtf h0, s0, #16
+; CHECK:         ucvtf h0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_u32 = tail call half @llvm.aarch64.neon.vcvtfxu2fp.f16.i32(i32 %a, i32 16)
@@ -306,7 +299,7 @@ entry:
 
 define dso_local i16 @test_vcvth_n_u16_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u16_f16_1:
-; CHECK:         fcvtzu s0, h0, #1
+; CHECK:         fcvtzu h0, h0, #1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -317,7 +310,7 @@ entry:
 
 define dso_local i16 @test_vcvth_n_u16_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u16_f16_16:
-; CHECK:         fcvtzu s0, h0, #16
+; CHECK:         fcvtzu h0, h0, #16
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -328,7 +321,7 @@ entry:
 
 define dso_local i32 @test_vcvth_n_u32_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u32_f16_1:
-; CHECK:         fcvtzu s0, h0, #1
+; CHECK:         fcvtzu h0, h0, #1
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -338,7 +331,7 @@ entry:
 
 define dso_local i32 @test_vcvth_n_u32_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u32_f16_16:
-; CHECK:         fcvtzu s0, h0, #16
+; CHECK:         fcvtzu h0, h0, #16
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:

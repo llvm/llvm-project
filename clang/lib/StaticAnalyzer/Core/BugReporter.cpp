@@ -865,7 +865,7 @@ static void reversePropagateInterestingSymbols(BugReport &R,
                                                const LocationContext *CallerCtx)
 {
   // FIXME: Handle non-CallExpr-based CallEvents.
-  const StackFrameContext *Callee = CalleeCtx->getCurrentStackFrame();
+  const StackFrameContext *Callee = CalleeCtx->getStackFrame();
   const Stmt *CallSite = Callee->getCallSite();
   if (const auto *CE = dyn_cast_or_null<CallExpr>(CallSite)) {
     if (const auto *FD = dyn_cast<FunctionDecl>(CalleeCtx->getDecl())) {
@@ -1956,7 +1956,7 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
   if (AddPathEdges) {
     // Add an edge to the start of the function.
     // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrameContext *CalleeLC = PDB.LC->getCurrentStackFrame();
+    const StackFrameContext *CalleeLC = PDB.LC->getStackFrame();
     const Decl *D = CalleeLC->getDecl();
     addEdgeToPath(PD->getActivePath(), PrevLoc,
                   PathDiagnosticLocation::createBegin(D, SM), CalleeLC);
@@ -2051,7 +2051,7 @@ const Decl *BugReport::getDeclWithIssue() const {
     return nullptr;
 
   const LocationContext *LC = N->getLocationContext();
-  return LC->getCurrentStackFrame()->getDecl();
+  return LC->getStackFrame()->getDecl();
 }
 
 void BugReport::Profile(llvm::FoldingSetNodeID& hash) const {

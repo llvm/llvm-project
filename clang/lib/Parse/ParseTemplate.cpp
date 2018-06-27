@@ -1474,3 +1474,111 @@ void Parser::LexTemplateFunctionForLateParsing(CachedTokens &Toks) {
     }
   }
 }
+
+/// We've parsed something that could plausibly be intended to be a template
+/// name (\p LHS) followed by a '<' token, and the following code can't possibly
+/// be an expression. Determine if this is likely to be a template-id and if so,
+/// diagnose it.
+bool Parser::diagnoseUnknownTemplateId(ExprResult LHS, SourceLocation Less) {
+  TentativeParsingAction TPA(*this);
+  // FIXME: We could look at the token sequence in a lot more detail here.
+  if (SkipUntil(tok::greater, tok::greatergreater, tok::greatergreatergreater,
+                StopAtSemi | StopBeforeMatch)) {
+    TPA.Commit();
+
+    SourceLocation Greater;
+    ParseGreaterThanInTemplateList(Greater, true, false);
+    Actions.diagnoseExprIntendedAsTemplateName(getCurScope(), LHS,
+                                               Less, Greater);
+    return true;
+  }
+
+  // There's no matching '>' token, this probably isn't supposed to be
+  // interpreted as a template-id. Parse it as an (ill-formed) comparison.
+  TPA.Revert();
+  return false;
+}
+
+void Parser::checkPotentialAngleBracket(ExprResult &PotentialTemplateName) {
+  assert(Tok.is(tok::less) && "not at a potential angle bracket");
+
+  bool DependentTemplateName = false;
+  if (!Actions.mightBeIntendedToBeTemplateName(PotentialTemplateName,
+                                               DependentTemplateName))
+    return;
+
+  // OK, this might be a name that the user intended to be parsed as a
+  // template-name, followed by a '<' token. Check for some easy cases.
+
+  // If we have potential_template<>, then it's supposed to be a template-name.
+  if (NextToken().is(tok::greater) ||
+      (getLangOpts().CPlusPlus11 &&
+       NextToken().isOneOf(tok::greatergreater, tok::greatergreatergreater))) {
+    SourceLocation Less = ConsumeToken();
+    SourceLocation Greater;
+    ParseGreaterThanInTemplateList(Greater, true, false);
+    Actions.diagnoseExprIntendedAsTemplateName(
+        getCurScope(), PotentialTemplateName, Less, Greater);
+    // FIXME: Perform error recovery.
+    PotentialTemplateName = ExprError();
+    return;
+  }
+
+  // If we have 'potential_template<type-id', assume it's supposed to be a
+  // template-name if there's a matching '>' later on.
+  {
+    // FIXME: Avoid the tentative parse when NextToken() can't begin a type.
+    TentativeParsingAction TPA(*this);
+    SourceLocation Less = ConsumeToken();
+    if (isTypeIdUnambiguously() &&
+        diagnoseUnknownTemplateId(PotentialTemplateName, Less)) {
+      TPA.Commit();
+      // FIXME: Perform error recovery.
+      PotentialTemplateName = ExprError();
+      return;
+    }
+    TPA.Revert();
+  }
+
+  // Otherwise, remember that we saw this in case we see a potentially-matching
+  // '>' token later on.
+  AngleBracketTracker::Priority Priority =
+      (DependentTemplateName ? AngleBracketTracker::DependentName
+                             : AngleBracketTracker::PotentialTypo) |
+      (Tok.hasLeadingSpace() ? AngleBracketTracker::SpaceBeforeLess
+                             : AngleBracketTracker::NoSpaceBeforeLess);
+  AngleBrackets.add(*this, PotentialTemplateName.get(), Tok.getLocation(),
+                    Priority);
+}
+
+bool Parser::checkPotentialAngleBracketDelimiter(
+    const AngleBracketTracker::Loc &LAngle, const Token &OpToken) {
+  // If a comma in an expression context is followed by a type that can be a
+  // template argument and cannot be an expression, then this is ill-formed,
+  // but might be intended to be part of a template-id.
+  if (OpToken.is(tok::comma) && isTypeIdUnambiguously() &&
+      diagnoseUnknownTemplateId(LAngle.TemplateName, LAngle.LessLoc)) {
+    AngleBrackets.clear(*this);
+    return true;
+  }
+
+  // If a context that looks like a template-id is followed by '()', then
+  // this is ill-formed, but might be intended to be a template-id
+  // followed by '()'.
+  if (OpToken.is(tok::greater) && Tok.is(tok::l_paren) &&
+      NextToken().is(tok::r_paren)) {
+    Actions.diagnoseExprIntendedAsTemplateName(
+        getCurScope(), LAngle.TemplateName, LAngle.LessLoc,
+        OpToken.getLocation());
+    AngleBrackets.clear(*this);
+    return true;
+  }
+
+  // After a '>' (etc), we're no longer potentially in a construct that's
+  // intended to be treated as a template-id.
+  if (OpToken.is(tok::greater) ||
+      (getLangOpts().CPlusPlus11 &&
+       OpToken.isOneOf(tok::greatergreater, tok::greatergreatergreater)))
+    AngleBrackets.clear(*this);
+  return false;
+}

@@ -11,8 +11,6 @@
 # CHECK-NOT:  .got
 # CHECK-NOT:  .plt
 # CHECK:      .dynsym
-# CHECK-NEXT: .dynstr
-# CHECK-NEXT: .gnu.hash
 # CHECK:      .text
 
 # Test that the size of a removed unused synthetic input section is not added

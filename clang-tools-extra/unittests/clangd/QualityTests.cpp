@@ -84,6 +84,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
     int deprecated() { return 0; }
 
     namespace { struct X { void y() { int z; } }; }
+    struct S{}
   )cpp";
   auto AST = Test.build();
 
@@ -115,6 +116,10 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "z"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FunctionScope);
+  // The injected class name is treated as the outer class name.
+  Relevance = {};
+  Relevance.merge(CodeCompletionResult(&findDecl(AST, "S::S"), 42));
+  EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::GlobalScope);
 }
 
 // Do the signals move the scores in the direction we expect?

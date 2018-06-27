@@ -94,6 +94,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-config
     FileCheck count not
     llc
+    llvm-as
     llvm-bcanalyzer
     llvm-cat
     llvm-dis

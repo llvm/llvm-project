@@ -288,7 +288,7 @@ template <typename WrappedIteratorT,
               decltype(**std::declval<WrappedIteratorT>())>::type>
 struct pointee_iterator
     : iterator_adaptor_base<
-          pointee_iterator<WrappedIteratorT>, WrappedIteratorT,
+          pointee_iterator<WrappedIteratorT, T>, WrappedIteratorT,
           typename std::iterator_traits<WrappedIteratorT>::iterator_category,
           T> {
   pointee_iterator() = default;
@@ -311,7 +311,7 @@ make_pointee_range(RangeT &&Range) {
 template <typename WrappedIteratorT,
           typename T = decltype(&*std::declval<WrappedIteratorT>())>
 class pointer_iterator
-    : public iterator_adaptor_base<pointer_iterator<WrappedIteratorT>,
+    : public iterator_adaptor_base<pointer_iterator<WrappedIteratorT, T>,
                                    WrappedIteratorT, T> {
   mutable T Ptr;
 

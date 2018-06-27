@@ -1968,8 +1968,8 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
     const Stmt *S = N->getLocation().castAs<StmtPoint>().getStmt();
 
     if (isa<ObjCIvarRefExpr>(S) &&
-        isSynthesizedAccessor(LCtx->getCurrentStackFrame())) {
-      S = LCtx->getCurrentStackFrame()->getCallSite();
+        isSynthesizedAccessor(LCtx->getStackFrame())) {
+      S = LCtx->getStackFrame()->getCallSite();
     }
 
     if (isa<ObjCArrayLiteral>(S)) {
@@ -2297,7 +2297,7 @@ GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
       const VarRegion *VR = R->getBaseRegion()->getAs<VarRegion>();
       // Do not show local variables belonging to a function other than
       // where the error is reported.
-      if (!VR || VR->getStackFrame() == LeakContext->getCurrentStackFrame())
+      if (!VR || VR->getStackFrame() == LeakContext->getStackFrame())
         FirstBinding = R;
     }
 

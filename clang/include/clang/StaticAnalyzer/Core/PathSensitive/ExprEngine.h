@@ -537,7 +537,7 @@ public:
   void evalEagerlyAssumeBinOpBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src, 
                          const Expr *Ex);
   
-  std::pair<const ProgramPointTag *, const ProgramPointTag *>
+  static std::pair<const ProgramPointTag *, const ProgramPointTag *>
     geteagerlyAssumeBinOpBifurcationTags();
 
   SVal evalMinus(SVal X) {

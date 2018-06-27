@@ -331,6 +331,7 @@ namespace clang {
         BraceCount(p.BraceCount) { }
     
     ~ParenBraceBracketBalancer() {
+      P.AngleBrackets.clear(P);
       P.ParenCount = ParenCount;
       P.BracketCount = BracketCount;
       P.BraceCount = BraceCount;

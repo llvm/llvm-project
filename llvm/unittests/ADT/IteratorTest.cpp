@@ -128,6 +128,20 @@ TEST(PointeeIteratorTest, Range) {
     EXPECT_EQ(A[I++], II);
 }
 
+TEST(PointeeIteratorTest, PointeeType) {
+  struct S {
+    int X;
+    bool operator==(const S &RHS) const { return X == RHS.X; };
+  };
+  S A[] = {S{0}, S{1}};
+  SmallVector<S *, 2> V{&A[0], &A[1]};
+
+  pointee_iterator<SmallVectorImpl<S *>::const_iterator, const S> I = V.begin();
+  for (int j = 0; j < 2; ++j, ++I) {
+    EXPECT_EQ(*V[j], *I);
+  }
+}
+
 TEST(FilterIteratorTest, Lambda) {
   auto IsOdd = [](int N) { return N % 2 == 1; };
   int A[] = {0, 1, 2, 3, 4, 5, 6};

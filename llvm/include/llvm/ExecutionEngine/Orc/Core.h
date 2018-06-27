@@ -622,13 +622,6 @@ private:
   VSO(ExecutionSessionBase &ES, std::string Name)
       : ES(ES), VSOName(std::move(Name)) {}
 
-  ExecutionSessionBase &ES;
-  std::string VSOName;
-  SymbolMap Symbols;
-  UnmaterializedInfosMap UnmaterializedInfos;
-  MaterializingInfosMap MaterializingInfos;
-  FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator;
-
   Error defineImpl(MaterializationUnit &MU);
 
   SymbolNameSet lookupFlagsImpl(SymbolFlagsMap &Flags,
@@ -660,6 +653,20 @@ private:
   void finalize(const SymbolFlagsMap &Finalized);
 
   void notifyFailed(const SymbolNameSet &FailedSymbols);
+
+  void runOutstandingMUs();
+
+  ExecutionSessionBase &ES;
+  std::string VSOName;
+  SymbolMap Symbols;
+  UnmaterializedInfosMap UnmaterializedInfos;
+  MaterializingInfosMap MaterializingInfos;
+  FallbackDefinitionGeneratorFunction FallbackDefinitionGenerator;
+
+  // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
+  //        with callbacks from asynchronous queries.
+  mutable std::recursive_mutex OutstandingMUsMutex;
+  std::vector<std::unique_ptr<MaterializationUnit>> OutstandingMUs;
 };
 
 /// An ExecutionSession represents a running JIT program.

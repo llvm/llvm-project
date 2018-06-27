@@ -274,10 +274,3 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
     return inst_sp->TestEmulation(output_stream.get(), test_file);
   return false;
 }
-
-lldb::AddressClass SBInstruction::GetAddressClass() {
-  lldb::InstructionSP inst_sp(GetOpaque());
-  if (inst_sp)
-    return inst_sp->GetAddressClass();
-  return AddressClass::eInvalid;
-}

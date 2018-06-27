@@ -46,6 +46,10 @@ public:
     return 5;
   }
 
+  const TargetRegisterClass *
+  getSubClassWithSubReg(const TargetRegisterClass *RC,
+                        unsigned Idx) const override;
+
   // Calls involved in thread-local variable lookup save more registers than
   // normal calls, so they need a different mask to represent this.
   const uint32_t *getTLSCallPreservedMask() const;

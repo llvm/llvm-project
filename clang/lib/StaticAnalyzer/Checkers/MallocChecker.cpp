@@ -2258,7 +2258,7 @@ MallocChecker::getAllocationSite(const ExplodedNode *N, SymbolRef Sym,
             // Do not show local variables belonging to a function other than
             // where the error is reported.
             if (!VR ||
-                (VR->getStackFrame() == LeakContext->getCurrentStackFrame()))
+                (VR->getStackFrame() == LeakContext->getStackFrame()))
               ReferenceRegion = MR;
           }
         }
@@ -2919,7 +2919,7 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
             // reference counting operations within it (see the code above),
             // and if so, we'd conclude that it likely is a reference counting
             // pointer destructor.
-            ReleaseDestructorLC = LC->getCurrentStackFrame();
+            ReleaseDestructorLC = LC->getStackFrame();
             // It is unlikely that releasing memory is delegated to a destructor
             // inside a destructor of a shared pointer, because it's fairly hard
             // to pass the information that the pointer indeed needs to be

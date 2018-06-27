@@ -26,9 +26,10 @@ _start:
 .section e,"awT"
 .section d,"ax",@nobits
 .section c,"ax"
-.section b,"a",@nobits
-.section a,"a"
+.section a,"a",@nobits
+.section b,"a"
 
+// For non-executable and non-writable sections, PROGBITS appear after others.
 // CHECK: Name: a
 // CHECK: Name: b
 // CHECK: Name: c

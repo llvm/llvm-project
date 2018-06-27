@@ -26,26 +26,27 @@ X86InstrFMA3Info *X86InstrFMA3Info::getX86InstrFMA3Info() {
   return &*X86InstrFMA3InfoObj;
 }
 
-#define FMA3BASE(R132, R213, R231, M132, M213, M231, Attrs)                    \
-  { { R132, R213, R231 }, { M132, M213, M231 }, Attrs },
-
-#define FMA3RMA(R132, R213, R231, M132, M213, M231, Attrs)                     \
-  FMA3BASE(X86::R132, X86::R213, X86::R231, X86::M132, X86::M213, X86::M231, Attrs)
-
-#define FMA3RM(R132, R213, R231, M132, M213, M231)                             \
-  FMA3RMA(R132, R213, R231, M132, M213, M231, 0)
+#define FMA3BASE(X132, X213, X231, Attrs)                                      \
+  { { X132, X213, X231 }, Attrs },
 
 #define FMA3RA(R132, R213, R231, Attrs)                                        \
-  FMA3BASE(X86::R132, X86::R213, X86::R231, 0, 0, 0, Attrs)
+  FMA3BASE(X86::R132, X86::R213, X86::R231, Attrs)
 
 #define FMA3R(R132, R213, R231)                                                \
   FMA3RA(R132, R213, R231, 0)
 
 #define FMA3MA(M132, M213, M231, Attrs)                                        \
-  FMA3BASE(0, 0, 0, X86::M132, X86::M213, X86::M231, Attrs)
+  FMA3BASE(X86::M132, X86::M213, X86::M231, Attrs)
 
 #define FMA3M(M132, M213, M231)                                                \
   FMA3MA(M132, M213, M231, 0)
+
+#define FMA3RMA(R132, R213, R231, M132, M213, M231, Attrs)                     \
+  FMA3RA(R132, R213, R231, Attrs)                                              \
+  FMA3MA(M132, M213, M231, Attrs)
+
+#define FMA3RM(R132, R213, R231, M132, M213, M231)                             \
+  FMA3RMA(R132, R213, R231, M132, M213, M231, 0)
 
 #define FMA3_AVX2_VECTOR_GROUP(Name)                                           \
   FMA3RM(Name##132PSr, Name##213PSr, Name##231PSr,                             \
@@ -231,17 +232,8 @@ static const X86InstrFMA3Group Groups[] = {
 
 X86InstrFMA3Info::X86InstrFMA3Info() {
   for (const X86InstrFMA3Group &G : Groups) {
-    if (G.RegOpcodes[0])
-      OpcodeToGroup[G.RegOpcodes[0]] = &G;
-    if (G.RegOpcodes[1])
-      OpcodeToGroup[G.RegOpcodes[1]] = &G;
-    if (G.RegOpcodes[2])
-      OpcodeToGroup[G.RegOpcodes[2]] = &G;
-    if (G.MemOpcodes[0])
-      OpcodeToGroup[G.MemOpcodes[0]] = &G;
-    if (G.MemOpcodes[1])
-      OpcodeToGroup[G.MemOpcodes[1]] = &G;
-    if (G.MemOpcodes[2])
-      OpcodeToGroup[G.MemOpcodes[2]] = &G;
+    OpcodeToGroup[G.Opcodes[0]] = &G;
+    OpcodeToGroup[G.Opcodes[1]] = &G;
+    OpcodeToGroup[G.Opcodes[2]] = &G;
   }
 }
