@@ -6,9 +6,9 @@
 # RUN: llvm-readelf -s %t | FileCheck %s
 
 # CHECK:      .dynsym  {{.*}}   A
+# CHECK-NEXT: .hash    {{.*}}   A
 # CHECK-NEXT: .dynstr  {{.*}}   A
 # CHECK-NEXT: .text    {{.*}}   AX
-# CHECK-NEXT: .hash    {{.*}}   A
 # CHECK-NEXT: foo      {{.*}}  WA
 # CHECK-NEXT: .dynamic {{.*}}  WA
 

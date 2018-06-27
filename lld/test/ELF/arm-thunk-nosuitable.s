@@ -1,7 +1,7 @@
+// REQUIRES: ARM
 // RUN: llvm-mc %s --arm-add-build-attributes --triple=armv7a-linux-gnueabihf --filetype=obj -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-objdump -triple=thumbv7a-linux-gnueabihf -d -start-address=2166784 -stop-address=2166794 %t | FileCheck %s
-// REQUIRES: ARM
 
         // Create a conditional branch too far away from a precreated thunk
         // section. This will need a thunk section created within range.
