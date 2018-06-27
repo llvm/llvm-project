@@ -25,6 +25,7 @@ if (NOT IOS)
     COMMAND ${CMAKE_COMMAND} -E create_symlink Versions/Current/Headers ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Headers
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLDB_FRAMEWORK_VERSION} ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/Current
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLDB_VERSION} $<TARGET_FILE_DIR:liblldb>/Resources/Clang
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift $<TARGET_FILE_DIR:liblldb>/Resources/Swift
   )
 else()
   add_custom_command(TARGET lldb-framework POST_BUILD
