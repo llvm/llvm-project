@@ -1405,8 +1405,10 @@ bool SwiftASTManipulator::FixCaptures() {
     if (!variable.m_decl)
       continue;
 
-    if (variable.m_decl->getStorageKind() !=
-        swift::AbstractStorageDecl::Computed)
+    auto impl = variable.m_decl->getImplInfo();
+    if (impl.getReadImpl() != swift::ReadImplKind::Get ||
+        (impl.getWriteImpl() != swift::WriteImplKind::Set &&
+         impl.getWriteImpl() != swift::WriteImplKind::Immutable))
       continue;
 
     swift::FuncDecl *getter_decl = variable.m_decl->getGetter();
