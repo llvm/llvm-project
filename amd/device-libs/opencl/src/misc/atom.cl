@@ -10,6 +10,9 @@
 
 #define ATTR __attribute__((overloadable, always_inline))
 
+// Cast away volatile before calling clang builtin
+#define VOLATILE
+
 #define AC_int(X) X
 #define AC_uint(X) X
 #define AC_long(X) X
@@ -32,16 +35,16 @@
 #define RC_float(X) as_float(X)
 #define RC_double(X) as_double(X)
 
-#define PC_int
-#define PC_uint
-#define PC_long
-#define PC_ulong
-#define PC_intptr_t
-#define PC_uintptr_t
-#define PC_size_t
-#define PC_ptrdiff_t
-#define PC_float (volatile atomic_int *)
-#define PC_double (volatile atomic_long *)
+#define PC_int (VOLATILE atomic_int *)
+#define PC_uint (VOLATILE atomic_uint *)
+#define PC_long (VOLATILE atomic_long *)
+#define PC_ulong (VOLATILE atomic_ulong *)
+#define PC_intptr_t (VOLATILE atomic_intptr_t *)
+#define PC_uintptr_t (VOLATILE atomic_uintptr_t *)
+#define PC_size_t (VOLATILE atomic_size_t *)
+#define PC_ptrdiff_t (VOLATILE atomic_ptrdiff_t *)
+#define PC_float (VOLATILE atomic_int *)
+#define PC_double (VOLATILE atomic_long *)
 
 #define EC_int
 #define EC_uint
@@ -65,14 +68,14 @@
 ATTR T \
 atom_##O(volatile A T *p, T v) \
 { \
-    return __opencl_atomic_fetch_##O((volatile atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    return __opencl_atomic_fetch_##O((VOLATILE atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
 }
 
 #define GEN2(T,A,O) \
 ATTR T \
 atomic_##O(volatile A T *p, T v) \
 { \
-    return __opencl_atomic_fetch_##O((volatile atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    return __opencl_atomic_fetch_##O((VOLATILE atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
 }
 
 #define OPSA(F,T,A) \
@@ -111,14 +114,14 @@ ALL()
 ATTR T \
 atom_##O(volatile A T *p) \
 { \
-    return F_##O((volatile atomic_##T *)p, (T)1, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    return F_##O((VOLATILE atomic_##T *)p, (T)1, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
 }
 
 #define GEN2(T,A,O) \
 ATTR T \
 atomic_##O(volatile A T *p) \
 { \
-    return F_##O((volatile atomic_##T *)p, (T)1, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    return F_##O((VOLATILE atomic_##T *)p, (T)1, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
 }
 
 ALL()
@@ -133,14 +136,14 @@ ALL()
 ATTR T \
 atom_xchg(volatile A T *p, T v) \
 { \
-    return __opencl_atomic_exchange((volatile atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    return __opencl_atomic_exchange((VOLATILE atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
 }
 
 #define GEN2(T,A) \
 ATTR T \
 atomic_xchg(volatile A T *p, T v) \
 { \
-    return __opencl_atomic_exchange((volatile atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    return __opencl_atomic_exchange((VOLATILE atomic_##T *)p, v, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
 }
 
 #define OPS(F,T) \
@@ -151,7 +154,7 @@ ALL()
 ATTR float
 atomic_xchg(volatile float *p, float v)
 {
-    return as_float(__opencl_atomic_exchange((volatile atomic_int *)p, as_int(v), OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE));
+    return as_float(__opencl_atomic_exchange((VOLATILE atomic_int *)p, as_int(v), OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE));
 }
 
 // Handle cmpxchg
@@ -162,7 +165,7 @@ atomic_xchg(volatile float *p, float v)
 ATTR T \
 atom_cmpxchg(volatile A T *p, T e, T d) \
 { \
-    __opencl_atomic_compare_exchange_strong((volatile atomic_##T *)p, &e, d,  OCL12_MEMORY_ORDER, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    __opencl_atomic_compare_exchange_strong((VOLATILE atomic_##T *)p, &e, d,  OCL12_MEMORY_ORDER, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
     return e; \
 }
 
@@ -170,7 +173,7 @@ atom_cmpxchg(volatile A T *p, T e, T d) \
 ATTR T \
 atomic_cmpxchg(volatile A T *p, T e, T d) \
 { \
-    __opencl_atomic_compare_exchange_strong((volatile atomic_##T *)p, &e, d,  OCL12_MEMORY_ORDER, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
+    __opencl_atomic_compare_exchange_strong((VOLATILE atomic_##T *)p, &e, d,  OCL12_MEMORY_ORDER, OCL12_MEMORY_ORDER, OCL12_MEMORY_SCOPE); \
     return e; \
 }
 
@@ -185,45 +188,45 @@ ALL()
 ATTR void \
 atomic_init(volatile atomic_##T *p, T v) \
 { \
-    __opencl_atomic_init(p, v); \
+    __opencl_atomic_init((VOLATILE atomic_##T *)p, v); \
 }
 
 #define GENS(T) \
 ATTR void \
 atomic_store(volatile atomic_##T *p, T v) \
 { \
-    __opencl_atomic_store(p, v, memory_order_seq_cst, memory_scope_device); \
+    __opencl_atomic_store((VOLATILE atomic_##T *)p, v, memory_order_seq_cst, memory_scope_device); \
 } \
  \
 ATTR void \
 atomic_store_explicit(volatile atomic_##T *p, T v, memory_order o) \
 { \
-    __opencl_atomic_store(p, v, o, memory_scope_device); \
+    __opencl_atomic_store((VOLATILE atomic_##T *)p, v, o, memory_scope_device); \
 } \
  \
 ATTR void \
 atomic_store_explicit(volatile atomic_##T *p, T v, memory_order o, memory_scope s) \
 { \
-    __opencl_atomic_store(p, v, o, s); \
+    __opencl_atomic_store((VOLATILE atomic_##T *)p, v, o, s); \
 }
 
 #define GENL(T) \
 ATTR T \
 atomic_load(volatile atomic_##T *p) \
 { \
-    return __opencl_atomic_load(p, memory_order_seq_cst, memory_scope_device); \
+    return __opencl_atomic_load((VOLATILE atomic_##T *)p, memory_order_seq_cst, memory_scope_device); \
 } \
  \
 ATTR T \
 atomic_load_explicit(volatile atomic_##T *p, memory_order o) \
 { \
-    return __opencl_atomic_load(p, o, memory_scope_device); \
+    return __opencl_atomic_load((VOLATILE atomic_##T *)p, o, memory_scope_device); \
 } \
  \
 ATTR T \
 atomic_load_explicit(volatile atomic_##T *p, memory_order o, memory_scope s) \
 { \
-    return __opencl_atomic_load(p, o, s); \
+    return __opencl_atomic_load((VOLATILE atomic_##T *)p, o, s); \
 }
 
 #define GENX(T) \
@@ -318,73 +321,73 @@ ALLI(FO)
 ATTR ulong
 atomic_fetch_add(volatile atomic_ulong *p, long v)
 {
-    return __opencl_atomic_fetch_add(p, (ulong)v, memory_order_seq_cst, memory_scope_device);
+    return __opencl_atomic_fetch_add((VOLATILE atomic_ulong *)p, (ulong)v, memory_order_seq_cst, memory_scope_device);
 }
 
 ATTR ulong
 atomic_fetch_add_explicit(volatile atomic_ulong *p, long v, memory_order o)
 {
-    return __opencl_atomic_fetch_add(p, (ulong)v, o, memory_scope_device);
+    return __opencl_atomic_fetch_add((VOLATILE atomic_ulong *)p, (ulong)v, o, memory_scope_device);
 }
 
 ATTR ulong
 atomic_fetch_add_explicit(volatile atomic_ulong *p, long v, memory_order o, memory_scope s)
 {
-    return __opencl_atomic_fetch_add(p, (ulong)v, o, s);
+    return __opencl_atomic_fetch_add((VOLATILE atomic_ulong *)p, (ulong)v, o, s);
 }
 
 ATTR ulong
 atomic_fetch_sub(volatile atomic_ulong *p, long v)
 {
-    return __opencl_atomic_fetch_sub(p, (ulong)v, memory_order_seq_cst, memory_scope_device);
+    return __opencl_atomic_fetch_sub((VOLATILE atomic_ulong *)p, (ulong)v, memory_order_seq_cst, memory_scope_device);
 }
 
 ATTR ulong
 atomic_fetch_sub_explicit(volatile atomic_ulong *p, long v, memory_order o)
 {
-    return __opencl_atomic_fetch_sub(p, (ulong)v, o, memory_scope_device);
+    return __opencl_atomic_fetch_sub((VOLATILE atomic_ulong *)p, (ulong)v, o, memory_scope_device);
 }
 
 ATTR ulong
 atomic_fetch_sub_explicit(volatile atomic_ulong *p, long v, memory_order o, memory_scope s)
 {
-    return __opencl_atomic_fetch_sub(p, (ulong)v, o, s);
+    return __opencl_atomic_fetch_sub((VOLATILE atomic_ulong *)p, (ulong)v, o, s);
 }
 
 // flag functions
 ATTR bool
 atomic_flag_test_and_set(volatile atomic_flag *p)
 {
-    return __opencl_atomic_exchange((volatile atomic_int *)p, 1, memory_order_seq_cst, memory_scope_device);
+    return __opencl_atomic_exchange((VOLATILE atomic_int *)p, 1, memory_order_seq_cst, memory_scope_device);
 }
 
 ATTR bool
 atomic_flag_test_and_set_explicit(volatile atomic_flag *p, memory_order o)
 {
-    return __opencl_atomic_exchange((volatile atomic_int *)p, 1, o, memory_scope_device);
+    return __opencl_atomic_exchange((VOLATILE atomic_int *)p, 1, o, memory_scope_device);
 }
 
 ATTR bool
 atomic_flag_test_and_set_explicit(volatile atomic_flag *p, memory_order o, memory_scope s)
 {
-    return __opencl_atomic_exchange((volatile atomic_int *)p, 1, o, s);
+    return __opencl_atomic_exchange((VOLATILE atomic_int *)p, 1, o, s);
 }
 
 ATTR void
 atomic_flag_clear(volatile atomic_flag *p)
 {
-    __opencl_atomic_store((volatile atomic_int *)p, 0, memory_order_seq_cst, memory_scope_device);
+    __opencl_atomic_store((VOLATILE atomic_int *)p, 0, memory_order_seq_cst, memory_scope_device);
 }
 
 ATTR void
 atomic_flag_clear_explicit(volatile atomic_flag *p, memory_order o)
 {
-    __opencl_atomic_store((volatile atomic_int *)p, 0, o, memory_scope_device);
+    __opencl_atomic_store((VOLATILE atomic_int *)p, 0, o, memory_scope_device);
 }
 
 ATTR void
 atomic_flag_clear_explicit(volatile atomic_flag *p, memory_order o, memory_scope s)
 {
-    __opencl_atomic_store((volatile atomic_int *)p, 0, o, s);
+    __opencl_atomic_store((VOLATILE atomic_int *)p, 0, o, s);
 }
 
