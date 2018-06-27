@@ -701,7 +701,7 @@ enum RankFlags {
   RF_WRITE = 1 << 15,
   RF_EXEC_WRITE = 1 << 14,
   RF_EXEC = 1 << 13,
-  RF_PROGBITS_NOT_EXEC_OR_WRITE = 1 << 12,
+  RF_RODATA = 1 << 12,
   RF_NON_TLS_BSS = 1 << 11,
   RF_NON_TLS_BSS_RO = 1 << 10,
   RF_NOT_TLS = 1 << 9,
@@ -755,15 +755,14 @@ static unsigned getSectionRank(const OutputSection *Sec) {
       Rank |= RF_EXEC_WRITE;
     else
       Rank |= RF_EXEC;
-  } else {
-    if (IsWrite)
-      Rank |= RF_WRITE;
+  } else if (IsWrite) {
+    Rank |= RF_WRITE;
+  } else if (Sec->Type == SHT_PROGBITS) {
     // Make non-executable and non-writable PROGBITS sections (e.g .rodata
-    // .eh_frame) closer to .text . They likely contain PC or GOT relative
+    // .eh_frame) closer to .text. They likely contain PC or GOT relative
     // relocations and there could be relocation overflow if other huge sections
     // (.dynstr .dynsym) were placed in between.
-    else if (Sec->Type == SHT_PROGBITS)
-      Rank |= RF_PROGBITS_NOT_EXEC_OR_WRITE;
+    Rank |= RF_RODATA;
   }
 
   // If we got here we know that both A and B are in the same PT_LOAD.
