@@ -9,6 +9,7 @@ include_directories(${CLANG_LINT_SOURCE_DIR})
 add_extra_unittest(ClangTidyTests
   ClangTidyDiagnosticConsumerTest.cpp
   ClangTidyOptionsTest.cpp
+  ExprMutationAnalyzerTest.cpp
   IncludeInserterTest.cpp
   GoogleModuleTest.cpp
   LLVMModuleTest.cpp

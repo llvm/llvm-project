@@ -117,8 +117,6 @@ public:
 
   void print(raw_ostream &os) const;
 
-  LLVM_DUMP_METHOD void dump() const { print(llvm::errs()); }
-
   bool operator==(const RangeSet &other) const {
     return ranges == other.ranges;
   }
@@ -209,90 +207,8 @@ private:
   static void computeAdjustment(SymbolRef &Sym, llvm::APSInt &Adjustment);
 };
 
-class RangeConstraintManager : public RangedConstraintManager {
-public:
-  RangeConstraintManager(SubEngine *SE, SValBuilder &SVB)
-      : RangedConstraintManager(SE, SVB) {}
+} // end GR namespace
 
-  //===------------------------------------------------------------------===//
-  // Implementation for interface from ConstraintManager.
-  //===------------------------------------------------------------------===//
-
-  bool canReasonAbout(SVal X) const override;
-
-  ConditionTruthVal checkNull(ProgramStateRef State, SymbolRef Sym) override;
-
-  const llvm::APSInt *getSymVal(ProgramStateRef State,
-                                SymbolRef Sym) const override;
-
-  ProgramStateRef removeDeadBindings(ProgramStateRef State,
-                                     SymbolReaper &SymReaper) override;
-
-  void print(ProgramStateRef State, raw_ostream &Out, const char *nl,
-             const char *sep) override;
-
-  //===------------------------------------------------------------------===//
-  // Implementation for interface from RangedConstraintManager.
-  //===------------------------------------------------------------------===//
-
-  ProgramStateRef assumeSymNE(ProgramStateRef State, SymbolRef Sym,
-                              const llvm::APSInt &V,
-                              const llvm::APSInt &Adjustment) override;
-
-  ProgramStateRef assumeSymEQ(ProgramStateRef State, SymbolRef Sym,
-                              const llvm::APSInt &V,
-                              const llvm::APSInt &Adjustment) override;
-
-  ProgramStateRef assumeSymLT(ProgramStateRef State, SymbolRef Sym,
-                              const llvm::APSInt &V,
-                              const llvm::APSInt &Adjustment) override;
-
-  ProgramStateRef assumeSymGT(ProgramStateRef State, SymbolRef Sym,
-                              const llvm::APSInt &V,
-                              const llvm::APSInt &Adjustment) override;
-
-  ProgramStateRef assumeSymLE(ProgramStateRef State, SymbolRef Sym,
-                              const llvm::APSInt &V,
-                              const llvm::APSInt &Adjustment) override;
-
-  ProgramStateRef assumeSymGE(ProgramStateRef State, SymbolRef Sym,
-                              const llvm::APSInt &V,
-                              const llvm::APSInt &Adjustment) override;
-
-  ProgramStateRef assumeSymWithinInclusiveRange(
-      ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
-      const llvm::APSInt &To, const llvm::APSInt &Adjustment) override;
-
-  ProgramStateRef assumeSymOutsideInclusiveRange(
-      ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
-      const llvm::APSInt &To, const llvm::APSInt &Adjustment) override;
-
-  RangeSet::Factory &getRangeSetFactory() { return F; }
-
-private:
-  RangeSet::Factory F;
-
-  RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
-
-  RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
-                         const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
-  RangeSet getSymGTRange(ProgramStateRef St, SymbolRef Sym,
-                         const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
-  RangeSet getSymLERange(ProgramStateRef St, SymbolRef Sym,
-                         const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
-  RangeSet getSymLERange(llvm::function_ref<RangeSet()> RS,
-                         const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
-  RangeSet getSymGERange(ProgramStateRef St, SymbolRef Sym,
-                         const llvm::APSInt &Int,
-                         const llvm::APSInt &Adjustment);
-};
-
-} // namespace ento
-
-} // namespace clang
+} // end clang namespace
 
 #endif

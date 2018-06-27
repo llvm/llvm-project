@@ -9316,8 +9316,15 @@ public:
     /// A functional-style cast.
     CCK_FunctionalCast,
     /// A cast other than a C-style cast.
-    CCK_OtherCast
+    CCK_OtherCast,
+    /// A conversion for an operand of a builtin overloaded operator.
+    CCK_ForBuiltinOverloadedOp
   };
+
+  static bool isCast(CheckedConversionKind CCK) {
+    return CCK == CCK_CStyleCast || CCK == CCK_FunctionalCast ||
+           CCK == CCK_OtherCast;
+  }
 
   /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit
   /// cast.  If there is already an implicit cast, merge into the existing one.

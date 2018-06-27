@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr1213 { // dr1213: 4
+namespace dr1213 { // dr1213: 7
 #if __cplusplus >= 201103L
   using T = int[3];
   int &&r = T{}[1];
@@ -11,6 +11,19 @@ namespace dr1213 { // dr1213: 4
   using T = decltype((T{}));
   using U = decltype((T{}[2]));
   using U = int &&;
+
+  // Same thing but in a case where we consider overloaded operator[].
+  struct ConvertsToInt {
+    operator int();
+  };
+  struct X { int array[1]; };
+  using U = decltype(X().array[ConvertsToInt()]);
+
+  // We apply the same rule to vector subscripting.
+  typedef int V4Int __attribute__((__vector_size__(sizeof(int) * 4)));
+  typedef int EV4Int __attribute__((__ext_vector_type__(4)));
+  using U = decltype(V4Int()[0]);
+  using U = decltype(EV4Int()[0]);
 #endif
 }
 

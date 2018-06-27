@@ -1673,23 +1673,22 @@ const char *CastExpr::getCastKindName(CastKind CK) {
 }
 
 namespace {
-  Expr *skipImplicitTemporary(Expr *expr) {
+  const Expr *skipImplicitTemporary(const Expr *E) {
     // Skip through reference binding to temporary.
-    if (MaterializeTemporaryExpr *Materialize
-                                  = dyn_cast<MaterializeTemporaryExpr>(expr))
-      expr = Materialize->GetTemporaryExpr();
+    if (auto *Materialize = dyn_cast<MaterializeTemporaryExpr>(E))
+      E = Materialize->GetTemporaryExpr();
 
     // Skip any temporary bindings; they're implicit.
-    if (CXXBindTemporaryExpr *Binder = dyn_cast<CXXBindTemporaryExpr>(expr))
-      expr = Binder->getSubExpr();
+    if (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
+      E = Binder->getSubExpr();
 
-    return expr;
+    return E;
   }
 }
 
 Expr *CastExpr::getSubExprAsWritten() {
-  Expr *SubExpr = nullptr;
-  CastExpr *E = this;
+  const Expr *SubExpr = nullptr;
+  const CastExpr *E = this;
   do {
     SubExpr = skipImplicitTemporary(E->getSubExpr());
 
@@ -1702,15 +1701,33 @@ Expr *CastExpr::getSubExprAsWritten() {
       assert((isa<CXXMemberCallExpr>(SubExpr) ||
               isa<BlockExpr>(SubExpr)) &&
              "Unexpected SubExpr for CK_UserDefinedConversion.");
-      if (isa<CXXMemberCallExpr>(SubExpr))
-        SubExpr = cast<CXXMemberCallExpr>(SubExpr)->getImplicitObjectArgument();
+      if (auto *MCE = dyn_cast<CXXMemberCallExpr>(SubExpr))
+        SubExpr = MCE->getImplicitObjectArgument();
     }
     
     // If the subexpression we're left with is an implicit cast, look
     // through that, too.
   } while ((E = dyn_cast<ImplicitCastExpr>(SubExpr)));  
   
-  return SubExpr;
+  return const_cast<Expr*>(SubExpr);
+}
+
+NamedDecl *CastExpr::getConversionFunction() const {
+  const Expr *SubExpr = nullptr;
+
+  for (const CastExpr *E = this; E; E = dyn_cast<ImplicitCastExpr>(SubExpr)) {
+    SubExpr = skipImplicitTemporary(E->getSubExpr());
+
+    if (E->getCastKind() == CK_ConstructorConversion)
+      return cast<CXXConstructExpr>(SubExpr)->getConstructor();
+
+    if (E->getCastKind() == CK_UserDefinedConversion) {
+      if (auto *MCE = dyn_cast<CXXMemberCallExpr>(SubExpr))
+        return MCE->getMethodDecl();
+    }
+  }
+
+  return nullptr;
 }
 
 CXXBaseSpecifier **CastExpr::path_buffer() {

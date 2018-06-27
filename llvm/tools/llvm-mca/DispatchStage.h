@@ -19,6 +19,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_DISPATCH_STAGE_H
 #define LLVM_TOOLS_LLVM_MCA_DISPATCH_STAGE_H
 
+#include "HWEventListener.h"
 #include "Instruction.h"
 #include "RegisterFile.h"
 #include "RetireControlUnit.h"
@@ -30,7 +31,6 @@ namespace mca {
 
 class WriteState;
 class Scheduler;
-class Pipeline;
 
 // Implements the hardware dispatch logic.
 //
@@ -54,7 +54,6 @@ class DispatchStage : public Stage {
   unsigned DispatchWidth;
   unsigned AvailableEntries;
   unsigned CarryOver;
-  Pipeline *Owner;
   const llvm::MCSubtargetInfo &STI;
   RetireControlUnit &RCU;
   RegisterFile &PRF;
@@ -66,6 +65,7 @@ class DispatchStage : public Stage {
   void dispatch(InstRef IR);
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
 
+  void notifyStallEvent(const HWStallEvent &Event);
   void notifyInstructionDispatched(const InstRef &IR,
                                    llvm::ArrayRef<unsigned> UsedPhysRegs);
 
@@ -84,12 +84,12 @@ class DispatchStage : public Stage {
   }
 
 public:
-  DispatchStage(Pipeline *P, const llvm::MCSubtargetInfo &Subtarget,
+  DispatchStage(const llvm::MCSubtargetInfo &Subtarget,
                 const llvm::MCRegisterInfo &MRI, unsigned RegisterFileSize,
                 unsigned MaxDispatchWidth, RetireControlUnit &R,
                 RegisterFile &F, Scheduler &Sched)
       : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
-        CarryOver(0U), Owner(P), STI(Subtarget), RCU(R), PRF(F), SC(Sched) {}
+        CarryOver(0U), STI(Subtarget), RCU(R), PRF(F), SC(Sched) {}
 
   // We can always try to dispatch, so returning false is okay in this case.
   // The retire stage, which controls the RCU, might have items to complete but

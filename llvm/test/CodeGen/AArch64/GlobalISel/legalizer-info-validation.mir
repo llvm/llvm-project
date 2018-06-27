@@ -91,43 +91,43 @@
 # DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMIC_CMPXCHG_WITH_SUCCESS (opcode {{[0-9]+}}): 3 type indices
-# DEBUG:      .. the first uncovered type index: 3, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMIC_CMPXCHG (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_XCHG (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_ADD (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_SUB (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_AND (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_NAND (opcode {{[0-9]+}}): 2 type indices
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined
 #
 # DEBUG-NEXT: G_ATOMICRMW_OR (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_XOR (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_MAX (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_MIN (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_UMAX (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_ATOMICRMW_UMIN (opcode {{[0-9]+}}): 2 type indices
-# DEBUG:      .. the first uncovered type index: 2, OK
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_BRCOND (opcode {{[0-9]+}}): 1 type index
 # DEBUG:      .. the first uncovered type index: 1, OK

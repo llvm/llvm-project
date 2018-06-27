@@ -248,6 +248,11 @@ def err_unexpected_at : Error<"unexpected '@' in program">;
 def err_atimport : Error<
 "use of '@import' when modules are disabled">;
 
+def warn_atimport_in_framework_header : Warning<
+  "use of '@import' in framework header is discouraged, "
+  "including this header requires -fmodules">,
+  InGroup<FrameworkHdrAtImport>;
+
 def err_invalid_reference_qualifier_application : Error<
   "'%0' qualifier may not be applied to a reference">;
 def err_illegal_decl_reference_to_reference : Error<

@@ -139,6 +139,7 @@ if(APPLE)
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
     COMMENT "Checking TSan Go runtime..."
     VERBATIM)
+  set_target_properties(GotsanRuntimeCheck PROPERTIES FOLDER "Compiler-RT Misc")
 else()
   foreach(arch ${TSAN_SUPPORTED_ARCH})
     if(arch STREQUAL "x86_64")
@@ -234,6 +235,7 @@ if(COMPILER_RT_LIBCXX_PATH AND
   endforeach()
 
   add_custom_target(libcxx_tsan DEPENDS ${libcxx_tsan_deps})
+  set_target_properties(libcxx_tsan PROPERTIES FOLDER "Compiler-RT Misc")
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)

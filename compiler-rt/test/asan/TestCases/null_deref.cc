@@ -15,10 +15,10 @@ void NullDeref(int *ptr) {
   ptr[10]++;  // BOOM
   // atos on Mac cannot extract the symbol name correctly. Also, on FreeBSD 9.2
   // the demangling function rejects local names with 'L' in front of them.
-  // CHECK: {{    #0 0x.* in .*NullDeref.*null_deref.cc:}}[[@LINE-3]]
+  // CHECK: {{    #0 0x.* in .*NullDeref.*null_deref.cc}}
 }
 int main() {
   NullDeref((int*)0);
-  // CHECK: {{    #1 0x.* in main.*null_deref.cc:}}[[@LINE-1]]
+  // CHECK: {{    #1 0x.* in main.*null_deref.cc}}
   // CHECK: AddressSanitizer can not provide additional info.
 }

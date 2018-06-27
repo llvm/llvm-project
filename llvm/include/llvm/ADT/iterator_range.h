@@ -59,9 +59,10 @@ template <typename T> iterator_range<T> make_range(std::pair<T, T> p) {
   return iterator_range<T>(std::move(p.first), std::move(p.second));
 }
 
-template<typename T>
-iterator_range<decltype(begin(std::declval<T>()))> drop_begin(T &&t, int n) {
-  return make_range(std::next(begin(t), n), end(t));
+template <typename T>
+iterator_range<decltype(adl_begin(std::declval<T>()))> drop_begin(T &&t,
+                                                                  int n) {
+  return make_range(std::next(adl_begin(t), n), adl_end(t));
 }
 }
 

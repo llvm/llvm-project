@@ -254,7 +254,7 @@ static void computeImportForReferencedGlobals(
       continue;
     }
 
-    LLVM_DEBUG(dbgs() << " ref -> " << VI.getGUID() << "\n");
+    LLVM_DEBUG(dbgs() << " ref -> " << VI << "\n");
 
     for (auto &RefSummary : VI.getSummaryList())
       if (RefSummary->getSummaryKind() == GlobalValueSummary::GlobalVarKind &&
@@ -284,8 +284,8 @@ static void computeImportForFunction(
   static int ImportCount = 0;
   for (auto &Edge : Summary.calls()) {
     ValueInfo VI = Edge.first;
-    LLVM_DEBUG(dbgs() << " edge -> " << VI.getGUID()
-                      << " Threshold:" << Threshold << "\n");
+    LLVM_DEBUG(dbgs() << " edge -> " << VI << " Threshold:" << Threshold
+                      << "\n");
 
     if (ImportCutoff >= 0 && ImportCount >= ImportCutoff) {
       LLVM_DEBUG(dbgs() << "ignored! import-cutoff value of " << ImportCutoff
@@ -399,8 +399,13 @@ static void ComputeImportForModule(
   // Populate the worklist with the import for the functions in the current
   // module
   for (auto &GVSummary : DefinedGVSummaries) {
+#ifndef NDEBUG
+    // FIXME: Change the GVSummaryMapTy to hold ValueInfo instead of GUID
+    // so this map look up (and possibly others) can be avoided.
+    auto VI = Index.getValueInfo(GVSummary.first);
+#endif
     if (!Index.isGlobalValueLive(GVSummary.second)) {
-      LLVM_DEBUG(dbgs() << "Ignores Dead GUID: " << GVSummary.first << "\n");
+      LLVM_DEBUG(dbgs() << "Ignores Dead GUID: " << VI << "\n");
       continue;
     }
     auto *FuncSummary =
@@ -408,7 +413,7 @@ static void ComputeImportForModule(
     if (!FuncSummary)
       // Skip import for global variables
       continue;
-    LLVM_DEBUG(dbgs() << "Initialize import for " << GVSummary.first << "\n");
+    LLVM_DEBUG(dbgs() << "Initialize import for " << VI << "\n");
     computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
                              DefinedGVSummaries, Worklist, ImportList,
                              ExportLists);
@@ -600,14 +605,16 @@ void llvm::computeDeadSymbols(
   }
 
   // Add values flagged in the index as live roots to the worklist.
-  for (const auto &Entry : Index)
+  for (const auto &Entry : Index) {
+    auto VI = Index.getValueInfo(Entry);
     for (auto &S : Entry.second.SummaryList)
       if (S->isLive()) {
-        LLVM_DEBUG(dbgs() << "Live root: " << Entry.first << "\n");
-        Worklist.push_back(ValueInfo(/*IsAnalysis=*/false, &Entry));
+        LLVM_DEBUG(dbgs() << "Live root: " << VI << "\n");
+        Worklist.push_back(VI);
         ++LiveSymbols;
         break;
       }
+  }
 
   // Make value live and add it to the worklist if it was not live before.
   auto visit = [&](ValueInfo VI) {

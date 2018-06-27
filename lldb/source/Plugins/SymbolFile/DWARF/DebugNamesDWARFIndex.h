@@ -31,7 +31,7 @@ public:
   void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) override;
   void GetObjCMethods(ConstString class_name, DIEArray &offsets) override {}
   void GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
-                            DIEArray &offsets) override {}
+                            DIEArray &offsets) override;
   void GetTypes(ConstString name, DIEArray &offsets) override;
   void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
   void GetNamespaces(ConstString name, DIEArray &offsets) override;

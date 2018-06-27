@@ -511,9 +511,9 @@ int main(int argc, char **argv) {
         Width, RegisterFileSize, LoadQueueSize, StoreQueueSize, AssumeNoAlias);
     P->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
     P->appendStage(llvm::make_unique<mca::DispatchStage>(
-        P.get(), *STI, *MRI, RegisterFileSize, Width, RCU, PRF, HWS));
-    P->appendStage(llvm::make_unique<mca::RetireStage>(P.get(), RCU, PRF));
-    P->appendStage(llvm::make_unique<mca::ExecuteStage>(P.get(), RCU, HWS));
+        *STI, *MRI, RegisterFileSize, Width, RCU, PRF, HWS));
+    P->appendStage(llvm::make_unique<mca::RetireStage>(RCU, PRF));
+    P->appendStage(llvm::make_unique<mca::ExecuteStage>(RCU, HWS));
     mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)

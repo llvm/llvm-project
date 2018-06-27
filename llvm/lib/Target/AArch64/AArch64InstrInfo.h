@@ -238,9 +238,6 @@ public:
 
   /// AArch64 supports the MachineOutliner.
   bool useMachineOutliner() const override { return true; }
-  
-  bool
-  canOutlineWithoutLRSave(MachineBasicBlock::iterator &CallInsertionPt) const;
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
   outliner::TargetCostInfo getOutlininingCandidateInfo(
