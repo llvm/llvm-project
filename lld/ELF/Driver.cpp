@@ -325,6 +325,25 @@ static bool getZFlag(opt::InputArgList &Args, StringRef K1, StringRef K2,
   return Default;
 }
 
+static bool isKnown(StringRef S) {
+  return S == "combreloc" || S == "copyreloc" || S == "defs" ||
+         S == "execstack" || S == "hazardplt" || S == "initfirst" ||
+         S == "keep-text-section-prefix" || S == "lazy" || S == "muldefs" ||
+         S == "nocombreloc" || S == "nocopyreloc" || S == "nodelete" ||
+         S == "nodlopen" || S == "noexecstack" ||
+         S == "nokeep-text-section-prefix" || S == "norelro" || S == "notext" ||
+         S == "now" || S == "origin" || S == "relro" || S == "retpolineplt" ||
+         S == "rodynamic" || S == "text" || S == "wxneeded" ||
+         S.startswith("max-page-size=") || S.startswith("stack-size=");
+}
+
+// Report an error for an unknown -z option.
+static void checkZOptions(opt::InputArgList &Args) {
+  for (auto *Arg : Args.filtered(OPT_z))
+    if (!isKnown(Arg->getValue()))
+      error("unknown -z value: " + StringRef(Arg->getValue()));
+}
+
 void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   ELFOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -380,6 +399,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   }
 
   readConfigs(Args);
+  checkZOptions(Args);
   initLLVM();
   createFiles(Args);
   if (errorCount())
