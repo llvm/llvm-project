@@ -1179,6 +1179,10 @@ TEST(CompletionTest, NonDocComments) {
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   Annotations Source(R"cpp(
+    // We ignore namespace comments, for rationale see CodeCompletionStrings.h.
+    namespace comments_ns {
+    }
+
     // ------------------
     int comments_foo();
 
@@ -1223,6 +1227,7 @@ TEST(CompletionTest, NonDocComments) {
       UnorderedElementsAre(AllOf(Not(IsDocumented()), Named("comments_foo")),
                            AllOf(IsDocumented(), Named("comments_baz")),
                            AllOf(IsDocumented(), Named("comments_quux")),
+                           AllOf(Not(IsDocumented()), Named("comments_ns")),
                            // FIXME(ibiryukov): the following items should have
                            // empty documentation, since they are separated from
                            // a comment with an empty line. Unfortunately, I

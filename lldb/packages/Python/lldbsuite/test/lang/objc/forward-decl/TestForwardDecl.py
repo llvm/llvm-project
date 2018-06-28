@@ -23,9 +23,8 @@ class ForwardDeclTestCase(TestBase):
         self.line = line_number(self.source, '// Set breakpoint 0 here.')
         self.shlib_names = ["Container"]
 
-    @skipUnlessDarwin
-    def test_expr(self):
-        self.build()
+    def do_test(self, dictionary=None):
+        self.build(dictionary=dictionary)
 
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
@@ -57,3 +56,17 @@ class ForwardDeclTestCase(TestBase):
         # This should display correctly.
         self.expect("expression [j getMember]", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["= 0x"])
+
+    @skipUnlessDarwin
+    def test_expr(self):
+        self.do_test()
+
+    @no_debug_info_test
+    @skipUnlessDarwin
+    @skipIf(compiler=no_match("clang"))
+    @skipIf(compiler_version=["<", "7.0"])
+    def test_debug_names(self):
+        """Test that we are able to find complete types when using DWARF v5
+        accelerator tables"""
+        self.do_test(
+            dict(CFLAGS_EXTRAS="-dwarf-version=5 -mllvm -accel-tables=Dwarf"))

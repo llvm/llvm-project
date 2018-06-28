@@ -209,6 +209,23 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
+  // Local-Dynamic sequence where offset of tls variable relative to dynamic
+  // thread pointer is stored in the got.
+  if (Expr == R_TLSLD_GOT_OFF) {
+    // Local-Dynamic relocs can be relaxed to local-exec
+    if (!Config->Shared) {
+      C.Relocations.push_back({R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Sym});
+      return 1;
+    }
+    if (!Sym.isInGot()) {
+      InX::Got->addEntry(Sym);
+      uint64_t Off = Sym.getGotOffset();
+      InX::Got->Relocations.push_back({R_ABS, Target->TlsOffsetRel, Off, 0, &Sym});
+    }
+    C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
+    return 1;
+  }
+
   if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL, R_TLSGD_GOT,
                      R_TLSGD_GOT_FROM_END, R_TLSGD_PC>(Expr)) {
     if (Config->Shared) {
@@ -335,12 +352,13 @@ static bool isRelExpr(RelExpr Expr) {
 static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                                      InputSectionBase &S, uint64_t RelOff) {
   // These expressions always compute a constant
-  if (isRelExprOneOf<R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
-                     R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32,
-                     R_MIPS_GOT_GP_PC, R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC,
-                     R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT,
-                     R_TLSGD_GOT_FROM_END, R_TLSGD_PC, R_PPC_CALL_PLT,
-                     R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT>(E))
+  if (isRelExprOneOf<
+          R_GOT_FROM_END, R_GOT_OFF, R_TLSLD_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
+          R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
+          R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
+          R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOT_FROM_END,
+          R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT>(
+          E))
     return true;
 
   // These never do, except if the entire file is position dependent or if

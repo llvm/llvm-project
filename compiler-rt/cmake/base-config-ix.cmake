@@ -12,7 +12,14 @@ check_include_file(unwind.h HAVE_UNWIND_H)
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)
 add_custom_target(install-compiler-rt-stripped)
-set_target_properties(compiler-rt PROPERTIES FOLDER "Compiler-RT Misc")
+set_property(
+  TARGET
+    compiler-rt
+    install-compiler-rt
+    install-compiler-rt-stripped
+  PROPERTY
+    FOLDER "Compiler-RT Misc"
+)
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can
 # construct the output paths, so it can behave as if it were in-tree here.
@@ -69,10 +76,17 @@ endif()
 if(NOT DEFINED COMPILER_RT_OS_DIR)
   string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
 endif()
-set(COMPILER_RT_LIBRARY_OUTPUT_DIR
-  ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
-set(COMPILER_RT_LIBRARY_INSTALL_DIR
-  ${COMPILER_RT_INSTALL_PATH}/lib/${COMPILER_RT_OS_DIR})
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  set(COMPILER_RT_LIBRARY_OUTPUT_DIR
+    ${COMPILER_RT_OUTPUT_DIR})
+  set(COMPILER_RT_LIBRARY_INSTALL_DIR
+    ${COMPILER_RT_INSTALL_PATH})
+else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(COMPILER_RT_LIBRARY_OUTPUT_DIR
+    ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
+  set(COMPILER_RT_LIBRARY_INSTALL_DIR
+    ${COMPILER_RT_INSTALL_PATH}/lib/${COMPILER_RT_OS_DIR})
+endif()
 
 if(APPLE)
   # On Darwin if /usr/include doesn't exist, the user probably has Xcode but not
