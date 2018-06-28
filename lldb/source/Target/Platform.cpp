@@ -1808,8 +1808,7 @@ uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
   FileSpec file_to_use;
   if (remote_filename.IsAbsolute())
     file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(), 
-                               false, 
-                               remote_filename.GetPathStyle());
+                               false);
   else
     file_to_use = remote_filename;
     

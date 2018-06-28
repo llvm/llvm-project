@@ -1286,8 +1286,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
       std::string name_string;
       process->ReadCStringFromMemory(buffer_addr, name_string, utility_error);
       if (utility_error.Success())
-        loaded_image->SetFile(name_string, false, 
-                              llvm::sys::path::Style::posix);
+        loaded_image->SetFile(name_string, false);
     }
     return process->AddImageToken(token);
   }
