@@ -180,7 +180,6 @@ void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {
 
 void ODRHash::clear() {
   DeclNameMap.clear();
-  TypeMap.clear();
   Bools.clear();
   ID.clear();
 }
@@ -770,14 +769,6 @@ public:
 
 void ODRHash::AddType(const Type *T) {
   assert(T && "Expecting non-null pointer.");
-  auto Result = TypeMap.insert(std::make_pair(T, TypeMap.size()));
-  ID.AddInteger(Result.first->second);
-  // On first encounter of a Type pointer, process it.  Every time afterwards,
-  // only the index value is needed.
-  if (!Result.second) {
-    return;
-  }
-
   ODRTypeVisitor(ID, *this).Visit(T);
 }
 

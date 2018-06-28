@@ -24,6 +24,12 @@ using namespace llvm;
 
 namespace mca {
 
+RegisterFile::RegisterFile(const llvm::MCSchedModel &SM,
+                           const llvm::MCRegisterInfo &mri, unsigned NumRegs)
+    : MRI(mri), RegisterMappings(mri.getNumRegs(), {WriteRef(), {0, 0}}) {
+  initialize(SM, NumRegs);
+}
+
 void RegisterFile::initialize(const MCSchedModel &SM, unsigned NumRegs) {
   // Create a default register file that "sees" all the machine registers
   // declared by the target. The number of physical registers in the default
@@ -66,8 +72,7 @@ void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
   // An empty set of register classes means: this register file contains all
   // the physical registers specified by the target.
   if (Entries.empty()) {
-    for (std::pair<WriteState *, IndexPlusCostPairTy> &Mapping :
-         RegisterMappings)
+    for (std::pair<WriteRef, IndexPlusCostPairTy> &Mapping : RegisterMappings)
       Mapping.second = std::make_pair(RegisterFileIndex, 1U);
     return;
   }
@@ -120,16 +125,17 @@ void RegisterFile::freePhysRegs(IndexPlusCostPairTy Entry,
   FreedPhysRegs[0] += Cost;
 }
 
-void RegisterFile::addRegisterWrite(WriteState &WS,
+void RegisterFile::addRegisterWrite(WriteRef Write,
                                     MutableArrayRef<unsigned> UsedPhysRegs,
                                     bool ShouldAllocatePhysRegs) {
+  const WriteState &WS = *Write.getWriteState();
   unsigned RegID = WS.getRegisterID();
   assert(RegID && "Adding an invalid register definition?");
 
   RegisterMapping &Mapping = RegisterMappings[RegID];
-  Mapping.first = &WS;
+  Mapping.first = Write;
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I)
-    RegisterMappings[*I].first = &WS;
+    RegisterMappings[*I].first = Write;
 
   // No physical registers are allocated for instructions that are optimized in
   // hardware. For example, zero-latency data-dependency breaking instructions
@@ -142,7 +148,7 @@ void RegisterFile::addRegisterWrite(WriteState &WS,
     return;
 
   for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I)
-    RegisterMappings[*I].first = &WS;
+    RegisterMappings[*I].first = Write;
 }
 
 void RegisterFile::removeRegisterWrite(const WriteState &WS,
@@ -156,50 +162,61 @@ void RegisterFile::removeRegisterWrite(const WriteState &WS,
          "Invalidating a write of unknown cycles!");
   assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");
   RegisterMapping &Mapping = RegisterMappings[RegID];
-  if (!Mapping.first)
+  WriteRef &WR = Mapping.first;
+  if (!WR.isValid())
     return;
 
   if (ShouldFreePhysRegs)
     freePhysRegs(Mapping.second, FreedPhysRegs);
 
-  if (Mapping.first == &WS)
-    Mapping.first = nullptr;
+  if (WR.getWriteState() == &WS)
+    WR.invalidate();
 
-  for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I)
-    if (RegisterMappings[*I].first == &WS)
-      RegisterMappings[*I].first = nullptr;
+  for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
+    WR = RegisterMappings[*I].first;
+    if (WR.getWriteState() == &WS)
+      WR.invalidate();
+  }
 
   if (!ShouldInvalidateSuperRegs)
     return;
 
-  for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I)
-    if (RegisterMappings[*I].first == &WS)
-      RegisterMappings[*I].first = nullptr;
+  for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
+    WR = RegisterMappings[*I].first;
+    if (WR.getWriteState() == &WS)
+      WR.invalidate();
+  }
 }
 
-void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
+void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
                                  unsigned RegID) const {
   assert(RegID && RegID < RegisterMappings.size());
-  WriteState *WS = RegisterMappings[RegID].first;
-  if (WS)
-    Writes.push_back(WS);
+  const WriteRef &WR = RegisterMappings[RegID].first;
+  if (WR.isValid())
+    Writes.push_back(WR);
 
   // Handle potential partial register updates.
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-    WS = RegisterMappings[*I].first;
-    if (WS)
-      Writes.push_back(WS);
+    const WriteRef &WR = RegisterMappings[*I].first;
+    if (WR.isValid())
+      Writes.push_back(WR);
   }
 
   // Remove duplicate entries and resize the input vector.
-  llvm::sort(Writes.begin(), Writes.end());
+  llvm::sort(Writes.begin(), Writes.end(),
+             [](const WriteRef &Lhs, const WriteRef &Rhs) {
+               return Lhs.getWriteState() < Rhs.getWriteState();
+             });
   auto It = std::unique(Writes.begin(), Writes.end());
   Writes.resize(std::distance(Writes.begin(), It));
 
   LLVM_DEBUG({
-    for (const WriteState *WS : Writes)
+    for (const WriteRef &WR : Writes) {
+      const WriteState &WS = *WR.getWriteState();
       dbgs() << "Found a dependent use of Register "
-             << MRI.getName(WS->getRegisterID()) << "\n";
+             << MRI.getName(WS.getRegisterID()) << " (defined by intruction #"
+             << WR.getSourceIndex() << '\n';
+    }
   });
 }
 
@@ -249,10 +266,7 @@ void RegisterFile::dump() const {
     const RegisterMapping &RM = RegisterMappings[I];
     dbgs() << MRI.getName(I) << ", " << I << ", Map=" << RM.second.first
            << ", ";
-    if (RM.first)
-      RM.first->dump();
-    else
-      dbgs() << "(null)\n";
+    RM.first.dump();
   }
 
   for (unsigned I = 0, E = getNumRegisterFiles(); I < E; ++I) {

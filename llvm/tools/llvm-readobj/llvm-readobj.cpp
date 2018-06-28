@@ -164,6 +164,10 @@ namespace opts {
   cl::opt<bool> ExpandRelocs("expand-relocs",
     cl::desc("Expand each shown relocation to multiple lines"));
 
+  // -raw-relr
+  cl::opt<bool> RawRelr("raw-relr",
+    cl::desc("Do not decode relocations in SHT_RELR section, display raw contents"));
+
   // -codeview
   cl::opt<bool> CodeView("codeview",
                          cl::desc("Display CodeView debug information"));

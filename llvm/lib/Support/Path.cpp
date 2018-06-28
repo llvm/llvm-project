@@ -927,16 +927,7 @@ std::error_code create_directories(const Twine &Path, bool IgnoreExisting,
   return create_directory(P, IgnoreExisting, Perms);
 }
 
-std::error_code copy_file(const Twine &From, const Twine &To) {
-  int ReadFD, WriteFD;
-  if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
-    return EC;
-  if (std::error_code EC =
-          openFileForWrite(To, WriteFD, CD_CreateAlways, OF_None)) {
-    close(ReadFD);
-    return EC;
-  }
-
+static std::error_code copy_file_internal(int ReadFD, int WriteFD) {
   const size_t BufSize = 4096;
   char *Buf = new char[BufSize];
   int BytesRead = 0, BytesWritten = 0;
@@ -953,13 +944,41 @@ std::error_code copy_file(const Twine &From, const Twine &To) {
     if (BytesWritten < 0)
       break;
   }
-  close(ReadFD);
-  close(WriteFD);
   delete[] Buf;
 
   if (BytesRead < 0 || BytesWritten < 0)
     return std::error_code(errno, std::generic_category());
   return std::error_code();
+}
+
+std::error_code copy_file(const Twine &From, const Twine &To) {
+  int ReadFD, WriteFD;
+  if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
+    return EC;
+  if (std::error_code EC =
+          openFileForWrite(To, WriteFD, CD_CreateAlways, OF_None)) {
+    close(ReadFD);
+    return EC;
+  }
+
+  std::error_code EC = copy_file_internal(ReadFD, WriteFD);
+
+  close(ReadFD);
+  close(WriteFD);
+
+  return EC;
+}
+
+std::error_code copy_file(const Twine &From, int ToFD) {
+  int ReadFD;
+  if (std::error_code EC = openFileForRead(From, ReadFD, OF_None))
+    return EC;
+
+  std::error_code EC = copy_file_internal(ReadFD, ToFD);
+
+  close(ReadFD);
+
+  return EC;
 }
 
 ErrorOr<MD5::MD5Result> md5_contents(int FD) {

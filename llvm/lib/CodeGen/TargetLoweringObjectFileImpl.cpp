@@ -91,12 +91,6 @@ static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
 //                                  ELF
 //===----------------------------------------------------------------------===//
 
-void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
-                                             const TargetMachine &TgtM) {
-  TargetLoweringObjectFile::Initialize(Ctx, TgtM);
-  TM = &TgtM;
-}
-
 void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
                                                      Module &M) const {
   auto &C = getContext();
@@ -122,49 +116,15 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
   StringRef Section;
 
   GetObjCImageInfo(M, Version, Flags, Section);
-  if (!Section.empty()) {
-    auto *S = C.getELFSection(Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-    Streamer.SwitchSection(S);
-    Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
-    Streamer.EmitIntValue(Version, 4);
-    Streamer.EmitIntValue(Flags, 4);
-    Streamer.AddBlankLine();
-  }
-
-  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
-  M.getModuleFlagsMetadata(ModuleFlags);
-
-  MDNode *CFGProfile = nullptr;
-
-  for (const auto &MFE : ModuleFlags) {
-    StringRef Key = MFE.Key->getString();
-    if (Key == "CG Profile") {
-      CFGProfile = cast<MDNode>(MFE.Val);
-      break;
-    }
-  }
-
-  if (!CFGProfile)
+  if (Section.empty())
     return;
 
-  auto GetSym = [this](const MDOperand &MDO) {
-    auto V = cast<ValueAsMetadata>(MDO);
-    const Function *F = cast<Function>(V->getValue());
-    return TM->getSymbol(F);
-  };
-
-  for (const auto &Edge : CFGProfile->operands()) {
-    MDNode *E = cast<MDNode>(Edge);
-    const MCSymbol *From = GetSym(E->getOperand(0));
-    const MCSymbol *To = GetSym(E->getOperand(1));
-    uint64_t Count = cast<ConstantAsMetadata>(E->getOperand(2))
-                         ->getValue()
-                         ->getUniqueInteger()
-                         .getZExtValue();
-    Streamer.emitCGProfileEntry(
-        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
-        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
-  }
+  auto *S = C.getELFSection(Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+  Streamer.SwitchSection(S);
+  Streamer.EmitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+  Streamer.EmitIntValue(Version, 4);
+  Streamer.EmitIntValue(Flags, 4);
+  Streamer.AddBlankLine();
 }
 
 MCSymbol *TargetLoweringObjectFileELF::getCFIPersonalitySymbol(
@@ -1390,7 +1350,10 @@ static std::string scalarConstantToHexString(const Constant *C) {
 MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     unsigned &Align) const {
-  if (Kind.isMergeableConst() && C) {
+  if (Kind.isMergeableConst() && C &&
+      getContext().getAsmInfo()->hasCOFFAssociativeComdats()) {
+    // GNU binutils doesn't support the kind of symbol with a null
+    // storage class that this generates.
     const unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                      COFF::IMAGE_SCN_MEM_READ |
                                      COFF::IMAGE_SCN_LNK_COMDAT;

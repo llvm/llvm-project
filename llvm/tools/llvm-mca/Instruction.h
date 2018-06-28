@@ -381,6 +381,36 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InstRef &IR) {
 }
 #endif
 
+/// A reference to a register write.
+///
+/// This class is mainly used by the register file to describe register
+/// mappings. It correlates a register write to the source index of the
+/// defining instruction.
+class WriteRef {
+  std::pair<unsigned, WriteState *> Data;
+  static const unsigned INVALID_IID;
+
+public:
+  WriteRef() : Data(INVALID_IID, nullptr) {}
+  WriteRef(unsigned SourceIndex, WriteState *WS) : Data(SourceIndex, WS) {}
+
+  unsigned getSourceIndex() const { return Data.first; }
+  const WriteState *getWriteState() const { return Data.second; }
+  WriteState *getWriteState() { return Data.second; }
+  void invalidate() { Data = std::make_pair(INVALID_IID, nullptr); }
+
+  bool isValid() const {
+    return Data.first != INVALID_IID && Data.second != nullptr;
+  }
+  bool operator==(const WriteRef &Other) const {
+    return Data == Other.Data;
+  }
+
+#ifndef NDEBUG
+  void dump() const;
+#endif
+};
+
 } // namespace mca
 
 #endif

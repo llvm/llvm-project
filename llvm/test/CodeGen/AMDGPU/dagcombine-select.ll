@@ -157,37 +157,37 @@ define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_v4i32(<4 x i
 
 ; GCN-LABEL: {{^}}sdiv_constant_sel_constants:
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 5, 0,
-define amdgpu_kernel void @sdiv_constant_sel_constants(i32 addrspace(1)* %p, i1 %cond) {
-  %sel = select i1 %cond, i32 121, i32 23
-  %bo = sdiv i32 120, %sel
-  store i32 %bo, i32 addrspace(1)* %p, align 4
+define amdgpu_kernel void @sdiv_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
+  %sel = select i1 %cond, i64 121, i64 23
+  %bo = sdiv i64 120, %sel
+  store i64 %bo, i64 addrspace(1)* %p, align 8
   ret void
 }
 
 ; GCN-LABEL: {{^}}udiv_constant_sel_constants:
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 5, 0,
-define amdgpu_kernel void @udiv_constant_sel_constants(i32 addrspace(1)* %p, i1 %cond) {
-  %sel = select i1 %cond, i32 -4, i32 23
-  %bo = udiv i32 120, %sel
-  store i32 %bo, i32 addrspace(1)* %p, align 4
+define amdgpu_kernel void @udiv_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
+  %sel = select i1 %cond, i64 -4, i64 23
+  %bo = udiv i64 120, %sel
+  store i64 %bo, i64 addrspace(1)* %p, align 8
   ret void
 }
 
 ; GCN-LABEL: {{^}}srem_constant_sel_constants:
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 3, 33,
-define amdgpu_kernel void @srem_constant_sel_constants(i32 addrspace(1)* %p, i1 %cond) {
-  %sel = select i1 %cond, i32 34, i32 15
-  %bo = srem i32 33, %sel
-  store i32 %bo, i32 addrspace(1)* %p, align 4
+define amdgpu_kernel void @srem_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
+  %sel = select i1 %cond, i64 34, i64 15
+  %bo = srem i64 33, %sel
+  store i64 %bo, i64 addrspace(1)* %p, align 8
   ret void
 }
 
 ; GCN-LABEL: {{^}}urem_constant_sel_constants:
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 3, 33,
-define amdgpu_kernel void @urem_constant_sel_constants(i32 addrspace(1)* %p, i1 %cond) {
-  %sel = select i1 %cond, i32 34, i32 15
-  %bo = urem i32 33, %sel
-  store i32 %bo, i32 addrspace(1)* %p, align 4
+define amdgpu_kernel void @urem_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
+  %sel = select i1 %cond, i64 34, i64 15
+  %bo = urem i64 33, %sel
+  store i64 %bo, i64 addrspace(1)* %p, align 8
   ret void
 }
 

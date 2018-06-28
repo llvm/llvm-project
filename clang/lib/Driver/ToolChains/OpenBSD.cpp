@@ -230,7 +230,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           Args.MakeArgString(getToolChain().GetFilePath("crtendS.o")));
   }
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
+  const char *Exec = Args.MakeArgString(
+      !NeedsSanitizerDeps ? getToolChain().GetLinkerPath()
+                          : getToolChain().GetProgramPath("ld.lld"));
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 

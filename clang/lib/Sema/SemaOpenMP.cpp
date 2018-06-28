@@ -10335,7 +10335,7 @@ static bool actOnOMPReductionKindClause(
     // OpenMP [2.9.3.3, Restrictions, C/C++, p.3]
     //  A variable that appears in a private clause must not have an incomplete
     //  type or a reference type.
-    if (S.RequireCompleteType(ELoc, Type,
+    if (S.RequireCompleteType(ELoc, D->getType(),
                               diag::err_omp_reduction_incomplete_type))
       continue;
     // OpenMP [2.14.3.6, reduction clause, Restrictions]

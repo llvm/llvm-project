@@ -29,7 +29,6 @@
 
 namespace mca {
 
-class WriteState;
 class Scheduler;
 
 // Implements the hardware dispatch logic.
@@ -78,7 +77,7 @@ class DispatchStage : public Stage {
     return checkRCU(IR) && checkPRF(IR) && checkScheduler(IR);
   }
 
-  void collectWrites(llvm::SmallVectorImpl<WriteState *> &Vec,
+  void collectWrites(llvm::SmallVectorImpl<WriteRef> &Vec,
                      unsigned RegID) const {
     return PRF.collectWrites(Vec, RegID);
   }

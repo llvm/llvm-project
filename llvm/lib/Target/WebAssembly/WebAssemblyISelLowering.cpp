@@ -429,6 +429,15 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
   return true;
 }
 
+EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
+                                                  LLVMContext &C,
+                                                  EVT VT) const {
+  if (VT.isVector())
+    return VT.changeVectorElementTypeToInteger();
+
+  return TargetLowering::getSetCCResultType(DL, C, VT);
+}
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Lowering private implementation.
 //===----------------------------------------------------------------------===//

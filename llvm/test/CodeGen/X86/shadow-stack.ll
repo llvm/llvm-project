@@ -64,7 +64,6 @@ define i32 @bar(i32 %i) local_unnamed_addr {
 ; X86_64-NEXT:    movq 8(%rax), %rcx
 ; X86_64-NEXT:    movq 16(%rax), %rsp
 ; X86_64-NEXT:    jmpq *%rcx
-; X86_64-NEXT:    ud2
 ;
 ; X86-LABEL: bar:
 ; X86:       ## %bb.0: ## %entry
@@ -99,7 +98,6 @@ define i32 @bar(i32 %i) local_unnamed_addr {
 ; X86-NEXT:    movl 4(%eax), %ecx
 ; X86-NEXT:    movl 8(%eax), %esp
 ; X86-NEXT:    jmpl *%ecx
-; X86-NEXT:    ud2
 entry:
   %0 = load i8*, i8** @buf, align 8
   tail call void @llvm.eh.sjlj.longjmp(i8* %0)

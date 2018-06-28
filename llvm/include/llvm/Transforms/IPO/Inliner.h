@@ -96,12 +96,17 @@ class InlinerPass : public PassInfoMixin<InlinerPass> {
 public:
   InlinerPass(InlineParams Params = getInlineParams())
       : Params(std::move(Params)) {}
+  ~InlinerPass();
+  InlinerPass(InlinerPass &&Arg)
+      : Params(std::move(Arg.Params)),
+        ImportedFunctionsStats(std::move(Arg.ImportedFunctionsStats)) {}
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 
 private:
   InlineParams Params;
+  std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
 };
 
 } // end namespace llvm

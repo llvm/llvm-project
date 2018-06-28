@@ -621,10 +621,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
     LLVM_ENABLE_PROJECTS
     LLVM_ENABLE_RUNTIMES)
 
-  # We don't need to depend on compiler-rt if we're building instrumented
+  # We don't need to depend on compiler-rt/libcxx if we're building instrumented
   # because the next stage will use the same compiler used to build this stage.
-  if(TARGET compiler-rt AND NOT LLVM_BUILD_INSTRUMENTED)
-    add_dependencies(clang-bootstrap-deps compiler-rt)
+  if(NOT LLVM_BUILD_INSTRUMENTED)
+    if(TARGET compiler-rt)
+      add_dependencies(clang-bootstrap-deps compiler-rt)
+    endif()
+    if(TARGET cxx-headers)
+      add_dependencies(clang-bootstrap-deps cxx-headers)
+    endif()
   endif()
 
   set(C_COMPILER "clang")
