@@ -560,7 +560,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
 
     case Intrinsic::r600_implicitarg_ptr: {
       MVT PtrVT = getPointerTy(DAG.getDataLayout(), AMDGPUASI.PARAM_I_ADDRESS);
-      uint32_t ByteOffset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
+      uint32_t ByteOffset = getImplicitParameterOffset(MF, FIRST_IMPLICIT);
       return DAG.getConstant(ByteOffset, DL, PtrVT);
     }
     case Intrinsic::r600_read_ngroups_x:
@@ -1544,8 +1544,6 @@ SDValue R600TargetLowering::LowerFormalArguments(
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   MachineFunction &MF = DAG.getMachineFunction();
-  R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
-
   SmallVector<ISD::InputArg, 8> LocalIns;
 
   if (AMDGPU::isShader(CallConv)) {
@@ -1609,7 +1607,6 @@ SDValue R600TargetLowering::LowerFormalArguments(
 
     // 4 is the preferred alignment for the CONSTANT memory space.
     InVals.push_back(Arg);
-    MFI->setABIArgOffset(Offset + MemVT.getStoreSize());
   }
   return Chain;
 }

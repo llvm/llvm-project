@@ -535,6 +535,10 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   // Bail if we find something different.
   SmallVector<ICmpInst *, 4> ICmpUsers;
   for (auto *U : TI->users()) {
+    // We don't care about users in unreachable blocks.
+    if (isa<Instruction>(U) &&
+        !DT->isReachableFromEntry(cast<Instruction>(U)->getParent()))
+      continue;
     if (ICmpInst *ICI = dyn_cast<ICmpInst>(U)) {
       if (ICI->getOperand(0) == TI && L->isLoopInvariant(ICI->getOperand(1))) {
         assert(L->contains(ICI->getParent()) && "LCSSA form broken?");
