@@ -7,11 +7,16 @@
 ; RUN: obj2yaml %t.wasm | FileCheck %s -check-prefix=EXPORT
 
 ; RUN: wasm-ld --export-all --no-gc-sections -o %t.wasm %t.o
-; RUN: obj2yaml %t.wasm | FileCheck %s -check-prefix=NOGC
+; RUN: obj2yaml %t.wasm | FileCheck %s -check-prefix=EXPORT
 
 ; Verify the --export-all flag exports hidden symbols
 
 target triple = "wasm32-unknown-unknown"
+
+define internal void @internal_func() local_unnamed_addr {
+entry:
+  ret void
+}
 
 define hidden void @bar() local_unnamed_addr {
 entry:
@@ -26,6 +31,7 @@ entry:
 define hidden void @_start() local_unnamed_addr {
 entry:
   call void @foo()
+  call void @internal_func()
   ret void
 }
 
@@ -33,13 +39,10 @@ entry:
 ; CHECK:         - Name:            _start
 ; CHECK-NOT:     - Name:            bar
 ; CHECK-NOT:     - Name:            foo
+; CHECK-NOT:     - Name:            internal_func
 
 ; EXPORT:     - Type:            EXPORT
 ; EXPORT:        - Name:            _start
-; EXPORT-NOT:    - Name:            bar
+; EXPORT:        - Name:            bar
 ; EXPORT:        - Name:            foo
-
-; NOGC:       - Type:            EXPORT
-; NOGC:        - Name:            _start
-; NOGC:        - Name:            bar
-; NOGC:        - Name:            foo
+; EXPORT-NOT:    - Name:            internal_func

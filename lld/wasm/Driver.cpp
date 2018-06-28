@@ -257,8 +257,8 @@ static void handleWeakUndefines() {
 
     // It is possible for undefined functions not to have a signature (eg. if
     // added via "--undefined"), but weak undefined ones do have a signature.
-    assert(FuncSym->getFunctionType());
-    const WasmSignature &Sig = *FuncSym->getFunctionType();
+    assert(FuncSym->FunctionType);
+    const WasmSignature &Sig = *FuncSym->FunctionType;
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
@@ -439,6 +439,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (!Config->Relocatable)
     handleWeakUndefines();
 
+  // Handle --export.
+  for (auto *Arg : Args.filtered(OPT_export)) {
+    StringRef Name = Arg->getValue();
+    Symbol *Sym = Symtab->find(Name);
+    if (Sym && Sym->isDefined())
+      Sym->ForceExport = true;
+    else if (!Config->AllowUndefined)
+      error("symbol exported via --export not found: " + Name);
+  }
+
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
   Symtab->addCombinedLTOObject();
@@ -465,16 +475,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
   if (errorCount())
     return;
-
-  // Handle --export.
-  for (auto *Arg : Args.filtered(OPT_export)) {
-    StringRef Name = Arg->getValue();
-    Symbol *Sym = Symtab->find(Name);
-    if (Sym && Sym->isDefined())
-      Sym->setHidden(false);
-    else if (!Config->AllowUndefined)
-      error("symbol exported via --export not found: " + Name);
-  }
 
   if (EntrySym)
     EntrySym->setHidden(false);
