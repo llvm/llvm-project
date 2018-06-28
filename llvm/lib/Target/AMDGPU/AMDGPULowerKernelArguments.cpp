@@ -99,6 +99,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   // FIXME: Alignment is broken broken with explicit arg offset.;
   const uint64_t TotalKernArgSize = BaseOffset +
     ST.getKernArgSegmentSize(F, DL.getTypeAllocSize(ArgStructTy));
+  if (TotalKernArgSize == 0)
+    return false;
 
   CallInst *KernArgSegment =
     Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, nullptr,
@@ -152,7 +154,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     unsigned AdjustedAlign = MinAlign(KernArgBaseAlign, AlignDownOffset);
 
     Value *ArgPtr;
-    if (Size < 32) {
+    if (Size < 32 && !ArgTy->isAggregateType()) { // FIXME: Handle aggregate types
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
       // bits.
@@ -218,7 +220,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
     // TODO: Convert noalias arg to !noalias
 
-    if (Size < 32) {
+    if (Size < 32 && !ArgTy->isAggregateType()) {
       if (IsExtArg && OffsetDiff == 0) {
         Type *I32Ty = Builder.getInt32Ty();
         bool IsSext = Arg.hasSExtAttr();

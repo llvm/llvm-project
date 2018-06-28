@@ -265,49 +265,26 @@ void size_implies_comparison(int *lhs, int *rhs) {
   clang_analyzer_eval((rhs - lhs) > 0); // expected-warning{{TRUE}}
 }
 
-//-------------------------------
-// False positives
-//-------------------------------
-
 void zero_implies_reversed_equal(int *lhs, int *rhs) {
   clang_analyzer_eval((rhs - lhs) == 0); // expected-warning{{UNKNOWN}}
   if ((rhs - lhs) == 0) {
-#ifdef ANALYZER_CM_Z3
     clang_analyzer_eval(rhs != lhs); // expected-warning{{FALSE}}
     clang_analyzer_eval(rhs == lhs); // expected-warning{{TRUE}}
-#else
-    clang_analyzer_eval(rhs != lhs); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
-#endif
     return;
   }
   clang_analyzer_eval((rhs - lhs) == 0); // expected-warning{{FALSE}}
-#ifdef ANALYZER_CM_Z3
   clang_analyzer_eval(rhs == lhs); // expected-warning{{FALSE}}
   clang_analyzer_eval(rhs != lhs); // expected-warning{{TRUE}}
-#else
-  clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(rhs != lhs); // expected-warning{{UNKNOWN}}
-#endif
 }
 
 void canonical_equal(int *lhs, int *rhs) {
   clang_analyzer_eval(lhs == rhs); // expected-warning{{UNKNOWN}}
   if (lhs == rhs) {
-#ifdef ANALYZER_CM_Z3
     clang_analyzer_eval(rhs == lhs); // expected-warning{{TRUE}}
-#else
-    clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
-#endif
     return;
   }
   clang_analyzer_eval(lhs == rhs); // expected-warning{{FALSE}}
-
-#ifdef ANALYZER_CM_Z3
   clang_analyzer_eval(rhs == lhs); // expected-warning{{FALSE}}
-#else
-  clang_analyzer_eval(rhs == lhs); // expected-warning{{UNKNOWN}}
-#endif
 }
 
 void compare_element_region_and_base(int *p) {

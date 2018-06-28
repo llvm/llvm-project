@@ -2946,11 +2946,10 @@ X86 Supports Indirect Branch Tracking (IBT) as part of Control-Flow
 Enforcement Technology (CET). IBT instruments ENDBR instructions used to
 specify valid targets of indirect call / jmp.
 The ``nocf_check`` attribute has two roles:
-1. Appertains to a function - do not add ENDBR instruction at the
-    beginning of the function.
-2. Appertains to a function pointer - do not track the target
-    function of this pointer (by adding nocf_check prefix to the
-    indirect-call instruction).
+1. Appertains to a function - do not add ENDBR instruction at the beginning of
+the function.
+2. Appertains to a function pointer - do not track the target function of this
+pointer (by adding nocf_check prefix to the indirect-call instruction).
 }];
 }
 

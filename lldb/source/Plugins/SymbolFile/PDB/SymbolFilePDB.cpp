@@ -347,6 +347,11 @@ bool SymbolFilePDB::ParseCompileUnitSupportFiles(
     FileSpec spec(file->getFileName(), false, FileSpec::Style::windows);
     support_files.AppendIfUnique(spec);
   }
+
+  // LLDB uses the DWARF-like file numeration (one based),
+  // the zeroth file is the compile unit itself
+  support_files.Insert(0, *sc.comp_unit);
+
   return true;
 }
 
@@ -596,12 +601,6 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
       resolve_scope & eSymbolContextFunction ||
       resolve_scope & eSymbolContextBlock ||
       resolve_scope & eSymbolContextLineEntry) {
-    addr_t file_vm_addr = so_addr.GetFileAddress();
-    auto symbol_up =
-        m_session_up->findSymbolByAddress(file_vm_addr, PDB_SymType::None);
-    if (!symbol_up)
-      return 0;
-
     auto cu_sp = GetCompileUnitContainsAddress(so_addr);
     if (!cu_sp) {
       if (resolved_flags | eSymbolContextVariable) {
@@ -612,39 +611,39 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
     sc.comp_unit = cu_sp.get();
     resolved_flags |= eSymbolContextCompUnit;
     lldbassert(sc.module_sp == cu_sp->GetModule());
+  }
 
-    switch (symbol_up->getSymTag()) {
-    case PDB_SymType::Function:
-      if (resolve_scope & eSymbolContextFunction) {
-        auto *pdb_func = llvm::dyn_cast<PDBSymbolFunc>(symbol_up.get());
-        assert(pdb_func);
-        auto func_uid = pdb_func->getSymIndexId();
-        sc.function = sc.comp_unit->FindFunctionByUID(func_uid).get();
-        if (sc.function == nullptr)
-          sc.function = ParseCompileUnitFunctionForPDBFunc(*pdb_func, sc);
-        if (sc.function) {
-          resolved_flags |= eSymbolContextFunction;
-          if (resolve_scope & eSymbolContextBlock) {
-            Block &block = sc.function->GetBlock(true);
-            sc.block = block.FindBlockByID(sc.function->GetID());
-            if (sc.block)
-              resolved_flags |= eSymbolContextBlock;
-          }
+  if (resolve_scope & eSymbolContextFunction) {
+    addr_t file_vm_addr = so_addr.GetFileAddress();
+    auto symbol_up =
+        m_session_up->findSymbolByAddress(file_vm_addr, PDB_SymType::Function);
+    if (symbol_up) {
+      auto *pdb_func = llvm::dyn_cast<PDBSymbolFunc>(symbol_up.get());
+      assert(pdb_func);
+      auto func_uid = pdb_func->getSymIndexId();
+      sc.function = sc.comp_unit->FindFunctionByUID(func_uid).get();
+      if (sc.function == nullptr)
+        sc.function = ParseCompileUnitFunctionForPDBFunc(*pdb_func, sc);
+      if (sc.function) {
+        resolved_flags |= eSymbolContextFunction;
+        if (resolve_scope & eSymbolContextBlock) {
+          Block &block = sc.function->GetBlock(true);
+          sc.block = block.FindBlockByID(sc.function->GetID());
+          if (sc.block)
+            resolved_flags |= eSymbolContextBlock;
         }
-      }
-      break;
-    default:
-      break;
-    }
-
-    if (resolve_scope & eSymbolContextLineEntry) {
-      if (auto *line_table = sc.comp_unit->GetLineTable()) {
-        Address addr(so_addr);
-        if (line_table->FindLineEntryByAddress(addr, sc.line_entry))
-          resolved_flags |= eSymbolContextLineEntry;
       }
     }
   }
+
+  if (resolve_scope & eSymbolContextLineEntry) {
+    if (auto *line_table = sc.comp_unit->GetLineTable()) {
+      Address addr(so_addr);
+      if (line_table->FindLineEntryByAddress(addr, sc.line_entry))
+        resolved_flags |= eSymbolContextLineEntry;
+    }
+  }
+
   return resolved_flags;
 }
 
@@ -1631,7 +1630,9 @@ void SymbolFilePDB::BuildSupportFileIdToSupportFileIndexMap(
   auto source_files = m_session_up->getSourceFilesForCompiland(compiland);
   if (!source_files)
     return;
-  int index = 0;
+
+  // LLDB uses the DWARF-like file numeration (one based)
+  int index = 1;
 
   while (auto file = source_files->getNext()) {
     uint32_t source_id = file->getUniqueId();

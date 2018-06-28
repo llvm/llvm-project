@@ -188,6 +188,10 @@ TEST(ArrayRefTest, Equals) {
   EXPECT_TRUE(AR1b.equals({3, 4, 5, 6}));
   EXPECT_FALSE(AR1b.equals({2, 3, 4, 5, 6}));
   EXPECT_FALSE(AR1b.equals({3, 4, 5, 6, 7}));
+
+  SmallVector<int, 8> V1{1, 2, 3, 4, 5, 6, 7, 8};
+  EXPECT_EQ(AR1, V1);
+  EXPECT_EQ(V1, AR1);
 }
 
 TEST(ArrayRefTest, EmptyEquals) {

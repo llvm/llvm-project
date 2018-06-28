@@ -181,20 +181,26 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteState *> &Writes,
                                  unsigned RegID) const {
   assert(RegID && RegID < RegisterMappings.size());
   WriteState *WS = RegisterMappings[RegID].first;
-  if (WS) {
-    LLVM_DEBUG(dbgs() << "Found a dependent use of RegID=" << RegID << '\n');
+  if (WS)
     Writes.push_back(WS);
-  }
 
   // Handle potential partial register updates.
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
     WS = RegisterMappings[*I].first;
-    if (WS && std::find(Writes.begin(), Writes.end(), WS) == Writes.end()) {
-      LLVM_DEBUG(dbgs() << "Found a dependent use of subReg " << *I
-                        << " (part of " << RegID << ")\n");
+    if (WS)
       Writes.push_back(WS);
-    }
   }
+
+  // Remove duplicate entries and resize the input vector.
+  llvm::sort(Writes.begin(), Writes.end());
+  auto It = std::unique(Writes.begin(), Writes.end());
+  Writes.resize(std::distance(Writes.begin(), It));
+
+  LLVM_DEBUG({
+    for (const WriteState *WS : Writes)
+      dbgs() << "Found a dependent use of Register "
+             << MRI.getName(WS->getRegisterID()) << "\n";
+  });
 }
 
 unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
