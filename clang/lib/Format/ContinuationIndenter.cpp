@@ -1648,7 +1648,7 @@ ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
   if (!Delimiter)
     return None;
   auto RawStringStyle = RawStringFormats.getDelimiterStyle(*Delimiter);
-  if (!RawStringStyle)
+  if (!RawStringStyle && Delimiter->empty())
     RawStringStyle = RawStringFormats.getEnclosingFunctionStyle(
         getEnclosingFunctionName(Current));
   if (!RawStringStyle)

@@ -783,6 +783,17 @@ def skipIfXmlSupportMissing(func):
     have_xml = xml.GetValueForKey("value").GetBooleanValue(fail_value)
     return unittest2.skipIf(not have_xml, "requires xml support")(func)
 
+def skipIfLLVMTargetMissing(target):
+    config = lldb.SBDebugger.GetBuildConfiguration()
+    targets = config.GetValueForKey("targets").GetValueForKey("value")
+    found = False
+    for i in range(targets.GetSize()):
+        if targets.GetItemAtIndex(i).GetStringValue(99) == target:
+            found = True
+            break
+    
+    return unittest2.skipIf(not found, "requires " + target)
+
 # Call sysctl on darwin to see if a specified hardware feature is available on this machine.
 def skipUnlessFeature(feature):
     def is_feature_enabled(self):

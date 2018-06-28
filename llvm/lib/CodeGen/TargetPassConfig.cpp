@@ -111,9 +111,17 @@ static cl::opt<bool> VerifyMachineCode("verify-machineinstrs", cl::Hidden,
     cl::desc("Verify generated machine code"),
     cl::init(false),
     cl::ZeroOrMore);
-static cl::opt<bool> EnableMachineOutliner("enable-machine-outliner",
-    cl::Hidden,
-    cl::desc("Enable machine outliner"));
+enum RunOutliner { AlwaysOutline, NeverOutline };
+// Enable or disable the MachineOutliner.
+static cl::opt<RunOutliner> EnableMachineOutliner(
+    "enable-machine-outliner", cl::desc("Enable the machine outliner"),
+    cl::Hidden, cl::ValueOptional, cl::init(NeverOutline),
+    cl::values(clEnumValN(AlwaysOutline, "always",
+                          "Run on all functions guaranteed to be beneficial "
+                          "(pass -enable-linkonceodr-outlining for more)"),
+               clEnumValN(NeverOutline, "never", "Disable all outlining"),
+               // Sentinel value for unspecified option.
+               clEnumValN(AlwaysOutline, "", "")));
 // Enable or disable FastISel. Both options are needed, because
 // FastISel is enabled by default with -fast, and we wish to be
 // able to enable or disable fast-isel independently from -O0.
@@ -906,7 +914,8 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&XRayInstrumentationID, false);
   addPass(&PatchableFunctionID, false);
 
-  if (EnableMachineOutliner)
+  if (getOptLevel() != CodeGenOpt::None &&
+      EnableMachineOutliner == AlwaysOutline)
     addPass(createMachineOutlinerPass());
 
   // Add passes that directly emit MI after all other MI passes.

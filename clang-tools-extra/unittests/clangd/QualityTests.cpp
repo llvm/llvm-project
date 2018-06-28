@@ -136,7 +136,7 @@ TEST(QualityTests, SymbolQualitySignalsSanity) {
   EXPECT_LT(ReservedName.evaluate(), Default.evaluate());
 
   SymbolQualitySignals WithReferences, ManyReferences;
-  WithReferences.References = 10;
+  WithReferences.References = 20;
   ManyReferences.References = 1000;
   EXPECT_GT(WithReferences.evaluate(), Default.evaluate());
   EXPECT_GT(ManyReferences.evaluate(), WithReferences.evaluate());

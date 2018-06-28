@@ -12,6 +12,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLExtras.h"
 #include <unordered_set>
 
 using namespace clang::ast_matchers;
@@ -29,11 +30,10 @@ bool isOverrideMethod(const FunctionDecl *Function) {
 } // namespace
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(functionDecl(isDefinition(),
-                                  hasBody(stmt(hasDescendant(stmt()))),
-                                  hasAnyParameter(decl()))
-                         .bind("function"),
-                     this);
+  Finder->addMatcher(
+      functionDecl(isDefinition(), hasBody(stmt()), hasAnyParameter(decl()))
+          .bind("function"),
+      this);
 }
 
 template <typename T>
@@ -122,7 +122,12 @@ UnusedParametersCheck::~UnusedParametersCheck() = default;
 
 UnusedParametersCheck::UnusedParametersCheck(StringRef Name,
                                              ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      StrictMode(Options.getLocalOrGlobal("StrictMode", 0) != 0) {}
+
+void UnusedParametersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StrictMode", StrictMode);
+}
 
 void UnusedParametersCheck::warnOnUnusedParameter(
     const MatchFinder::MatchResult &Result, const FunctionDecl *Function,
@@ -170,7 +175,15 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
     if (Param->isUsed() || Param->isReferenced() || !Param->getDeclName() ||
         Param->hasAttr<UnusedAttr>())
       continue;
-    warnOnUnusedParameter(Result, Function, i);
+
+    // In non-strict mode ignore function definitions with empty bodies
+    // (constructor initializer counts for non-empty body).
+    if (StrictMode ||
+        (Function->getBody()->child_begin() !=
+         Function->getBody()->child_end()) ||
+        (isa<CXXConstructorDecl>(Function) &&
+         cast<CXXConstructorDecl>(Function)->getNumCtorInitializers() > 0))
+      warnOnUnusedParameter(Result, Function, i);
   }
 }
 

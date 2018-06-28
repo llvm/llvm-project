@@ -3008,7 +3008,6 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
-  EVT CCVT = getSetCCResultType(VT);
   unsigned BitWidth = VT.getScalarSizeInBits();
 
   // fold vector ops
@@ -3031,7 +3030,7 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), N0);
   // fold (sdiv X, MIN_SIGNED) -> select(X == MIN_SIGNED, 1, 0)
   if (N1C && N1C->getAPIntValue().isMinSignedValue())
-    return DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, N0, N1, ISD::SETEQ),
+    return DAG.getSelect(DL, VT, DAG.getSetCC(DL, VT, N0, N1, ISD::SETEQ),
                          DAG.getConstant(1, DL, VT),
                          DAG.getConstant(0, DL, VT));
 
@@ -3101,12 +3100,12 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, Zero, Sra);
 
     // FIXME: Use SELECT_CC once we improve SELECT_CC constant-folding.
-    SDValue IsNeg = DAG.getSetCC(DL, CCVT, N1, Zero, ISD::SETLT);
-    SDValue Res = DAG.getSelect(DL, VT, IsNeg, Sub, Sra);
+    SDValue Res = DAG.getSelect(
+        DL, VT, DAG.getSetCC(DL, VT, N1, Zero, ISD::SETLT), Sub, Sra);
     // Special case: (sdiv X, 1) -> X
     SDValue One = DAG.getConstant(1, DL, VT);
-    SDValue IsOne = DAG.getSetCC(DL, CCVT, N1, One, ISD::SETEQ);
-    Res = DAG.getSelect(DL, VT, IsOne, N0, Res);
+    Res = DAG.getSelect(DL, VT, DAG.getSetCC(DL, VT, N1, One, ISD::SETEQ), N0,
+                        Res);
     return Res;
   }
 

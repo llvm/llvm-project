@@ -389,8 +389,9 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     FatMagic = HIPFatMagic;
   } else {
     if (RelocatableDeviceCode)
-      // TODO: Figure out how this is called on mac OS!
-      FatbinConstantName = "__nv_relfatbin";
+      FatbinConstantName = CGM.getTriple().isMacOSX()
+                               ? "__NV_CUDA,__nv_relfatbin"
+                               : "__nv_relfatbin";
     else
       FatbinConstantName =
           CGM.getTriple().isMacOSX() ? "__NV_CUDA,__nv_fatbin" : ".nv_fatbin";
@@ -398,8 +399,9 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     FatbinSectionName =
         CGM.getTriple().isMacOSX() ? "__NV_CUDA,__fatbin" : ".nvFatBinSegment";
 
-    // TODO: Figure out how this is called on mac OS!
-    ModuleIDSectionName = "__nv_module_id";
+    ModuleIDSectionName = CGM.getTriple().isMacOSX()
+                              ? "__NV_CUDA,__nv_module_id"
+                              : "__nv_module_id";
     ModuleIDPrefix = "__nv_";
 
     // For CUDA, create a string literal containing the fat binary loaded from

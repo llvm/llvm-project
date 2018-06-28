@@ -89,6 +89,7 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeGlobalISel(Registry);
   initializeARMLoadStoreOptPass(Registry);
   initializeARMPreAllocLoadStoreOptPass(Registry);
+  initializeARMParallelDSPPass(Registry);
   initializeARMConstantIslandsPass(Registry);
   initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
@@ -238,8 +239,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       this->Options.EABIVersion = EABI::EABI5;
   }
 
-  if (TT.isOSBinFormatMachO())
+  if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
+    this->Options.NoTrapAfterNoreturn = true;
+  }
 
   initAsmInfo();
 }
@@ -404,6 +407,9 @@ void ARMPassConfig::addIRPasses() {
 }
 
 bool ARMPassConfig::addPreISel() {
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createARMParallelDSPPass());
+
   if ((TM->getOptLevel() != CodeGenOpt::None &&
        EnableGlobalMerge == cl::BOU_UNSET) ||
       EnableGlobalMerge == cl::BOU_TRUE) {
