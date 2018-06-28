@@ -196,4 +196,25 @@ BenchmarkRunner::writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
   return ResultPath.str();
 }
 
+llvm::Expected<SnippetPrototype> BenchmarkRunner::generateSelfAliasingPrototype(
+    const Instruction &Instr) const {
+  const AliasingConfigurations SelfAliasing(Instr, Instr);
+  if (SelfAliasing.empty()) {
+    return llvm::make_error<BenchmarkFailure>("empty self aliasing");
+  }
+  SnippetPrototype Prototype;
+  InstructionInstance II(Instr);
+  if (SelfAliasing.hasImplicitAliasing()) {
+    Prototype.Explanation = "implicit Self cycles, picking random values.";
+  } else {
+    Prototype.Explanation =
+        "explicit self cycles, selecting one aliasing Conf.";
+    // This is a self aliasing instruction so defs and uses are from the same
+    // instance, hence twice II in the following call.
+    setRandomAliasing(SelfAliasing, II, II);
+  }
+  Prototype.Snippet.push_back(std::move(II));
+  return std::move(Prototype);
+}
+
 } // namespace exegesis

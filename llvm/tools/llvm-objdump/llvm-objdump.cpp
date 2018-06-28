@@ -67,6 +67,12 @@
 using namespace llvm;
 using namespace object;
 
+cl::opt<bool>
+    llvm::AllHeaders("all-headers",
+                     cl::desc("Display all available header information"));
+static cl::alias AllHeadersShort("x", cl::desc("Alias for --all-headers"),
+                                 cl::aliasopt(AllHeaders));
+
 static cl::list<std::string>
 InputFilenames(cl::Positional, cl::desc("<input object files>"),cl::ZeroOrMore);
 
@@ -2233,6 +2239,9 @@ int main(int argc, char **argv) {
   // Defaults to a.out if no filenames specified.
   if (InputFilenames.size() == 0)
     InputFilenames.push_back("a.out");
+
+  if (AllHeaders)
+    PrivateHeaders = Relocations = SectionHeaders = SymbolTable = true;
 
   if (DisassembleAll || PrintSource || PrintLines)
     Disassemble = true;

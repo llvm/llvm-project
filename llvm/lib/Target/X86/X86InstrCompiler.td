@@ -1774,35 +1774,64 @@ let Predicates = [HasBMI2] in {
                           (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   }
 
-  let AddedComplexity = -20 in {
-    def : Pat<(sra (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
-              (SARX32rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(sra (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
-              (SARX64rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(sra (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+            (SARX32rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(sra (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+            (SARX64rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-    def : Pat<(srl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
-              (SHRX32rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(srl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
-              (SHRX64rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(srl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+            (SHRX32rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(srl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+            (SHRX64rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-    def : Pat<(shl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
-              (SHLX32rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(shl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
-              (SHLX64rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  }
+  def : Pat<(shl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+            (SHLX32rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(shl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+            (SHLX64rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 }
+
+// Use BTR/BTS/BTC for clearing/setting/toggling a bit in a variable location.
+multiclass one_bit_patterns<RegisterClass RC, ValueType VT, Instruction BTR,
+                            Instruction BTS, Instruction BTC,
+                            ImmLeaf ImmShift> {
+  def : Pat<(and RC:$src1, (rotl -2, GR8:$src2)),
+            (BTR RC:$src1,
+                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(or RC:$src1, (shl 1, GR8:$src2)),
+            (BTS RC:$src1,
+                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(xor RC:$src1, (shl 1, GR8:$src2)),
+            (BTC RC:$src1,
+                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+  // Similar to above, but removing unneeded masking of the shift amount.
+  def : Pat<(and RC:$src1, (rotl -2, (and GR8:$src2, ImmShift))),
+            (BTR RC:$src1,
+                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(or RC:$src1, (shl 1, (and GR8:$src2, ImmShift))),
+            (BTS RC:$src1,
+                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(xor RC:$src1, (shl 1, (and GR8:$src2, ImmShift))),
+            (BTC RC:$src1,
+                (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+}
+
+defm : one_bit_patterns<GR16, i16, BTR16rr, BTS16rr, BTC16rr, immShift16>;
+defm : one_bit_patterns<GR32, i32, BTR32rr, BTS32rr, BTC32rr, immShift32>;
+defm : one_bit_patterns<GR64, i64, BTR64rr, BTS64rr, BTC64rr, immShift64>;
+
 
 // (anyext (setcc_carry)) -> (setcc_carry)
 def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),

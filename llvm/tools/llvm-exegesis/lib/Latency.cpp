@@ -43,28 +43,8 @@ llvm::Error LatencyBenchmarkRunner::isInfeasible(
 }
 
 llvm::Expected<SnippetPrototype>
-LatencyBenchmarkRunner::generateSelfAliasingPrototype(
-    const Instruction &Instr,
-    const AliasingConfigurations &SelfAliasing) const {
-  SnippetPrototype Prototype;
-  InstructionInstance II(Instr);
-  if (SelfAliasing.hasImplicitAliasing()) {
-    Prototype.Explanation = "implicit Self cycles, picking random values.";
-  } else {
-    Prototype.Explanation =
-        "explicit self cycles, selecting one aliasing Conf.";
-    // This is a self aliasing instruction so defs and uses are from the same
-    // instance, hence twice II in the following call.
-    setRandomAliasing(SelfAliasing, II, II);
-  }
-  Prototype.Snippet.push_back(std::move(II));
-  return std::move(Prototype);
-}
-
-llvm::Expected<SnippetPrototype>
 LatencyBenchmarkRunner::generateTwoInstructionPrototype(
-    const Instruction &Instr,
-    const AliasingConfigurations &SelfAliasing) const {
+    const Instruction &Instr) const {
   std::vector<unsigned> Opcodes;
   Opcodes.resize(State.getInstrInfo().getNumOpcodes());
   std::iota(Opcodes.begin(), Opcodes.end(), 0U);
@@ -89,8 +69,9 @@ LatencyBenchmarkRunner::generateTwoInstructionPrototype(
     if (!Back.hasImplicitAliasing())
       setRandomAliasing(Back, OtherII, ThisII);
     SnippetPrototype Prototype;
-    Prototype.Explanation = llvm::formatv("creating cycle through {0}.",
-                                          State.getInstrInfo().getName(OtherOpcode));
+    Prototype.Explanation =
+        llvm::formatv("creating cycle through {0}.",
+                      State.getInstrInfo().getName(OtherOpcode));
     Prototype.Snippet.push_back(std::move(ThisII));
     Prototype.Snippet.push_back(std::move(OtherII));
     return std::move(Prototype);
@@ -105,13 +86,12 @@ LatencyBenchmarkRunner::generatePrototype(unsigned Opcode) const {
   if (auto E = isInfeasible(InstrDesc))
     return std::move(E);
   const Instruction Instr(InstrDesc, RATC);
-  const AliasingConfigurations SelfAliasing(Instr, Instr);
-  if (SelfAliasing.empty()) {
-    // No self aliasing, trying to create a dependency through another opcode.
-    return generateTwoInstructionPrototype(Instr, SelfAliasing);
-  } else {
-    return generateSelfAliasingPrototype(Instr, SelfAliasing);
-  }
+  if (auto SelfAliasingPrototype = generateSelfAliasingPrototype(Instr))
+    return SelfAliasingPrototype;
+  else
+    llvm::consumeError(SelfAliasingPrototype.takeError());
+  // No self aliasing, trying to create a dependency through another opcode.
+  return generateTwoInstructionPrototype(Instr);
 }
 
 std::vector<BenchmarkMeasure>

@@ -69,6 +69,9 @@ protected:
   const LLVMState &State;
   const RegisterAliasingTrackerCache RATC;
 
+  llvm::Expected<SnippetPrototype> generateSelfAliasingPrototype(
+      const Instruction &Instr) const;
+
 private:
   // API to be implemented by subclasses.
   virtual llvm::Expected<SnippetPrototype>

@@ -76,7 +76,7 @@ private:
     std::unique_ptr<MemoryBuffer> Content;
   };
 
-  Expected<msf::MSFLayout> finalizeMsfLayout();
+  Error finalizeMsfLayout();
   Expected<uint32_t> allocateNamedStream(StringRef Name, uint32_t Size);
 
   void commitFpm(WritableBinaryStream &MsfBuffer, const msf::MSFLayout &Layout);

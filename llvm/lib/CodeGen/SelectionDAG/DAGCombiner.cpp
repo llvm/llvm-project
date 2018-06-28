@@ -1692,6 +1692,10 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
       return N->getOperand(1);
   }
 
+  // Don't simplify token factors if optnone.
+  if (OptLevel == CodeGenOpt::None)
+    return SDValue();
+
   SmallVector<SDNode *, 8> TFs;     // List of token factors to visit.
   SmallVector<SDValue, 8> Ops;      // Ops for replacing token factor.
   SmallPtrSet<SDNode*, 16> SeenOps;
@@ -3004,6 +3008,7 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  EVT CCVT = getSetCCResultType(VT);
   unsigned BitWidth = VT.getScalarSizeInBits();
 
   // fold vector ops
@@ -3024,6 +3029,11 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   // fold (sdiv X, -1) -> 0-X
   if (N1C && N1C->isAllOnesValue())
     return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), N0);
+  // fold (sdiv X, MIN_SIGNED) -> select(X == MIN_SIGNED, 1, 0)
+  if (N1C && N1C->getAPIntValue().isMinSignedValue())
+    return DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, N0, N1, ISD::SETEQ),
+                         DAG.getConstant(1, DL, VT),
+                         DAG.getConstant(0, DL, VT));
 
   if (SDValue V = simplifyDivRem(N, DAG))
     return V;
@@ -3038,18 +3048,8 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
 
   // Helper for determining whether a value is a power-2 constant scalar or a
   // vector of such elements.
-  SmallBitVector KnownNegatives(
-      (N1C || !VT.isVector()) ? 1 : VT.getVectorNumElements(), false);
-  unsigned EltIndex = 0;
-  auto IsPowerOfTwo = [&KnownNegatives, &EltIndex](ConstantSDNode *C) {
-    unsigned Idx = EltIndex++;
+  auto IsPowerOfTwo = [](ConstantSDNode *C) {
     if (C->isNullValue() || C->isOpaque())
-      return false;
-    // The instruction sequence to be generated contains shifting C by (op size
-    // in bits - # of trailing zeros in C), which results in an undef value when
-    // C == 1. (e.g. if the op size in bits is 32, it will be (sra x , 32) if C
-    // == 1)
-    if (C->getAPIntValue().isOneValue())
       return false;
     if (C->getAPIntValue().isAllOnesValue())
       return false;
@@ -3058,10 +3058,8 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
 
     if (C->getAPIntValue().isPowerOf2())
       return true;
-    if ((-C->getAPIntValue()).isPowerOf2()) {
-      KnownNegatives.set(Idx);
+    if ((-C->getAPIntValue()).isPowerOf2())
       return true;
-    }
     return false;
   };
 
@@ -3083,6 +3081,7 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     SDValue Inexact = DAG.getNode(ISD::SUB, DL, ShiftAmtTy, Bits, C1);
     if (!isConstantOrConstantVector(Inexact))
       return SDValue();
+
     // Splat the sign bit into the register
     SDValue Sign = DAG.getNode(ISD::SRA, DL, VT, N0,
                                DAG.getConstant(BitWidth - 1, DL, ShiftAmtTy));
@@ -3090,37 +3089,25 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
 
     // Add (N0 < 0) ? abs2 - 1 : 0;
     SDValue Srl = DAG.getNode(ISD::SRL, DL, VT, Sign, Inexact);
-    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Srl);
     AddToWorklist(Srl.getNode());
-    AddToWorklist(Add.getNode()); // Divide by pow2
+    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Srl);
+    AddToWorklist(Add.getNode());
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Add, C1);
+    AddToWorklist(Sra.getNode());
 
     // If dividing by a positive value, we're done. Otherwise, the result must
     // be negated.
-    if (KnownNegatives.none())
-      return Sra;
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, Zero, Sra);
 
-    AddToWorklist(Sra.getNode());
-    SDValue Sub =
-        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Sra);
-    // If all shift amount elements are negative, we're done.
-    if (KnownNegatives.all())
-      return Sub;
-
-    // Shift amount has both positive and negative elements.
-    assert(VT.isVector() && !N0C &&
-           "Expecting a non-splat vector shift amount");
-
-    SmallVector<SDValue, 64> VSelectMask;
-    for (int i = 0, e = VT.getVectorNumElements(); i < e; ++i)
-      VSelectMask.push_back(
-          DAG.getConstant(KnownNegatives[i] ? -1 : 0, DL, MVT::i1));
-
-    SDValue Mask =
-        DAG.getBuildVector(EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                                            VT.getVectorElementCount()),
-                           DL, VSelectMask);
-    return DAG.getNode(ISD::VSELECT, DL, VT, Mask, Sub, Sra);
+    // FIXME: Use SELECT_CC once we improve SELECT_CC constant-folding.
+    SDValue IsNeg = DAG.getSetCC(DL, CCVT, N1, Zero, ISD::SETLT);
+    SDValue Res = DAG.getSelect(DL, VT, IsNeg, Sub, Sra);
+    // Special case: (sdiv X, 1) -> X
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue IsOne = DAG.getSetCC(DL, CCVT, N1, One, ISD::SETEQ);
+    Res = DAG.getSelect(DL, VT, IsOne, N0, Res);
+    return Res;
   }
 
   // If integer divide is expensive and we satisfy the requirements, emit an
@@ -11139,9 +11126,14 @@ static SDValue foldFPToIntToFP(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // We only do this if the target has legal ftrunc. Otherwise, we'd likely be
-  // replacing casts with a libcall.
+  // replacing casts with a libcall. We also must be allowed to ignore -0.0
+  // because FTRUNC will return -0.0 for (-1.0, -0.0), but using integer
+  // conversions would return +0.0.
+  // FIXME: We should be able to use node-level FMF here.
+  // TODO: If strict math, should we use FABS (+ range check for signed cast)?
   EVT VT = N->getValueType(0);
-  if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT) ||
+      !DAG.getTarget().Options.NoSignedZerosFPMath)
     return SDValue();
 
   // fptosi/fptoui round towards zero, so converting from FP to integer and

@@ -568,7 +568,20 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
         if (Val.getOpcode() == ISD::TargetGlobalTLSAddress)
           return false;
       }
+
+      break;
     }
+    case ISD::SHL:
+    case ISD::SRA:
+    case ISD::SRL:
+      // Don't fold a load into a shift by immediate. The BMI2 instructions
+      // support folding a load, but not an immediate. The legacy instructions
+      // support folding an immediate, but can't fold a load. Folding an
+      // immediate is preferable to folding a load.
+      if (isa<ConstantSDNode>(U->getOperand(1)))
+        return false;
+
+      break;
     }
   }
 
@@ -668,6 +681,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;
       CurDAG->DeleteNode(N);
+      continue;
     }
 
     if (OptLevel != CodeGenOpt::None &&

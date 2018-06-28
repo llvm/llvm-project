@@ -27,6 +27,8 @@ using namespace llvm;
 void Pipeline::addEventListener(HWEventListener *Listener) {
   if (Listener)
     Listeners.insert(Listener);
+  for (auto &S : Stages)
+    S->addListener(Listener);
 }
 
 bool Pipeline::hasWorkToProcess() {
@@ -75,33 +77,6 @@ void Pipeline::notifyCycleBegin(unsigned Cycle) {
   LLVM_DEBUG(dbgs() << "[E] Cycle begin: " << Cycle << '\n');
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleBegin();
-}
-
-void Pipeline::notifyInstructionEvent(const HWInstructionEvent &Event) {
-  for (HWEventListener *Listener : Listeners)
-    Listener->onInstructionEvent(Event);
-}
-
-void Pipeline::notifyStallEvent(const HWStallEvent &Event) {
-  for (HWEventListener *Listener : Listeners)
-    Listener->onStallEvent(Event);
-}
-
-void Pipeline::notifyResourceAvailable(const ResourceRef &RR) {
-  LLVM_DEBUG(dbgs() << "[E] Resource Available: [" << RR.first << '.'
-                    << RR.second << "]\n");
-  for (HWEventListener *Listener : Listeners)
-    Listener->onResourceAvailable(RR);
-}
-
-void Pipeline::notifyReservedBuffers(ArrayRef<unsigned> Buffers) {
-  for (HWEventListener *Listener : Listeners)
-    Listener->onReservedBuffers(Buffers);
-}
-
-void Pipeline::notifyReleasedBuffers(ArrayRef<unsigned> Buffers) {
-  for (HWEventListener *Listener : Listeners)
-    Listener->onReleasedBuffers(Buffers);
 }
 
 void Pipeline::notifyCycleEnd(unsigned Cycle) {

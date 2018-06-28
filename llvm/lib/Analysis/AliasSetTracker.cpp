@@ -639,8 +639,12 @@ void AliasSet::print(raw_ostream &OS) const {
     OS << "\n    " << UnknownInsts.size() << " Unknown instructions: ";
     for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
       if (i) OS << ", ";
-      if (auto *I = getUnknownInst(i))
-        I->printAsOperand(OS);
+      if (auto *I = getUnknownInst(i)) {
+        if (I->hasName())
+          I->printAsOperand(OS);
+        else
+          I->print(OS);
+      }
     }
   }
   OS << "\n";

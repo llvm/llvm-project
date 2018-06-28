@@ -16,17 +16,20 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_STAGE_H
 #define LLVM_TOOLS_LLVM_MCA_STAGE_H
 
+#include "HWEventListener.h"
 #include <set>
 
 namespace mca {
 
-class HWEventListener;
 class InstRef;
 
 class Stage {
-  std::set<HWEventListener *> Listeners;
   Stage(const Stage &Other) = delete;
   Stage &operator=(const Stage &Other) = delete;
+  std::set<HWEventListener *> Listeners;
+
+protected:
+  const std::set<HWEventListener *> &getListeners() const { return Listeners; }
 
 public:
   Stage();
@@ -51,6 +54,8 @@ public:
 
   /// Add a listener to receive callbacks during the execution of this stage.
   void addListener(HWEventListener *Listener);
+
+  virtual void notifyInstructionEvent(const HWInstructionEvent &Event);
 };
 
 } // namespace mca

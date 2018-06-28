@@ -40,6 +40,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #endif
 MODULE_PASS("always-inline", AlwaysInlinerPass())
 MODULE_PASS("called-value-propagation", CalledValuePropagationPass())
+MODULE_PASS("cg-profile", CGProfilePass())
 MODULE_PASS("constmerge", ConstantMergePass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())

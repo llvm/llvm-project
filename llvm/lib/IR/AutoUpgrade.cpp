@@ -65,19 +65,6 @@ static bool UpgradeX86IntrinsicsWith8BitMask(Function *F, Intrinsic::ID IID,
   return true;
 }
 
-// Upgrade the declaration of fp compare intrinsics that change return type
-// from scalar to vXi1 mask.
-static bool UpgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
-                                      Function *&NewFn) {
-  // Check if the return type is a vector.
-  if (F->getReturnType()->isVectorTy())
-    return false;
-
-  rename(F);
-  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
-  return true;
-}
-
 static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // All of the intrinsics matches below should be marked with which llvm
   // version started autoupgrading them. At some point in the future we would
@@ -220,6 +207,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.cmp.d") || // Added in 5.0
       Name.startswith("avx512.mask.cmp.q") || // Added in 5.0
       Name.startswith("avx512.mask.cmp.w") || // Added in 5.0
+      Name.startswith("avx512.mask.cmp.p") || // Added in 7.0
       Name.startswith("avx512.mask.ucmp.") || // Added in 5.0
       Name.startswith("avx512.cvtb2mask.") || // Added in 7.0
       Name.startswith("avx512.cvtw2mask.") || // Added in 7.0
@@ -272,6 +260,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.div.p") || // Added in 7.0. 128/256 in 4.0
       Name.startswith("avx512.mask.max.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.min.p") || // Added in 7.0. 128/256 in 5.0
+      Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -388,42 +377,6 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
   if (Name == "avx2.mpsadbw") // Added in 3.6
     return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_avx2_mpsadbw,
                                             NewFn);
-  if (Name == "avx512.mask.cmp.pd.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_512,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_512,
-                                     NewFn);
-  if (Name == "avx512.mask.fpclass.pd.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_pd_128,
-                                     NewFn);
-  if (Name == "avx512.mask.fpclass.pd.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_pd_256,
-                                     NewFn);
-  if (Name == "avx512.mask.fpclass.pd.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_pd_512,
-                                     NewFn);
-  if (Name == "avx512.mask.fpclass.ps.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_ps_128,
-                                     NewFn);
-  if (Name == "avx512.mask.fpclass.ps.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_ps_256,
-                                     NewFn);
-  if (Name == "avx512.mask.fpclass.ps.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_fpclass_ps_512,
-                                     NewFn);
 
   // frcz.ss/sd may need to have an argument dropped. Added in 3.2
   if (Name.startswith("xop.vfrcz.ss") && F->arg_size() == 2) {
@@ -1013,8 +966,9 @@ static Value *upgradePMULDQ(IRBuilder<> &Builder, CallInst &CI, bool IsSigned) {
 }
 
 // Applying mask on vector of i1's and make sure result is at least 8 bits wide.
-static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder,Value *Vec, Value *Mask,
-                                     unsigned NumElts) {
+static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
+                                     Value *Mask) {
+  unsigned NumElts = Vec->getType()->getVectorNumElements();
   if (Mask) {
     const auto *C = dyn_cast<Constant>(Mask);
     if (!C || !C->isAllOnesValue())
@@ -1060,7 +1014,7 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
 
   Value *Mask = CI.getArgOperand(CI.getNumArgOperands() - 1);
 
-  return ApplyX86MaskOn1BitsVec(Builder, Cmp, Mask, NumElts);
+  return ApplyX86MaskOn1BitsVec(Builder, Cmp, Mask);
 }
 
 // Replace a masked intrinsic with an older unmasked intrinsic.
@@ -1530,8 +1484,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       ICmpInst::Predicate Pred =
         Name.startswith("avx512.ptestm") ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
       Rep = Builder.CreateICmp(Pred, Rep, Zero);
-      unsigned NumElts = Op0->getType()->getVectorNumElements();
-      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, Mask, NumElts);
+      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, Mask);
     } else if (IsX86 && (Name.startswith("avx512.mask.pbroadcast"))){
       unsigned NumElts =
           CI->getArgOperand(1)->getType()->getVectorNumElements();
@@ -1641,10 +1594,65 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // "avx512.mask.pcmpeq." or "avx512.mask.pcmpgt."
       bool CmpEq = Name[16] == 'e';
       Rep = upgradeMaskedCompare(Builder, *CI, CmpEq ? 0 : 6, true);
-    } else if (IsX86 && Name.startswith("avx512.mask.cmp")) {
+    } else if (IsX86 && Name.startswith("avx512.mask.fpclass.p")) {
+      Type *OpTy = CI->getArgOperand(0)->getType();
+      unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
+      unsigned EltWidth = OpTy->getScalarSizeInBits();
+      Intrinsic::ID IID;
+      if (VecWidth == 128 && EltWidth == 32)
+        IID = Intrinsic::x86_avx512_fpclass_ps_128;
+      else if (VecWidth == 256 && EltWidth == 32)
+        IID = Intrinsic::x86_avx512_fpclass_ps_256;
+      else if (VecWidth == 512 && EltWidth == 32)
+        IID = Intrinsic::x86_avx512_fpclass_ps_512;
+      else if (VecWidth == 128 && EltWidth == 64)
+        IID = Intrinsic::x86_avx512_fpclass_pd_128;
+      else if (VecWidth == 256 && EltWidth == 64)
+        IID = Intrinsic::x86_avx512_fpclass_pd_256;
+      else if (VecWidth == 512 && EltWidth == 64)
+        IID = Intrinsic::x86_avx512_fpclass_pd_512;
+      else
+        llvm_unreachable("Unexpected intrinsic");
+
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
+                               { CI->getOperand(0), CI->getArgOperand(1) });
+      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.cmp.p")) {
+      Type *OpTy = CI->getArgOperand(0)->getType();
+      unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
+      unsigned EltWidth = OpTy->getScalarSizeInBits();
+      Intrinsic::ID IID;
+      if (VecWidth == 128 && EltWidth == 32)
+        IID = Intrinsic::x86_avx512_cmp_ps_128;
+      else if (VecWidth == 256 && EltWidth == 32)
+        IID = Intrinsic::x86_avx512_cmp_ps_256;
+      else if (VecWidth == 512 && EltWidth == 32)
+        IID = Intrinsic::x86_avx512_cmp_ps_512;
+      else if (VecWidth == 128 && EltWidth == 64)
+        IID = Intrinsic::x86_avx512_cmp_pd_128;
+      else if (VecWidth == 256 && EltWidth == 64)
+        IID = Intrinsic::x86_avx512_cmp_pd_256;
+      else if (VecWidth == 512 && EltWidth == 64)
+        IID = Intrinsic::x86_avx512_cmp_pd_512;
+      else
+        llvm_unreachable("Unexpected intrinsic");
+
+      SmallVector<Value *, 4> Args;
+      Args.push_back(CI->getArgOperand(0));
+      Args.push_back(CI->getArgOperand(1));
+      Args.push_back(CI->getArgOperand(2));
+      if (CI->getNumArgOperands() == 5)
+        Args.push_back(CI->getArgOperand(4));
+
+      Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
+                               Args);
+      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, CI->getArgOperand(3));
+    } else if (IsX86 && Name.startswith("avx512.mask.cmp.") &&
+               Name[16] != 'p') {
+      // Integer compare intrinsics.
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
       Rep = upgradeMaskedCompare(Builder, *CI, Imm, true);
-    } else if (IsX86 && Name.startswith("avx512.mask.ucmp")) {
+    } else if (IsX86 && Name.startswith("avx512.mask.ucmp.")) {
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
       Rep = upgradeMaskedCompare(Builder, *CI, Imm, false);
     } else if (IsX86 && (Name.startswith("avx512.cvtb2mask.") ||
@@ -1654,8 +1662,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Op = CI->getArgOperand(0);
       Value *Zero = llvm::Constant::getNullValue(Op->getType());
       Rep = Builder.CreateICmp(ICmpInst::ICMP_SLT, Op, Zero);
-      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, nullptr,
-                                   Op->getType()->getVectorNumElements());
+      Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, nullptr);
     } else if(IsX86 && (Name == "ssse3.pabs.b.128" ||
                         Name == "ssse3.pabs.w.128" ||
                         Name == "ssse3.pabs.d.128" ||
@@ -3113,59 +3120,6 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     Args.back() = Builder.CreateTrunc(Args.back(), Type::getInt8Ty(C), "trunc");
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
-  }
-
-  case Intrinsic::x86_avx512_mask_cmp_pd_128:
-  case Intrinsic::x86_avx512_mask_cmp_pd_256:
-  case Intrinsic::x86_avx512_mask_cmp_pd_512:
-  case Intrinsic::x86_avx512_mask_cmp_ps_128:
-  case Intrinsic::x86_avx512_mask_cmp_ps_256:
-  case Intrinsic::x86_avx512_mask_cmp_ps_512: {
-    SmallVector<Value *, 4> Args;
-    Args.push_back(CI->getArgOperand(0));
-    Args.push_back(CI->getArgOperand(1));
-    Args.push_back(CI->getArgOperand(2));
-    if (CI->getNumArgOperands() == 5)
-      Args.push_back(CI->getArgOperand(4));
-
-    NewCall = Builder.CreateCall(NewFn, Args);
-    unsigned NumElts = Args[0]->getType()->getVectorNumElements();
-    Value *Res = ApplyX86MaskOn1BitsVec(Builder, NewCall, CI->getArgOperand(3),
-                                        NumElts);
-
-    std::string Name = CI->getName();
-    if (!Name.empty()) {
-      CI->setName(Name + ".old");
-      NewCall->setName(Name);
-    }
-    CI->replaceAllUsesWith(Res);
-    CI->eraseFromParent();
-    return;
-  }
-
-  case Intrinsic::x86_avx512_mask_fpclass_pd_128:
-  case Intrinsic::x86_avx512_mask_fpclass_pd_256:
-  case Intrinsic::x86_avx512_mask_fpclass_pd_512:
-  case Intrinsic::x86_avx512_mask_fpclass_ps_128:
-  case Intrinsic::x86_avx512_mask_fpclass_ps_256:
-  case Intrinsic::x86_avx512_mask_fpclass_ps_512: {
-    SmallVector<Value *, 4> Args;
-    Args.push_back(CI->getArgOperand(0));
-    Args.push_back(CI->getArgOperand(1));
-
-    NewCall = Builder.CreateCall(NewFn, Args);
-    unsigned NumElts = Args[0]->getType()->getVectorNumElements();
-    Value *Res = ApplyX86MaskOn1BitsVec(Builder, NewCall, CI->getArgOperand(2),
-                                        NumElts);
-
-    std::string Name = CI->getName();
-    if (!Name.empty()) {
-      CI->setName(Name + ".old");
-      NewCall->setName(Name);
-    }
-    CI->replaceAllUsesWith(Res);
-    CI->eraseFromParent();
-    return;
   }
 
   case Intrinsic::thread_pointer: {

@@ -12,8 +12,11 @@ add_llvm_tool(dsymutil
   dsymutil.cpp
   BinaryHolder.cpp
   CFBundle.cpp
+  CompileUnit.cpp
   DebugMap.cpp
+  DeclContext.cpp
   DwarfLinker.cpp
+  DwarfStreamer.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
   NonRelocatableStringpool.cpp
