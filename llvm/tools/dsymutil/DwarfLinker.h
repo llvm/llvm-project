@@ -180,7 +180,7 @@ private:
   ///
   /// The return value indicates whether the DIE is incomplete.
   bool lookForDIEsToKeep(RelocationManager &RelocMgr, RangesTy &Ranges,
-                         UnitListTy &Units, const DWARFDie &DIE,
+                         const UnitListTy &Units, const DWARFDie &DIE,
                          const DebugMapObject &DMO, CompileUnit &CU,
                          unsigned Flags);
 
@@ -221,7 +221,7 @@ private:
 
   /// Mark the passed DIE as well as all the ones it depends on as kept.
   void keepDIEAndDependencies(RelocationManager &RelocMgr, RangesTy &Ranges,
-                              UnitListTy &Units, const DWARFDie &DIE,
+                              const UnitListTy &Units, const DWARFDie &DIE,
                               CompileUnit::DIEInfo &MyInfo,
                               const DebugMapObject &DMO, CompileUnit &CU,
                               bool UseODR);

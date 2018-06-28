@@ -96,6 +96,13 @@ void WriteState::dump() const {
   dbgs() << "{ OpIdx=" << WD.OpIndex << ", Lat=" << WD.Latency << ", RegID "
          << getRegisterID() << ", Cycles Left=" << getCyclesLeft() << " }\n";
 }
+
+void WriteRef::dump() const {
+  if (isValid())
+    getWriteState()->dump();
+  else
+    dbgs() << "(null)";
+}
 #endif
 
 void Instruction::dispatch(unsigned RCUToken) {
@@ -152,4 +159,7 @@ void Instruction::cycleEvent() {
   if (!CyclesLeft)
     Stage = IS_EXECUTED;
 }
+
+const unsigned WriteRef::INVALID_IID = std::numeric_limits<unsigned>::max();
+
 } // namespace mca

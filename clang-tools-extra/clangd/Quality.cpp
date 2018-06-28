@@ -7,6 +7,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "Quality.h"
+#include <cmath>
 #include "URI.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
@@ -147,8 +148,8 @@ float SymbolQualitySignals::evaluate() const {
 
   // This avoids a sharp gradient for tail symbols, and also neatly avoids the
   // question of whether 0 references means a bad symbol or missing data.
-  if (References >= 3)
-    Score *= std::log(References);
+  if (References >= 10)
+    Score *= std::log10(References);
 
   if (Deprecated)
     Score *= 0.1f;

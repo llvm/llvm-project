@@ -273,16 +273,6 @@ namespace llvm {
     }
 
     /// @}
-    /// @name Comparison operators
-    /// @{
-
-    friend bool operator==(ArrayRef LHS, ArrayRef RHS) {
-      return LHS.equals(RHS);
-    }
-
-    friend bool operator!=(ArrayRef LHS, ArrayRef RHS) { return !(LHS == RHS); }
-
-    /// @}
   };
 
   /// MutableArrayRef - Represent a mutable reference to an array (0 or more
@@ -519,6 +509,22 @@ namespace llvm {
   MutableArrayRef<T> makeMutableArrayRef(T *data, size_t length) {
     return MutableArrayRef<T>(data, length);
   }
+
+  /// @}
+  /// @name ArrayRef Comparison Operators
+  /// @{
+
+  template<typename T>
+  inline bool operator==(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return LHS.equals(RHS);
+  }
+
+  template<typename T>
+  inline bool operator!=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS == RHS);
+  }
+
+  /// @}
 
   // ArrayRefs can be treated like a POD type.
   template <typename T> struct isPodLike;

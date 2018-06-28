@@ -244,12 +244,17 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
-  if (TT.isOSBinFormatMachO())
+  if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
+    this->Options.NoTrapAfterNoreturn = true;
+  }
 
   // Enable GlobalISel at or below EnableGlobalISelAt0.
   if (getOptLevel() <= EnableGlobalISelAtO)
     setGlobalISel(true);
+
+  // AArch64 supports the MachineOutliner.
+  setMachineOutliner(true);
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;

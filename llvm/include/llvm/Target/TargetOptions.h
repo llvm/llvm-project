@@ -108,8 +108,10 @@ namespace llvm {
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
           UniqueSectionNames(true), TrapUnreachable(false),
+          NoTrapAfterNoreturn(false),
           EmulatedTLS(false), ExplicitEmulatedTLS(false),
-          EnableIPRA(false), EmitStackSizeSection(false) {}
+          EnableIPRA(false), EmitStackSizeSection(false),
+          EnableMachineOutliner(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -213,6 +215,10 @@ namespace llvm {
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;
 
+    /// Do not emit a trap instruction for 'unreachable' IR instructions behind
+    /// noreturn calls, even if TrapUnreachable is true.
+    unsigned NoTrapAfterNoreturn : 1;
+
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
@@ -225,6 +231,9 @@ namespace llvm {
 
     /// Emit section containing metadata on function stack sizes.
     unsigned EmitStackSizeSection : 1;
+
+    /// Enables the MachineOutliner pass.
+    unsigned EnableMachineOutliner : 1;
 
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.
