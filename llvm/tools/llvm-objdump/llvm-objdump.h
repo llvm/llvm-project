@@ -32,6 +32,7 @@ extern cl::opt<std::string> ArchName;
 extern cl::opt<std::string> MCPU;
 extern cl::list<std::string> MAttrs;
 extern cl::list<std::string> FilterSections;
+extern cl::opt<bool> AllHeaders;
 extern cl::opt<bool> Disassemble;
 extern cl::opt<bool> DisassembleAll;
 extern cl::opt<bool> NoShowRawInsn;

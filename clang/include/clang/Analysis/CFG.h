@@ -1025,6 +1025,7 @@ public:
     bool AddCXXNewAllocator = false;
     bool AddCXXDefaultInitExprInCtors = false;
     bool AddRichCXXConstructors = false;
+    bool MarkElidedCXXConstructors = false;
 
     BuildOptions() = default;
 

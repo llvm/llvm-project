@@ -1178,7 +1178,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
 
   // FIXME: Should use getKernArgSize
   Out.kernarg_segment_byte_size =
-    STM.getKernArgSegmentSize(MF.getFunction(), MFI->getABIArgOffset());
+    STM.getKernArgSegmentSize(MF.getFunction(), MFI->getExplicitKernArgSize());
   Out.wavefront_sgpr_count = CurrentProgramInfo.NumSGPR;
   Out.workitem_vgpr_count = CurrentProgramInfo.NumVGPR;
   Out.workitem_private_segment_byte_size = CurrentProgramInfo.ScratchSize;
@@ -1205,7 +1205,7 @@ AMDGPU::HSAMD::Kernel::CodeProps::Metadata AMDGPUAsmPrinter::getHSACodeProps(
   HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
 
   HSACodeProps.mKernargSegmentSize =
-    STM.getKernArgSegmentSize(MF.getFunction(), MFI.getABIArgOffset());
+    STM.getKernArgSegmentSize(MF.getFunction(), MFI.getExplicitKernArgSize());
   HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
   HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
   HSACodeProps.mKernargSegmentAlign =

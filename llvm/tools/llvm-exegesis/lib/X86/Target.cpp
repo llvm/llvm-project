@@ -10,6 +10,7 @@
 
 #include "../Latency.h"
 #include "../Uops.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
 #include "X86RegisterInfo.h"
@@ -17,43 +18,107 @@
 
 namespace exegesis {
 
-// Test whether we can generate a snippet for this instruction.
-static llvm::Error shouldRun(const LLVMState &State, const unsigned Opcode) {
-  const auto &InstrInfo = State.getInstrInfo();
-  const auto OpcodeName = InstrInfo.getName(Opcode);
-  if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
-      OpcodeName.startswith("ADJCALLSTACK")) {
-    return llvm::make_error<BenchmarkFailure>(
-        "Unsupported opcode: Push/Pop/AdjCallStack");
-  }
-  return llvm::ErrorSuccess();
-}
-
 namespace {
 
-class X86LatencyBenchmarkRunner : public LatencyBenchmarkRunner {
-private:
-  using LatencyBenchmarkRunner::LatencyBenchmarkRunner;
+// Common code for X86 Uops and Latency runners.
+template <typename Impl> class X86BenchmarkRunner : public Impl {
+  using Impl::Impl;
 
   llvm::Expected<SnippetPrototype>
   generatePrototype(unsigned Opcode) const override {
-    if (llvm::Error E = shouldRun(State, Opcode)) {
-      return std::move(E);
+    // Test whether we can generate a snippet for this instruction.
+    const auto &InstrInfo = this->State.getInstrInfo();
+    const auto OpcodeName = InstrInfo.getName(Opcode);
+    if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
+        OpcodeName.startswith("ADJCALLSTACK")) {
+      return llvm::make_error<BenchmarkFailure>(
+          "Unsupported opcode: Push/Pop/AdjCallStack");
     }
-    return LatencyBenchmarkRunner::generatePrototype(Opcode);
+
+    // Handle X87.
+    const auto &InstrDesc = InstrInfo.get(Opcode);
+    const unsigned FPInstClass = InstrDesc.TSFlags & llvm::X86II::FPTypeMask;
+    const Instruction Instr(InstrDesc, this->RATC);
+    switch (FPInstClass) {
+    case llvm::X86II::NotFP:
+      break;
+    case llvm::X86II::ZeroArgFP:
+      return Impl::handleZeroArgFP(Instr);
+    case llvm::X86II::OneArgFP:
+      return Impl::handleOneArgFP(Instr); // fstp ST(0)
+    case llvm::X86II::OneArgFPRW:
+    case llvm::X86II::TwoArgFP: {
+      // These are instructions like
+      //   - `ST(0) = fsqrt(ST(0))` (OneArgFPRW)
+      //   - `ST(0) = ST(0) + ST(i)` (TwoArgFP)
+      // They are intrinsically serial and do not modify the state of the stack.
+      // We generate the same code for latency and uops.
+      return this->generateSelfAliasingPrototype(Instr);
+    }
+    case llvm::X86II::CompareFP:
+      return Impl::handleCompareFP(Instr);
+    case llvm::X86II::CondMovFP:
+      return Impl::handleCondMovFP(Instr);
+    case llvm::X86II::SpecialFP:
+      return Impl::handleSpecialFP(Instr);
+    default:
+      llvm_unreachable("Unknown FP Type!");
+    }
+
+    // Fallback to generic implementation.
+    return Impl::Base::generatePrototype(Opcode);
   }
 };
 
-class X86UopsBenchmarkRunner : public UopsBenchmarkRunner {
-private:
-  using UopsBenchmarkRunner::UopsBenchmarkRunner;
-
+class X86LatencyImpl : public LatencyBenchmarkRunner {
+protected:
+  using Base = LatencyBenchmarkRunner;
+  using Base::Base;
   llvm::Expected<SnippetPrototype>
-  generatePrototype(unsigned Opcode) const override {
-    if (llvm::Error E = shouldRun(State, Opcode)) {
-      return std::move(E);
-    }
-    return UopsBenchmarkRunner::generatePrototype(Opcode);
+  handleZeroArgFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 ZeroArgFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleOneArgFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 OneArgFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleCompareFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 CompareFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleCondMovFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 CondMovFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleSpecialFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 SpecialFP");
+  }
+};
+
+class X86UopsImpl : public UopsBenchmarkRunner {
+protected:
+  using Base = UopsBenchmarkRunner;
+  using Base::Base;
+  llvm::Expected<SnippetPrototype>
+  handleZeroArgFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 ZeroArgFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleOneArgFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 OneArgFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleCompareFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 CompareFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleCondMovFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 CondMovFP");
+  }
+  llvm::Expected<SnippetPrototype>
+  handleSpecialFP(const Instruction &Instr) const {
+    return llvm::make_error<BenchmarkFailure>("Unsupported x87 SpecialFP");
   }
 };
 
@@ -62,15 +127,11 @@ class ExegesisX86Target : public ExegesisTarget {
     // Lowers FP pseudo-instructions, e.g. ABS_Fp32 -> ABS_F.
     // FIXME: Enable when the exegesis assembler no longer does
     // Properties.reset(TracksLiveness);
-    // PM.add(llvm::createX86FloatingPointStackifierPass());
+    PM.add(llvm::createX86FloatingPointStackifierPass());
   }
 
   std::vector<llvm::MCInst>
   setRegToConstant(unsigned Reg) const override {
-    // FIXME: Handle FP stack:
-    // llvm::X86::RFP32RegClass
-    // llvm::X86::RFP64RegClass
-    // llvm::X86::RFP80RegClass
     if (llvm::X86::GR8RegClass.contains(Reg)) {
       return {llvm::MCInstBuilder(llvm::X86::MOV8ri).addReg(Reg).addImm(1)};
     }
@@ -92,17 +153,23 @@ class ExegesisX86Target : public ExegesisTarget {
     if (llvm::X86::VR512RegClass.contains(Reg)) {
       return setVectorRegToConstant(Reg, 64, llvm::X86::VMOVDQU64Zrm);
     }
+    if (llvm::X86::RFP32RegClass.contains(Reg) ||
+        llvm::X86::RFP64RegClass.contains(Reg) ||
+        llvm::X86::RFP80RegClass.contains(Reg)) {
+      return setVectorRegToConstant(Reg, 8, llvm::X86::LD_Fp64m);
+    }
     return {};
   }
 
   std::unique_ptr<BenchmarkRunner>
   createLatencyBenchmarkRunner(const LLVMState &State) const override {
-    return llvm::make_unique<X86LatencyBenchmarkRunner>(State);
+    return llvm::make_unique<X86BenchmarkRunner<X86LatencyImpl>>(
+        State);
   }
 
   std::unique_ptr<BenchmarkRunner>
   createUopsBenchmarkRunner(const LLVMState &State) const override {
-    return llvm::make_unique<X86UopsBenchmarkRunner>(State);
+    return llvm::make_unique<X86BenchmarkRunner<X86UopsImpl>>(State);
   }
 
   bool matchesArch(llvm::Triple::ArchType Arch) const override {

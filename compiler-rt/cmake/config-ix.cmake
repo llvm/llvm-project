@@ -384,7 +384,6 @@ if(APPLE)
   # for list_intersect
   include(CompilerRTUtils)
 
-
   list_intersect(SANITIZER_COMMON_SUPPORTED_ARCH
     ALL_SANITIZER_COMMON_SUPPORTED_ARCH
     COMPILER_RT_SUPPORTED_ARCH

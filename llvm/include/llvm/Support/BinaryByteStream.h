@@ -222,6 +222,12 @@ private:
       return Error::success();
     }
 
+    /// Returns a pointer to the start of the buffer.
+    uint8_t *getBufferStart() const { return FileBuffer->getBufferStart(); }
+
+    /// Returns a pointer to the end of the buffer.
+    uint8_t *getBufferEnd() const { return FileBuffer->getBufferEnd(); }
+
   private:
     std::unique_ptr<FileOutputBuffer> FileBuffer;
   };
@@ -252,6 +258,12 @@ public:
   }
 
   Error commit() override { return Impl.commit(); }
+
+  /// Returns a pointer to the start of the buffer.
+  uint8_t *getBufferStart() const { return Impl.getBufferStart(); }
+
+  /// Returns a pointer to the end of the buffer.
+  uint8_t *getBufferEnd() const { return Impl.getBufferEnd(); }
 
 private:
   StreamImpl Impl;

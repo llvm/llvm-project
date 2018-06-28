@@ -124,6 +124,9 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     set(LLVM_RUNTIMES_PREFIX "${LLVM_RUNTIMES_TARGET}/")
   endif()
 
+  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
+         ${PACKAGE_VERSION})
+
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
 
@@ -132,12 +135,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     string(TOUPPER ${canon_name} canon_name)
     # The subdirectories need to treat this as standalone builds
     set(${canon_name}_STANDALONE_BUILD On)
-
-    if(LLVM_RUNTIMES_TARGET)
-      if(NOT "${projName}" MATCHES "compiler-rt")
-        set(${canon_name}_INSTALL_PREFIX "lib/${LLVM_RUNTIMES_PREFIX}/" CACHE STRING "" FORCE)
-      endif()
-    endif()
 
     # Setting a variable to let sub-projects detect which other projects
     # will be included under here.
@@ -152,15 +149,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # other runtimes are added.
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
-
-    if(LLVM_RUNTIMES_TARGET)
-      if(NOT "${projName}" MATCHES "compiler-rt")
-        set(LLVM_BINARY_DIR "${LLVM_LIBRARY_DIR}/${LLVM_RUNTIMES_PREFIX}")
-        set(LLVM_LIBDIR_SUFFIX "${LLVM_RUNTIMES_LIBDIR_SUFFIX}")
-        set(LLVM_LIBRARY_OUTPUT_INTDIR "${LLVM_LIBRARY_DIR}/${LLVM_RUNTIMES_PREFIX}lib${LLVM_RUNTIMES_LIBDIR_SUFFIX}")
-        set(LLVM_RUNTIME_OUTPUT_INTDIR "${LLVM_TOOLS_BINARY_DIR}/${LLVM_RUNTIMES_PREFIX}")
-      endif()
-    endif()
 
     # Between each sub-project we want to cache and clear the LIT properties
     set_property(GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
@@ -247,6 +235,8 @@ else() # if this is included from LLVM's CMake
                              ${compiler_rt_path}/lib/builtins
                              CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
+                                        -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
+                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_C_COMPILER_WORKS=ON
@@ -278,6 +268,8 @@ else() # if this is included from LLVM's CMake
                              ${compiler_rt_path}/lib/builtins
                              CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
+                                        -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
+                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${target}
                                         -DCMAKE_ASM_COMPILER_TARGET=${target}
                                         -DCMAKE_C_COMPILER_WORKS=ON
@@ -371,6 +363,8 @@ else() # if this is included from LLVM's CMake
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                         -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
+                                        -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
+                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_CXX_COMPILER_TARGET=${TARGET_TRIPLE}
                                         -DCMAKE_ASM_COMPILER_TARGET=${TARGET_TRIPLE}
@@ -455,6 +449,8 @@ else() # if this is included from LLVM's CMake
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                         -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
+                                        -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
+                                        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                         -DCMAKE_C_COMPILER_TARGET=${target}
                                         -DCMAKE_CXX_COMPILER_TARGET=${target}
                                         -DCMAKE_ASM_COMPILER_TARGET=${target}

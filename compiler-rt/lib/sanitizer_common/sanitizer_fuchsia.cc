@@ -472,7 +472,7 @@ uptr MainThreadStackBase, MainThreadStackSize;
 
 bool GetRandom(void *buffer, uptr length, bool blocking) {
   CHECK_LE(length, ZX_CPRNG_DRAW_MAX_LEN);
-  CHECK_EQ(_zx_cprng_draw(buffer, length), ZX_OK);
+  _zx_cprng_draw(buffer, length);
   return true;
 }
 

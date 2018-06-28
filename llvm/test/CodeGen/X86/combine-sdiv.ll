@@ -77,12 +77,25 @@ define <4 x i32> @combine_vec_sdiv_by_minsigned(<4 x i32> %x) {
 ; AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2ORLATER-LABEL: combine_vec_sdiv_by_minsigned:
-; AVX2ORLATER:       # %bb.0:
-; AVX2ORLATER-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; AVX2ORLATER-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX2ORLATER-NEXT:    vpsrld $31, %xmm0, %xmm0
-; AVX2ORLATER-NEXT:    retq
+; AVX2-LABEL: combine_vec_sdiv_by_minsigned:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: combine_vec_sdiv_by_minsigned:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; AVX512F-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpsrld $31, %xmm0, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: combine_vec_sdiv_by_minsigned:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpcmpeqd {{.*}}(%rip){1to4}, %xmm0, %k1
+; AVX512BW-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
+; AVX512BW-NEXT:    retq
 ;
 ; XOP-LABEL: combine_vec_sdiv_by_minsigned:
 ; XOP:       # %bb.0:

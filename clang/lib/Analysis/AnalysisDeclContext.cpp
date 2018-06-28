@@ -71,7 +71,8 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addInitializers, bool addTemporaryDtors, bool addLifetime,
     bool addLoopExit, bool addScopes, bool synthesizeBodies,
     bool addStaticInitBranch, bool addCXXNewAllocator,
-    bool addRichCXXConstructors, CodeInjector *injector)
+    bool addRichCXXConstructors, bool markElidedCXXConstructors,
+    CodeInjector *injector)
     : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
@@ -84,6 +85,7 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
   cfgBuildOptions.AddStaticInitBranches = addStaticInitBranch;
   cfgBuildOptions.AddCXXNewAllocator = addCXXNewAllocator;
   cfgBuildOptions.AddRichCXXConstructors = addRichCXXConstructors;
+  cfgBuildOptions.MarkElidedCXXConstructors = markElidedCXXConstructors;
 }
 
 void AnalysisDeclContextManager::clear() { Contexts.clear(); }

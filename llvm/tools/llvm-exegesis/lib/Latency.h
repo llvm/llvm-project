@@ -32,13 +32,8 @@ public:
 private:
   llvm::Error isInfeasible(const llvm::MCInstrDesc &MCInstrDesc) const;
 
-  llvm::Expected<SnippetPrototype> generateSelfAliasingPrototype(
-      const Instruction &Instr,
-      const AliasingConfigurations &SelfAliasing) const;
-
   llvm::Expected<SnippetPrototype> generateTwoInstructionPrototype(
-      const Instruction &Instr,
-      const AliasingConfigurations &SelfAliasing) const;
+      const Instruction &Instr) const;
 
   std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,

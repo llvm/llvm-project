@@ -327,6 +327,9 @@ private:
   /// \sa naiveCTUEnabled
   Optional<bool> NaiveCTU;
 
+  /// \sa shouldElideConstructors
+  Optional<bool> ElideConstructors;
+
 
   /// A helper function that retrieves option for a given full-qualified
   /// checker name.
@@ -703,6 +706,13 @@ public:
   /// This is an experimental feature to inline functions from another
   /// translation units.
   bool naiveCTUEnabled();
+
+  /// Returns true if elidable C++ copy-constructors and move-constructors
+  /// should be actually elided during analysis. Both behaviors are allowed
+  /// by the C++ standard, and the analyzer, like CodeGen, defaults to eliding.
+  /// Starting with C++17 some elisions become mandatory, and in these cases
+  /// the option will be ignored.
+  bool shouldElideConstructors();
 };
   
 using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;

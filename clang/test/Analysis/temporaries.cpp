@@ -612,107 +612,44 @@ void test() {
   clang_analyzer_eval(c3.getY() == 2); // expected-warning{{TRUE}}
 
   C c4 = returnTemporaryWithConstruction();
-  clang_analyzer_eval(c4.getX() == 1);
-  clang_analyzer_eval(c4.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(c4.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c4.getY() == 2); // expected-warning{{TRUE}}
 
   C c5 = returnTemporaryWithAnotherFunctionWithConstruction();
-  clang_analyzer_eval(c5.getX() == 1);
-  clang_analyzer_eval(c5.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(c5.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c5.getY() == 2); // expected-warning{{TRUE}}
 
   C c6 = returnTemporaryWithCopyConstructionWithConstruction();
-  clang_analyzer_eval(c5.getX() == 1);
-  clang_analyzer_eval(c5.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(c5.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c5.getY() == 2); // expected-warning{{TRUE}}
 
 #if __cplusplus >= 201103L
 
   C c7 = returnTemporaryWithBraces();
-  clang_analyzer_eval(c7.getX() == 1);
-  clang_analyzer_eval(c7.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(c7.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c7.getY() == 2); // expected-warning{{TRUE}}
 
   C c8 = returnTemporaryWithAnotherFunctionWithBraces();
-  clang_analyzer_eval(c8.getX() == 1);
-  clang_analyzer_eval(c8.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(c8.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c8.getY() == 2); // expected-warning{{TRUE}}
 
   C c9 = returnTemporaryWithCopyConstructionWithBraces();
-  clang_analyzer_eval(c9.getX() == 1);
-  clang_analyzer_eval(c9.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(c9.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(c9.getY() == 2); // expected-warning{{TRUE}}
 
 #endif // C++11
 
   D d1 = returnTemporaryWithVariableAndNonTrivialCopy();
-  clang_analyzer_eval(d1.getX() == 1);
-  clang_analyzer_eval(d1.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(d1.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(d1.getY() == 2); // expected-warning{{TRUE}}
 
   D d2 = returnTemporaryWithAnotherFunctionWithVariableAndNonTrivialCopy();
-  clang_analyzer_eval(d2.getX() == 1);
-  clang_analyzer_eval(d2.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(d2.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(d2.getY() == 2); // expected-warning{{TRUE}}
 
   D d3 = returnTemporaryWithCopyConstructionWithVariableAndNonTrivialCopy();
-  clang_analyzer_eval(d3.getX() == 1);
-  clang_analyzer_eval(d3.getY() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(d3.getX() == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(d3.getY() == 2); // expected-warning{{TRUE}}
 }
 } // namespace test_return_temporary
 
@@ -767,19 +704,9 @@ void test(int coin) {
 
   C c2 = coin ? C(1) : C(2);
   if (coin) {
-    clang_analyzer_eval(c2.getX() == 1);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-2{{TRUE}}
-#else
-  // expected-warning@-4{{UNKNOWN}}
-#endif
+    clang_analyzer_eval(c2.getX() == 1); // expected-warning{{TRUE}}
   } else {
-    clang_analyzer_eval(c2.getX() == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-2{{TRUE}}
-#else
-  // expected-warning@-4{{UNKNOWN}}
-#endif
+    clang_analyzer_eval(c2.getX() == 2); // expected-warning{{TRUE}}
   }
 }
 
@@ -816,16 +743,9 @@ void test_simple_temporary_with_copy() {
   {
     C c = C(x, y);
   }
-  // Two constructors (temporary object expr and copy) and two destructors.
-  clang_analyzer_eval(x == 2);
-  clang_analyzer_eval(y == 2);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-3{{TRUE}}
-  // expected-warning@-3{{TRUE}}
-#else
-  // expected-warning@-6{{UNKNOWN}}
-  // expected-warning@-6{{UNKNOWN}}
-#endif
+  // Only one constructor directly into the variable, and one destructor.
+  clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(y == 1); // expected-warning{{TRUE}}
 }
 
 void test_ternary_temporary(int coin) {
@@ -833,10 +753,10 @@ void test_ternary_temporary(int coin) {
   {
     const C &c = coin ? C(x, y) : C(z, w);
   }
-  // This time each branch contains an additional elidable copy constructor.
+  // Only one constructor on every branch, and one automatic destructor.
   if (coin) {
-    clang_analyzer_eval(x == 2);
-    clang_analyzer_eval(y == 2);
+    clang_analyzer_eval(x == 1);
+    clang_analyzer_eval(y == 1);
 #ifdef TEMPORARY_DTORS
     // expected-warning@-3{{TRUE}}
     // expected-warning@-3{{TRUE}}
@@ -850,8 +770,8 @@ void test_ternary_temporary(int coin) {
   } else {
     clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
     clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
-    clang_analyzer_eval(z == 2);
-    clang_analyzer_eval(w == 2);
+    clang_analyzer_eval(z == 1);
+    clang_analyzer_eval(w == 1);
 #ifdef TEMPORARY_DTORS
     // expected-warning@-3{{TRUE}}
     // expected-warning@-3{{TRUE}}
@@ -867,33 +787,18 @@ void test_ternary_temporary_with_copy(int coin) {
   {
     C c = coin ? C(x, y) : C(z, w);
   }
-  // Temporary expression, elidable copy within branch,
-  // constructor for variable - 3 total.
+  // On each branch the variable is constructed directly.
   if (coin) {
-    clang_analyzer_eval(x == 3);
-    clang_analyzer_eval(y == 3);
-#ifdef TEMPORARY_DTORS
-    // expected-warning@-3{{TRUE}}
-    // expected-warning@-3{{TRUE}}
-#else
-    // expected-warning@-6{{UNKNOWN}}
-    // expected-warning@-6{{UNKNOWN}}
-#endif
+    clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+    clang_analyzer_eval(y == 1); // expected-warning{{TRUE}}
     clang_analyzer_eval(z == 0); // expected-warning{{TRUE}}
     clang_analyzer_eval(w == 0); // expected-warning{{TRUE}}
 
   } else {
     clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
     clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
-    clang_analyzer_eval(z == 3);
-    clang_analyzer_eval(w == 3);
-#ifdef TEMPORARY_DTORS
-    // expected-warning@-3{{TRUE}}
-    // expected-warning@-3{{TRUE}}
-#else
-    // expected-warning@-6{{UNKNOWN}}
-    // expected-warning@-6{{UNKNOWN}}
-#endif
+    clang_analyzer_eval(z == 1); // expected-warning{{TRUE}}
+    clang_analyzer_eval(w == 1); // expected-warning{{TRUE}}
   }
 }
 } // namespace test_match_constructors_and_destructors
@@ -928,12 +833,13 @@ void testLifetimeExtendedCall() {
 }
 
 void testCopiedCall() {
-  C c = make();
-  // Should have divided by zero in the temporary destructor.
-  clang_analyzer_warnIfReached();
-#ifndef TEMPORARY_DTORS
-    // expected-warning@-2{{REACHABLE}}
-#endif
+  {
+    C c = make();
+    // Should have elided the constructor/destructor for the temporary
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+  }
+  // Should have divided by zero in the destructor.
+  clang_analyzer_warnIfReached(); // no-warning
 }
 } // namespace destructors_for_return_values
 
@@ -1018,20 +924,10 @@ void test() {
 #endif
 
   S s = 20;
-  clang_analyzer_eval(s.x == 20);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-2{{TRUE}}
-#else
-  // expected-warning@-4{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(s.x == 20); // expected-warning{{TRUE}}
 
   C c2 = s;
-  clang_analyzer_eval(c2.getX() == 20);
-#ifdef TEMPORARY_DTORS
-  // expected-warning@-2{{TRUE}}
-#else
-  // expected-warning@-4{{UNKNOWN}}
-#endif
+  clang_analyzer_eval(c2.getX() == 20); // expected-warning{{TRUE}}
 }
 } // end namespace implicit_constructor_conversion
 

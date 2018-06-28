@@ -1,5 +1,17 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++11 -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++17 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++11 -analyzer-config elide-constructors=false -DNO_ELIDE_FLAG -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -std=c++17 -analyzer-config elide-constructors=false -DNO_ELIDE_FLAG -verify %s
+
+// Copy elision always occurs in C++17, otherwise it's under
+// an on-by-default flag.
+#if __cplusplus >= 201703L
+  #define ELIDE 1
+#else
+  #ifndef NO_ELIDE_FLAG
+    #define ELIDE 1
+  #endif
+#endif
 
 void clang_analyzer_eval(bool);
 
@@ -39,9 +51,9 @@ public:
   C() : t(T(4)) {
     S s = {1, 2, 3};
     t.s = s;
-    // FIXME: Should be TRUE in C++11 as well.
+    // FIXME: Should be TRUE regardless of copy elision.
     clang_analyzer_eval(t.w == 4);
-#if __cplusplus >= 201703L
+#ifdef ELIDE
     // expected-warning@-2{{TRUE}}
 #else
     // expected-warning@-4{{UNKNOWN}}
@@ -149,7 +161,7 @@ void testMultipleReturns() {
   AddressVector<ClassWithoutDestructor> v;
   ClassWithoutDestructor c = make3(v);
 
-#if __cplusplus >= 201703L
+#if ELIDE
   clang_analyzer_eval(v.len == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(v.buf[0] == &c); // expected-warning{{TRUE}}
 #else
@@ -184,13 +196,13 @@ void testVariable() {
     ClassWithDestructor c = ClassWithDestructor(v);
     // Check if the last destructor is an automatic destructor.
     // A temporary destructor would have fired by now.
-#if __cplusplus >= 201703L
+#if ELIDE
     clang_analyzer_eval(v.len == 1); // expected-warning{{TRUE}}
 #else
     clang_analyzer_eval(v.len == 3); // expected-warning{{TRUE}}
 #endif
   }
-#if __cplusplus >= 201703L
+#if ELIDE
   // 0. Construct the variable.
   // 1. Destroy the variable.
   clang_analyzer_eval(v.len == 2); // expected-warning{{TRUE}}
@@ -218,13 +230,13 @@ void testCtorInitializer() {
     TestCtorInitializer t(v);
     // Check if the last destructor is an automatic destructor.
     // A temporary destructor would have fired by now.
-#if __cplusplus >= 201703L
+#if ELIDE
     clang_analyzer_eval(v.len == 1); // expected-warning{{TRUE}}
 #else
     clang_analyzer_eval(v.len == 3); // expected-warning{{TRUE}}
 #endif
   }
-#if __cplusplus >= 201703L
+#if ELIDE
   // 0. Construct the member variable.
   // 1. Destroy the member variable.
   clang_analyzer_eval(v.len == 2); // expected-warning{{TRUE}}
@@ -257,14 +269,14 @@ void testMultipleReturnsWithDestructors() {
     ClassWithDestructor c = make3(v);
     // Check if the last destructor is an automatic destructor.
     // A temporary destructor would have fired by now.
-#if __cplusplus >= 201703L
+#if ELIDE
     clang_analyzer_eval(v.len == 1); // expected-warning{{TRUE}}
 #else
     clang_analyzer_eval(v.len == 9); // expected-warning{{TRUE}}
 #endif
   }
 
-#if __cplusplus >= 201703L
+#if ELIDE
   // 0. Construct the variable. Yes, constructor in make1() constructs
   //    the variable 'c'.
   // 1. Destroy the variable.
