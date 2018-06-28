@@ -793,6 +793,14 @@ bool LegacyInlinerBase::removeDeadFunctions(CallGraph &CG,
   return true;
 }
 
+InlinerPass::~InlinerPass() {
+  if (ImportedFunctionsStats) {
+    assert(InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No);
+    ImportedFunctionsStats->dump(InlinerFunctionImportStats ==
+                                 InlinerFunctionImportStatsOpts::Verbose);
+  }
+}
+
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {
@@ -803,6 +811,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   assert(InitialC.size() > 0 && "Cannot handle an empty SCC!");
   Module &M = *InitialC.begin()->getFunction().getParent();
   ProfileSummaryInfo *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(M);
+
+  if (!ImportedFunctionsStats &&
+      InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
+    ImportedFunctionsStats =
+        llvm::make_unique<ImportedFunctionsInliningStatistics>();
+    ImportedFunctionsStats->setModuleInfo(M);
+  }
 
   // We use a single common worklist for calls across the entire SCC. We
   // process these in-order and append new calls introduced during inlining to
@@ -1008,6 +1023,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
             if (!NewCallee->isDeclaration())
               Calls.push_back({CS, NewHistoryID});
       }
+
+      if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
+        ImportedFunctionsStats->recordInline(F, Callee);
 
       // Merge the attributes based on the inlining.
       AttributeFuncs::mergeAttributesForInlining(F, Callee);

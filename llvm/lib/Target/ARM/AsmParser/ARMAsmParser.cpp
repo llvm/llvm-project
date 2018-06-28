@@ -561,6 +561,8 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool shouldOmitPredicateOperand(StringRef Mnemonic, OperandVector &Operands);
   bool isITBlockTerminator(MCInst &Inst) const;
   void fixupGNULDRDAlias(StringRef Mnemonic, OperandVector &Operands);
+  bool validateLDRDSTRD(MCInst &Inst, const OperandVector &Operands,
+                        bool Load, bool ARMMode, bool Writeback);
 
 public:
   enum ARMMatchResultTy {
@@ -6302,6 +6304,65 @@ bool ARMAsmParser::validatetSTMRegList(const MCInst &Inst,
   return false;
 }
 
+bool ARMAsmParser::validateLDRDSTRD(MCInst &Inst,
+                                    const OperandVector &Operands,
+                                    bool Load, bool ARMMode, bool Writeback) {
+  unsigned RtIndex = Load || !Writeback ? 0 : 1;
+  unsigned Rt = MRI->getEncodingValue(Inst.getOperand(RtIndex).getReg());
+  unsigned Rt2 = MRI->getEncodingValue(Inst.getOperand(RtIndex + 1).getReg());
+
+  if (ARMMode) {
+    // Rt can't be R14.
+    if (Rt == 14)
+      return Error(Operands[3]->getStartLoc(),
+                  "Rt can't be R14");
+
+    // Rt must be even-numbered.
+    if ((Rt & 1) == 1)
+      return Error(Operands[3]->getStartLoc(),
+                   "Rt must be even-numbered");
+
+    // Rt2 must be Rt + 1.
+    if (Rt2 != Rt + 1) {
+      if (Load)
+        return Error(Operands[3]->getStartLoc(),
+                     "destination operands must be sequential");
+      else
+        return Error(Operands[3]->getStartLoc(),
+                     "source operands must be sequential");
+    }
+
+    // FIXME: Diagnose m == 15
+    // FIXME: Diagnose ldrd with m == t || m == t2.
+  }
+
+  if (!ARMMode && Load) {
+    if (Rt2 == Rt)
+      return Error(Operands[3]->getStartLoc(),
+                   "destination operands can't be identical");
+  }
+
+  if (Writeback) {
+    unsigned Rn = MRI->getEncodingValue(Inst.getOperand(3).getReg());
+
+    if (Rn == Rt || Rn == Rt2) {
+      if (Load)
+        return Error(Operands[3]->getStartLoc(),
+                     "base register needs to be different from destination "
+                     "registers");
+      else
+        return Error(Operands[3]->getStartLoc(),
+                     "source register and base register can't be identical");
+    }
+
+    // FIXME: Diagnose ldrd/strd with writeback and n == 15.
+    // (Except the immediate form of ldrd?)
+  }
+
+  return false;
+}
+
+
 // FIXME: We would really like to be able to tablegen'erate this.
 bool ARMAsmParser::validateInstruction(MCInst &Inst,
                                        const OperandVector &Operands) {
@@ -6364,50 +6425,27 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     break;
   }
   case ARM::LDRD:
+    if (validateLDRDSTRD(Inst, Operands, /*Load*/true, /*ARMMode*/true,
+                         /*Writeback*/false))
+      return true;
+    break;
   case ARM::LDRD_PRE:
-  case ARM::LDRD_POST: {
-    const unsigned RtReg = Inst.getOperand(0).getReg();
-
-    // Rt can't be R14.
-    if (RtReg == ARM::LR)
-      return Error(Operands[3]->getStartLoc(),
-                   "Rt can't be R14");
-
-    const unsigned Rt = MRI->getEncodingValue(RtReg);
-    // Rt must be even-numbered.
-    if ((Rt & 1) == 1)
-      return Error(Operands[3]->getStartLoc(),
-                   "Rt must be even-numbered");
-
-    // Rt2 must be Rt + 1.
-    const unsigned Rt2 = MRI->getEncodingValue(Inst.getOperand(1).getReg());
-    if (Rt2 != Rt + 1)
-      return Error(Operands[3]->getStartLoc(),
-                   "destination operands must be sequential");
-
-    if (Opcode == ARM::LDRD_PRE || Opcode == ARM::LDRD_POST) {
-      const unsigned Rn = MRI->getEncodingValue(Inst.getOperand(3).getReg());
-      // For addressing modes with writeback, the base register needs to be
-      // different from the destination registers.
-      if (Rn == Rt || Rn == Rt2)
-        return Error(Operands[3]->getStartLoc(),
-                     "base register needs to be different from destination "
-                     "registers");
-    }
-
-    return false;
-  }
+  case ARM::LDRD_POST:
+    if (validateLDRDSTRD(Inst, Operands, /*Load*/true, /*ARMMode*/true,
+                         /*Writeback*/true))
+      return true;
+    break;
   case ARM::t2LDRDi8:
+    if (validateLDRDSTRD(Inst, Operands, /*Load*/true, /*ARMMode*/false,
+                         /*Writeback*/false))
+      return true;
+    break;
   case ARM::t2LDRD_PRE:
-  case ARM::t2LDRD_POST: {
-    // Rt2 must be different from Rt.
-    unsigned Rt = MRI->getEncodingValue(Inst.getOperand(0).getReg());
-    unsigned Rt2 = MRI->getEncodingValue(Inst.getOperand(1).getReg());
-    if (Rt2 == Rt)
-      return Error(Operands[3]->getStartLoc(),
-                   "destination operands can't be identical");
-    return false;
-  }
+  case ARM::t2LDRD_POST:
+    if (validateLDRDSTRD(Inst, Operands, /*Load*/true, /*ARMMode*/false,
+                         /*Writeback*/true))
+      return true;
+    break;
   case ARM::t2BXJ: {
     const unsigned RmReg = Inst.getOperand(0).getReg();
     // Rm = SP is no longer unpredictable in v8-A
@@ -6416,35 +6454,39 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                    "r13 (SP) is an unpredictable operand to BXJ");
     return false;
   }
-  case ARM::STRD: {
-    // Rt2 must be Rt + 1.
-    unsigned Rt = MRI->getEncodingValue(Inst.getOperand(0).getReg());
-    unsigned Rt2 = MRI->getEncodingValue(Inst.getOperand(1).getReg());
-    if (Rt2 != Rt + 1)
-      return Error(Operands[3]->getStartLoc(),
-                   "source operands must be sequential");
-    return false;
-  }
+  case ARM::STRD:
+    if (validateLDRDSTRD(Inst, Operands, /*Load*/false, /*ARMMode*/true,
+                         /*Writeback*/false))
+      return true;
+    break;
   case ARM::STRD_PRE:
-  case ARM::STRD_POST: {
-    // Rt2 must be Rt + 1.
-    unsigned Rt = MRI->getEncodingValue(Inst.getOperand(1).getReg());
-    unsigned Rt2 = MRI->getEncodingValue(Inst.getOperand(2).getReg());
-    if (Rt2 != Rt + 1)
-      return Error(Operands[3]->getStartLoc(),
-                   "source operands must be sequential");
-    return false;
-  }
+  case ARM::STRD_POST:
+    if (validateLDRDSTRD(Inst, Operands, /*Load*/false, /*ARMMode*/true,
+                         /*Writeback*/true))
+      return true;
+    break;
+  case ARM::t2STRD_PRE:
+  case ARM::t2STRD_POST:
+    if (validateLDRDSTRD(Inst, Operands, /*Load*/false, /*ARMMode*/false,
+                         /*Writeback*/true))
+      return true;
+    break;
   case ARM::STR_PRE_IMM:
   case ARM::STR_PRE_REG:
+  case ARM::t2STR_PRE:
   case ARM::STR_POST_IMM:
   case ARM::STR_POST_REG:
+  case ARM::t2STR_POST:
   case ARM::STRH_PRE:
+  case ARM::t2STRH_PRE:
   case ARM::STRH_POST:
+  case ARM::t2STRH_POST:
   case ARM::STRB_PRE_IMM:
   case ARM::STRB_PRE_REG:
+  case ARM::t2STRB_PRE:
   case ARM::STRB_POST_IMM:
-  case ARM::STRB_POST_REG: {
+  case ARM::STRB_POST_REG:
+  case ARM::t2STRB_POST: {
     // Rt must be different from Rn.
     const unsigned Rt = MRI->getEncodingValue(Inst.getOperand(1).getReg());
     const unsigned Rn = MRI->getEncodingValue(Inst.getOperand(2).getReg());
@@ -6456,18 +6498,28 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   }
   case ARM::LDR_PRE_IMM:
   case ARM::LDR_PRE_REG:
+  case ARM::t2LDR_PRE:
   case ARM::LDR_POST_IMM:
   case ARM::LDR_POST_REG:
+  case ARM::t2LDR_POST:
   case ARM::LDRH_PRE:
+  case ARM::t2LDRH_PRE:
   case ARM::LDRH_POST:
+  case ARM::t2LDRH_POST:
   case ARM::LDRSH_PRE:
+  case ARM::t2LDRSH_PRE:
   case ARM::LDRSH_POST:
+  case ARM::t2LDRSH_POST:
   case ARM::LDRB_PRE_IMM:
   case ARM::LDRB_PRE_REG:
+  case ARM::t2LDRB_PRE:
   case ARM::LDRB_POST_IMM:
   case ARM::LDRB_POST_REG:
+  case ARM::t2LDRB_POST:
   case ARM::LDRSB_PRE:
-  case ARM::LDRSB_POST: {
+  case ARM::t2LDRSB_PRE:
+  case ARM::LDRSB_POST:
+  case ARM::t2LDRSB_POST: {
     // Rt must be different from Rn.
     const unsigned Rt = MRI->getEncodingValue(Inst.getOperand(0).getReg());
     const unsigned Rn = MRI->getEncodingValue(Inst.getOperand(2).getReg());
@@ -6478,7 +6530,9 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     return false;
   }
   case ARM::SBFX:
-  case ARM::UBFX: {
+  case ARM::t2SBFX:
+  case ARM::UBFX:
+  case ARM::t2UBFX: {
     // Width must be in range [1, 32-lsb].
     unsigned LSB = Inst.getOperand(2).getImm();
     unsigned Widthm1 = Inst.getOperand(3).getImm();

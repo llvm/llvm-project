@@ -237,11 +237,13 @@ bool checkDebugifyMetadata(Module &M,
         continue;
       }
 
-      dbg() << "ERROR: Instruction with empty DebugLoc in function ";
-      dbg() << F.getName() << " --";
-      I.print(dbg());
-      dbg() << "\n";
-      HasErrors = true;
+      if (!DL) {
+        dbg() << "ERROR: Instruction with empty DebugLoc in function ";
+        dbg() << F.getName() << " --";
+        I.print(dbg());
+        dbg() << "\n";
+        HasErrors = true;
+      }
     }
 
     // Find missing variables and mis-sized debug values.

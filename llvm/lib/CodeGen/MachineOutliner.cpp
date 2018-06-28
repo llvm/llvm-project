@@ -1331,15 +1331,6 @@ bool MachineOutliner::runOnModule(Module &M) {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetInstrInfo *TII = STI.getInstrInfo();
 
-  // Does the target implement the MachineOutliner? If it doesn't, quit here.
-  if (!TII->useMachineOutliner()) {
-    // No. So we're done.
-    LLVM_DEBUG(
-        dbgs()
-        << "Skipping pass: Target does not support the MachineOutliner.\n");
-    return false;
-  }
-
   // If the user specifies that they want to outline from linkonceodrs, set
   // it here.
   OutlineFromLinkOnceODRs = EnableLinkOnceODROutlining;

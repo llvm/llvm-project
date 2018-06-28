@@ -404,21 +404,21 @@ Lbaz: .quad 0
 @------------------------------------------------------------------------------
 @ STRD (immediate)
 @------------------------------------------------------------------------------
-        strd r1, r2, [r4]
+        strd r2, r3, [r4]
         strd r2, r3, [r6, #1]
-        strd r3, r4, [r7, #22]!
+        strd r0, r1, [r7, #22]!
         strd r4, r5, [r8], #7
-        strd r5, r6, [sp], #0
+        strd r4, r5, [sp], #0
         strd r6, r7, [lr], #+0
-        strd r7, r8, [r9], #-0
+        strd r10, r11, [r9], #-0
 
-@ CHECK: strd	r1, r2, [r4]            @ encoding: [0xf0,0x10,0xc4,0xe1]
+@ CHECK: strd	r2, r3, [r4]            @ encoding: [0xf0,0x20,0xc4,0xe1]
 @ CHECK: strd	r2, r3, [r6, #1]        @ encoding: [0xf1,0x20,0xc6,0xe1]
-@ CHECK: strd	r3, r4, [r7, #22]!      @ encoding: [0xf6,0x31,0xe7,0xe1]
+@ CHECK: strd	r0, r1, [r7, #22]!      @ encoding: [0xf6,0x01,0xe7,0xe1]
 @ CHECK: strd	r4, r5, [r8], #7        @ encoding: [0xf7,0x40,0xc8,0xe0]
-@ CHECK: strd	r5, r6, [sp], #0        @ encoding: [0xf0,0x50,0xcd,0xe0]
+@ CHECK: strd	r4, r5, [sp], #0        @ encoding: [0xf0,0x40,0xcd,0xe0]
 @ CHECK: strd	r6, r7, [lr], #0        @ encoding: [0xf0,0x60,0xce,0xe0]
-@ CHECK: strd	r7, r8, [r9], #-0       @ encoding: [0xf0,0x70,0x49,0xe0]
+@ CHECK: strd	r10, r11, [r9], #-0     @ encoding: [0xf0,0xa0,0x49,0xe0]
 
 
 @------------------------------------------------------------------------------
@@ -429,14 +429,14 @@ Lbaz: .quad 0
 @ STRD (register)
 @------------------------------------------------------------------------------
         strd r8, r9, [r4, r1]
-        strd r7, r8, [r3, r9]!
+        strd r6, r7, [r3, r9]!
         strd r6, r7, [r5], r8
-        strd r5, r6, [r12], -r10
+        strd r4, r5, [r12], -r10
 
 @ CHECK: strd	r8, r9, [r4, r1]        @ encoding: [0xf1,0x80,0x84,0xe1]
-@ CHECK: strd	r7, r8, [r3, r9]!       @ encoding: [0xf9,0x70,0xa3,0xe1]
+@ CHECK: strd	r6, r7, [r3, r9]!       @ encoding: [0xf9,0x60,0xa3,0xe1]
 @ CHECK: strd	r6, r7, [r5], r8        @ encoding: [0xf8,0x60,0x85,0xe0]
-@ CHECK: strd	r5, r6, [r12], -r10     @ encoding: [0xfa,0x50,0x0c,0xe0]
+@ CHECK: strd	r4, r5, [r12], -r10     @ encoding: [0xfa,0x40,0x0c,0xe0]
 
 
 @------------------------------------------------------------------------------

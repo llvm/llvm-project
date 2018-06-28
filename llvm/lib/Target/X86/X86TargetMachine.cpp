@@ -156,15 +156,9 @@ static std::string computeDataLayout(const Triple &TT) {
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           bool JIT,
                                            Optional<Reloc::Model> RM) {
   bool is64Bit = TT.getArch() == Triple::x86_64;
   if (!RM.hasValue()) {
-    // JIT codegen should use static relocations by default, since it's
-    // typically executed in process and not relocatable.
-    if (JIT)
-      return Reloc::Static;
-
     // Darwin defaults to PIC in 64 bit mode and dynamic-no-pic in 32 bit mode.
     // Win64 requires rip-rel addressing, thus we force it to PIC. Otherwise we
     // use static relocation model by default.
@@ -216,7 +210,7 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
           T, computeDataLayout(TT), TT, CPU, FS, Options,
-          getEffectiveRelocModel(TT, JIT, RM),
+          getEffectiveRelocModel(TT, RM),
           getEffectiveCodeModel(CM, JIT, TT.getArch() == Triple::x86_64), OL),
       TLOF(createTLOF(getTargetTriple())) {
   // Windows stack unwinder gets confused when execution flow "falls through"
@@ -229,8 +223,14 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   // to ever want to mix 32 and 64-bit windows code in a single module
   // this should be fine.
   if ((TT.isOSWindows() && TT.getArch() == Triple::x86_64) || TT.isPS4() ||
-      TT.isOSBinFormatMachO())
+      TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
+    this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
+  }
+
+  // Outlining is available for x86-64.
+  if (TT.getArch() == Triple::x86_64)
+    setMachineOutliner(true);
 
   initAsmInfo();
 }

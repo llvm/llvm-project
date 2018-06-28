@@ -30,13 +30,25 @@ namespace llvm {
 /// not committed, the file will be deleted in the FileOutputBuffer destructor.
 class FileOutputBuffer {
 public:
-  enum  {
-    F_executable = 1  /// set the 'x' bit on the resulting file
+  enum {
+    /// set the 'x' bit on the resulting file
+    F_executable = 1,
+
+    /// the contents of the new file are initialized from the file that exists
+    /// at the location (if present).  This allows in-place modification of an
+    /// existing file.
+    F_modify = 2
   };
 
   /// Factory method to create an OutputBuffer object which manages a read/write
   /// buffer of the specified size. When committed, the buffer will be written
   /// to the file at the specified path.
+  ///
+  /// When F_modify is specified and \p FilePath refers to an existing on-disk
+  /// file \p Size may be set to -1, in which case the entire file is used.
+  /// Otherwise, the file shrinks or grows as necessary based on the value of
+  /// \p Size.  It is an error to specify F_modify and Size=-1 if \p FilePath
+  /// does not exist.
   static Expected<std::unique_ptr<FileOutputBuffer>>
   create(StringRef FilePath, size_t Size, unsigned Flags = 0);
 

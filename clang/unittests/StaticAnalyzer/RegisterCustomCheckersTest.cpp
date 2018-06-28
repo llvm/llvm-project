@@ -61,7 +61,7 @@ public:
     AnalysisConsumer->AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
       Registry.addChecker<CustomChecker>("custom.CustomChecker", "Description");
     });
-    return AnalysisConsumer;
+    return std::move(AnalysisConsumer);
   }
 };
 

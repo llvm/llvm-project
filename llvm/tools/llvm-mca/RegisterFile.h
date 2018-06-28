@@ -25,15 +25,16 @@ namespace mca {
 
 class ReadState;
 class WriteState;
+class WriteRef;
 
 /// Manages hardware register files, and tracks register definitions for
 /// register renaming purposes.
 class RegisterFile {
   const llvm::MCRegisterInfo &MRI;
 
-  // Each register file is associated with an instance of RegisterMappingTracker.
-  // A RegisterMappingTracker keeps track of the number of physical registers
-  // which have been dynamically allocated by the simulator.
+  // Each register file is associated with an instance of
+  // RegisterMappingTracker. A RegisterMappingTracker tracks the number of
+  // physical registers that are dynamically allocated by the simulator.
   struct RegisterMappingTracker {
     // The total number of physical registers that are available in this
     // register file for register renaming purpouses.  A value of zero for this
@@ -53,7 +54,7 @@ class RegisterFile {
   // hardware registers declared by the target (i.e. all the register
   // definitions in the target specific `XYZRegisterInfo.td` - where `XYZ` is
   // the target name).
-  // 
+  //
   // Users can limit the number of physical registers that are available in
   // regsiter file #0 specifying command line flag `-register-file-size=<uint>`.
   llvm::SmallVector<RegisterMappingTracker, 4> RegisterFiles;
@@ -68,14 +69,14 @@ class RegisterFile {
   // RegisterMapping objects are mainly used to track physical register
   // definitions. There is a RegisterMapping for every register defined by the
   // Target. For each register, a RegisterMapping pair contains a descriptor of
-  // the last register write (in the form of a WriteState object), as well as a
+  // the last register write (in the form of a WriteRef object), as well as a
   // IndexPlusCostPairTy to quickly identify owning register files.
   //
   // This implementation does not allow overlapping register files. The only
   // register file that is allowed to overlap with other register files is
   // register file #0. If we exclude register #0, every register is "owned" by
   // at most one register file.
-  using RegisterMapping = std::pair<WriteState *, IndexPlusCostPairTy>;
+  using RegisterMapping = std::pair<WriteRef, IndexPlusCostPairTy>;
 
   // This map contains one entry for each register defined by the target.
   std::vector<RegisterMapping> RegisterMappings;
@@ -117,16 +118,13 @@ class RegisterFile {
 
 public:
   RegisterFile(const llvm::MCSchedModel &SM, const llvm::MCRegisterInfo &mri,
-               unsigned NumRegs = 0)
-      : MRI(mri), RegisterMappings(mri.getNumRegs(), {nullptr, {0, 0}}) {
-    initialize(SM, NumRegs);
-  }
+               unsigned NumRegs = 0);
 
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of
   // allocated physical registers in each register file modified by the write.
   // No physical regiser is allocated when flag ShouldAllocatePhysRegs is set.
-  void addRegisterWrite(WriteState &WS,
+  void addRegisterWrite(WriteRef Write,
                         llvm::MutableArrayRef<unsigned> UsedPhysRegs,
                         bool ShouldAllocatePhysRegs = true);
 
@@ -143,7 +141,7 @@ public:
   // register file was busy.  This sematic allows us classify dispatch dispatch
   // stalls caused by the lack of register file resources.
   unsigned isAvailable(llvm::ArrayRef<unsigned> Regs) const;
-  void collectWrites(llvm::SmallVectorImpl<WriteState *> &Writes,
+  void collectWrites(llvm::SmallVectorImpl<WriteRef> &Writes,
                      unsigned RegID) const;
   void updateOnRead(ReadState &RS, unsigned RegID);
 

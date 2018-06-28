@@ -106,9 +106,7 @@ namespace dsymutil {
 
 /// Similar to DWARFUnitSection::getUnitForOffset(), but returning our
 /// CompileUnit object instead.
-static CompileUnit *
-getUnitForOffset(std::vector<std::unique_ptr<CompileUnit>> &Units,
-                 unsigned Offset) {
+static CompileUnit *getUnitForOffset(const UnitListTy &Units, unsigned Offset) {
   auto CU = std::upper_bound(
       Units.begin(), Units.end(), Offset,
       [](uint32_t LHS, const std::unique_ptr<CompileUnit> &RHS) {
@@ -120,11 +118,12 @@ getUnitForOffset(std::vector<std::unique_ptr<CompileUnit>> &Units,
 /// Resolve the DIE attribute reference that has been extracted in \p RefValue.
 /// The resulting DIE might be in another CompileUnit which is stored into \p
 /// ReferencedCU. \returns null if resolving fails for any reason.
-static DWARFDie
-resolveDIEReference(const DwarfLinker &Linker, const DebugMapObject &DMO,
-                    std::vector<std::unique_ptr<CompileUnit>> &Units,
-                    const DWARFFormValue &RefValue, const DWARFUnit &Unit,
-                    const DWARFDie &DIE, CompileUnit *&RefCU) {
+static DWARFDie resolveDIEReference(const DwarfLinker &Linker,
+                                    const DebugMapObject &DMO,
+                                    const UnitListTy &Units,
+                                    const DWARFFormValue &RefValue,
+                                    const DWARFUnit &Unit, const DWARFDie &DIE,
+                                    CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
   uint64_t RefOffset = *RefValue.getAsReference();
 
@@ -673,12 +672,10 @@ unsigned DwarfLinker::shouldKeepDIE(RelocationManager &RelocMgr,
 /// back to lookForDIEsToKeep while adding TF_DependencyWalk to the
 /// TraversalFlags to inform it that it's not doing the primary DIE
 /// tree walk.
-void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
-                                         RangesTy &Ranges, UnitListTy &Units,
-                                         const DWARFDie &Die,
-                                         CompileUnit::DIEInfo &MyInfo,
-                                         const DebugMapObject &DMO,
-                                         CompileUnit &CU, bool UseODR) {
+void DwarfLinker::keepDIEAndDependencies(
+    RelocationManager &RelocMgr, RangesTy &Ranges, const UnitListTy &Units,
+    const DWARFDie &Die, CompileUnit::DIEInfo &MyInfo,
+    const DebugMapObject &DMO, CompileUnit &CU, bool UseODR) {
   DWARFUnit &Unit = CU.getOrigUnit();
   MyInfo.Keep = true;
 
@@ -773,7 +770,7 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
 ///
 /// The return value indicates whether the DIE is incomplete.
 bool DwarfLinker::lookForDIEsToKeep(RelocationManager &RelocMgr,
-                                    RangesTy &Ranges, UnitListTy &Units,
+                                    RangesTy &Ranges, const UnitListTy &Units,
                                     const DWARFDie &Die,
                                     const DebugMapObject &DMO, CompileUnit &CU,
                                     unsigned Flags) {
@@ -2108,7 +2105,7 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
     outs() << "cloning .debug_info from " << Filename << "\n";
   }
 
-  std::vector<std::unique_ptr<CompileUnit>> CompileUnits;
+  UnitListTy CompileUnits;
   CompileUnits.push_back(std::move(Unit));
   DIECloner(*this, RelocMgr, DIEAlloc, CompileUnits, Options)
       .cloneAllCompileUnits(*DwarfContext, DMO, Ranges, StringPool);

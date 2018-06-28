@@ -41,6 +41,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/PhiValues.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
@@ -61,7 +62,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
-#include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
@@ -832,8 +832,6 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM)));
-
-  MPM.addPass(CGProfilePass());
 
   // Now we need to do some global optimization transforms.
   // FIXME: It would seem like these should come first in the optimization

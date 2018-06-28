@@ -373,6 +373,19 @@ public:
     uint32_t
     LoadImage (lldb::SBFileSpec &image_spec, lldb::SBError &error);
     
+    %feature("autodoc", "
+    Load the library whose filename is given by image_spec looking in all the
+    paths supplied in the paths argument.  If successful, return a token that
+    can be passed to UnloadImage and fill loaded_path with the path that was
+    successfully loaded.  On failure, return 
+    lldb.LLDB_INVALID_IMAGE_TOKEN.
+    ") LoadImageUsingPaths;
+    uint32_t 
+    LoadImageUsingPaths(const lldb::SBFileSpec &image_spec,
+                        SBStringList &paths,
+                        lldb::SBFileSpec &loaded_path, 
+                        SBError &error);
+
     lldb::SBError
     UnloadImage (uint32_t image_token);
     

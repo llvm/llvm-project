@@ -175,7 +175,7 @@ void Writer::createImportSection() {
     Import.Field = Sym->getName();
     if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_FUNCTION;
-      Import.SigIndex = lookupType(*FunctionSym->getFunctionType());
+      Import.SigIndex = lookupType(*FunctionSym->FunctionType);
     } else {
       auto *GlobalSym = cast<GlobalSymbol>(Sym);
       Import.Kind = WASM_EXTERNAL_GLOBAL;
@@ -740,11 +740,7 @@ void Writer::calculateExports() {
   unsigned FakeGlobalIndex = NumImportedGlobals + InputGlobals.size();
 
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (!Sym->isDefined())
-      continue;
-    if (Sym->isHidden() && !Config->ExportAll)
-      continue;
-    if (Sym->isLocal())
+    if (!Sym->isExported())
       continue;
     if (!Sym->isLive())
       continue;
@@ -850,7 +846,7 @@ void Writer::calculateTypes() {
 
   for (const Symbol *Sym : ImportedSymbols)
     if (auto *F = dyn_cast<FunctionSymbol>(Sym))
-      registerType(*F->getFunctionType());
+      registerType(*F->FunctionType);
 
   for (const InputFunction *F : InputFunctions)
     registerType(F->Signature);
@@ -993,7 +989,7 @@ void Writer::calculateInitFunctions() {
     const WasmLinkingData &L = File->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions) {
       FunctionSymbol *Sym = File->getFunctionSymbol(F.Symbol);
-      if (*Sym->getFunctionType() != WasmSignature{{}, WASM_TYPE_NORESULT})
+      if (*Sym->FunctionType != WasmSignature{{}, WASM_TYPE_NORESULT})
         error("invalid signature for init func: " + toString(*Sym));
       InitFunctions.emplace_back(WasmInitEntry{Sym, F.Priority});
     }

@@ -40,7 +40,6 @@ class ODRHash {
   // Use DenseMaps to convert from DeclarationName and Type pointers
   // to an index value.
   llvm::DenseMap<DeclarationName, unsigned> DeclNameMap;
-  llvm::DenseMap<const Type*, unsigned> TypeMap;
 
   // Save space by processing bools at the end.
   llvm::SmallVector<bool, 128> Bools;

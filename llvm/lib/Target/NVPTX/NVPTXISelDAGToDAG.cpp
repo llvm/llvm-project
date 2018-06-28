@@ -3630,12 +3630,6 @@ bool NVPTXDAGToDAGISel::SelectADDRri64(SDNode *OpNode, SDValue Addr,
   return SelectADDRri_imp(OpNode, Addr, Base, Offset, MVT::i64);
 }
 
-// symbol
-bool NVPTXDAGToDAGISel::SelectADDRvar(SDNode *OpNode, SDValue Addr,
-                                      SDValue &Value) {
-  return SelectDirectAddr(Addr, Value);
-}
-
 bool NVPTXDAGToDAGISel::ChkMemSDNodeAddressSpace(SDNode *N,
                                                  unsigned int spN) const {
   const Value *Src = nullptr;

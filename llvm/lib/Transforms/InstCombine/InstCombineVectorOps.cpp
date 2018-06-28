@@ -1164,9 +1164,32 @@ static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
   else
     return nullptr;
 
-  // TODO: There are potential folds where the opcodes do not match (mul+shl).
-  if (B0->getOpcode() != B1->getOpcode())
+  // We need matching binops to fold the lanes together.
+  BinaryOperator::BinaryOps Opc0 = B0->getOpcode();
+  BinaryOperator::BinaryOps Opc1 = B1->getOpcode();
+  bool DropNSW = false;
+  if (ConstantsAreOp1 && Opc0 != Opc1) {
+    // If we have multiply and shift-left-by-constant, convert the shift:
+    // shl X, C --> mul X, 1 << C
+    // TODO: We drop "nsw" if shift is converted into multiply because it may
+    // not be correct when the shift amount is BitWidth - 1. We could examine
+    // each vector element to determine if it is safe to keep that flag.
+    if (Opc0 == Instruction::Mul && Opc1 == Instruction::Shl) {
+      C1 = ConstantExpr::getShl(ConstantInt::get(C1->getType(), 1), C1);
+      Opc1 = Instruction::Mul;
+      DropNSW = true;
+    } else if (Opc0 == Instruction::Shl && Opc1 == Instruction::Mul) {
+      C0 = ConstantExpr::getShl(ConstantInt::get(C0->getType(), 1), C0);
+      Opc0 = Instruction::Mul;
+      DropNSW = true;
+    }
+  }
+
+  if (Opc0 != Opc1)
     return nullptr;
+
+  // The opcodes must be the same. Use a new name to make that clear.
+  BinaryOperator::BinaryOps BOpc = Opc0;
 
   // Remove a binop and the shuffle by rearranging the constant:
   // shuffle (op X, C0), (op X, C1), M --> op X, C'
@@ -1176,16 +1199,17 @@ static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
   // If the shuffle mask contains undef elements, then the new constant
   // vector will have undefs in those lanes. This could cause the entire
   // binop to be undef.
-  if (B0->isIntDivRem())
+  if (Instruction::isIntDivRem(BOpc))
     NewC = getSafeVectorConstantForIntDivRem(NewC);
 
-  BinaryOperator::BinaryOps Opc = B0->getOpcode();
-  Instruction *NewBO = ConstantsAreOp1 ? BinaryOperator::Create(Opc, X, NewC) :
-                                         BinaryOperator::Create(Opc, NewC, X);
+  Instruction *NewBO = ConstantsAreOp1 ? BinaryOperator::Create(BOpc, X, NewC) :
+                                         BinaryOperator::Create(BOpc, NewC, X);
 
   // Flags are intersected from the 2 source binops.
   NewBO->copyIRFlags(B0);
   NewBO->andIRFlags(B1);
+  if (DropNSW)
+    NewBO->setHasNoSignedWrap(false);
   return NewBO;
 }
 
