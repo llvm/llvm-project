@@ -4367,7 +4367,7 @@ SwiftASTContext::GetIRGenerator(swift::IRGenOptions &opts,
 swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
   VALID_OR_RETURN(*m_ir_gen_module_ap);
 
-  if (m_ir_gen_module_ap.get() == NULL) {
+  llvm::call_once(m_ir_gen_module_once, [this]() {
     // Make sure we have a good ClangImporter.
     GetClangImporter();
 
@@ -4410,7 +4410,7 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
         llvm_module->setTargetTriple(triple);
       }
     }
-  }
+  });
   return *m_ir_gen_module_ap;
 }
 

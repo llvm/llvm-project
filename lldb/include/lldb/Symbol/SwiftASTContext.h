@@ -27,6 +27,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Threading.h"
 
 #include <map>
 #include <set>
@@ -822,6 +823,7 @@ protected:
   std::unique_ptr<llvm::TargetOptions> m_target_options_ap;
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
+  llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
