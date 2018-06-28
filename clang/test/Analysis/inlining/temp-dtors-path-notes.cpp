@@ -30,19 +30,14 @@ public:
 };
 
 void test(int coin) {
-  // We'd divide by zero in the temporary destructor that goes after the
-  // elidable copy-constructor from C(0) to the lifetime-extended temporary.
-  // So in fact this example has nothing to do with lifetime extension.
-  // Actually, it would probably be better to elide the constructor, and
-  // put the note for the destructor call at the closing brace after nop.
+  // We'd divide by zero in the automatic destructor for variable 'c'.
   const C &c = coin ? C(1) : C(0); // expected-note   {{Assuming 'coin' is 0}}
                                    // expected-note@-1{{'?' condition is false}}
                                    // expected-note@-2{{Passing the value 0 via 1st parameter 'x'}}
                                    // expected-note@-3{{Calling constructor for 'C'}}
                                    // expected-note@-4{{Returning from constructor for 'C'}}
-                                   // expected-note@-5{{Calling '~C'}}
   c.nop();
-}
+} // expected-note{{Calling '~C'}}
 } // end namespace test_lifetime_extended_temporary
 
 namespace test_bug_after_dtor {

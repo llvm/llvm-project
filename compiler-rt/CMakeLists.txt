@@ -102,6 +102,8 @@ pythonize_bool(ANDROID)
 set(COMPILER_RT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMPILER_RT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+pythonize_bool(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+
 # We support running instrumented tests when we're not cross compiling
 # and target a UNIX-like system or Windows.
 # We can run tests on Android even when we are cross-compiling.

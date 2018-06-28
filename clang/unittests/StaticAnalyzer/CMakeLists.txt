@@ -11,6 +11,7 @@ target_link_libraries(StaticAnalysisTests
   PRIVATE
   clangBasic
   clangAnalysis
+  clangFrontend
   clangStaticAnalyzerCore
   clangStaticAnalyzerFrontend
   clangTooling

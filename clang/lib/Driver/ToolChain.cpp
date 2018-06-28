@@ -74,6 +74,11 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
+  SmallString<128> P(D.ResourceDir);
+  llvm::sys::path::append(P, D.getTargetTriple(), "lib");
+  if (getVFS().exists(P))
+    getFilePaths().push_back(P.str());
+
   std::string CandidateLibPath = getArchSpecificLibPath();
   if (getVFS().exists(CandidateLibPath))
     getFilePaths().push_back(CandidateLibPath);
@@ -350,15 +355,23 @@ std::string ToolChain::getCompilerRTPath() const {
 std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
                                      bool Shared) const {
   const llvm::Triple &TT = getTriple();
-  const char *Env = TT.isAndroid() ? "-android" : "";
   bool IsITANMSVCWindows =
       TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
 
-  StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
   const char *Prefix = IsITANMSVCWindows ? "" : "lib";
   const char *Suffix = Shared ? (Triple.isOSWindows() ? ".dll" : ".so")
                               : (IsITANMSVCWindows ? ".lib" : ".a");
 
+  const Driver &D = getDriver();
+  SmallString<128> P(D.ResourceDir);
+  llvm::sys::path::append(P, D.getTargetTriple(), "lib");
+  if (getVFS().exists(P)) {
+    llvm::sys::path::append(P, Prefix + Twine("clang_rt.") + Component + Suffix);
+    return P.str();
+  }
+
+  StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
+  const char *Env = TT.isAndroid() ? "-android" : "";
   SmallString<128> Path(getCompilerRTPath());
   llvm::sys::path::append(Path, Prefix + Twine("clang_rt.") + Component + "-" +
                                     Arch + Env + Suffix);

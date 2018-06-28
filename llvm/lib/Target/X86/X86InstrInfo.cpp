@@ -5413,8 +5413,7 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
 #ifndef NDEBUG
   // Make sure the tables are sorted.
-  static bool FoldTablesChecked = false;
-  if (!FoldTablesChecked) {
+  static bool LLVM_ATTRIBUTE_UNUSED FoldTablesChecked = [] {
     assert(std::is_sorted(std::begin(MemoryFoldTable2Addr),
                           std::end(MemoryFoldTable2Addr)) &&
            std::adjacent_find(std::begin(MemoryFoldTable2Addr),
@@ -5451,8 +5450,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                               std::end(MemoryFoldTable4)) ==
            std::end(MemoryFoldTable4) &&
            "MemoryFoldTable4 is not sorted and unique!");
-    FoldTablesChecked = true;
-  }
+    return true;
+  }();
 #endif
 }
 

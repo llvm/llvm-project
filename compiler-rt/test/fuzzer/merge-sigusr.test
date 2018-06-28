@@ -1,5 +1,5 @@
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
-XFAIL: ios
+UNSUPPORTED: darwin
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: %cpp_compiler %S/SleepOneSecondTest.cpp -o %t/LFSIGUSR

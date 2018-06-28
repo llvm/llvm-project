@@ -918,7 +918,7 @@ let Predicates = [HasBMI2] in {
                           (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   }
 
-  // Artificially lower the complexity so that we'll favor
+  // We prefer to use
   //  mov (%ecx), %esi
   //  shl $imm, $esi
   //
@@ -926,32 +926,32 @@ let Predicates = [HasBMI2] in {
   //
   //  movb $imm, %al
   //  shlx %al, (%ecx), %esi
-  let AddedComplexity = -20 in {
-    def : Pat<(sra (loadi32 addr:$src1), GR8:$src2),
-              (SARX32rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(sra (loadi64 addr:$src1), GR8:$src2),
-              (SARX64rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  //
+  // This priority is enforced by IsProfitableToFoldLoad.
+  def : Pat<(sra (loadi32 addr:$src1), GR8:$src2),
+            (SARX32rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(sra (loadi64 addr:$src1), GR8:$src2),
+            (SARX64rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-    def : Pat<(srl (loadi32 addr:$src1), GR8:$src2),
-              (SHRX32rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(srl (loadi64 addr:$src1), GR8:$src2),
-              (SHRX64rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(srl (loadi32 addr:$src1), GR8:$src2),
+            (SHRX32rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(srl (loadi64 addr:$src1), GR8:$src2),
+            (SHRX64rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-    def : Pat<(shl (loadi32 addr:$src1), GR8:$src2),
-              (SHLX32rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(shl (loadi64 addr:$src1), GR8:$src2),
-              (SHLX64rm addr:$src1,
-                        (INSERT_SUBREG
-                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  }
+  def : Pat<(shl (loadi32 addr:$src1), GR8:$src2),
+            (SHLX32rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  def : Pat<(shl (loadi64 addr:$src1), GR8:$src2),
+            (SHLX64rm addr:$src1,
+                      (INSERT_SUBREG
+                        (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 }

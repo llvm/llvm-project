@@ -7,11 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/MSFError.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileOutputBuffer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -244,7 +248,7 @@ uint32_t MSFBuilder::computeDirectoryByteSize() const {
   return Size;
 }
 
-Expected<MSFLayout> MSFBuilder::build() {
+Expected<MSFLayout> MSFBuilder::generateLayout() {
   SuperBlock *SB = Allocator.Allocate<SuperBlock>();
   MSFLayout L;
   L.SB = SB;
@@ -305,4 +309,74 @@ Expected<MSFLayout> MSFBuilder::build() {
   L.FreePageMap = FreeBlocks;
 
   return L;
+}
+
+static void commitFpm(WritableBinaryStream &MsfBuffer, const MSFLayout &Layout,
+                      BumpPtrAllocator &Allocator) {
+  auto FpmStream =
+      WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator);
+
+  // We only need to create the alt fpm stream so that it gets initialized.
+  WritableMappedBlockStream::createFpmStream(Layout, MsfBuffer, Allocator,
+                                             true);
+
+  uint32_t BI = 0;
+  BinaryStreamWriter FpmWriter(*FpmStream);
+  while (BI < Layout.SB->NumBlocks) {
+    uint8_t ThisByte = 0;
+    for (uint32_t I = 0; I < 8; ++I) {
+      bool IsFree =
+          (BI < Layout.SB->NumBlocks) ? Layout.FreePageMap.test(BI) : true;
+      uint8_t Mask = uint8_t(IsFree) << I;
+      ThisByte |= Mask;
+      ++BI;
+    }
+    cantFail(FpmWriter.writeObject(ThisByte));
+  }
+  assert(FpmWriter.bytesRemaining() == 0);
+}
+
+Expected<FileBufferByteStream> MSFBuilder::commit(StringRef Path,
+                                                  MSFLayout &Layout) {
+  Expected<MSFLayout> L = generateLayout();
+  if (!L)
+    return L.takeError();
+
+  Layout = std::move(*L);
+
+  uint64_t FileSize = Layout.SB->BlockSize * Layout.SB->NumBlocks;
+  auto OutFileOrError = FileOutputBuffer::create(Path, FileSize);
+  if (auto EC = OutFileOrError.takeError())
+    return std::move(EC);
+
+  FileBufferByteStream Buffer(std::move(*OutFileOrError),
+                              llvm::support::little);
+  BinaryStreamWriter Writer(Buffer);
+
+  if (auto EC = Writer.writeObject(*Layout.SB))
+    return std::move(EC);
+
+  commitFpm(Buffer, Layout, Allocator);
+
+  uint32_t BlockMapOffset =
+      msf::blockToOffset(Layout.SB->BlockMapAddr, Layout.SB->BlockSize);
+  Writer.setOffset(BlockMapOffset);
+  if (auto EC = Writer.writeArray(Layout.DirectoryBlocks))
+    return std::move(EC);
+
+  auto DirStream = WritableMappedBlockStream::createDirectoryStream(
+      Layout, Buffer, Allocator);
+  BinaryStreamWriter DW(*DirStream);
+  if (auto EC = DW.writeInteger<uint32_t>(Layout.StreamSizes.size()))
+    return std::move(EC);
+
+  if (auto EC = DW.writeArray(Layout.StreamSizes))
+    return std::move(EC);
+
+  for (const auto &Blocks : Layout.StreamMap) {
+    if (auto EC = DW.writeArray(Blocks))
+      return std::move(EC);
+  }
+
+  return std::move(Buffer);
 }

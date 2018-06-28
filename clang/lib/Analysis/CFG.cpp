@@ -1252,10 +1252,22 @@ void CFGBuilder::findConstructionContexts(
   if (!Child)
     return;
 
+  auto withExtraLayer = [this, Layer](Stmt *S) {
+    return ConstructionContextLayer::create(cfg->getBumpVectorContext(), S,
+                                            Layer);
+  };
+
   switch(Child->getStmtClass()) {
   case Stmt::CXXConstructExprClass:
   case Stmt::CXXTemporaryObjectExprClass: {
-    consumeConstructionContext(Layer, cast<CXXConstructExpr>(Child));
+    // Support pre-C++17 copy elision AST.
+    auto *CE = cast<CXXConstructExpr>(Child);
+    if (BuildOpts.MarkElidedCXXConstructors && CE->isElidable()) {
+      assert(CE->getNumArgs() == 1);
+      findConstructionContexts(withExtraLayer(CE), CE->getArg(0));
+    }
+
+    consumeConstructionContext(Layer, CE);
     break;
   }
   // FIXME: This, like the main visit, doesn't support CUDAKernelCallExpr.
@@ -1294,10 +1306,21 @@ void CFGBuilder::findConstructionContexts(
   }
   case Stmt::CXXBindTemporaryExprClass: {
     auto *BTE = cast<CXXBindTemporaryExpr>(Child);
-    findConstructionContexts(
-        ConstructionContextLayer::create(cfg->getBumpVectorContext(),
-                                         BTE, Layer),
-        BTE->getSubExpr());
+    findConstructionContexts(withExtraLayer(BTE), BTE->getSubExpr());
+    break;
+  }
+  case Stmt::MaterializeTemporaryExprClass: {
+    // Normally we don't want to search in MaterializeTemporaryExpr because
+    // it indicates the beginning of a temporary object construction context,
+    // so it shouldn't be found in the middle. However, if it is the beginning
+    // of an elidable copy or move construction context, we need to include it.
+    if (const auto *CE =
+            dyn_cast_or_null<CXXConstructExpr>(Layer->getTriggerStmt())) {
+      if (CE->isElidable()) {
+        auto *MTE = cast<MaterializeTemporaryExpr>(Child);
+        findConstructionContexts(withExtraLayer(MTE), MTE->GetTemporaryExpr());
+      }
+    }
     break;
   }
   case Stmt::ConditionalOperatorClass: {
@@ -4931,7 +4954,7 @@ static void print_initializer(raw_ostream &OS, StmtPrinterHelper &Helper,
 static void print_construction_context(raw_ostream &OS,
                                        StmtPrinterHelper &Helper,
                                        const ConstructionContext *CC) {
-  const Stmt *S1 = nullptr, *S2 = nullptr;
+  SmallVector<const Stmt *, 3> Stmts;
   switch (CC->getKind()) {
   case ConstructionContext::SimpleConstructorInitializerKind: {
     OS << ", ";
@@ -4944,52 +4967,56 @@ static void print_construction_context(raw_ostream &OS,
     const auto *CICC =
         cast<CXX17ElidedCopyConstructorInitializerConstructionContext>(CC);
     print_initializer(OS, Helper, CICC->getCXXCtorInitializer());
-    S2 = CICC->getCXXBindTemporaryExpr();
+    Stmts.push_back(CICC->getCXXBindTemporaryExpr());
     break;
   }
   case ConstructionContext::SimpleVariableKind: {
     const auto *SDSCC = cast<SimpleVariableConstructionContext>(CC);
-    S1 = SDSCC->getDeclStmt();
+    Stmts.push_back(SDSCC->getDeclStmt());
     break;
   }
   case ConstructionContext::CXX17ElidedCopyVariableKind: {
     const auto *CDSCC = cast<CXX17ElidedCopyVariableConstructionContext>(CC);
-    S1 = CDSCC->getDeclStmt();
-    S2 = CDSCC->getCXXBindTemporaryExpr();
+    Stmts.push_back(CDSCC->getDeclStmt());
+    Stmts.push_back(CDSCC->getCXXBindTemporaryExpr());
     break;
   }
   case ConstructionContext::NewAllocatedObjectKind: {
     const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
-    S1 = NECC->getCXXNewExpr();
+    Stmts.push_back(NECC->getCXXNewExpr());
     break;
   }
   case ConstructionContext::SimpleReturnedValueKind: {
     const auto *RSCC = cast<SimpleReturnedValueConstructionContext>(CC);
-    S1 = RSCC->getReturnStmt();
+    Stmts.push_back(RSCC->getReturnStmt());
     break;
   }
   case ConstructionContext::CXX17ElidedCopyReturnedValueKind: {
     const auto *RSCC =
         cast<CXX17ElidedCopyReturnedValueConstructionContext>(CC);
-    S1 = RSCC->getReturnStmt();
-    S2 = RSCC->getCXXBindTemporaryExpr();
+    Stmts.push_back(RSCC->getReturnStmt());
+    Stmts.push_back(RSCC->getCXXBindTemporaryExpr());
     break;
   }
-  case ConstructionContext::TemporaryObjectKind: {
-    const auto *TOCC = cast<TemporaryObjectConstructionContext>(CC);
-    S1 = TOCC->getCXXBindTemporaryExpr();
-    S2 = TOCC->getMaterializedTemporaryExpr();
+  case ConstructionContext::SimpleTemporaryObjectKind: {
+    const auto *TOCC = cast<SimpleTemporaryObjectConstructionContext>(CC);
+    Stmts.push_back(TOCC->getCXXBindTemporaryExpr());
+    Stmts.push_back(TOCC->getMaterializedTemporaryExpr());
+    break;
+  }
+  case ConstructionContext::ElidedTemporaryObjectKind: {
+    const auto *TOCC = cast<ElidedTemporaryObjectConstructionContext>(CC);
+    Stmts.push_back(TOCC->getCXXBindTemporaryExpr());
+    Stmts.push_back(TOCC->getMaterializedTemporaryExpr());
+    Stmts.push_back(TOCC->getConstructorAfterElision());
     break;
   }
   }
-  if (S1) {
-    OS << ", ";
-    Helper.handledStmt(const_cast<Stmt *>(S1), OS);
-  }
-  if (S2) {
-    OS << ", ";
-    Helper.handledStmt(const_cast<Stmt *>(S2), OS);
-  }
+  for (auto I: Stmts)
+    if (I) {
+      OS << ", ";
+      Helper.handledStmt(const_cast<Stmt *>(I), OS);
+    }
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
