@@ -107,7 +107,9 @@ namespace llvm {
           EnableFastISel(false), UseInitArray(false),
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
-          UniqueSectionNames(true), TrapUnreachable(false), EmulatedTLS(false),
+          UniqueSectionNames(true), TrapUnreachable(false),
+          NoTrapAfterNoreturn(false),
+          EmulatedTLS(false),
           EnableIPRA(false), EmitStackSizeSection(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
@@ -208,6 +210,10 @@ namespace llvm {
 
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;
+
+    /// Do not emit a trap instruction for 'unreachable' IR instructions behind
+    /// noreturn calls, even if TrapUnreachable is true.
+    unsigned NoTrapAfterNoreturn : 1;
 
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..

@@ -221,8 +221,10 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   // to ever want to mix 32 and 64-bit windows code in a single module
   // this should be fine.
   if ((TT.isOSWindows() && TT.getArch() == Triple::x86_64) || TT.isPS4() ||
-      TT.isOSBinFormatMachO())
+      TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
+    this->Options.NoTrapAfterNoreturn = TT.isOSBinFormatMachO();
+  }
 
   initAsmInfo();
 }
