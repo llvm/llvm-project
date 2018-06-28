@@ -1,3 +1,4 @@
+UNSUPPORTED: darwin
 # Temporary use -mllvm -use-unknown-locations=Disable so that
 # all instructions have debug info (file line numbers) attached.
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest -mllvm -use-unknown-locations=Disable

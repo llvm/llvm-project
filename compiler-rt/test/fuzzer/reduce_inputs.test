@@ -1,5 +1,6 @@
 # Test -reduce_inputs=1
 
+UNSUPPORTED: darwin
 RUN: rm -rf %t/C
 RUN: mkdir -p %t/C
 RUN: %cpp_compiler %S/ShrinkControlFlowSimpleTest.cpp -o %t-ShrinkControlFlowSimpleTest
