@@ -109,10 +109,14 @@ function(add_asm_sources output)
 endfunction()
 
 macro(set_output_name output name arch)
-  if(ANDROID AND ${arch} STREQUAL "i386")
-    set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    set(${output} ${name})
   else()
-    set(${output} "${name}-${arch}${COMPILER_RT_OS_SUFFIX}")
+    if(ANDROID AND ${arch} STREQUAL "i386")
+      set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")
+    else()
+      set(${output} "${name}-${arch}${COMPILER_RT_OS_SUFFIX}")
+    endif()
   endif()
 endmacro()
 
@@ -168,6 +172,8 @@ function(add_compiler_rt_runtime name type)
         set(output_name_${libname} ${libname}${COMPILER_RT_OS_SUFFIX})
         set(sources_${libname} ${LIB_SOURCES})
         format_object_libs(sources_${libname} ${os} ${LIB_OBJECT_LIBS})
+        get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir_${libname})
+        get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir_${libname})
       endif()
     endforeach()
   else()
@@ -193,6 +199,8 @@ function(add_compiler_rt_runtime name type)
       format_object_libs(sources_${libname} ${arch} ${LIB_OBJECT_LIBS})
       set(libnames ${libnames} ${libname})
       set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${NO_LTO_FLAGS} ${LIB_CFLAGS})
+      get_compiler_rt_output_dir(${arch} output_dir_${libname})
+      get_compiler_rt_install_dir(${arch} install_dir_${libname})
     endforeach()
   endif()
 
@@ -245,7 +253,7 @@ function(add_compiler_rt_runtime name type)
     set_target_link_flags(${libname} ${extra_link_flags_${libname}})
     set_property(TARGET ${libname} APPEND PROPERTY
                 COMPILE_DEFINITIONS ${LIB_DEFS})
-    set_target_output_directories(${libname} ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+    set_target_output_directories(${libname} ${output_dir_${libname}})
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
@@ -270,11 +278,11 @@ function(add_compiler_rt_runtime name type)
       endif()
     endif()
     install(TARGETS ${libname}
-      ARCHIVE DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR}
+      ARCHIVE DESTINATION ${install_dir_${libname}}
               ${COMPONENT_OPTION}
-      LIBRARY DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR}
+      LIBRARY DESTINATION ${install_dir_${libname}}
               ${COMPONENT_OPTION}
-      RUNTIME DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR}
+      RUNTIME DESTINATION ${install_dir_${libname}}
               ${COMPONENT_OPTION})
 
     # We only want to generate per-library install targets if you aren't using
@@ -621,8 +629,10 @@ endfunction()
 function(configure_compiler_rt_lit_site_cfg input output)
   set_llvm_build_mode()
 
+  get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
+
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
-  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${output_dir})
 
   configure_lit_site_cfg(${input} ${output})
 endfunction()

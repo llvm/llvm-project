@@ -1,3 +1,5 @@
+include(CompilerRTUtils)
+
 set(SANITIZER_GEN_DYNAMIC_LIST
   ${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common/scripts/gen_dynamic_list.py)
 
@@ -37,9 +39,9 @@ macro(add_sanitizer_rt_symbols name)
     add_custom_target(${target_name}-symbols ALL
       DEPENDS ${stamp}
       SOURCES ${SANITIZER_GEN_DYNAMIC_LIST} ${ARG_EXTRA})
-
+    get_compiler_rt_install_dir(${arch} install_dir)
     install(FILES $<TARGET_FILE:${target_name}>.syms
-            DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR})
+            DESTINATION ${install_dir})
     if(ARG_PARENT_TARGET)
       add_dependencies(${ARG_PARENT_TARGET} ${target_name}-symbols)
     endif()

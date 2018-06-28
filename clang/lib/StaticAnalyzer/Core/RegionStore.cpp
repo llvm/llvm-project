@@ -1341,7 +1341,8 @@ RegionStoreManager::getSizeInElements(ProgramStateRef state,
   // If a variable is reinterpreted as a type that doesn't fit into a larger
   // type evenly, round it down.
   // This is a signed value, since it's used in arithmetic with signed indices.
-  return svalBuilder.makeIntVal(RegionSize / EleSize, false);
+  return svalBuilder.makeIntVal(RegionSize / EleSize,
+                                svalBuilder.getArrayIndexType());
 }
 
 //===----------------------------------------------------------------------===//

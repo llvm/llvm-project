@@ -18,4 +18,9 @@ config.target_triple = "@TARGET_TRIPLE@"
 lit_config.load_config(config,
     "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 
+if config.enable_per_target_runtime_dir:
+  config.runtime_library_dir = config.compiler_rt_libdir
+else:
+  config.runtime_library_dir = "@LLVM_LIBRARY_DIR@"
+
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

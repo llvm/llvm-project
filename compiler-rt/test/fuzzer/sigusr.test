@@ -1,4 +1,4 @@
-# XFAIL: ios
+UNSUPPORTED: darwin
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
 RUN: rm -rf %t
 RUN: mkdir -p %t

@@ -888,10 +888,8 @@ def I8Imm : SDNodeXForm<imm, [{
   return getI8Imm((uint8_t)N->getZExtValue(), SDLoc(N));
 }]>;
 
-def FROUND_NO_EXC : ImmLeaf<i32, [{ return Imm == 8; }]>;
-def FROUND_CURRENT : ImmLeaf<i32, [{
-  return Imm == X86::STATIC_ROUNDING::CUR_DIRECTION;
-}]>;
+def FROUND_NO_EXC : PatLeaf<(i32 8)>;
+def FROUND_CURRENT : PatLeaf<(i32 4)>;
 
 // BYTE_imm - Transform bit immediates into byte immediates.
 def BYTE_imm  : SDNodeXForm<imm, [{
