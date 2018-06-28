@@ -500,11 +500,23 @@ static void AddBoolConfigEntry(StructuredData::Dictionary &dict,
   dict.AddItem(name, std::move(entry_up));
 }
 
+static void AddLLVMTargets(StructuredData::Dictionary &dict) {
+  auto array_up = llvm::make_unique<StructuredData::Array>();
+#define LLVM_TARGET(target)                                                    \
+  array_up->AddItem(llvm::make_unique<StructuredData::String>(#target));
+#include "llvm/Config/Targets.def"
+  auto entry_up = llvm::make_unique<StructuredData::Dictionary>();
+  entry_up->AddItem("value", std::move(array_up));
+  entry_up->AddStringItem("description", "A list of configured LLVM targets.");
+  dict.AddItem("targets", std::move(entry_up));
+}
+
 SBStructuredData SBDebugger::GetBuildConfiguration() {
   auto config_up = llvm::make_unique<StructuredData::Dictionary>();
   AddBoolConfigEntry(
       *config_up, "xml", XMLDocument::XMLEnabled(),
       "A boolean value that indicates if XML support is enabled in LLDB");
+  AddLLVMTargets(*config_up);
 
   SBStructuredData data;
   data.m_impl_up->SetObjectSP(std::move(config_up));

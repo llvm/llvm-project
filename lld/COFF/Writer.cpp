@@ -1045,6 +1045,11 @@ void Writer::createGuardCFTables() {
   if (Config->Entry)
     addSymbolToRVASet(AddressTakenSyms, cast<Defined>(Config->Entry));
 
+  // Ensure sections referenced in the gfid table are 16-byte aligned.
+  for (const ChunkAndOffset &C : AddressTakenSyms)
+    if (C.InputChunk->Alignment < 16)
+      C.InputChunk->Alignment = 16;
+
   maybeAddRVATable(std::move(AddressTakenSyms), "__guard_fids_table",
                    "__guard_fids_count");
 
