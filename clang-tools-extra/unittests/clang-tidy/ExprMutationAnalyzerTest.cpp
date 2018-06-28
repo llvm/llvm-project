@@ -581,7 +581,7 @@ TEST(ExprMutationAnalyzerTest, UnevaluatedExpressions) {
 
   AST = tooling::buildASTFromCodeWithArgs("namespace std { class type_info; }"
                                           "void f() { int x; typeid(x = 10); }",
-                                          std::vector<std::string>({"-frtti"}));
+                                          {"-frtti"});
   Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_FALSE(isMutated(Results, AST.get()));
 
@@ -601,7 +601,7 @@ TEST(ExprMutationAnalyzerTest, NotUnevaluatedExpressions) {
       "namespace std { class type_info; }"
       "struct A { virtual ~A(); }; struct B : A {};"
       "struct X { A& f(); }; void f() { X x; typeid(x.f()); }",
-      std::vector<std::string>({"-frtti"}));
+      {"-frtti"});
   Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.f()"));
 }
