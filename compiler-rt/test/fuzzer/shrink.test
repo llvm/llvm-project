@@ -1,3 +1,4 @@
+UNSUPPORTED: darwin
 RUN: %cpp_compiler %S/ShrinkControlFlowTest.cpp -o %t-ShrinkControlFlowTest
 RUN: %cpp_compiler %S/ShrinkValueProfileTest.cpp -o %t-ShrinkValueProfileTest
 RUN: %run %t-ShrinkControlFlowTest -seed=1 -exit_on_item=0eb8e4ed029b774d80f2b66408203801cb982a60 -runs=1000000  -shrink=1 -reduce_inputs=0 2>&1 | FileCheck %s --check-prefix=SHRINK1

@@ -1,4 +1,4 @@
-XFAIL: ios
+UNSUPPORTED: darwin
 CHECK: BINGO
 
 RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-FullCoverageSetTest
