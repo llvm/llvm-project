@@ -465,8 +465,8 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
     break;
   }
 
-  if (Lang.CPlusPlus && HSOpts.UseStandardCXXIncludes &&
-      HSOpts.UseStandardSystemIncludes) {
+  if (Lang.CPlusPlus && !Lang.AsmPreprocessor &&
+      HSOpts.UseStandardCXXIncludes && HSOpts.UseStandardSystemIncludes) {
     if (HSOpts.UseLibcxx) {
       if (triple.isOSDarwin()) {
         // On Darwin, libc++ may be installed alongside the compiler in
