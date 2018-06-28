@@ -451,6 +451,7 @@ public:
                              bool addStaticInitBranches = false,
                              bool addCXXNewAllocator = true,
                              bool addRichCXXConstructors = true,
+                             bool markElidedCXXConstructors = true,
                              CodeInjector *injector = nullptr);
 
   AnalysisDeclContext *getContext(const Decl *D);

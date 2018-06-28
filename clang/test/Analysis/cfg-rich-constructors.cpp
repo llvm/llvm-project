@@ -1,7 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -w %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX11 %s
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX11,ELIDE,CXX11-ELIDE %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++17 -w %s > %t 2>&1
-// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX17 %s
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX17,ELIDE,CXX17-ELIDE %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -w -analyzer-config elide-constructors=false %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX11,NOELIDE,CXX11-NOELIDE %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++17 -w -analyzer-config elide-constructors=false %s > %t 2>&1
+// RUN: FileCheck --input-file=%t -check-prefixes=CHECK,CXX17,NOELIDE,CXX17-NOELIDE %s
 
 class C {
 public:
@@ -99,10 +103,12 @@ void simpleVariableWithOperatorNewInBraces() {
 // CHECK: void simpleVariableInitializedByValue()
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
+// CXX11-ELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.5])
+// CXX11-NOELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CXX11-NEXT:     4: [B1.3]
 // CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], class C)
 // CXX11-NEXT:     6: C c = C::get();
+// CXX17-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CXX17-NEXT:     4: C c = C::get();
 void simpleVariableInitializedByValue() {
   C c = C::get();
@@ -122,17 +128,21 @@ void simpleVariableInitializedByValue() {
 // CHECK:        [B2]
 // CHECK-NEXT:     1: C::get
 // CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CXX11-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4])
+// CXX11-ELIDE-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4], [B2.5])
+// CXX11-NOELIDE-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4])
 // CXX11-NEXT:     4: [B2.3]
-// CXX11-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.2], class C)
+// CXX11-ELIDE-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.2], [B1.3], class C)
+// CXX11-NOELIDE-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.2], class C)
 // CXX17-NEXT:     3: [B2.2]()
 // CHECK:        [B3]
 // CHECK-NEXT:     1: 0
 // CHECK-NEXT:     2: [B3.1] (ImplicitCastExpr, NullToPointer, class C *)
-// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], class C)
+// CXX11-ELIDE-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], [B3.6], class C)
+// CXX11-NOELIDE-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], class C)
 // CXX11-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CXX11-NEXT:     5: [B3.4]
-// CXX11-NEXT:     6: [B3.5] (CXXConstructExpr, [B1.2], class C)
+// CXX11-ELIDE-NEXT:     6: [B3.5] (CXXConstructExpr, [B1.2], [B1.3], class C)
+// CXX11-NOELIDE-NEXT:     6: [B3.5] (CXXConstructExpr, [B1.2], class C)
 // CXX17-NEXT:     3: [B3.2] (CXXConstructExpr, class C)
 // CXX17-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CHECK:        [B4]
@@ -146,7 +156,9 @@ void simpleVariableWithTernaryOperator(bool coin) {
 // CHECK: void simpleVariableWithElidableCopy()
 // CHECK:          1: 0
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NullToPointer, class C *)
-// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], class C)
+// CXX11-ELIDE-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], [B1.6], class C)
+// CXX11-NOELIDE-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], class C)
+// CXX17-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], class C)
 // CHECK-NEXT:     4: C([B1.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CXX11-NEXT:     5: [B1.4]
 // CXX11-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.7], class C)
@@ -185,14 +197,16 @@ void referenceVariableWithInitializer() {
 // CHECK:        [B2]
 // CHECK-NEXT:     1: C::get
 // CHECK-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CXX11-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4])
+// CXX11-ELIDE-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4], [B2.5])
+// CXX11-NOELIDE-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4])
 // CXX11-NEXT:     4: [B2.3]
 // CXX11-NEXT:     5: [B2.4] (CXXConstructExpr, [B1.3], class C)
 // CXX17-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B1.3])
 // CHECK:        [B3]
 // CHECK-NEXT:     1: 0
 // CHECK-NEXT:     2: [B3.1] (ImplicitCastExpr, NullToPointer, class C *)
-// CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], class C)
+// CXX11-ELIDE-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], [B3.6], class C)
+// CXX11-NOELIDE-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.5], class C)
 // CXX11-NEXT:     4: C([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CXX11-NEXT:     5: [B3.4]
 // CXX11-NEXT:     6: [B3.5] (CXXConstructExpr, [B1.3], class C)
@@ -242,7 +256,8 @@ public:
 // CHECK-NEXT:     7: CFGNewAllocator(C *)
 // CHECK-NEXT:     8: C::get
 // CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CXX11-NEXT:    10: [B1.9]() (CXXRecordTypedCall, [B1.11])
+// CXX11-ELIDE-NEXT:    10: [B1.9]() (CXXRecordTypedCall, [B1.11], [B1.12])
+// CXX11-NOELIDE-NEXT:    10: [B1.9]() (CXXRecordTypedCall, [B1.11])
 // CXX11-NEXT:    11: [B1.10]
 // CXX11-NEXT:    12: [B1.11] (CXXConstructExpr, [B1.13], class C)
 // CXX11-NEXT:    13: new C([B1.12])
@@ -270,7 +285,8 @@ public:
 // CHECK: F()
 // CHECK:          1: E::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class ctor_initializers::E (*)(
-// CXX11-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
+// CXX11-ELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6], [B1.7])
+// CXX11-NOELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
 // CXX11-NEXT:     4: [B1.3] (BindTemporary)
 // CXX11-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class ctor_initializers::E)
 // CXX11-NEXT:     6: [B1.5]
@@ -326,10 +342,12 @@ C returnBracesWithMultipleItems() {
 }
 
 // CHECK: C returnTemporary()
-// CHECK:          1: C() (CXXConstructExpr, [B1.2], class C)
+// CXX11-ELIDE:    1: C() (CXXConstructExpr, [B1.2], [B1.3], class C)
+// CXX11-NOELIDE:  1: C() (CXXConstructExpr, [B1.2], class C)
 // CXX11-NEXT:     2: [B1.1]
 // CXX11-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.4], class C)
 // CXX11-NEXT:     4: return [B1.3];
+// CXX17:          1: C() (CXXConstructExpr, [B1.2], class C)
 // CXX17-NEXT:     2: return [B1.1];
 C returnTemporary() {
   return C();
@@ -338,7 +356,9 @@ C returnTemporary() {
 // CHECK: C returnTemporaryWithArgument()
 // CHECK:          1: nullptr
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, NullToPointer, class C *)
-// CHECK-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], class C)
+// CXX11-ELIDE-NEXT: 3: [B1.2] (CXXConstructExpr, [B1.5], [B1.6], class C)
+// CXX11-NOELIDE-NEXT: 3: [B1.2] (CXXConstructExpr, [B1.5], class C)
+// CXX17-NEXT:     3: [B1.2] (CXXConstructExpr, [B1.5], class C)
 // CHECK-NEXT:     4: C([B1.3]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CXX11-NEXT:     5: [B1.4]
 // CXX11-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.7], class C)
@@ -352,10 +372,12 @@ C returnTemporaryWithArgument() {
 // CHECK: C returnTemporaryConstructedByFunction()
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
+// CXX11-ELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.5])
+// CXX11-NOELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CXX11-NEXT:     4: [B1.3]
 // CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.6], class C)
 // CXX11-NEXT:     6: return [B1.5];
+// CXX17-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CXX17-NEXT:     4: return [B1.3];
 C returnTemporaryConstructedByFunction() {
   return C::get();
@@ -364,9 +386,11 @@ C returnTemporaryConstructedByFunction() {
 // CHECK: C returnChainOfCopies()
 // CHECK:          1: C::get
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class C (*)(void))
-// CXX11-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
+// CXX11-ELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.5])
+// CXX11-NOELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4])
 // CXX11-NEXT:     4: [B1.3]
-// CXX11-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], class C)
+// CXX11-ELIDE-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], [B1.8], class C)
+// CXX11-NOELIDE-NEXT:     5: [B1.4] (CXXConstructExpr, [B1.7], class C)
 // CXX11-NEXT:     6: C([B1.5]) (CXXFunctionalCastExpr, ConstructorConversion, class C)
 // CXX11-NEXT:     7: [B1.6]
 // CXX11-NEXT:     8: [B1.7] (CXXConstructExpr, [B1.9], class C)
@@ -390,7 +414,8 @@ public:
 
 // FIXME: There should be no temporary destructor in C++17.
 // CHECK:  return_stmt_with_dtor::D returnTemporary()
-// CXX11:          1: return_stmt_with_dtor::D() (CXXConstructExpr, [B1.2], [B1.4], class return_stmt_with_dtor::D)
+// CXX11-ELIDE:          1: return_stmt_with_dtor::D() (CXXConstructExpr, [B1.2], [B1.4], [B1.5], class return_stmt_with_dtor::D)
+// CXX11-NOELIDE:          1: return_stmt_with_dtor::D() (CXXConstructExpr, [B1.2], [B1.4], class return_stmt_with_dtor::D)
 // CXX11-NEXT:     2: [B1.1] (BindTemporary)
 // CXX11-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class return_stmt_with_dtor::D)
 // CXX11-NEXT:     4: [B1.3]
@@ -409,7 +434,8 @@ D returnTemporary() {
 // CHECK: void returnByValueIntoVariable()
 // CHECK:          1: returnTemporary
 // CHECK-NEXT:     2: [B1.1] (ImplicitCastExpr, FunctionToPointerDecay, class return_stmt_with_dtor::D (*)(void))
-// CXX11-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
+// CXX11-ELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6], [B1.7])
+// CXX11-NOELIDE-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.4], [B1.6])
 // CXX11-NEXT:     4: [B1.3] (BindTemporary)
 // CXX11-NEXT:     5: [B1.4] (ImplicitCastExpr, NoOp, const class return_stmt_with_dtor::D)
 // CXX11-NEXT:     6: [B1.5]
@@ -451,7 +477,8 @@ void temporaryInCondition() {
 }
 
 // CHECK: void temporaryInConditionVariable()
-// CHECK:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-ELIDE:    1: C() (CXXConstructExpr, [B2.2], [B2.3], class C)
+// CXX11-NOELIDE:  1: C() (CXXConstructExpr, [B2.2], class C)
 // CXX11-NEXT:     2: [B2.1]
 // CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
 // CXX11-NEXT:     4: C c = C();
@@ -461,6 +488,7 @@ void temporaryInCondition() {
 // CXX11-NEXT:     8: [B2.6]
 // CXX11-NEXT:     9: [B2.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
 // CXX11-NEXT:     T: if [B2.9]
+// CXX17:          1: C() (CXXConstructExpr, [B2.2], class C)
 // CXX17-NEXT:     2: C c = C();
 // CXX17-NEXT:     3: c
 // CXX17-NEXT:     4: [B2.3] (ImplicitCastExpr, NoOp, const class C)
@@ -475,7 +503,8 @@ void temporaryInConditionVariable() {
 
 // CHECK: void temporaryInForLoopConditionVariable()
 // CHECK:        [B2]
-// CXX11-NEXT:     1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B2.2], [B2.3], class C)
+// CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B2.2], class C)
 // CXX11-NEXT:     2: [B2.1]
 // CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
 // CXX11-NEXT:     4: C c2 = C();
@@ -494,7 +523,8 @@ void temporaryInConditionVariable() {
 // CXX17-NEXT:     7: [B2.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
 // CXX17-NEXT:     T: for (...; [B2.7]; )
 // CHECK:        [B3]
-// CXX11-NEXT:     1: C() (CXXConstructExpr, [B3.2], class C)
+// CXX11-ELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], [B3.3], class C)
+// CXX11-NOELIDE-NEXT:     1: C() (CXXConstructExpr, [B3.2], class C)
 // CXX11-NEXT:     2: [B3.1]
 // CXX11-NEXT:     3: [B3.2] (CXXConstructExpr, [B3.4], class C)
 // CXX11-NEXT:     4: C c1 = C();
@@ -505,9 +535,9 @@ void temporaryInForLoopConditionVariable() {
 }
 
 
-// FIXME: Find construction context for the loop condition variable.
 // CHECK: void temporaryInWhileLoopConditionVariable()
-// CXX11:          1: C() (CXXConstructExpr, [B2.2], class C)
+// CXX11-ELIDE:          1: C() (CXXConstructExpr, [B2.2], [B2.3], class C)
+// CXX11-NOELIDE:          1: C() (CXXConstructExpr, [B2.2], class C)
 // CXX11-NEXT:     2: [B2.1]
 // CXX11-NEXT:     3: [B2.2] (CXXConstructExpr, [B2.4], class C)
 // CXX11-NEXT:     4: C c = C();
@@ -567,7 +597,7 @@ void temporaryInCondition() {
 
 // CHECK: void referenceVariableWithConstructor()
 // CHECK:          1: 0
-// CHECK-NEXT:     2: [B1.1] (CXXConstructExpr, [B1.3], [B1.4], const class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     2: [B1.1] (CXXConstructExpr, [B1.4], const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     3: [B1.2] (BindTemporary)
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: const temporary_object_expr_with_dtors::D &d(0);
@@ -577,7 +607,7 @@ void referenceVariableWithConstructor() {
 }
 
 // CHECK: void referenceVariableWithInitializer()
-// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B1.2], [B1.4], class temporary_object_expr_with_dtors::D)
+// CHECK:          1: temporary_object_expr_with_dtors::D() (CXXConstructExpr, [B1.4], class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     2: [B1.1] (BindTemporary)
 // CHECK-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     4: [B1.3]
@@ -603,20 +633,22 @@ void referenceVariableWithInitializer() {
 // CXX11:        [B5]
 // CXX11-NEXT:     1: D::get
 // CXX11-NEXT:     2: [B5.1] (ImplicitCastExpr, FunctionToPointerDecay, class temporary_object_expr_with_dtors::D (*)(void))
-// CXX11-NEXT:     3: [B5.2]() (CXXRecordTypedCall, [B5.4], [B5.6])
+// CXX11-ELIDE-NEXT:     3: [B5.2]() (CXXRecordTypedCall, [B5.4], [B5.6], [B5.7])
+// CXX11-NOELIDE-NEXT:     3: [B5.2]() (CXXRecordTypedCall, [B5.4], [B5.6])
 // CXX11-NEXT:     4: [B5.3] (BindTemporary)
 // CXX11-NEXT:     5: [B5.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CXX11-NEXT:     6: [B5.5]
-// CXX11-NEXT:     7: [B5.6] (CXXConstructExpr, [B5.8], [B4.3], class temporary_object_expr_with_dtors::D)
+// CXX11-NEXT:     7: [B5.6] (CXXConstructExpr, [B4.3], class temporary_object_expr_with_dtors::D)
 // CXX11-NEXT:     8: [B5.7] (BindTemporary)
 // CXX11:        [B6]
 // CXX11-NEXT:     1: 0
-// CXX11-NEXT:     2: [B6.1] (CXXConstructExpr, [B6.3], [B6.6], class temporary_object_expr_with_dtors::D)
+// CXX11-ELIDE-NEXT:     2: [B6.1] (CXXConstructExpr, [B6.3], [B6.6], [B6.7], class temporary_object_expr_with_dtors::D)
+// CXX11-NOELIDE-NEXT:     2: [B6.1] (CXXConstructExpr, [B6.3], [B6.6], class temporary_object_expr_with_dtors::D)
 // CXX11-NEXT:     3: [B6.2] (BindTemporary)
 // CXX11-NEXT:     4: temporary_object_expr_with_dtors::D([B6.3]) (CXXFunctionalCastExpr, ConstructorConversion, class temporary_object_expr_with_dtors::D)
 // CXX11-NEXT:     5: [B6.4] (ImplicitCastExpr, NoOp, const class temporary_object_expr_with_dtors::D)
 // CXX11-NEXT:     6: [B6.5]
-// CXX11-NEXT:     7: [B6.6] (CXXConstructExpr, [B6.8], [B4.3], class temporary_object_expr_with_dtors::D)
+// CXX11-NEXT:     7: [B6.6] (CXXConstructExpr, [B4.3], class temporary_object_expr_with_dtors::D)
 // CXX11-NEXT:     8: [B6.7] (BindTemporary)
 // CXX11:        [B7]
 // CXX11-NEXT:     1: coin
@@ -631,11 +663,11 @@ void referenceVariableWithInitializer() {
 // CXX17:        [B2]
 // CXX17-NEXT:     1: D::get
 // CXX17-NEXT:     2: [B2.1] (ImplicitCastExpr, FunctionToPointerDecay, class temporary_object_expr_with_dtors::D (*)(void))
-// CXX17-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B2.4], [B1.3])
+// CXX17-NEXT:     3: [B2.2]() (CXXRecordTypedCall, [B1.3])
 // CXX17-NEXT:     4: [B2.3] (BindTemporary)
 // CXX17:        [B3]
 // CXX17-NEXT:     1: 0
-// CXX17-NEXT:     2: [B3.1] (CXXConstructExpr, [B3.3], [B1.3], class temporary_object_expr_with_dtors::D)
+// CXX17-NEXT:     2: [B3.1] (CXXConstructExpr, [B1.3], class temporary_object_expr_with_dtors::D)
 // CXX17-NEXT:     3: [B3.2] (BindTemporary)
 // CXX17-NEXT:     4: temporary_object_expr_with_dtors::D([B3.3]) (CXXFunctionalCastExpr, ConstructorConversion, class temporary_object_expr_with_dtors::D)
 // CXX17:        [B4]
@@ -648,7 +680,7 @@ void referenceVariableWithTernaryOperator(bool coin) {
 
 // CHECK: void referenceWithFunctionalCast()
 // CHECK:          1: 1
-// CHECK-NEXT:     2: [B1.1] (CXXConstructExpr, [B1.3], [B1.5], class temporary_object_expr_with_dtors::D)
+// CHECK-NEXT:     2: [B1.1] (CXXConstructExpr, [B1.5], class temporary_object_expr_with_dtors::D)
 // CHECK-NEXT:     3: [B1.2] (BindTemporary)
 // CHECK-NEXT:     4: temporary_object_expr_with_dtors::D([B1.3]) (CXXFunctionalCastExpr, ConstructorCon
 // CHECK-NEXT:     5: [B1.4]
@@ -699,7 +731,8 @@ public:
 // CHECK:          1: implicit_constructor_conversion::A() (CXXConstructExpr, [B1.3], class implicit_constructor_conversion::A)
 // CXX11-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
 // CXX11-NEXT:     3: [B1.2]
-// CXX11-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.6], [B1.8], class implicit_constructor_conversion::B)
+// CXX11-ELIDE-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.6], [B1.8], [B1.9], class implicit_constructor_conversion::B)
+// CXX11-NOELIDE-NEXT:     4: [B1.3] (CXXConstructExpr, [B1.6], [B1.8], class implicit_constructor_conversion::B)
 // CXX11-NEXT:     5: [B1.4] (ImplicitCastExpr, ConstructorConversion, class implicit_constructor_conversion::B)
 // CXX11-NEXT:     6: [B1.5] (BindTemporary)
 // CXX11-NEXT:     7: [B1.6] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::B)
@@ -724,7 +757,8 @@ void implicitConstructionConversionFromTemporary() {
 // CHECK-NEXT:     3: [B1.2]() (CXXRecordTypedCall, [B1.5])
 // CHECK-NEXT:     4: [B1.3] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::A)
 // CHECK-NEXT:     5: [B1.4]
-// CXX11-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.8], [B1.10], class implicit_constructor_conversion::B)
+// CXX11-ELIDE-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.8], [B1.10], [B1.11], class implicit_constructor_conversion::B)
+// CXX11-NOELIDE-NEXT:     6: [B1.5] (CXXConstructExpr, [B1.8], [B1.10], class implicit_constructor_conversion::B)
 // CXX11-NEXT:     7: [B1.6] (ImplicitCastExpr, ConstructorConversion, class implicit_constructor_conversion::B)
 // CXX11-NEXT:     8: [B1.7] (BindTemporary)
 // CXX11-NEXT:     9: [B1.8] (ImplicitCastExpr, NoOp, const class implicit_constructor_conversion::B)

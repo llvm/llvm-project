@@ -780,9 +780,30 @@ private:
       llvm::PointerUnion<const Stmt *, const CXXCtorInitializer *> P,
       const LocationContext *LC);
 
+  /// If the given expression corresponds to a temporary that was used for
+  /// passing into an elidable copy/move constructor and that constructor
+  /// was actually elided, track that we also need to elide the destructor.
+  static ProgramStateRef elideDestructor(ProgramStateRef State,
+                                         const CXXBindTemporaryExpr *BTE,
+                                         const LocationContext *LC);
+
+  /// Stop tracking the destructor that corresponds to an elided constructor.
+  static ProgramStateRef
+  cleanupElidedDestructor(ProgramStateRef State,
+                          const CXXBindTemporaryExpr *BTE,
+                          const LocationContext *LC);
+
+  /// Returns true if the given expression corresponds to a temporary that
+  /// was constructed for passing into an elidable copy/move constructor
+  /// and that constructor was actually elided.
+  static bool isDestructorElided(ProgramStateRef State,
+                                 const CXXBindTemporaryExpr *BTE,
+                                 const LocationContext *LC);
+
   /// Check if all objects under construction have been fully constructed
   /// for the given context range (including FromLC, not including ToLC).
-  /// This is useful for assertions.
+  /// This is useful for assertions. Also checks if elided destructors
+  /// were cleaned up.
   static bool areAllObjectsFullyConstructed(ProgramStateRef State,
                                             const LocationContext *FromLC,
                                             const LocationContext *ToLC);

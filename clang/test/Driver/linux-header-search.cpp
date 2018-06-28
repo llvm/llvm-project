@@ -7,6 +7,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-SYSROOT %s
@@ -18,6 +19,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-INSTALL %s
@@ -30,6 +32,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-SYSROOT %s
@@ -41,6 +44,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxxv2_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxxv2_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXXV2-INSTALL %s
@@ -54,6 +58,7 @@
 // RUN:     -target x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libstdcxx_libcxxv2_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT %s

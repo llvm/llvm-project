@@ -112,7 +112,7 @@ TEST_F(MSFBuilderTest, TestAddStreamNoDirectoryBlockIncrease) {
   EXPECT_THAT_EXPECTED(ExpectedMsf, Succeeded());
   auto &Msf = *ExpectedMsf;
 
-  auto ExpectedL1 = Msf.build();
+  auto ExpectedL1 = Msf.generateLayout();
   EXPECT_THAT_EXPECTED(ExpectedL1, Succeeded());
   MSFLayout &L1 = *ExpectedL1;
 
@@ -129,7 +129,7 @@ TEST_F(MSFBuilderTest, TestAddStreamNoDirectoryBlockIncrease) {
   auto Blocks = Msf2.getStreamBlocks(0);
   EXPECT_EQ(1U, Blocks.size());
 
-  auto ExpectedL2 = Msf2.build();
+  auto ExpectedL2 = Msf2.generateLayout();
   EXPECT_THAT_EXPECTED(ExpectedL2, Succeeded());
   MSFLayout &L2 = *ExpectedL2;
   auto NewDirBlocks = L2.DirectoryBlocks;
@@ -149,7 +149,7 @@ TEST_F(MSFBuilderTest, TestAddStreamWithDirectoryBlockIncrease) {
   EXPECT_THAT_EXPECTED(Msf.addStream(4096 * 4096 / sizeof(uint32_t)),
                        Succeeded());
 
-  auto ExpectedL1 = Msf.build();
+  auto ExpectedL1 = Msf.generateLayout();
   EXPECT_THAT_EXPECTED(ExpectedL1, Succeeded());
   MSFLayout &L1 = *ExpectedL1;
   auto DirBlocks = L1.DirectoryBlocks;
@@ -289,7 +289,7 @@ TEST_F(MSFBuilderTest, BuildMsfLayout) {
   }
   ++ExpectedNumBlocks; // The directory itself should use 1 block
 
-  auto ExpectedLayout = Msf.build();
+  auto ExpectedLayout = Msf.generateLayout();
   EXPECT_THAT_EXPECTED(ExpectedLayout, Succeeded());
   MSFLayout &L = *ExpectedLayout;
   EXPECT_EQ(4096U, L.SB->BlockSize);
@@ -316,7 +316,7 @@ TEST_F(MSFBuilderTest, UseDirectoryBlockHint) {
   EXPECT_THAT_ERROR(Msf.setDirectoryBlocksHint({B + 1}), Succeeded());
   EXPECT_THAT_EXPECTED(Msf.addStream(2048, {B + 2}), Succeeded());
 
-  auto ExpectedLayout = Msf.build();
+  auto ExpectedLayout = Msf.generateLayout();
   EXPECT_THAT_EXPECTED(ExpectedLayout, Succeeded());
   MSFLayout &L = *ExpectedLayout;
   EXPECT_EQ(msf::getMinimumBlockCount() + 2, L.SB->NumBlocks);
@@ -338,7 +338,7 @@ TEST_F(MSFBuilderTest, DirectoryBlockHintInsufficient) {
   uint32_t Size = 4096 * 4096 / 4;
   EXPECT_THAT_EXPECTED(Msf.addStream(Size), Succeeded());
 
-  auto ExpectedLayout = Msf.build();
+  auto ExpectedLayout = Msf.generateLayout();
   EXPECT_THAT_EXPECTED(ExpectedLayout, Succeeded());
   MSFLayout &L = *ExpectedLayout;
   EXPECT_EQ(2U, L.DirectoryBlocks.size());
@@ -356,7 +356,7 @@ TEST_F(MSFBuilderTest, DirectoryBlockHintOverestimated) {
 
   ASSERT_THAT_EXPECTED(Msf.addStream(2048), Succeeded());
 
-  auto ExpectedLayout = Msf.build();
+  auto ExpectedLayout = Msf.generateLayout();
   ASSERT_THAT_EXPECTED(ExpectedLayout, Succeeded());
   MSFLayout &L = *ExpectedLayout;
   EXPECT_EQ(1U, L.DirectoryBlocks.size());
@@ -376,7 +376,7 @@ TEST_F(MSFBuilderTest, StreamDoesntUseFpmBlocks) {
   Expected<uint32_t> SN = Msf.addStream(StreamSize);
   ASSERT_THAT_EXPECTED(SN, Succeeded());
 
-  auto ExpectedLayout = Msf.build();
+  auto ExpectedLayout = Msf.generateLayout();
   ASSERT_THAT_EXPECTED(ExpectedLayout, Succeeded());
   MSFLayout &L = *ExpectedLayout;
   auto BlocksRef = L.StreamMap[*SN];

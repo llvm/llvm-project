@@ -321,6 +321,12 @@ bool AnalyzerOptions::shouldSerializeStats() {
                           /* Default = */ false);
 }
 
+bool AnalyzerOptions::shouldElideConstructors() {
+  return getBooleanOption(ElideConstructors,
+                          "elide-constructors",
+                          /* Default = */ true);
+}
+
 int AnalyzerOptions::getOptionAsInteger(StringRef Name, int DefaultVal,
                                         const CheckerBase *C,
                                         bool SearchInParents) {
