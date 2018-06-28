@@ -228,11 +228,11 @@ if(NOT LIBCXX_USING_INSTALLED_LLVM AND LLVM_BINARY_DIR)
     list(APPEND out_files ${dst})
   endif()
 
-  add_custom_target(cxx_headers ALL DEPENDS ${out_files} ${LIBCXX_CXX_ABI_HEADER_TARGET})
+  add_custom_target(cxx-headers ALL DEPENDS ${out_files} ${LIBCXX_CXX_ABI_HEADER_TARGET})
 else()
-  add_custom_target(cxx_headers)
+  add_custom_target(cxx-headers)
 endif()
-set_target_properties(cxx_headers PROPERTIES FOLDER "Misc")
+set_target_properties(cxx-headers PROPERTIES FOLDER "Misc")
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})
@@ -255,7 +255,7 @@ if (LIBCXX_INSTALL_HEADERS)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
-                      DEPENDS cxx_headers ${generated_config_deps}
+                      DEPENDS cxx-headers ${generated_config_deps}
                       COMMAND "${CMAKE_COMMAND}"
                               -DCMAKE_INSTALL_COMPONENT=cxx-headers
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")

@@ -106,7 +106,7 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
         " in " + toString(File));
 }
 
-static void checkFunctionType(const Symbol *Existing, const InputFile *File,
+static void checkFunctionType(Symbol *Existing, const InputFile *File,
                               const WasmSignature *NewSig) {
   auto ExistingFunction = dyn_cast<FunctionSymbol>(Existing);
   if (!ExistingFunction) {
@@ -114,13 +114,20 @@ static void checkFunctionType(const Symbol *Existing, const InputFile *File,
     return;
   }
 
-  const WasmSignature *OldSig = ExistingFunction->getFunctionType();
-  if (OldSig && NewSig && *NewSig != *OldSig) {
+  if (!NewSig)
+    return;
+
+  const WasmSignature *OldSig = ExistingFunction->FunctionType;
+  if (!OldSig) {
+    ExistingFunction->FunctionType = NewSig;
+    return;
+  }
+
+  if (*NewSig != *OldSig)
     warn("function signature mismatch: " + Existing->getName() +
          "\n>>> defined as " + toString(*OldSig) + " in " +
          toString(Existing->getFile()) + "\n>>> defined as " +
          toString(*NewSig) + " in " + toString(File));
-  }
 }
 
 // Check the type of new symbol matches that of the symbol is replacing.
@@ -286,8 +293,9 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, uint32_t Flags,
     replaceSymbol<UndefinedFunction>(S, Name, Flags, File, Sig);
   else if (auto *Lazy = dyn_cast<LazySymbol>(S))
     Lazy->fetch();
-  else if (S->isDefined())
+  else
     checkFunctionType(S, File, Sig);
+
   return S;
 }
 
