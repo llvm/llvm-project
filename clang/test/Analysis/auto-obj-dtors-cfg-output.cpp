@@ -56,7 +56,7 @@ extern const bool UV;
 // CHECK-NEXT:   4: [B1.3] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:   5: const A &b = a;
 // WARNINGS-NEXT:   6: A() (CXXConstructExpr, class A)
-// ANALYZER-NEXT:   6: A() (CXXConstructExpr, [B1.7], [B1.9], class A)
+// ANALYZER-NEXT:   6: A() (CXXConstructExpr, [B1.9], class A)
 // CHECK-NEXT:   7: [B1.6] (BindTemporary)
 // CHECK-NEXT:   8: [B1.7] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:   9: [B1.8]
@@ -78,7 +78,7 @@ void test_const_ref() {
 // CHECK:      [B1]
 // WARNINGS-NEXT:   1: A() (CXXConstructExpr, class A)
 // CXX98-ANALYZER-NEXT:   1: A() (CXXConstructExpr, [B1.2], class A)
-// CXX11-ANALYZER-NEXT:   1: A() (CXXConstructExpr, [B1.2], [B1.3], class A)
+// CXX11-ANALYZER-NEXT:   1: A() (CXXConstructExpr, [B1.3], class A)
 // CHECK-NEXT:   2: [B1.1] (BindTemporary)
 // CXX98-NEXT:   3: [B1.2].x
 // CXX98-NEXT:   4: [B1.3]
@@ -102,7 +102,7 @@ void test_const_ref_to_field() {
 // CHECK:        [B1]
 // WARNINGS-NEXT:     1: A() (CXXConstructExpr, class A)
 // CXX98-ANALYZER-NEXT:     1: A() (CXXConstructExpr, [B1.2], class A)
-// CXX11-ANALYZER-NEXT:     1: A() (CXXConstructExpr, [B1.2], [B1.3], class A)
+// CXX11-ANALYZER-NEXT:     1: A() (CXXConstructExpr, [B1.3], class A)
 // CHECK-NEXT:     2: [B1.1] (BindTemporary)
 // CXX98-NEXT:     3: A::x
 // CXX98-NEXT:     4: &[B1.3]
@@ -130,20 +130,20 @@ void test_pointer_to_member() {
 // CHECK-NEXT:     Succs (1): B1
 // CHECK:        [B1]
 // WARNINGS-NEXT:     1: A() (CXXConstructExpr, class A)
-// ANALYZER-NEXT:     1: A() (CXXConstructExpr, [B1.2], [B1.4], class A)
+// ANALYZER-NEXT:     1: A() (CXXConstructExpr, [B1.4], class A)
 // CHECK-NEXT:     2: [B1.1] (BindTemporary)
 // CHECK-NEXT:     3: [B1.2] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:     4: [B1.3]
 // CHECK-NEXT:     5: {[B1.4]}
 // CHECK-NEXT:     6: B b = {A()};
 // WARNINGS-NEXT:     7: A() (CXXConstructExpr, class A)
-// ANALYZER-NEXT:     7: A() (CXXConstructExpr, [B1.8], [B1.10], class A)
+// ANALYZER-NEXT:     7: A() (CXXConstructExpr, [B1.10], class A)
 // CHECK-NEXT:     8: [B1.7] (BindTemporary)
 // CHECK-NEXT:     9: [B1.8] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:    10: [B1.9]
 // CHECK-NEXT:    11: {[B1.10]}
 // WARNINGS-NEXT:    12: A() (CXXConstructExpr, class A)
-// ANALYZER-NEXT:    12: A() (CXXConstructExpr, [B1.13], [B1.15], class A)
+// ANALYZER-NEXT:    12: A() (CXXConstructExpr, [B1.15], class A)
 // CHECK-NEXT:    13: [B1.12] (BindTemporary)
 // CHECK-NEXT:    14: [B1.13] (ImplicitCastExpr, NoOp, const class A)
 // CHECK-NEXT:    15: [B1.14]

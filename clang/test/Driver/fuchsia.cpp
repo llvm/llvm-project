@@ -4,7 +4,7 @@
 // CHECK: "-triple" "x86_64-fuchsia"
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK: "-internal-isystem" "{{.*[/\\]}}x86_64-fuchsia{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic"
 // CHECK: "--sysroot=[[SYSROOT]]"

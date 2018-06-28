@@ -2850,6 +2850,10 @@ public:
     return const_cast<CastExpr *>(this)->getSubExprAsWritten();
   }
 
+  /// If this cast applies a user-defined conversion, retrieve the conversion
+  /// function that it invokes.
+  NamedDecl *getConversionFunction() const;
+
   typedef CXXBaseSpecifier **path_iterator;
   typedef const CXXBaseSpecifier * const *path_const_iterator;
   bool path_empty() const { return CastExprBits.BasePathSize == 0; }

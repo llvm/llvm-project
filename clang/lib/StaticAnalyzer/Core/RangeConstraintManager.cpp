@@ -174,6 +174,38 @@ RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
   return newRanges;
 }
 
+// Turn all [A, B] ranges to [-B, -A]. Ranges [MIN, B] are turned to range set
+// [MIN, MIN] U [-B, MAX], when MIN and MAX are the minimal and the maximal
+// signed values of the type.
+RangeSet RangeSet::Negate(BasicValueFactory &BV, Factory &F) const {
+  PrimRangeSet newRanges = F.getEmptySet();
+
+  for (iterator i = begin(), e = end(); i != e; ++i) {
+    const llvm::APSInt &from = i->From(), &to = i->To();
+    const llvm::APSInt &newTo = (from.isMinSignedValue() ?
+                                 BV.getMaxValue(from) :
+                                 BV.getValue(- from));
+    if (to.isMaxSignedValue() && !newRanges.isEmpty() &&
+        newRanges.begin()->From().isMinSignedValue()) {
+      assert(newRanges.begin()->To().isMinSignedValue() &&
+             "Ranges should not overlap");
+      assert(!from.isMinSignedValue() && "Ranges should not overlap");
+      const llvm::APSInt &newFrom = newRanges.begin()->From();
+      newRanges =
+        F.add(F.remove(newRanges, *newRanges.begin()), Range(newFrom, newTo));
+    } else if (!to.isMinSignedValue()) {
+      const llvm::APSInt &newFrom = BV.getValue(- to);
+      newRanges = F.add(newRanges, Range(newFrom, newTo));
+    }
+    if (from.isMinSignedValue()) {
+      newRanges = F.add(newRanges, Range(BV.getMinValue(from),
+                                         BV.getMinValue(from)));
+    }
+  }
+
+  return newRanges;
+}
+
 void RangeSet::print(raw_ostream &os) const {
   bool isFirst = true;
   os << "{ ";
@@ -252,6 +284,8 @@ private:
   RangeSet::Factory F;
 
   RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
+  const RangeSet* getRangeForMinusSymbol(ProgramStateRef State,
+                                         SymbolRef Sym);
 
   RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
@@ -268,6 +302,7 @@ private:
   RangeSet getSymGERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
                          const llvm::APSInt &Adjustment);
+
 };
 
 } // end anonymous namespace
@@ -423,9 +458,15 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
   if (ConstraintRangeTy::data_type *V = State->get<ConstraintRange>(Sym))
     return *V;
 
+  BasicValueFactory &BV = getBasicVals();
+
+  // If Sym is a difference of symbols A - B, then maybe we have range set
+  // stored for B - A.
+  if (const RangeSet *R = getRangeForMinusSymbol(State, Sym))
+    return R->Negate(BV, F);
+
   // Lazily generate a new RangeSet representing all possible values for the
   // given symbol type.
-  BasicValueFactory &BV = getBasicVals();
   QualType T = Sym->getType();
 
   RangeSet Result(F, BV.getMinValue(T), BV.getMaxValue(T));
@@ -439,6 +480,32 @@ RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
     return applyBitwiseConstraints(BV, F, Result, SIE);
 
   return Result;
+}
+
+// FIXME: Once SValBuilder supports unary minus, we should use SValBuilder to
+//        obtain the negated symbolic expression instead of constructing the
+//        symbol manually. This will allow us to support finding ranges of not
+//        only negated SymSymExpr-type expressions, but also of other, simpler
+//        expressions which we currently do not know how to negate.
+const RangeSet*
+RangeConstraintManager::getRangeForMinusSymbol(ProgramStateRef State,
+                                               SymbolRef Sym) {
+  if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(Sym)) {
+    if (SSE->getOpcode() == BO_Sub) {
+      QualType T = Sym->getType();
+      SymbolManager &SymMgr = State->getSymbolManager();
+      SymbolRef negSym = SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub,
+                                              SSE->getLHS(), T);
+      if (const RangeSet *negV = State->get<ConstraintRange>(negSym)) {
+        // Unsigned range set cannot be negated, unless it is [0, 0].
+        if ((negV->getConcreteValue() &&
+             (*negV->getConcreteValue() == 0)) ||
+            T->isSignedIntegerOrEnumerationType())
+          return negV;
+      }
+    }
+  }
+  return nullptr;
 }
 
 //===------------------------------------------------------------------------===

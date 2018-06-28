@@ -1,4 +1,4 @@
-//===- unittest/Analysis/AnalyzerOptionsTest.cpp - SA Options test --------===//
+//===- unittest/StaticAnalyzer/AnalyzerOptionsTest.cpp - SA Options test --===//
 //
 //                     The LLVM Compiler Infrastructure
 //

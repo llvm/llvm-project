@@ -23,7 +23,8 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_ARCMT
   CLANG_ENABLE_STATIC_ANALYZER
   ENABLE_BACKTRACES
-  HAVE_LIBZ)
+  HAVE_LIBZ
+  LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in

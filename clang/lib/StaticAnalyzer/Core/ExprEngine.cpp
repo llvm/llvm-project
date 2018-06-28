@@ -139,7 +139,8 @@ public:
     // encountered. This list may be expanded when new actions are implemented.
     assert(getCXXCtorInitializer() || isa<DeclStmt>(getStmt()) ||
            isa<CXXNewExpr>(getStmt()) || isa<CXXBindTemporaryExpr>(getStmt()) ||
-           isa<MaterializeTemporaryExpr>(getStmt()));
+           isa<MaterializeTemporaryExpr>(getStmt()) ||
+           isa<CXXConstructExpr>(getStmt()));
   }
 
   const Stmt *getStmt() const {
@@ -183,6 +184,14 @@ typedef llvm::ImmutableMap<ConstructedObjectKey, SVal>
 REGISTER_TRAIT_WITH_PROGRAMSTATE(ObjectsUnderConstruction,
                                  ObjectsUnderConstructionMap)
 
+// Additionally, track a set of destructors that correspond to elided
+// constructors when copy elision occurs.
+typedef std::pair<const CXXBindTemporaryExpr *, const LocationContext *>
+    ElidedDestructorItem;
+typedef llvm::ImmutableSet<ElidedDestructorItem>
+    ElidedDestructorSet;
+REGISTER_TRAIT_WITH_PROGRAMSTATE(ElidedDestructors,
+                                 ElidedDestructorSet)
 
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
@@ -358,14 +367,12 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
   // a new temporary region out of thin air and copy the contents of the object
   // (which are currently present in the Environment, because Init is an rvalue)
   // into that region. This is not correct, but it is better than nothing.
-  bool FoundOriginalMaterializationRegion = false;
   const TypedValueRegion *TR = nullptr;
   if (const auto *MT = dyn_cast<MaterializeTemporaryExpr>(Result)) {
     if (Optional<SVal> V = getObjectUnderConstruction(State, MT, LC)) {
-      FoundOriginalMaterializationRegion = true;
-      TR = cast<CXXTempObjectRegion>(V->getAsRegion());
-      assert(TR);
       State = finishObjectConstruction(State, MT, LC);
+      State = State->BindExpr(Result, LC, *V);
+      return State;
     } else {
       StorageDuration SD = MT->getStorageDuration();
       // If this object is bound to a reference with static storage duration, we
@@ -402,35 +409,33 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
     }
   }
 
-  if (!FoundOriginalMaterializationRegion) {
-    // What remains is to copy the value of the object to the new region.
-    // FIXME: In other words, what we should always do is copy value of the
-    // Init expression (which corresponds to the bigger object) to the whole
-    // temporary region TR. However, this value is often no longer present
-    // in the Environment. If it has disappeared, we instead invalidate TR.
-    // Still, what we can do is assign the value of expression Ex (which
-    // corresponds to the sub-object) to the TR's sub-region Reg. At least,
-    // values inside Reg would be correct.
-    SVal InitVal = State->getSVal(Init, LC);
-    if (InitVal.isUnknown()) {
-      InitVal = getSValBuilder().conjureSymbolVal(Result, LC, Init->getType(),
-                                                  currBldrCtx->blockCount());
-      State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
+  // What remains is to copy the value of the object to the new region.
+  // FIXME: In other words, what we should always do is copy value of the
+  // Init expression (which corresponds to the bigger object) to the whole
+  // temporary region TR. However, this value is often no longer present
+  // in the Environment. If it has disappeared, we instead invalidate TR.
+  // Still, what we can do is assign the value of expression Ex (which
+  // corresponds to the sub-object) to the TR's sub-region Reg. At least,
+  // values inside Reg would be correct.
+  SVal InitVal = State->getSVal(Init, LC);
+  if (InitVal.isUnknown()) {
+    InitVal = getSValBuilder().conjureSymbolVal(Result, LC, Init->getType(),
+                                                currBldrCtx->blockCount());
+    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
 
-      // Then we'd need to take the value that certainly exists and bind it
-      // over.
-      if (InitValWithAdjustments.isUnknown()) {
-        // Try to recover some path sensitivity in case we couldn't
-        // compute the value.
-        InitValWithAdjustments = getSValBuilder().conjureSymbolVal(
-            Result, LC, InitWithAdjustments->getType(),
-            currBldrCtx->blockCount());
-      }
-      State =
-          State->bindLoc(Reg.castAs<Loc>(), InitValWithAdjustments, LC, false);
-    } else {
-      State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
+    // Then we'd need to take the value that certainly exists and bind it
+    // over.
+    if (InitValWithAdjustments.isUnknown()) {
+      // Try to recover some path sensitivity in case we couldn't
+      // compute the value.
+      InitValWithAdjustments = getSValBuilder().conjureSymbolVal(
+          Result, LC, InitWithAdjustments->getType(),
+          currBldrCtx->blockCount());
     }
+    State =
+        State->bindLoc(Reg.castAs<Loc>(), InitValWithAdjustments, LC, false);
+  } else {
+    State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
   }
 
   // The result expression would now point to the correct sub-region of the
@@ -438,10 +443,8 @@ ExprEngine::createTemporaryRegionIfNeeded(ProgramStateRef State,
   // correctly in case (Result == Init).
   State = State->BindExpr(Result, LC, Reg);
 
-  if (!FoundOriginalMaterializationRegion) {
-    // Notify checkers once for two bindLoc()s.
-    State = processRegionChange(State, TR, LC);
-  }
+  // Notify checkers once for two bindLoc()s.
+  State = processRegionChange(State, TR, LC);
 
   return State;
 }
@@ -475,6 +478,30 @@ ProgramStateRef ExprEngine::finishObjectConstruction(
   return State->remove<ObjectsUnderConstruction>(Key);
 }
 
+ProgramStateRef ExprEngine::elideDestructor(ProgramStateRef State,
+                                            const CXXBindTemporaryExpr *BTE,
+                                            const LocationContext *LC) {
+  ElidedDestructorItem I(BTE, LC);
+  assert(!State->contains<ElidedDestructors>(I));
+  return State->add<ElidedDestructors>(I);
+}
+
+ProgramStateRef
+ExprEngine::cleanupElidedDestructor(ProgramStateRef State,
+                                    const CXXBindTemporaryExpr *BTE,
+                                    const LocationContext *LC) {
+  ElidedDestructorItem I(BTE, LC);
+  assert(State->contains<ElidedDestructors>(I));
+  return State->remove<ElidedDestructors>(I);
+}
+
+bool ExprEngine::isDestructorElided(ProgramStateRef State,
+                                    const CXXBindTemporaryExpr *BTE,
+                                    const LocationContext *LC) {
+  ElidedDestructorItem I(BTE, LC);
+  return State->contains<ElidedDestructors>(I);
+}
+
 bool ExprEngine::areAllObjectsFullyConstructed(ProgramStateRef State,
                                                const LocationContext *FromLC,
                                                const LocationContext *ToLC) {
@@ -483,6 +510,10 @@ bool ExprEngine::areAllObjectsFullyConstructed(ProgramStateRef State,
     assert(LC && "ToLC must be a parent of FromLC!");
     for (auto I : State->get<ObjectsUnderConstruction>())
       if (I.first.getLocationContext() == LC)
+        return false;
+
+    for (auto I: State->get<ElidedDestructors>())
+      if (I.second == LC)
         return false;
 
     LC = LC->getParent();
@@ -528,6 +559,14 @@ static void printObjectsUnderConstructionForContext(raw_ostream &Out,
       continue;
     Key.print(Out, nullptr, PP);
     Out << " : " << Value << NL;
+  }
+
+  for (auto I : State->get<ElidedDestructors>()) {
+    if (I.second != LC)
+      continue;
+    Out << '(' << I.second << ',' << (const void *)I.first << ") ";
+    I.first->printPretty(Out, nullptr, PP);
+    Out << " : (constructor elided)" << NL;
   }
 }
 
@@ -1003,10 +1042,11 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
 void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
                                       ExplodedNode *Pred,
                                       ExplodedNodeSet &Dst) {
-  ExplodedNodeSet CleanDtorState;
-  StmtNodeBuilder StmtBldr(Pred, CleanDtorState, *currBldrCtx);
+  const CXXBindTemporaryExpr *BTE = D.getBindTemporaryExpr();
   ProgramStateRef State = Pred->getState();
+  const LocationContext *LC = Pred->getLocationContext();
   const MemRegion *MR = nullptr;
+
   if (Optional<SVal> V =
           getObjectUnderConstruction(State, D.getBindTemporaryExpr(),
                                      Pred->getLocationContext())) {
@@ -1017,6 +1057,21 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
                                      Pred->getLocationContext());
     MR = V->getAsRegion();
   }
+
+  // If copy elision has occured, and the constructor corresponding to the
+  // destructor was elided, we need to skip the destructor as well.
+  if (isDestructorElided(State, BTE, LC)) {
+    State = cleanupElidedDestructor(State, BTE, LC);
+    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+    PostImplicitCall PP(D.getDestructorDecl(getContext()),
+                        D.getBindTemporaryExpr()->getLocStart(),
+                        Pred->getLocationContext());
+    Bldr.generateNode(PP, State, Pred);
+    return;
+  }
+
+  ExplodedNodeSet CleanDtorState;
+  StmtNodeBuilder StmtBldr(Pred, CleanDtorState, *currBldrCtx);
   StmtBldr.generateNode(D.getBindTemporaryExpr(), Pred, State);
 
   QualType T = D.getBindTemporaryExpr()->getSubExpr()->getType();
@@ -2201,7 +2256,20 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
           // it must be a separate problem.
           assert(isa<CXXBindTemporaryExpr>(I.first.getStmt()));
           State = State->remove<ObjectsUnderConstruction>(I.first);
+          // Also cleanup the elided destructor info.
+          ElidedDestructorItem Item(
+              cast<CXXBindTemporaryExpr>(I.first.getStmt()),
+              I.first.getLocationContext());
+          State = State->remove<ElidedDestructors>(Item);
         }
+
+      // Also suppress the assertion for elided destructors when temporary
+      // destructors are not provided at all by the CFG, because there's no
+      // good place to clean them up.
+      if (!AMgr.getAnalyzerOptions().includeTemporaryDtorsInCFG())
+        for (auto I : State->get<ElidedDestructors>())
+          if (I.second == LC)
+            State = State->remove<ElidedDestructors>(I);
 
       LC = LC->getParent();
     }
