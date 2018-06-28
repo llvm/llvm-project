@@ -54,9 +54,9 @@ void lld::wasm::markLive() {
     Enqueue(Symtab->find(Config->Entry));
   Enqueue(WasmSym::CallCtors);
 
-  // We export all defined, non-hidden symbols so they are all gc roots too
+  // We need to preserve any exported symbol
   for (Symbol *Sym : Symtab->getSymbols())
-    if (Sym->isDefined() && !Sym->isHidden())
+    if (Sym->isExported())
       Enqueue(Sym);
 
   // The ctor functions are all used in the synthetic __wasm_call_ctors
