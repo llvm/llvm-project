@@ -166,7 +166,9 @@ public:
 
   uint32_t DoLoadImage(lldb_private::Process *process,
                        const lldb_private::FileSpec &remote_file,
-                       lldb_private::Status &error) override;
+                       const std::vector<std::string> *paths,
+                       lldb_private::Status &error,
+                       lldb_private::FileSpec *loaded_image) override;
 
   lldb_private::Status UnloadImage(lldb_private::Process *process,
                                    uint32_t image_token) override;

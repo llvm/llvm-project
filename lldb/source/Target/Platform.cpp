@@ -1765,7 +1765,7 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
       if (error.Fail())
         return LLDB_INVALID_IMAGE_TOKEN;
     }
-    return DoLoadImage(process, remote_file, error);
+    return DoLoadImage(process, remote_file, nullptr, error);
   }
 
   if (local_file) {
@@ -1778,12 +1778,12 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
       if (error.Fail())
         return LLDB_INVALID_IMAGE_TOKEN;
     }
-    return DoLoadImage(process, target_file, error);
-  }
+    return DoLoadImage(process, target_file, nullptr, error);
+  } 
 
   if (remote_file) {
     // Only remote file was specified so we don't have to do any copying
-    return DoLoadImage(process, remote_file, error);
+    return DoLoadImage(process, remote_file, nullptr, error);
   }
 
   error.SetErrorString("Neither local nor remote file was specified");
@@ -1792,9 +1792,28 @@ uint32_t Platform::LoadImage(lldb_private::Process *process,
 
 uint32_t Platform::DoLoadImage(lldb_private::Process *process,
                                const lldb_private::FileSpec &remote_file,
-                               lldb_private::Status &error) {
+                               const std::vector<std::string> *paths,
+                               lldb_private::Status &error,
+                               lldb_private::FileSpec *loaded_image) {
   error.SetErrorString("LoadImage is not supported on the current platform");
   return LLDB_INVALID_IMAGE_TOKEN;
+}
+
+uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
+                               const lldb_private::FileSpec &remote_filename,
+                               const std::vector<std::string> &paths,
+                               lldb_private::Status &error,
+                               lldb_private::FileSpec *loaded_path)
+{
+  FileSpec file_to_use;
+  if (remote_filename.IsAbsolute())
+    file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(), 
+                               false, 
+                               remote_filename.GetPathStyle());
+  else
+    file_to_use = remote_filename;
+    
+  return DoLoadImage(process, file_to_use, &paths, error, loaded_path);
 }
 
 Status Platform::UnloadImage(lldb_private::Process *process,

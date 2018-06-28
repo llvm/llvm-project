@@ -846,9 +846,45 @@ public:
                      const lldb_private::FileSpec &remote_file,
                      lldb_private::Status &error);
 
+  //------------------------------------------------------------------
+  /// Load a shared library specified by base name into this process,
+  /// looking by hand along a set of paths.
+  ///
+  /// @param[in] process
+  ///     The process to load the image.
+  ///
+  /// @param[in] library_name
+  ///     The name of the library to look for.
+  ///
+  /// @param[in] path_list
+  ///     The list of paths to use to search for the library.  First
+  ///     match wins.
+  ///
+  /// @param[out] error
+  ///     An error object that gets filled in with any errors that
+  ///     might occur when trying to load the shared library.
+  ///
+  /// @param[out] loaded_path
+  ///      If non-null, the path to the dylib that was successfully loaded
+  ///      is stored in this path.
+  /// 
+  /// @return
+  ///     A token that represents the shared library which can be
+  ///     passed to UnloadImage. A value of
+  ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+  ///     library can't be opened.
+  //------------------------------------------------------------------
+  uint32_t LoadImageUsingPaths(lldb_private::Process *process,
+                               const lldb_private::FileSpec &library_name,
+                               const std::vector<std::string> &paths,
+                               lldb_private::Status &error,
+                               lldb_private::FileSpec *loaded_path);
+
   virtual uint32_t DoLoadImage(lldb_private::Process *process,
                                const lldb_private::FileSpec &remote_file,
-                               lldb_private::Status &error);
+                               const std::vector<std::string> *paths,
+                               lldb_private::Status &error,
+                               lldb_private::FileSpec *loaded_path = nullptr);
 
   virtual Status UnloadImage(lldb_private::Process *process,
                              uint32_t image_token);
