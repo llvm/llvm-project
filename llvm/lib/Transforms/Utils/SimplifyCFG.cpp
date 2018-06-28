@@ -5679,7 +5679,7 @@ bool SimplifyCFGOpt::SimplifyIndirectBr(IndirectBrInst *IBI) {
 /// any transform which might inhibit optimization (such as our ability to
 /// specialize a particular handler via tail commoning).  We do this by not
 /// merging any blocks which require us to introduce a phi.  Since the same
-/// values are flowing through both blocks, we don't loose any ability to
+/// values are flowing through both blocks, we don't lose any ability to
 /// specialize.  If anything, we make such specialization more likely.
 ///
 /// TODO - This transformation could remove entries from a phi in the target

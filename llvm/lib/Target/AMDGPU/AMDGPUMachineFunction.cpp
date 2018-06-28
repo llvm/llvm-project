@@ -17,10 +17,9 @@ using namespace llvm;
 AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   MachineFunctionInfo(),
   LocalMemoryObjects(),
-  KernArgSize(0),
+  ExplicitKernArgSize(0),
   MaxKernArgAlign(0),
   LDSSize(0),
-  ABIArgOffset(0),
   IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
   NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath),
   MemoryBound(false),

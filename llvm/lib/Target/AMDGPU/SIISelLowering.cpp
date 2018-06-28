@@ -1078,8 +1078,8 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
 
 SDValue SITargetLowering::getImplicitArgPtr(SelectionDAG &DAG,
                                             const SDLoc &SL) const {
-  auto MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
-  uint64_t Offset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
+  uint64_t Offset = getImplicitParameterOffset(DAG.getMachineFunction(),
+                                               FIRST_IMPLICIT);
   return lowerKernArgParameterPtr(DAG, SL, DAG.getEntryNode(), Offset);
 }
 
@@ -1749,7 +1749,6 @@ SDValue SITargetLowering::LowerFormalArguments(
       EVT MemVT = VA.getLocVT();
 
       const uint64_t Offset = ExplicitOffset + VA.getLocMemOffset();
-      Info->setABIArgOffset(Offset + MemVT.getStoreSize());
       unsigned Align = MinAlign(KernelArgBaseAlign, Offset);
 
       // The first 36 bytes of the input buffer contains information about
@@ -2308,6 +2307,13 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported required tail call to function ");
+  }
+
+  if (AMDGPU::isShader(MF.getFunction().getCallingConv())) {
+    // Note the issue is with the CC of the calling function, not of the call
+    // itself.
+    return lowerUnhandledCall(CLI, InVals,
+                          "unsupported call from graphics shader of function ");
   }
 
   // The first 4 bytes are reserved for the callee's emergency stack slot.

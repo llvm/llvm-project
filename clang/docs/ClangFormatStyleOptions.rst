@@ -1588,7 +1588,7 @@ the configuration (without a prefix: ``Auto``).
   onto individual lines whenever they go over ``ColumnLimit``.
 
 
-  .. code-block:: c++
+  .. code-block:: objc
 
      Always (or Auto, if BinPackParameters=true):
      @interface ccccccccccccc () <
