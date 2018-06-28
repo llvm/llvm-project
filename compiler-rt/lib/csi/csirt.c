@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "csi.h"
+#include <csi/csi.h>
 
 // Compile-time assert the property structs are 64 bits.
 static_assert(sizeof(func_prop_t) == 8, "Size of func_prop_t is not 64 bits.");

@@ -4,7 +4,7 @@ set(CILKSCALE_SOURCES
   cilkscale.c
   csanrt.c)
 
-include_directories(..)
+include_directories(${COMPILER_RT_SOURCE_DIR}/include)
 
 set(CILKSCALE_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 

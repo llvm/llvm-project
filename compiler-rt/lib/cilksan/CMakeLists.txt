@@ -11,7 +11,7 @@ set(CILKSAN_SOURCES
   drivercsan.cpp
   csanrt.cpp)
 
-include_directories(..)
+include_directories(${COMPILER_RT_SOURCE_DIR}/include)
 
 set(CILKSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
