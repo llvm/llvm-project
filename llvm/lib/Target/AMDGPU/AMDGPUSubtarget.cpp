@@ -451,11 +451,31 @@ bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
-unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
-                                            unsigned ExplicitArgBytes) const {
-  uint64_t TotalSize = ExplicitArgBytes;
-  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
+uint64_t SISubtarget::getExplicitKernArgSize(const Function &F) const {
+  assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL);
 
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  uint64_t ExplicitArgBytes = 0;
+  for (const Argument &Arg : F.args()) {
+    Type *ArgTy = Arg.getType();
+
+    unsigned Align = DL.getABITypeAlignment(ArgTy);
+    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
+    ExplicitArgBytes = alignTo(ExplicitArgBytes, Align) + AllocSize;
+  }
+
+  return ExplicitArgBytes;
+}
+
+unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
+                                            int64_t ExplicitArgBytes) const {
+  if (ExplicitArgBytes == -1)
+    ExplicitArgBytes = getExplicitKernArgSize(F);
+
+  unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
+
+  uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
+  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
   if (ImplicitBytes != 0) {
     unsigned Alignment = getAlignmentForImplicitArgPtr();
     TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;

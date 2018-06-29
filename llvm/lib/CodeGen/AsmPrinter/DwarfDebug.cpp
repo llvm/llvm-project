@@ -317,6 +317,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   else
     UseInlineStrings = DwarfInlinedStrings == Enable;
 
+  UseLocSection = !TT.isNVPTX();
+
   HasAppleExtensionAttributes = tuneForLLDB();
 
   // Handle split DWARF.
@@ -1196,6 +1198,9 @@ void DwarfDebug::collectVariableInfo(DwarfCompileUnit &TheCU,
       RegVar->initializeDbgValue(MInsn);
       continue;
     }
+    // Do not emit location lists if .debug_loc secton is disabled.
+    if (!useLocSection())
+      continue;
 
     // Handle multiple DBG_VALUE instructions describing one variable.
     DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar, *MInsn);

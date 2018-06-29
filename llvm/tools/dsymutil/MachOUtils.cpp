@@ -327,19 +327,25 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   MCAsm.layout(Layout);
 
   BinaryHolder InputBinaryHolder(false);
-  auto ErrOrObjs = InputBinaryHolder.GetObjectFiles(DM.getBinaryPath());
-  if (auto Error = ErrOrObjs.getError())
-    return error(Twine("opening ") + DM.getBinaryPath() + ": " +
-                     Error.message(),
-                 "output file streaming");
 
-  auto ErrOrInputBinary =
-      InputBinaryHolder.GetAs<object::MachOObjectFile>(DM.getTriple());
-  if (auto Error = ErrOrInputBinary.getError())
+  auto ObjectEntry = InputBinaryHolder.getObjectEntry(DM.getBinaryPath());
+  if (!ObjectEntry) {
+    auto Err = ObjectEntry.takeError();
     return error(Twine("opening ") + DM.getBinaryPath() + ": " +
-                     Error.message(),
+                     toString(std::move(Err)),
                  "output file streaming");
-  auto &InputBinary = *ErrOrInputBinary;
+  }
+
+  auto Object =
+      ObjectEntry->getObjectAs<object::MachOObjectFile>(DM.getTriple());
+  if (!Object) {
+    auto Err = Object.takeError();
+    return error(Twine("opening ") + DM.getBinaryPath() + ": " +
+                     toString(std::move(Err)),
+                 "output file streaming");
+  }
+
+  auto &InputBinary = *Object;
 
   bool Is64Bit = Writer.is64Bit();
   MachO::symtab_command SymtabCmd = InputBinary.getSymtabLoadCommand();

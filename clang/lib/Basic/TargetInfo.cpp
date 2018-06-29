@@ -53,7 +53,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   // We give the _Accum 1 fewer fractional bits than their corresponding _Fract
   // types by default to have the same number of fractional bits between _Accum
   // and _Fract types.
-  SameFBits = false;
+  PaddingOnUnsignedFixedPoint = false;
   ShortAccumScale = 7;
   AccumScale = 15;
   LongAccumScale = 31;
@@ -377,7 +377,7 @@ void TargetInfo::adjust(LangOptions &Opts) {
 
   // Each unsigned fixed point type has the same number of fractional bits as
   // its corresponding signed type.
-  SameFBits |= Opts.SameFBits;
+  PaddingOnUnsignedFixedPoint |= Opts.PaddingOnUnsignedFixedPoint;
   CheckFixedPointBits();
 }
 

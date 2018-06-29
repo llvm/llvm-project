@@ -8,7 +8,7 @@ static_assert(sizeof(+X().e) == sizeof(int), "");
 static_assert(sizeof(X().e + 1) == sizeof(int), "");
 static_assert(sizeof(true ? X().e : 0) == sizeof(int), "");
 
-enum E { a = __LONG_LONG_MAX__ };
+enum E : long long { a = __LONG_LONG_MAX__ };
 static_assert(sizeof(E{}) == sizeof(long long), "");
 
 // If the bit-field has an enumerated type, it is treated as any other value of

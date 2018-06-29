@@ -70,14 +70,14 @@
 ; GCN: v_cmp_ne_u32_e32 vcc, 1, [[REG]]
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, -1, vcc
 
-; GCN: ; %Flow5
+; GCN: ; %Flow4
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN: v_cmp_ne_u32_e32 vcc, 0
 
 ; GCN: ; %exit1
 ; GCN: ds_write_b32
 
-; GCN: %Flow6
+; GCN: %Flow5
 ; GCN-NEXT: s_or_b64 exec, exec
 ; GCN: v_cmp_ne_u32_e32 vcc, 0
 ; GCN-NEXT: s_and_saveexec_b64

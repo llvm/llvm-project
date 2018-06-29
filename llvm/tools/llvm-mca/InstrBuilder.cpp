@@ -265,8 +265,6 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
                           const MCSchedClassDesc &SCDesc,
                           const MCSubtargetInfo &STI) {
   unsigned SchedClassID = MCDesc.getSchedClass();
-  bool HasReadAdvanceEntries = SCDesc.NumReadAdvanceEntries > 0;
-
   unsigned i = 0;
   unsigned NumExplicitDefs = MCDesc.getNumDefs();
   // Skip explicit definitions.
@@ -295,7 +293,6 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
     ReadDescriptor &Read = ID.Reads[CurrentUse];
     Read.OpIndex = i + CurrentUse;
     Read.UseIndex = CurrentUse;
-    Read.HasReadAdvanceEntries = HasReadAdvanceEntries;
     Read.SchedClassID = SchedClassID;
     LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex);
   }
@@ -305,7 +302,6 @@ static void populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.OpIndex = ~CurrentUse;
     Read.UseIndex = NumExplicitUses + CurrentUse;
     Read.RegisterID = MCDesc.getImplicitUses()[CurrentUse];
-    Read.HasReadAdvanceEntries = HasReadAdvanceEntries;
     Read.SchedClassID = SchedClassID;
     LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex
                       << ", RegisterID=" << Read.RegisterID << '\n');

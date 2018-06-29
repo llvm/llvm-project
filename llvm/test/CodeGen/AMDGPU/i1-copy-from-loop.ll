@@ -7,11 +7,13 @@
 ; only contain the lanes that were active during the last loop iteration.
 ;
 ; SI: ; %for.body
-; SI: v_cmp_gt_u32_e64 [[SREG:s\[[0-9]+:[0-9]+\]]], 4,
-; SI: v_cndmask_b32_e64 [[VREG:v[0-9]+]], 0, -1, [[SREG]]
-; SI-NOT: [[VREG]]
-; SI: ; %for.end
-; SI: v_cmp_ne_u32_e32 vcc, 0, [[VREG]]
+; SI:      v_cmp_gt_u32_e64 [[SREG:s\[[0-9]+:[0-9]+\]]], 4,
+; SI:      v_cndmask_b32_e64 [[VREG:v[0-9]+]], 0, -1, [[SREG]]
+; SI-NEXT: s_cbranch_vccnz [[ENDIF:BB[0-9_]+]]
+; SI:      [[ENDIF]]:
+; SI-NOT:  [[VREG]]
+; SI:      ; %for.end
+; SI:      v_cmp_ne_u32_e32 vcc, 0, [[VREG]]
 define amdgpu_ps void @i1_copy_from_loop(<4 x i32> inreg %rsrc, i32 %tid) {
 entry:
   br label %for.body

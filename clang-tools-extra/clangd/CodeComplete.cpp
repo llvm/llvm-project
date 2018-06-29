@@ -43,7 +43,7 @@
 #include <queue>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
-#define DEBUG_TYPE "codecomplete"
+#define DEBUG_TYPE "CodeComplete"
 
 namespace clang {
 namespace clangd {
@@ -237,136 +237,152 @@ struct CompletionCandidate {
     return IndexResult->Detail->IncludeHeader;
   }
 
-  // Builds an LSP completion item.
-  CompletionItem build(StringRef FileName, const CompletionItemScores &Scores,
-                       const CodeCompleteOptions &Opts,
-                       CodeCompletionString *SemaCCS,
-                       const IncludeInserter &Includes,
-                       llvm::StringRef SemaDocComment) const {
-    assert(bool(SemaResult) == bool(SemaCCS));
-    assert(SemaResult || IndexResult);
-
-    CompletionItem I;
-    bool InsertingInclude = false; // Whether a new #include will be added.
-    if (SemaResult) {
-      llvm::StringRef Name(SemaCCS->getTypedText());
-      std::string Signature, SnippetSuffix, Qualifiers;
-      getSignature(*SemaCCS, &Signature, &SnippetSuffix, &Qualifiers);
-      I.label = (Qualifiers + Name + Signature).str();
-      I.filterText = Name;
-      I.insertText = (Qualifiers + Name).str();
-      if (Opts.EnableSnippets)
-        I.insertText += SnippetSuffix;
-      I.documentation = formatDocumentation(*SemaCCS, SemaDocComment);
-      I.detail = getReturnType(*SemaCCS);
-      if (SemaResult->Kind == CodeCompletionResult::RK_Declaration)
-        if (const auto *D = SemaResult->getDeclaration())
-          if (const auto *ND = llvm::dyn_cast<NamedDecl>(D))
-            I.SymbolScope = splitQualifiedName(printQualifiedName(*ND)).first;
-      I.kind = toCompletionItemKind(SemaResult->Kind, SemaResult->Declaration);
-    }
-    if (IndexResult) {
-      if (I.SymbolScope.empty())
-        I.SymbolScope = IndexResult->Scope;
-      if (I.kind == CompletionItemKind::Missing)
-        I.kind = toCompletionItemKind(IndexResult->SymInfo.Kind);
-      // FIXME: reintroduce a way to show the index source for debugging.
-      if (I.label.empty())
-        I.label = (IndexResult->Name + IndexResult->Signature).str();
-      if (I.filterText.empty())
-        I.filterText = IndexResult->Name;
-
-      // FIXME(ioeric): support inserting/replacing scope qualifiers.
-      if (I.insertText.empty()) {
-        I.insertText = IndexResult->Name;
-        if (Opts.EnableSnippets)
-          I.insertText += IndexResult->CompletionSnippetSuffix;
-      }
-
-      if (auto *D = IndexResult->Detail) {
-        if (I.documentation.empty())
-          I.documentation = D->Documentation;
-        if (I.detail.empty())
-          I.detail = D->ReturnType;
-        if (auto Inserted = headerToInsertIfNotPresent()) {
-          auto IncludePath = [&]() -> Expected<std::string> {
-            auto ResolvedDeclaring = toHeaderFile(
-                IndexResult->CanonicalDeclaration.FileURI, FileName);
-            if (!ResolvedDeclaring)
-              return ResolvedDeclaring.takeError();
-            auto ResolvedInserted = toHeaderFile(*Inserted, FileName);
-            if (!ResolvedInserted)
-              return ResolvedInserted.takeError();
-            if (!Includes.shouldInsertInclude(*ResolvedDeclaring,
-                                              *ResolvedInserted))
-              return "";
-            return Includes.calculateIncludePath(*ResolvedDeclaring,
-                                                 *ResolvedInserted);
-          }();
-          if (!IncludePath) {
-            std::string ErrMsg =
-                ("Failed to generate include insertion edits for adding header "
-                 "(FileURI=\"" +
-                 IndexResult->CanonicalDeclaration.FileURI +
-                 "\", IncludeHeader=\"" + D->IncludeHeader + "\") into " +
-                 FileName)
-                    .str();
-            log(ErrMsg + ":" + llvm::toString(IncludePath.takeError()));
-          } else if (!IncludePath->empty()) {
-            // FIXME: consider what to show when there is no #include insertion,
-            // and for sema results, for consistency.
-            if (auto Edit = Includes.insert(*IncludePath)) {
-              I.detail += ("\n" + StringRef(*IncludePath).trim('"')).str();
-              I.additionalTextEdits = {std::move(*Edit)};
-              InsertingInclude = true;
-            }
-          }
-        }
-      }
-    }
-    I.label = (InsertingInclude ? Opts.IncludeIndicator.Insert
-                                : Opts.IncludeIndicator.NoInsert) +
-              I.label;
-    I.scoreInfo = Scores;
-    I.sortText = sortText(Scores.finalScore, Name);
-    I.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
-                                             : InsertTextFormat::PlainText;
-    return I;
-  }
-
   using Bundle = llvm::SmallVector<CompletionCandidate, 4>;
-
-  static CompletionItem build(const Bundle &Bundle, CompletionItem First,
-                              const clangd::CodeCompleteOptions &Opts) {
-    if (Bundle.size() == 1)
-      return First;
-    // Patch up the completion item to make it look like a bundle.
-    // This is a bit of a hack but most things are the same.
-
-    // Need to erase the signature. All bundles are function calls.
-    llvm::StringRef Name = Bundle.front().Name;
-    First.insertText =
-        Opts.EnableSnippets ? (Name + "(${0})").str() : Name.str();
-    // Keep the visual indicator of the original label.
-    bool InsertingInclude =
-        StringRef(First.label).startswith(Opts.IncludeIndicator.Insert);
-    First.label = (Twine(InsertingInclude ? Opts.IncludeIndicator.Insert
-                                          : Opts.IncludeIndicator.NoInsert) +
-                   Name + "(…)")
-                      .str();
-    First.detail = llvm::formatv("[{0} overloads]", Bundle.size());
-    return First;
-  }
 };
 using ScoredBundle =
-    std::pair<CompletionCandidate::Bundle, CompletionItemScores>;
+    std::pair<CompletionCandidate::Bundle, CodeCompletion::Scores>;
 struct ScoredBundleGreater {
   bool operator()(const ScoredBundle &L, const ScoredBundle &R) {
-    if (L.second.finalScore != R.second.finalScore)
-      return L.second.finalScore > R.second.finalScore;
+    if (L.second.Total != R.second.Total)
+      return L.second.Total > R.second.Total;
     return L.first.front().Name <
            R.first.front().Name; // Earlier name is better.
   }
+};
+
+// Assembles a code completion out of a bundle of >=1 completion candidates.
+// Many of the expensive strings are only computed at this point, once we know
+// the candidate bundle is going to be returned.
+//
+// Many fields are the same for all candidates in a bundle (e.g. name), and are
+// computed from the first candidate, in the constructor.
+// Others vary per candidate, so add() must be called for remaining candidates.
+struct CodeCompletionBuilder {
+  CodeCompletionBuilder(ASTContext &ASTCtx, const CompletionCandidate &C,
+                        CodeCompletionString *SemaCCS,
+                        const IncludeInserter &Includes, StringRef FileName,
+                        const CodeCompleteOptions &Opts)
+      : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments) {
+    add(C, SemaCCS);
+    if (C.SemaResult) {
+      Completion.Name = llvm::StringRef(SemaCCS->getTypedText());
+      if (Completion.Scope.empty())
+        if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
+          if (const auto *D = C.SemaResult->getDeclaration())
+            if (const auto *ND = llvm::dyn_cast<NamedDecl>(D))
+              Completion.Scope =
+                  splitQualifiedName(printQualifiedName(*ND)).first;
+      Completion.Kind =
+          toCompletionItemKind(C.SemaResult->Kind, C.SemaResult->Declaration);
+    }
+    if (C.IndexResult) {
+      if (Completion.Scope.empty())
+        Completion.Scope = C.IndexResult->Scope;
+      if (Completion.Kind == CompletionItemKind::Missing)
+        Completion.Kind = toCompletionItemKind(C.IndexResult->SymInfo.Kind);
+      if (Completion.Name.empty())
+        Completion.Name = C.IndexResult->Name;
+    }
+    if (auto Inserted = C.headerToInsertIfNotPresent()) {
+      // Turn absolute path into a literal string that can be #included.
+      auto Include = [&]() -> Expected<std::pair<std::string, bool>> {
+        auto ResolvedDeclaring =
+            toHeaderFile(C.IndexResult->CanonicalDeclaration.FileURI, FileName);
+        if (!ResolvedDeclaring)
+          return ResolvedDeclaring.takeError();
+        auto ResolvedInserted = toHeaderFile(*Inserted, FileName);
+        if (!ResolvedInserted)
+          return ResolvedInserted.takeError();
+        return std::make_pair(Includes.calculateIncludePath(*ResolvedDeclaring,
+                                                            *ResolvedInserted),
+                              Includes.shouldInsertInclude(*ResolvedDeclaring,
+                                                           *ResolvedInserted));
+      }();
+      if (Include) {
+        Completion.Header = Include->first;
+        if (Include->second)
+          Completion.HeaderInsertion = Includes.insert(Include->first);
+      } else
+        log(llvm::formatv(
+            "Failed to generate include insertion edits for adding header "
+            "(FileURI='{0}', IncludeHeader='{1}') into {2}",
+            C.IndexResult->CanonicalDeclaration.FileURI,
+            C.IndexResult->Detail->IncludeHeader, FileName));
+    }
+  }
+
+  void add(const CompletionCandidate &C, CodeCompletionString *SemaCCS) {
+    assert(bool(C.SemaResult) == bool(SemaCCS));
+    Bundled.emplace_back();
+    BundledEntry &S = Bundled.back();
+    if (C.SemaResult) {
+      getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix,
+                   &Completion.RequiredQualifier);
+      S.ReturnType = getReturnType(*SemaCCS);
+    } else if (C.IndexResult) {
+      S.Signature = C.IndexResult->Signature;
+      S.SnippetSuffix = C.IndexResult->CompletionSnippetSuffix;
+      if (auto *D = C.IndexResult->Detail)
+        S.ReturnType = D->ReturnType;
+    }
+    if (ExtractDocumentation && Completion.Documentation.empty()) {
+      if (C.IndexResult && C.IndexResult->Detail)
+        Completion.Documentation = C.IndexResult->Detail->Documentation;
+      else if (C.SemaResult)
+        Completion.Documentation = getDocComment(ASTCtx, *C.SemaResult,
+                                                 /*CommentsFromHeader=*/false);
+    }
+  }
+
+  CodeCompletion build() {
+    Completion.ReturnType = summarizeReturnType();
+    Completion.Signature = summarizeSignature();
+    Completion.SnippetSuffix = summarizeSnippet();
+    Completion.BundleSize = Bundled.size();
+    return std::move(Completion);
+  }
+
+private:
+  struct BundledEntry {
+    std::string SnippetSuffix;
+    std::string Signature;
+    std::string ReturnType;
+  };
+
+  // If all BundledEntrys have the same value for a property, return it.
+  template <std::string BundledEntry::*Member>
+  const std::string *onlyValue() const {
+    auto B = Bundled.begin(), E = Bundled.end();
+    for (auto I = B + 1; I != E; ++I)
+      if (I->*Member != B->*Member)
+        return nullptr;
+    return &(B->*Member);
+  }
+
+  std::string summarizeReturnType() const {
+    if (auto *RT = onlyValue<&BundledEntry::ReturnType>())
+      return *RT;
+    return "";
+  }
+
+  std::string summarizeSnippet() const {
+    if (auto *Snippet = onlyValue<&BundledEntry::SnippetSuffix>())
+      return *Snippet;
+    // All bundles are function calls.
+    return "(${0})";
+  }
+
+  std::string summarizeSignature() const {
+    if (auto *Signature = onlyValue<&BundledEntry::Signature>())
+      return *Signature;
+    // All bundles are function calls.
+    return "(…)";
+  }
+
+  ASTContext &ASTCtx;
+  CodeCompletion Completion;
+  SmallVector<BundledEntry, 1> Bundled;
+  bool ExtractDocumentation;
 };
 
 // Determine the symbol ID for a Sema code completion result, if possible.
@@ -952,13 +968,13 @@ public:
         // directory.
         FileProximityMatch(ArrayRef<StringRef>({FileName})) {}
 
-  CompletionList run(const SemaCompleteInput &SemaCCInput) && {
+  CodeCompleteResult run(const SemaCompleteInput &SemaCCInput) && {
     trace::Span Tracer("CodeCompleteFlow");
 
     // We run Sema code completion first. It builds an AST and calculates:
     //   - completion results based on the AST.
     //   - partial identifier and context. We need these for the index query.
-    CompletionList Output;
+    CodeCompleteResult Output;
     auto RecorderOwner = llvm::make_unique<CompletionRecorder>(Opts, [&]() {
       assert(Recorder && "Recorder is not set");
       assert(Includes && "Includes is not set");
@@ -977,13 +993,13 @@ public:
     SPAN_ATTACH(Tracer, "sema_results", NSema);
     SPAN_ATTACH(Tracer, "index_results", NIndex);
     SPAN_ATTACH(Tracer, "merged_results", NBoth);
-    SPAN_ATTACH(Tracer, "returned_results", Output.items.size());
-    SPAN_ATTACH(Tracer, "incomplete", Output.isIncomplete);
+    SPAN_ATTACH(Tracer, "returned_results", Output.Completions.size());
+    SPAN_ATTACH(Tracer, "incomplete", Output.HasMore);
     log(llvm::formatv("Code complete: {0} results from Sema, {1} from Index, "
                       "{2} matched, {3} returned{4}.",
-                      NSema, NIndex, NBoth, Output.items.size(),
-                      Output.isIncomplete ? " (incomplete)" : ""));
-    assert(!Opts.Limit || Output.items.size() <= Opts.Limit);
+                      NSema, NIndex, NBoth, Output.Completions.size(),
+                      Output.HasMore ? " (incomplete)" : ""));
+    assert(!Opts.Limit || Output.Completions.size() <= Opts.Limit);
     // We don't assert that isIncomplete means we hit a limit.
     // Indexes may choose to impose their own limits even if we don't have one.
     return Output;
@@ -992,7 +1008,7 @@ public:
 private:
   // This is called by run() once Sema code completion is done, but before the
   // Sema data structures are torn down. It does all the real work.
-  CompletionList runWithSema() {
+  CodeCompleteResult runWithSema() {
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
     // Sema provides the needed context to query the index.
@@ -1005,11 +1021,13 @@ private:
                             : SymbolSlab();
     // Merge Sema and Index results, score them, and pick the winners.
     auto Top = mergeResults(Recorder->Results, IndexResults);
-    // Convert the results to the desired LSP structs.
-    CompletionList Output;
-    for (auto &C : Top)
-      Output.items.push_back(toCompletionItem(C.first, C.second));
-    Output.isIncomplete = Incomplete;
+    // Convert the results to final form, assembling the expensive strings.
+    CodeCompleteResult Output;
+    for (auto &C : Top) {
+      Output.Completions.push_back(toCodeCompletion(C.first));
+      Output.Completions.back().Score = C.second;
+    }
+    Output.HasMore = Incomplete;
     return Output;
   }
 
@@ -1126,20 +1144,19 @@ private:
       }
     }
 
-    float QualScore = Quality.evaluate(), RelScore = Relevance.evaluate();
-    CompletionItemScores Scores;
-    Scores.finalScore = evaluateSymbolAndRelevance(QualScore, RelScore);
-    // The purpose of exporting component scores is to allow NameMatch to be
-    // replaced on the client-side. So we export (NameMatch, final/NameMatch)
-    // rather than (RelScore, QualScore).
-    Scores.filterScore = Relevance.NameMatch;
-    Scores.symbolScore =
-        Scores.filterScore ? Scores.finalScore / Scores.filterScore : QualScore;
+    CodeCompletion::Scores Scores;
+    Scores.Quality = Quality.evaluate();
+    Scores.Relevance = Relevance.evaluate();
+    Scores.Total = evaluateSymbolAndRelevance(Scores.Quality, Scores.Relevance);
+    // NameMatch is in fact a multiplier on total score, so rescoring is sound.
+    Scores.ExcludingName = Relevance.NameMatch
+                               ? Scores.Total / Relevance.NameMatch
+                               : Scores.Quality;
 
     LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << "("
                             << IndexResult << " index) "
                             << "(" << SemaResult << " sema)"
-                            << " = " << Scores.finalScore << "\n"
+                            << " = " << Scores.Total << "\n"
                             << Quality << Relevance << "\n");
 
     NSema += bool(SemaResult);
@@ -1149,34 +1166,28 @@ private:
       Incomplete = true;
   }
 
-  CompletionItem toCompletionItem(const CompletionCandidate::Bundle &Bundle,
-                                  const CompletionItemScores &Scores) {
-    CodeCompletionString *SemaCCS = nullptr;
-    std::string FrontDocComment;
-    if (auto *SR = Bundle.front().SemaResult) {
-      SemaCCS = Recorder->codeCompletionString(*SR);
-      if (Opts.IncludeComments) {
-        assert(Recorder->CCSema);
-        FrontDocComment = getDocComment(Recorder->CCSema->getASTContext(), *SR,
-                                        /*CommentsFromHeader=*/false);
-      }
+  CodeCompletion toCodeCompletion(const CompletionCandidate::Bundle &Bundle) {
+    llvm::Optional<CodeCompletionBuilder> Builder;
+    for (const auto &Item : Bundle) {
+      CodeCompletionString *SemaCCS =
+          Item.SemaResult ? Recorder->codeCompletionString(*Item.SemaResult)
+                          : nullptr;
+      if (!Builder)
+        Builder.emplace(Recorder->CCSema->getASTContext(), Item, SemaCCS,
+                        *Includes, FileName, Opts);
+      else
+        Builder->add(Item, SemaCCS);
     }
-    return CompletionCandidate::build(
-        Bundle,
-        Bundle.front().build(FileName, Scores, Opts, SemaCCS, *Includes,
-                             FrontDocComment),
-        Opts);
+    return Builder->build();
   }
 };
 
-CompletionList codeComplete(PathRef FileName,
-                            const tooling::CompileCommand &Command,
-                            PrecompiledPreamble const *Preamble,
-                            const std::vector<Inclusion> &PreambleInclusions,
-                            StringRef Contents, Position Pos,
-                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs,
-                            CodeCompleteOptions Opts) {
+CodeCompleteResult codeComplete(
+    PathRef FileName, const tooling::CompileCommand &Command,
+    PrecompiledPreamble const *Preamble,
+    const std::vector<Inclusion> &PreambleInclusions, StringRef Contents,
+    Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    std::shared_ptr<PCHContainerOperations> PCHs, CodeCompleteOptions Opts) {
   return CodeCompleteFlow(FileName, Opts)
       .run({FileName, Command, Preamble, PreambleInclusions, Contents, Pos, VFS,
             PCHs});
@@ -1211,6 +1222,30 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
                                enumDecl(InTopLevelScope, unless(isScoped()))))),
                 ND, ASTCtx)
               .empty();
+}
+
+CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
+  CompletionItem LSP;
+  LSP.label = (HeaderInsertion ? Opts.IncludeIndicator.Insert
+                               : Opts.IncludeIndicator.NoInsert) +
+              RequiredQualifier + Name + Signature;
+  LSP.kind = Kind;
+  LSP.detail = BundleSize > 1 ? llvm::formatv("[{0} overloads]", BundleSize)
+                              : ReturnType;
+  if (!Header.empty())
+    LSP.detail += "\n" + Header;
+  LSP.documentation = Documentation;
+  LSP.sortText = sortText(Score.Total, Name);
+  LSP.filterText = Name;
+  LSP.insertText = RequiredQualifier + Name;
+  if (Opts.EnableSnippets)
+    LSP.insertText += SnippetSuffix;
+  LSP.insertTextFormat = Opts.EnableSnippets ? InsertTextFormat::Snippet
+                                             : InsertTextFormat::PlainText;
+  if (HeaderInsertion)
+    LSP.additionalTextEdits = {*HeaderInsertion};
+  LSP.SymbolScope = Scope;
+  return LSP;
 }
 
 } // namespace clangd

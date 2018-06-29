@@ -1,6 +1,6 @@
 # REQUIRES: zlib
 # RUN: yaml2obj %s > %t
-# RUN: lldb-test module-sections --contents %t | FileCheck %s
+# RUN: lldb-test object-file --contents %t | FileCheck %s
 --- !ELF
 FileHeader:
   Class:           ELFCLASS32

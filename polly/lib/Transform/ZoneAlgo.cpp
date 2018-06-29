@@ -840,33 +840,31 @@ static isl::union_map normalizeValInst(isl::union_map Input,
                                        const DenseSet<PHINode *> &ComputedPHIs,
                                        isl::union_map NormalizeMap) {
   isl::union_map Result = isl::union_map::empty(Input.get_space());
-  Input.foreach_map(
-      [&Result, &ComputedPHIs, &NormalizeMap](isl::map Map) -> isl::stat {
-        isl::space Space = Map.get_space();
-        isl::space RangeSpace = Space.range();
+  for (isl::map Map : Input.get_map_list()) {
+    isl::space Space = Map.get_space();
+    isl::space RangeSpace = Space.range();
 
-        // Instructions within the SCoP are always wrapped. Non-wrapped tuples
-        // are therefore invariant in the SCoP and don't need normalization.
-        if (!RangeSpace.is_wrapping()) {
-          Result = Result.add_map(Map);
-          return isl::stat::ok;
-        }
+    // Instructions within the SCoP are always wrapped. Non-wrapped tuples
+    // are therefore invariant in the SCoP and don't need normalization.
+    if (!RangeSpace.is_wrapping()) {
+      Result = Result.add_map(Map);
+      continue;
+    }
 
-        auto *PHI = dyn_cast<PHINode>(static_cast<Value *>(
-            RangeSpace.unwrap().get_tuple_id(isl::dim::out).get_user()));
+    auto *PHI = dyn_cast<PHINode>(static_cast<Value *>(
+        RangeSpace.unwrap().get_tuple_id(isl::dim::out).get_user()));
 
-        // If no normalization is necessary, then the ValInst stands for itself.
-        if (!ComputedPHIs.count(PHI)) {
-          Result = Result.add_map(Map);
-          return isl::stat::ok;
-        }
+    // If no normalization is necessary, then the ValInst stands for itself.
+    if (!ComputedPHIs.count(PHI)) {
+      Result = Result.add_map(Map);
+      continue;
+    }
 
-        // Otherwise, apply the normalization.
-        isl::union_map Mapped = isl::union_map(Map).apply_range(NormalizeMap);
-        Result = Result.unite(Mapped);
-        NumPHINormialization++;
-        return isl::stat::ok;
-      });
+    // Otherwise, apply the normalization.
+    isl::union_map Mapped = isl::union_map(Map).apply_range(NormalizeMap);
+    Result = Result.unite(Mapped);
+    NumPHINormialization++;
+  }
   return Result;
 }
 

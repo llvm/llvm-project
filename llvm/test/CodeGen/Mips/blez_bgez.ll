@@ -1,5 +1,5 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
-; RUN: llc -march=mips64el < %s | FileCheck %s
+; RUN: llc -march=mipsel -enable-shrink-wrap=false  < %s | FileCheck %s
+; RUN: llc -march=mips64el -enable-shrink-wrap=false < %s | FileCheck %s
 
 ; CHECK-LABEL: test_blez:
 ; CHECK: blez ${{[0-9]+}}, {{\$|\.L}}BB

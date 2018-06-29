@@ -228,6 +228,17 @@ define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) 
   ret void
 }
 
+; GCN-LABEL: {{^}}kernel_implicitarg_no_struct_align_padding:
+; HSA: kernarg_segment_byte_size = 120
+; MESA: kernarg_segment_byte_size = 84
+; GCN: kernarg_segment_alignment = 6
+define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>, i32) #1 {
+  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
+  %load = load volatile i32, i32 addrspace(4)* %cast
+  ret void
+}
+
 declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #2
 declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #2
 
