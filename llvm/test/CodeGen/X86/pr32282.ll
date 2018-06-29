@@ -12,30 +12,23 @@
 define void @foo() {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl d, %ecx
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    movl d, %eax
+; X86-NEXT:    notl %eax
+; X86-NEXT:    movl d+4, %ecx
 ; X86-NEXT:    notl %ecx
-; X86-NEXT:    movl d+4, %edx
-; X86-NEXT:    notl %edx
-; X86-NEXT:    andl $701685459, %edx # imm = 0x29D2DED3
-; X86-NEXT:    andl $-564453154, %ecx # imm = 0xDE5B20DE
-; X86-NEXT:    shrdl $21, %edx, %ecx
-; X86-NEXT:    shrl $21, %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb %al, %al
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    cmovnel %eax, %esi
-; X86-NEXT:    cmovel %ecx, %edx
-; X86-NEXT:    andl $-2, %edx
-; X86-NEXT:    addl $7, %edx
-; X86-NEXT:    adcxl %eax, %esi
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $701685459, %ecx # imm = 0x29D2DED3
+; X86-NEXT:    andl $-564453154, %eax # imm = 0xDE5B20DE
+; X86-NEXT:    shrdl $21, %ecx, %eax
+; X86-NEXT:    shrl $21, %ecx
+; X86-NEXT:    andl $-2, %eax
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    addl $7, %eax
+; X86-NEXT:    adcxl %edx, %ecx
+; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
@@ -46,9 +39,7 @@ define void @foo() {
 ; X86-NEXT:    .cfi_adjust_cfa_offset -16
 ; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    setne {{[0-9]+}}(%esp)
-; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;

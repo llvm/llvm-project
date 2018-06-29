@@ -1203,9 +1203,13 @@ AMDGPU::HSAMD::Kernel::CodeProps::Metadata AMDGPUAsmPrinter::getHSACodeProps(
   const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
+  const Function &F = MF.getFunction();
 
-  HSACodeProps.mKernargSegmentSize =
-    STM.getKernArgSegmentSize(MF.getFunction(), MFI.getExplicitKernArgSize());
+  // Avoid asserting on erroneous cases.
+  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
+    return HSACodeProps;
+
+  HSACodeProps.mKernargSegmentSize = STM.getKernArgSegmentSize(F);
   HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
   HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
   HSACodeProps.mKernargSegmentAlign =

@@ -152,7 +152,7 @@ private:
   ///                  type of the unit DIE.
   ///
   /// \returns true if the content is verified successfully, false otherwise.
-  bool verifyUnitContents(DWARFUnit Unit, uint8_t UnitType = 0);
+  bool verifyUnitContents(DWARFUnit &Unit, uint8_t UnitType = 0);
 
   /// Verify that all Die ranges are valid.
   ///

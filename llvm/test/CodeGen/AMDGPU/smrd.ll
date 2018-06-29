@@ -328,6 +328,7 @@ ret_block:                                       ; preds = %.outer, %.label22, %
 .inner_loop_body:
   %descriptor = load <4 x i32>, <4 x i32> addrspace(4)* %descptr, align 16, !invariant.load !0
   %load1result = call float @llvm.SI.load.const.v4i32(<4 x i32> %descriptor, i32 0)
+  store float %load1result, float addrspace(1)* undef
   %inner_br2 = icmp uge i32 %1, 10
   br i1 %inner_br2, label %.inner_loop_header, label %.outer_loop_body
 

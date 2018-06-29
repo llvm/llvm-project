@@ -14,7 +14,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; SI-NEXT: ; mask branch [[FLOW_BB:BB[0-9]+_[0-9]+]]
 ; SI-NEXT: s_cbranch_execz [[FLOW_BB]]
 
-; SI-NEXT: BB{{[0-9]+}}_1: ; %LeafBlock4
+; SI-NEXT: BB{{[0-9]+}}_1: ; %LeafBlock3
 ; SI-NOT: s_mov_b64 s[{{[0-9]:[0-9]}}], -1
 ; SI: v_mov_b32_e32 v{{[0-9]}}, -1
 ; SI: s_and_saveexec_b64

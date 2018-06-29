@@ -862,8 +862,9 @@ public:
     return getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS;
   }
 
+  uint64_t getExplicitKernArgSize(const Function &F) const;
   unsigned getKernArgSegmentSize(const Function &F,
-                                 unsigned ExplictArgBytes) const;
+                                 int64_t ExplicitArgBytes = -1) const;
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

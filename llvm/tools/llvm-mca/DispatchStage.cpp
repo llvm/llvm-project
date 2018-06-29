@@ -82,12 +82,6 @@ void DispatchStage::updateRAWDependencies(ReadState &RS,
   // For each write, check if we have ReadAdvance information, and use it
   // to figure out in how many cycles this read becomes available.
   const ReadDescriptor &RD = RS.getDescriptor();
-  if (!RD.HasReadAdvanceEntries) {
-    for (WriteRef &WR : DependentWrites)
-      WR.getWriteState()->addUser(&RS, /* ReadAdvance */ 0);
-    return;
-  }
-
   const MCSchedModel &SM = STI.getSchedModel();
   const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
   for (WriteRef &WR : DependentWrites) {
