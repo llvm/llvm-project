@@ -35,6 +35,8 @@ def subs: S<"subsystem">, HelpText<"Specify subsystem">;
 def stack: S<"stack">;
 def strip_all: F<"strip-all">,
     HelpText<"Omit all symbol information from the output binary">;
+def strip_debug: F<"strip-debug">,
+    HelpText<"Omit all debug information, but keep symbol information">;
 def whole_archive: F<"whole-archive">,
     HelpText<"Include all object files for following archives">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
@@ -72,3 +74,4 @@ def version: F<"version">, HelpText<"Display the version number and exit">;
 // Alias
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
+def alias_strip_S: Flag<["-"], "S">, Alias<strip_debug>;
