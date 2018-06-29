@@ -5413,7 +5413,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
 #ifndef NDEBUG
   // Make sure the tables are sorted.
-  static bool LLVM_ATTRIBUTE_UNUSED FoldTablesChecked = [] {
+  static std::atomic<bool> FoldTablesChecked(false);
+  if (!FoldTablesChecked.load(std::memory_order_relaxed)) {
     assert(std::is_sorted(std::begin(MemoryFoldTable2Addr),
                           std::end(MemoryFoldTable2Addr)) &&
            std::adjacent_find(std::begin(MemoryFoldTable2Addr),
@@ -5450,8 +5451,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                               std::end(MemoryFoldTable4)) ==
            std::end(MemoryFoldTable4) &&
            "MemoryFoldTable4 is not sorted and unique!");
-    return true;
-  }();
+    FoldTablesChecked.store(true, std::memory_order_relaxed);
+  }
 #endif
 }
 
@@ -11247,9 +11248,7 @@ isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
 /// TODO: Eliminate this and move the code to X86MachineFunctionInfo.
 ///
 unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
-  assert((!Subtarget.is64Bit() ||
-          MF->getTarget().getCodeModel() == CodeModel::Medium ||
-          MF->getTarget().getCodeModel() == CodeModel::Large) &&
+  assert(!Subtarget.is64Bit() &&
          "X86-64 PIC uses RIP relative addressing");
 
   X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
@@ -11260,8 +11259,7 @@ unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   // Create the register. The code to initialize it is inserted
   // later, by the CGBR pass (below).
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
-  GlobalBaseReg = RegInfo.createVirtualRegister(
-      Subtarget.is64Bit() ? &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass);
+  GlobalBaseReg = RegInfo.createVirtualRegister(&X86::GR32_NOSPRegClass);
   X86FI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
 }
@@ -12635,10 +12633,9 @@ namespace {
         static_cast<const X86TargetMachine *>(&MF.getTarget());
       const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
 
-      // Don't do anything in the 64-bit small and kernel code models. They use
-      // RIP-relative addressing for everything.
-      if (STI.is64Bit() && (TM->getCodeModel() == CodeModel::Small ||
-                            TM->getCodeModel() == CodeModel::Kernel))
+      // Don't do anything if this is 64-bit as 64-bit PIC
+      // uses RIP relative addressing.
+      if (STI.is64Bit())
         return false;
 
       // Only emit a global base reg in PIC mode.
@@ -12665,41 +12662,17 @@ namespace {
       else
         PC = GlobalBaseReg;
 
-      if (STI.is64Bit()) {
-        if (TM->getCodeModel() == CodeModel::Medium) {
-          // In the medium code model, use a RIP-relative LEA to materialize the
-          // GOT.
-          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::LEA64r), PC)
-              .addReg(X86::RIP)
-              .addImm(0)
-              .addReg(0)
-              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_")
-              .addReg(0);
-        } else if (TM->getCodeModel() == CodeModel::Large) {
-          // Loading the GOT in the large code model requires math with labels,
-          // so we use a pseudo instruction and expand it during MC emission.
-          unsigned Scratch = RegInfo.createVirtualRegister(&X86::GR64RegClass);
-          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVGOT64r), PC)
-              .addReg(Scratch, RegState::Undef | RegState::Define)
-              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_");
-        } else {
-          llvm_unreachable("unexpected code model");
-        }
-      } else {
-        // Operand of MovePCtoStack is completely ignored by asm printer. It's
-        // only used in JIT code emission as displacement to pc.
-        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVPC32r), PC).addImm(0);
+      // Operand of MovePCtoStack is completely ignored by asm printer. It's
+      // only used in JIT code emission as displacement to pc.
+      BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVPC32r), PC).addImm(0);
 
-        // If we're using vanilla 'GOT' PIC style, we should use relative
-        // addressing not to pc, but to _GLOBAL_OFFSET_TABLE_ external.
-        if (STI.isPICStyleGOT()) {
-          // Generate addl $__GLOBAL_OFFSET_TABLE_ + [.-piclabel],
-          // %some_register
-          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD32ri), GlobalBaseReg)
-              .addReg(PC)
-              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
-                                 X86II::MO_GOT_ABSOLUTE_ADDRESS);
-        }
+      // If we're using vanilla 'GOT' PIC style, we should use relative addressing
+      // not to pc, but to _GLOBAL_OFFSET_TABLE_ external.
+      if (STI.isPICStyleGOT()) {
+        // Generate addl $__GLOBAL_OFFSET_TABLE_ + [.-piclabel], %some_register
+        BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD32ri), GlobalBaseReg)
+          .addReg(PC).addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
+                                        X86II::MO_GOT_ABSOLUTE_ADDRESS);
       }
 
       return true;

@@ -155,7 +155,7 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
-                                           const AMDGPUSubtarget &STI)
+                                           const AMDGPUCommonSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
   AMDGPUASI = AMDGPU::getAMDGPUAS(TM);
   // Lower floating point store/load to integer store/load to reduce the number
@@ -330,20 +330,12 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FLOG, MVT::f32, Custom);
   setOperationAction(ISD::FLOG10, MVT::f32, Custom);
 
-  if (Subtarget->has16BitInsts()) {
-    setOperationAction(ISD::FLOG, MVT::f16, Custom);
-    setOperationAction(ISD::FLOG10, MVT::f16, Custom);
-  }
 
   setOperationAction(ISD::FNEARBYINT, MVT::f32, Custom);
   setOperationAction(ISD::FNEARBYINT, MVT::f64, Custom);
 
   setOperationAction(ISD::FREM, MVT::f32, Custom);
   setOperationAction(ISD::FREM, MVT::f64, Custom);
-
-  // v_mad_f32 does not support denormals according to some sources.
-  if (!Subtarget->hasFP32Denormals())
-    setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
@@ -358,19 +350,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v4i32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8i32, Custom);
-
-  if (Subtarget->getGeneration() < AMDGPUSubtarget::SEA_ISLANDS) {
-    setOperationAction(ISD::FCEIL, MVT::f64, Custom);
-    setOperationAction(ISD::FTRUNC, MVT::f64, Custom);
-    setOperationAction(ISD::FRINT, MVT::f64, Custom);
-    setOperationAction(ISD::FFLOOR, MVT::f64, Custom);
-  }
-
-  if (!Subtarget->hasBFI()) {
-    // fcopysign can be done in a single instruction with BFI.
-    setOperationAction(ISD::FCOPYSIGN, MVT::f32, Expand);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
-  }
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f64, Custom);
@@ -403,12 +382,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SUBE, VT, Legal);
   }
 
-  if (!Subtarget->hasBCNT(32))
-    setOperationAction(ISD::CTPOP, MVT::i32, Expand);
-
-  if (!Subtarget->hasBCNT(64))
-    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
-
   // The hardware supports 32-bit ROTR, but not ROTL.
   setOperationAction(ISD::ROTL, MVT::i32, Expand);
   setOperationAction(ISD::ROTL, MVT::i64, Expand);
@@ -428,27 +401,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SMAX, MVT::i32, Legal);
   setOperationAction(ISD::UMAX, MVT::i32, Legal);
 
-  if (Subtarget->hasFFBH())
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
-
-  if (Subtarget->hasFFBL())
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
-
   setOperationAction(ISD::CTTZ, MVT::i64, Custom);
   setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Custom);
   setOperationAction(ISD::CTLZ, MVT::i64, Custom);
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
-
-  // We only really have 32-bit BFE instructions (and 16-bit on VI).
-  //
-  // On SI+ there are 64-bit BFEs, but they are scalar only and there isn't any
-  // effort to match them now. We want this to be false for i64 cases when the
-  // extraction isn't restricted to the upper or lower half. Ideally we would
-  // have some pass reduce 64-bit extracts to 32-bit if possible. Extracts that
-  // span the midpoint are probably relatively rare, so don't worry about them
-  // for now.
-  if (Subtarget->hasBFE())
-    setHasExtractBitsInsn(true);
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
     MVT::v2i32, MVT::v4i32
@@ -553,11 +509,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   // will be uniform and we always use vector compares. Assume we are using
   // vector compares until that is fixed.
   setHasMultipleConditionRegisters(true);
-
-  // SI at least has hardware support for floating point exceptions, but no way
-  // of using or handling them is implemented. They are also optional in OpenCL
-  // (Section 7.3)
-  setHasFloatingPointExceptions(Subtarget->hasFPExceptions());
 
   PredictableSelectIsExpensive = false;
 
@@ -781,7 +732,7 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
     {
       const LoadSDNode * L = dyn_cast<LoadSDNode>(N);
       if (L->getMemOperand()->getAddrSpace()
-      == Subtarget->getAMDGPUAS().CONSTANT_ADDRESS_32BIT)
+      == AMDGPUASI.CONSTANT_ADDRESS_32BIT)
         return true;
       return false;
     }
@@ -3986,9 +3937,13 @@ SDValue AMDGPUTargetLowering::loadInputValue(SelectionDAG &DAG,
 }
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
-    const AMDGPUMachineFunction *MFI, const ImplicitParameter Param) const {
-  unsigned Alignment = Subtarget->getAlignmentForImplicitArgPtr();
-  uint64_t ArgOffset = alignTo(MFI->getABIArgOffset(), Alignment);
+    const MachineFunction &MF, const ImplicitParameter Param) const {
+  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  unsigned ExplicitArgOffset = ST.getExplicitKernelArgOffset(MF.getFunction());
+  unsigned Alignment = ST.getAlignmentForImplicitArgPtr();
+  uint64_t ArgOffset = alignTo(MFI->getExplicitKernArgSize(), Alignment) +
+                       ExplicitArgOffset;
   switch (Param) {
   case GRID_DIM:
     return ArgOffset;
@@ -4286,9 +4241,11 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     switch (IID) {
     case Intrinsic::amdgcn_mbcnt_lo:
     case Intrinsic::amdgcn_mbcnt_hi: {
+      const SISubtarget &ST =
+          DAG.getMachineFunction().getSubtarget<SISubtarget>();
       // These return at most the wavefront size - 1.
       unsigned Size = Op.getValueType().getSizeInBits();
-      Known.Zero.setHighBits(Size - Subtarget->getWavefrontSizeLog2());
+      Known.Zero.setHighBits(Size - ST.getWavefrontSizeLog2());
       break;
     }
     default:

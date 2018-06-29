@@ -18,13 +18,13 @@ include "R600InstrFormats.td"
 class R600WrapperInst <dag outs, dag ins, string asm = "", list<dag> pattern = []> :
   AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
   let SubtargetPredicate = isR600toCayman;
+  let Namespace = "R600";
 }
 
 
 class InstR600ISA <dag outs, dag ins, string asm, list<dag> pattern = []> :
     InstR600 <outs, ins, asm, pattern, NullALU> {
 
-  let Namespace = "AMDGPU";
 }
 
 def MEMxi : Operand<iPTR> {
@@ -86,6 +86,12 @@ def ADDRIndirect : ComplexPattern<iPTR, 2, "SelectADDRIndirect", [], []>;
 def R600_Pred : PredicateOperand<i32, (ops R600_Predicate),
                                      (ops PRED_SEL_OFF)>;
 
+let isTerminator = 1, isReturn = 1, hasCtrlDep = 1,
+    usesCustomInserter = 1, Namespace = "R600" in {
+  def RETURN : ILFormat<(outs), (ins variable_ops),
+    "RETURN", [(AMDGPUendpgm)]
+  >;
+}
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 
@@ -219,34 +225,6 @@ class R600_REDUCTION <bits<11> inst, dag ins, string asm, list<dag> pattern,
 
 } // End mayLoad = 1, mayStore = 0, hasSideEffects = 0
 
-def TEX_SHADOW : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return (TType >= 6 && TType <= 8) || TType == 13;
-  }]
->;
-
-def TEX_RECT : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return TType == 5;
-  }]
->;
-
-def TEX_ARRAY : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return TType == 9 || TType == 10 || TType == 16;
-  }]
->;
-
-def TEX_SHADOW_ARRAY : PatLeaf<
-  (imm),
-  [{uint32_t TType = (uint32_t)N->getZExtValue();
-    return TType == 11 || TType == 12 || TType == 17;
-  }]
->;
-
 class EG_CF_RAT <bits <8> cfinst, bits <6> ratinst, bits<4> ratid, bits<4> mask,
                  dag outs, dag ins, string asm, list<dag> pattern> :
     InstR600ISA <outs, ins, asm, pattern>,
@@ -357,6 +335,8 @@ def vtx_id2_load : LoadVtxId2 <load>;
 // R600 SDNodes
 //===----------------------------------------------------------------------===//
 
+let Namespace = "R600" in {
+
 def INTERP_PAIR_XY :  AMDGPUShaderInst <
   (outs R600_TReg32_X:$dst0, R600_TReg32_Y:$dst1),
   (ins i32imm:$src0, R600_TReg32_Y:$src1, R600_TReg32_X:$src2),
@@ -368,6 +348,8 @@ def INTERP_PAIR_ZW :  AMDGPUShaderInst <
   (ins i32imm:$src0, R600_TReg32_Y:$src1, R600_TReg32_X:$src2),
   "INTERP_PAIR_ZW $src0 $src1 $src2 : $dst0 dst1",
   []>;
+
+}
 
 def CONST_ADDRESS: SDNode<"AMDGPUISD::CONST_ADDRESS",
   SDTypeProfile<1, -1, [SDTCisInt<0>, SDTCisPtrTy<1>]>,
@@ -416,10 +398,14 @@ def : R600Pat<(TEXTURE_FETCH (i32 TextureOp), vt:$SRC_GPR,
 // Interpolation Instructions
 //===----------------------------------------------------------------------===//
 
+let Namespace = "R600" in {
+
 def INTERP_VEC_LOAD :  AMDGPUShaderInst <
   (outs R600_Reg128:$dst),
   (ins i32imm:$src0),
   "INTERP_LOAD $src0 : $dst">;
+
+}
 
 def INTERP_XY : R600_2OP <0xD6, "INTERP_XY", []> {
   let bank_swizzle = 5;
@@ -660,7 +646,7 @@ def PAD : R600WrapperInst <(outs), (ins), "PAD", [] > {
 
 let isCodeGenOnly = 1, isPseudo = 1 in {
 
-let usesCustomInserter = 1  in {
+let Namespace = "R600", usesCustomInserter = 1  in {
 
 class FABS <RegisterClass rc> : AMDGPUShaderInst <
   (outs rc:$dst),
@@ -792,7 +778,9 @@ class MOV_IMM <ValueType vt, Operand immType> : R600WrapperInst <
   (ins immType:$imm),
   "",
   []
->;
+> {
+  let Namespace = "R600";
+}
 
 } // end let isPseudo = 1, isCodeGenOnly = 1, usesCustomInserter = 1
 
@@ -1007,7 +995,7 @@ class CNDGE_Common <bits<5> inst> : R600_3OP <
 }
 
 
-let isCodeGenOnly = 1, isPseudo = 1, Namespace = "AMDGPU"  in {
+let isCodeGenOnly = 1, isPseudo = 1, Namespace = "R600"  in {
 class R600_VEC2OP<list<dag> pattern> : InstR600 <(outs R600_Reg32:$dst), (ins
 // Slot X
    UEM:$update_exec_mask_X, UP:$update_pred_X, WRITE:$write_X,
@@ -1326,7 +1314,9 @@ let Predicates = [isR600] in {
 // Regist loads and stores - for indirect addressing
 //===----------------------------------------------------------------------===//
 
+let Namespace = "R600" in {
 defm R600_ : RegisterLoadStore <R600_Reg32, FRAMEri, ADDRIndirect>;
+}
 
 // Hardcode channel to 0
 // NOTE: LSHR is not available here. LSHR is per family instruction
@@ -1378,11 +1368,12 @@ let usesCustomInserter = 1 in {
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
 
-def MASK_WRITE : AMDGPUShaderInst <
+def MASK_WRITE : InstR600 <
     (outs),
     (ins R600_Reg32:$src),
     "MASK_WRITE $src",
-    []
+    [],
+    NullALU
 >;
 
 } // End mayLoad = 0, mayStore = 0, hasSideEffects = 1
@@ -1413,7 +1404,7 @@ def TXD_SHADOW: InstR600 <
 // Constant Buffer Addressing Support
 //===----------------------------------------------------------------------===//
 
-let usesCustomInserter = 1, isCodeGenOnly = 1, isPseudo = 1, Namespace = "AMDGPU"  in {
+let usesCustomInserter = 1, isCodeGenOnly = 1, isPseudo = 1, Namespace = "R600"  in {
 def CONST_COPY : Instruction {
   let OutOperandList = (outs R600_Reg32:$dst);
   let InOperandList = (ins i32imm:$src);
@@ -1536,23 +1527,6 @@ let Inst{63-32} = Word1;
 //===---------------------------------------------------------------------===//
 // Flow and Program control Instructions
 //===---------------------------------------------------------------------===//
-class ILFormat<dag outs, dag ins, string asmstr, list<dag> pattern>
-: Instruction {
-
-     let Namespace = "AMDGPU";
-     dag OutOperandList = outs;
-     dag InOperandList = ins;
-     let Pattern = pattern;
-     let AsmString = !strconcat(asmstr, "\n");
-     let isPseudo = 1;
-     let Itinerary = NullALU;
-     bit hasIEEEFlag = 0;
-     bit hasZeroOpFlag = 0;
-     let mayLoad = 0;
-     let mayStore = 0;
-     let hasSideEffects = 0;
-     let isCodeGenOnly = 1;
-}
 
 multiclass BranchConditional<SDNode Op, RegisterClass rci, RegisterClass rcf> {
     def _i32 : ILFormat<(outs),
@@ -1584,21 +1558,12 @@ multiclass BranchInstr2<string name> {
 // Custom Inserter for Branches and returns, this eventually will be a
 // separate pass
 //===---------------------------------------------------------------------===//
-let isTerminator = 1, usesCustomInserter = 1, isBranch = 1, isBarrier = 1 in {
+let isTerminator = 1, usesCustomInserter = 1, isBranch = 1, isBarrier = 1,
+    Namespace = "R600" in {
   def BRANCH : ILFormat<(outs), (ins brtarget:$target),
       "; Pseudo unconditional branch instruction",
       [(br bb:$target)]>;
   defm BRANCH_COND : BranchConditional<IL_brcond, R600_Reg32, R600_Reg32>;
-}
-
-//===---------------------------------------------------------------------===//
-// Return instruction
-//===---------------------------------------------------------------------===//
-let isTerminator = 1, isReturn = 1, hasCtrlDep = 1,
-    usesCustomInserter = 1 in {
-  def RETURN : ILFormat<(outs), (ins variable_ops),
-    "RETURN", [(AMDGPUendpgm)]
-  >;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1731,7 +1696,7 @@ def : R600Pat <
 
 // KIL Patterns
 def KIL : R600Pat <
-  (int_AMDGPU_kill f32:$src0),
+  (int_r600_kill f32:$src0),
   (MASK_WRITE (KILLGT (f32 ZERO), $src0))
 >;
 

@@ -181,7 +181,7 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
   if (Features.test(FeatureGFX9))
     return {9, 0, 0};
 
-  if (!Features.test(FeatureGCN) || Features.test(FeatureSouthernIslands))
+  if (Features.test(FeatureSouthernIslands))
     return {0, 0, 0};
   return {7, 0, 0};
 }
@@ -243,7 +243,7 @@ unsigned getMaxWorkGroupsPerCU(const FeatureBitset &Features,
 }
 
 unsigned getMaxWavesPerCU(const FeatureBitset &Features) {
-  return getMaxWavesPerEU(Features) * getEUsPerCU(Features);
+  return getMaxWavesPerEU() * getEUsPerCU(Features);
 }
 
 unsigned getMaxWavesPerCU(const FeatureBitset &Features,
@@ -255,9 +255,7 @@ unsigned getMinWavesPerEU(const FeatureBitset &Features) {
   return 1;
 }
 
-unsigned getMaxWavesPerEU(const FeatureBitset &Features) {
-  if (!Features.test(FeatureGCN))
-    return 8;
+unsigned getMaxWavesPerEU() {
   // FIXME: Need to take scratch memory into account.
   return 10;
 }
@@ -313,7 +311,7 @@ unsigned getAddressableNumSGPRs(const FeatureBitset &Features) {
 unsigned getMinNumSGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
   assert(WavesPerEU != 0);
 
-  if (WavesPerEU >= getMaxWavesPerEU(Features))
+  if (WavesPerEU >= getMaxWavesPerEU())
     return 0;
 
   unsigned MinNumSGPRs = getTotalNumSGPRs(Features) / (WavesPerEU + 1);
@@ -390,7 +388,7 @@ unsigned getAddressableNumVGPRs(const FeatureBitset &Features) {
 unsigned getMinNumVGPRs(const FeatureBitset &Features, unsigned WavesPerEU) {
   assert(WavesPerEU != 0);
 
-  if (WavesPerEU >= getMaxWavesPerEU(Features))
+  if (WavesPerEU >= getMaxWavesPerEU())
     return 0;
   unsigned MinNumVGPRs =
       alignDown(getTotalNumVGPRs(Features) / (WavesPerEU + 1),
@@ -735,6 +733,8 @@ bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
   case node: return isGFX9(STI) ? node##_gfx9 : node##_vi;
 
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
+  if (STI.getTargetTriple().getArch() == Triple::r600)
+    return Reg;
   MAP_REG2REG
 }
 

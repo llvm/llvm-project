@@ -906,7 +906,8 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&XRayInstrumentationID, false);
   addPass(&PatchableFunctionID, false);
 
-  if (EnableMachineOutliner)
+  if (TM->Options.EnableMachineOutliner && getOptLevel() != CodeGenOpt::None &&
+      EnableMachineOutliner)
     addPass(createMachineOutlinerPass());
 
   // Add passes that directly emit MI after all other MI passes.

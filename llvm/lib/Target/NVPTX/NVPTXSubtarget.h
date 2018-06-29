@@ -74,7 +74,6 @@ public:
   bool hasAtomBitwise64() const { return SmVersion >= 32; }
   bool hasAtomMinMax64() const { return SmVersion >= 32; }
   bool hasLDG() const { return SmVersion >= 32; }
-  bool hasLDU() const { return ((SmVersion >= 20) && (SmVersion < 30)); }
   inline bool hasHWROT32() const { return SmVersion >= 32; }
   bool hasImageHandles() const;
   bool hasFP16Math() const { return SmVersion >= 53; }

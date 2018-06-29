@@ -360,10 +360,10 @@ def int_amdgcn_sffbh :
   [IntrNoMem, IntrSpeculatable]
 >;
 
-// v_mad_f32/v_mac_f32, selected regardless of denorm support.
+// v_mad_f32|f16/v_mac_f32|f16, selected regardless of denorm support.
 def int_amdgcn_fmad_ftz :
-  Intrinsic<[llvm_float_ty],
-            [llvm_float_ty, llvm_float_ty, llvm_float_ty],
+  Intrinsic<[llvm_anyfloat_ty],
+            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]
 >;
 

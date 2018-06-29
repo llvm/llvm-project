@@ -72,7 +72,7 @@ bool DispatchStage::checkScheduler(const InstRef &IR) {
 
 void DispatchStage::updateRAWDependencies(ReadState &RS,
                                           const MCSubtargetInfo &STI) {
-  SmallVector<WriteState *, 4> DependentWrites;
+  SmallVector<WriteRef, 4> DependentWrites;
 
   collectWrites(DependentWrites, RS.getRegisterID());
   RS.setDependentWrites(DependentWrites.size());
@@ -83,17 +83,18 @@ void DispatchStage::updateRAWDependencies(ReadState &RS,
   // to figure out in how many cycles this read becomes available.
   const ReadDescriptor &RD = RS.getDescriptor();
   if (!RD.HasReadAdvanceEntries) {
-    for (WriteState *WS : DependentWrites)
-      WS->addUser(&RS, /* ReadAdvance */ 0);
+    for (WriteRef &WR : DependentWrites)
+      WR.getWriteState()->addUser(&RS, /* ReadAdvance */ 0);
     return;
   }
 
   const MCSchedModel &SM = STI.getSchedModel();
   const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
-  for (WriteState *WS : DependentWrites) {
-    unsigned WriteResID = WS->getWriteResourceID();
+  for (WriteRef &WR : DependentWrites) {
+    WriteState &WS = *WR.getWriteState();
+    unsigned WriteResID = WS.getWriteResourceID();
     int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
-    WS->addUser(&RS, ReadAdvance);
+    WS.addUser(&RS, ReadAdvance);
   }
 }
 
@@ -126,7 +127,8 @@ void DispatchStage::dispatch(InstRef IR) {
   // is allocated to the instruction.
   SmallVector<unsigned, 4> RegisterFiles(PRF.getNumRegisterFiles());
   for (std::unique_ptr<WriteState> &WS : IS.getDefs())
-    PRF.addRegisterWrite(*WS, RegisterFiles, !Desc.isZeroLatency());
+    PRF.addRegisterWrite(WriteRef(IR.first, WS.get()), RegisterFiles,
+                         !Desc.isZeroLatency());
 
   // Reserve slots in the RCU, and notify the instruction that it has been
   // dispatched to the schedulers for execution.

@@ -394,6 +394,12 @@ std::error_code rename(const Twine &from, const Twine &to);
 /// @param To The path to copy to. This is created.
 std::error_code copy_file(const Twine &From, const Twine &To);
 
+/// Copy the contents of \a From to \a To.
+///
+/// @param From The path to copy from.
+/// @param To The open file descriptor of the destinatino file.
+std::error_code copy_file(const Twine &From, int ToFD);
+
 /// Resize path to size. File is resized as if by POSIX truncate().
 ///
 /// @param FD Input file descriptor.

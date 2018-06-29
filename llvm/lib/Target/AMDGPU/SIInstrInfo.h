@@ -31,6 +31,9 @@
 #include <cassert>
 #include <cstdint>
 
+#define GET_INSTRINFO_HEADER
+#include "AMDGPUGenInstrInfo.inc"
+
 namespace llvm {
 
 class APInt;
@@ -39,7 +42,7 @@ class RegScavenger;
 class SISubtarget;
 class TargetRegisterClass;
 
-class SIInstrInfo final : public AMDGPUInstrInfo {
+class SIInstrInfo final : public AMDGPUGenInstrInfo {
 private:
   const SIRegisterInfo RI;
   const SISubtarget &ST;
@@ -163,7 +166,10 @@ public:
 
   bool shouldClusterMemOps(MachineInstr &FirstLdSt, unsigned BaseReg1,
                            MachineInstr &SecondLdSt, unsigned BaseReg2,
-                           unsigned NumLoads) const final;
+                           unsigned NumLoads) const override;
+
+  bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
+                               int64_t Offset1, unsigned NumLoads) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
@@ -871,6 +877,12 @@ public:
   static bool isLegalMUBUFImmOffset(unsigned Imm) {
     return isUInt<12>(Imm);
   }
+
+  /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
+  /// Return -1 if the target-specific opcode for the pseudo instruction does
+  /// not exist. If Opcode is not a pseudo instruction, this is identity.
+  int pseudoToMCOpcode(int Opcode) const;
+
 };
 
 namespace AMDGPU {

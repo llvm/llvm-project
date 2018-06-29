@@ -51,6 +51,9 @@ class HWStallEvent;
 /// histograms. For example, it tracks how the dispatch group size changes
 /// over time.
 class Pipeline {
+  Pipeline(const Pipeline &P) = delete;
+  Pipeline &operator=(const Pipeline &P) = delete;
+
   /// An ordered list of stages that define this instruction pipeline.
   llvm::SmallVector<std::unique_ptr<Stage>, 8> Stages;
   std::set<HWEventListener *> Listeners;

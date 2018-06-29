@@ -21,6 +21,7 @@
 
 namespace llvm {
 
+class AMDGPUSubtarget;
 class LiveIntervals;
 class MachineRegisterInfo;
 class SISubtarget;

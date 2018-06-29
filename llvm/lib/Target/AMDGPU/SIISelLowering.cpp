@@ -113,7 +113,8 @@ static unsigned findFirstFreeSGPR(CCState &CCInfo) {
 
 SITargetLowering::SITargetLowering(const TargetMachine &TM,
                                    const SISubtarget &STI)
-    : AMDGPUTargetLowering(TM, STI) {
+    : AMDGPUTargetLowering(TM, STI),
+      Subtarget(&STI) {
   addRegisterClass(MVT::i1, &AMDGPU::VReg_1RegClass);
   addRegisterClass(MVT::i64, &AMDGPU::SReg_64RegClass);
 
@@ -147,7 +148,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v4f16, &AMDGPU::SReg_64RegClass);
   }
 
-  computeRegisterProperties(STI.getRegisterInfo());
+  computeRegisterProperties(Subtarget->getRegisterInfo());
 
   // We need to custom lower vector stores from local memory
   setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
@@ -323,7 +324,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Expand);
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i64, Expand);
 
-  if (getSubtarget()->hasFlatAddressSpace()) {
+  if (Subtarget->hasFlatAddressSpace()) {
     setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
     setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
   }
@@ -336,6 +337,44 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::TRAP, MVT::Other, Custom);
   setOperationAction(ISD::DEBUGTRAP, MVT::Other, Custom);
 
+  if (Subtarget->has16BitInsts()) {
+    setOperationAction(ISD::FLOG, MVT::f16, Custom);
+    setOperationAction(ISD::FLOG10, MVT::f16, Custom);
+  }
+
+  // v_mad_f32 does not support denormals according to some sources.
+  if (!Subtarget->hasFP32Denormals())
+    setOperationAction(ISD::FMAD, MVT::f32, Legal);
+
+  if (!Subtarget->hasBFI()) {
+    // fcopysign can be done in a single instruction with BFI.
+    setOperationAction(ISD::FCOPYSIGN, MVT::f32, Expand);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f64, Expand);
+  }
+
+  if (!Subtarget->hasBCNT(32))
+    setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+
+  if (!Subtarget->hasBCNT(64))
+    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
+
+  if (Subtarget->hasFFBH())
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
+
+  if (Subtarget->hasFFBL())
+    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
+
+  // We only really have 32-bit BFE instructions (and 16-bit on VI).
+  //
+  // On SI+ there are 64-bit BFEs, but they are scalar only and there isn't any
+  // effort to match them now. We want this to be false for i64 cases when the
+  // extraction isn't restricted to the upper or lower half. Ideally we would
+  // have some pass reduce 64-bit extracts to 32-bit if possible. Extracts that
+  // span the midpoint are probably relatively rare, so don't worry about them
+  // for now.
+  if (Subtarget->hasBFE())
+    setHasExtractBitsInsn(true);
+
   setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
 
@@ -343,6 +382,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FTRUNC, MVT::f64, Legal);
     setOperationAction(ISD::FCEIL, MVT::f64, Legal);
     setOperationAction(ISD::FRINT, MVT::f64, Legal);
+  } else {
+    setOperationAction(ISD::FCEIL, MVT::f64, Custom);
+    setOperationAction(ISD::FTRUNC, MVT::f64, Custom);
+    setOperationAction(ISD::FRINT, MVT::f64, Custom);
+    setOperationAction(ISD::FFLOOR, MVT::f64, Custom);
   }
 
   setOperationAction(ISD::FFLOOR, MVT::f64, Legal);
@@ -616,10 +660,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ATOMIC_LOAD_UMAX);
 
   setSchedulingPreference(Sched::RegPressure);
+
+  // SI at least has hardware support for floating point exceptions, but no way
+  // of using or handling them is implemented. They are also optional in OpenCL
+  // (Section 7.3)
+  setHasFloatingPointExceptions(Subtarget->hasFPExceptions());
 }
 
 const SISubtarget *SITargetLowering::getSubtarget() const {
-  return static_cast<const SISubtarget *>(Subtarget);
+  return Subtarget;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1078,8 +1127,8 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
 
 SDValue SITargetLowering::getImplicitArgPtr(SelectionDAG &DAG,
                                             const SDLoc &SL) const {
-  auto MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
-  uint64_t Offset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
+  uint64_t Offset = getImplicitParameterOffset(DAG.getMachineFunction(),
+                                               FIRST_IMPLICIT);
   return lowerKernArgParameterPtr(DAG, SL, DAG.getEntryNode(), Offset);
 }
 
@@ -1749,7 +1798,6 @@ SDValue SITargetLowering::LowerFormalArguments(
       EVT MemVT = VA.getLocVT();
 
       const uint64_t Offset = ExplicitOffset + VA.getLocMemOffset();
-      Info->setABIArgOffset(Offset + MemVT.getStoreSize());
       unsigned Align = MinAlign(KernelArgBaseAlign, Offset);
 
       // The first 36 bytes of the input buffer contains information about
@@ -2013,8 +2061,7 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   // FIXME: Does sret work properly?
   if (!Info->isEntryFunction()) {
-    const SIRegisterInfo *TRI
-      = static_cast<const SISubtarget *>(Subtarget)->getRegisterInfo();
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
     const MCPhysReg *I =
       TRI->getCalleeSavedRegsViaCopy(&DAG.getMachineFunction());
     if (I) {
@@ -2116,8 +2163,7 @@ void SITargetLowering::passSpecialInputs(
   SelectionDAG &DAG = CLI.DAG;
   const SDLoc &DL = CLI.DL;
 
-  const SISubtarget *ST = getSubtarget();
-  const SIRegisterInfo *TRI = ST->getRegisterInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   auto &ArgUsageInfo =
     DAG.getPass()->getAnalysis<AMDGPUArgumentUsageInfo>();
@@ -2308,6 +2354,13 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported required tail call to function ");
+  }
+
+  if (AMDGPU::isShader(MF.getFunction().getCallingConv())) {
+    // Note the issue is with the CC of the calling function, not of the call
+    // itself.
+    return lowerUnhandledCall(CLI, InVals,
+                          "unsupported call from graphics shader of function ");
   }
 
   // The first 4 bytes are reserved for the callee's emergency stack slot.
@@ -2555,7 +2608,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Add a register mask operand representing the call-preserved registers.
 
-  const AMDGPURegisterInfo *TRI = Subtarget->getRegisterInfo();
+  auto *TRI = static_cast<const SIRegisterInfo*>(Subtarget->getRegisterInfo());
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
@@ -8173,8 +8226,7 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   if (Info->isEntryFunction()) {
     // Callable functions have fixed registers used for stack access.

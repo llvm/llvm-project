@@ -15,21 +15,19 @@
 
 namespace llvm {
 
+class AMDGPUSubtarget;
+
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.
   SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
 protected:
-  uint64_t KernArgSize;
+  uint64_t ExplicitKernArgSize;
   unsigned MaxKernArgAlign;
 
   /// Number of bytes in the LDS that are being used.
   unsigned LDSSize;
-
-  // FIXME: This should probably be removed.
-  /// Start of implicit kernel args
-  unsigned ABIArgOffset;
 
   // Kernels + shaders. i.e. functions called by the driver and not called
   // by other functions.
@@ -48,29 +46,21 @@ public:
 
   uint64_t allocateKernArg(uint64_t Size, unsigned Align) {
     assert(isPowerOf2_32(Align));
-    KernArgSize = alignTo(KernArgSize, Align);
+    ExplicitKernArgSize = alignTo(ExplicitKernArgSize, Align);
 
-    uint64_t Result = KernArgSize;
-    KernArgSize += Size;
+    uint64_t Result = ExplicitKernArgSize;
+    ExplicitKernArgSize += Size;
 
     MaxKernArgAlign = std::max(Align, MaxKernArgAlign);
     return Result;
   }
 
-  uint64_t getKernArgSize() const {
-    return KernArgSize;
+  uint64_t getExplicitKernArgSize() const {
+    return ExplicitKernArgSize;
   }
 
   unsigned getMaxKernArgAlign() const {
     return MaxKernArgAlign;
-  }
-
-  void setABIArgOffset(unsigned NewOffset) {
-    ABIArgOffset = NewOffset;
-  }
-
-  unsigned getABIArgOffset() const {
-    return ABIArgOffset;
   }
 
   unsigned getLDSSize() const {

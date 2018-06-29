@@ -218,13 +218,16 @@ protected:
                   raw_ostream &O);
 };
 
-// FIXME: R600 specific parts of AMDGPUInstrPrinter should be moved here, and
-// MCTargetDesc should be using R600InstPrinter for the R600 target.
-class R600InstPrinter : public AMDGPUInstPrinter {
+class R600InstPrinter : public MCInstPrinter {
 public:
   R600InstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                   const MCRegisterInfo &MRI)
-    : AMDGPUInstPrinter(MAI, MII, MRI) {}
+    : MCInstPrinter(MAI, MII, MRI) {}
+
+  void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
+                 const MCSubtargetInfo &STI) override;
+  void printInstruction(const MCInst *MI, raw_ostream &O);
+  static const char *getRegisterName(unsigned RegNo);
 
   void printAbs(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printBankSwizzle(const MCInst *MI, unsigned OpNo, raw_ostream &O);

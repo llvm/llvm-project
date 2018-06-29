@@ -23,11 +23,13 @@
 namespace llvm {
 
 class AMDGPUMachineFunction;
-class AMDGPUSubtarget;
+class AMDGPUCommonSubtarget;
 struct ArgDescriptor;
 
 class AMDGPUTargetLowering : public TargetLowering {
 private:
+  const AMDGPUCommonSubtarget *Subtarget;
+
   /// \returns AMDGPUISD::FFBH_U32 node if the incoming \p Op may have been
   /// legalized from a smaller type VT. Need to match pre-legalized type because
   /// the generic legalization inserts the add/sub between the select and
@@ -39,7 +41,6 @@ public:
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
 protected:
-  const AMDGPUSubtarget *Subtarget;
   AMDGPUAS AMDGPUASI;
 
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -124,7 +125,7 @@ protected:
   void analyzeFormalArgumentsCompute(CCState &State,
                               const SmallVectorImpl<ISD::InputArg> &Ins) const;
 public:
-  AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
+  AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUCommonSubtarget &STI);
 
   bool mayIgnoreSignedZero(SDValue Op) const {
     if (getTargetMachine().Options.NoSignedZerosFPMath)
@@ -292,7 +293,7 @@ public:
 
   /// Helper function that returns the byte offset of the given
   /// type of implicit parameter.
-  uint32_t getImplicitParameterOffset(const AMDGPUMachineFunction *MFI,
+  uint32_t getImplicitParameterOffset(const MachineFunction &MF,
                                       const ImplicitParameter Param) const;
 
   AMDGPUAS getAMDGPUAS() const {

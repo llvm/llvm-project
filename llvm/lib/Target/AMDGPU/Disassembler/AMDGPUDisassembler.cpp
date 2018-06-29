@@ -20,6 +20,7 @@
 #include "Disassembler/AMDGPUDisassembler.h"
 #include "AMDGPU.h"
 #include "AMDGPURegisterInfo.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"

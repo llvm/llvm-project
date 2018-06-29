@@ -358,17 +358,21 @@ define <4 x i32> @or_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
   ret <4 x i32> %t3
 }
 
+; But we don't transform if both intermediate values have extra uses.
+
 define <4 x i32> @xor_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @xor_2_vars(
-; CHECK-NEXT:    [[T1:%.*]] = xor <4 x i32> [[V0:%.*]], <i32 1, i32 undef, i32 3, i32 4>
+; CHECK-NEXT:    [[T1:%.*]] = xor <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[T2:%.*]] = xor <4 x i32> [[V1:%.*]], <i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T2]])
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = xor <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
   %t2 = xor <4 x i32> %v1, <i32 5, i32 6, i32 7, i32 8>
   %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+  call void @use_v4i32(<4 x i32> %t1)
   call void @use_v4i32(<4 x i32> %t2)
   ret <4 x i32> %t3
 }
@@ -380,15 +384,11 @@ define <4 x i32> @udiv_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-NEXT:    [[T1:%.*]] = udiv <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = udiv <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V1:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 undef, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
-; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T2]])
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = udiv <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0
   %t2 = udiv <4 x i32> <i32 5, i32 6, i32 7, i32 8>, %v1
   %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 undef, i32 1, i32 2, i32 7>
-  call void @use_v4i32(<4 x i32> %t1)
-  call void @use_v4i32(<4 x i32> %t2)
   ret <4 x i32> %t3
 }
 
@@ -502,14 +502,11 @@ define <4 x double> @fdiv_2_vars(<4 x double> %v0, <4 x double> %v1) {
   ret <4 x double> %t3
 }
 
-; FIXME:
 ; Shift-left with constant shift amount can be converted to mul to enable the fold.
 
 define <4 x i32> @mul_shl(<4 x i32> %v0) {
 ; CHECK-LABEL: @mul_shl(
-; CHECK-NEXT:    [[T1:%.*]] = mul nuw <4 x i32> [[V0:%.*]], <i32 undef, i32 undef, i32 3, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = shl nuw <4 x i32> [[V0]], <i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = mul nuw <4 x i32> [[V0:%.*]], <i32 32, i32 64, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = mul nuw <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
@@ -518,11 +515,11 @@ define <4 x i32> @mul_shl(<4 x i32> %v0) {
   ret <4 x i32> %t3
 }
 
+; Try with shift as operand 0 of the shuffle; 'nsw' is dropped for safety, but that could be improved.
+
 define <4 x i32> @shl_mul(<4 x i32> %v0) {
 ; CHECK-LABEL: @shl_mul(
-; CHECK-NEXT:    [[T1:%.*]] = shl nsw <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = mul nsw <4 x i32> [[V0]], <i32 5, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 undef, i32 2, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = mul <4 x i32> [[V0:%.*]], <i32 5, i32 undef, i32 8, i32 16>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = shl nsw <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
@@ -536,8 +533,7 @@ define <4 x i32> @shl_mul(<4 x i32> %v0) {
 
 define <4 x i32> @mul_is_nop_shl(<4 x i32> %v0) {
 ; CHECK-LABEL: @mul_is_nop_shl(
-; CHECK-NEXT:    [[T2:%.*]] = shl <4 x i32> [[V0:%.*]], <i32 5, i32 6, i32 7, i32 8>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[V0]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[T3:%.*]] = shl <4 x i32> [[V0:%.*]], <i32 0, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = mul <4 x i32> %v0, <i32 1, i32 2, i32 3, i32 4>
@@ -545,6 +541,8 @@ define <4 x i32> @mul_is_nop_shl(<4 x i32> %v0) {
   %t3 = shufflevector <4 x i32> %t1, <4 x i32> %t2, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x i32> %t3
 }
+
+; Negative test: shift amount (operand 1) must be constant.
 
 define <4 x i32> @shl_mul_not_constant_shift_amount(<4 x i32> %v0) {
 ; CHECK-LABEL: @shl_mul_not_constant_shift_amount(

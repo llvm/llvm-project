@@ -236,8 +236,6 @@ public:
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
 
-  /// AArch64 supports the MachineOutliner.
-  bool useMachineOutliner() const override { return true; }
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
   outliner::TargetCostInfo getOutlininingCandidateInfo(

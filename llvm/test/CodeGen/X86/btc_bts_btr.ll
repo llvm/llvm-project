@@ -15,10 +15,9 @@ define i16 @btr_16(i16 %x, i16 %n) {
 ;
 ; X86-LABEL: btr_16:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movw $-2, %ax
-; X86-NEXT:    rolw %cl, %ax
-; X86-NEXT:    andw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    btrw %cx, %ax
 ; X86-NEXT:    retl
   %1 = shl i16 1, %n
   %2 = xor i16 %1, -1
@@ -75,10 +74,9 @@ define i32 @btr_32(i32 %x, i32 %n) {
 ;
 ; X86-LABEL: btr_32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $-2, %eax
-; X86-NEXT:    roll %cl, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btrl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = shl i32 1, %n
   %2 = xor i32 %1, -1
@@ -95,10 +93,9 @@ define i32 @bts_32(i32 %x, i32 %n) {
 ;
 ; X86-LABEL: bts_32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btsl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = shl i32 1, %n
   %2 = or i32 %x, %1
@@ -114,10 +111,9 @@ define i32 @btc_32(i32 %x, i32 %n) {
 ;
 ; X86-LABEL: btc_32:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btcl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = shl i32 1, %n
   %2 = xor i32 %x, %1
@@ -223,10 +219,9 @@ define i16 @btr_16_mask(i16 %x, i16 %n) {
 ;
 ; X86-LABEL: btr_16_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movw $-2, %ax
-; X86-NEXT:    rolw %cl, %ax
-; X86-NEXT:    andw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    btrw %cx, %ax
 ; X86-NEXT:    retl
   %1 = and i16 %n, 15
   %2 = shl i16 1, %1
@@ -290,10 +285,9 @@ define i32 @btr_32_mask(i32 %x, i32 %n) {
 ;
 ; X86-LABEL: btr_32_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $-2, %eax
-; X86-NEXT:    roll %cl, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btrl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = and i32 %n, 31
   %2 = shl i32 1, %1
@@ -311,10 +305,9 @@ define i32 @bts_32_mask(i32 %x, i32 %n) {
 ;
 ; X86-LABEL: bts_32_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btsl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = and i32 %n, 31
   %2 = shl i32 1, %1
@@ -331,10 +324,9 @@ define i32 @btc_32_mask(i32 %x, i32 %n) {
 ;
 ; X86-LABEL: btc_32_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btcl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = and i32 %n, 31
   %2 = shl i32 1, %1
@@ -437,19 +429,16 @@ define i64 @btc_64_mask(i64 %x, i64 %n) {
 define i16 @btr_16_load(i16* %x, i16 %n) {
 ; X64-LABEL: btr_16_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    movw $-2, %ax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolw %cl, %ax
-; X64-NEXT:    andw (%rdi), %ax
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    btrw %si, %ax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btr_16_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movw $-2, %ax
-; X86-NEXT:    rolw %cl, %ax
-; X86-NEXT:    andw (%edx), %ax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    btrw %cx, %ax
 ; X86-NEXT:    retl
   %1 = load i16, i16* %x
   %2 = shl i16 1, %n
@@ -511,19 +500,16 @@ define i16 @btc_16_load(i16* %x, i16 %n) {
 define i32 @btr_32_load(i32* %x, i32 %n) {
 ; X64-LABEL: btr_32_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $-2, %eax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    roll %cl, %eax
-; X64-NEXT:    andl (%rdi), %eax
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    btrl %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btr_32_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $-2, %eax
-; X86-NEXT:    roll %cl, %eax
-; X86-NEXT:    andl (%edx), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    btrl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = load i32, i32* %x
   %2 = shl i32 1, %n
@@ -535,19 +521,16 @@ define i32 @btr_32_load(i32* %x, i32 %n) {
 define i32 @bts_32_load(i32* %x, i32 %n) {
 ; X64-LABEL: bts_32_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    orl (%rdi), %eax
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    btsl %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: bts_32_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    orl (%edx), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    btsl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = load i32, i32* %x
   %2 = shl i32 1, %n
@@ -558,19 +541,16 @@ define i32 @bts_32_load(i32* %x, i32 %n) {
 define i32 @btc_32_load(i32* %x, i32 %n) {
 ; X64-LABEL: btc_32_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    xorl (%rdi), %eax
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    btcl %esi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btc_32_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    xorl (%edx), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    btcl %ecx, %eax
 ; X86-NEXT:    retl
   %1 = load i32, i32* %x
   %2 = shl i32 1, %n
@@ -581,10 +561,8 @@ define i32 @btc_32_load(i32* %x, i32 %n) {
 define i64 @btr_64_load(i64* %x, i64 %n) {
 ; X64-LABEL: btr_64_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq $-2, %rax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolq %cl, %rax
-; X64-NEXT:    andq (%rdi), %rax
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    btrq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btr_64_load:
@@ -621,10 +599,8 @@ define i64 @btr_64_load(i64* %x, i64 %n) {
 define i64 @bts_64_load(i64* %x, i64 %n) {
 ; X64-LABEL: bts_64_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shlq %cl, %rax
-; X64-NEXT:    orq (%rdi), %rax
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    btsq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: bts_64_load:
@@ -658,10 +634,8 @@ define i64 @bts_64_load(i64* %x, i64 %n) {
 define i64 @btc_64_load(i64* %x, i64 %n) {
 ; X64-LABEL: btc_64_load:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    shlq %cl, %rax
-; X64-NEXT:    xorq (%rdi), %rax
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    btcq %rsi, %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btc_64_load:
