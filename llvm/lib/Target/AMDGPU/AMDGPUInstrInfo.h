@@ -20,10 +20,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
-#define GET_INSTRINFO_HEADER
-#include "AMDGPUGenInstrInfo.inc"
-#undef GET_INSTRINFO_HEADER
-
 namespace llvm {
 
 class AMDGPUSubtarget;
@@ -31,25 +27,9 @@ class MachineFunction;
 class MachineInstr;
 class MachineInstrBuilder;
 
-class AMDGPUInstrInfo : public AMDGPUGenInstrInfo {
-private:
-  const AMDGPUSubtarget &ST;
-
-  virtual void anchor();
-protected:
-  AMDGPUAS AMDGPUASI;
-
+class AMDGPUInstrInfo {
 public:
   explicit AMDGPUInstrInfo(const AMDGPUSubtarget &st);
-
-  bool shouldScheduleLoadsNear(SDNode *Load1, SDNode *Load2,
-                               int64_t Offset1, int64_t Offset2,
-                               unsigned NumLoads) const override;
-
-  /// Return a target-specific opcode if Opcode is a pseudo instruction.
-  /// Return -1 if the target-specific opcode for the pseudo instruction does
-  /// not exist. If Opcode is not a pseudo instruction, this is identity.
-  int pseudoToMCOpcode(int Opcode) const;
 
   static bool isUniformMMO(const MachineMemOperand *MMO);
 };

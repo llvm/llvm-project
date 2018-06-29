@@ -83,10 +83,12 @@ static void save_code(char *p) {
 }
 
 static void restore_code() {
-  char *code = (char *)mmap(real_start, kCodeSize, PROT_WRITE | PROT_EXEC,
-                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, 0, 0);
+  char *code =
+      (char *)mmap(real_start, kCodeSize, PROT_READ | PROT_WRITE | PROT_EXEC,
+                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, 0, 0);
   assert(code == real_start);
   memcpy(code, saved_code, kCodeSize);
+  __clear_cache(code, code + kCodeSize);
 }
 
 int main(int argc, char *argv[]) {

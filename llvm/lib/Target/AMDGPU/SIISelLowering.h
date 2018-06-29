@@ -22,6 +22,9 @@
 namespace llvm {
 
 class SITargetLowering final : public AMDGPUTargetLowering {
+private:
+  const SISubtarget *Subtarget;
+
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
   SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;

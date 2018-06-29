@@ -45,17 +45,12 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   friend BaseT;
 
-  const AMDGPUSubtarget *ST;
-  const AMDGPUTargetLowering *TLI;
+  Triple TargetTriple;
 
 public:
   explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(TM->getSubtargetImpl(F)),
-      TLI(ST->getTargetLowering()) {}
-
-  const AMDGPUSubtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+      TargetTriple(TM->getTargetTriple()) {}
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
@@ -123,7 +118,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(TM->getSubtargetImpl(F)),
+      ST(static_cast<const AMDGPUSubtarget*>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()),
       CommonTTI(TM, F),
       IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())) {}
@@ -211,18 +206,18 @@ class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
 
   friend BaseT;
 
-  const AMDGPUSubtarget *ST;
+  const R600Subtarget *ST;
   const AMDGPUTargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
 
 public:
   explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(TM->getSubtargetImpl(F)),
+      ST(static_cast<const R600Subtarget*>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()),
       CommonTTI(TM, F)	{}
 
-  const AMDGPUSubtarget *getST() const { return ST; }
+  const R600Subtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

@@ -109,10 +109,16 @@ def Feature8MSecExt       : SubtargetFeature<"8msecext", "Has8MSecExt", "true",
                                              "Enable support for ARMv8-M "
                                              "Security Extensions">;
 
+def FeatureSHA2           : SubtargetFeature<"sha2", "HasSHA2", "true",
+                                             "Enable SHA1 and SHA256 support", [FeatureNEON]>;
+
+def FeatureAES            : SubtargetFeature<"aes", "HasAES", "true",
+                                             "Enable AES support", [FeatureNEON]>;
+
 def FeatureCrypto         : SubtargetFeature<"crypto", "HasCrypto", "true",
                                              "Enable support for "
                                              "Cryptography extensions",
-                                             [FeatureNEON]>;
+                                             [FeatureNEON, FeatureSHA2, FeatureAES]>;
 
 def FeatureCRC            : SubtargetFeature<"crc", "HasCRC", "true",
                                              "Enable support for CRC instructions">;
@@ -419,6 +425,10 @@ def HasV8_3aOps   : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
                                    "Support ARM v8.3a instructions",
                                    [HasV8_2aOps]>;
 
+def HasV8_4aOps   : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
+                                   "Support ARM v8.4a instructions",
+                                   [HasV8_3aOps, FeatureDotProd]>;
+
 //===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.
 //
@@ -623,6 +633,20 @@ def ARMv83a   : Architecture<"armv8.3-a", "ARMv83a",  [HasV8_3aOps,
                                                        FeatureCrypto,
                                                        FeatureCRC,
                                                        FeatureRAS]>;
+
+def ARMv84a   : Architecture<"armv8.4-a", "ARMv84a",  [HasV8_4aOps,
+                                                       FeatureAClass,
+                                                       FeatureDB,
+                                                       FeatureFPARMv8,
+                                                       FeatureNEON,
+                                                       FeatureDSP,
+                                                       FeatureTrustZone,
+                                                       FeatureMP,
+                                                       FeatureVirtualization,
+                                                       FeatureCrypto,
+                                                       FeatureCRC,
+                                                       FeatureRAS,
+                                                       FeatureDotProd]>;
 
 def ARMv8r    : Architecture<"armv8-r",   "ARMv8r",   [HasV8Ops,
                                                        FeatureRClass,

@@ -907,6 +907,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::ROTL,               MVT::v4i32, Custom);
     setOperationAction(ISD::ROTL,               MVT::v8i16, Custom);
+    setOperationAction(ISD::ROTL,               MVT::v16i8, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
@@ -1040,6 +1041,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::ROTL,              MVT::v8i32,  Custom);
     setOperationAction(ISD::ROTL,              MVT::v16i16, Custom);
+    setOperationAction(ISD::ROTL,              MVT::v32i8,  Custom);
 
     setOperationAction(ISD::SELECT,            MVT::v4f64, Custom);
     setOperationAction(ISD::SELECT,            MVT::v4i64, Custom);
@@ -20400,8 +20402,20 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   const IntrinsicData* IntrData = getIntrinsicWithoutChain(IntNo);
   if (IntrData) {
     switch(IntrData->Type) {
-    case INTR_TYPE_1OP:
+    case INTR_TYPE_1OP: {
+      // We specify 2 possible opcodes for intrinsics with rounding modes.
+      // First, we check if the intrinsic may have non-default rounding mode,
+      // (IntrData->Opc1 != 0), then we check the rounding mode operand.
+      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
+      if (IntrWithRoundingModeOpcode != 0) {
+        SDValue Rnd = Op.getOperand(2);
+        if (!isRoundModeCurDirection(Rnd)) {
+          return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
+                             Op.getOperand(1), Rnd);
+        }
+      }
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1));
+    }
     case INTR_TYPE_2OP: {
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
@@ -20615,6 +20629,21 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
                                               Src1, Src2, Src3),
                                   Mask, PassThru, Subtarget, DAG);
+    }
+    case INTR_TYPE_1OP_RM: {
+      // We specify 2 possible opcodes for intrinsics with rounding modes.
+      // First, we check if the intrinsic may have non-default rounding mode,
+      // (IntrData->Opc1 != 0), then we check the rounding mode operand.
+      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
+      if (IntrWithRoundingModeOpcode != 0) {
+        SDValue Rnd = Op.getOperand(2);
+        if (!isRoundModeCurDirection(Rnd)) {
+          return DAG.getNode(IntrWithRoundingModeOpcode,
+                             dl, Op.getValueType(),
+                             Op.getOperand(1), Rnd);
+        }
+      }
+      return DAG.getNode(IntrData->Opc0, dl, VT, Op.getOperand(1));
     }
     case INTR_TYPE_3OP_RM: {
       SDValue Src1 = Op.getOperand(1);
@@ -23842,9 +23871,10 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.is256BitVector() && !Subtarget.hasAVX2())
     return Lower256IntArith(Op, DAG);
 
-  assert((VT == MVT::v4i32 || VT == MVT::v8i16 ||
-          ((VT == MVT::v8i32 || VT == MVT::v16i16) && Subtarget.hasAVX2())) &&
-         "Only v4i32/v8i16/v8i32/v16i16 vector rotates supported");
+  assert((VT == MVT::v4i32 || VT == MVT::v8i16 || VT == MVT::v16i8 ||
+          ((VT == MVT::v8i32 || VT == MVT::v16i16 || VT == MVT::v32i8) &&
+           Subtarget.hasAVX2())) &&
+         "Only vXi32/vXi16/vXi8 vector rotates supported");
 
   // Rotate by an uniform constant - expand back to shifts.
   // TODO - legalizers should be able to handle this.
@@ -23855,22 +23885,88 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
       if (RotateAmt == 0)
         return R;
 
-      SDValue SHL = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, VT, R,
-                                               RotateAmt, DAG);
-      SDValue SRL = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, VT, R,
-                                               EltSizeInBits - RotateAmt, DAG);
+      SDValue AmtR = DAG.getConstant(EltSizeInBits - RotateAmt, DL, VT);
+      SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, R, Amt);
+      SDValue SRL = DAG.getNode(ISD::SRL, DL, VT, R, AmtR);
       return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
     }
   }
 
   // Rotate by splat - expand back to shifts.
   // TODO - legalizers should be able to handle this.
-  if (IsSplatValue(VT, Amt, DL, DAG, Subtarget, Opcode)) {
+  if ((EltSizeInBits >= 16 || Subtarget.hasBWI()) &&
+      IsSplatValue(VT, Amt, DL, DAG, Subtarget, Opcode)) {
     SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
     AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
     SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, R, Amt);
     SDValue SRL = DAG.getNode(ISD::SRL, DL, VT, R, AmtR);
     return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
+  }
+
+  // v16i8/v32i8: Split rotation into rot4/rot2/rot1 stages and select by
+  // the amount bit.
+  if (EltSizeInBits == 8) {
+    if (Subtarget.hasBWI()) {
+      SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
+      AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
+      SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, R, Amt);
+      SDValue SRL = DAG.getNode(ISD::SRL, DL, VT, R, AmtR);
+      return DAG.getNode(ISD::OR, DL, VT, SHL, SRL);
+    }
+
+    MVT ExtVT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements() / 2);
+
+    auto SignBitSelect = [&](MVT SelVT, SDValue Sel, SDValue V0, SDValue V1) {
+      if (Subtarget.hasSSE41()) {
+        // On SSE41 targets we make use of the fact that VSELECT lowers
+        // to PBLENDVB which selects bytes based just on the sign bit.
+        V0 = DAG.getBitcast(VT, V0);
+        V1 = DAG.getBitcast(VT, V1);
+        Sel = DAG.getBitcast(VT, Sel);
+        return DAG.getBitcast(SelVT, DAG.getSelect(DL, VT, Sel, V0, V1));
+      }
+      // On pre-SSE41 targets we test for the sign bit by comparing to
+      // zero - a negative value will set all bits of the lanes to true
+      // and VSELECT uses that in its OR(AND(V0,C),AND(V1,~C)) lowering.
+      SDValue Z = getZeroVector(SelVT, Subtarget, DAG, DL);
+      SDValue C = DAG.getNode(X86ISD::PCMPGT, DL, SelVT, Z, Sel);
+      return DAG.getSelect(DL, SelVT, C, V0, V1);
+    };
+
+    // Turn 'a' into a mask suitable for VSELECT: a = a << 5;
+    // We can safely do this using i16 shifts as we're only interested in
+    // the 3 lower bits of each byte.
+    Amt = DAG.getBitcast(ExtVT, Amt);
+    Amt = DAG.getNode(ISD::SHL, DL, ExtVT, Amt, DAG.getConstant(5, DL, ExtVT));
+    Amt = DAG.getBitcast(VT, Amt);
+
+    // r = VSELECT(r, rot(r, 4), a);
+    SDValue M;
+    M = DAG.getNode(
+        ISD::OR, DL, VT,
+        DAG.getNode(ISD::SHL, DL, VT, R, DAG.getConstant(4, DL, VT)),
+        DAG.getNode(ISD::SRL, DL, VT, R, DAG.getConstant(4, DL, VT)));
+    R = SignBitSelect(VT, Amt, M, R);
+
+    // a += a
+    Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
+
+    // r = VSELECT(r, rot(r, 2), a);
+    M = DAG.getNode(
+        ISD::OR, DL, VT,
+        DAG.getNode(ISD::SHL, DL, VT, R, DAG.getConstant(2, DL, VT)),
+        DAG.getNode(ISD::SRL, DL, VT, R, DAG.getConstant(6, DL, VT)));
+    R = SignBitSelect(VT, Amt, M, R);
+
+    // a += a
+    Amt = DAG.getNode(ISD::ADD, DL, VT, Amt, Amt);
+
+    // return VSELECT(r, rot(r, 1), a);
+    M = DAG.getNode(
+        ISD::OR, DL, VT,
+        DAG.getNode(ISD::SHL, DL, VT, R, DAG.getConstant(1, DL, VT)),
+        DAG.getNode(ISD::SRL, DL, VT, R, DAG.getConstant(7, DL, VT)));
+    return SignBitSelect(VT, Amt, M, R);
   }
 
   bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());

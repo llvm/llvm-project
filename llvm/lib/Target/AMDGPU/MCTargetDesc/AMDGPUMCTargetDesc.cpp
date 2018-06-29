@@ -38,8 +38,16 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_MC_DESC
 #include "AMDGPUGenSubtargetInfo.inc"
 
+#define NoSchedModel NoSchedModelR600
+#define GET_SUBTARGETINFO_MC_DESC
+#include "R600GenSubtargetInfo.inc"
+#undef NoSchedModelR600
+
 #define GET_REGINFO_MC_DESC
 #include "AMDGPUGenRegisterInfo.inc"
+
+#define GET_REGINFO_MC_DESC
+#include "R600GenRegisterInfo.inc"
 
 static MCInstrInfo *createAMDGPUMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
@@ -49,12 +57,17 @@ static MCInstrInfo *createAMDGPUMCInstrInfo() {
 
 static MCRegisterInfo *createAMDGPUMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitAMDGPUMCRegisterInfo(X, 0);
+  if (TT.getArch() == Triple::r600)
+    InitR600MCRegisterInfo(X, 0);
+  else
+    InitAMDGPUMCRegisterInfo(X, 0);
   return X;
 }
 
 static MCSubtargetInfo *
 createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  if (TT.getArch() == Triple::r600)
+    return createR600MCSubtargetInfoImpl(TT, CPU, FS);
   return createAMDGPUMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
@@ -63,8 +76,10 @@ static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,
                                                 const MCAsmInfo &MAI,
                                                 const MCInstrInfo &MII,
                                                 const MCRegisterInfo &MRI) {
-  return T.getArch() == Triple::r600 ? new R600InstPrinter(MAI, MII, MRI) : 
-                                       new AMDGPUInstPrinter(MAI, MII, MRI);
+  if (T.getArch() == Triple::r600)
+    return new R600InstPrinter(MAI, MII, MRI);
+  else
+    return new AMDGPUInstPrinter(MAI, MII, MRI);
 }
 
 static MCTargetStreamer *createAMDGPUAsmTargetStreamer(MCStreamer &S,
@@ -90,10 +105,12 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
 }
 
 extern "C" void LLVMInitializeAMDGPUTargetMC() {
+
+  TargetRegistry::RegisterMCInstrInfo(getTheGCNTarget(), createAMDGPUMCInstrInfo);
+  TargetRegistry::RegisterMCInstrInfo(getTheAMDGPUTarget(), createR600MCInstrInfo);
   for (Target *T : {&getTheAMDGPUTarget(), &getTheGCNTarget()}) {
     RegisterMCAsmInfo<AMDGPUMCAsmInfo> X(*T);
 
-    TargetRegistry::RegisterMCInstrInfo(*T, createAMDGPUMCInstrInfo);
     TargetRegistry::RegisterMCRegInfo(*T, createAMDGPUMCRegisterInfo);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createAMDGPUMCSubtargetInfo);
     TargetRegistry::RegisterMCInstPrinter(*T, createAMDGPUMCInstPrinter);

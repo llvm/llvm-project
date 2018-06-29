@@ -41,7 +41,7 @@ class InstR600 <dag outs, dag ins, string asm, list<dag> pattern,
   bit LDS_1A2D = 0;
 
   let SubtargetPredicate = isR600toCayman;
-  let Namespace = "AMDGPU";
+  let Namespace = "R600";
   let OutOperandList = outs;
   let InOperandList = ins;
   let AsmString = asm;

@@ -17,6 +17,11 @@ def isVIOnly : Predicate<"Subtarget->getGeneration() =="
 
 def DisableInst : Predicate <"false">, AssemblerPredicate<"FeatureDisable">;
 
+class GCNPredicateControl : PredicateControl {
+  Predicate SIAssemblerPredicate = isSICI;
+  Predicate VIAssemblerPredicate = isVI;
+}
+
 // Execpt for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in AMDGPUInstrInfo.cpp
 def SIEncodingFamily {

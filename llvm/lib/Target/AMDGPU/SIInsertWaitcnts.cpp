@@ -934,8 +934,7 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
   // All waits must be resolved at call return.
   // NOTE: this could be improved with knowledge of all call sites or
   //   with knowledge of the called routines.
-  if (MI.getOpcode() == AMDGPU::RETURN ||
-      MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
+  if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return) {
     for (enum InstCounterType T = VM_CNT; T < NUM_INST_CNTS;
          T = (enum InstCounterType)(T + 1)) {
@@ -1131,7 +1130,7 @@ void SIInsertWaitcnts::generateWaitcntInstBefore(
   // TODO: Remove this work-around, enable the assert for Bug 457939
   //       after fixing the scheduler. Also, the Shader Compiler code is
   //       independent of target.
-  if (readsVCCZ(MI) && ST->getGeneration() <= SISubtarget::SEA_ISLANDS) {
+  if (readsVCCZ(MI) && ST->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS) {
     if (ScoreBrackets->getScoreLB(LGKM_CNT) <
             ScoreBrackets->getScoreUB(LGKM_CNT) &&
         ScoreBrackets->hasPendingSMEM()) {
@@ -1716,7 +1715,7 @@ void SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       if (ScoreBrackets->getScoreLB(LGKM_CNT) <
               ScoreBrackets->getScoreUB(LGKM_CNT) &&
           ScoreBrackets->hasPendingSMEM()) {
-        if (ST->getGeneration() <= SISubtarget::SEA_ISLANDS)
+        if (ST->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
           VCCZBugWorkAround = true;
       }
     }

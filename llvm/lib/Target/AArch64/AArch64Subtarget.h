@@ -66,6 +66,7 @@ protected:
   bool HasV8_1aOps = false;
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
+  bool HasV8_4aOps = false;
 
   bool HasFPARMv8 = false;
   bool HasNEON = false;
@@ -78,6 +79,14 @@ protected:
   bool HasPerfMon = false;
   bool HasFullFP16 = false;
   bool HasSPE = false;
+
+  // ARMv8.4 Crypto extensions
+  bool HasSM4 = true;
+  bool HasSHA3 = true;
+
+  bool HasSHA2 = true;
+  bool HasAES = true;
+
   bool HasLSLFast = false;
   bool HasSVE = false;
   bool HasRCPC = false;
@@ -201,6 +210,7 @@ public:
   bool hasV8_1aOps() const { return HasV8_1aOps; }
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
+  bool hasV8_4aOps() const { return HasV8_4aOps; }
 
   bool hasZeroCycleRegMove() const { return HasZeroCycleRegMove; }
 
@@ -228,6 +238,10 @@ public:
   bool hasLSE() const { return HasLSE; }
   bool hasRAS() const { return HasRAS; }
   bool hasRDM() const { return HasRDM; }
+  bool hasSM4() const { return HasSM4; }
+  bool hasSHA3() const { return HasSHA3; }
+  bool hasSHA2() const { return HasSHA2; }
+  bool hasAES() const { return HasAES; }
   bool balanceFPOps() const { return BalanceFPOps; }
   bool predictableSelectIsExpensive() const {
     return PredictableSelectIsExpensive;

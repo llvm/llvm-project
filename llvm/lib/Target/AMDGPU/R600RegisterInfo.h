@@ -15,13 +15,14 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600REGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_R600REGISTERINFO_H
 
-#include "AMDGPURegisterInfo.h"
+#define GET_REGINFO_HEADER
+#include "R600GenRegisterInfo.inc"
 
 namespace llvm {
 
 class AMDGPUSubtarget;
 
-struct R600RegisterInfo final : public AMDGPURegisterInfo {
+struct R600RegisterInfo final : public R600GenRegisterInfo {
   RegClassWeight RCW;
 
   R600RegisterInfo();
@@ -49,6 +50,8 @@ struct R600RegisterInfo final : public AMDGPURegisterInfo {
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
+
+  void reserveRegisterTuples(BitVector &Reserved, unsigned Reg) const;
 };
 
 } // End namespace llvm

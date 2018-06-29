@@ -9889,24 +9889,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_sqrtpd256:
   case X86::BI__builtin_ia32_sqrtpd:
   case X86::BI__builtin_ia32_sqrtps256:
-  case X86::BI__builtin_ia32_sqrtps: {
-    Function *F = CGM.getIntrinsic(Intrinsic::sqrt, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
-  case X86::BI__builtin_ia32_sqrtps512_mask:
-  case X86::BI__builtin_ia32_sqrtpd512_mask: {
-    unsigned CC = cast<llvm::ConstantInt>(Ops[3])->getZExtValue();
-    // Support only if the rounding mode is 4 (AKA CUR_DIRECTION),
-    // otherwise keep the intrinsic.
-    if (CC != 4) {
-      Intrinsic::ID IID = BuiltinID == X86::BI__builtin_ia32_sqrtps512_mask ?
-                          Intrinsic::x86_avx512_mask_sqrt_ps_512 :
-                          Intrinsic::x86_avx512_mask_sqrt_pd_512;
-      return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+  case X86::BI__builtin_ia32_sqrtps:
+  case X86::BI__builtin_ia32_sqrtps512:
+  case X86::BI__builtin_ia32_sqrtpd512: {
+    if (Ops.size() == 2) {
+      unsigned CC = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+      // Support only if the rounding mode is 4 (AKA CUR_DIRECTION),
+      // otherwise keep the intrinsic.
+      if (CC != 4) {
+        Intrinsic::ID IID = BuiltinID == X86::BI__builtin_ia32_sqrtps512 ?
+                            Intrinsic::x86_avx512_sqrt_ps_512 :
+                            Intrinsic::x86_avx512_sqrt_pd_512;
+        return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+      }
     }
     Function *F = CGM.getIntrinsic(Intrinsic::sqrt, Ops[0]->getType());
-    return EmitX86Select(*this, Ops[2], Builder.CreateCall(F, {Ops[0]}),
-                         Ops[1]);
+    return Builder.CreateCall(F, Ops[0]);
   }
   case X86::BI__builtin_ia32_pabsb128:
   case X86::BI__builtin_ia32_pabsw128:

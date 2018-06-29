@@ -8372,3 +8372,171 @@ define <16 x float> @test_mm512_max_round_ps_current(<16 x float> %a0, <16 x flo
   ret <16 x float> %res
 }
 declare <16 x float> @llvm.x86.avx512.mask.max.ps.512(<16 x float>, <16 x float>, <16 x float>, i16, i32)
+
+define <8 x double> @test_sqrt_pd_512(<8 x double> %a0) {
+; CHECK-LABEL: test_sqrt_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vsqrtpd %zmm0, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0x51,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %a0,  <8 x double> undef, i8 -1, i32 4)
+  ret <8 x double> %res
+}
+define <8 x double> @test_mask_sqrt_pd_512(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+; X86-LABEL: test_mask_sqrt_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsqrtpd %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0xfd,0x49,0x51,0xc8]
+; X86-NEXT:    vmovapd %zmm1, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0x28,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_sqrt_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtpd %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0xfd,0x49,0x51,0xc8]
+; X64-NEXT:    vmovapd %zmm1, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0x28,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %a0,  <8 x double> %passthru, i8 %mask, i32 4)
+  ret <8 x double> %res
+}
+define <8 x double> @test_maskz_sqrt_pd_512(<8 x double> %a0, i8 %mask) {
+; X86-LABEL: test_maskz_sqrt_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsqrtpd %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xc9,0x51,0xc0]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_sqrt_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtpd %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xc9,0x51,0xc0]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %a0,  <8 x double> zeroinitializer, i8 %mask, i32 4)
+  ret <8 x double> %res
+}
+define <8 x double> @test_sqrt_round_pd_512(<8 x double> %a0) {
+; CHECK-LABEL: test_sqrt_round_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x78,0x51,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %a0,  <8 x double> undef, i8 -1, i32 11)
+  ret <8 x double> %res
+}
+define <8 x double> @test_mask_sqrt_round_pd_512(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+; X86-LABEL: test_mask_sqrt_round_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0xfd,0x79,0x51,0xc8]
+; X86-NEXT:    vmovapd %zmm1, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0x28,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_sqrt_round_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0xfd,0x79,0x51,0xc8]
+; X64-NEXT:    vmovapd %zmm1, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0x28,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %a0,  <8 x double> %passthru, i8 %mask, i32 11)
+  ret <8 x double> %res
+}
+define <8 x double> @test_maskz_sqrt_round_pd_512(<8 x double> %a0, i8 %mask) {
+; X86-LABEL: test_maskz_sqrt_round_pd_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x04]
+; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
+; X86-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xf9,0x51,0xc0]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_sqrt_round_pd_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0xf9,0x51,0xc0]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %a0,  <8 x double> zeroinitializer, i8 %mask, i32 11)
+  ret <8 x double> %res
+}
+declare <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double>, <8 x double>, i8, i32) nounwind readnone
+
+define <16 x float> @test_sqrt_ps_512(<16 x float> %a0) {
+; CHECK-LABEL: test_sqrt_ps_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vsqrtps %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x51,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> undef, i16 -1, i32 4)
+  ret <16 x float> %res
+}
+define <16 x float> @test_mask_sqrt_ps_512(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+; X86-LABEL: test_mask_sqrt_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vsqrtps %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0x51,0xc8]
+; X86-NEXT:    vmovaps %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_sqrt_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtps %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x49,0x51,0xc8]
+; X64-NEXT:    vmovaps %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> %passthru, i16 %mask, i32 4)
+  ret <16 x float> %res
+}
+define <16 x float> @test_maskz_sqrt_ps_512(<16 x float> %a0, i16 %mask) {
+; X86-LABEL: test_maskz_sqrt_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vsqrtps %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xc9,0x51,0xc0]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_sqrt_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtps %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xc9,0x51,0xc0]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> zeroinitializer, i16 %mask, i32 4)
+  ret <16 x float> %res
+}
+define <16 x float> @test_sqrt_round_ps_512(<16 x float> %a0) {
+; CHECK-LABEL: test_sqrt_round_ps_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x78,0x51,0xc0]
+; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 11)
+  ret <16 x float> %res
+}
+define <16 x float> @test_mask_sqrt_round_ps_512(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+; X86-LABEL: test_mask_sqrt_round_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x79,0x51,0xc8]
+; X86-NEXT:    vmovaps %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_mask_sqrt_round_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm1 {%k1} ## encoding: [0x62,0xf1,0x7c,0x79,0x51,0xc8]
+; X64-NEXT:    vmovaps %zmm1, %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x28,0xc1]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> %passthru, i16 %mask, i32 11)
+  ret <16 x float> %res
+}
+define <16 x float> @test_maskz_sqrt_round_ps_512(<16 x float> %a0, i16 %mask) {
+; X86-LABEL: test_maskz_sqrt_round_ps_512:
+; X86:       ## %bb.0:
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 ## encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xf9,0x51,0xc0]
+; X86-NEXT:    retl ## encoding: [0xc3]
+;
+; X64-LABEL: test_maskz_sqrt_round_ps_512:
+; X64:       ## %bb.0:
+; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf1,0x7c,0xf9,0x51,0xc0]
+; X64-NEXT:    retq ## encoding: [0xc3]
+  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> zeroinitializer, i16 %mask, i32 11)
+  ret <16 x float> %res
+}
+declare <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float>, <16 x float>, i16, i32) nounwind readnone
