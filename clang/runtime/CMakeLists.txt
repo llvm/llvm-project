@@ -58,8 +58,12 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
     endif()
   endforeach()
 
+  if(TARGET cxx-headers)
+    set(COMPILER_RT_LIBCXX_DEPENDENCY "cxx-headers")
+  endif()
+
   ExternalProject_Add(compiler-rt
-    DEPENDS llvm-config clang
+    DEPENDS llvm-config clang ${COMPILER_RT_LIBCXX_DEPENDENCY}
     PREFIX ${COMPILER_RT_PREFIX}
     SOURCE_DIR ${COMPILER_RT_SRC_ROOT}
     STAMP_DIR ${STAMP_DIR}

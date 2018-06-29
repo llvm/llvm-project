@@ -1,12 +1,14 @@
 // RUN: %clangxx -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 
-// XFAIL: android
-
 #include <stdio.h>
+
+#if !defined(__GLIBC_PREREQ)
+#define __GLIBC_PREREQ(a, b) 0
+#endif
 
 // getauxval() used instead of sysconf() in GetPageSize() is defined starting
 // glbc version 2.16.
-#if defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2, 16)
+#if __GLIBC_PREREQ(2, 16)
 extern "C" long sysconf(int name) {
   fprintf(stderr, "sysconf wrapper called\n");
   return 0;

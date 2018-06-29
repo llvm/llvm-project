@@ -1169,8 +1169,11 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
       if (!IsMatchingSCEV && !TryNonMatchingSCEV)
           continue;
 
+      // TODO: this possibly can be reworked to avoid this cast at all.
       Instruction *TempIncV =
-          cast<Instruction>(PN.getIncomingValueForBlock(LatchBlock));
+          dyn_cast<Instruction>(PN.getIncomingValueForBlock(LatchBlock));
+      if (!TempIncV)
+        continue;
 
       // Check whether we can reuse this PHI node.
       if (LSRMode) {

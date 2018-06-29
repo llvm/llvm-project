@@ -608,6 +608,6 @@ Pass *llvm::createARMParallelDSPPass() {
 char ARMParallelDSP::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ARMParallelDSP, "parallel-dsp",
-                "Transform loops to use DSP intrinsics", false, false);
+                "Transform loops to use DSP intrinsics", false, false)
 INITIALIZE_PASS_END(ARMParallelDSP, "parallel-dsp",
-                "Transform loops to use DSP intrinsics", false, false);
+                "Transform loops to use DSP intrinsics", false, false)

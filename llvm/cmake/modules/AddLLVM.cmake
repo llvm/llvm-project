@@ -1283,7 +1283,7 @@ function(get_llvm_lit_path base_dir file_name)
   endif()
 
   set(lit_file_name "llvm-lit")
-  if (WIN32 AND NOT CYGWIN)
+  if (CMAKE_HOST_WIN32 AND NOT CYGWIN)
     # llvm-lit needs suffix.py for multiprocess to find a main module.
     set(lit_file_name "${lit_file_name}.py")
   endif ()
@@ -1557,7 +1557,10 @@ function(llvm_externalize_debuginfo name)
 
   if(NOT LLVM_EXTERNALIZE_DEBUGINFO_SKIP_STRIP)
     if(APPLE)
-      set(strip_command COMMAND xcrun strip -Sxl $<TARGET_FILE:${name}>)
+      if(NOT CMAKE_STRIP)
+        set(CMAKE_STRIP xcrun strip)
+      endif()
+      set(strip_command COMMAND ${CMAKE_STRIP} -Sxl $<TARGET_FILE:${name}>)
     else()
       set(strip_command COMMAND ${CMAKE_STRIP} -gx $<TARGET_FILE:${name}>)
     endif()
@@ -1571,8 +1574,11 @@ function(llvm_externalize_debuginfo name)
       set_property(TARGET ${name} APPEND_STRING PROPERTY
         LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
     endif()
+    if(NOT CMAKE_DSYMUTIL)
+      set(CMAKE_DSYMUTIL xcrun dsymutil)
+    endif()
     add_custom_command(TARGET ${name} POST_BUILD
-      COMMAND xcrun dsymutil $<TARGET_FILE:${name}>
+      COMMAND ${CMAKE_DSYMUTIL} $<TARGET_FILE:${name}>
       ${strip_command}
       )
   else()

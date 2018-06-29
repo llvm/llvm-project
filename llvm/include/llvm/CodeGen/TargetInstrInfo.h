@@ -1602,9 +1602,6 @@ public:
     return false;
   }
 
-  /// Returns true if the target implements the MachineOutliner.
-  virtual bool useMachineOutliner() const { return false; }
-
   /// Returns a \p outliner::TargetCostInfo struct containing target-specific
   /// information for a set of outlining candidates.
   virtual outliner::TargetCostInfo getOutlininingCandidateInfo(

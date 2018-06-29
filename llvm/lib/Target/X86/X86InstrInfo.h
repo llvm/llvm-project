@@ -553,9 +553,6 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  /// X86 supports the MachineOutliner.
-  bool useMachineOutliner() const override { return true; }
-
   virtual outliner::TargetCostInfo getOutlininingCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
 

@@ -100,7 +100,7 @@ unsigned getMinWavesPerEU(const FeatureBitset &Features);
 
 /// \returns Maximum number of waves per execution unit for given subtarget \p
 /// Features without any kind of limitation.
-unsigned getMaxWavesPerEU(const FeatureBitset &Features);
+unsigned getMaxWavesPerEU();
 
 /// \returns Maximum number of waves per execution unit for given subtarget \p
 /// Features and limited by given \p FlatWorkGroupSize.

@@ -554,17 +554,17 @@ def update_git_repos():
         output = get_git_cmd_output(cmd)
 
 
-def send_emails(email_addresses, msg):
+def send_emails(email_addresses, sender, msg):
     s = smtplib.SMTP()
     s.connect()
     for email_address in email_addresses:
         email_msg = email.mime.multipart.MIMEMultipart()
-        email_msg['From'] = ''
+        email_msg['From'] = sender
         email_msg['To'] = email_address
         email_msg['Subject'] = 'LLVM patches you may be able to review.'
-        email_msg.attach(email.mime.text.MIMEText(msg, 'plain'))
+        email_msg.attach(email.mime.text.MIMEText(msg.encode('utf-8'), 'plain'))
         # python 3.x: s.send_message(email_msg)
-        s.sendmail(email_msg['From'], email_msg['To'], msg)
+        s.sendmail(email_msg['From'], email_msg['To'], email_msg.as_string())
     s.quit()
 
 
@@ -585,7 +585,19 @@ def main():
         default=True,
         help='Do not update cached Phabricator objects')
     parser.add_argument(
-        'email_addresses',
+        '--email-report',
+        dest='email_report',
+        nargs='*',
+        default="",
+        help="A email addresses to send the report to.")
+    parser.add_argument(
+        '--sender',
+        dest='sender',
+        default="",
+        help="The email address to use in 'From' on messages emailed out.")
+    parser.add_argument(
+        '--email-addresses',
+        dest='email_addresses',
         nargs='*',
         help="The email addresses (as known by LLVM git) of " +
         "the people to look for reviews for.")
@@ -597,6 +609,9 @@ def main():
         logging.basicConfig(level=logging.DEBUG)
 
     people_to_look_for = [e.decode('utf-8') for e in args.email_addresses]
+    logging.debug("Will look for reviews that following contributors could " +
+                  "review: {}".format(people_to_look_for))
+    logging.debug("Will email a report to: {}".format(args.email_report))
 
     phab = init_phab_connection()
 
@@ -609,7 +624,9 @@ def main():
         phab,
         days=1,
         filter_reviewers=filter_reviewers_to_report_for(people_to_look_for))
-    send_emails(people_to_look_for, msg)
+
+    if args.email_report != []:
+        send_emails(args.email_report, args.sender, msg)
 
 
 if __name__ == "__main__":

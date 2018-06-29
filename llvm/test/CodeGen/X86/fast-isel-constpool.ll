@@ -16,11 +16,7 @@ define float @constpool_float(float %x) {
 ;
 ; LARGE-LABEL: constpool_float:
 ; LARGE:       ## %bb.0:
-; LARGE-NEXT:  Ltmp0:
-; LARGE-NEXT:    leaq {{.*}}(%rip), %rax
-; LARGE-NEXT:    movabsq $__GLOBAL_OFFSET_TABLE_-Ltmp0, %rcx
-; LARGE-NEXT:    addq %rcx, %rax
-; LARGE-NEXT:    movabsq $LCPI0_0@GOTOFF, %rax
+; LARGE-NEXT:    movabsq $LCPI0_0, %rax
 ; LARGE-NEXT:    addss (%rax), %xmm0
 ; LARGE-NEXT:    retq
 ;
@@ -32,11 +28,7 @@ define float @constpool_float(float %x) {
 ;
 ; LARGE_AVX-LABEL: constpool_float:
 ; LARGE_AVX:       ## %bb.0:
-; LARGE_AVX-NEXT:  Ltmp0:
-; LARGE_AVX-NEXT:    leaq {{.*}}(%rip), %rax
-; LARGE_AVX-NEXT:    movabsq $__GLOBAL_OFFSET_TABLE_-Ltmp0, %rcx
-; LARGE_AVX-NEXT:    addq %rcx, %rax
-; LARGE_AVX-NEXT:    movabsq $LCPI0_0@GOTOFF, %rax
+; LARGE_AVX-NEXT:    movabsq $LCPI0_0, %rax
 ; LARGE_AVX-NEXT:    vaddss (%rax), %xmm0, %xmm0
 ; LARGE_AVX-NEXT:    retq
 
@@ -53,11 +45,7 @@ define double @constpool_double(double %x) nounwind {
 ;
 ; LARGE-LABEL: constpool_double:
 ; LARGE:       ## %bb.0:
-; LARGE-NEXT:  Ltmp1:
-; LARGE-NEXT:    leaq {{.*}}(%rip), %rax
-; LARGE-NEXT:    movabsq $__GLOBAL_OFFSET_TABLE_-Ltmp1, %rcx
-; LARGE-NEXT:    addq %rcx, %rax
-; LARGE-NEXT:    movabsq $LCPI1_0@GOTOFF, %rax
+; LARGE-NEXT:    movabsq $LCPI1_0, %rax
 ; LARGE-NEXT:    addsd (%rax), %xmm0
 ; LARGE-NEXT:    retq
 ;
@@ -69,11 +57,7 @@ define double @constpool_double(double %x) nounwind {
 ;
 ; LARGE_AVX-LABEL: constpool_double:
 ; LARGE_AVX:       ## %bb.0:
-; LARGE_AVX-NEXT:  Ltmp1:
-; LARGE_AVX-NEXT:    leaq {{.*}}(%rip), %rax
-; LARGE_AVX-NEXT:    movabsq $__GLOBAL_OFFSET_TABLE_-Ltmp1, %rcx
-; LARGE_AVX-NEXT:    addq %rcx, %rax
-; LARGE_AVX-NEXT:    movabsq $LCPI1_0@GOTOFF, %rax
+; LARGE_AVX-NEXT:    movabsq $LCPI1_0, %rax
 ; LARGE_AVX-NEXT:    vaddsd (%rax), %xmm0, %xmm0
 ; LARGE_AVX-NEXT:    retq
 

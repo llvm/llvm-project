@@ -86,10 +86,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.broadcastm") || // Added in 6.0
       Name == "sse.sqrt.ss" || // Added in 7.0
       Name == "sse2.sqrt.sd" || // Added in 7.0
-      Name == "avx512.mask.sqrt.ps.128" || // Added in 7.0
-      Name == "avx512.mask.sqrt.ps.256" || // Added in 7.0
-      Name == "avx512.mask.sqrt.pd.128" || // Added in 7.0
-      Name == "avx512.mask.sqrt.pd.256" || // Added in 7.0
+      Name.startswith("avx512.mask.sqrt.p") || // Added in 7.0
       Name.startswith("avx.sqrt.p") || // Added in 7.0
       Name.startswith("sse2.sqrt.p") || // Added in 7.0
       Name.startswith("sse.sqrt.p") || // Added in 7.0
@@ -1465,14 +1462,24 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                                          Intrinsic::sqrt,
                                                          CI->getType()),
                                {CI->getArgOperand(0)});
-    } else if (IsX86 && (Name.startswith("avx512.mask.sqrt.p") &&
-                         !Name.endswith("512"))) {
+    } else if (IsX86 && (Name.startswith("avx512.mask.sqrt.p"))) {
+      if (CI->getNumArgOperands() == 4 &&
+          (!isa<ConstantInt>(CI->getArgOperand(3)) ||
+           cast<ConstantInt>(CI->getArgOperand(3))->getZExtValue() != 4)) {
+        Intrinsic::ID IID = Name[18] == 's' ? Intrinsic::x86_avx512_sqrt_ps_512
+                                            : Intrinsic::x86_avx512_sqrt_pd_512;
+
+        Value *Args[] = { CI->getArgOperand(0), CI->getArgOperand(3) };
+        Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(),
+                                                           IID), Args);
+      } else {
         Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(),
                                                            Intrinsic::sqrt,
                                                            CI->getType()),
                                  {CI->getArgOperand(0)});
-        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
-                            CI->getArgOperand(1));
+      }
+      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                          CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx512.ptestm") ||
                          Name.startswith("avx512.ptestnm"))) {
       Value *Op0 = CI->getArgOperand(0);

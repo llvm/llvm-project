@@ -110,7 +110,8 @@ namespace llvm {
           UniqueSectionNames(true), TrapUnreachable(false),
           NoTrapAfterNoreturn(false),
           EmulatedTLS(false), ExplicitEmulatedTLS(false),
-          EnableIPRA(false), EmitStackSizeSection(false) {}
+          EnableIPRA(false), EmitStackSizeSection(false),
+          EnableMachineOutliner(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -230,6 +231,9 @@ namespace llvm {
 
     /// Emit section containing metadata on function stack sizes.
     unsigned EmitStackSizeSection : 1;
+
+    /// Enables the MachineOutliner pass.
+    unsigned EnableMachineOutliner : 1;
 
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.

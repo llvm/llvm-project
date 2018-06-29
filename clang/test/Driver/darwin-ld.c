@@ -366,7 +366,7 @@
 // RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Xlinker -exported_symbols_list -Xlinker /dev/null -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// PROFILE_EXPORT: "-exported_symbol" "_VPMergeHook" "-exported_symbol" "___llvm_profile_filename" "-exported_symbol" "___llvm_profile_raw_version" "-exported_symbol" "_lprofCurFilename"
+// PROFILE_EXPORT: "-exported_symbol" "___llvm_profile_filename" "-exported_symbol" "___llvm_profile_raw_version" "-exported_symbol" "_lprofCurFilename"
 //
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=NO_PROFILE_EXPORT %s < %t.log

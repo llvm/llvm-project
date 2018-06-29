@@ -152,7 +152,7 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
   IsAMDGCN = TT.getArch() == Triple::amdgcn;
   IsAMDHSA = TT.getOS() == Triple::AMDHSA;
 
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  const AMDGPUCommonSubtarget &ST = AMDGPUCommonSubtarget::get(*TM, F);
   if (!ST.isPromoteAllocaEnabled())
     return false;
 
@@ -174,8 +174,8 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
 
 std::pair<Value *, Value *>
 AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(
-                                *Builder.GetInsertBlock()->getParent());
+  const Function &F = *Builder.GetInsertBlock()->getParent();
+  const AMDGPUCommonSubtarget &ST = AMDGPUCommonSubtarget::get(*TM, F);
 
   if (!IsAMDHSA) {
     Function *LocalSizeYFn
@@ -261,8 +261,8 @@ AMDGPUPromoteAlloca::getLocalSizeYZ(IRBuilder<> &Builder) {
 }
 
 Value *AMDGPUPromoteAlloca::getWorkitemID(IRBuilder<> &Builder, unsigned N) {
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(
-                                *Builder.GetInsertBlock()->getParent());
+  const AMDGPUCommonSubtarget &ST =
+      AMDGPUCommonSubtarget::get(*TM, *Builder.GetInsertBlock()->getParent());
   Intrinsic::ID IntrID = Intrinsic::ID::not_intrinsic;
 
   switch (N) {
@@ -602,7 +602,7 @@ bool AMDGPUPromoteAlloca::collectUsesWithPtrTypes(
 bool AMDGPUPromoteAlloca::hasSufficientLocalMem(const Function &F) {
 
   FunctionType *FTy = F.getFunctionType();
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  const AMDGPUCommonSubtarget &ST = AMDGPUCommonSubtarget::get(*TM, F);
 
   // If the function has any arguments in the local address space, then it's
   // possible these arguments require the entire local memory space, so
@@ -729,8 +729,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
   if (!SufficientLDS)
     return false;
 
-  const AMDGPUSubtarget &ST =
-    TM->getSubtarget<AMDGPUSubtarget>(ContainingFunction);
+  const AMDGPUCommonSubtarget &ST = AMDGPUCommonSubtarget::get(*TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
   const DataLayout &DL = Mod->getDataLayout();

@@ -65,6 +65,12 @@ DYNAMIC_TAG(PREINIT_ARRAYSZ, 33) // Size of the DT_PREINIT_ARRAY array.
 
 DYNAMIC_TAG(SYMTAB_SHNDX, 34) // Address of the SHT_SYMTAB_SHNDX section.
 
+// Experimental support for SHT_RELR sections. For details, see proposal
+// at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
+DYNAMIC_TAG(RELRSZ, 35)  // Size of Relr relocation table.
+DYNAMIC_TAG(RELR, 36)    // Address of relocation table (Relr entries).
+DYNAMIC_TAG(RELRENT, 37) // Size of a Relr relocation entry.
+
 DYNAMIC_TAG_MARKER(LOOS, 0x60000000)   // Start of environment specific tags.
 DYNAMIC_TAG_MARKER(HIOS, 0x6FFFFFFF)   // End of environment specific tags.
 DYNAMIC_TAG_MARKER(LOPROC, 0x70000000) // Start of processor specific tags.
@@ -76,6 +82,12 @@ DYNAMIC_TAG(ANDROID_REL, 0x6000000F)
 DYNAMIC_TAG(ANDROID_RELSZ, 0x60000010)
 DYNAMIC_TAG(ANDROID_RELA, 0x60000011)
 DYNAMIC_TAG(ANDROID_RELASZ, 0x60000012)
+
+// Android's experimental support for SHT_RELR sections.
+// https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#253
+DYNAMIC_TAG(ANDROID_RELR, 0x6FFFE000)      // Address of relocation table (Relr entries).
+DYNAMIC_TAG(ANDROID_RELRSZ, 0x6FFFE001)    // Size of Relr relocation table.
+DYNAMIC_TAG(ANDROID_RELRENT, 0x6FFFE003)   // Size of a Relr relocation entry.
 
 DYNAMIC_TAG(GNU_HASH, 0x6FFFFEF5)    // Reference to the GNU hash table.
 DYNAMIC_TAG(TLSDESC_PLT, 0x6FFFFEF6) // Location of PLT entry for TLS

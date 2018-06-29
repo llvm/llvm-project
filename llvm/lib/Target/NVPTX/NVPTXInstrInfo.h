@@ -52,10 +52,6 @@ public:
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
-  virtual bool isMoveInstr(const MachineInstr &MI, unsigned &SrcReg,
-                           unsigned &DestReg) const;
-  bool isLoadInstr(const MachineInstr &MI, unsigned &AddrSpace) const;
-  bool isStoreInstr(const MachineInstr &MI, unsigned &AddrSpace) const;
 
   // Branch analysis.
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -68,10 +64,6 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
-  unsigned getLdStCodeAddrSpace(const MachineInstr &MI) const {
-    return MI.getOperand(2).getImm();
-  }
-
 };
 
 } // namespace llvm

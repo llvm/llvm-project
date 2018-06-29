@@ -68,30 +68,14 @@ X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char
 X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
-  // If we're not PIC, it's not very interesting.
-  if (!isPositionIndependent())
+  // 64 bits can use %rip addressing for anything local.
+  if (is64Bit())
     return X86II::MO_NO_FLAG;
 
-  // For 64-bit, we need to consider the code model.
-  if (is64Bit()) {
-    switch (TM.getCodeModel()) {
-    // 64-bit small code model is simple: All rip-relative.
-    case CodeModel::Small:
-    case CodeModel::Kernel:
-      return X86II::MO_NO_FLAG;
-
-    // The large PIC code model uses GOTOFF.
-    case CodeModel::Large:
-      return X86II::MO_GOTOFF;
-
-    // Medium is a hybrid: RIP-rel for code, GOTOFF for DSO local data.
-    case CodeModel::Medium:
-      if (isa<Function>(GV))
-        return X86II::MO_NO_FLAG; // All code is RIP-relative
-      return X86II::MO_GOTOFF;    // Local symbols use GOTOFF.
-    }
-    llvm_unreachable("invalid code model");
-  }
+  // If this is for a position dependent executable, the static linker can
+  // figure it out.
+  if (!isPositionIndependent())
+    return X86II::MO_NO_FLAG;
 
   // The COFF dynamic linker just patches the executable sections.
   if (isTargetCOFF())
@@ -113,8 +97,8 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
 
 unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
                                                     const Module &M) const {
-  // The static large model never uses stubs.
-  if (TM.getCodeModel() == CodeModel::Large && !isPositionIndependent())
+  // Large model never uses stubs.
+  if (TM.getCodeModel() == CodeModel::Large)
     return X86II::MO_NO_FLAG;
 
   // Absolute symbols can be referenced directly.
@@ -136,7 +120,7 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
   if (isTargetCOFF())
     return X86II::MO_DLLIMPORT;
 
-  if (is64Bit() && TM.getCodeModel() != CodeModel::Large)
+  if (is64Bit())
     return X86II::MO_GOTPCREL;
 
   if (isTargetDarwin()) {

@@ -51,7 +51,7 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == AMDGPU::KILLGT)
+      if (MI.getOpcode() == R600::KILLGT)
         killPixel = true;
       unsigned numOperands = MI.getNumOperands();
       for (unsigned op_idx = 0; op_idx < numOperands; op_idx++) {

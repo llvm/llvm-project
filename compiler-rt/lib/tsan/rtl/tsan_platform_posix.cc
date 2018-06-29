@@ -16,6 +16,7 @@
 #if SANITIZER_POSIX
 
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "tsan_platform.h"
@@ -24,13 +25,18 @@
 namespace __tsan {
 
 static const char kShadowMemoryMappingWarning[] =
-    "FATAL: %s can not madvise shadow region [%zx, %zx] with %s\n";
+    "FATAL: %s can not madvise shadow region [%zx, %zx] with %s (errno: %d)\n";
+static const char kShadowMemoryMappingHint[] =
+    "HINT: if %s is not supported in your environment, you may set "
+    "TSAN_OPTIONS=%s=0\n";
 
 static void NoHugePagesInShadow(uptr addr, uptr size) {
   if (common_flags()->no_huge_pages_for_shadow)
     if (!NoHugePagesInRegion(addr, size)) {
       Printf(kShadowMemoryMappingWarning, SanitizerToolName, addr, addr + size,
-             "MADV_NOHUGEPAGE");
+             "MADV_NOHUGEPAGE", errno);
+      Printf(kShadowMemoryMappingHint, "MADV_NOHUGEPAGE",
+             "no_huge_pages_for_shadow");
       Die();
     }
 }
@@ -39,7 +45,8 @@ static void DontDumpShadow(uptr addr, uptr size) {
   if (common_flags()->use_madv_dontdump)
     if (!DontDumpShadowMemory(addr, size)) {
       Printf(kShadowMemoryMappingWarning, SanitizerToolName, addr, addr + size,
-             "MADV_DONTDUMP");
+             "MADV_DONTDUMP", errno);
+      Printf(kShadowMemoryMappingHint, "MADV_DONTDUMP", "use_madv_dontdump");
       Die();
     }
 }
