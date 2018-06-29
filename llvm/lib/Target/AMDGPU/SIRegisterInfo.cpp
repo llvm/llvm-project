@@ -1232,8 +1232,6 @@ const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
     &AMDGPU::VReg_512RegClass,
     &AMDGPU::SReg_512RegClass,
     &AMDGPU::SCC_CLASSRegClass,
-    &AMDGPU::R600_Reg32RegClass,
-    &AMDGPU::R600_PredicateRegClass,
     &AMDGPU::Pseudo_SReg_32RegClass,
     &AMDGPU::Pseudo_SReg_128RegClass,
   };

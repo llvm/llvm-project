@@ -40,6 +40,7 @@ Target &getTheGCNTarget();
 MCCodeEmitter *createR600MCCodeEmitter(const MCInstrInfo &MCII,
                                        const MCRegisterInfo &MRI,
                                        MCContext &Ctx);
+MCInstrInfo *createR600MCInstrInfo();
 
 MCCodeEmitter *createSIMCCodeEmitter(const MCInstrInfo &MCII,
                                      const MCRegisterInfo &MRI,
@@ -59,6 +60,10 @@ createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
 #include "AMDGPUGenRegisterInfo.inc"
 #undef GET_REGINFO_ENUM
 
+#define GET_REGINFO_ENUM
+#include "R600GenRegisterInfo.inc"
+#undef GET_REGINFO_ENUM
+
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_OPERAND_ENUM
 #define GET_INSTRINFO_SCHED_ENUM
@@ -67,9 +72,20 @@ createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
 #undef GET_INSTRINFO_OPERAND_ENUM
 #undef GET_INSTRINFO_ENUM
 
+#define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_OPERAND_ENUM
+#define GET_INSTRINFO_SCHED_ENUM
+#include "R600GenInstrInfo.inc"
+#undef GET_INSTRINFO_SCHED_ENUM
+#undef GET_INSTRINFO_OPERAND_ENUM
+#undef GET_INSTRINFO_ENUM
 
 #define GET_SUBTARGETINFO_ENUM
 #include "AMDGPUGenSubtargetInfo.inc"
+#undef GET_SUBTARGETINFO_ENUM
+
+#define GET_SUBTARGETINFO_ENUM
+#include "R600GenSubtargetInfo.inc"
 #undef GET_SUBTARGETINFO_ENUM
 
 #endif

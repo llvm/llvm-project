@@ -2337,6 +2337,7 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
           return true;
         }
 
+        assert(LSB + Width + 1 <= 32 && "Shouldn't create an invalid ubfx");
         SDValue Ops[] = { N->getOperand(0).getOperand(0),
                           CurDAG->getTargetConstant(LSB, dl, MVT::i32),
                           CurDAG->getTargetConstant(Width, dl, MVT::i32),
@@ -2361,6 +2362,7 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
       if (LSB < 0)
         return false;
       SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
+      assert(LSB + Width + 1 <= 32 && "Shouldn't create an invalid ubfx");
       SDValue Ops[] = { N->getOperand(0).getOperand(0),
                         CurDAG->getTargetConstant(LSB, dl, MVT::i32),
                         CurDAG->getTargetConstant(Width, dl, MVT::i32),
@@ -2382,6 +2384,7 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
       // Note: The width operand is encoded as width-1.
       unsigned Width = MSB - LSB;
       SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
+      assert(Srl_imm + Width + 1 <= 32 && "Shouldn't create an invalid ubfx");
       SDValue Ops[] = { N->getOperand(0).getOperand(0),
                         CurDAG->getTargetConstant(Srl_imm, dl, MVT::i32),
                         CurDAG->getTargetConstant(Width, dl, MVT::i32),
@@ -2402,6 +2405,7 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
       return false;
 
     SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
+    assert(LSB + Width <= 32 && "Shouldn't create an invalid ubfx");
     SDValue Ops[] = { N->getOperand(0).getOperand(0),
                       CurDAG->getTargetConstant(LSB, dl, MVT::i32),
                       CurDAG->getTargetConstant(Width - 1, dl, MVT::i32),

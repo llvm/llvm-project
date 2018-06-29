@@ -432,19 +432,19 @@ void AMDGPUCFGStructurizer::reversePredicateSetter(
   for (;; --I) {
     if (I == MBB.end())
       continue;
-    if (I->getOpcode() == AMDGPU::PRED_X) {
+    if (I->getOpcode() == R600::PRED_X) {
       switch (I->getOperand(2).getImm()) {
-      case AMDGPU::PRED_SETE_INT:
-        I->getOperand(2).setImm(AMDGPU::PRED_SETNE_INT);
+      case R600::PRED_SETE_INT:
+        I->getOperand(2).setImm(R600::PRED_SETNE_INT);
         return;
-      case AMDGPU::PRED_SETNE_INT:
-        I->getOperand(2).setImm(AMDGPU::PRED_SETE_INT);
+      case R600::PRED_SETNE_INT:
+        I->getOperand(2).setImm(R600::PRED_SETE_INT);
         return;
-      case AMDGPU::PRED_SETE:
-        I->getOperand(2).setImm(AMDGPU::PRED_SETNE);
+      case R600::PRED_SETE:
+        I->getOperand(2).setImm(R600::PRED_SETNE);
         return;
-      case AMDGPU::PRED_SETNE:
-        I->getOperand(2).setImm(AMDGPU::PRED_SETE);
+      case R600::PRED_SETNE:
+        I->getOperand(2).setImm(R600::PRED_SETE);
         return;
       default:
         llvm_unreachable("PRED_X Opcode invalid!");
@@ -513,10 +513,10 @@ void AMDGPUCFGStructurizer::insertCondBranchBefore(
 
 int AMDGPUCFGStructurizer::getBranchNzeroOpcode(int OldOpcode) {
   switch(OldOpcode) {
-  case AMDGPU::JUMP_COND:
-  case AMDGPU::JUMP: return AMDGPU::IF_PREDICATE_SET;
-  case AMDGPU::BRANCH_COND_i32:
-  case AMDGPU::BRANCH_COND_f32: return AMDGPU::IF_LOGICALNZ_f32;
+  case R600::JUMP_COND:
+  case R600::JUMP: return R600::IF_PREDICATE_SET;
+  case R600::BRANCH_COND_i32:
+  case R600::BRANCH_COND_f32: return R600::IF_LOGICALNZ_f32;
   default: llvm_unreachable("internal error");
   }
   return -1;
@@ -524,10 +524,10 @@ int AMDGPUCFGStructurizer::getBranchNzeroOpcode(int OldOpcode) {
 
 int AMDGPUCFGStructurizer::getBranchZeroOpcode(int OldOpcode) {
   switch(OldOpcode) {
-  case AMDGPU::JUMP_COND:
-  case AMDGPU::JUMP: return AMDGPU::IF_PREDICATE_SET;
-  case AMDGPU::BRANCH_COND_i32:
-  case AMDGPU::BRANCH_COND_f32: return AMDGPU::IF_LOGICALZ_f32;
+  case R600::JUMP_COND:
+  case R600::JUMP: return R600::IF_PREDICATE_SET;
+  case R600::BRANCH_COND_i32:
+  case R600::BRANCH_COND_f32: return R600::IF_LOGICALZ_f32;
   default: llvm_unreachable("internal error");
   }
   return -1;
@@ -535,8 +535,8 @@ int AMDGPUCFGStructurizer::getBranchZeroOpcode(int OldOpcode) {
 
 int AMDGPUCFGStructurizer::getContinueNzeroOpcode(int OldOpcode) {
   switch(OldOpcode) {
-  case AMDGPU::JUMP_COND:
-  case AMDGPU::JUMP: return AMDGPU::CONTINUE_LOGICALNZ_i32;
+  case R600::JUMP_COND:
+  case R600::JUMP: return R600::CONTINUE_LOGICALNZ_i32;
   default: llvm_unreachable("internal error");
   }
   return -1;
@@ -544,8 +544,8 @@ int AMDGPUCFGStructurizer::getContinueNzeroOpcode(int OldOpcode) {
 
 int AMDGPUCFGStructurizer::getContinueZeroOpcode(int OldOpcode) {
   switch(OldOpcode) {
-  case AMDGPU::JUMP_COND:
-  case AMDGPU::JUMP: return AMDGPU::CONTINUE_LOGICALZ_i32;
+  case R600::JUMP_COND:
+  case R600::JUMP: return R600::CONTINUE_LOGICALZ_i32;
   default: llvm_unreachable("internal error");
   }
   return -1;
@@ -573,9 +573,9 @@ AMDGPUCFGStructurizer::getFalseBranch(MachineBasicBlock *MBB,
 
 bool AMDGPUCFGStructurizer::isCondBranch(MachineInstr *MI) {
   switch (MI->getOpcode()) {
-    case AMDGPU::JUMP_COND:
-    case AMDGPU::BRANCH_COND_i32:
-    case AMDGPU::BRANCH_COND_f32: return true;
+    case R600::JUMP_COND:
+    case R600::BRANCH_COND_i32:
+    case R600::BRANCH_COND_f32: return true;
   default:
     return false;
   }
@@ -584,8 +584,8 @@ bool AMDGPUCFGStructurizer::isCondBranch(MachineInstr *MI) {
 
 bool AMDGPUCFGStructurizer::isUncondBranch(MachineInstr *MI) {
   switch (MI->getOpcode()) {
-  case AMDGPU::JUMP:
-  case AMDGPU::BRANCH:
+  case R600::JUMP:
+  case R600::BRANCH:
     return true;
   default:
     return false;
@@ -634,7 +634,7 @@ MachineInstr *AMDGPUCFGStructurizer::getReturnInstr(MachineBasicBlock *MBB) {
   MachineBasicBlock::reverse_iterator It = MBB->rbegin();
   if (It != MBB->rend()) {
     MachineInstr *instr = &(*It);
-    if (instr->getOpcode() == AMDGPU::RETURN)
+    if (instr->getOpcode() == R600::RETURN)
       return instr;
   }
   return nullptr;
@@ -687,8 +687,8 @@ void AMDGPUCFGStructurizer::wrapup(MachineBasicBlock *MBB) {
    MachineBasicBlock::iterator E = MBB->end();
    MachineBasicBlock::iterator It = Pre;
    while (It != E) {
-     if (Pre->getOpcode() == AMDGPU::CONTINUE
-         && It->getOpcode() == AMDGPU::ENDLOOP)
+     if (Pre->getOpcode() == R600::CONTINUE
+         && It->getOpcode() == R600::ENDLOOP)
        ContInstr.push_back(&*Pre);
      Pre = It;
      ++It;
@@ -1303,15 +1303,15 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
 
   bool LandBlkHasOtherPred = (LandBlk->pred_size() > 2);
 
-  //insert AMDGPU::ENDIF to avoid special case "input landBlk == NULL"
-  MachineBasicBlock::iterator I = insertInstrBefore(LandBlk, AMDGPU::ENDIF);
+  //insert R600::ENDIF to avoid special case "input landBlk == NULL"
+  MachineBasicBlock::iterator I = insertInstrBefore(LandBlk, R600::ENDIF);
 
   if (LandBlkHasOtherPred) {
     report_fatal_error("Extra register needed to handle CFG");
     unsigned CmpResReg =
       HeadMBB->getParent()->getRegInfo().createVirtualRegister(I32RC);
     report_fatal_error("Extra compare instruction needed to handle CFG");
-    insertCondBranchBefore(LandBlk, I, AMDGPU::IF_PREDICATE_SET,
+    insertCondBranchBefore(LandBlk, I, R600::IF_PREDICATE_SET,
         CmpResReg, DebugLoc());
   }
 
@@ -1319,7 +1319,7 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
   // cause an assertion failure in the PostRA scheduling pass.
   unsigned InitReg =
     HeadMBB->getParent()->getRegInfo().createVirtualRegister(I32RC);
-  insertCondBranchBefore(LandBlk, I, AMDGPU::IF_PREDICATE_SET, InitReg,
+  insertCondBranchBefore(LandBlk, I, R600::IF_PREDICATE_SET, InitReg,
       DebugLoc());
 
   if (MigrateTrue) {
@@ -1329,7 +1329,7 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
     // (initVal != 1).
     report_fatal_error("Extra register needed to handle CFG");
   }
-  insertInstrBefore(I, AMDGPU::ELSE);
+  insertInstrBefore(I, R600::ELSE);
 
   if (MigrateFalse) {
     migrateInstruction(FalseMBB, LandBlk, I);
@@ -1341,7 +1341,7 @@ int AMDGPUCFGStructurizer::improveSimpleJumpintoIf(MachineBasicBlock *HeadMBB,
 
   if (LandBlkHasOtherPred) {
     // add endif
-    insertInstrBefore(I, AMDGPU::ENDIF);
+    insertInstrBefore(I, R600::ENDIF);
 
     // put initReg = 2 to other predecessors of landBlk
     for (MachineBasicBlock::pred_iterator PI = LandBlk->pred_begin(),
@@ -1414,7 +1414,7 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
   }
 
   if (FalseMBB) {
-    insertInstrBefore(I, AMDGPU::ELSE);
+    insertInstrBefore(I, R600::ELSE);
     MBB->splice(I, FalseMBB, FalseMBB->begin(),
                    FalseMBB->end());
     MBB->removeSuccessor(FalseMBB, true);
@@ -1423,7 +1423,7 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
     retireBlock(FalseMBB);
     MLI->removeBlock(FalseMBB);
   }
-  insertInstrBefore(I, AMDGPU::ENDIF);
+  insertInstrBefore(I, R600::ENDIF);
 
   BranchMI->eraseFromParent();
 
@@ -1436,8 +1436,8 @@ void AMDGPUCFGStructurizer::mergeLooplandBlock(MachineBasicBlock *DstBlk,
   LLVM_DEBUG(dbgs() << "loopPattern header = BB" << DstBlk->getNumber()
                     << " land = BB" << LandMBB->getNumber() << "\n";);
 
-  insertInstrBefore(DstBlk, AMDGPU::WHILELOOP, DebugLoc());
-  insertInstrEnd(DstBlk, AMDGPU::ENDLOOP, DebugLoc());
+  insertInstrBefore(DstBlk, R600::WHILELOOP, DebugLoc());
+  insertInstrEnd(DstBlk, R600::ENDLOOP, DebugLoc());
   DstBlk->replaceSuccessor(DstBlk, LandMBB);
 }
 
@@ -1453,9 +1453,9 @@ void AMDGPUCFGStructurizer::mergeLoopbreakBlock(MachineBasicBlock *ExitingMBB,
   MachineBasicBlock::iterator I = BranchMI;
   if (TrueBranch != LandMBB)
     reversePredicateSetter(I, *I->getParent());
-  insertCondBranchBefore(ExitingMBB, I, AMDGPU::IF_PREDICATE_SET, AMDGPU::PREDICATE_BIT, DL);
-  insertInstrBefore(I, AMDGPU::BREAK);
-  insertInstrBefore(I, AMDGPU::ENDIF);
+  insertCondBranchBefore(ExitingMBB, I, R600::IF_PREDICATE_SET, R600::PREDICATE_BIT, DL);
+  insertInstrBefore(I, R600::BREAK);
+  insertInstrBefore(I, R600::ENDIF);
   //now branchInst can be erase safely
   BranchMI->eraseFromParent();
   //now take care of successors, retire blocks
@@ -1484,8 +1484,8 @@ void AMDGPUCFGStructurizer::settleLoopcontBlock(MachineBasicBlock *ContingMBB,
           getBranchZeroOpcode(OldOpcode);
       insertCondBranchBefore(I, BranchOpcode, DL);
       // insertEnd to ensure phi-moves, if exist, go before the continue-instr.
-      insertInstrEnd(ContingMBB, AMDGPU::CONTINUE, DL);
-      insertInstrEnd(ContingMBB, AMDGPU::ENDIF, DL);
+      insertInstrEnd(ContingMBB, R600::CONTINUE, DL);
+      insertInstrEnd(ContingMBB, R600::ENDIF, DL);
     } else {
       int BranchOpcode =
           TrueBranch == ContMBB ? getContinueNzeroOpcode(OldOpcode) :
@@ -1500,7 +1500,7 @@ void AMDGPUCFGStructurizer::settleLoopcontBlock(MachineBasicBlock *ContingMBB,
     // location we've just inserted that reference here so it should be
     // representative insertEnd to ensure phi-moves, if exist, go before the
     // continue-instr.
-    insertInstrEnd(ContingMBB, AMDGPU::CONTINUE,
+    insertInstrEnd(ContingMBB, R600::CONTINUE,
         getLastDebugLocInBB(ContingMBB));
   }
 }
@@ -1627,7 +1627,7 @@ void AMDGPUCFGStructurizer::addDummyExitBlock(
     SmallVectorImpl<MachineBasicBlock*> &RetMBB) {
   MachineBasicBlock *DummyExitBlk = FuncRep->CreateMachineBasicBlock();
   FuncRep->push_back(DummyExitBlk);  //insert to function
-  insertInstrEnd(DummyExitBlk, AMDGPU::RETURN);
+  insertInstrEnd(DummyExitBlk, R600::RETURN);
 
   for (SmallVectorImpl<MachineBasicBlock *>::iterator It = RetMBB.begin(),
        E = RetMBB.end(); It != E; ++It) {

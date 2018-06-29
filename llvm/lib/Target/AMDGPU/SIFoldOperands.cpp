@@ -76,7 +76,7 @@ public:
   MachineRegisterInfo *MRI;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
-  const SISubtarget *ST;
+  const AMDGPUSubtarget *ST;
 
   void foldOperand(MachineOperand &OpToFold,
                    MachineInstr *UseMI,
@@ -972,7 +972,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   MRI = &MF.getRegInfo();
-  ST = &MF.getSubtarget<SISubtarget>();
+  ST = &MF.getSubtarget<AMDGPUSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
 

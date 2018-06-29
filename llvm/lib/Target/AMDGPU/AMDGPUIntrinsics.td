@@ -14,5 +14,3 @@
 let TargetPrefix = "AMDGPU", isTarget = 1 in {
   def int_AMDGPU_kill : Intrinsic<[], [llvm_float_ty], []>;
 }
-
-include "SIIntrinsics.td"

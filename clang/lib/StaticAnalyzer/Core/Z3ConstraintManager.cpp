@@ -1414,9 +1414,8 @@ Z3Expr Z3ConstraintManager::getZ3BinExpr(const Z3Expr &LHS, QualType LTy,
 
     // If the two operands are pointers and the operation is a subtraction, the
     // result is of type ptrdiff_t, which is signed
-    if (LTy->isAnyPointerType() && LTy == RTy && Op == BO_Sub) {
-      ASTContext &Ctx = getBasicVals().getContext();
-      *RetTy = Ctx.getIntTypeForBitwidth(Ctx.getTypeSize(LTy), true);
+    if (LTy->isAnyPointerType() && RTy->isAnyPointerType() && Op == BO_Sub) {
+      *RetTy = getBasicVals().getContext().getPointerDiffType();
     }
   }
 

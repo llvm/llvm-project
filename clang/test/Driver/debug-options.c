@@ -134,6 +134,8 @@
 // RUN:        | FileCheck -check-prefix=GIGNORE %s
 //
 // RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GOPT %s
+// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NOGOPT %s
+// RUN: %clang -### -c -ggnu-pubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOGOPT %s
 //
 // RUN: %clang -### -c -gdwarf-aranges %s 2>&1 | FileCheck -check-prefix=GARANGE %s
 //
@@ -222,6 +224,7 @@
 // GIGNORE-NOT: "argument unused during compilation"
 //
 // GOPT: -ggnu-pubnames
+// NOGOPT-NOT: -ggnu-pubnames
 //
 // GARANGE: -generate-arange-section
 //

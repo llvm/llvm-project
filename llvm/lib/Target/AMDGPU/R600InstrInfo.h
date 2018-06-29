@@ -15,8 +15,11 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_R600INSTRINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_R600INSTRINFO_H
 
-#include "AMDGPUInstrInfo.h"
 #include "R600RegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+
+#define GET_INSTRINFO_HEADER
+#include "R600GenInstrInfo.inc"
 
 namespace llvm {
 
@@ -34,7 +37,7 @@ class MachineInstr;
 class MachineInstrBuilder;
 class R600Subtarget;
 
-class R600InstrInfo final : public AMDGPUInstrInfo {
+class R600InstrInfo final : public R600GenInstrInfo {
 private:
   const R600RegisterInfo RI;
   const R600Subtarget &ST;
@@ -324,7 +327,7 @@ public:
       PseudoSourceValue::PSVKind Kind) const override;
 };
 
-namespace AMDGPU {
+namespace R600 {
 
 int getLDSNoRetOp(uint16_t Opcode);
 

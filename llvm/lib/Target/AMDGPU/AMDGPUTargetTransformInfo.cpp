@@ -102,7 +102,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   unsigned ThresholdPrivate = UnrollThresholdPrivate;
   unsigned ThresholdLocal = UnrollThresholdLocal;
   unsigned MaxBoost = std::max(ThresholdPrivate, ThresholdLocal);
-  AMDGPUAS ASST = ST->getAMDGPUAS();
+  const AMDGPUAS &ASST = AMDGPU::getAMDGPUAS(TargetTriple);
   for (const BasicBlock *BB : L->getBlocks()) {
     const DataLayout &DL = BB->getModule()->getDataLayout();
     unsigned LocalGEPsSeen = 0;
