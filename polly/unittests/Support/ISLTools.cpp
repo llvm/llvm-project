@@ -6,7 +6,7 @@ namespace isl {
 static bool operator==(const isl::basic_set &A, const isl::basic_set &B) {
   return A.is_equal(B);
 }
-}
+} // namespace isl
 
 TEST(Support, isl_iterator) {
   std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> RawCtx(isl_ctx_alloc(),
