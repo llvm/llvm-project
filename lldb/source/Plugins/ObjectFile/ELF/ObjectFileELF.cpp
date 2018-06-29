@@ -730,16 +730,17 @@ size_t ObjectFileELF::GetModuleSpecifications(
                     data.GetDataStart(), data.GetByteSize());
               }
             }
+            using u32le = llvm::support::ulittle32_t;
             if (gnu_debuglink_crc) {
               // Use 4 bytes of crc from the .gnu_debuglink section.
-              uint32_t uuidt[4] = {gnu_debuglink_crc, 0, 0, 0};
-              uuid = UUID::fromData(uuidt, sizeof(uuidt));
+              u32le data(gnu_debuglink_crc);
+              uuid = UUID::fromData(&data, sizeof(data));
             } else if (core_notes_crc) {
               // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make
               // it look different form .gnu_debuglink crc followed by 4 bytes
               // of note segments crc.
-              uint32_t uuidt[4] = {g_core_uuid_magic, core_notes_crc, 0, 0};
-              uuid = UUID::fromData(uuidt, sizeof(uuidt));
+              u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
+              uuid = UUID::fromData(data, sizeof(data));
             }
           }
 
@@ -909,6 +910,7 @@ bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
   if (!ParseSectionHeaders() && GetType() != ObjectFile::eTypeCoreFile)
     return false;
 
+  using u32le = llvm::support::ulittle32_t;
   if (m_uuid.IsValid()) {
     // We have the full build id uuid.
     *uuid = m_uuid;
@@ -925,8 +927,8 @@ bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
       // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make it look
       // different form .gnu_debuglink crc - followed by 4 bytes of note
       // segments crc.
-      uint32_t uuidt[4] = {g_core_uuid_magic, core_notes_crc, 0, 0};
-      m_uuid = UUID::fromData(uuidt, sizeof(uuidt));
+      u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
+      m_uuid = UUID::fromData(data, sizeof(data));
     }
   } else {
     if (!m_gnu_debuglink_crc)
@@ -934,8 +936,8 @@ bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
           calc_gnu_debuglink_crc32(m_data.GetDataStart(), m_data.GetByteSize());
     if (m_gnu_debuglink_crc) {
       // Use 4 bytes of crc from the .gnu_debuglink section.
-      uint32_t uuidt[4] = {m_gnu_debuglink_crc, 0, 0, 0};
-      m_uuid = UUID::fromData(uuidt, sizeof(uuidt));
+      u32le data(m_gnu_debuglink_crc);
+      m_uuid = UUID::fromData(&data, sizeof(data));
     }
   }
 
@@ -1273,18 +1275,16 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
         // Only bother processing this if we don't already have the uuid set.
         if (!uuid.IsValid()) {
           // 16 bytes is UUID|MD5, 20 bytes is SHA1. Other linkers may produce a
-          // build-id of a different
-          // length. Accept it as long as it's at least 4 bytes as it will be
-          // better than our own crc32.
-          if (note.n_descsz >= 4 && note.n_descsz <= 20) {
-            uint8_t uuidbuf[20];
-            if (data.GetU8(&offset, &uuidbuf, note.n_descsz) == nullptr) {
+          // build-id of a different length. Accept it as long as it's at least
+          // 4 bytes as it will be better than our own crc32.
+          if (note.n_descsz >= 4) {
+            if (const uint8_t *buf = data.PeekData(offset, note.n_descsz)) {
+              // Save the build id as the UUID for the module.
+              uuid = UUID::fromData(buf, note.n_descsz);
+            } else {
               error.SetErrorString("failed to read GNU_BUILD_ID note payload");
               return error;
             }
-
-            // Save the build id as the UUID for the module.
-            uuid = UUID::fromData(uuidbuf, note.n_descsz);
           }
         }
         break;

@@ -1217,6 +1217,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       !Config->DLL && Args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   Config->DebugDwarf = Args.hasArg(OPT_debug_dwarf);
   Config->DebugGHashes = Args.hasArg(OPT_debug_ghash);
+  Config->DebugSymtab = Args.hasArg(OPT_debug_symtab);
 
   Config->MapFile = getMapFile(Args);
 

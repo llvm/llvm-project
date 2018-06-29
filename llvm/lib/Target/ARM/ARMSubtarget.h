@@ -105,6 +105,7 @@ protected:
     ARMv81a,
     ARMv82a,
     ARMv83a,
+    ARMv84a,
     ARMv8a,
     ARMv8mBaseline,
     ARMv8mMainline,
@@ -151,6 +152,7 @@ protected:
   bool HasV8_1aOps = false;
   bool HasV8_2aOps = false;
   bool HasV8_3aOps = false;
+  bool HasV8_4aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
 
@@ -298,6 +300,12 @@ protected:
 
   /// Has8MSecExt - if true, processor supports ARMv8-M Security Extensions
   bool Has8MSecExt = false;
+
+  /// HasSHA2 - if true, processor supports SHA1 and SHA256
+  bool HasSHA2 = false;
+
+  /// HasAES - if true, processor supports AES
+  bool HasAES = false;
 
   /// HasCrypto - if true, processor supports Cryptography extensions
   bool HasCrypto = false;
@@ -513,6 +521,7 @@ public:
   bool hasV8_1aOps() const { return HasV8_1aOps; }
   bool hasV8_2aOps() const { return HasV8_2aOps; }
   bool hasV8_3aOps() const { return HasV8_3aOps; }
+  bool hasV8_4aOps() const { return HasV8_4aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
 
@@ -538,6 +547,8 @@ public:
   bool hasVFP4() const { return HasVFPv4; }
   bool hasFPARMv8() const { return HasFPARMv8; }
   bool hasNEON() const { return HasNEON;  }
+  bool hasSHA2() const { return HasSHA2; }
+  bool hasAES() const { return HasAES; }
   bool hasCrypto() const { return HasCrypto; }
   bool hasDotProd() const { return HasDotProd; }
   bool hasCRC() const { return HasCRC; }

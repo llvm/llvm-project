@@ -10,10 +10,19 @@
 // This file defines a checker that reports uninitialized fields in objects
 // created after a constructor call.
 //
-// This checker has an option "Pedantic" (boolean). If its not set or is set to
-// false, the checker won't emit warnings for objects that don't have at least
-// one initialized field. This may be set with
-// `-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true`.
+// This checker has two options:
+//   - "Pedantic" (boolean). If its not set or is set to false, the checker
+//     won't emit warnings for objects that don't have at least one initialized
+//     field. This may be set with
+//
+//  `-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true`.
+//
+//   - "NotesAsWarnings" (boolean). If set to true, the checker will emit a
+//     warning for each uninitalized field, as opposed to emitting one warning
+//     per constructor call, and listing the uninitialized fields that belongs
+//     to it in notes. Defaults to false.
+//
+//  `-analyzer-config alpha.cplusplus.UninitializedObject:NotesAsWarnings=true`.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,7 +41,9 @@ class UninitializedObjectChecker : public Checker<check::EndFunction> {
   std::unique_ptr<BuiltinBug> BT_uninitField;
 
 public:
-  bool IsPedantic; // Will be initialized when registering the checker.
+  // These fields will be initialized when registering the checker.
+  bool IsPedantic;
+  bool ShouldConvertNotesToWarnings;
 
   UninitializedObjectChecker()
       : BT_uninitField(new BuiltinBug(this, "Uninitialized fields")) {}
@@ -216,6 +227,9 @@ bool isPrimitiveType(const QualType &T) {
   return T->isBuiltinType() || T->isEnumeralType();
 }
 
+/// Constructs a note message for a given FieldChainInfo object.
+void printNoteMessage(llvm::raw_ostream &Out, const FieldChainInfo &Chain);
+
 } // end of anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -264,6 +278,23 @@ void UninitializedObjectChecker::checkEndFunction(
     LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
         CallSite, Context.getSourceManager(), Node->getLocationContext());
 
+  // For Plist consumers that don't support notes just yet, we'll convert notes
+  // to warnings.
+  if (ShouldConvertNotesToWarnings) {
+    for (const auto &Chain : UninitFields) {
+      SmallString<100> WarningBuf;
+      llvm::raw_svector_ostream WarningOS(WarningBuf);
+
+      printNoteMessage(WarningOS, Chain);
+
+      auto Report = llvm::make_unique<BugReport>(
+          *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
+          Node->getLocationContext()->getDecl());
+      Context.emitReport(std::move(Report));
+    }
+    return;
+  }
+
   SmallString<100> WarningBuf;
   llvm::raw_svector_ostream WarningOS(WarningBuf);
   WarningOS << UninitFields.size() << " uninitialized field"
@@ -274,29 +305,16 @@ void UninitializedObjectChecker::checkEndFunction(
       *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
       Node->getLocationContext()->getDecl());
 
-  // TODO: As of now, one warning is emitted per constructor call, and the
-  // uninitialized fields are listed in notes. Until there's a better support
-  // for notes avaible, a note-less version of this checker should be
-  // implemented.
-  for (const auto &FieldChain : UninitFields) {
+  for (const auto &Chain : UninitFields) {
     SmallString<200> NoteBuf;
     llvm::raw_svector_ostream NoteOS(NoteBuf);
 
-    if (FieldChain.isPointer()) {
-      if (FieldChain.isDereferenced())
-        NoteOS << "uninitialized pointee 'this->";
-      else
-        NoteOS << "uninitialized pointer 'this->";
-    } else
-      NoteOS << "uninitialized field 'this->";
-    FieldChain.print(NoteOS);
-    NoteOS << "'";
+    printNoteMessage(NoteOS, Chain);
 
     Report->addNote(NoteOS.str(),
-                    PathDiagnosticLocation::create(FieldChain.getEndOfChain(),
+                    PathDiagnosticLocation::create(Chain.getEndOfChain(),
                                                    Context.getSourceManager()));
   }
-
   Context.emitReport(std::move(Report));
 }
 
@@ -662,10 +680,24 @@ bool isCalledByConstructor(const CheckerContext &Context) {
   return false;
 }
 
+void printNoteMessage(llvm::raw_ostream &Out, const FieldChainInfo &Chain) {
+  if (Chain.isPointer()) {
+    if (Chain.isDereferenced())
+      Out << "uninitialized pointee 'this->";
+    else
+      Out << "uninitialized pointer 'this->";
+  } else
+    Out << "uninitialized field 'this->";
+  Chain.print(Out);
+  Out << "'";
+}
+
 } // end of anonymous namespace
 
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   auto Chk = Mgr.registerChecker<UninitializedObjectChecker>();
   Chk->IsPedantic = Mgr.getAnalyzerOptions().getBooleanOption(
       "Pedantic", /*DefaultVal*/ false, Chk);
+  Chk->ShouldConvertNotesToWarnings = Mgr.getAnalyzerOptions().getBooleanOption(
+      "NotesAsWarnings", /*DefaultVal*/ false, Chk);
 }

@@ -1283,7 +1283,7 @@ function(get_llvm_lit_path base_dir file_name)
   endif()
 
   set(lit_file_name "llvm-lit")
-  if (WIN32 AND NOT CYGWIN)
+  if (CMAKE_HOST_WIN32 AND NOT CYGWIN)
     # llvm-lit needs suffix.py for multiprocess to find a main module.
     set(lit_file_name "${lit_file_name}.py")
   endif ()
