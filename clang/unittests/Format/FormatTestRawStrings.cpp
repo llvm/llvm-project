@@ -862,6 +862,32 @@ int f() {
                     Style));
 }
 
+TEST_F(FormatTestRawStrings,
+       DoNotFormatUnrecognizedDelimitersInRecognizedFunctions) {
+  FormatStyle Style = getRawStringPbStyleWithColumns(60);
+  Style.RawStringFormats[0].EnclosingFunctions.push_back(
+      "EqualsProto");
+  // EqualsProto is a recognized function, but the Raw delimiter is
+  // unrecognized. Do not touch the string in this case, since it might be
+  // special.
+  expect_eq(R"test(
+void f() {
+  aaaaaaaaa(bbbbbbbbb, EqualsProto(R"Raw(
+item {
+  key: value
+}
+)Raw"));
+})test",
+            format(R"test(
+void f() {
+  aaaaaaaaa(bbbbbbbbb, EqualsProto(R"Raw(
+item {
+  key: value
+}
+)Raw"));
+})test",
+                   Style));
+}
 
 } // end namespace
 } // end namespace format
