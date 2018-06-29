@@ -76,21 +76,17 @@ size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
   ExecutionContext exe_ctx(interpreter.GetExecutionContext());
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
-    const size_t num_modules = target->GetImages().GetSize();
-    if (num_modules > 0) {
-      UUID::ValueType uuid_bytes;
-      uint32_t num_bytes_decoded = 0;
-      UUID::DecodeUUIDBytesFromString(s, uuid_bytes, num_bytes_decoded);
+    llvm::SmallVector<uint8_t, 20> uuid_bytes;
+    if (UUID::DecodeUUIDBytesFromString(s, uuid_bytes).empty()) {
+      const size_t num_modules = target->GetImages().GetSize();
       for (size_t i = 0; i < num_modules; ++i) {
         ModuleSP module_sp(target->GetImages().GetModuleAtIndex(i));
         if (module_sp) {
           const UUID &module_uuid = module_sp->GetUUID();
           if (module_uuid.IsValid()) {
-            llvm::ArrayRef<uint8_t> decoded_bytes(uuid_bytes,
-                                                  num_bytes_decoded);
             llvm::ArrayRef<uint8_t> module_bytes = module_uuid.GetBytes();
-            if (module_bytes.size() >= num_bytes_decoded &&
-                module_bytes.take_front(num_bytes_decoded) == decoded_bytes) {
+            if (module_bytes.size() >= uuid_bytes.size() &&
+                module_bytes.take_front(uuid_bytes.size()).equals(uuid_bytes)) {
               matches.AppendString(module_uuid.GetAsString());
             }
           }

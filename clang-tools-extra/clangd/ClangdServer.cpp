@@ -165,11 +165,15 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
 
     // FIXME(ibiryukov): even if Preamble is non-null, we may want to check
     // both the old and the new version in case only one of them matches.
-    CompletionList Result = clangd::codeComplete(
+    CodeCompleteResult Result = clangd::codeComplete(
         File, IP->Command, PreambleData ? &PreambleData->Preamble : nullptr,
         PreambleData ? PreambleData->Inclusions : std::vector<Inclusion>(),
         IP->Contents, Pos, FS, PCHs, CodeCompleteOpts);
-    CB(std::move(Result));
+    CompletionList LSPResult;
+    LSPResult.isIncomplete = Result.HasMore;
+    for (const auto &Completion : Result.Completions)
+      LSPResult.items.push_back(Completion.render(CodeCompleteOpts));
+    CB(std::move(LSPResult));
   };
 
   WorkScheduler.runWithPreamble("CodeComplete", File,
