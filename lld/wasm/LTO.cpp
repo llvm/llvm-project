@@ -95,7 +95,8 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
     R.Prevailing = !ObjSym.isUndefined() && Sym->getFile() == &F;
-    R.VisibleToRegularObj = Config->Relocatable || Sym->IsUsedInRegularObj;
+    R.VisibleToRegularObj = Config->Relocatable || Sym->IsUsedInRegularObj ||
+                            (R.Prevailing && Sym->isExported());
     if (R.Prevailing)
       undefine(Sym);
   }

@@ -51,6 +51,7 @@ protected:
   static SmallString<128> DirBar;
   static SmallString<128> DirBaz;
   static SmallString<128> DirTestFolder;
+  static SmallString<128> DirNested;
 
   static SmallString<128> FileAA;
   static SmallString<128> FileAB;
@@ -65,17 +66,17 @@ protected:
     llvm::sys::fs::current_path(OriginalWorkingDir);
 
     ASSERT_NO_ERROR(fs::createUniqueDirectory("FsCompletion", BaseDir));
-    const char *DirNames[] = {"foo", "fooa", "foob",       "fooc",
-                              "bar", "baz",  "test_folder"};
+    const char *DirNames[] = {"foo", "fooa", "foob",        "fooc",
+                              "bar", "baz",  "test_folder", "foo/nested"};
     const char *FileNames[] = {"aa1234.tmp",  "ab1234.tmp",  "ac1234.tmp",
                                "foo1234.tmp", "bar1234.tmp", "baz1234.tmp"};
-    SmallString<128> *Dirs[] = {&DirFoo, &DirFooA, &DirFooB,      &DirFooC,
-                                &DirBar, &DirBaz,  &DirTestFolder};
+    SmallString<128> *Dirs[] = {&DirFoo, &DirFooA, &DirFooB,       &DirFooC,
+                                &DirBar, &DirBaz,  &DirTestFolder, &DirNested};
     for (auto Dir : llvm::zip(DirNames, Dirs)) {
       auto &Path = *std::get<1>(Dir);
       Path = BaseDir;
       path::append(Path, std::get<0>(Dir));
-      ASSERT_NO_ERROR(fs::create_directory(Path));
+      ASSERT_NO_ERROR(fs::create_directories(Path));
     }
 
     SmallString<128> *Files[] = {&FileAA,  &FileAB,  &FileAC,
@@ -146,6 +147,7 @@ SmallString<128> CompletionTest::DirFooC;
 SmallString<128> CompletionTest::DirBar;
 SmallString<128> CompletionTest::DirBaz;
 SmallString<128> CompletionTest::DirTestFolder;
+SmallString<128> CompletionTest::DirNested;
 
 SmallString<128> CompletionTest::FileAA;
 SmallString<128> CompletionTest::FileAB;
@@ -279,6 +281,18 @@ TEST_F(CompletionTest, DirCompletionUsername) {
       ContainsExactString(Twine("~/baz") + path::get_separator(), Results));
   EXPECT_TRUE(ContainsExactString(
       Twine("~/test_folder") + path::get_separator(), Results));
+
+  // Check that we can complete directories in nested paths
+  Count = CommandCompletions::DiskDirectories("~/foo/", Results, Resolver);
+  ASSERT_EQ(1u, Count);
+  ASSERT_EQ(Count, Results.GetSize());
+  EXPECT_TRUE(ContainsExactString(Twine("~/foo/nested") + path::get_separator(),
+                                  Results));
+  Count = CommandCompletions::DiskDirectories("~/foo/nes", Results, Resolver);
+  ASSERT_EQ(1u, Count);
+  ASSERT_EQ(Count, Results.GetSize());
+  EXPECT_TRUE(ContainsExactString(Twine("~/foo/nested") + path::get_separator(),
+                                  Results));
 
   // With ~username syntax it should return one match if there is an exact
   // match.

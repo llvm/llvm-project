@@ -360,12 +360,18 @@ void ArchiveFile::addMember(const Archive::Symbol *Sym) {
             "could not get the buffer for the member defining symbol " +
                 Sym->getName());
 
-  if (identify_magic(MB.getBuffer()) != file_magic::wasm_object) {
+  InputFile *Obj;
+
+  file_magic Magic = identify_magic(MB.getBuffer());
+  if (Magic == file_magic::wasm_object) {
+    Obj = make<ObjFile>(MB);
+  } else if (Magic == file_magic::bitcode) {
+    Obj = make<BitcodeFile>(MB);
+  } else {
     error("unknown file type: " + MB.getBufferIdentifier());
     return;
   }
 
-  InputFile *Obj = make<ObjFile>(MB);
   Obj->ParentName = ParentName;
   Symtab->addFile(Obj);
 }

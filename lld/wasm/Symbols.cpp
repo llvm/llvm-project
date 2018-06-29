@@ -98,6 +98,16 @@ void Symbol::setHidden(bool IsHidden) {
     Flags |= WASM_SYMBOL_VISIBILITY_DEFAULT;
 }
 
+bool Symbol::isExported() const {
+  if (!isDefined() || isLocal())
+    return false;
+
+  if (ForceExport || Config->ExportAll)
+    return true;
+
+  return !isHidden();
+}
+
 uint32_t FunctionSymbol::getFunctionIndex() const {
   if (auto *F = dyn_cast<DefinedFunction>(this))
     return F->Function->getFunctionIndex();

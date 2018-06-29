@@ -221,8 +221,6 @@ private:
   Semaphore &Barrier;
   /// Inputs, corresponding to the current state of AST.
   ParseInputs FileInputs;
-  /// CompilerInvocation used for FileInputs.
-  std::unique_ptr<CompilerInvocation> Invocation;
   /// Size of the last AST
   /// Guards members used by both TUScheduler and the worker thread.
   mutable std::mutex Mutex;
@@ -325,7 +323,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
         Inputs.CompileCommand.Directory + "] " +
         llvm::join(Inputs.CompileCommand.CommandLine, " "));
     // Rebuild the preamble and the AST.
-    Invocation = buildCompilerInvocation(Inputs);
+    std::unique_ptr<CompilerInvocation> Invocation =
+        buildCompilerInvocation(Inputs);
     if (!Invocation) {
       log("Could not build CompilerInvocation for file " + FileName);
       return;
@@ -341,8 +340,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     }
     // Build the AST for diagnostics.
     llvm::Optional<ParsedAST> AST =
-        buildAST(FileName, llvm::make_unique<CompilerInvocation>(*Invocation),
-                 Inputs, NewPreamble, PCHs);
+        buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
     // We want to report the diagnostics even if this update was cancelled.
     // It seems more useful than making the clients wait indefinitely if they
     // spam us with updates.
@@ -362,6 +360,8 @@ void ASTWorker::runWithAST(
   auto Task = [=](decltype(Action) Action) {
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
     if (!AST) {
+      std::unique_ptr<CompilerInvocation> Invocation =
+          buildCompilerInvocation(FileInputs);
       // Try rebuilding the AST.
       llvm::Optional<ParsedAST> NewAST =
           Invocation
