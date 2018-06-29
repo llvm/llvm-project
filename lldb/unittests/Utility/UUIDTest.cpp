@@ -71,3 +71,14 @@ TEST(UUIDTest, SetFromStringRef) {
       32u, u.SetFromStringRef("404142434445464748494a4b4c4d4e4f-50515253", 16));
   EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNO", 16), u);
 }
+
+TEST(UUIDTest, StringConverion) {
+  EXPECT_EQ("40414243", UUID::fromData("@ABC", 4).GetAsString());
+  EXPECT_EQ("40414243-4445-4647", UUID::fromData("@ABCDEFG", 8).GetAsString());
+  EXPECT_EQ("40414243-4445-4647-4849-4A4B",
+            UUID::fromData("@ABCDEFGHIJK", 12).GetAsString());
+  EXPECT_EQ("40414243-4445-4647-4849-4A4B4C4D4E4F",
+            UUID::fromData("@ABCDEFGHIJKLMNO", 16).GetAsString());
+  EXPECT_EQ("40414243-4445-4647-4849-4A4B4C4D4E4F-50515253",
+            UUID::fromData("@ABCDEFGHIJKLMNOPQRS", 20).GetAsString());
+}

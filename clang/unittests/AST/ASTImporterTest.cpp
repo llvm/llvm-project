@@ -472,138 +472,110 @@ TEST_P(CanonicalRedeclChain, ShouldBeSameForAllDeclInTheChain) {
 
 TEST_P(ImportExpr, ImportStringLiteral) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { \"foo\"; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     stringLiteral(
-                       hasType(
-                         asString("const char [4]"))))))));
-  testImport("void declToImport() { L\"foo\"; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     stringLiteral(
-                       hasType(
-                        asString("const wchar_t [4]"))))))));
-  testImport("void declToImport() { \"foo\" \"bar\"; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     stringLiteral(
-                       hasType(
-                         asString("const char [7]"))))))));
+  testImport(
+      "void declToImport() { (void)\"foo\"; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          stringLiteral(hasType(asString("const char [4]"))))));
+  testImport(
+      "void declToImport() { (void)L\"foo\"; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          stringLiteral(hasType(asString("const wchar_t [4]"))))));
+  testImport(
+      "void declToImport() { (void) \"foo\" \"bar\"; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          stringLiteral(hasType(asString("const char [7]"))))));
 }
 
 TEST_P(ImportExpr, ImportGNUNullExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { __null; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     gnuNullExpr(
-                       hasType(isInteger())))))));
+  testImport(
+      "void declToImport() { (void)__null; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(gnuNullExpr(hasType(isInteger())))));
 }
 
 TEST_P(ImportExpr, ImportCXXNullPtrLiteralExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { nullptr; }",
-             Lang_CXX11, "", Lang_CXX11, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     cxxNullPtrLiteralExpr())))));
+  testImport(
+      "void declToImport() { (void)nullptr; }",
+      Lang_CXX11, "", Lang_CXX11, Verifier,
+      functionDecl(hasDescendant(cxxNullPtrLiteralExpr())));
 }
 
 
 TEST_P(ImportExpr, ImportFloatinglLiteralExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { 1.0; }",
-             Lang_C, "", Lang_C, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     floatLiteral(
-                       equals(1.0),
-                       hasType(asString("double"))))))));
-  testImport("void declToImport() { 1.0e-5f; }",
-              Lang_C, "", Lang_C, Verifier,
-              functionDecl(
-                hasBody(
-                  compoundStmt(
-                    has(
-                      floatLiteral(
-                        equals(1.0e-5f),
-                        hasType(asString("float"))))))));
+  testImport(
+      "void declToImport() { (void)1.0; }",
+      Lang_C, "", Lang_C, Verifier,
+      functionDecl(hasDescendant(
+          floatLiteral(equals(1.0), hasType(asString("double"))))));
+  testImport(
+      "void declToImport() { (void)1.0e-5f; }",
+      Lang_C, "", Lang_C, Verifier,
+      functionDecl(hasDescendant(
+          floatLiteral(equals(1.0e-5f), hasType(asString("float"))))));
 }
 
 TEST_P(ImportExpr, ImportCompoundLiteralExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() {"
-             "  struct s { int x; long y; unsigned z; }; "
-             "  (struct s){ 42, 0L, 1U }; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     compoundLiteralExpr(
-                       hasType(asString("struct s")),
-                       has(initListExpr(
-                         hasType(asString("struct s")),
-                         has(integerLiteral(
-                               equals(42), hasType(asString("int")))),
-                         has(integerLiteral(
-                               equals(0), hasType(asString("long")))),
-                         has(integerLiteral(
-                               equals(1),
-                               hasType(asString("unsigned int"))))
-                         ))))))));
+  testImport(
+      "void declToImport() {"
+      "  struct s { int x; long y; unsigned z; }; "
+      "  (void)(struct s){ 42, 0L, 1U }; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          compoundLiteralExpr(
+              hasType(asString("struct s")),
+              has(initListExpr(
+                  hasType(asString("struct s")),
+                  has(integerLiteral(
+                      equals(42), hasType(asString("int")))),
+                  has(integerLiteral(
+                      equals(0), hasType(asString("long")))),
+                  has(integerLiteral(
+                      equals(1), hasType(asString("unsigned int"))))))))));
 }
 
 TEST_P(ImportExpr, ImportCXXThisExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("class declToImport { void f() { this; } };",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             cxxRecordDecl(
-               hasMethod(
-                 hasBody(
-                   compoundStmt(
-                     has(
-                       cxxThisExpr(
-                         hasType(
-                           asString("class declToImport *")))))))));
+  testImport(
+      "class declToImport { void f() { (void)this; } };",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      cxxRecordDecl(
+          hasMethod(
+              hasDescendant(
+                  cxxThisExpr(
+                      hasType(
+                          asString("class declToImport *")))))));
 }
 
 TEST_P(ImportExpr, ImportAtomicExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { int *ptr; __atomic_load_n(ptr, 1); }",
-             Lang_C, "", Lang_C, Verifier,
-             functionDecl(hasBody(compoundStmt(has(atomicExpr(
-                 has(ignoringParenImpCasts(
-                     declRefExpr(hasDeclaration(varDecl(hasName("ptr"))),
-                                 hasType(asString("int *"))))),
-                 has(integerLiteral(equals(1), hasType(asString("int"))))))))));
+  testImport(
+      "void declToImport() { int *ptr; __atomic_load_n(ptr, 1); }",
+      Lang_C, "", Lang_C, Verifier,
+      functionDecl(hasDescendant(
+          atomicExpr(
+              has(ignoringParenImpCasts(
+                  declRefExpr(hasDeclaration(varDecl(hasName("ptr"))),
+                      hasType(asString("int *"))))),
+              has(integerLiteral(equals(1), hasType(asString("int"))))))));
 }
 
 TEST_P(ImportExpr, ImportLabelDeclAndAddrLabelExpr) {
   MatchVerifier<Decl> Verifier;
   testImport(
-      "void declToImport() { loop: goto loop; &&loop; }", Lang_C, "", Lang_C,
-      Verifier,
-      functionDecl(hasBody(compoundStmt(
-          has(labelStmt(hasDeclaration(labelDecl(hasName("loop"))))),
-          has(addrLabelExpr(hasDeclaration(labelDecl(hasName("loop")))))))));
+      "void declToImport() { loop: goto loop; (void)&&loop; }",
+      Lang_C, "", Lang_C, Verifier,
+      functionDecl(
+          hasDescendant(
+              labelStmt(hasDeclaration(labelDecl(hasName("loop"))))),
+          hasDescendant(
+              addrLabelExpr(hasDeclaration(labelDecl(hasName("loop")))))));
 }
 
 AST_MATCHER_P(TemplateDecl, hasTemplateDecl,
@@ -631,10 +603,11 @@ TEST_P(ImportExpr, ImportParenListExpr) {
 
 TEST_P(ImportExpr, ImportSwitch) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { int b; switch (b) { case 1: break; } }",
-             Lang_C, "", Lang_C, Verifier,
-             functionDecl(hasBody(compoundStmt(
-                 has(switchStmt(has(compoundStmt(has(caseStmt())))))))));
+  testImport(
+      "void declToImport() { int b; switch (b) { case 1: break; } }",
+      Lang_C, "", Lang_C, Verifier,
+      functionDecl(hasDescendant(
+          switchStmt(has(compoundStmt(has(caseStmt())))))));
 }
 
 TEST_P(ImportExpr, ImportStmtExpr) {
@@ -643,164 +616,120 @@ TEST_P(ImportExpr, ImportStmtExpr) {
   testImport(
     "void declToImport() { int b; int a = b ?: 1; int C = ({int X=4; X;}); }",
     Lang_C, "", Lang_C, Verifier,
-    functionDecl(
-      hasBody(
-        compoundStmt(
-          has(
-            declStmt(
-              hasSingleDecl(
-                varDecl(
-                  hasName("C"),
-                  hasType(asString("int")),
-                  hasInitializer(
-                    stmtExpr(
-                      hasAnySubstatement(
-                        declStmt(
-                          hasSingleDecl(
-                            varDecl(
-                              hasName("X"),
-                              hasType(asString("int")),
-                              hasInitializer(
+    functionDecl(hasDescendant(
+        varDecl(
+            hasName("C"),
+            hasType(asString("int")),
+            hasInitializer(
+                stmtExpr(
+                    hasAnySubstatement(declStmt(hasSingleDecl(
+                        varDecl(
+                            hasName("X"),
+                            hasType(asString("int")),
+                            hasInitializer(
                                 integerLiteral(equals(4))))))),
-                      hasDescendant(
-                        implicitCastExpr()
-                        )))))))))));
+                    hasDescendant(
+                        implicitCastExpr())))))));
 }
 
 TEST_P(ImportExpr, ImportConditionalOperator) {
   MatchVerifier<Decl> Verifier;
   testImport(
-    "void declToImport() { true ? 1 : -5; }",
-    Lang_CXX, "", Lang_CXX, Verifier,
-    functionDecl(
-      hasBody(
-        compoundStmt(
-          has(
-            conditionalOperator(
+      "void declToImport() { (void)(true ? 1 : -5); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          conditionalOperator(
               hasCondition(cxxBoolLiteral(equals(true))),
               hasTrueExpression(integerLiteral(equals(1))),
               hasFalseExpression(
-                unaryOperator(hasUnaryOperand(integerLiteral(equals(5))))
-                )))))));
+                  unaryOperator(hasUnaryOperand(integerLiteral(equals(5))))))
+          )));
 }
 
 TEST_P(ImportExpr, ImportBinaryConditionalOperator) {
   MatchVerifier<Decl> Verifier;
   testImport(
-    "void declToImport() { 1 ?: -5; }", Lang_CXX, "", Lang_CXX, Verifier,
-    functionDecl(
-      hasBody(
-        compoundStmt(
-          has(
-            binaryConditionalOperator(
+      "void declToImport() { (void)(1 ?: -5); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          binaryConditionalOperator(
               hasCondition(
-                implicitCastExpr(
-                  hasSourceExpression(
-                    opaqueValueExpr(
-                      hasSourceExpression(integerLiteral(equals(1))))),
-                  hasType(booleanType()))),
+                  implicitCastExpr(
+                      hasSourceExpression(opaqueValueExpr(
+                          hasSourceExpression(integerLiteral(equals(1))))),
+                      hasType(booleanType()))),
               hasTrueExpression(
-                opaqueValueExpr(hasSourceExpression(
-                                  integerLiteral(equals(1))))),
+                  opaqueValueExpr(
+                      hasSourceExpression(integerLiteral(equals(1))))),
               hasFalseExpression(
-                unaryOperator(hasOperatorName("-"),
-                              hasUnaryOperand(integerLiteral(equals(5)))))
-                ))))));
+                  unaryOperator(
+                      hasOperatorName("-"),
+                      hasUnaryOperand(integerLiteral(equals(5)))))))));
 }
 
 TEST_P(ImportExpr, ImportDesignatedInitExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() {"
-             "  struct point { double x; double y; };"
-             "  struct point ptarray[10] = "
-                    "{ [2].y = 1.0, [2].x = 2.0, [0].x = 1.0 }; }",
-             Lang_C, "", Lang_C, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     declStmt(
-                       hasSingleDecl(
-                         varDecl(
-                           hasInitializer(
-                             initListExpr(
-                               hasSyntacticForm(
-                                 initListExpr(
-                                   has(
-                                     designatedInitExpr(
-                                       designatorCountIs(2),
-                                       has(floatLiteral(
-                                             equals(1.0))),
-                                       has(integerLiteral(
-                                             equals(2))))),
-                                   has(
-                                     designatedInitExpr(
-                                       designatorCountIs(2),
-                                       has(floatLiteral(
-                                             equals(2.0))),
-                                       has(integerLiteral(
-                                             equals(2))))),
-                                   has(
-                                     designatedInitExpr(
-                                       designatorCountIs(2),
-                                       has(floatLiteral(
-                                             equals(1.0))),
-                                       has(integerLiteral(
-                                             equals(0)))))
-                                   ))))))))))));
+  testImport(
+      "void declToImport() {"
+      "  struct point { double x; double y; };"
+      "  struct point ptarray[10] = "
+      "{ [2].y = 1.0, [2].x = 2.0, [0].x = 1.0 }; }",
+      Lang_C, "", Lang_C, Verifier,
+      functionDecl(hasDescendant(
+          initListExpr(
+              has(designatedInitExpr(
+                  designatorCountIs(2),
+                  has(floatLiteral(equals(1.0))),
+                  has(integerLiteral(equals(2))))),
+              has(designatedInitExpr(
+                  designatorCountIs(2),
+                  has(floatLiteral(equals(2.0))),
+                  has(integerLiteral(equals(2))))),
+              has(designatedInitExpr(
+                  designatorCountIs(2),
+                  has(floatLiteral(equals(1.0))),
+                  has(integerLiteral(equals(0)))))))));
 }
 
 
 TEST_P(ImportExpr, ImportPredefinedExpr) {
   MatchVerifier<Decl> Verifier;
   // __func__ expands as StringLiteral("declToImport")
-  testImport("void declToImport() { __func__; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     predefinedExpr(
-                       hasType(
-                         asString("const char [13]")),
-                       has(
-                         stringLiteral(
-                           hasType(
-                             asString("const char [13]"))))))))));
+  testImport(
+      "void declToImport() { (void)__func__; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          predefinedExpr(
+              hasType(
+                  asString("const char [13]")),
+              has(stringLiteral(hasType(
+                  asString("const char [13]"))))))));
 }
 
 TEST_P(ImportExpr, ImportInitListExpr) {
   MatchVerifier<Decl> Verifier;
   testImport(
-    "void declToImport() {"
-    "  struct point { double x; double y; };"
-    "  point ptarray[10] = { [2].y = 1.0, [2].x = 2.0,"
-    "                        [0].x = 1.0 }; }",
-    Lang_CXX, "", Lang_CXX, Verifier,
-    functionDecl(
-      hasBody(
-        compoundStmt(
-          has(
-            declStmt(
-              hasSingleDecl(
-                varDecl(
-                  hasInitializer(
-                    initListExpr(
-                      has(
-                        cxxConstructExpr(
-                          requiresZeroInitialization())),
-                      has(
-                        initListExpr(
-                          hasType(asString("struct point")),
-                          has(floatLiteral(equals(1.0))),
-                          has(implicitValueInitExpr(
-                                hasType(asString("double")))))),
-                      has(
-                        initListExpr(
-                          hasType(asString("struct point")),
-                          has(floatLiteral(equals(2.0))),
-                          has(floatLiteral(equals(1.0)))))
-                        ))))))))));
+      "void declToImport() {"
+      "  struct point { double x; double y; };"
+      "  point ptarray[10] = { [2].y = 1.0, [2].x = 2.0,"
+      "                        [0].x = 1.0 }; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          initListExpr(
+              has(
+                  cxxConstructExpr(
+                  requiresZeroInitialization())),
+              has(
+                  initListExpr(
+                      hasType(asString("struct point")),
+                      has(floatLiteral(equals(1.0))),
+                      has(implicitValueInitExpr(
+                          hasType(asString("double")))))),
+              has(
+                  initListExpr(
+                      hasType(asString("struct point")),
+                      has(floatLiteral(equals(2.0))),
+                      has(floatLiteral(equals(1.0)))))))));
 }
 
 
@@ -808,47 +737,40 @@ const internal::VariadicDynCastAllOfMatcher<Expr, VAArgExpr> vaArgExpr;
 
 TEST_P(ImportExpr, ImportVAArgExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport(__builtin_va_list list, ...) {"
-             "  (void)__builtin_va_arg(list, int); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     cStyleCastExpr(
-                       hasSourceExpression(
-                         vaArgExpr())))))));
+  testImport(
+      "void declToImport(__builtin_va_list list, ...) {"
+      "  (void)__builtin_va_arg(list, int); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          cStyleCastExpr(hasSourceExpression(vaArgExpr())))));
 }
 
 TEST_P(ImportExpr, CXXTemporaryObjectExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("struct C {};"
-             "void declToImport() { C c = C(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(hasBody(compoundStmt(has(
-                 declStmt(has(varDecl(has(exprWithCleanups(has(cxxConstructExpr(
-                     has(materializeTemporaryExpr(has(implicitCastExpr(
-                         has(cxxTemporaryObjectExpr())))))))))))))))));
+  testImport(
+      "struct C {};"
+      "void declToImport() { C c = C(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          exprWithCleanups(has(cxxConstructExpr(
+              has(materializeTemporaryExpr(has(implicitCastExpr(
+                  has(cxxTemporaryObjectExpr())))))))))));
 }
 
 TEST_P(ImportType, ImportAtomicType) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { typedef _Atomic(int) a_int; }",
-             Lang_CXX11, "", Lang_CXX11, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     declStmt(
-                       has(
-                         typedefDecl(
-                           has(atomicType())))))))));
+  testImport(
+      "void declToImport() { typedef _Atomic(int) a_int; }",
+      Lang_CXX11, "", Lang_CXX11, Verifier,
+      functionDecl(hasDescendant(typedefDecl(has(atomicType())))));
 }
 
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <typename T> void declToImport() { };", Lang_CXX, "",
-             Lang_CXX, Verifier, functionTemplateDecl());
+  testImport(
+      "template <typename T> void declToImport() { };",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionTemplateDecl());
 }
 
 const internal::VariadicDynCastAllOfMatcher<Expr, CXXDependentScopeMemberExpr>
@@ -856,24 +778,26 @@ const internal::VariadicDynCastAllOfMatcher<Expr, CXXDependentScopeMemberExpr>
 
 TEST_P(ImportExpr, ImportCXXDependentScopeMemberExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <typename T> struct C { T t; };"
-             "template <typename T> void declToImport() {"
-             "  C<T> d;"
-             "  d.t;"
-             "}"
-             "void instantiate() { declToImport<int>(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionTemplateDecl(has(functionDecl(
-                 has(compoundStmt(has(cxxDependentScopeMemberExpr())))))));
-  testImport("template <typename T> struct C { T t; };"
-             "template <typename T> void declToImport() {"
-             "  C<T> d;"
-             "  (&d)->t;"
-             "}"
-             "void instantiate() { declToImport<int>(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionTemplateDecl(has(functionDecl(
-                 has(compoundStmt(has(cxxDependentScopeMemberExpr())))))));
+  testImport(
+      "template <typename T> struct C { T t; };"
+      "template <typename T> void declToImport() {"
+      "  C<T> d;"
+      "  (void)d.t;"
+      "}"
+      "void instantiate() { declToImport<int>(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionTemplateDecl(hasDescendant(
+          cStyleCastExpr(has(cxxDependentScopeMemberExpr())))));
+  testImport(
+      "template <typename T> struct C { T t; };"
+      "template <typename T> void declToImport() {"
+      "  C<T> d;"
+      "  (void)(&d)->t;"
+      "}"
+      "void instantiate() { declToImport<int>(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionTemplateDecl(hasDescendant(
+          cStyleCastExpr(has(cxxDependentScopeMemberExpr())))));
 }
 
 TEST_P(ImportType, ImportTypeAliasTemplate) {
@@ -885,8 +809,7 @@ TEST_P(ImportType, ImportTypeAliasTemplate) {
       "int declToImport() { return dummy2<3>::i; }",
       Lang_CXX11, "", Lang_CXX11, Verifier,
       functionDecl(
-          hasBody(compoundStmt(
-              has(returnStmt(has(implicitCastExpr(has(declRefExpr()))))))),
+          hasDescendant(implicitCastExpr(has(declRefExpr()))),
           unless(hasAncestor(translationUnitDecl(has(typeAliasDecl()))))));
 }
 
@@ -898,32 +821,26 @@ TEST_P(ImportDecl, ImportVarTemplate) {
   testImport(
       "template <typename T>"
       "T pi = T(3.1415926535897932385L);"
-      "void declToImport() { pi<int>; }",
-      Lang_CXX11, "", Lang_CXX11, Verifier,
+      "void declToImport() { (void)pi<int>; }",
+      Lang_CXX14, "", Lang_CXX14, Verifier,
       functionDecl(
-          hasBody(has(declRefExpr(to(varTemplateSpecializationDecl())))),
+          hasDescendant(declRefExpr(to(varTemplateSpecializationDecl()))),
           unless(hasAncestor(translationUnitDecl(has(varDecl(
               hasName("pi"), unless(varTemplateSpecializationDecl()))))))));
 }
 
 TEST_P(ImportType, ImportPackExpansion) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <typename... Args>"
-             "struct dummy {"
-             "  dummy(Args... args) {}"
-             "  static const int i = 4;"
-             "};"
-             "int declToImport() { return dummy<int>::i; }",
-             Lang_CXX11, "", Lang_CXX11, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     returnStmt(
-                       has(
-                         implicitCastExpr(
-                           has(
-                             declRefExpr())))))))));
+  testImport(
+      "template <typename... Args>"
+      "struct dummy {"
+      "  dummy(Args... args) {}"
+      "  static const int i = 4;"
+      "};"
+      "int declToImport() { return dummy<int>::i; }",
+      Lang_CXX11, "", Lang_CXX11, Verifier,
+      functionDecl(hasDescendant(
+          returnStmt(has(implicitCastExpr(has(declRefExpr())))))));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Type,
@@ -932,15 +849,16 @@ const internal::VariadicDynCastAllOfMatcher<Type,
 
 TEST_P(ImportType, ImportDependentTemplateSpecialization) {
   MatchVerifier<Decl> Verifier;
-  testImport("template<typename T>"
-             "struct A;"
-             "template<typename T>"
-             "struct declToImport {"
-             "  typename A<T>::template B<T> a;"
-             "};",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             classTemplateDecl(has(cxxRecordDecl(has(
-                 fieldDecl(hasType(dependentTemplateSpecializationType())))))));
+  testImport(
+      "template<typename T>"
+      "struct A;"
+      "template<typename T>"
+      "struct declToImport {"
+      "  typename A<T>::template B<T> a;"
+      "};",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      classTemplateDecl(has(cxxRecordDecl(has(
+          fieldDecl(hasType(dependentTemplateSpecializationType())))))));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, SizeOfPackExpr>
@@ -948,15 +866,14 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, SizeOfPackExpr>
 
 TEST_P(ImportExpr, ImportSizeOfPackExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <typename... Ts>"
-             "void declToImport() {"
-             "  const int i = sizeof...(Ts);"
-             "};"
-             "void g() { declToImport<int>(); }",
-             Lang_CXX11, "", Lang_CXX11, Verifier,
-             functionTemplateDecl(has(functionDecl(
-                 hasBody(compoundStmt(has(declStmt(has(varDecl(hasInitializer(
-                     implicitCastExpr(has(sizeOfPackExpr())))))))))))));
+  testImport(
+      "template <typename... Ts>"
+      "void declToImport() {"
+      "  const int i = sizeof...(Ts);"
+      "};"
+      "void g() { declToImport<int>(); }",
+      Lang_CXX11, "", Lang_CXX11, Verifier,
+          functionTemplateDecl(hasDescendant(sizeOfPackExpr())));
   testImport(
       "template <typename... Ts>"
       "using X = int[sizeof...(Ts)];"
@@ -981,15 +898,12 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, TypeTraitExpr> typeTraitExpr;
 
 TEST_P(ImportExpr, ImportTypeTraitExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("void declToImport() { "
-             "  __builtin_types_compatible_p(int, int);"
-             "}",
-             Lang_C, "", Lang_C, Verifier,
-             functionDecl(
-               hasBody(
-                 compoundStmt(
-                   has(
-                     typeTraitExpr(hasType(asString("int"))))))));
+  testImport(
+      "void declToImport() { "
+      "  (void)__builtin_types_compatible_p(int, int);"
+      "}",
+      Lang_C, "", Lang_C, Verifier,
+      functionDecl(hasDescendant(typeTraitExpr(hasType(asString("int"))))));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXTypeidExpr> cxxTypeidExpr;
@@ -1012,22 +926,15 @@ TEST_P(ImportExpr, ImportCXXTypeidExpr) {
 
 TEST_P(ImportExpr, ImportTypeTraitExprValDep) {
   MatchVerifier<Decl> Verifier;
-  testImport("template<typename T> struct declToImport {"
-             "  void m() { __is_pod(T); }"
-             "};"
-             "void f() { declToImport<int>().m(); }",
-             Lang_CXX11, "", Lang_CXX11, Verifier,
-             classTemplateDecl(
-               has(
-                 cxxRecordDecl(
-                   has(
-                     functionDecl(
-                       hasBody(
-                         compoundStmt(
-                           has(
-                             typeTraitExpr(
-                               hasType(booleanType())
-                               ))))))))));
+  testImport(
+      "template<typename T> struct declToImport {"
+      "  void m() { (void)__is_pod(T); }"
+      "};"
+      "void f() { declToImport<int>().m(); }",
+      Lang_CXX11, "", Lang_CXX11, Verifier,
+      classTemplateDecl(has(cxxRecordDecl(has(
+          functionDecl(hasDescendant(
+              typeTraitExpr(hasType(booleanType())))))))));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Expr, CXXPseudoDestructorExpr>
@@ -1035,28 +942,24 @@ const internal::VariadicDynCastAllOfMatcher<Expr, CXXPseudoDestructorExpr>
 
 TEST_P(ImportExpr, ImportCXXPseudoDestructorExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("typedef int T;"
-             "void declToImport(int *p) {"
-             "  T t;"
-             "  p->T::~T();"
-             "}",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(has(compoundStmt(has(
-                 callExpr(has(cxxPseudoDestructorExpr())))))));
+  testImport(
+      "typedef int T;"
+      "void declToImport(int *p) {"
+      "  T t;"
+      "  p->T::~T();"
+      "}",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(
+          callExpr(has(cxxPseudoDestructorExpr())))));
 }
 
 TEST_P(ImportDecl, ImportUsingDecl) {
   MatchVerifier<Decl> Verifier;
-  testImport("namespace foo { int bar; }"
-             "void declToImport() { using foo::bar; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionDecl(
-               has(
-                 compoundStmt(
-                   has(
-                     declStmt(
-                       has(
-                         usingDecl())))))));
+  testImport(
+      "namespace foo { int bar; }"
+      "void declToImport() { using foo::bar; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionDecl(hasDescendant(usingDecl())));
 }
 
 /// \brief Matches shadow declarations introduced into a scope by a
@@ -1074,45 +977,48 @@ const internal::VariadicDynCastAllOfMatcher<Decl,
 
 TEST_P(ImportDecl, ImportUsingShadowDecl) {
   MatchVerifier<Decl> Verifier;
-  testImport("namespace foo { int bar; }"
-             "namespace declToImport { using foo::bar; }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             namespaceDecl(has(usingShadowDecl())));
+  testImport(
+      "namespace foo { int bar; }"
+      "namespace declToImport { using foo::bar; }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      namespaceDecl(has(usingShadowDecl())));
 }
 
 TEST_P(ImportExpr, ImportUnresolvedLookupExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("template<typename T> int foo();"
-             "template <typename T> void declToImport() {"
-             "  ::foo<T>;"
-             "  ::template foo<T>;"
-             "}"
-             "void instantiate() { declToImport<int>(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionTemplateDecl(has(functionDecl(
-                 has(compoundStmt(has(unresolvedLookupExpr())))))));
+  testImport(
+      "template<typename T> int foo();"
+      "template <typename T> void declToImport() {"
+      "  (void)::foo<T>;"
+      "  (void)::template foo<T>;"
+      "}"
+      "void instantiate() { declToImport<int>(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionTemplateDecl(hasDescendant(unresolvedLookupExpr())));
 }
 
 TEST_P(ImportExpr, ImportCXXUnresolvedConstructExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <typename T> struct C { T t; };"
-             "template <typename T> void declToImport() {"
-             "  C<T> d;"
-             "  d.t = T();"
-             "}"
-             "void instantiate() { declToImport<int>(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionTemplateDecl(has(functionDecl(has(compoundStmt(has(
-                 binaryOperator(has(cxxUnresolvedConstructExpr())))))))));
-  testImport("template <typename T> struct C { T t; };"
-             "template <typename T> void declToImport() {"
-             "  C<T> d;"
-             "  (&d)->t = T();"
-             "}"
-             "void instantiate() { declToImport<int>(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionTemplateDecl(has(functionDecl(has(compoundStmt(has(
-                 binaryOperator(has(cxxUnresolvedConstructExpr())))))))));
+  testImport(
+      "template <typename T> struct C { T t; };"
+      "template <typename T> void declToImport() {"
+      "  C<T> d;"
+      "  d.t = T();"
+      "}"
+      "void instantiate() { declToImport<int>(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionTemplateDecl(hasDescendant(
+          binaryOperator(has(cxxUnresolvedConstructExpr())))));
+  testImport(
+      "template <typename T> struct C { T t; };"
+      "template <typename T> void declToImport() {"
+      "  C<T> d;"
+      "  (&d)->t = T();"
+      "}"
+      "void instantiate() { declToImport<int>(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+          functionTemplateDecl(hasDescendant(
+              binaryOperator(has(cxxUnresolvedConstructExpr())))));
 }
 
 /// Check that function "declToImport()" (which is the templated function
@@ -1120,16 +1026,18 @@ TEST_P(ImportExpr, ImportCXXUnresolvedConstructExpr) {
 /// Same for class template declarations.
 TEST_P(ImportDecl, ImportTemplatedDeclForTemplate) {
   MatchVerifier<Decl> Verifier;
-  testImport("template <typename T> void declToImport() { T a = 1; }"
-             "void instantiate() { declToImport<int>(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             functionTemplateDecl(hasAncestor(translationUnitDecl(
-                 unless(has(functionDecl(hasName("declToImport"))))))));
-  testImport("template <typename T> struct declToImport { T t; };"
-             "void instantiate() { declToImport<int>(); }",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             classTemplateDecl(hasAncestor(translationUnitDecl(
-                 unless(has(cxxRecordDecl(hasName("declToImport"))))))));
+  testImport(
+      "template <typename T> void declToImport() { T a = 1; }"
+      "void instantiate() { declToImport<int>(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      functionTemplateDecl(hasAncestor(translationUnitDecl(
+          unless(has(functionDecl(hasName("declToImport"))))))));
+  testImport(
+      "template <typename T> struct declToImport { T t; };"
+      "void instantiate() { declToImport<int>(); }",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      classTemplateDecl(hasAncestor(translationUnitDecl(
+          unless(has(cxxRecordDecl(hasName("declToImport"))))))));
 }
 
 TEST_P(ImportDecl, ImportClassTemplatePartialSpecialization) {
@@ -1148,22 +1056,24 @@ TEST_P(ImportDecl, ImportClassTemplatePartialSpecialization) {
 
 TEST_P(ImportExpr, CXXOperatorCallExpr) {
   MatchVerifier<Decl> Verifier;
-  testImport("class declToImport {"
-             "  void f() { *this = declToImport(); }"
-             "};",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             cxxRecordDecl(has(cxxMethodDecl(hasBody(compoundStmt(
-                 has(exprWithCleanups(has(cxxOperatorCallExpr())))))))));
+  testImport(
+      "class declToImport {"
+      "  void f() { *this = declToImport(); }"
+      "};",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      cxxRecordDecl(has(cxxMethodDecl(hasDescendant(
+          cxxOperatorCallExpr())))));
 }
 
 TEST_P(ImportExpr, DependentSizedArrayType) {
   MatchVerifier<Decl> Verifier;
-  testImport("template<typename T, int Size> class declToImport {"
-             "  T data[Size];"
-             "};",
-             Lang_CXX, "", Lang_CXX, Verifier,
-             classTemplateDecl(has(cxxRecordDecl(
-                 has(fieldDecl(hasType(dependentSizedArrayType())))))));
+  testImport(
+      "template<typename T, int Size> class declToImport {"
+      "  T data[Size];"
+      "};",
+      Lang_CXX, "", Lang_CXX, Verifier,
+      classTemplateDecl(has(cxxRecordDecl(
+          has(fieldDecl(hasType(dependentSizedArrayType())))))));
 }
 
 TEST_P(ASTImporterTestBase, ImportOfTemplatedDeclOfClassTemplateDecl) {
@@ -2197,7 +2107,8 @@ TEST_P(ImportExpr, DependentScopeDeclRefExpr) {
              "template <typename T> void declToImport() {"
              "  (void) S<T>::foo;"
              "}"
-             "void instantiate() { declToImport<int>(); }",
+             "void instantiate() { declToImport<int>(); }"
+             "template <typename T> T S<T>::foo;",
              Lang_CXX11, "", Lang_CXX11, Verifier,
              functionTemplateDecl(has(functionDecl(has(compoundStmt(
                  has(cStyleCastExpr(has(dependentScopeDeclRefExpr())))))))));

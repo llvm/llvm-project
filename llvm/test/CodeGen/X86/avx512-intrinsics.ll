@@ -393,28 +393,140 @@ define <8 x double> @test_sqrt_pd_512(<8 x double> %a0) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vsqrtpd %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double> %a0,  <8 x double> zeroinitializer, i8 -1, i32 4)
-  ret <8 x double> %res
+  %1 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> %a0)
+  ret <8 x double> %1
 }
-declare <8 x double> @llvm.x86.avx512.mask.sqrt.pd.512(<8 x double>, <8 x double>, i8, i32) nounwind readnone
+
+define <8 x double> @test_mask_sqrt_pd_512(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+; CHECK-LABEL: test_mask_sqrt_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtpd %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> %a0)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> %passthru
+  ret <8 x double> %3
+}
+
+define <8 x double> @test_maskz_sqrt_pd_512(<8 x double> %a0, i8 %mask) {
+; CHECK-LABEL: test_maskz_sqrt_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtpd %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %1 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> %a0)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> zeroinitializer
+  ret <8 x double> %3
+}
+declare <8 x double> @llvm.sqrt.v8f64(<8 x double>)
+
+define <8 x double> @test_sqrt_round_pd_512(<8 x double> %a0) {
+; CHECK-LABEL: test_sqrt_round_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> %a0, i32 11)
+  ret <8 x double> %1
+}
+
+define <8 x double> @test_mask_sqrt_round_pd_512(<8 x double> %a0, <8 x double> %passthru, i8 %mask) {
+; CHECK-LABEL: test_mask_sqrt_round_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> %a0, i32 11)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> %passthru
+  ret <8 x double> %3
+}
+
+define <8 x double> @test_maskz_sqrt_round_pd_512(<8 x double> %a0, i8 %mask) {
+; CHECK-LABEL: test_maskz_sqrt_round_pd_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtpd {rz-sae}, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %1 = call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> %a0, i32 11)
+  %2 = bitcast i8 %mask to <8 x i1>
+  %3 = select <8 x i1> %2, <8 x double> %1, <8 x double> zeroinitializer
+  ret <8 x double> %3
+}
+declare <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double>, i32) nounwind readnone
 
 define <16 x float> @test_sqrt_ps_512(<16 x float> %a0) {
 ; CHECK-LABEL: test_sqrt_ps_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vsqrtps %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 4)
-  ret <16 x float> %res
+  %1 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %a0)
+  ret <16 x float> %1
 }
+
+define <16 x float> @test_mask_sqrt_ps_512(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+; CHECK-LABEL: test_mask_sqrt_ps_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtps %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %a0)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %passthru
+  ret <16 x float> %3
+}
+
+define <16 x float> @test_maskz_sqrt_ps_512(<16 x float> %a0, i16 %mask) {
+; CHECK-LABEL: test_maskz_sqrt_ps_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtps %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %1 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %a0)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
+  ret <16 x float> %3
+}
+declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
+
 define <16 x float> @test_sqrt_round_ps_512(<16 x float> %a0) {
 ; CHECK-LABEL: test_sqrt_round_ps_512:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float> %a0, <16 x float> zeroinitializer, i16 -1, i32 3)
-  ret <16 x float> %res
+  %1 = call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> %a0, i32 11)
+  ret <16 x float> %1
 }
-declare <16 x float> @llvm.x86.avx512.mask.sqrt.ps.512(<16 x float>, <16 x float>, i16, i32) nounwind readnone
+
+define <16 x float> @test_mask_sqrt_round_ps_512(<16 x float> %a0, <16 x float> %passthru, i16 %mask) {
+; CHECK-LABEL: test_mask_sqrt_round_ps_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm1 {%k1}
+; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %1 = call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> %a0, i32 11)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> %passthru
+  ret <16 x float> %3
+}
+
+define <16 x float> @test_maskz_sqrt_round_ps_512(<16 x float> %a0, i16 %mask) {
+; CHECK-LABEL: test_maskz_sqrt_round_ps_512:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vsqrtps {rz-sae}, %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+  %1 = call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> %a0, i32 11)
+  %2 = bitcast i16 %mask to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x float> %1, <16 x float> zeroinitializer
+  ret <16 x float> %3
+}
+declare <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float>, i32) nounwind readnone
 
 define <8 x double> @test_getexp_pd_512(<8 x double> %a0) {
 ; CHECK-LABEL: test_getexp_pd_512:

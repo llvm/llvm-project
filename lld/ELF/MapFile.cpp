@@ -174,9 +174,6 @@ void elf::writeMapFile() {
     }
 
     auto *OSec = dyn_cast<OutputSection>(Base);
-    if (!OSec)
-      continue;
-
     writeHeader(OS, OSec->Addr, OSec->getLMA(), OSec->Size, OSec->Alignment);
     OS << OSec->Name << '\n';
 

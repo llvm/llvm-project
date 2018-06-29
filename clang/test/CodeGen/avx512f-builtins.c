@@ -30,26 +30,26 @@ __m512d test_mm512_maskz_sqrt_pd (__mmask8 __U, __m512d __A)
 __m512d test_mm512_mask_sqrt_round_pd(__m512d __W,__mmask8 __U,__m512d __A)
 {
   // CHECK-LABEL: @test_mm512_mask_sqrt_round_pd
-  // CHECK: call <8 x double> @llvm.sqrt.v8f64(<8 x double> %{{.*}})
+  // CHECK: call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> %{{.*}}, i32 8)
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
-  return _mm512_mask_sqrt_round_pd(__W,__U,__A,_MM_FROUND_CUR_DIRECTION);
+  return _mm512_mask_sqrt_round_pd(__W,__U,__A,_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_maskz_sqrt_round_pd(__mmask8 __U,__m512d __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_sqrt_round_pd
-  // CHECK: call <8 x double> @llvm.sqrt.v8f64(<8 x double> %{{.*}})
+  // CHECK: call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> %{{.*}}, i32 8)
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> {{.*}}
-  return _mm512_maskz_sqrt_round_pd(__U,__A,_MM_FROUND_CUR_DIRECTION);
+  return _mm512_maskz_sqrt_round_pd(__U,__A,_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_sqrt_round_pd(__m512d __A)
 {
   // CHECK-LABEL: @test_mm512_sqrt_round_pd
-  // CHECK: call <8 x double> @llvm.sqrt.v8f64(<8 x double> %{{.*}})
-  return _mm512_sqrt_round_pd(__A,_MM_FROUND_CUR_DIRECTION);
+  // CHECK: call <8 x double> @llvm.x86.avx512.sqrt.pd.512(<8 x double> %{{.*}}, i32 8)
+  return _mm512_sqrt_round_pd(__A,_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_sqrt_ps(__m512 a)
@@ -80,26 +80,26 @@ __m512 test_mm512_maskz_sqrt_ps( __mmask16 __U, __m512 __A)
 __m512 test_mm512_mask_sqrt_round_ps(__m512 __W,__mmask16 __U,__m512 __A)
 {
   // CHECK-LABEL: @test_mm512_mask_sqrt_round_ps
-  // CHECK: call <16 x float> @llvm.sqrt.v16f32(<16 x float> %{{.*}})
+  // CHECK: call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> %{{.*}}, i32 8)
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
-  return _mm512_mask_sqrt_round_ps(__W,__U,__A,_MM_FROUND_CUR_DIRECTION);
+  return _mm512_mask_sqrt_round_ps(__W,__U,__A,_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_maskz_sqrt_round_ps(__mmask16 __U,__m512 __A)
 {
   // CHECK-LABEL: @test_mm512_maskz_sqrt_round_ps
-  // CHECK: call <16 x float> @llvm.sqrt.v16f32(<16 x float> %{{.*}})
+  // CHECK: call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> %{{.*}}, i32 8)
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> {{.*}}
-  return _mm512_maskz_sqrt_round_ps(__U,__A,_MM_FROUND_CUR_DIRECTION);
+  return _mm512_maskz_sqrt_round_ps(__U,__A,_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512 test_mm512_sqrt_round_ps(__m512 __A)
 {
   // CHECK-LABEL: @test_mm512_sqrt_round_ps
-  // CHECK: call <16 x float> @llvm.sqrt.v16f32(<16 x float> %{{.*}})
-  return _mm512_sqrt_round_ps(__A,_MM_FROUND_CUR_DIRECTION);
+  // CHECK: call <16 x float> @llvm.x86.avx512.sqrt.ps.512(<16 x float> %{{.*}}, i32 8)
+  return _mm512_sqrt_round_ps(__A,_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_rsqrt14_pd(__m512d a)

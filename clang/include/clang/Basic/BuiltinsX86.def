@@ -866,8 +866,8 @@ TARGET_BUILTIN(__builtin_ia32_rdpkru, "Ui", "n", "pku")
 TARGET_BUILTIN(__builtin_ia32_wrpkru, "vUi", "n", "pku")
 
 // AVX-512
-TARGET_BUILTIN(__builtin_ia32_sqrtpd512_mask, "V8dV8dV8dUcIi", "nc", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_sqrtps512_mask, "V16fV16fV16fUsIi", "nc", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_sqrtpd512, "V8dV8dIi", "nc", "avx512f")
+TARGET_BUILTIN(__builtin_ia32_sqrtps512, "V16fV16fIi", "nc", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_rsqrt14sd_mask, "V2dV2dV2dV2dUc", "nc", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_rsqrt14ss_mask, "V4fV4fV4fV4fUc", "nc", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_rsqrt14pd512_mask, "V8dV8dV8dUc", "nc", "avx512f")

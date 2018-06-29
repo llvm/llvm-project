@@ -139,6 +139,7 @@ def help_q : Flag<["/?", "-?"], "">, Alias<help>;
 // LLD extensions
 def debug_ghash : F<"debug:ghash">;
 def debug_dwarf : F<"debug:dwarf">;
+def debug_symtab : F<"debug:symtab">;
 def export_all_symbols : F<"export-all-symbols">;
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
