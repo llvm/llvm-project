@@ -89,11 +89,12 @@ isl::map polly::beforeScatter(isl::map Map, bool Strict) {
 
 isl::union_map polly::beforeScatter(isl::union_map UMap, bool Strict) {
   isl::union_map Result = isl::union_map::empty(UMap.get_space());
-  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+
+  for (isl::map Map : UMap.get_map_list()) {
     isl::map After = beforeScatter(Map, Strict);
     Result = Result.add_map(After);
-    return isl::stat::ok;
-  });
+  }
+
   return Result;
 }
 
@@ -106,11 +107,10 @@ isl::map polly::afterScatter(isl::map Map, bool Strict) {
 
 isl::union_map polly::afterScatter(const isl::union_map &UMap, bool Strict) {
   isl::union_map Result = isl::union_map::empty(UMap.get_space());
-  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+  for (isl::map Map : UMap.get_map_list()) {
     isl::map After = afterScatter(Map, Strict);
     Result = Result.add_map(After);
-    return isl::stat::ok;
-  });
+  }
   return Result;
 }
 
@@ -158,10 +158,8 @@ isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
 
 unsigned polly::getNumScatterDims(const isl::union_map &Schedule) {
   unsigned Dims = 0;
-  Schedule.foreach_map([&Dims](isl::map Map) -> isl::stat {
+  for (isl::map Map : Schedule.get_map_list())
     Dims = std::max(Dims, Map.dim(isl::dim::out));
-    return isl::stat::ok;
-  });
   return Dims;
 }
 
@@ -176,13 +174,12 @@ isl::space polly::getScatterSpace(const isl::union_map &Schedule) {
 isl::union_map polly::makeIdentityMap(const isl::union_set &USet,
                                       bool RestrictDomain) {
   isl::union_map Result = isl::union_map::empty(USet.get_space());
-  USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
+  for (isl::set Set : USet.get_set_list()) {
     isl::map IdentityMap = isl::map::identity(Set.get_space().map_from_set());
     if (RestrictDomain)
       IdentityMap = IdentityMap.intersect_domain(Set);
     Result = Result.add_map(IdentityMap);
-    return isl::stat::ok;
-  });
+  }
   return Result;
 }
 
@@ -196,11 +193,10 @@ isl::map polly::reverseDomain(isl::map Map) {
 
 isl::union_map polly::reverseDomain(const isl::union_map &UMap) {
   isl::union_map Result = isl::union_map::empty(UMap.get_space());
-  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+  for (isl::map Map : UMap.get_map_list()) {
     auto Reversed = reverseDomain(std::move(Map));
     Result = Result.add_map(Reversed);
-    return isl::stat::ok;
-  });
+  }
   return Result;
 }
 
@@ -218,11 +214,10 @@ isl::set polly::shiftDim(isl::set Set, int Pos, int Amount) {
 
 isl::union_set polly::shiftDim(isl::union_set USet, int Pos, int Amount) {
   isl::union_set Result = isl::union_set::empty(USet.get_space());
-  USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
+  for (isl::set Set : USet.get_set_list()) {
     isl::set Shifted = shiftDim(Set, Pos, Amount);
     Result = Result.add_set(Shifted);
-    return isl::stat::ok;
-  });
+  }
   return Result;
 }
 
@@ -259,11 +254,10 @@ isl::union_map polly::shiftDim(isl::union_map UMap, isl::dim Dim, int Pos,
                                int Amount) {
   isl::union_map Result = isl::union_map::empty(UMap.get_space());
 
-  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+  for (isl::map Map : UMap.get_map_list()) {
     isl::map Shifted = shiftDim(Map, Dim, Pos, Amount);
     Result = Result.add_map(Shifted);
-    return isl::stat::ok;
-  });
+  }
   return Result;
 }
 
@@ -474,13 +468,10 @@ isl::map polly::distributeDomain(isl::map Map) {
 
 isl::union_map polly::distributeDomain(isl::union_map UMap) {
   isl::union_map Result = isl::union_map::empty(UMap.get_space());
-  isl::stat Success = UMap.foreach_map([=, &Result](isl::map Map) {
+  for (isl::map Map : UMap.get_map_list()) {
     auto Distributed = distributeDomain(Map);
     Result = Result.add_map(Distributed);
-    return isl::stat::ok;
-  });
-  if (Success != isl::stat::ok)
-    return {};
+  }
   return Result;
 }
 
@@ -710,13 +701,12 @@ static void printSortedPolyhedra(isl::union_set USet, llvm::raw_ostream &OS,
 
   // Get all the polyhedra.
   std::vector<isl::basic_set> BSets;
-  USet.foreach_set([&BSets](isl::set Set) -> isl::stat {
-    Set.foreach_basic_set([&BSets](isl::basic_set BSet) -> isl::stat {
+
+  for (isl::set Set : USet.get_set_list()) {
+    for (isl::basic_set BSet : Set.get_basic_set_list()) {
       BSets.push_back(BSet);
-      return isl::stat::ok;
-    });
-    return isl::stat::ok;
-  });
+    }
+  }
 
   if (BSets.empty()) {
     OS << "{\n}\n";
@@ -785,10 +775,8 @@ static void recursiveExpand(isl::basic_set BSet, int Dim, isl::set &Expanded) {
 ///   { [0]; [1] }
 static isl::set expand(const isl::set &Set) {
   isl::set Expanded = isl::set::empty(Set.get_space());
-  Set.foreach_basic_set([&](isl::basic_set BSet) -> isl::stat {
+  for (isl::basic_set BSet : Set.get_basic_set_list())
     recursiveExpand(BSet, 0, Expanded);
-    return isl::stat::ok;
-  });
   return Expanded;
 }
 
@@ -797,11 +785,10 @@ static isl::set expand(const isl::set &Set) {
 /// @see expand(const isl::set)
 static isl::union_set expand(const isl::union_set &USet) {
   isl::union_set Expanded = isl::union_set::empty(USet.get_space());
-  USet.foreach_set([&](isl::set Set) -> isl::stat {
+  for (isl::set Set : USet.get_set_list()) {
     isl::set SetExpanded = expand(Set);
     Expanded = Expanded.add_set(SetExpanded);
-    return isl::stat::ok;
-  });
+  }
   return Expanded;
 }
 
