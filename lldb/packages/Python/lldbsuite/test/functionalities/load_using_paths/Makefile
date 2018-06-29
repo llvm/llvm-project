@@ -1,6 +1,7 @@
 LEVEL := ../../make
 
 CXX_SOURCES := main.cpp
+LD_EXTRAS := -ldl
 
 include $(LEVEL)/Makefile.rules
 
