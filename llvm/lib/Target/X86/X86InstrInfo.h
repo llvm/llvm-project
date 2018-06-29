@@ -17,9 +17,9 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "X86InstrFMA3Info.h"
 #include "X86RegisterInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include <vector>
 
 #define GET_INSTRINFO_HEADER
 #include "X86GenInstrInfo.inc"
@@ -168,14 +168,31 @@ class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
+  struct MemOp2RegOpTableTypeEntry {
+    uint16_t MemOp;
+    uint16_t RegOp;
+    uint16_t Flags;
+
+    bool operator<(const MemOp2RegOpTableTypeEntry &RHS) const {
+      return MemOp < RHS.MemOp;
+    }
+    bool operator==(const MemOp2RegOpTableTypeEntry &RHS) const {
+      return MemOp == RHS.MemOp;
+    }
+    friend bool operator<(const MemOp2RegOpTableTypeEntry &TE,
+                          unsigned Opcode) {
+      return TE.MemOp < Opcode;
+    }
+  };
+
   /// MemOp2RegOpTable - Load / store unfolding opcode map.
   ///
-  typedef DenseMap<unsigned, std::pair<uint16_t, uint16_t>>
-      MemOp2RegOpTableType;
+  typedef std::vector<MemOp2RegOpTableTypeEntry> MemOp2RegOpTableType;
   MemOp2RegOpTableType MemOp2RegOpTable;
 
   static void AddTableEntry(MemOp2RegOpTableType &M2RTable, uint16_t RegOp,
                             uint16_t MemOp, uint16_t Flags);
+  const MemOp2RegOpTableTypeEntry *lookupUnfoldTable(unsigned MemOp) const;
 
   virtual void anchor();
 

@@ -3765,11 +3765,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    /*Default=*/false))
     Args.AddLastArg(CmdArgs, options::OPT_ffixed_point);
 
-  if (Args.hasFlag(options::OPT_fsame_fbits,
-                   options::OPT_fno_same_fbits,
-                   /*Default=*/false))
-    Args.AddLastArg(CmdArgs, options::OPT_fsame_fbits);
-
   // Handle -{std, ansi, trigraphs} -- take the last of -{std, ansi}
   // (-ansi is equivalent to -std=c89 or -std=c++98).
   //
@@ -4802,23 +4797,30 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_complete_member_pointers, false))
     CmdArgs.push_back("-fcomplete-member-pointers");
 
-  if (Args.hasFlag(options::OPT_moutline, options::OPT_mno_outline, false)) {
-    // We only support -moutline in AArch64 right now. If we're not compiling
-    // for AArch64, emit a warning and ignore the flag. Otherwise, add the
-    // proper mllvm flags.
-    if (Triple.getArch() != llvm::Triple::aarch64) {
-      D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
-    } else {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-machine-outliner");
-
-      // The outliner shouldn't compete with linkers that dedupe linkonceodr
-      // functions in LTO. Enable that behaviour by default when compiling with
-      // LTO.
-      if (getToolChain().getDriver().isUsingLTO()) {
+  if (Arg *A = Args.getLastArg(options::OPT_moutline,
+                               options::OPT_mno_outline)) {
+    if (A->getOption().matches(options::OPT_moutline)) {
+      // We only support -moutline in AArch64 right now. If we're not compiling
+      // for AArch64, emit a warning and ignore the flag. Otherwise, add the
+      // proper mllvm flags.
+      if (Triple.getArch() != llvm::Triple::aarch64) {
+        D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
+      } else {
         CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-enable-linkonceodr-outlining");
+        CmdArgs.push_back("-enable-machine-outliner");
+
+        // The outliner shouldn't compete with linkers that dedupe linkonceodr
+        // functions in LTO. Enable that behaviour by default when compiling with
+        // LTO.
+        if (getToolChain().getDriver().isUsingLTO()) {
+          CmdArgs.push_back("-mllvm");
+          CmdArgs.push_back("-enable-linkonceodr-outlining");
+        }
       }
+    } else {
+      // Disable all outlining behaviour.
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-enable-machine-outliner=never");
     }
   }
 

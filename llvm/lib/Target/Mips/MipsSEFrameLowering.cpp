@@ -394,7 +394,6 @@ MipsSEFrameLowering::MipsSEFrameLowering(const MipsSubtarget &STI)
 
 void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
-  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineFrameInfo &MFI    = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
@@ -682,7 +681,7 @@ void MipsSEFrameLowering::emitInterruptPrologueStub(
 
 void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
-  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   MachineFrameInfo &MFI            = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
@@ -691,7 +690,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
   const MipsRegisterInfo &RegInfo =
       *static_cast<const MipsRegisterInfo *>(STI.getRegisterInfo());
 
-  DebugLoc DL = MBBI->getDebugLoc();
+  DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   MipsABIInfo ABI = STI.getABI();
   unsigned SP = ABI.GetStackPtr();
   unsigned FP = ABI.GetFramePtr();
@@ -790,7 +789,6 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                           const std::vector<CalleeSavedInfo> &CSI,
                           const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
-  MachineBasicBlock *EntryBlock = &MF->front();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
@@ -803,7 +801,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA || Reg == Mips::RA_64)
         && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)
-      EntryBlock->addLiveIn(Reg);
+      MBB.addLiveIn(Reg);
 
     // ISRs require HI/LO to be spilled into kernel registers to be then
     // spilled to the stack frame.
@@ -828,7 +826,7 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     // Insert the spill to the stack frame.
     bool IsKill = !IsRAAndRetAddrIsTaken;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    TII.storeRegToStackSlot(*EntryBlock, MI, Reg, IsKill,
+    TII.storeRegToStackSlot(MBB, MI, Reg, IsKill,
                             CSI[i].getFrameIdx(), RC, TRI);
   }
 

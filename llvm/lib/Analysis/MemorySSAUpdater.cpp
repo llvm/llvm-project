@@ -492,6 +492,39 @@ void MemorySSAUpdater::removeMemoryAccess(MemoryAccess *MA) {
   MSSA->removeFromLists(MA);
 }
 
+void MemorySSAUpdater::removeBlocks(
+    const SmallPtrSetImpl<BasicBlock *> &DeadBlocks) {
+  // First delete all uses of BB in MemoryPhis.
+  for (BasicBlock *BB : DeadBlocks) {
+    TerminatorInst *TI = BB->getTerminator();
+    assert(TI && "Basic block expected to have a terminator instruction");
+    for (BasicBlock *Succ : TI->successors())
+      if (!DeadBlocks.count(Succ))
+        if (MemoryPhi *MP = MSSA->getMemoryAccess(Succ)) {
+          MP->unorderedDeleteIncomingBlock(BB);
+          if (MP->getNumIncomingValues() == 1)
+            removeMemoryAccess(MP);
+        }
+    // Drop all references of all accesses in BB
+    if (MemorySSA::AccessList *Acc = MSSA->getWritableBlockAccesses(BB))
+      for (MemoryAccess &MA : *Acc)
+        MA.dropAllReferences();
+  }
+
+  // Next, delete all memory accesses in each block
+  for (BasicBlock *BB : DeadBlocks) {
+    MemorySSA::AccessList *Acc = MSSA->getWritableBlockAccesses(BB);
+    if (!Acc)
+      continue;
+    for (auto AB = Acc->begin(), AE = Acc->end(); AB != AE;) {
+      MemoryAccess *MA = &*AB;
+      ++AB;
+      MSSA->removeFromLookups(MA);
+      MSSA->removeFromLists(MA);
+    }
+  }
+}
+
 MemoryAccess *MemorySSAUpdater::createMemoryAccessInBB(
     Instruction *I, MemoryAccess *Definition, const BasicBlock *BB,
     MemorySSA::InsertionPlace Point) {

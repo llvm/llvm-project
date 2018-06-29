@@ -48,6 +48,14 @@ LLVMContextImpl::~LLVMContextImpl() {
   while (!OwnedModules.empty())
     delete *OwnedModules.begin();
 
+#ifndef NDEBUG
+  // Check for metadata references from leaked Instructions.
+  for (auto &Pair : InstructionMetadata)
+    Pair.first->dump();
+  assert(InstructionMetadata.empty() &&
+         "Instructions with metadata have been leaked");
+#endif
+
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
   // unnecessary RAUW when nodes are still unresolved.
   for (auto *I : DistinctMDNodes)

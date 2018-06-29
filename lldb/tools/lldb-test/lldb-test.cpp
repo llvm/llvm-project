@@ -51,14 +51,15 @@ using namespace llvm;
 namespace opts {
 static cl::SubCommand BreakpointSubcommand("breakpoints",
                                            "Test breakpoint resolution");
-cl::SubCommand ModuleSubcommand("module-sections",
-                                "Display LLDB Module Information");
+cl::SubCommand ObjectFileSubcommand("object-file",
+                                    "Display LLDB object file information");
 cl::SubCommand SymbolsSubcommand("symbols", "Dump symbols for an object file");
 cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
 
 cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
                          cl::sub(BreakpointSubcommand),
-                         cl::sub(ModuleSubcommand), cl::sub(SymbolsSubcommand),
+                         cl::sub(ObjectFileSubcommand),
+                         cl::sub(SymbolsSubcommand),
                          cl::sub(IRMemoryMapSubcommand));
 
 /// Create a target using the file pointed to by \p Filename, or abort.
@@ -85,13 +86,14 @@ static std::string substitute(StringRef Cmd);
 static int evaluateBreakpoints(Debugger &Dbg);
 } // namespace breakpoint
 
-namespace module {
+namespace object {
 cl::opt<bool> SectionContents("contents",
                               cl::desc("Dump each section's contents"),
-                              cl::sub(ModuleSubcommand));
+                              cl::sub(ObjectFileSubcommand));
 cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
-                                     cl::OneOrMore, cl::sub(ModuleSubcommand));
-} // namespace module
+                                     cl::OneOrMore,
+                                     cl::sub(ObjectFileSubcommand));
+} // namespace object
 
 namespace symbols {
 static cl::list<std::string> InputFilenames(cl::Positional,
@@ -616,11 +618,11 @@ int opts::symbols::dumpSymbols(Debugger &Dbg) {
   return HadErrors;
 }
 
-static int dumpModules(Debugger &Dbg) {
+static int dumpObjectFiles(Debugger &Dbg) {
   LinePrinter Printer(4, llvm::outs());
 
   int HadErrors = 0;
-  for (const auto &File : opts::module::InputFilenames) {
+  for (const auto &File : opts::object::InputFilenames) {
     ModuleSpec Spec{FileSpec(File, false)};
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
@@ -634,6 +636,10 @@ static int dumpModules(Debugger &Dbg) {
       continue;
     }
 
+    Printer.formatLine("Architecture: {0}",
+                       ModulePtr->GetArchitecture().GetTriple().getTriple());
+    Printer.formatLine("UUID: {0}", ModulePtr->GetUUID().GetAsString());
+
     size_t Count = Sections->GetNumSections(0);
     Printer.formatLine("Showing {0} sections", Count);
     for (size_t I = 0; I < Count; ++I) {
@@ -646,7 +652,7 @@ static int dumpModules(Debugger &Dbg) {
       Printer.formatLine("VM size: {0}", S->GetByteSize());
       Printer.formatLine("File size: {0}", S->GetFileSize());
 
-      if (opts::module::SectionContents) {
+      if (opts::object::SectionContents) {
         DataExtractor Data;
         S->GetSectionData(Data);
         ArrayRef<uint8_t> Bytes = {Data.GetDataStart(), Data.GetDataEnd()};
@@ -841,8 +847,8 @@ int main(int argc, const char *argv[]) {
 
   if (opts::BreakpointSubcommand)
     return opts::breakpoint::evaluateBreakpoints(*Dbg);
-  if (opts::ModuleSubcommand)
-    return dumpModules(*Dbg);
+  if (opts::ObjectFileSubcommand)
+    return dumpObjectFiles(*Dbg);
   if (opts::SymbolsSubcommand)
     return opts::symbols::dumpSymbols(*Dbg);
   if (opts::IRMemoryMapSubcommand)

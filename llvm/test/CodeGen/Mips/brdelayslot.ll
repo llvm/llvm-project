@@ -6,6 +6,7 @@
 ; RUN: llc -march=mipsel -disable-mips-df-forward-search=false \
 ; RUN: -relocation-model=static < %s | FileCheck %s -check-prefix=FORWARD
 ; RUN: llc -march=mipsel -disable-mips-df-backward-search -relocation-model=pic \
+; RUN: -enable-shrink-wrap=false \
 ; RUN: -disable-mips-df-succbb-search=false -disable-preheader-prot=true < %s | \
 ; RUN: FileCheck %s -check-prefix=SUCCBB
 

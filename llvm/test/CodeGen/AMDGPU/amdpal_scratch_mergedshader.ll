@@ -24,7 +24,7 @@ define amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inre
 
 .endls:                                           ; preds = %.beginls, %.entry
   %.fca.2.gep120.i = getelementptr inbounds [3 x <4 x float>], [3 x <4 x float>] addrspace(5)* %__llpc_global_proxy_7.i, i64 0, i64 2
-  store <4 x float> <float 9.000000e+00, float 1.000000e+01, float 1.100000e+01, float 1.200000e+01>, <4 x float> addrspace(5)* %.fca.2.gep120.i, align 16
+  store volatile <4 x float> <float 9.000000e+00, float 1.000000e+01, float 1.100000e+01, float 1.200000e+01>, <4 x float> addrspace(5)* %.fca.2.gep120.i, align 16
   br label %bb
 
 bb:                                               ; preds = %bb, %.endls

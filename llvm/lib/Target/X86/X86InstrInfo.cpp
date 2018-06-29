@@ -5411,10 +5411,17 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                   // Index 4, folded load
                   Entry.Flags | TB_INDEX_4 | TB_FOLDED_LOAD);
 
+  // Sort the memory->reg unfold table.
+  array_pod_sort(MemOp2RegOpTable.begin(), MemOp2RegOpTable.end());
+
 #ifndef NDEBUG
   // Make sure the tables are sorted.
   static std::atomic<bool> FoldTablesChecked(false);
   if (!FoldTablesChecked.load(std::memory_order_relaxed)) {
+    assert(std::adjacent_find(MemOp2RegOpTable.begin(),
+                              MemOp2RegOpTable.end()) ==
+           MemOp2RegOpTable.end() &&
+           "MemOp2RegOpTable is not unique!");
     assert(std::is_sorted(std::begin(MemoryFoldTable2Addr),
                           std::end(MemoryFoldTable2Addr)) &&
            std::adjacent_find(std::begin(MemoryFoldTable2Addr),
@@ -5459,11 +5466,17 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 void
 X86InstrInfo::AddTableEntry(MemOp2RegOpTableType &M2RTable,
                             uint16_t RegOp, uint16_t MemOp, uint16_t Flags) {
-  if ((Flags & TB_NO_REVERSE) == 0) {
-    assert(!M2RTable.count(MemOp) &&
-         "Duplicated entries in unfolding maps?");
-    M2RTable[MemOp] = std::make_pair(RegOp, Flags);
-  }
+  if ((Flags & TB_NO_REVERSE) == 0)
+    M2RTable.push_back({MemOp, RegOp, Flags});
+}
+
+const X86InstrInfo::MemOp2RegOpTableTypeEntry *
+X86InstrInfo::lookupUnfoldTable(unsigned MemOp) const {
+  auto I = std::lower_bound(MemOp2RegOpTable.begin(), MemOp2RegOpTable.end(),
+                            MemOp);
+  if (I != MemOp2RegOpTable.end() && I->MemOp == MemOp)
+    return &*I;
+  return nullptr;
 }
 
 static const X86MemoryFoldTableEntry *
@@ -10722,13 +10735,13 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 bool X86InstrInfo::unfoldMemoryOperand(
     MachineFunction &MF, MachineInstr &MI, unsigned Reg, bool UnfoldLoad,
     bool UnfoldStore, SmallVectorImpl<MachineInstr *> &NewMIs) const {
-  auto I = MemOp2RegOpTable.find(MI.getOpcode());
-  if (I == MemOp2RegOpTable.end())
+  const MemOp2RegOpTableTypeEntry *I = lookupUnfoldTable(MI.getOpcode());
+  if (I == nullptr)
     return false;
-  unsigned Opc = I->second.first;
-  unsigned Index = I->second.second & TB_INDEX_MASK;
-  bool FoldedLoad = I->second.second & TB_FOLDED_LOAD;
-  bool FoldedStore = I->second.second & TB_FOLDED_STORE;
+  unsigned Opc = I->RegOp;
+  unsigned Index = I->Flags & TB_INDEX_MASK;
+  bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
+  bool FoldedStore = I->Flags & TB_FOLDED_STORE;
   if (UnfoldLoad && !FoldedLoad)
     return false;
   UnfoldLoad &= FoldedLoad;
@@ -10844,13 +10857,13 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   if (!N->isMachineOpcode())
     return false;
 
-  auto I = MemOp2RegOpTable.find(N->getMachineOpcode());
-  if (I == MemOp2RegOpTable.end())
+  const MemOp2RegOpTableTypeEntry *I = lookupUnfoldTable(N->getMachineOpcode());
+  if (I == nullptr)
     return false;
-  unsigned Opc = I->second.first;
-  unsigned Index = I->second.second & TB_INDEX_MASK;
-  bool FoldedLoad = I->second.second & TB_FOLDED_LOAD;
-  bool FoldedStore = I->second.second & TB_FOLDED_STORE;
+  unsigned Opc = I->RegOp;
+  unsigned Index = I->Flags & TB_INDEX_MASK;
+  bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
+  bool FoldedStore = I->Flags & TB_FOLDED_STORE;
   const MCInstrDesc &MCID = get(Opc);
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
@@ -10975,18 +10988,18 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
 unsigned X86InstrInfo::getOpcodeAfterMemoryUnfold(unsigned Opc,
                                       bool UnfoldLoad, bool UnfoldStore,
                                       unsigned *LoadRegIndex) const {
-  auto I = MemOp2RegOpTable.find(Opc);
-  if (I == MemOp2RegOpTable.end())
+  const MemOp2RegOpTableTypeEntry *I = lookupUnfoldTable(Opc);
+  if (I == nullptr)
     return 0;
-  bool FoldedLoad = I->second.second & TB_FOLDED_LOAD;
-  bool FoldedStore = I->second.second & TB_FOLDED_STORE;
+  bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
+  bool FoldedStore = I->Flags & TB_FOLDED_STORE;
   if (UnfoldLoad && !FoldedLoad)
     return 0;
   if (UnfoldStore && !FoldedStore)
     return 0;
   if (LoadRegIndex)
-    *LoadRegIndex = I->second.second & TB_INDEX_MASK;
-  return I->second.first;
+    *LoadRegIndex = I->Flags & TB_INDEX_MASK;
+  return I->RegOp;
 }
 
 bool

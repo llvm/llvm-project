@@ -1,7 +1,7 @@
 // REQUIRES: x86
 
 // RUN: llvm-mc -filetype=obj -triple=i386-pc-linux %s -o %t1.o
-// RUN: ld.lld %t1.o -M | FileCheck -strict-whitespace %s
+// RUN: ld.lld %t1.o -o %t1 -M | FileCheck -strict-whitespace %s
 
 .global _start
 _start:

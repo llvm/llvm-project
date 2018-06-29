@@ -12,7 +12,7 @@ entry:
   br label %loop
 
 loop:
-  store i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, i32 addrspace(1)* %out, align 4
   br label %loop
 }
 
@@ -21,7 +21,7 @@ loop:
 ; IR:  br i1 %cond, label %loop, label %UnifiedReturnBlock
 
 ; IR: loop:
-; IR: store i32 999, i32 addrspace(1)* %out, align 4
+; IR: store volatile i32 999, i32 addrspace(1)* %out, align 4
 ; IR: br i1 true, label %loop, label %UnifiedReturnBlock
 
 ; IR: UnifiedReturnBlock:
@@ -47,7 +47,7 @@ entry:
   br i1 %cond, label %loop, label %return
 
 loop:
-  store i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, i32 addrspace(1)* %out, align 4
   br label %loop
 
 return:
@@ -59,11 +59,11 @@ return:
 ; IR: br i1 undef, label %loop1, label %loop2
 
 ; IR: loop1:
-; IR: store i32 999, i32 addrspace(1)* %out, align 4
+; IR: store volatile i32 999, i32 addrspace(1)* %out, align 4
 ; IR: br i1 true, label %loop1, label %DummyReturnBlock
 
 ; IR: loop2:
-; IR: store i32 888, i32 addrspace(1)* %out, align 4
+; IR: store volatile i32 888, i32 addrspace(1)* %out, align 4
 ; IR: br i1 true, label %loop2, label %DummyReturnBlock
 
 ; IR: DummyReturnBlock:
@@ -96,11 +96,11 @@ entry:
   br i1 undef, label %loop1, label %loop2
 
 loop1:
-  store i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, i32 addrspace(1)* %out, align 4
   br label %loop1
 
 loop2:
-  store i32 888, i32 addrspace(1)* %out, align 4
+  store volatile i32 888, i32 addrspace(1)* %out, align 4
   br label %loop2
 }
 
@@ -113,7 +113,7 @@ loop2:
 ; IR: br label %inner_loop
 
 ; IR: inner_loop:
-; IR: store i32 999, i32 addrspace(1)* %out, align 4
+; IR: store volatile i32 999, i32 addrspace(1)* %out, align 4
 ; IR: %cond3 = icmp eq i32 %tmp, 3
 ; IR: br i1 true, label %TransitionBlock, label %UnifiedReturnBlock
 
@@ -132,7 +132,6 @@ loop2:
 ; SI: [[INNER_LOOP:BB[0-9]+_[0-9]+]]:  ; %inner_loop
 ; SI: s_waitcnt expcnt(0)
 ; SI: v_mov_b32_e32 [[REG:v[0-9]+]], 0x3e7
-; SI: v_cmp_ne_u32_e32
 ; SI: s_waitcnt lgkmcnt(0)
 ; SI: buffer_store_dword [[REG]]
 
@@ -156,7 +155,7 @@ outer_loop:
  br label %inner_loop
 
 inner_loop:                                     ; preds = %LeafBlock, %LeafBlock1
-  store i32 999, i32 addrspace(1)* %out, align 4
+  store volatile i32 999, i32 addrspace(1)* %out, align 4
   %cond3 = icmp eq i32 %tmp, 3
   br i1 %cond3, label %inner_loop, label %outer_loop
 
