@@ -77,11 +77,6 @@ struct ReadDescriptor {
   // Scheduling Class Index. It is used to query the scheduling model for the
   // MCSchedClassDesc object.
   unsigned SchedClassID;
-  // True if there may be a local forwarding logic in hardware to serve a
-  // write used by this read. This information, along with SchedClassID, is
-  // used to dynamically check at Instruction creation time, if the input
-  // operands can benefit from a ReadAdvance bonus.
-  bool HasReadAdvanceEntries;
 
   bool isImplicitRead() const { return OpIndex < 0; };
 };

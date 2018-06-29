@@ -1982,18 +1982,25 @@ bool DwarfLinker::registerModuleReference(
 }
 
 ErrorOr<const object::ObjectFile &>
-DwarfLinker::loadObject(BinaryHolder &BinaryHolder, const DebugMapObject &Obj,
-                        const DebugMap &Map) {
-  auto ErrOrObjs =
-      BinaryHolder.GetObjectFiles(Obj.getObjectFilename(), Obj.getTimestamp());
-  if (std::error_code EC = ErrOrObjs.getError()) {
-    reportWarning(Twine(Obj.getObjectFilename()) + ": " + EC.message(), Obj);
-    return EC;
+DwarfLinker::loadObject(const DebugMapObject &Obj, const DebugMap &Map) {
+  auto ObjectEntry =
+      BinHolder.getObjectEntry(Obj.getObjectFilename(), Obj.getTimestamp());
+  if (!ObjectEntry) {
+    auto Err = ObjectEntry.takeError();
+    reportWarning(
+        Twine(Obj.getObjectFilename()) + ": " + toString(std::move(Err)), Obj);
+    return errorToErrorCode(std::move(Err));
   }
-  auto ErrOrObj = BinaryHolder.Get(Map.getTriple());
-  if (std::error_code EC = ErrOrObj.getError())
-    reportWarning(Twine(Obj.getObjectFilename()) + ": " + EC.message(), Obj);
-  return ErrOrObj;
+
+  auto Object = ObjectEntry->getObject(Map.getTriple());
+  if (!Object) {
+    auto Err = Object.takeError();
+    reportWarning(
+        Twine(Obj.getObjectFilename()) + ": " + toString(std::move(Err)), Obj);
+    return errorToErrorCode(std::move(Err));
+  }
+
+  return *Object;
 }
 
 Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
@@ -2009,10 +2016,11 @@ Error DwarfLinker::loadClangModule(StringRef Filename, StringRef ModulePath,
     sys::path::append(Path, ModulePath, Filename);
   else
     sys::path::append(Path, Filename);
-  BinaryHolder ObjHolder(Options.Verbose);
+  // Don't use the cached binary holder because we have no thread-safety
+  // guarantee and the lifetime is limited.
   auto &Obj = ModuleMap.addDebugMapObject(
       Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
-  auto ErrOrObj = loadObject(ObjHolder, Obj, ModuleMap);
+  auto ErrOrObj = loadObject(Obj, ModuleMap);
   if (!ErrOrObj) {
     // Try and emit more helpful warnings by applying some heuristics.
     StringRef ObjFile = DMO.getObjectFilename();
@@ -2238,7 +2246,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
   std::vector<LinkContext> ObjectContexts;
   ObjectContexts.reserve(NumObjects);
   for (const auto &Obj : Map.objects())
-    ObjectContexts.emplace_back(Map, *this, *Obj.get(), Options.Verbose);
+    ObjectContexts.emplace_back(Map, *this, *Obj.get());
 
   // This Dwarf string pool which is only used for uniquing. This one should
   // never be used for offsets as its not thread-safe or predictable.
@@ -2459,9 +2467,9 @@ bool DwarfLinker::link(const DebugMap &Map) {
   return Options.NoOutput ? true : Streamer->finish(Map);
 }
 
-bool linkDwarf(raw_fd_ostream &OutFile, const DebugMap &DM,
-               const LinkOptions &Options) {
-  DwarfLinker Linker(OutFile, Options);
+bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
+               const DebugMap &DM, const LinkOptions &Options) {
+  DwarfLinker Linker(OutFile, BinHolder, Options);
   return Linker.link(DM);
 }
 

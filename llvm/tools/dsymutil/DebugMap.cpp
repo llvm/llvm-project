@@ -240,26 +240,31 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::denormalize(IO &IO) {
   StringMap<uint64_t> SymbolAddresses;
 
   sys::path::append(Path, Filename);
-  auto ErrOrObjectFiles = BinHolder.GetObjectFiles(Path);
-  if (auto EC = ErrOrObjectFiles.getError()) {
-    WithColor::warning() << "Unable to open " << Path << " " << EC.message()
-                         << '\n';
-  } else if (auto ErrOrObjectFile = BinHolder.Get(Ctxt.BinaryTriple)) {
-    // Rewrite the object file symbol addresses in the debug map. The YAML
-    // input is mainly used to test dsymutil without requiring binaries
-    // checked-in. If we generate the object files during the test, we can't
-    // hard-code the symbols addresses, so look them up here and rewrite them.
-    for (const auto &Sym : ErrOrObjectFile->symbols()) {
-      uint64_t Address = Sym.getValue();
-      Expected<StringRef> Name = Sym.getName();
-      if (!Name ||
-          (Sym.getFlags() & (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
-        // TODO: Actually report errors helpfully.
-        if (!Name)
-          consumeError(Name.takeError());
-        continue;
+
+  auto ObjectEntry = BinHolder.getObjectEntry(Path);
+  if (!ObjectEntry) {
+    auto Err = ObjectEntry.takeError();
+    WithColor::warning() << "Unable to open " << Path << " "
+                         << toString(std::move(Err)) << '\n';
+  } else {
+    auto Object = ObjectEntry->getObject(Ctxt.BinaryTriple);
+    if (!Object) {
+      auto Err = Object.takeError();
+      WithColor::warning() << "Unable to open " << Path << " "
+                           << toString(std::move(Err)) << '\n';
+    } else {
+      for (const auto &Sym : Object->symbols()) {
+        uint64_t Address = Sym.getValue();
+        Expected<StringRef> Name = Sym.getName();
+        if (!Name || (Sym.getFlags() &
+                      (SymbolRef::SF_Absolute | SymbolRef::SF_Common))) {
+          // TODO: Actually report errors helpfully.
+          if (!Name)
+            consumeError(Name.takeError());
+          continue;
+        }
+        SymbolAddresses[*Name] = Address;
       }
-      SymbolAddresses[*Name] = Address;
     }
   }
 
