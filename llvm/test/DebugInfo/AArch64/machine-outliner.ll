@@ -1,4 +1,4 @@
-; RUN: llc -O0 -verify-machineinstrs -filetype=obj -mtriple=aarch64-- \
+; RUN: llc -verify-machineinstrs -filetype=obj -mtriple=aarch64-- \
 ; RUN: -enable-machine-outliner < %s | llvm-dwarfdump - | FileCheck %s
 
 ; Ensure that the MachineOutliner produces valid DWARF when it creates outlined

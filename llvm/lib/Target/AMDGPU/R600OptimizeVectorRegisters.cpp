@@ -79,7 +79,7 @@ public:
   std::vector<unsigned> UndefReg;
 
   RegSeqInfo(MachineRegisterInfo &MRI, MachineInstr *MI) : Instr(MI) {
-    assert(MI->getOpcode() == AMDGPU::REG_SEQUENCE);
+    assert(MI->getOpcode() == R600::REG_SEQUENCE);
     for (unsigned i = 1, e = Instr->getNumOperands(); i < e; i+=2) {
       MachineOperand &MO = Instr->getOperand(i);
       unsigned Chan = Instr->getOperand(i + 1).getImm();
@@ -159,8 +159,8 @@ bool R600VectorRegMerger::canSwizzle(const MachineInstr &MI)
   if (TII->get(MI.getOpcode()).TSFlags & R600_InstFlag::TEX_INST)
     return true;
   switch (MI.getOpcode()) {
-  case AMDGPU::R600_ExportSwz:
-  case AMDGPU::EG_ExportSwz:
+  case R600::R600_ExportSwz:
+  case R600::EG_ExportSwz:
     return true;
   default:
     return false;
@@ -213,12 +213,12 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
   std::vector<unsigned> UpdatedUndef = BaseRSI->UndefReg;
   for (DenseMap<unsigned, unsigned>::iterator It = RSI->RegToChan.begin(),
       E = RSI->RegToChan.end(); It != E; ++It) {
-    unsigned DstReg = MRI->createVirtualRegister(&AMDGPU::R600_Reg128RegClass);
+    unsigned DstReg = MRI->createVirtualRegister(&R600::R600_Reg128RegClass);
     unsigned SubReg = (*It).first;
     unsigned Swizzle = (*It).second;
     unsigned Chan = getReassignedChan(RemapChan, Swizzle);
 
-    MachineInstr *Tmp = BuildMI(MBB, Pos, DL, TII->get(AMDGPU::INSERT_SUBREG),
+    MachineInstr *Tmp = BuildMI(MBB, Pos, DL, TII->get(R600::INSERT_SUBREG),
         DstReg)
         .addReg(SrcVec)
         .addReg(SubReg)
@@ -234,7 +234,7 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
     SrcVec = DstReg;
   }
   MachineInstr *NewMI =
-      BuildMI(MBB, Pos, DL, TII->get(AMDGPU::COPY), Reg).addReg(SrcVec);
+      BuildMI(MBB, Pos, DL, TII->get(R600::COPY), Reg).addReg(SrcVec);
   LLVM_DEBUG(dbgs() << "    ->"; NewMI->dump(););
 
   LLVM_DEBUG(dbgs() << "  Updating Swizzle:\n");
@@ -354,7 +354,7 @@ bool R600VectorRegMerger::runOnMachineFunction(MachineFunction &Fn) {
     for (MachineBasicBlock::iterator MII = MB->begin(), MIIE = MB->end();
          MII != MIIE; ++MII) {
       MachineInstr &MI = *MII;
-      if (MI.getOpcode() != AMDGPU::REG_SEQUENCE) {
+      if (MI.getOpcode() != R600::REG_SEQUENCE) {
         if (TII->get(MI.getOpcode()).TSFlags & R600_InstFlag::TEX_INST) {
           unsigned Reg = MI.getOperand(1).getReg();
           for (MachineRegisterInfo::def_instr_iterator

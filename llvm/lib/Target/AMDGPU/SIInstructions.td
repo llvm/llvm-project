@@ -11,10 +11,9 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, GCNPredicateControl {
   let SubtargetPredicate = isGCN;
 }
-
 
 include "VOPInstructions.td"
 include "SOPInstructions.td"

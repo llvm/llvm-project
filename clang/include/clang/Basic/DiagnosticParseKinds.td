@@ -173,6 +173,9 @@ def warn_attribute_on_function_definition : Warning<
 def warn_gcc_attribute_location : Warning<
   "GCC does not allow an attribute in this position on a function declaration">, 
   InGroup<GccCompat>;
+def warn_gcc_variable_decl_in_for_loop : Warning<
+  "GCC does not allow variable declarations in for loop initializers before "
+  "C99">, InGroup<GccCompat>;
 def warn_attribute_no_decl : Warning<
   "attribute %0 ignored, because it is not attached to a declaration">, 
   InGroup<IgnoredAttributes>;

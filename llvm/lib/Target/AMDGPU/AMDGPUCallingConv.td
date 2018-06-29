@@ -85,17 +85,6 @@ def RetCC_SI_Shader : CallingConv<[
   ]>>
 ]>;
 
-// Calling convention for R600
-def CC_R600 : CallingConv<[
-  CCIfInReg<CCIfType<[v4f32, v4i32] , CCAssignToReg<[
-    T0_XYZW, T1_XYZW, T2_XYZW, T3_XYZW, T4_XYZW, T5_XYZW, T6_XYZW, T7_XYZW,
-    T8_XYZW, T9_XYZW, T10_XYZW, T11_XYZW, T12_XYZW, T13_XYZW, T14_XYZW, T15_XYZW,
-    T16_XYZW, T17_XYZW, T18_XYZW, T19_XYZW, T20_XYZW, T21_XYZW, T22_XYZW,
-    T23_XYZW, T24_XYZW, T25_XYZW, T26_XYZW, T27_XYZW, T28_XYZW, T29_XYZW,
-    T30_XYZW, T31_XYZW, T32_XYZW
-  ]>>>
-]>;
-
 // Calling convention for compute kernels
 def CC_AMDGPU_Kernel : CallingConv<[
   CCCustom<"allocateKernArg">
@@ -165,9 +154,5 @@ def CC_AMDGPU : CallingConv<[
    CCIf<"static_cast<const AMDGPUSubtarget&>"
          "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
            "AMDGPUSubtarget::SOUTHERN_ISLANDS && State.getCallingConv() == CallingConv::C",
-        CCDelegateTo<CC_AMDGPU_Func>>,
-   CCIf<"static_cast<const AMDGPUSubtarget&>"
-          "(State.getMachineFunction().getSubtarget()).getGeneration() < "
-            "AMDGPUSubtarget::SOUTHERN_ISLANDS",
-        CCDelegateTo<CC_R600>>
+        CCDelegateTo<CC_AMDGPU_Func>>
 ]>;

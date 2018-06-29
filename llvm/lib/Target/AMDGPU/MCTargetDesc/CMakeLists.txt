@@ -8,5 +8,6 @@ add_llvm_library(LLVMAMDGPUDesc
   AMDGPUMCTargetDesc.cpp
   AMDGPUTargetStreamer.cpp
   R600MCCodeEmitter.cpp
+  R600MCTargetDesc.cpp
   SIMCCodeEmitter.cpp
 )

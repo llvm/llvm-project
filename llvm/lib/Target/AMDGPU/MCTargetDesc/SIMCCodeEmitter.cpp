@@ -438,3 +438,6 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   llvm_unreachable("Encoding of this operand type is not supported yet.");
   return 0;
 }
+
+#define ENABLE_INSTR_PREDICATE_VERIFIER
+#include "AMDGPUGenMCCodeEmitter.inc"
