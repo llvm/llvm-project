@@ -1624,8 +1624,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
     // Parse declaration, which eats the ';'.
-    if (!C99orCXXorObjC)   // Use of C99-style for loops in C90 mode?
+    if (!C99orCXXorObjC) {   // Use of C99-style for loops in C90 mode?
       Diag(Tok, diag::ext_c99_variable_decl_in_for_loop);
+      Diag(Tok, diag::warn_gcc_variable_decl_in_for_loop);
+    }
 
     // In C++0x, "for (T NS:a" might not be a typo for ::
     bool MightBeForRangeStmt = getLangOpts().CPlusPlus;

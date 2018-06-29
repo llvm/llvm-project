@@ -114,6 +114,7 @@ class ELFState {
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::Relr Elf_Relr;
 
   enum class SymtabType { Static, Dynamic };
 
@@ -459,7 +460,10 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   Section.Content.writeAsBinary(OS);
   for (auto i = Section.Content.binary_size(); i < Section.Size; ++i)
     OS.write(0);
-  SHeader.sh_entsize = 0;
+  if (Section.Type == llvm::ELF::SHT_RELR)
+    SHeader.sh_entsize = sizeof(Elf_Relr);
+  else
+    SHeader.sh_entsize = 0;
   SHeader.sh_size = Section.Size;
 }
 

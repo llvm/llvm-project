@@ -15,6 +15,10 @@
 // XFAIL: tsan
 // XFAIL: msan
 // XFAIL: ubsan
+
+// https://github.com/google/sanitizers/issues/981
+// XFAIL: android-26
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

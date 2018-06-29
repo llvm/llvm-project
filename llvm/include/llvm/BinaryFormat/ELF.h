@@ -796,6 +796,9 @@ enum : unsigned {
   SHT_PREINIT_ARRAY = 16,               // Pointers to pre-init functions.
   SHT_GROUP = 17,                       // Section group.
   SHT_SYMTAB_SHNDX = 18,                // Indices for SHN_XINDEX entries.
+  // Experimental support for SHT_RELR sections. For details, see proposal
+  // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
+  SHT_RELR = 19,                        // Relocation entries; only offsets.
   SHT_LOOS = 0x60000000,                // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
@@ -804,6 +807,9 @@ enum : unsigned {
   SHT_LLVM_ODRTAB = 0x6fff4c00,         // LLVM ODR table.
   SHT_LLVM_LINKER_OPTIONS = 0x6fff4c01, // LLVM Linker Options.
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c02, // LLVM Call Graph Profile.
+  // Android's experimental support for SHT_RELR sections.
+  // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
+  SHT_ANDROID_RELR = 0x6fffff00,        // Relocation entries; only offsets.
   SHT_GNU_ATTRIBUTES = 0x6ffffff5,      // Object attributes.
   SHT_GNU_HASH = 0x6ffffff6,            // GNU-style hash table.
   SHT_GNU_verdef = 0x6ffffffd,          // GNU version definitions.
@@ -1067,6 +1073,9 @@ struct Elf32_Rela {
   }
 };
 
+// Relocation entry without explicit addend or info (relative relocations only).
+typedef Elf32_Word Elf32_Relr; // offset/bitmap for relative relocations
+
 // Relocation entry, without explicit addend.
 struct Elf64_Rel {
   Elf64_Addr r_offset; // Location (file byte offset, or program virtual addr).
@@ -1099,6 +1108,9 @@ struct Elf64_Rela {
     r_info = ((Elf64_Xword)s << 32) + (t & 0xffffffffL);
   }
 };
+
+// Relocation entry without explicit addend or info (relative relocations only).
+typedef Elf64_Xword Elf64_Relr; // offset/bitmap for relative relocations
 
 // Program header for ELF32.
 struct Elf32_Phdr {

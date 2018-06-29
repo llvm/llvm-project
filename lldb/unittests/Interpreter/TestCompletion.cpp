@@ -286,14 +286,12 @@ TEST_F(CompletionTest, DirCompletionUsername) {
   Count = CommandCompletions::DiskDirectories("~/foo/", Results, Resolver);
   ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(ContainsExactString(Twine("~/foo") + path::get_separator() +
-                                      "nested" + path::get_separator(),
+  EXPECT_TRUE(ContainsExactString(Twine("~/foo/nested") + path::get_separator(),
                                   Results));
   Count = CommandCompletions::DiskDirectories("~/foo/nes", Results, Resolver);
   ASSERT_EQ(1u, Count);
   ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(ContainsExactString(Twine("~/foo") + path::get_separator() +
-                                      "nested" + path::get_separator(),
+  EXPECT_TRUE(ContainsExactString(Twine("~/foo/nested") + path::get_separator(),
                                   Results));
 
   // With ~username syntax it should return one match if there is an exact

@@ -1,6 +1,3 @@
-// FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// XFAIL: android
-//
 // RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 

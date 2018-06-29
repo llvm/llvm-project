@@ -149,7 +149,7 @@ TEST(FileOutputBuffer, TestModify) {
         FileOutputBuffer::create(File1, size_t(-1), FileOutputBuffer::F_modify);
     ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
     std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
-    ASSERT_EQ(10, Buffer->getBufferSize());
+    ASSERT_EQ(10U, Buffer->getBufferSize());
     uint8_t *Data = Buffer->getBufferStart();
     Data[0] = 'X';
     Data[9] = 'X';
@@ -162,7 +162,7 @@ TEST(FileOutputBuffer, TestModify) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr = MemoryBuffer::getFile(File1);
     ASSERT_NO_ERROR(BufferOrErr.getError());
     std::unique_ptr<MemoryBuffer> Buffer = std::move(*BufferOrErr);
-    ASSERT_EQ(10, Buffer->getBufferSize());
+    ASSERT_EQ(10U, Buffer->getBufferSize());
     EXPECT_EQ(StringRef("XAAAAAAAAX"), Buffer->getBuffer());
   }
 

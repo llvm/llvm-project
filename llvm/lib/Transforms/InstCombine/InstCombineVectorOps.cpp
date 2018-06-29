@@ -1199,7 +1199,7 @@ static Instruction *foldSelectShuffles(ShuffleVectorInst &Shuf) {
   // If the shuffle mask contains undef elements, then the new constant
   // vector will have undefs in those lanes. This could cause the entire
   // binop to be undef.
-  if (B0->isIntDivRem())
+  if (Instruction::isIntDivRem(BOpc))
     NewC = getSafeVectorConstantForIntDivRem(NewC);
 
   Instruction *NewBO = ConstantsAreOp1 ? BinaryOperator::Create(BOpc, X, NewC) :

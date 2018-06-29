@@ -2007,6 +2007,14 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
         isCompleteType(From->getLocStart(), FromType))
       return Context.hasSameUnqualifiedType(
           ToType, FromEnumType->getDecl()->getPromotionType());
+
+    // C++ [conv.prom]p5:
+    //   If the bit-field has an enumerated type, it is treated as any other
+    //   value of that type for promotion purposes.
+    //
+    // ... so do not fall through into the bit-field checks below in C++.
+    if (getLangOpts().CPlusPlus)
+      return false;
   }
 
   // C++0x [conv.prom]p2:
@@ -2054,6 +2062,11 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   // other value of that type for promotion purposes (C++ 4.5p3).
   // FIXME: We should delay checking of bit-fields until we actually perform the
   // conversion.
+  //
+  // FIXME: In C, only bit-fields of types _Bool, int, or unsigned int may be
+  // promoted, per C11 6.3.1.1/2. We promote all bit-fields (including enum
+  // bit-fields and those whose underlying type is larger than int) for GCC
+  // compatibility.
   if (From) {
     if (FieldDecl *MemberDecl = From->getSourceBitField()) {
       llvm::APSInt BitWidth;

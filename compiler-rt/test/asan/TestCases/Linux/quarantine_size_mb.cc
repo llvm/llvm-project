@@ -5,6 +5,10 @@
 // RUN: %env_asan_opts=quarantine_size_mb=10:quarantine_size=20:verbosity=1  not %run %t  2>&1 | FileCheck %s  --check-prefix=BOTH
 // RUN: %env_asan_opts=quarantine_size_mb=1000:hard_rss_limit_mb=50 not  %run %t          2>&1 | FileCheck %s  --check-prefix=RSS_LIMIT
 // RUN: %env_asan_opts=hard_rss_limit_mb=20                         not  %run %t          2>&1 | FileCheck %s  --check-prefix=RSS_LIMIT
+
+// https://github.com/google/sanitizers/issues/981
+// XFAIL: android-26
+
 #include <string.h>
 char *g;
 
