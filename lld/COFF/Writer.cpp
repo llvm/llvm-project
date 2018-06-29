@@ -665,7 +665,7 @@ void Writer::createSymbolAndStringTable() {
     Sec->setStringTableOff(addEntryToStringTable(Sec->Name));
   }
 
-  if (Config->DebugDwarf) {
+  if (Config->DebugDwarf || Config->DebugSymtab) {
     for (ObjFile *File : ObjFile::Instances) {
       for (Symbol *B : File->getSymbols()) {
         auto *D = dyn_cast_or_null<Defined>(B);

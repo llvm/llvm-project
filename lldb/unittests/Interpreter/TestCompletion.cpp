@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 #include "TestingSupport/MockTildeExpressionResolver.h"
 #include "llvm/ADT/SmallString.h"
@@ -103,16 +104,6 @@ protected:
     return false;
   }
 
-  static bool ContainsExactString(const Twine &Str, const StringList &Paths) {
-    SmallString<16> Storage;
-    StringRef Rendered = Str.toStringRef(Storage);
-    for (size_t I = 0; I < Paths.GetSize(); ++I) {
-      if (Paths[I] == Rendered)
-        return true;
-    }
-    return false;
-  }
-
   void DoDirCompletions(const Twine &Prefix,
                         StandardTildeExpressionResolver &Resolver,
                         StringList &Results) {
@@ -156,6 +147,14 @@ SmallString<128> CompletionTest::FileFoo;
 SmallString<128> CompletionTest::FileBar;
 SmallString<128> CompletionTest::FileBaz;
 }
+
+static std::vector<std::string> toVector(const StringList &SL) {
+  std::vector<std::string> Result;
+  for (size_t Idx = 0; Idx < SL.GetSize(); ++Idx)
+    Result.push_back(SL[Idx]);
+  return Result;
+}
+using testing::UnorderedElementsAre;
 
 TEST_F(CompletionTest, DirCompletionAbsolute) {
   // All calls to DiskDirectories() return only directories, even when
@@ -254,67 +253,47 @@ TEST_F(CompletionTest, DirCompletionUsername) {
   Resolver.AddKnownUser("Lars", DirFooC);
   Resolver.AddKnownUser("Jason", DirFoo);
   Resolver.AddKnownUser("Larry", DirFooA);
+  std::string sep = path::get_separator();
 
   // Just resolving current user's home directory by itself should return the
   // directory.
   StringList Results;
   size_t Count = CommandCompletions::DiskDirectories("~", Results, Resolver);
-  ASSERT_EQ(1u, Count);
-  ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(ContainsExactString(Twine("~") + path::get_separator(), Results));
+  EXPECT_EQ(Count, Results.GetSize());
+  EXPECT_THAT(toVector(Results), UnorderedElementsAre("~" + sep));
 
   // With a slash appended, it should return all items in the directory.
   Count = CommandCompletions::DiskDirectories("~/", Results, Resolver);
-  ASSERT_EQ(7u, Count);
-  ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~/foo") + path::get_separator(), Results));
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~/fooa") + path::get_separator(), Results));
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~/foob") + path::get_separator(), Results));
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~/fooc") + path::get_separator(), Results));
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~/bar") + path::get_separator(), Results));
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~/baz") + path::get_separator(), Results));
-  EXPECT_TRUE(ContainsExactString(
-      Twine("~/test_folder") + path::get_separator(), Results));
+  EXPECT_THAT(toVector(Results),
+              UnorderedElementsAre(
+                  "~/foo" + sep, "~/fooa" + sep, "~/foob" + sep, "~/fooc" + sep,
+                  "~/bar" + sep, "~/baz" + sep, "~/test_folder" + sep));
+  EXPECT_EQ(Count, Results.GetSize());
 
   // Check that we can complete directories in nested paths
   Count = CommandCompletions::DiskDirectories("~/foo/", Results, Resolver);
-  ASSERT_EQ(1u, Count);
-  ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(ContainsExactString(Twine("~/foo/nested") + path::get_separator(),
-                                  Results));
+  EXPECT_EQ(Count, Results.GetSize());
+  EXPECT_THAT(toVector(Results), UnorderedElementsAre("~/foo/nested" + sep));
+
   Count = CommandCompletions::DiskDirectories("~/foo/nes", Results, Resolver);
-  ASSERT_EQ(1u, Count);
-  ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(ContainsExactString(Twine("~/foo/nested") + path::get_separator(),
-                                  Results));
+  EXPECT_EQ(Count, Results.GetSize());
+  EXPECT_THAT(toVector(Results), UnorderedElementsAre("~/foo/nested" + sep));
 
   // With ~username syntax it should return one match if there is an exact
-  // match.
-  // It shouldn't translate to the actual directory, it should keep the form the
-  // user typed.
+  // match.  It shouldn't translate to the actual directory, it should keep the
+  // form the user typed.
   Count = CommandCompletions::DiskDirectories("~Lars", Results, Resolver);
-  ASSERT_EQ(1u, Count);
-  ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~Lars") + path::get_separator(), Results));
+  EXPECT_EQ(Count, Results.GetSize());
+  EXPECT_THAT(toVector(Results), UnorderedElementsAre("~Lars" + sep));
 
   // But with a username that is not found, no results are returned.
   Count = CommandCompletions::DiskDirectories("~Dave", Results, Resolver);
-  ASSERT_EQ(0u, Count);
-  ASSERT_EQ(Count, Results.GetSize());
+  EXPECT_EQ(Count, Results.GetSize());
+  EXPECT_THAT(toVector(Results), UnorderedElementsAre());
 
   // And if there are multiple matches, it should return all of them.
   Count = CommandCompletions::DiskDirectories("~La", Results, Resolver);
-  ASSERT_EQ(2u, Count);
-  ASSERT_EQ(Count, Results.GetSize());
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~Lars") + path::get_separator(), Results));
-  EXPECT_TRUE(
-      ContainsExactString(Twine("~Larry") + path::get_separator(), Results));
+  EXPECT_EQ(Count, Results.GetSize());
+  EXPECT_THAT(toVector(Results),
+              UnorderedElementsAre("~Lars" + sep, "~Larry" + sep));
 }

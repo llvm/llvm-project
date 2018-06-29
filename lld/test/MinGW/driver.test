@@ -90,6 +90,11 @@ RUN: ld.lld -### -m i386pep foo.o -s | FileCheck -check-prefix STRIP %s
 RUN: ld.lld -### -m i386pep foo.o --strip-all | FileCheck -check-prefix STRIP %s
 STRIP-NOT: -debug:dwarf
 
+RUN: ld.lld -### -m i386pep foo.o -S | FileCheck -check-prefix STRIP-DEBUG %s
+RUN: ld.lld -### -m i386pep foo.o --strip-debug | FileCheck -check-prefix STRIP-DEBUG %s
+STRIP-DEBUG: -debug:symtab
+STRIP-DEBUG-NOT: -debug:dwarf
+
 RUN: ld.lld -### -m i386pep foo.o -pdb out.pdb | FileCheck -check-prefix PDB %s
 PDB: -debug -pdb:out.pdb
 PDB-NOT: -debug:dwarf
