@@ -522,13 +522,8 @@ void ASTDeclReader::Visit(Decl *D) {
   IsDeclMarkedUsed = false;
 
   if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
-    if (DD->DeclInfo) {
-      auto *Info = DD->DeclInfo.get<DeclaratorDecl::ExtInfo *>();
-      Info->TInfo = GetTypeSourceInfo();
-    }
-    else {
-      DD->DeclInfo = GetTypeSourceInfo();
-    }
+    if (auto *TInfo = DD->getTypeSourceInfo())
+      Record.readTypeLoc(TInfo->getTypeLoc());
   }
 
   if (auto *TD = dyn_cast<TypeDecl>(D)) {
@@ -815,6 +810,10 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
     ReadQualifierInfo(*Info);
     DD->DeclInfo = Info;
   }
+  QualType TSIType = Record.readType();
+  DD->setTypeSourceInfo(
+      TSIType.isNull() ? nullptr
+                       : Reader.getContext().CreateTypeSourceInfo(TSIType));
 }
 
 void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {

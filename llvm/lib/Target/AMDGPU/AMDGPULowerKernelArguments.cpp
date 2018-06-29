@@ -74,31 +74,11 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   BasicBlock &EntryBlock = *F.begin();
   IRBuilder<> Builder(&*EntryBlock.begin());
 
-  SmallVector<Type *, 16> ArgTypes;
-  for (Argument &Arg : F.args()) {
-    Type *ArgTy = Arg.getType();
-    unsigned Size = DL.getTypeStoreSizeInBits(ArgTy);
-    bool IsExtArg = Size < 32 && (Arg.hasZExtAttr() || Arg.hasSExtAttr()) &&
-                    !ST.isAmdHsaOS();
-
-    // Clover seems to always pad i8/i16 to i32, but doesn't properly align
-    // them?
-    // Make sure the struct elements have correct size and alignment for ext
-    // args. These seem to be padded up to 4-bytes but not correctly aligned.
-    ArgTypes.push_back(
-      IsExtArg ? ArrayType::get(ArgTy, 32 / Size) : Arg.getType());
-  }
-
-  StructType *ArgStructTy = StructType::create(Ctx, ArgTypes, F.getName());
-  const StructLayout *Layout = DL.getStructLayout(ArgStructTy);
-
-  // Minimum alignment for kern segment is 16.
-  unsigned KernArgBaseAlign = std::max(16u, DL.getABITypeAlignment(ArgStructTy));
+  const unsigned KernArgBaseAlign = 16; // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
 
   // FIXME: Alignment is broken broken with explicit arg offset.;
-  const uint64_t TotalKernArgSize = BaseOffset +
-    ST.getKernArgSegmentSize(F, DL.getTypeAllocSize(ArgStructTy));
+  const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F);
   if (TotalKernArgSize == 0)
     return false;
 
@@ -109,23 +89,34 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   KernArgSegment->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
   KernArgSegment->addAttribute(AttributeList::ReturnIndex,
     Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
-  KernArgSegment->addAttribute(AttributeList::ReturnIndex,
-    Attribute::getWithAlignment(Ctx, KernArgBaseAlign));
-
-  Value *KernArgBase = KernArgSegment;
-  if (BaseOffset != 0) {
-    KernArgBase = Builder.CreateConstInBoundsGEP1_64(KernArgBase, BaseOffset);
-    KernArgBaseAlign = MinAlign(KernArgBaseAlign, BaseOffset);
-  }
 
   unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
-  Value *CastStruct = Builder.CreateBitCast(KernArgBase,
-                                            ArgStructTy->getPointerTo(AS));
+  unsigned MaxAlign = 1;
+  uint64_t ExplicitArgOffset = 0;
+
   for (Argument &Arg : F.args()) {
+    Type *ArgTy = Arg.getType();
+    unsigned Align = DL.getABITypeAlignment(ArgTy);
+    MaxAlign = std::max(Align, MaxAlign);
+    unsigned Size = DL.getTypeSizeInBits(ArgTy);
+    unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
+
+
+    // Clover seems to always pad i8/i16 to i32, but doesn't properly align
+    // them?
+    // Make sure the struct elements have correct size and alignment for ext
+    // args. These seem to be padded up to 4-bytes but not correctly aligned.
+    bool IsExtArg = AllocSize < 32 && (Arg.hasZExtAttr() || Arg.hasSExtAttr()) &&
+                    !ST.isAmdHsaOS();
+    if (IsExtArg)
+      AllocSize = 4;
+
+    uint64_t EltOffset = alignTo(ExplicitArgOffset, Align) + BaseOffset;
+    ExplicitArgOffset = alignTo(ExplicitArgOffset, Align) + AllocSize;
+
     if (Arg.use_empty())
       continue;
 
-    Type *ArgTy = Arg.getType();
     if (PointerType *PT = dyn_cast<PointerType>(ArgTy)) {
       // FIXME: Hack. We rely on AssertZext to be able to fold DS addressing
       // modes on SI to know the high bits are 0 so pointer adds don't wrap. We
@@ -145,10 +136,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     bool IsV3 = VT && VT->getNumElements() == 3;
     VectorType *V4Ty = nullptr;
 
-    unsigned Size = DL.getTypeSizeInBits(ArgTy);
-    bool IsExtArg = Size < 32 && (Arg.hasZExtAttr() || Arg.hasSExtAttr()) &&
-                    !ST.isAmdHsaOS();
-    int64_t EltOffset = Layout->getElementOffset(Arg.getArgNo());
     int64_t AlignDownOffset = alignDown(EltOffset, 4);
     int64_t OffsetDiff = EltOffset - AlignDownOffset;
     unsigned AdjustedAlign = MinAlign(KernArgBaseAlign, AlignDownOffset);
@@ -162,18 +149,23 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       // Additionally widen any sub-dword load to i32 even if suitably aligned,
       // so that CSE between different argument loads works easily.
 
-      ArgPtr = Builder.CreateConstGEP1_64(KernArgBase, AlignDownOffset);
-      ArgPtr = Builder.CreateBitCast(
-        ArgPtr,
-        Builder.getInt32Ty()->getPointerTo(AS),
+      ArgPtr = Builder.CreateConstInBoundsGEP1_64(
+        KernArgSegment,
+        AlignDownOffset,
         Arg.getName() + ".kernarg.offset.align.down");
+      ArgPtr = Builder.CreateBitCast(ArgPtr,
+                                     Builder.getInt32Ty()->getPointerTo(AS),
+                                     ArgPtr->getName() + ".cast");
     } else {
-      ArgPtr = Builder.CreateStructGEP(CastStruct, Arg.getArgNo(),
-                                       Arg.getName() + ".kernarg.offset");
+      ArgPtr = Builder.CreateConstInBoundsGEP1_64(
+        KernArgSegment,
+        AlignDownOffset,
+        Arg.getName() + ".kernarg.offset");
+      ArgPtr = Builder.CreateBitCast(ArgPtr, ArgTy->getPointerTo(AS),
+                                     ArgPtr->getName() + ".cast");
     }
 
     assert((!IsExtArg || !IsV3) && "incompatible situation");
-
 
     if (IsV3 && Size >= 32) {
       V4Ty = VectorType::get(VT->getVectorElementType(), 4);
@@ -253,6 +245,10 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       Arg.replaceAllUsesWith(Load);
     }
   }
+
+  KernArgSegment->addAttribute(
+    AttributeList::ReturnIndex,
+    Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
 
   return true;
 }

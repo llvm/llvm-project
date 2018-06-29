@@ -56,8 +56,9 @@ using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 /// first step when we start processing a DebugMapObject.
 class DwarfLinker {
 public:
-  DwarfLinker(raw_fd_ostream &OutFile, const LinkOptions &Options)
-      : OutFile(OutFile), Options(Options) {}
+  DwarfLinker(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
+              const LinkOptions &Options)
+      : OutFile(OutFile), BinHolder(BinHolder), Options(Options) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -139,22 +140,20 @@ private:
   /// Keeps track of data associated with one object during linking.
   struct LinkContext {
     DebugMapObject &DMO;
-    BinaryHolder BinHolder;
     const object::ObjectFile *ObjectFile;
     RelocationManager RelocMgr;
     std::unique_ptr<DWARFContext> DwarfContext;
     RangesTy Ranges;
     UnitListTy CompileUnits;
 
-    LinkContext(const DebugMap &Map, DwarfLinker &Linker, DebugMapObject &DMO,
-                bool Verbose = false)
-        : DMO(DMO), BinHolder(Verbose), RelocMgr(Linker) {
+    LinkContext(const DebugMap &Map, DwarfLinker &Linker, DebugMapObject &DMO)
+        : DMO(DMO), RelocMgr(Linker) {
       // Swift ASTs are not object files.
       if (DMO.getType() == MachO::N_AST) {
         ObjectFile = nullptr;
         return;
       }
-      auto ErrOrObj = Linker.loadObject(BinHolder, DMO, Map);
+      auto ErrOrObj = Linker.loadObject(DMO, Map);
       ObjectFile = ErrOrObj ? &*ErrOrObj : nullptr;
       DwarfContext = ObjectFile ? DWARFContext::create(*ObjectFile) : nullptr;
     }
@@ -441,12 +440,12 @@ private:
   bool createStreamer(const Triple &TheTriple, raw_fd_ostream &OutFile);
 
   /// Attempt to load a debug object from disk.
-  ErrorOr<const object::ObjectFile &> loadObject(BinaryHolder &BinaryHolder,
-                                                 const DebugMapObject &Obj,
+  ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const DebugMap &Map);
   /// @}
 
   raw_fd_ostream &OutFile;
+  BinaryHolder &BinHolder;
   LinkOptions Options;
   std::unique_ptr<DwarfStreamer> Streamer;
   uint64_t OutputDebugInfoSize;

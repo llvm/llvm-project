@@ -95,6 +95,14 @@ static cl::opt<bool> ClInstrumentStack("hwasan-instrument-stack",
                                        cl::desc("instrument stack (allocas)"),
                                        cl::Hidden, cl::init(true));
 
+static cl::opt<bool> ClUARRetagToZero(
+    "hwasan-uar-retag-to-zero",
+    cl::desc("Clear alloca tags before returning from the function to allow "
+             "non-instrumented and instrumented function calls mix. When set "
+             "to false, allocas are retagged before returning from the "
+             "function to detect use after return."),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClGenerateTagsWithCalls(
     "hwasan-generate-tags-with-calls",
     cl::desc("generate new tags with runtime library calls"), cl::Hidden,
@@ -577,6 +585,8 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
+  if (ClUARRetagToZero)
+    return ConstantInt::get(IntptrTy, 0);
   if (ClGenerateTagsWithCalls)
     return getNextTagWithCall(IRB);
   return IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, 0xFFU));

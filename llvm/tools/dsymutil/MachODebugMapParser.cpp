@@ -28,8 +28,7 @@ public:
                       bool PaperTrailWarnings = false, bool Verbose = false)
       : BinaryPath(BinaryPath), Archs(Archs.begin(), Archs.end()),
         PathPrefix(PathPrefix), PaperTrailWarnings(PaperTrailWarnings),
-        MainBinaryHolder(Verbose), CurrentObjectHolder(Verbose),
-        CurrentDebugMapObject(nullptr) {}
+        BinHolder(Verbose), CurrentDebugMapObject(nullptr) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
   /// multiple maps in case it is a universal binary.
@@ -47,15 +46,13 @@ private:
   bool PaperTrailWarnings;
 
   /// Owns the MemoryBuffer for the main binary.
-  BinaryHolder MainBinaryHolder;
+  BinaryHolder BinHolder;
   /// Map of the binary symbol addresses.
   StringMap<uint64_t> MainBinarySymbolAddresses;
   StringRef MainBinaryStrings;
   /// The constructed DebugMap.
   std::unique_ptr<DebugMap> Result;
 
-  /// Owns the MemoryBuffer for the currently handled object file.
-  BinaryHolder CurrentObjectHolder;
   /// Map of the currently processed object file symbol addresses.
   StringMap<Optional<uint64_t>> CurrentObjectAddresses;
   /// Element of the debug map corresponding to the current object file.
@@ -136,23 +133,25 @@ void MachODebugMapParser::switchToNewDebugMapObject(
   SmallString<80> Path(PathPrefix);
   sys::path::append(Path, Filename);
 
-  auto MachOOrError =
-      CurrentObjectHolder.GetFilesAs<MachOObjectFile>(Path, Timestamp);
-  if (auto Error = MachOOrError.getError()) {
-    Warning("unable to open object file: " + Error.message(), Path.str());
+  auto ObjectEntry = BinHolder.getObjectEntry(Path, Timestamp);
+  if (!ObjectEntry) {
+    auto Err = ObjectEntry.takeError();
+    Warning("unable to open object file: " + toString(std::move(Err)),
+            Path.str());
     return;
   }
 
-  auto ErrOrAchObj =
-      CurrentObjectHolder.GetAs<MachOObjectFile>(Result->getTriple());
-  if (auto Error = ErrOrAchObj.getError()) {
-    Warning("unable to open object file: " + Error.message(), Path.str());
+  auto Object = ObjectEntry->getObjectAs<MachOObjectFile>(Result->getTriple());
+  if (!Object) {
+    auto Err = Object.takeError();
+    Warning("unable to open object file: " + toString(std::move(Err)),
+            Path.str());
     return;
   }
 
   CurrentDebugMapObject =
       &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
-  loadCurrentObjectFileSymbols(*ErrOrAchObj);
+  loadCurrentObjectFileSymbols(*Object);
 }
 
 static std::string getArchName(const object::MachOObjectFile &Obj) {
@@ -322,17 +321,26 @@ static bool shouldLinkArch(SmallVectorImpl<StringRef> &Archs, StringRef Arch) {
 }
 
 bool MachODebugMapParser::dumpStab() {
-  auto MainBinOrError =
-      MainBinaryHolder.GetFilesAs<MachOObjectFile>(BinaryPath);
-  if (auto Error = MainBinOrError.getError()) {
-    llvm::errs() << "Cannot get '" << BinaryPath
-                 << "' as MachO file: " << Error.message() << "\n";
+  auto ObjectEntry = BinHolder.getObjectEntry(BinaryPath);
+  if (!ObjectEntry) {
+    auto Err = ObjectEntry.takeError();
+    WithColor::error() << "cannot load '" << BinaryPath
+                       << "': " << toString(std::move(Err)) << '\n';
     return false;
   }
 
-  for (const auto *Binary : *MainBinOrError)
-    if (shouldLinkArch(Archs, Binary->getArchTriple().getArchName()))
-      dumpOneBinaryStab(*Binary, BinaryPath);
+  auto Objects = ObjectEntry->getObjectsAs<MachOObjectFile>();
+  if (!Objects) {
+    auto Err = Objects.takeError();
+    WithColor::error() << "cannot get '" << BinaryPath
+                       << "' as MachO file: " << toString(std::move(Err))
+                       << "\n";
+    return false;
+  }
+
+  for (const auto *Object : *Objects)
+    if (shouldLinkArch(Archs, Object->getArchTriple().getArchName()))
+      dumpOneBinaryStab(*Object, BinaryPath);
 
   return true;
 }
@@ -341,15 +349,20 @@ bool MachODebugMapParser::dumpStab() {
 /// successful iterates over the STAB entries. The real parsing is
 /// done in handleStabSymbolTableEntry.
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>> MachODebugMapParser::parse() {
-  auto MainBinOrError =
-      MainBinaryHolder.GetFilesAs<MachOObjectFile>(BinaryPath);
-  if (auto Error = MainBinOrError.getError())
-    return Error;
+  auto ObjectEntry = BinHolder.getObjectEntry(BinaryPath);
+  if (!ObjectEntry) {
+    return errorToErrorCode(ObjectEntry.takeError());
+  }
+
+  auto Objects = ObjectEntry->getObjectsAs<MachOObjectFile>();
+  if (!Objects) {
+    return errorToErrorCode(ObjectEntry.takeError());
+  }
 
   std::vector<std::unique_ptr<DebugMap>> Results;
-  for (const auto *Binary : *MainBinOrError)
-    if (shouldLinkArch(Archs, Binary->getArchTriple().getArchName()))
-      Results.push_back(parseOneBinary(*Binary, BinaryPath));
+  for (const auto *Object : *Objects)
+    if (shouldLinkArch(Archs, Object->getArchTriple().getArchName()))
+      Results.push_back(parseOneBinary(*Object, BinaryPath));
 
   return std::move(Results);
 }

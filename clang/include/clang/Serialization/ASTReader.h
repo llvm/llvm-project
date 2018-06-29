@@ -1771,6 +1771,10 @@ public:
   TypeSourceInfo *GetTypeSourceInfo(ModuleFile &F,
                                     const RecordData &Record, unsigned &Idx);
 
+  /// Raad the type locations for the given TInfo.
+  void ReadTypeLoc(ModuleFile &F, const RecordData &Record, unsigned &Idx,
+                   TypeLoc TL);
+
   /// Resolve a type ID into a type, potentially building a new
   /// type.
   QualType GetType(serialization::TypeID ID);
@@ -2458,6 +2462,11 @@ public:
   /// Reads a declarator info from the given record, advancing Idx.
   TypeSourceInfo *getTypeSourceInfo() {
     return Reader->GetTypeSourceInfo(*F, Record, Idx);
+  }
+
+  /// Reads the location information for a type.
+  void readTypeLoc(TypeLoc TL) {
+    return Reader->ReadTypeLoc(*F, Record, Idx, TL);
   }
 
   /// Map a local type ID within a given AST file to a global type ID.

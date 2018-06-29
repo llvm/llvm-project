@@ -1597,10 +1597,11 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
 /// ShouldDelete defaults to true, and will cause the memory access to also be
 /// deleted, not just removed.
 void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
+  BasicBlock *BB = MA->getBlock();
   // The access list owns the reference, so we erase it from the non-owning list
   // first.
   if (!isa<MemoryUse>(MA)) {
-    auto DefsIt = PerBlockDefs.find(MA->getBlock());
+    auto DefsIt = PerBlockDefs.find(BB);
     std::unique_ptr<DefsList> &Defs = DefsIt->second;
     Defs->remove(*MA);
     if (Defs->empty())
@@ -1609,15 +1610,17 @@ void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
 
   // The erase call here will delete it. If we don't want it deleted, we call
   // remove instead.
-  auto AccessIt = PerBlockAccesses.find(MA->getBlock());
+  auto AccessIt = PerBlockAccesses.find(BB);
   std::unique_ptr<AccessList> &Accesses = AccessIt->second;
   if (ShouldDelete)
     Accesses->erase(MA);
   else
     Accesses->remove(MA);
 
-  if (Accesses->empty())
+  if (Accesses->empty()) {
     PerBlockAccesses.erase(AccessIt);
+    BlockNumberingValid.erase(BB);
+  }
 }
 
 void MemorySSA::print(raw_ostream &OS) const {

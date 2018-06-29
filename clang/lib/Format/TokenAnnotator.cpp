@@ -698,13 +698,19 @@ private:
                  Line.startsWith(TT_ObjCMethodSpecifier)) {
         Tok->Type = TT_ObjCMethodExpr;
         const FormatToken *BeforePrevious = Tok->Previous->Previous;
+        // Ensure we tag all identifiers in method declarations as
+        // TT_SelectorName.
+        bool UnknownIdentifierInMethodDeclaration =
+            Line.startsWith(TT_ObjCMethodSpecifier) &&
+            Tok->Previous->is(tok::identifier) && Tok->Previous->is(TT_Unknown);
         if (!BeforePrevious ||
             // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
             !(BeforePrevious->is(TT_CastRParen) ||
               (BeforePrevious->is(TT_ObjCMethodExpr) &&
                BeforePrevious->is(tok::colon))) ||
             BeforePrevious->is(tok::r_square) ||
-            Contexts.back().LongestObjCSelectorName == 0) {
+            Contexts.back().LongestObjCSelectorName == 0 ||
+            UnknownIdentifierInMethodDeclaration) {
           Tok->Previous->Type = TT_SelectorName;
           if (!Contexts.back().FirstObjCSelectorName)
             Contexts.back().FirstObjCSelectorName = Tok->Previous;

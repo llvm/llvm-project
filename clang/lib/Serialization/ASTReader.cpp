@@ -6733,6 +6733,13 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
   TL.setKWLoc(ReadSourceLocation());
 }
 
+void ASTReader::ReadTypeLoc(ModuleFile &F, const ASTReader::RecordData &Record,
+                            unsigned &Idx, TypeLoc TL) {
+  TypeLocReader TLR(F, *this, Record, Idx);
+  for (; !TL.isNull(); TL = TL.getNextTypeLoc())
+    TLR.Visit(TL);
+}
+
 TypeSourceInfo *
 ASTReader::GetTypeSourceInfo(ModuleFile &F, const ASTReader::RecordData &Record,
                              unsigned &Idx) {
@@ -6741,9 +6748,7 @@ ASTReader::GetTypeSourceInfo(ModuleFile &F, const ASTReader::RecordData &Record,
     return nullptr;
 
   TypeSourceInfo *TInfo = getContext().CreateTypeSourceInfo(InfoTy);
-  TypeLocReader TLR(F, *this, Record, Idx);
-  for (TypeLoc TL = TInfo->getTypeLoc(); !TL.isNull(); TL = TL.getNextTypeLoc())
-    TLR.Visit(TL);
+  ReadTypeLoc(F, Record, Idx, TInfo->getTypeLoc());
   return TInfo;
 }
 

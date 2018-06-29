@@ -189,7 +189,7 @@ void SymbolTable::reportRemainingUndefines() {
   }
 
   for (ObjFile *File : ObjFile::Instances) {
-    size_t SymIndex = size_t{0} - 1;
+    size_t SymIndex = (size_t)-1;
     for (Symbol *Sym : File->getSymbols()) {
       ++SymIndex;
       if (!Sym)

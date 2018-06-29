@@ -36,6 +36,10 @@ public:
 
   bool isFPCloseToIncomingSP() const override { return false; }
 
+  bool enableShrinkWrapping(const MachineFunction &MF) const override {
+    return true;
+  }
+
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF,
                                 MachineBasicBlock &MBB,

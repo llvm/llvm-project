@@ -306,8 +306,8 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest,
 COMPATIBLE_VALUE_LANGOPT(FunctionAlignment, 5, 0, "Default alignment for functions")
 
 LANGOPT(FixedPoint, 1, 0, "fixed point types")
-LANGOPT(SameFBits, 1, 0,
-        "unsigned and signed fixed point type having the same number of fractional bits")
+LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
+        "unsigned fixed point types having one extra padding bit")
 
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
