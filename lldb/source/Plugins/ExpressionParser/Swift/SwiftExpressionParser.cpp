@@ -1754,8 +1754,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
               llvm::cast<SwiftExpressionVariable>(persistent_variable.get())
                   ->SetIsModifiable(false);
             }
-            if (decl->getStorageKind() ==
-                swift::VarDecl::StorageKindTy::Computed) {
+            if (!decl->hasStorage()) {
               llvm::cast<SwiftExpressionVariable>(persistent_variable.get())
                   ->SetIsComputed(true);
             }
