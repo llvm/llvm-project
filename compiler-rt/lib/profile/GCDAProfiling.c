@@ -527,6 +527,10 @@ void llvm_register_flush_function(flush_fn fn) {
   }
 }
 
+// __gcov_flush is hidden. When called in a .so file,
+// it dumps profile data of the calling .so file.
+// If a main program needs to dump profile data of each linked
+// .so files, it should use dlsym to find and call llvm_gcov_flush.
 COMPILER_RT_VISIBILITY
 void __gcov_flush() {
   struct flush_fn_node *curr = flush_fn_head;
@@ -535,6 +539,12 @@ void __gcov_flush() {
     curr->fn();
     curr = curr->next;
   }
+}
+
+// llvm_gcov_flush is not hidden for a program to use dlsym to
+// find and call for any linked .so file.
+void llvm_gcov_flush() {
+  __gcov_flush();
 }
 
 COMPILER_RT_VISIBILITY

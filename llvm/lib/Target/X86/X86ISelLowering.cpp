@@ -20411,7 +20411,13 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       }
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1));
     }
-    case INTR_TYPE_2OP: {
+    case INTR_TYPE_2OP:
+    case INTR_TYPE_2OP_IMM8: {
+      SDValue Src2 = Op.getOperand(2);
+
+      if (IntrData->Type == INTR_TYPE_2OP_IMM8)
+        Src2 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Src2);
+
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
       // (IntrData->Opc1 != 0), then we check the rounding mode operand.
@@ -20420,12 +20426,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         SDValue Rnd = Op.getOperand(3);
         if (!isRoundModeCurDirection(Rnd)) {
           return DAG.getNode(IntrWithRoundingModeOpcode, dl, Op.getValueType(),
-                             Op.getOperand(1), Op.getOperand(2), Rnd);
+                             Op.getOperand(1), Src2, Rnd);
         }
       }
 
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
-                         Op.getOperand(1), Op.getOperand(2));
+                         Op.getOperand(1), Src2);
     }
     case INTR_TYPE_3OP:
     case INTR_TYPE_3OP_IMM8: {
@@ -20537,15 +20543,11 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               RoundingMode, Sae),
                                   Mask, Src0, Subtarget, DAG);
     }
-    case INTR_TYPE_2OP_MASK:
-    case INTR_TYPE_2OP_IMM8_MASK: {
+    case INTR_TYPE_2OP_MASK: {
       SDValue Src1 = Op.getOperand(1);
       SDValue Src2 = Op.getOperand(2);
       SDValue PassThru = Op.getOperand(3);
       SDValue Mask = Op.getOperand(4);
-
-      if (IntrData->Type == INTR_TYPE_2OP_IMM8_MASK)
-        Src2 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Src2);
 
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,

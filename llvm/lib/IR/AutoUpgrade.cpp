@@ -258,6 +258,10 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.max.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.min.p") || // Added in 7.0. 128/256 in 5.0
       Name.startswith("avx512.mask.fpclass.p") || // Added in 7.0
+      Name.startswith("avx512.mask.prorv.") || // Added in 7.0
+      Name.startswith("avx512.mask.pror.") || // Added in 7.0
+      Name.startswith("avx512.mask.prolv.") || // Added in 7.0
+      Name.startswith("avx512.mask.prol.") || // Added in 7.0
       Name == "sse.cvtsi2ss" || // Added in 7.0
       Name == "sse.cvtsi642ss" || // Added in 7.0
       Name == "sse2.cvtsi2sd" || // Added in 7.0
@@ -1272,6 +1276,66 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
       IID = Intrinsic::x86_avx512_vpshrd_d_512;
     else if (VecWidth == 512 && Name[7] == 'w')
       IID = Intrinsic::x86_avx512_vpshrd_w_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("prorv.")) {
+    if (VecWidth == 128 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prorv_d_128;
+    else if (VecWidth == 256 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prorv_d_256;
+    else if (VecWidth == 512 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prorv_d_512;
+    else if (VecWidth == 128 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prorv_q_128;
+    else if (VecWidth == 256 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prorv_q_256;
+    else if (VecWidth == 512 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prorv_q_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("prolv.")) {
+    if (VecWidth == 128 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prolv_d_128;
+    else if (VecWidth == 256 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prolv_d_256;
+    else if (VecWidth == 512 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prolv_d_512;
+    else if (VecWidth == 128 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prolv_q_128;
+    else if (VecWidth == 256 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prolv_q_256;
+    else if (VecWidth == 512 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prolv_q_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("pror.")) {
+    if (VecWidth == 128 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_pror_d_128;
+    else if (VecWidth == 256 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_pror_d_256;
+    else if (VecWidth == 512 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_pror_d_512;
+    else if (VecWidth == 128 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_pror_q_128;
+    else if (VecWidth == 256 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_pror_q_256;
+    else if (VecWidth == 512 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_pror_q_512;
+    else
+      llvm_unreachable("Unexpected intrinsic");
+  } else if (Name.startswith("prol.")) {
+    if (VecWidth == 128 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prol_d_128;
+    else if (VecWidth == 256 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prol_d_256;
+    else if (VecWidth == 512 && EltWidth == 32)
+      IID = Intrinsic::x86_avx512_prol_d_512;
+    else if (VecWidth == 128 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prol_q_128;
+    else if (VecWidth == 256 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prol_q_256;
+    else if (VecWidth == 512 && EltWidth == 64)
+      IID = Intrinsic::x86_avx512_prol_q_512;
     else
       llvm_unreachable("Unexpected intrinsic");
   } else
