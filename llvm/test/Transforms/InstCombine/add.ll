@@ -119,6 +119,30 @@ define i32 @test5(i32 %A, i32 %B) {
   ret i32 %D
 }
 
+define <2 x i8> @neg_op0_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @neg_op0_vec_undef_elt(
+; CHECK-NEXT:    [[NEGA:%.*]] = sub <2 x i8> <i8 0, i8 undef>, [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[NEGA]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %nega = sub <2 x i8> <i8 0, i8 undef>, %a
+  %r = add <2 x i8> %nega, %b
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @neg_neg_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @neg_neg_vec_undef_elt(
+; CHECK-NEXT:    [[NEGA:%.*]] = sub <2 x i8> <i8 undef, i8 0>, [[A:%.*]]
+; CHECK-NEXT:    [[NEGB:%.*]] = sub <2 x i8> <i8 undef, i8 0>, [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[NEGA]], [[NEGB]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %nega = sub <2 x i8> <i8 undef, i8 0>, %a
+  %negb = sub <2 x i8> <i8 undef, i8 0>, %b
+  %r = add <2 x i8> %nega, %negb
+  ret <2 x i8> %r
+}
+
 ; C = 7*A+A == 8*A == A << 3
 define i32 @test6(i32 %A) {
 ; CHECK-LABEL: @test6(
@@ -806,7 +830,7 @@ final:
 ; E = (A + 1) + ~B = A - B
 define i32 @add_not_increment(i32 %A, i32 %B) {
 ; CHECK-LABEL: @add_not_increment(
-; CHECK-NEXT:    [[E:%.*]] = sub i32 %A, %B
+; CHECK-NEXT:    [[E:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %C = xor i32 %B, -1
@@ -818,7 +842,7 @@ define i32 @add_not_increment(i32 %A, i32 %B) {
 ; E = (A + 1) + ~B = A - B
 define <2 x i32> @add_not_increment_vec(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @add_not_increment_vec(
-; CHECK-NEXT:    [[E:%.*]] = sub <2 x i32> %A, %B
+; CHECK-NEXT:    [[E:%.*]] = sub <2 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
   %C = xor <2 x i32> %B, <i32 -1, i32 -1>
@@ -830,7 +854,7 @@ define <2 x i32> @add_not_increment_vec(<2 x i32> %A, <2 x i32> %B) {
 ; E = ~B + (1 + A) = A - B
 define i32 @add_not_increment_commuted(i32 %A, i32 %B) {
 ; CHECK-LABEL: @add_not_increment_commuted(
-; CHECK-NEXT:    [[E:%.*]] = sub i32 %A, %B
+; CHECK-NEXT:    [[E:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %C = xor i32 %B, -1
