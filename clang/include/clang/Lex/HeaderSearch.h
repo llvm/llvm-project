@@ -272,7 +272,9 @@ public:
   
   FileManager &getFileMgr() const { return FileMgr; }
 
-  /// \brief Interface for setting the file search paths.
+  DiagnosticsEngine &getDiags() const { return Diags; }
+
+  /// Interface for setting the file search paths.
   void SetSearchPaths(const std::vector<DirectoryLookup> &dirs,
                       unsigned angledDirIdx, unsigned systemDirIdx,
                       bool noCurDirSearch) {
