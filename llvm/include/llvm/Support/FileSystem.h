@@ -397,7 +397,7 @@ std::error_code copy_file(const Twine &From, const Twine &To);
 /// Copy the contents of \a From to \a To.
 ///
 /// @param From The path to copy from.
-/// @param To The open file descriptor of the destinatino file.
+/// @param ToFD The open file descriptor of the destination file.
 std::error_code copy_file(const Twine &From, int ToFD);
 
 /// Resize path to size. File is resized as if by POSIX truncate().
