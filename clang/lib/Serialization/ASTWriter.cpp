@@ -5447,12 +5447,11 @@ void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
     return;
   }
 
+  AddTypeRef(TInfo->getType());
   AddTypeLoc(TInfo->getTypeLoc());
 }
 
 void ASTRecordWriter::AddTypeLoc(TypeLoc TL) {
-  AddTypeRef(TL.getType());
-
   TypeLocWriter TLW(*this);
   for (; !TL.isNull(); TL = TL.getNextTypeLoc())
     TLW.Visit(TL);
@@ -5777,6 +5776,7 @@ void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
     case NestedNameSpecifier::TypeSpec:
     case NestedNameSpecifier::TypeSpecWithTemplate:
       Record->push_back(Kind == NestedNameSpecifier::TypeSpecWithTemplate);
+      AddTypeRef(NNS.getTypeLoc().getType());
       AddTypeLoc(NNS.getTypeLoc());
       AddSourceLocation(NNS.getLocalSourceRange().getEnd());
       break;

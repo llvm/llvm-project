@@ -38,14 +38,14 @@ endif:
 ; SI: s_cbranch_scc0 [[IF:BB[0-9]+_[0-9]+]]
 
 ; SI: ; %bb.1: ; %else
-; SI: s_load_dword [[LOAD0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x25
-; SI: s_load_dword [[LOAD1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2e
+; SI: s_load_dword [[LOAD0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2e
+; SI: s_load_dword [[LOAD1:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x37
 ; SI-NOT: add
 ; SI: s_branch [[ENDIF:BB[0-9]+_[0-9]+]]
 
 ; SI: [[IF]]: ; %if
-; SI: s_load_dword [[LOAD0]], s{{\[[0-9]+:[0-9]+\]}}, 0x13
-; SI: s_load_dword [[LOAD1]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI: s_load_dword [[LOAD0]], s{{\[[0-9]+:[0-9]+\]}}, 0x1c
+; SI: s_load_dword [[LOAD1]], s{{\[[0-9]+:[0-9]+\]}}, 0x25
 ; SI-NOT: add
 
 ; SI: [[ENDIF]]: ; %endif

@@ -2338,8 +2338,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.FixedPoint =
       Args.hasFlag(OPT_ffixed_point, OPT_fno_fixed_point, /*Default=*/false) &&
       !Opts.CPlusPlus;
-  Opts.SameFBits =
-      Args.hasFlag(OPT_fsame_fbits, OPT_fno_same_fbits,
+  Opts.PaddingOnUnsignedFixedPoint =
+      Args.hasFlag(OPT_fpadding_on_unsigned_fixed_point,
+                   OPT_fno_padding_on_unsigned_fixed_point,
                    /*Default=*/false) &&
       Opts.FixedPoint;
 

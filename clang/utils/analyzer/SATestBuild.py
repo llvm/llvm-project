@@ -136,6 +136,9 @@ CleanupScript = "cleanup_run_static_analyzer.sh"
 # This is a file containing commands for scan-build.
 BuildScript = "run_static_analyzer.cmd"
 
+# A comment in a build script which disables wrapping.
+NoPrefixCmd = "#NOPREFIX"
+
 # The log file name.
 LogFolderName = "Logs"
 BuildLogName = "run_static_analyzer.log"
@@ -274,17 +277,18 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
     SBOptions += "-plist-html -o '%s' " % SBOutputDir
     SBOptions += "-enable-checker " + AllCheckers + " "
     SBOptions += "--keep-empty "
-    AnalyzerConfig = {
-        "stable-report-filename": "true",
-        "serialize-stats": "true"
-    }
+    AnalyzerConfig = [
+        ("stable-report-filename", "true"),
+        ("serialize-stats", "true"),
+    ]
 
     SBOptions += "-analyzer-config '%s' " % (
-        ",".join("%s=%s" % (key, value) for key, value in AnalyzerConfig.iteritems()))
+        ",".join("%s=%s" % (key, value) for (key, value) in AnalyzerConfig))
 
     # Always use ccc-analyze to ensure that we can locate the failures
     # directory.
     SBOptions += "--override-compiler "
+    ExtraEnv = {}
     try:
         SBCommandFile = open(BuildScriptPath, "r")
         SBPrefix = "scan-build " + SBOptions + " "
@@ -292,6 +296,15 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
             Command = Command.strip()
             if len(Command) == 0:
                 continue
+
+            # Custom analyzer invocation specified by project.
+            # Communicate required information using environment variables
+            # instead.
+            if Command == NoPrefixCmd:
+                SBPrefix = ""
+                ExtraEnv['OUTPUT'] = SBOutputDir
+                continue
+
             # If using 'make', auto imply a -jX argument
             # to speed up analysis.  xcodebuild will
             # automatically use the maximum number of cores.
@@ -305,6 +318,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
             check_call(SBCommand, cwd=SBCwd,
                        stderr=PBuildLogFile,
                        stdout=PBuildLogFile,
+                       env=dict(os.environ, **ExtraEnv),
                        shell=True)
     except CalledProcessError:
         Local.stderr.write("Error: scan-build failed. Its output was: \n")

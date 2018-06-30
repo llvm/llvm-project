@@ -336,11 +336,10 @@ public:
 class FalsePositiveRefutationBRVisitor final : public BugReporterVisitor {
 private:
   /// Holds the constraints in a given path
-  // TODO: should we use a set?
-  llvm::SmallVector<ConstraintRangeTy, 32> Constraints;
+  ConstraintRangeTy Constraints;
 
 public:
-  FalsePositiveRefutationBRVisitor() = default;
+  FalsePositiveRefutationBRVisitor();
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -348,6 +347,9 @@ public:
                                                  const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
+
+  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
+                       BugReport &BR) override;
 };
 
 namespace bugreporter {

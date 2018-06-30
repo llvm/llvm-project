@@ -3,7 +3,9 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-elf"
 
-; Because there is a 1 in the vector, sdiv should not be reduced to shifts.
+; This should be treated as a non-splat vector of pow2 divisor, so sdivs will be
+; transformed to shrs in DAGCombiner. There will be 4 stores and 3 shrs (For '1'
+; entry we don't need a shr).
 
 ; CHECK-LABEL: vector_sdiv:
 ; CHECK-DAG:  i32.store

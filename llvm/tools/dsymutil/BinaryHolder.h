@@ -46,7 +46,7 @@ public:
   /// Base class shared by cached entries, representing objects and archives.
   class EntryBase {
   protected:
-    std::unique_ptr<MemoryBuffer> MemoryBuffer;
+    std::unique_ptr<MemoryBuffer> MemBuffer;
     std::unique_ptr<object::MachOUniversalBinary> FatBinary;
     std::string FatBinaryName;
   };

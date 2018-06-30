@@ -16130,24 +16130,19 @@ static SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) {
   // values for large shift amounts.
   SDValue AndNode = DAG.getNode(ISD::AND, dl, MVT::i8, ShAmt,
                                 DAG.getConstant(VTBits, dl, MVT::i8));
-  SDValue Cond = DAG.getNode(X86ISD::CMP, dl, MVT::i32,
-                             AndNode, DAG.getConstant(0, dl, MVT::i8));
+  SDValue Cond = DAG.getSetCC(dl, MVT::i8, AndNode,
+                             DAG.getConstant(0, dl, MVT::i8), ISD::SETNE);
 
   SDValue Hi, Lo;
-  SDValue CC = DAG.getConstant(X86::COND_NE, dl, MVT::i8);
-  SDValue Ops0[4] = { Tmp2, Tmp3, CC, Cond };
-  SDValue Ops1[4] = { Tmp3, Tmp1, CC, Cond };
-
   if (Op.getOpcode() == ISD::SHL_PARTS) {
-    Hi = DAG.getNode(X86ISD::CMOV, dl, VT, Ops0);
-    Lo = DAG.getNode(X86ISD::CMOV, dl, VT, Ops1);
+    Hi = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp3, Tmp2);
+    Lo = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp1, Tmp3);
   } else {
-    Lo = DAG.getNode(X86ISD::CMOV, dl, VT, Ops0);
-    Hi = DAG.getNode(X86ISD::CMOV, dl, VT, Ops1);
+    Lo = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp3, Tmp2);
+    Hi = DAG.getNode(ISD::SELECT, dl, VT, Cond, Tmp1, Tmp3);
   }
 
-  SDValue Ops[2] = { Lo, Hi };
-  return DAG.getMergeValues(Ops, dl);
+  return DAG.getMergeValues({ Lo, Hi }, dl);
 }
 
 // Try to use a packed vector operation to handle i64 on 32-bit targets when

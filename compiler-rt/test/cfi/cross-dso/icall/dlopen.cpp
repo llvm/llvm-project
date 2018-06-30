@@ -88,7 +88,7 @@ static void restore_code() {
                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, 0, 0);
   assert(code == real_start);
   memcpy(code, saved_code, kCodeSize);
-  __clear_cache(code, code + kCodeSize);
+  __builtin___clear_cache(code, code + kCodeSize);
 }
 
 int main(int argc, char *argv[]) {

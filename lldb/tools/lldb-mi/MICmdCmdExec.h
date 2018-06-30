@@ -66,7 +66,6 @@ public:
 private:
   const CMIUtilString m_constStrArgStart; // StopAtEntry - run to first
                                           // instruction or main() if specified
-  lldb::SBCommandReturnObject m_lldbResult;
 };
 
 //++
@@ -91,7 +90,6 @@ public:
   bool Acknowledge() override;
   // From CMICmnBase
   /* dtor */ ~CMICmdCmdExecContinue() override;
-
   // Attributes:
 };
 
@@ -121,7 +119,6 @@ public:
 
   // Attributes:
 private:
-  lldb::SBCommandReturnObject m_lldbResult;
   const CMIUtilString m_constStrArgNumber; // Not specified in MI spec but
                                            // Eclipse gives this option
 };

@@ -67,33 +67,42 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #endif
 #endif
 
+#pragma push_macro("_CPP14_CONSTEXPR")
+#if __cplusplus >= 201402L
+#define _CPP14_CONSTEXPR constexpr
+#else
+#define _CPP14_CONSTEXPR
+#endif
+
 template <class __T, class __Cmp>
 __attribute__((enable_if(true, "")))
-inline __device__ const __T &
+inline _CPP14_CONSTEXPR __host__ __device__ const __T &
 max(const __T &__a, const __T &__b, __Cmp __cmp) {
   return __cmp(__a, __b) ? __b : __a;
 }
 
 template <class __T>
 __attribute__((enable_if(true, "")))
-inline __device__ const __T &
+inline _CPP14_CONSTEXPR __host__ __device__ const __T &
 max(const __T &__a, const __T &__b) {
   return __a < __b ? __b : __a;
 }
 
 template <class __T, class __Cmp>
 __attribute__((enable_if(true, "")))
-inline __device__ const __T &
+inline _CPP14_CONSTEXPR __host__ __device__ const __T &
 min(const __T &__a, const __T &__b, __Cmp __cmp) {
   return __cmp(__b, __a) ? __b : __a;
 }
 
 template <class __T>
 __attribute__((enable_if(true, "")))
-inline __device__ const __T &
+inline _CPP14_CONSTEXPR __host__ __device__ const __T &
 min(const __T &__a, const __T &__b) {
   return __a < __b ? __a : __b;
 }
+
+#pragma pop_macro("_CPP14_CONSTEXPR")
 
 #ifdef _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_END_NAMESPACE_STD

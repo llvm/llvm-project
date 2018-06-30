@@ -51,7 +51,7 @@ Error BinaryHolder::ArchiveEntry::load(StringRef Filename,
   if (auto Err = ErrOrBuff.getError())
     return errorCodeToError(Err);
 
-  MemoryBuffer = std::move(*ErrOrBuff);
+  MemBuffer = std::move(*ErrOrBuff);
 
   if (Verbose)
     WithColor::note() << "loaded archive '" << ArchiveFilename << "'\n";
@@ -61,15 +61,15 @@ Error BinaryHolder::ArchiveEntry::load(StringRef Filename,
   std::vector<MemoryBufferRef> ArchiveBuffers;
 
   auto ErrOrFat =
-      object::MachOUniversalBinary::create(MemoryBuffer->getMemBufferRef());
+      object::MachOUniversalBinary::create(MemBuffer->getMemBufferRef());
   if (!ErrOrFat) {
     consumeError(ErrOrFat.takeError());
-    ArchiveBuffers.push_back(MemoryBuffer->getMemBufferRef());
+    ArchiveBuffers.push_back(MemBuffer->getMemBufferRef());
   } else {
     FatBinary = std::move(*ErrOrFat);
     FatBinaryName = ArchiveFilename;
     ArchiveBuffers =
-        getMachOFatMemoryBuffers(FatBinaryName, *MemoryBuffer, *FatBinary);
+        getMachOFatMemoryBuffers(FatBinaryName, *MemBuffer, *FatBinary);
   }
 
   // Finally, try to load the archives.
@@ -90,7 +90,7 @@ Error BinaryHolder::ObjectEntry::load(StringRef Filename, bool Verbose) {
   if (auto Err = ErrOrBuff.getError())
     return errorCodeToError(Err);
 
-  MemoryBuffer = std::move(*ErrOrBuff);
+  MemBuffer = std::move(*ErrOrBuff);
 
   if (Verbose)
     WithColor::note() << "loaded object.\n";
@@ -100,15 +100,15 @@ Error BinaryHolder::ObjectEntry::load(StringRef Filename, bool Verbose) {
   std::vector<MemoryBufferRef> ObjectBuffers;
 
   auto ErrOrFat =
-      object::MachOUniversalBinary::create(MemoryBuffer->getMemBufferRef());
+      object::MachOUniversalBinary::create(MemBuffer->getMemBufferRef());
   if (!ErrOrFat) {
     consumeError(ErrOrFat.takeError());
-    ObjectBuffers.push_back(MemoryBuffer->getMemBufferRef());
+    ObjectBuffers.push_back(MemBuffer->getMemBufferRef());
   } else {
     FatBinary = std::move(*ErrOrFat);
     FatBinaryName = Filename;
     ObjectBuffers =
-        getMachOFatMemoryBuffers(FatBinaryName, *MemoryBuffer, *FatBinary);
+        getMachOFatMemoryBuffers(FatBinaryName, *MemBuffer, *FatBinary);
   }
 
   Objects.reserve(ObjectBuffers.size());

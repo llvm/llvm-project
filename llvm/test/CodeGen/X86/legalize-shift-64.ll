@@ -142,26 +142,15 @@ define i32 @test6() {
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    movl $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    shldl $32, %eax, %ecx
-; CHECK-NEXT:    movb $32, %dl
-; CHECK-NEXT:    testb %dl, %dl
-; CHECK-NEXT:    jne .LBB5_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:  .LBB5_2:
-; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    xorl $1, %eax
-; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    je .LBB5_5
-; CHECK-NEXT:  # %bb.3: # %if.then
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    jmp .LBB5_4
-; CHECK-NEXT:  .LBB5_5: # %if.end
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  .LBB5_4: # %if.then
+; CHECK-NEXT:    orl $0, %eax
+; CHECK-NEXT:    je .LBB5_3
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    jmp .LBB5_2
+; CHECK-NEXT:  .LBB5_3: # %if.end
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  .LBB5_2: # %if.then
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    .cfi_def_cfa %esp, 4
