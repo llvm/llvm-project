@@ -886,7 +886,7 @@ public:
   /// Emits a reference to a declarator info.
   void AddTypeSourceInfo(TypeSourceInfo *TInfo);
 
-  /// Emits a type with source-location information.
+  /// Emits source location information for a type. Does not emit the type.
   void AddTypeLoc(TypeLoc TL);
 
   /// Emits a template argument location info.

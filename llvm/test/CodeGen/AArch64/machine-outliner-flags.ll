@@ -1,9 +1,12 @@
+; REQUIRES: asserts
 ; RUN: llc %s -debug-pass=Structure -verify-machineinstrs \
-; RUN: -enable-machine-outliner=always -mtriple arm64---- -o /dev/null 2>&1 \
+; RUN: --debug-only=machine-outliner -enable-machine-outliner=always \
+; RUN: -mtriple arm64---- -o /dev/null 2>&1 \
 ; RUN: | FileCheck %s -check-prefix=ALWAYS
 
 ; RUN: llc %s -debug-pass=Structure -verify-machineinstrs \
-; RUN: -enable-machine-outliner -mtriple arm64---- -o /dev/null 2>&1 \
+; RUN: --debug-only=machine-outliner -enable-machine-outliner \
+; RUN: -mtriple arm64---- -o /dev/null 2>&1 \
 ; RUN: | FileCheck %s -check-prefix=ENABLE
 
 ; RUN: llc %s -debug-pass=Structure -verify-machineinstrs \
@@ -31,7 +34,9 @@
 ;  * -enable-machine-outliner=never is passed
 
 ; ALWAYS: Machine Outliner
+; ALWAYS: Machine Outliner: Running on all functions
 ; ENABLE: Machine Outliner
+; ENABLE: Machine Outliner: Running on all functions
 ; NEVER-NOT: Machine Outliner
 ; NOT-ADDED-NOT: Machine Outliner
 ; OPTNONE-NOT: Machine Outliner
