@@ -5,6 +5,8 @@
 // on Windows.
 //
 // UNSUPPORTED: win32
+// Linkage issue
+// XFAIL: openbsd
 
 #include <iostream>
 
