@@ -1210,6 +1210,11 @@ Sema::ActOnStartProtocolInterface(SourceLocation AtProtoInterfaceLoc,
     PDecl = ObjCProtocolDecl::Create(Context, CurContext, ProtocolName,
                                      ProtocolLoc, AtProtoInterfaceLoc,
                                      /*PrevDecl=*/nullptr);
+
+    // If we are using modules, add the decl to the context in order to
+    // serialize something meaningful.
+    if (getLangOpts().Modules)
+      PushOnScopeChains(PDecl, TUScope);
     PDecl->startDefinition();
   } else {
     if (PrevDecl) {

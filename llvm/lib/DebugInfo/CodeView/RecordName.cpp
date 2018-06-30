@@ -286,6 +286,8 @@ static int getSymbolNameOffset(CVSymbol Sym) {
   case SymbolKind::S_GMANDATA:
   case SymbolKind::S_LTHREAD32:
   case SymbolKind::S_GTHREAD32:
+  case SymbolKind::S_PROCREF:
+  case SymbolKind::S_LPROCREF:
     return 10;
   // See RegisterSym and LocalSym
   case SymbolKind::S_REGISTER:

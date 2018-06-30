@@ -177,7 +177,7 @@ void initializeInferFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeInlineCostAnalysisPass(PassRegistry&);
 void initializeInstCountPass(PassRegistry&);
 void initializeInstNamerPass(PassRegistry&);
-void initializeInstSimplifierPass(PassRegistry&);
+void initializeInstSimplifyLegacyPassPass(PassRegistry &);
 void initializeInstrProfilingLegacyPassPass(PassRegistry&);
 void initializeInstructionCombiningPassPass(PassRegistry&);
 void initializeInstructionSelectPass(PassRegistry&);
