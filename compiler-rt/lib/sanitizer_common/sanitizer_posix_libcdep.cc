@@ -78,8 +78,10 @@ bool NoHugePagesInRegion(uptr addr, uptr size) {
 }
 
 bool DontDumpShadowMemory(uptr addr, uptr length) {
-#ifdef MADV_DONTDUMP
+#if defined(MADV_DONTDUMP)
   return madvise((void *)addr, length, MADV_DONTDUMP) == 0;
+#elif defined(MADV_NOCORE)
+  return madvise((void *)addr, length, MADV_NOCORE) == 0;
 #else
   return true;
 #endif  // MADV_DONTDUMP

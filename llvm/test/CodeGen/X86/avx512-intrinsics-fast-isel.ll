@@ -1665,52 +1665,54 @@ define <8 x i64> @test_mm512_mul_epi32(<8 x i64> %__A, <8 x i64> %__B) nounwind 
   ret <8 x i64> %tmp4
 }
 
-define <8 x i64> @test_mm512_maskz_mul_epi32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
+define <8 x i64> @test_mm512_maskz_mul_epi32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
 ; X86-LABEL: test_mm512_maskz_mul_epi32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuldq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_mul_epi32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuldq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp1 = ashr exact <8 x i64> %tmp, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp3 = ashr exact <8 x i64> %tmp2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp4 = mul nsw <8 x i64> %tmp3, %tmp1
-  %tmp5 = bitcast i8 %conv to <8 x i1>
-  %tmp6 = select <8 x i1> %tmp5, <8 x i64> %tmp4, <8 x i64> zeroinitializer
-  ret <8 x i64> %tmp6
+entry:
+  %0 = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %1 = ashr exact <8 x i64> %0, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %3 = ashr exact <8 x i64> %2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %4 = mul nsw <8 x i64> %3, %1
+  %5 = bitcast i8 %__k to <8 x i1>
+  %6 = select <8 x i1> %5, <8 x i64> %4, <8 x i64> zeroinitializer
+  ret <8 x i64> %6
 }
 
-define <8 x i64> @test_mm512_mask_mul_epi32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
+define <8 x i64> @test_mm512_mask_mul_epi32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
 ; X86-LABEL: test_mm512_mask_mul_epi32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuldq %zmm0, %zmm1, %zmm2 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_mul_epi32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuldq %zmm0, %zmm1, %zmm2 {%k1}
 ; X64-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp1 = ashr exact <8 x i64> %tmp, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp3 = ashr exact <8 x i64> %tmp2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp4 = mul nsw <8 x i64> %tmp3, %tmp1
-  %tmp5 = bitcast i8 %conv to <8 x i1>
-  %tmp6 = select <8 x i1> %tmp5, <8 x i64> %tmp4, <8 x i64> %__src
-  ret <8 x i64> %tmp6
+entry:
+  %0 = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %1 = ashr exact <8 x i64> %0, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %3 = ashr exact <8 x i64> %2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %4 = mul nsw <8 x i64> %3, %1
+  %5 = bitcast i8 %__k to <8 x i1>
+  %6 = select <8 x i1> %5, <8 x i64> %4, <8 x i64> %__src
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_mul_epu32(<8 x i64> %__A, <8 x i64> %__B) nounwind {
@@ -1729,48 +1731,50 @@ define <8 x i64> @test_mm512_mul_epu32(<8 x i64> %__A, <8 x i64> %__B) nounwind 
   ret <8 x i64> %tmp2
 }
 
-define <8 x i64> @test_mm512_maskz_mul_epu32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
+define <8 x i64> @test_mm512_maskz_mul_epu32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
 ; X86-LABEL: test_mm512_maskz_mul_epu32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_mul_epu32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp2 = mul nuw <8 x i64> %tmp1, %tmp
-  %tmp3 = bitcast i8 %conv to <8 x i1>
-  %tmp4 = select <8 x i1> %tmp3, <8 x i64> %tmp2, <8 x i64> zeroinitializer
-  ret <8 x i64> %tmp4
+entry:
+  %0 = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %2 = mul nuw <8 x i64> %1, %0
+  %3 = bitcast i8 %__k to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> zeroinitializer
+  ret <8 x i64> %4
 }
 
-define <8 x i64> @test_mm512_mask_mul_epu32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
+define <8 x i64> @test_mm512_mask_mul_epu32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
 ; X86-LABEL: test_mm512_mask_mul_epu32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_mul_epu32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2 {%k1}
 ; X64-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp2 = mul nuw <8 x i64> %tmp1, %tmp
-  %tmp3 = bitcast i8 %conv to <8 x i1>
-  %tmp4 = select <8 x i1> %tmp3, <8 x i64> %tmp2, <8 x i64> %__src
-  ret <8 x i64> %tmp4
+entry:
+  %0 = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %2 = mul nuw <8 x i64> %1, %0
+  %3 = bitcast i8 %__k to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %__src
+  ret <8 x i64> %4
 }
 
 define <8 x double> @test_mm512_set1_epi8(i8 signext %d) nounwind {
