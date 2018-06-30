@@ -1652,6 +1652,11 @@ public:
                      "TargetInstrInfo::isFunctionSafeToOutlineFrom!");
   }
 
+  /// Return true if the function should be outlined from by default.
+  virtual bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const {
+    return false;
+  }
+
 private:
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
   unsigned CatchRetOpcode;

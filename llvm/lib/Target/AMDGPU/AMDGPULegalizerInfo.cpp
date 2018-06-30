@@ -39,6 +39,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
 
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
+  const LLT S512 = LLT::scalar(512);
 
   const LLT GlobalPtr = GetAddrSpacePtr(AMDGPUAS::GLOBAL_ADDRESS);
   const LLT ConstantPtr = GetAddrSpacePtr(AMDGPUAS::CONSTANT_ADDRESS);
@@ -70,9 +71,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const SISubtarget &ST,
 
   getActionDefinitionsBuilder(G_FCONSTANT)
     .legalFor({S32, S64});
+
+  // G_IMPLICIT_DEF is a no-op so we can make it legal for any value type that
+  // can fit in a register.
+  // FIXME: We need to legalize several more operations before we can add
+  // a test case for size > 512.
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-    .legalFor({S1, S32, S64,
-               GlobalPtr, ConstantPtr, LocalPtr, FlatPtr, PrivatePtr});
+    .legalIf([=](const LegalityQuery &Query) {
+        return Query.Types[0].getSizeInBits() <= 512;
+    })
+    .clampScalar(0, S1, S512);
 
   getActionDefinitionsBuilder(G_CONSTANT)
     .legalFor({S1, S32, S64});

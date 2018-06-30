@@ -1665,52 +1665,54 @@ define <8 x i64> @test_mm512_mul_epi32(<8 x i64> %__A, <8 x i64> %__B) nounwind 
   ret <8 x i64> %tmp4
 }
 
-define <8 x i64> @test_mm512_maskz_mul_epi32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
+define <8 x i64> @test_mm512_maskz_mul_epi32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
 ; X86-LABEL: test_mm512_maskz_mul_epi32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuldq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_mul_epi32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuldq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp1 = ashr exact <8 x i64> %tmp, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp3 = ashr exact <8 x i64> %tmp2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp4 = mul nsw <8 x i64> %tmp3, %tmp1
-  %tmp5 = bitcast i8 %conv to <8 x i1>
-  %tmp6 = select <8 x i1> %tmp5, <8 x i64> %tmp4, <8 x i64> zeroinitializer
-  ret <8 x i64> %tmp6
+entry:
+  %0 = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %1 = ashr exact <8 x i64> %0, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %3 = ashr exact <8 x i64> %2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %4 = mul nsw <8 x i64> %3, %1
+  %5 = bitcast i8 %__k to <8 x i1>
+  %6 = select <8 x i1> %5, <8 x i64> %4, <8 x i64> zeroinitializer
+  ret <8 x i64> %6
 }
 
-define <8 x i64> @test_mm512_mask_mul_epi32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
+define <8 x i64> @test_mm512_mask_mul_epi32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
 ; X86-LABEL: test_mm512_mask_mul_epi32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuldq %zmm0, %zmm1, %zmm2 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_mul_epi32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuldq %zmm0, %zmm1, %zmm2 {%k1}
 ; X64-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp1 = ashr exact <8 x i64> %tmp, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp3 = ashr exact <8 x i64> %tmp2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-  %tmp4 = mul nsw <8 x i64> %tmp3, %tmp1
-  %tmp5 = bitcast i8 %conv to <8 x i1>
-  %tmp6 = select <8 x i1> %tmp5, <8 x i64> %tmp4, <8 x i64> %__src
-  ret <8 x i64> %tmp6
+entry:
+  %0 = shl <8 x i64> %__A, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %1 = ashr exact <8 x i64> %0, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %2 = shl <8 x i64> %__B, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %3 = ashr exact <8 x i64> %2, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %4 = mul nsw <8 x i64> %3, %1
+  %5 = bitcast i8 %__k to <8 x i1>
+  %6 = select <8 x i1> %5, <8 x i64> %4, <8 x i64> %__src
+  ret <8 x i64> %6
 }
 
 define <8 x i64> @test_mm512_mul_epu32(<8 x i64> %__A, <8 x i64> %__B) nounwind {
@@ -1729,48 +1731,50 @@ define <8 x i64> @test_mm512_mul_epu32(<8 x i64> %__A, <8 x i64> %__B) nounwind 
   ret <8 x i64> %tmp2
 }
 
-define <8 x i64> @test_mm512_maskz_mul_epu32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
+define <8 x i64> @test_mm512_maskz_mul_epu32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B) nounwind {
 ; X86-LABEL: test_mm512_maskz_mul_epu32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_maskz_mul_epu32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuludq %zmm0, %zmm1, %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp2 = mul nuw <8 x i64> %tmp1, %tmp
-  %tmp3 = bitcast i8 %conv to <8 x i1>
-  %tmp4 = select <8 x i1> %tmp3, <8 x i64> %tmp2, <8 x i64> zeroinitializer
-  ret <8 x i64> %tmp4
+entry:
+  %0 = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %2 = mul nuw <8 x i64> %1, %0
+  %3 = bitcast i8 %__k to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> zeroinitializer
+  ret <8 x i64> %4
 }
 
-define <8 x i64> @test_mm512_mask_mul_epu32(i16 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
+define <8 x i64> @test_mm512_mask_mul_epu32(i8 zeroext %__k, <8 x i64> %__A, <8 x i64> %__B, <8 x i64> %__src) nounwind {
 ; X86-LABEL: test_mm512_mask_mul_epu32:
-; X86:       # %bb.0:
-; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2 {%k1}
 ; X86-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm512_mask_mul_epu32:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vpmuludq %zmm0, %zmm1, %zmm2 {%k1}
 ; X64-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; X64-NEXT:    retq
-  %conv = trunc i16 %__k to i8
-  %tmp = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-  %tmp2 = mul nuw <8 x i64> %tmp1, %tmp
-  %tmp3 = bitcast i8 %conv to <8 x i1>
-  %tmp4 = select <8 x i1> %tmp3, <8 x i64> %tmp2, <8 x i64> %__src
-  ret <8 x i64> %tmp4
+entry:
+  %0 = and <8 x i64> %__A, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %1 = and <8 x i64> %__B, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %2 = mul nuw <8 x i64> %1, %0
+  %3 = bitcast i8 %__k to <8 x i1>
+  %4 = select <8 x i1> %3, <8 x i64> %2, <8 x i64> %__src
+  ret <8 x i64> %4
 }
 
 define <8 x double> @test_mm512_set1_epi8(i8 signext %d) nounwind {
@@ -9222,6 +9226,440 @@ entry:
   ret <16 x float> %0
 }
 
+define <8 x i64> @test_mm512_rol_epi32(<8 x i64> %__A) local_unnamed_addr #0 {
+; CHECK-LABEL: test_mm512_rol_epi32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprold $5, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = tail call <16 x i32> @llvm.x86.avx512.prol.d.512(<16 x i32> %0, i32 5)
+  %2 = bitcast <16 x i32> %1 to <8 x i64>
+  ret <8 x i64> %2
+}
+
+declare <16 x i32> @llvm.x86.avx512.prol.d.512(<16 x i32>, i32) #1
+
+define <8 x i64> @test_mm512_mask_rol_epi32(<8 x i64> %__W, i16 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_mask_rol_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprold $5, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_rol_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprold $5, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = tail call <16 x i32> @llvm.x86.avx512.prol.d.512(<16 x i32> %0, i32 5)
+  %2 = bitcast <8 x i64> %__W to <16 x i32>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x i32> %1, <16 x i32> %2
+  %5 = bitcast <16 x i32> %4 to <8 x i64>
+  ret <8 x i64> %5
+}
+
+define <8 x i64> @test_mm512_maskz_rol_epi32(i16 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_maskz_rol_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprold $5, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_rol_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprold $5, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = tail call <16 x i32> @llvm.x86.avx512.prol.d.512(<16 x i32> %0, i32 5)
+  %2 = bitcast i16 %__U to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  %4 = bitcast <16 x i32> %3 to <8 x i64>
+  ret <8 x i64> %4
+}
+
+define <8 x i64> @test_mm512_rol_epi64(<8 x i64> %__A) {
+; CHECK-LABEL: test_mm512_rol_epi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprolq $5, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prol.q.512(<8 x i64> %__A, i32 5)
+  ret <8 x i64> %0
+}
+
+declare <8 x i64> @llvm.x86.avx512.prol.q.512(<8 x i64>, i32) #1
+
+define <8 x i64> @test_mm512_mask_rol_epi64(<8 x i64> %__W, i8 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_mask_rol_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprolq $5, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_rol_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprolq $5, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prol.q.512(<8 x i64> %__A, i32 5)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__W
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_maskz_rol_epi64(i8 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_maskz_rol_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprolq $5, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_rol_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprolq $5, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prol.q.512(<8 x i64> %__A, i32 5)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_rolv_epi32(<8 x i64> %__A, <8 x i64> %__B) {
+; CHECK-LABEL: test_mm512_rolv_epi32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__B to <16 x i32>
+  %2 = tail call <16 x i32> @llvm.x86.avx512.prolv.d.512(<16 x i32> %0, <16 x i32> %1)
+  %3 = bitcast <16 x i32> %2 to <8 x i64>
+  ret <8 x i64> %3
+}
+
+define <8 x i64> @test_mm512_mask_rolv_epi32(<8 x i64> %__W, i16 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_mask_rolv_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprolvd %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_rolv_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprolvd %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__B to <16 x i32>
+  %2 = tail call <16 x i32> @llvm.x86.avx512.prolv.d.512(<16 x i32> %0, <16 x i32> %1)
+  %3 = bitcast <8 x i64> %__W to <16 x i32>
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %2, <16 x i32> %3
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
+}
+
+define <8 x i64> @test_mm512_maskz_rolv_epi32(i16 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_maskz_rolv_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprolvd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_rolv_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprolvd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__B to <16 x i32>
+  %2 = tail call <16 x i32> @llvm.x86.avx512.prolv.d.512(<16 x i32> %0, <16 x i32> %1)
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> zeroinitializer
+  %5 = bitcast <16 x i32> %4 to <8 x i64>
+  ret <8 x i64> %5
+}
+
+define <8 x i64> @test_mm512_rolv_epi64(<8 x i64> %__A, <8 x i64> %__B) {
+; CHECK-LABEL: test_mm512_rolv_epi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prolv.q.512(<8 x i64> %__A, <8 x i64> %__B)
+  ret <8 x i64> %0
+}
+
+define <8 x i64> @test_mm512_mask_rolv_epi64(<8 x i64> %__W, i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_mask_rolv_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprolvq %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_rolv_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprolvq %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prolv.q.512(<8 x i64> %__A, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__W
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_maskz_rolv_epi64(i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_maskz_rolv_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprolvq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_rolv_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprolvq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prolv.q.512(<8 x i64> %__A, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_ror_epi32(<8 x i64> %__A) {
+; CHECK-LABEL: test_mm512_ror_epi32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprord $5, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = tail call <16 x i32> @llvm.x86.avx512.pror.d.512(<16 x i32> %0, i32 5)
+  %2 = bitcast <16 x i32> %1 to <8 x i64>
+  ret <8 x i64> %2
+}
+
+declare <16 x i32> @llvm.x86.avx512.pror.d.512(<16 x i32>, i32) #1
+
+define <8 x i64> @test_mm512_mask_ror_epi32(<8 x i64> %__W, i16 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_mask_ror_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprord $5, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_ror_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprord $5, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = tail call <16 x i32> @llvm.x86.avx512.pror.d.512(<16 x i32> %0, i32 5)
+  %2 = bitcast <8 x i64> %__W to <16 x i32>
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x i32> %1, <16 x i32> %2
+  %5 = bitcast <16 x i32> %4 to <8 x i64>
+  ret <8 x i64> %5
+}
+
+define <8 x i64> @test_mm512_maskz_ror_epi32(i16 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_maskz_ror_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprord $5, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_ror_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprord $5, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = tail call <16 x i32> @llvm.x86.avx512.pror.d.512(<16 x i32> %0, i32 5)
+  %2 = bitcast i16 %__U to <16 x i1>
+  %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> zeroinitializer
+  %4 = bitcast <16 x i32> %3 to <8 x i64>
+  ret <8 x i64> %4
+}
+
+define <8 x i64> @test_mm512_ror_epi64(<8 x i64> %__A) {
+; CHECK-LABEL: test_mm512_ror_epi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprorq $5, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.pror.q.512(<8 x i64> %__A, i32 5)
+  ret <8 x i64> %0
+}
+
+declare <8 x i64> @llvm.x86.avx512.pror.q.512(<8 x i64>, i32) #1
+
+define <8 x i64> @test_mm512_mask_ror_epi64(<8 x i64> %__W, i8 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_mask_ror_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprorq $5, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_ror_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprorq $5, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.pror.q.512(<8 x i64> %__A, i32 5)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__W
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_maskz_ror_epi64(i8 zeroext %__U, <8 x i64> %__A) {
+; X86-LABEL: test_mm512_maskz_ror_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprorq $5, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_ror_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprorq $5, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.pror.q.512(<8 x i64> %__A, i32 5)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_rorv_epi32(<8 x i64> %__A, <8 x i64> %__B) {
+; CHECK-LABEL: test_mm512_rorv_epi32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprorvd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__B to <16 x i32>
+  %2 = tail call <16 x i32> @llvm.x86.avx512.prorv.d.512(<16 x i32> %0, <16 x i32> %1)
+  %3 = bitcast <16 x i32> %2 to <8 x i64>
+  ret <8 x i64> %3
+}
+
+define <8 x i64> @test_mm512_mask_rorv_epi32(<8 x i64> %__W, i16 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_mask_rorv_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprorvd %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_rorv_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprorvd %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__B to <16 x i32>
+  %2 = tail call <16 x i32> @llvm.x86.avx512.prorv.d.512(<16 x i32> %0, <16 x i32> %1)
+  %3 = bitcast <8 x i64> %__W to <16 x i32>
+  %4 = bitcast i16 %__U to <16 x i1>
+  %5 = select <16 x i1> %4, <16 x i32> %2, <16 x i32> %3
+  %6 = bitcast <16 x i32> %5 to <8 x i64>
+  ret <8 x i64> %6
+}
+
+define <8 x i64> @test_mm512_maskz_rorv_epi32(i16 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_maskz_rorv_epi32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
+; X86-NEXT:    vprorvd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_rorv_epi32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprorvd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = bitcast <8 x i64> %__A to <16 x i32>
+  %1 = bitcast <8 x i64> %__B to <16 x i32>
+  %2 = tail call <16 x i32> @llvm.x86.avx512.prorv.d.512(<16 x i32> %0, <16 x i32> %1)
+  %3 = bitcast i16 %__U to <16 x i1>
+  %4 = select <16 x i1> %3, <16 x i32> %2, <16 x i32> zeroinitializer
+  %5 = bitcast <16 x i32> %4 to <8 x i64>
+  ret <8 x i64> %5
+}
+
+define <8 x i64> @test_mm512_rorv_epi64(<8 x i64> %__A, <8 x i64> %__B) {
+; CHECK-LABEL: test_mm512_rorv_epi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vprorvq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prorv.q.512(<8 x i64> %__A, <8 x i64> %__B)
+  ret <8 x i64> %0
+}
+
+define <8 x i64> @test_mm512_mask_rorv_epi64(<8 x i64> %__W, i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_mask_rorv_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprorvq %zmm2, %zmm1, %zmm0 {%k1}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_rorv_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprorvq %zmm2, %zmm1, %zmm0 {%k1}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prorv.q.512(<8 x i64> %__A, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> %__W
+  ret <8 x i64> %2
+}
+
+define <8 x i64> @test_mm512_maskz_rorv_epi64(i8 zeroext %__U, <8 x i64> %__A, <8 x i64> %__B) {
+; X86-LABEL: test_mm512_maskz_rorv_epi64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    kmovw %eax, %k1
+; X86-NEXT:    vprorvq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_rorv_epi64:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vprorvq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; X64-NEXT:    retq
+entry:
+  %0 = tail call <8 x i64> @llvm.x86.avx512.prorv.q.512(<8 x i64> %__A, <8 x i64> %__B)
+  %1 = bitcast i8 %__U to <8 x i1>
+  %2 = select <8 x i1> %1, <8 x i64> %0, <8 x i64> zeroinitializer
+  ret <8 x i64> %2
+}
+
 declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>) #9
 declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>) #9
 declare float @llvm.fma.f32(float, float, float) #9
@@ -9244,6 +9682,10 @@ declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>)
 declare <4 x float> @llvm.x86.sse.min.ps(<4 x float>, <4 x float>)
 declare <8 x double> @llvm.sqrt.v8f64(<8 x double>)
 declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
+declare <16 x i32> @llvm.x86.avx512.prolv.d.512(<16 x i32>, <16 x i32>)
+declare <8 x i64> @llvm.x86.avx512.prolv.q.512(<8 x i64>, <8 x i64>)
+declare <16 x i32> @llvm.x86.avx512.prorv.d.512(<16 x i32>, <16 x i32>)
+declare <8 x i64> @llvm.x86.avx512.prorv.q.512(<8 x i64>, <8 x i64>)
 
 !0 = !{i32 1}
 

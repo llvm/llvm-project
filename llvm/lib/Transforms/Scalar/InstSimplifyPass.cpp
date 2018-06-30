@@ -1,4 +1,4 @@
-//===------ SimplifyInstructions.cpp - Remove redundant instructions ------===//
+//===- InstSimplifyPass.cpp -----------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,15 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This is a utility pass used for testing the InstructionSimplify analysis.
-// The analysis is applied to every instruction, and if it simplifies then the
-// instruction is replaced by the simplification.  If you are looking for a pass
-// that performs serious instruction folding, use the instcombine pass instead.
-//
-//===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/SimplifyInstructions.h"
+#include "llvm/Transforms/Scalar/InstSimplifyPass.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -22,13 +15,13 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "instsimplify"
@@ -84,58 +77,57 @@ static bool runImpl(Function &F, const SimplifyQuery &SQ,
 }
 
 namespace {
-  struct InstSimplifier : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    InstSimplifier() : FunctionPass(ID) {
-      initializeInstSimplifierPass(*PassRegistry::getPassRegistry());
-    }
+struct InstSimplifyLegacyPass : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  InstSimplifyLegacyPass() : FunctionPass(ID) {
+    initializeInstSimplifyLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<AssumptionCacheTracker>();
-      AU.addRequired<TargetLibraryInfoWrapperPass>();
-      AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+  }
 
-    /// runOnFunction - Remove instructions that simplify.
-    bool runOnFunction(Function &F) override {
-      if (skipFunction(F))
-        return false;
+  /// runOnFunction - Remove instructions that simplify.
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
 
-      const DominatorTree *DT =
-          &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-      const TargetLibraryInfo *TLI =
-          &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-      AssumptionCache *AC =
-          &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-      OptimizationRemarkEmitter *ORE =
-          &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-      const DataLayout &DL = F.getParent()->getDataLayout();
-      const SimplifyQuery SQ(DL, TLI, DT, AC);
-      return runImpl(F, SQ, ORE);
-    }
-  };
-}
+    const DominatorTree *DT =
+        &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    const TargetLibraryInfo *TLI =
+        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    AssumptionCache *AC =
+        &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    OptimizationRemarkEmitter *ORE =
+        &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    const SimplifyQuery SQ(DL, TLI, DT, AC);
+    return runImpl(F, SQ, ORE);
+  }
+};
+} // namespace
 
-char InstSimplifier::ID = 0;
-INITIALIZE_PASS_BEGIN(InstSimplifier, "instsimplify",
+char InstSimplifyLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(InstSimplifyLegacyPass, "instsimplify",
                       "Remove redundant instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_END(InstSimplifier, "instsimplify",
+INITIALIZE_PASS_END(InstSimplifyLegacyPass, "instsimplify",
                     "Remove redundant instructions", false, false)
-char &llvm::InstructionSimplifierID = InstSimplifier::ID;
 
 // Public interface to the simplify instructions pass.
-FunctionPass *llvm::createInstructionSimplifierPass() {
-  return new InstSimplifier();
+FunctionPass *llvm::createInstSimplifyLegacyPass() {
+  return new InstSimplifyLegacyPass();
 }
 
-PreservedAnalyses InstSimplifierPass::run(Function &F,
-                                      FunctionAnalysisManager &AM) {
+PreservedAnalyses InstSimplifyPass::run(Function &F,
+                                        FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);

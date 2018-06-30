@@ -48,7 +48,6 @@ add_llvm_library(LLVMTransformUtils
   SanitizerStats.cpp
   SimplifyCFG.cpp
   SimplifyIndVar.cpp
-  SimplifyInstructions.cpp
   SimplifyLibCalls.cpp
   SplitModule.cpp
   StripNonLineTableDebugInfo.cpp
