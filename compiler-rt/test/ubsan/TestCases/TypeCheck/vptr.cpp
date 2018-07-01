@@ -40,6 +40,8 @@
 // UNSUPPORTED: win32
 // Suppressions file not pushed to the device.
 // UNSUPPORTED: android
+// Compilation error
+// UNSUPPORTED: openbsd
 #include <new>
 #include <typeinfo>
 #include <assert.h>

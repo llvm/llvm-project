@@ -23,6 +23,8 @@
 // Coverage is not yet implemented in TSan.
 // XFAIL: ubsan-tsan
 // UNSUPPORTED: ubsan-standalone-static
+// No coverage support
+// UNSUPPORTED: openbsd
 
 volatile int sink;
 int main(int argc, char **argv) {

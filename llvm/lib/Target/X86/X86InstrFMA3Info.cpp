@@ -21,11 +21,6 @@
 
 using namespace llvm;
 
-static ManagedStatic<X86InstrFMA3Info> X86InstrFMA3InfoObj;
-X86InstrFMA3Info *X86InstrFMA3Info::getX86InstrFMA3Info() {
-  return &*X86InstrFMA3InfoObj;
-}
-
 #define FMA3BASE(X132, X213, X231, Attrs)                                      \
   { { X132, X213, X231 }, Attrs },
 
@@ -230,10 +225,35 @@ static const X86InstrFMA3Group Groups[] = {
   FMA3_AVX512_VECTOR_GROUP(VFMSUBADD)
 };
 
-X86InstrFMA3Info::X86InstrFMA3Info() {
-  for (const X86InstrFMA3Group &G : Groups) {
-    OpcodeToGroup[G.Opcodes[0]] = &G;
-    OpcodeToGroup[G.Opcodes[1]] = &G;
-    OpcodeToGroup[G.Opcodes[2]] = &G;
+namespace {
+
+struct X86InstrFMA3Info {
+  /// A map that is used to find the group of FMA opcodes using any FMA opcode
+  /// from the group.
+  DenseMap<unsigned, const X86InstrFMA3Group *> OpcodeToGroup;
+
+  /// Constructor. Just creates an object of the class.
+  X86InstrFMA3Info() {
+    for (const X86InstrFMA3Group &G : Groups) {
+      OpcodeToGroup[G.Opcodes[0]] = &G;
+      OpcodeToGroup[G.Opcodes[1]] = &G;
+      OpcodeToGroup[G.Opcodes[2]] = &G;
+    }
   }
+};
+
+}
+
+static ManagedStatic<X86InstrFMA3Info> X86FMA3InfoObj;
+
+/// Returns a reference to a group of FMA3 opcodes to where the given
+/// \p Opcode is included. If the given \p Opcode is not recognized as FMA3
+/// and not included into any FMA3 group, then nullptr is returned.
+const X86InstrFMA3Group *llvm::getFMA3Group(unsigned Opcode) {
+  auto &Map = X86FMA3InfoObj->OpcodeToGroup;
+  auto I = Map.find(Opcode);
+  if (I != Map.end())
+    return I->second;
+
+  return nullptr;
 }

@@ -88,40 +88,10 @@ struct X86InstrFMA3Group {
   }
 };
 
-/// This class provides information about all existing FMA3 opcodes
-///
-class X86InstrFMA3Info final {
-private:
-  /// A map that is used to find the group of FMA opcodes using any FMA opcode
-  /// from the group.
-  DenseMap<unsigned, const X86InstrFMA3Group *> OpcodeToGroup;
-
-public:
-  /// Returns the reference to an object of this class. It is assumed that
-  /// only one object may exist.
-  static X86InstrFMA3Info *getX86InstrFMA3Info();
-
-  /// Constructor. Just creates an object of the class.
-  X86InstrFMA3Info();
-
-  /// Returns a reference to a group of FMA3 opcodes to where the given
-  /// \p Opcode is included. If the given \p Opcode is not recognized as FMA3
-  /// and not included into any FMA3 group, then nullptr is returned.
-  static const X86InstrFMA3Group *getFMA3Group(unsigned Opcode) {
-    // Find the group including the given opcode.
-    const X86InstrFMA3Info *FMA3Info = getX86InstrFMA3Info();
-    auto I = FMA3Info->OpcodeToGroup.find(Opcode);
-    if (I == FMA3Info->OpcodeToGroup.end())
-      return nullptr;
-
-    return I->second;
-  }
-
-  /// Returns true iff the given \p Opcode is recognized as FMA3 by this class.
-  static bool isFMA3(unsigned Opcode) {
-    return getFMA3Group(Opcode) != nullptr;
-  }
-};
+/// Returns a reference to a group of FMA3 opcodes to where the given
+/// \p Opcode is included. If the given \p Opcode is not recognized as FMA3
+/// and not included into any FMA3 group, then nullptr is returned.
+const X86InstrFMA3Group *getFMA3Group(unsigned Opcode);
 
 } // end namespace llvm
 

@@ -7243,8 +7243,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                      OpIdx1, OpIdx2);
     }
 
-    const X86InstrFMA3Group *FMA3Group =
-        X86InstrFMA3Info::getFMA3Group(MI.getOpcode());
+    const X86InstrFMA3Group *FMA3Group = getFMA3Group(MI.getOpcode());
     if (FMA3Group) {
       unsigned Opc =
         getFMA3OpcodeToCommuteOperands(MI, OpIdx1, OpIdx2, *FMA3Group);
@@ -7478,8 +7477,7 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   }
 
   default:
-    const X86InstrFMA3Group *FMA3Group =
-        X86InstrFMA3Info::getFMA3Group(MI.getOpcode());
+    const X86InstrFMA3Group *FMA3Group = getFMA3Group(MI.getOpcode());
     if (FMA3Group)
       return findThreeSrcCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2,
                                            FMA3Group->isIntrinsic());
