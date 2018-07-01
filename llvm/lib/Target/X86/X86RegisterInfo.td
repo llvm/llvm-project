@@ -90,15 +90,15 @@ def SP : X86Reg<"sp", 4, [SPL]>;
 def IP : X86Reg<"ip", 0>;
 
 let isArtificial = 1 in {
-  def HAX : X86Reg<"hax", -1>;
-  def HDX : X86Reg<"hdx", -3>;
-  def HCX : X86Reg<"hcx", -2>;
-  def HBX : X86Reg<"hbx", -4>;
-  def HSI : X86Reg<"hsi", -7>;
-  def HDI : X86Reg<"hdi", -8>;
-  def HBP : X86Reg<"hbp", -6>;
-  def HSP : X86Reg<"hsp", -5>;
-  def HIP : X86Reg<"hip", -1>;
+  def HAX : X86Reg<"", -1>;
+  def HDX : X86Reg<"", -3>;
+  def HCX : X86Reg<"", -2>;
+  def HBX : X86Reg<"", -4>;
+  def HSI : X86Reg<"", -7>;
+  def HDI : X86Reg<"", -8>;
+  def HBP : X86Reg<"", -6>;
+  def HSP : X86Reg<"", -5>;
+  def HIP : X86Reg<"", -1>;
 }
 
 // X86-64 only, requires REX.

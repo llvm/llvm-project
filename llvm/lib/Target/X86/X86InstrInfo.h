@@ -168,32 +168,6 @@ class X86InstrInfo final : public X86GenInstrInfo {
   X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
-  struct MemOp2RegOpTableTypeEntry {
-    uint16_t MemOp;
-    uint16_t RegOp;
-    uint16_t Flags;
-
-    bool operator<(const MemOp2RegOpTableTypeEntry &RHS) const {
-      return MemOp < RHS.MemOp;
-    }
-    bool operator==(const MemOp2RegOpTableTypeEntry &RHS) const {
-      return MemOp == RHS.MemOp;
-    }
-    friend bool operator<(const MemOp2RegOpTableTypeEntry &TE,
-                          unsigned Opcode) {
-      return TE.MemOp < Opcode;
-    }
-  };
-
-  /// MemOp2RegOpTable - Load / store unfolding opcode map.
-  ///
-  typedef std::vector<MemOp2RegOpTableTypeEntry> MemOp2RegOpTableType;
-  MemOp2RegOpTableType MemOp2RegOpTable;
-
-  static void AddTableEntry(MemOp2RegOpTableType &M2RTable, uint16_t RegOp,
-                            uint16_t MemOp, uint16_t Flags);
-  const MemOp2RegOpTableTypeEntry *lookupUnfoldTable(unsigned MemOp) const;
-
   virtual void anchor();
 
   bool AnalyzeBranchImpl(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
