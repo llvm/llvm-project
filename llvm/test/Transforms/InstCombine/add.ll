@@ -121,8 +121,7 @@ define i32 @test5(i32 %A, i32 %B) {
 
 define <2 x i8> @neg_op0_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @neg_op0_vec_undef_elt(
-; CHECK-NEXT:    [[NEGA:%.*]] = sub <2 x i8> <i8 0, i8 undef>, [[A:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[NEGA]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %nega = sub <2 x i8> <i8 0, i8 undef>, %a
@@ -132,9 +131,8 @@ define <2 x i8> @neg_op0_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
 
 define <2 x i8> @neg_neg_vec_undef_elt(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @neg_neg_vec_undef_elt(
-; CHECK-NEXT:    [[NEGA:%.*]] = sub <2 x i8> <i8 undef, i8 0>, [[A:%.*]]
-; CHECK-NEXT:    [[NEGB:%.*]] = sub <2 x i8> <i8 undef, i8 0>, [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[NEGA]], [[NEGB]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %nega = sub <2 x i8> <i8 undef, i8 0>, %a
