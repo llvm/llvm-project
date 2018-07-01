@@ -422,6 +422,13 @@ public:
     bool AllowPeeling;
     /// Allow unrolling of all the iterations of the runtime loop remainder.
     bool UnrollRemainder;
+    /// Allow unroll and jam. Used to enable unroll and jam for the target.
+    bool UnrollAndJam;
+    /// Threshold for unroll and jam, for inner loop size. The 'Threshold'
+    /// value above is used during unroll and jam for the outer loop size.
+    /// This value is used in the same manner to limit the size of the inner
+    /// loop.
+    unsigned UnrollAndJamInnerLoopThreshold;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
