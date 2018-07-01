@@ -192,6 +192,12 @@ Pass *createSimpleLoopUnrollPass(int OptLevel = 2);
 
 //===----------------------------------------------------------------------===//
 //
+// LoopUnrollAndJam - This pass is a simple loop unroll and jam pass.
+//
+Pass *createLoopUnrollAndJamPass(int OptLevel = 2);
+
+//===----------------------------------------------------------------------===//
+//
 // LoopReroll - This pass is a simple loop rerolling pass.
 //
 Pass *createLoopRerollPass();
