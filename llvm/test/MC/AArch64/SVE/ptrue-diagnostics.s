@@ -5,12 +5,12 @@
 // --------------------------------------------------------------------------//
 
 ptrue p0.s, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: ptrue p0.s, vl512
 // CHECK-NOT: [[@LINE-3]]:{{[0-9]+}}:
 
 ptrue p0.s, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: ptrue p0.s, vl9
 // CHECK-NOT: [[@LINE-3]]:{{[0-9]+}}:
 

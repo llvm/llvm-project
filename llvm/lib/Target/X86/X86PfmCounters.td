@@ -72,4 +72,6 @@ def SKXPort7Counter : PfmIssueCounter<SKXPort7, ["uops_dispatched_port:port_7"]>
 
 let SchedModel = BtVer2Model in {
 def JCycleCounter : PfmCycleCounter<"cpu_clk_unhalted">;
+def JFPU0Counter  : PfmIssueCounter<JFPU0, ["dispatched_fpu:pipe0"]>;
+def JFPU1Counter  : PfmIssueCounter<JFPU1, ["dispatched_fpu:pipe1"]>;
 }

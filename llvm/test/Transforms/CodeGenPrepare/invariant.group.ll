@@ -7,8 +7,8 @@ define void @foo() {
 enter:
   ; CHECK-NOT: !invariant.group
   ; CHECK-NOT: @llvm.launder.invariant.group.p0i8(
-  ; CHECK: %val = load i8, i8* @tmp, !tbaa
-  %val = load i8, i8* @tmp, !invariant.group !0, !tbaa !{!1, !1, i64 0}
+  ; CHECK: %val = load i8, i8* @tmp{{$}}
+  %val = load i8, i8* @tmp, !invariant.group !0
   %ptr = call i8* @llvm.launder.invariant.group.p0i8(i8* @tmp)
   
   ; CHECK: store i8 42, i8* @tmp{{$}}
@@ -18,7 +18,23 @@ enter:
 }
 ; CHECK-LABEL: }
 
-declare i8* @llvm.launder.invariant.group.p0i8(i8*)
+; CHECK-LABEL: define void @foo2() {
+define void @foo2() {
+enter:
+  ; CHECK-NOT: !invariant.group
+  ; CHECK-NOT: @llvm.strip.invariant.group.p0i8(
+  ; CHECK: %val = load i8, i8* @tmp{{$}}
+  %val = load i8, i8* @tmp, !invariant.group !0
+  %ptr = call i8* @llvm.strip.invariant.group.p0i8(i8* @tmp)
 
+  ; CHECK: store i8 42, i8* @tmp{{$}}
+  store i8 42, i8* %ptr, !invariant.group !0
+
+  ret void
+}
+; CHECK-LABEL: }
+
+
+declare i8* @llvm.launder.invariant.group.p0i8(i8*)
+declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 !0 = !{}
-!1 = !{!"x", !0}

@@ -1388,7 +1388,7 @@ unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
   return FMAForms[FormIndex];
 }
 
-static bool commuteVPTERNLOG(MachineInstr &MI, unsigned SrcOpIdx1,
+static void commuteVPTERNLOG(MachineInstr &MI, unsigned SrcOpIdx1,
                              unsigned SrcOpIdx2) {
   // Determine which case this commute is or if it can't be done.
   unsigned Case = getThreeSrcCommuteCase(MI.getDesc().TSFlags, SrcOpIdx1,
@@ -1412,8 +1412,6 @@ static bool commuteVPTERNLOG(MachineInstr &MI, unsigned SrcOpIdx1,
   if (Imm & SwapMasks[Case][2]) NewImm |= SwapMasks[Case][3];
   if (Imm & SwapMasks[Case][3]) NewImm |= SwapMasks[Case][2];
   MI.getOperand(MI.getNumOperands()-1).setImm(NewImm);
-
-  return true;
 }
 
 // Returns true if this is a VPERMI2 or VPERMT2 instruction that can be
@@ -1585,8 +1583,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VMOVSDrr:
   case X86::VMOVSSrr:{
     // On SSE41 or later we can commute a MOVSS/MOVSD to a BLENDPS/BLENDPD.
-    if (!Subtarget.hasSSE41())
-      return nullptr;
+    assert(Subtarget.hasSSE41() && "Commuting MOVSD/MOVSS requires SSE41!");
 
     unsigned Mask, Opc;
     switch (MI.getOpcode()) {
@@ -1618,37 +1615,6 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     WorkingMI.getOperand(3).setImm((Src1Hi << 4) | (Src2Hi >> 4));
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
-  }
-  case X86::CMPSDrr:
-  case X86::CMPSSrr:
-  case X86::CMPPDrri:
-  case X86::CMPPSrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr:
-  case X86::VCMPPDrri:
-  case X86::VCMPPSrri:
-  case X86::VCMPPDYrri:
-  case X86::VCMPPSYrri:
-  case X86::VCMPSDZrr:
-  case X86::VCMPSSZrr:
-  case X86::VCMPPDZrri:
-  case X86::VCMPPSZrri:
-  case X86::VCMPPDZ128rri:
-  case X86::VCMPPSZ128rri:
-  case X86::VCMPPDZ256rri:
-  case X86::VCMPPSZ256rri: {
-    // Float comparison can be safely commuted for
-    // Ordered/Unordered/Equal/NotEqual tests
-    unsigned Imm = MI.getOperand(3).getImm() & 0x7;
-    switch (Imm) {
-    case 0x00: // EQUAL
-    case 0x03: // UNORDERED
-    case 0x04: // NOT EQUAL
-    case 0x07: // ORDERED
-      return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
-    default:
-      return nullptr;
-    }
   }
   case X86::VPCMPBZ128rri:  case X86::VPCMPUBZ128rri:
   case X86::VPCMPBZ256rri:  case X86::VPCMPUBZ256rri:
@@ -1707,8 +1673,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   }
   case X86::MOVHLPSrr:
   case X86::UNPCKHPDrr: {
-    if (!Subtarget.hasSSE2())
-      return nullptr;
+    assert(Subtarget.hasSSE2() && "Commuting MOVHLP/UNPCKHPD requires SSE2!");
 
     unsigned Opc = MI.getOpcode();
     switch (Opc) {
@@ -1825,8 +1790,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPTERNLOGQZ256rmbikz:
   case X86::VPTERNLOGQZrmbikz: {
     auto &WorkingMI = cloneIfNew(MI);
-    if (!commuteVPTERNLOG(WorkingMI, OpIdx1, OpIdx2))
-      return nullptr;
+    commuteVPTERNLOG(WorkingMI, OpIdx1, OpIdx2);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
   }
@@ -1839,12 +1803,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                      OpIdx1, OpIdx2);
     }
 
-    const X86InstrFMA3Group *FMA3Group = getFMA3Group(MI.getOpcode());
+    const X86InstrFMA3Group *FMA3Group = getFMA3Group(MI.getOpcode(),
+                                                      MI.getDesc().TSFlags);
     if (FMA3Group) {
       unsigned Opc =
         getFMA3OpcodeToCommuteOperands(MI, OpIdx1, OpIdx2, *FMA3Group);
-      if (Opc == 0)
-        return nullptr;
       auto &WorkingMI = cloneIfNew(MI);
       WorkingMI.setDesc(get(Opc));
       return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
@@ -2001,11 +1964,15 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   case X86::MOVSDrr:
   case X86::MOVSSrr:
   case X86::VMOVSDrr:
-  case X86::VMOVSSrr: {
+  case X86::VMOVSSrr:
     if (Subtarget.hasSSE41())
       return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
     return false;
-  }
+  case X86::MOVHLPSrr:
+  case X86::UNPCKHPDrr:
+    if (Subtarget.hasSSE2())
+      return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+    return false;
   case X86::VPTERNLOGDZrri:      case X86::VPTERNLOGDZrmi:
   case X86::VPTERNLOGDZ128rri:   case X86::VPTERNLOGDZ128rmi:
   case X86::VPTERNLOGDZ256rri:   case X86::VPTERNLOGDZ256rmi:
@@ -2073,7 +2040,8 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
   }
 
   default:
-    const X86InstrFMA3Group *FMA3Group = getFMA3Group(MI.getOpcode());
+    const X86InstrFMA3Group *FMA3Group = getFMA3Group(MI.getOpcode(),
+                                                      MI.getDesc().TSFlags);
     if (FMA3Group)
       return findThreeSrcCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2,
                                            FMA3Group->isIntrinsic());

@@ -3275,11 +3275,6 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
   }
 }
 
-void printAsPrintable(raw_ostream &W, StringRef S) {
-  for (char C : S)
-    W << (isprint(C) ? C : '.');
-}
-
 template <class ELFT>
 void GNUStyle<ELFT>::printSectionAsString(const ELFO *Obj,
                                          StringRef SectionName) {
@@ -3303,9 +3298,8 @@ void GNUStyle<ELFT>::printSectionAsString(const ELFO *Obj,
       CurrentWord++;
       continue;
     }
-    OS << format("[%6tx]  ", CurrentWord - SecContent);
-    printAsPrintable(OS, StringRef(CurrentWord, WordSize));
-    OS << '\n';
+    OS << format("[%6tx]", CurrentWord - SecContent);
+    OS << format(" %.*s\n", WordSize, CurrentWord);
     CurrentWord += WordSize + 1;
   }
   OS.flush();
@@ -4367,9 +4361,8 @@ void LLVMStyle<ELFT>::printSectionAsString(const ELFO *Obj,
     W.startLine() << "["
                   << to_string(
                          format_hex_no_prefix((CurrentWord - SecContent), 6))
-                  << "]  ";
-    printAsPrintable(W.startLine(), StringRef(CurrentWord, WordSize));
-    W.startLine() << '\n';
+                  << "]";
+    W.startLine() << format(" %.*s\n", WordSize, CurrentWord);
     CurrentWord += WordSize + 1;
   }
 }

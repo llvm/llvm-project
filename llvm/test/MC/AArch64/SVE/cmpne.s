@@ -49,3 +49,51 @@ cmpne   p0.s, p0/z, z0.s, z0.d
 // CHECK-ENCODING: [0x10,0x20,0x80,0x24]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 10 20 80 24 <unknown>
+
+cmpne   p0.b, p0/z, z0.b, #-16
+// CHECK-INST: cmpne p0.b, p0/z, z0.b, #-16
+// CHECK-ENCODING: [0x10,0x80,0x10,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 10 25 <unknown>
+
+cmpne   p0.h, p0/z, z0.h, #-16
+// CHECK-INST: cmpne p0.h, p0/z, z0.h, #-16
+// CHECK-ENCODING: [0x10,0x80,0x50,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 50 25 <unknown>
+
+cmpne   p0.s, p0/z, z0.s, #-16
+// CHECK-INST: cmpne p0.s, p0/z, z0.s, #-16
+// CHECK-ENCODING: [0x10,0x80,0x90,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 90 25 <unknown>
+
+cmpne   p0.d, p0/z, z0.d, #-16
+// CHECK-INST: cmpne p0.d, p0/z, z0.d, #-16
+// CHECK-ENCODING: [0x10,0x80,0xd0,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 d0 25 <unknown>
+
+cmpne   p0.b, p0/z, z0.b, #15
+// CHECK-INST: cmpne p0.b, p0/z, z0.b, #15
+// CHECK-ENCODING: [0x10,0x80,0x0f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 0f 25 <unknown>
+
+cmpne   p0.h, p0/z, z0.h, #15
+// CHECK-INST: cmpne p0.h, p0/z, z0.h, #15
+// CHECK-ENCODING: [0x10,0x80,0x4f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 4f 25 <unknown>
+
+cmpne   p0.s, p0/z, z0.s, #15
+// CHECK-INST: cmpne p0.s, p0/z, z0.s, #15
+// CHECK-ENCODING: [0x10,0x80,0x8f,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 8f 25 <unknown>
+
+cmpne   p0.d, p0/z, z0.d, #15
+// CHECK-INST: cmpne p0.d, p0/z, z0.d, #15
+// CHECK-ENCODING: [0x10,0x80,0xcf,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 80 cf 25 <unknown>
