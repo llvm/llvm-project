@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: ld.lld --icf=all %t.o -o %t --print-icf-sections 2>&1 | FileCheck %s
+# RUN: ld.lld --icf=all %t.o -o /dev/null --print-icf-sections 2>&1 | FileCheck %s
 
 # Checks that ICF does not merge 2 sections the offset of
 # the relocations of which differ.

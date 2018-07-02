@@ -14,6 +14,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int sign(int x)
@@ -72,6 +73,13 @@ int main()
     test(S("abcdefghijklmnopqrst"), S("abcde"), 15);
     test(S("abcdefghijklmnopqrst"), S("abcdefghij"), 10);
     test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrst"), 0);
+    }
+#endif
+
+#if TEST_STD_VER > 3
+    {   // LWG 2946
+    std::string s = " !";
+    assert(s.compare({"abc", 1}) < 0);
     }
 #endif
 }

@@ -77,4 +77,13 @@ int main()
          S("1234567890123456789012345678901234567890"));
     }
 #endif
+
+#if TEST_STD_VER > 3
+    {   // LWG 2946
+    std::string s;
+    s += {"abc", 1};
+    assert(s.size() == 1);
+    assert(s == "a");
+    }
+#endif
 }

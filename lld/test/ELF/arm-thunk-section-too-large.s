@@ -1,6 +1,6 @@
 // REQUIRES: ARM
 // RUN: llvm-mc %s -triple=armv7a-linux-gnueabihf -arm-add-build-attributes -filetype=obj -o %t.o
-// RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
+// RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 // CHECK: InputSection too large for range extension thunk
         .syntax unified

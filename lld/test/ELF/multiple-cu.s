@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/multiple-cu.s -o %t2.o
 # RUN: ld.lld -r -o %t.o %t1.o %t2.o
-# RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK:      error: undefined symbol: foo
 # CHECK-NEXT: referenced by test1.c:2

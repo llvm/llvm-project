@@ -35,8 +35,8 @@ struct some_alloc
 
     some_alloc() {}
     some_alloc(const some_alloc&);
+    T *allocate(size_t);
     void deallocate(void*, unsigned) {}
-
     typedef std::true_type propagate_on_container_swap;
 };
 
@@ -47,6 +47,7 @@ struct some_alloc2
 
     some_alloc2() {}
     some_alloc2(const some_alloc2&);
+    T *allocate(size_t);
     void deallocate(void*, unsigned) {}
 
     typedef std::false_type propagate_on_container_swap;

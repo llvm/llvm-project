@@ -6,7 +6,7 @@
 # RUN: llvm-readobj %t1 > /dev/null
 
 # RUN: echo "SECTIONS { ASSERT(0, fail) }" > %t3.script
-# RUN: not ld.lld -shared -o %t3 --script %t3.script %t1.o > %t.log 2>&1
+# RUN: not ld.lld -shared -o /dev/null --script %t3.script %t1.o > %t.log 2>&1
 # RUN: FileCheck %s -check-prefix=FAIL < %t.log
 # FAIL: fail
 
@@ -34,7 +34,7 @@
 ## It is consistent with how ASSERT can be written outside of the
 ## output section declaration.
 # RUN: echo "SECTIONS { .foo : { ASSERT(1, \"true\") } }" > %t7.script
-# RUN: ld.lld -shared -o %t7 --script %t7.script %t1.o
+# RUN: ld.lld -shared -o /dev/null --script %t7.script %t1.o
 
 .section .foo, "a"
  .quad 0

@@ -8,7 +8,7 @@
 // And the easy way to do that is to trigger GC. That way .text.dumb
 // be collected and mentioned check will execute.
 
-// RUN: not ld.lld -gc-sections -shared %tabs %t -o %t2
+// RUN: not ld.lld -gc-sections -shared %tabs %t -o /dev/null
 
 .section .text.dumb,"ax"
  nop
