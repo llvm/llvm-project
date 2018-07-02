@@ -1782,3 +1782,13 @@
 // CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-GENTOO-X32: "-lc"
 // CHECK-LD-GENTOO-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu \
+// RUN:     --gcc-toolchain="%S/Inputs/rhel_7_tree/opt/rh/devtoolset-7/root/usr" \
+// RUN:     --sysroot=%S/Inputs/rhel_7_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-RHEL7-DTS %s
+// CHECK-LD-RHEL7-DTS: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-RHLE7-DTS: Selected GCC installation: [[GCC_INSTALL:[[SYSROOT]]/lib/gcc/x86_64-redhat-linux/7]]
+// CHECK-LD-RHEL7-DTS-NOT: /usr/bin/ld
+// CHECK-LD-RHLE7-DTS: [[GCC_INSTALL]/../../../bin/ld

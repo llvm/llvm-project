@@ -3,11 +3,6 @@
 // ------------------------------------------------------------------------- //
 // Invalid result register
 
-uqinch w0
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
-// CHECK-NEXT: uqinch w0
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
 uqinch wsp
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqinch wsp
@@ -16,6 +11,30 @@ uqinch wsp
 uqinch sp
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqinch sp
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+uqinch z0.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK-NEXT: uqinch z0.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// ------------------------------------------------------------------------- //
+// Operands not matching up (unsigned inc only has one register operand)
+
+uqinch x0, w0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: uqinch x0, w0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+uqinch w0, w0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: uqinch w0, w0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+uqinch x0, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: uqinch x0, x0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 
@@ -42,12 +61,12 @@ uqinch x0, all, mul #17
 // Invalid predicate patterns
 
 uqinch x0, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqinch x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 uqinch x0, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: uqinch x0, vl9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

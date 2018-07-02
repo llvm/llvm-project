@@ -2022,6 +2022,7 @@ public:
   Value *CreateLaunderInvariantGroup(Value *Ptr) {
     assert(isa<PointerType>(Ptr->getType()) &&
            "launder.invariant.group only applies to pointers.");
+    // FIXME: we could potentially avoid casts to/from i8*.
     auto *PtrType = Ptr->getType();
     auto *Int8PtrTy = getInt8PtrTy(PtrType->getPointerAddressSpace());
     if (PtrType != Int8PtrTy)
@@ -2036,6 +2037,34 @@ public:
            "LaunderInvariantGroup should take and return the same type");
 
     CallInst *Fn = CreateCall(FnLaunderInvariantGroup, {Ptr});
+
+    if (PtrType != Int8PtrTy)
+      return CreateBitCast(Fn, PtrType);
+    return Fn;
+  }
+
+  /// \brief Create a strip.invariant.group intrinsic call. If Ptr type is
+  /// different from pointer to i8, it's casted to pointer to i8 in the same
+  /// address space before call and casted back to Ptr type after call.
+  Value *CreateStripInvariantGroup(Value *Ptr) {
+    assert(isa<PointerType>(Ptr->getType()) &&
+           "strip.invariant.group only applies to pointers.");
+
+    // FIXME: we could potentially avoid casts to/from i8*.
+    auto *PtrType = Ptr->getType();
+    auto *Int8PtrTy = getInt8PtrTy(PtrType->getPointerAddressSpace());
+    if (PtrType != Int8PtrTy)
+      Ptr = CreateBitCast(Ptr, Int8PtrTy);
+    Module *M = BB->getParent()->getParent();
+    Function *FnStripInvariantGroup = Intrinsic::getDeclaration(
+        M, Intrinsic::strip_invariant_group, {Int8PtrTy});
+
+    assert(FnStripInvariantGroup->getReturnType() == Int8PtrTy &&
+           FnStripInvariantGroup->getFunctionType()->getParamType(0) ==
+               Int8PtrTy &&
+           "StripInvariantGroup should take and return the same type");
+
+    CallInst *Fn = CreateCall(FnStripInvariantGroup, {Ptr});
 
     if (PtrType != Int8PtrTy)
       return CreateBitCast(Fn, PtrType);

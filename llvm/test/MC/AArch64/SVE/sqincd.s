@@ -37,6 +37,87 @@ sqincd  x0, all, mul #16
 
 
 // ---------------------------------------------------------------------------//
+// Test 32-bit form (x0, w0) and its aliases
+// ---------------------------------------------------------------------------//
+
+sqincd  x0, w0
+// CHECK-INST: sqincd  x0, w0
+// CHECK-ENCODING: [0xe0,0xf3,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 f3 e0 04 <unknown>
+
+sqincd  x0, w0, all
+// CHECK-INST: sqincd  x0, w0
+// CHECK-ENCODING: [0xe0,0xf3,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 f3 e0 04 <unknown>
+
+sqincd  x0, w0, all, mul #1
+// CHECK-INST: sqincd  x0, w0
+// CHECK-ENCODING: [0xe0,0xf3,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 f3 e0 04 <unknown>
+
+sqincd  x0, w0, all, mul #16
+// CHECK-INST: sqincd  x0, w0, all
+// CHECK-ENCODING: [0xe0,0xf3,0xef,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 f3 ef 04 <unknown>
+
+sqincd  x0, w0, pow2
+// CHECK-INST: sqincd  x0, w0, pow2
+// CHECK-ENCODING: [0x00,0xf0,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 f0 e0 04 <unknown>
+
+sqincd  x0, w0, pow2, mul #16
+// CHECK-INST: sqincd  x0, w0, pow2, mul #16
+// CHECK-ENCODING: [0x00,0xf0,0xef,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 f0 ef 04 <unknown>
+
+
+// ---------------------------------------------------------------------------//
+// Test vector form and aliases.
+// ---------------------------------------------------------------------------//
+sqincd  z0.d
+// CHECK-INST: sqincd  z0.d
+// CHECK-ENCODING: [0xe0,0xc3,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 e0 04 <unknown>
+
+sqincd  z0.d, all
+// CHECK-INST: sqincd  z0.d
+// CHECK-ENCODING: [0xe0,0xc3,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 e0 04 <unknown>
+
+sqincd  z0.d, all, mul #1
+// CHECK-INST: sqincd  z0.d
+// CHECK-ENCODING: [0xe0,0xc3,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 e0 04 <unknown>
+
+sqincd  z0.d, all, mul #16
+// CHECK-INST: sqincd  z0.d, all, mul #16
+// CHECK-ENCODING: [0xe0,0xc3,0xef,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 ef 04 <unknown>
+
+sqincd  z0.d, pow2
+// CHECK-INST: sqincd  z0.d, pow2
+// CHECK-ENCODING: [0x00,0xc0,0xe0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 e0 04 <unknown>
+
+sqincd  z0.d, pow2, mul #16
+// CHECK-INST: sqincd  z0.d, pow2, mul #16
+// CHECK-ENCODING: [0x00,0xc0,0xef,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 c0 ef 04 <unknown>
+
+
+// ---------------------------------------------------------------------------//
 // Test all patterns for 64-bit form
 // ---------------------------------------------------------------------------//
 

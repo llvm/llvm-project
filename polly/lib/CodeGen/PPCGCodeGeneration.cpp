@@ -578,8 +578,9 @@ private:
 
   /// Insert function calls to retrieve the SPIR group/local ids.
   ///
-  /// @param The kernel to generate the function calls for.
-  void insertKernelCallsSPIR(ppcg_kernel *Kernel);
+  /// @param Kernel The kernel to generate the function calls for.
+  /// @param SizeTypeIs64Bit Whether size_t of the openCl device is 64bit.
+  void insertKernelCallsSPIR(ppcg_kernel *Kernel, bool SizeTypeIs64bit);
 
   /// Setup the creation of functions referenced by the GPU kernel.
   ///
@@ -2097,7 +2098,8 @@ void GPUNodeBuilder::insertKernelIntrinsics(ppcg_kernel *Kernel) {
   }
 }
 
-void GPUNodeBuilder::insertKernelCallsSPIR(ppcg_kernel *Kernel) {
+void GPUNodeBuilder::insertKernelCallsSPIR(ppcg_kernel *Kernel,
+                                           bool SizeTypeIs64bit) {
   const char *GroupName[3] = {"__gen_ocl_get_group_id0",
                               "__gen_ocl_get_group_id1",
                               "__gen_ocl_get_group_id2"};
@@ -2105,8 +2107,11 @@ void GPUNodeBuilder::insertKernelCallsSPIR(ppcg_kernel *Kernel) {
   const char *LocalName[3] = {"__gen_ocl_get_local_id0",
                               "__gen_ocl_get_local_id1",
                               "__gen_ocl_get_local_id2"};
+  IntegerType *SizeT =
+      SizeTypeIs64bit ? Builder.getInt64Ty() : Builder.getInt32Ty();
 
-  auto createFunc = [this](const char *Name, __isl_take isl_id *Id) mutable {
+  auto createFunc = [this](const char *Name, __isl_take isl_id *Id,
+                           IntegerType *SizeT) mutable {
     Module *M = Builder.GetInsertBlock()->getParent()->getParent();
     Function *FN = M->getFunction(Name);
 
@@ -2114,22 +2119,23 @@ void GPUNodeBuilder::insertKernelCallsSPIR(ppcg_kernel *Kernel) {
     if (!FN) {
       GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
       std::vector<Type *> Args;
-      FunctionType *Ty = FunctionType::get(Builder.getInt32Ty(), Args, false);
+      FunctionType *Ty = FunctionType::get(SizeT, Args, false);
       FN = Function::Create(Ty, Linkage, Name, M);
       FN->setCallingConv(CallingConv::SPIR_FUNC);
     }
 
     Value *Val = Builder.CreateCall(FN, {});
-    Val = Builder.CreateIntCast(Val, Builder.getInt64Ty(), false, Name);
+    if (SizeT == Builder.getInt32Ty())
+      Val = Builder.CreateIntCast(Val, Builder.getInt64Ty(), false, Name);
     IDToValue[Id] = Val;
     KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
   };
 
   for (int i = 0; i < Kernel->n_grid; ++i)
-    createFunc(GroupName[i], isl_id_list_get_id(Kernel->block_ids, i));
+    createFunc(GroupName[i], isl_id_list_get_id(Kernel->block_ids, i), SizeT);
 
   for (int i = 0; i < Kernel->n_block; ++i)
-    createFunc(LocalName[i], isl_id_list_get_id(Kernel->thread_ids, i));
+    createFunc(LocalName[i], isl_id_list_get_id(Kernel->thread_ids, i), SizeT);
 }
 
 void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
@@ -2307,8 +2313,10 @@ void GPUNodeBuilder::createKernelFunction(
     insertKernelIntrinsics(Kernel);
     break;
   case GPUArch::SPIR32:
+    insertKernelCallsSPIR(Kernel, false);
+    break;
   case GPUArch::SPIR64:
-    insertKernelCallsSPIR(Kernel);
+    insertKernelCallsSPIR(Kernel, true);
     break;
   }
 }

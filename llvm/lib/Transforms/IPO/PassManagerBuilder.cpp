@@ -38,6 +38,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/InstSimplifyPass.h"
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize.h"
@@ -94,6 +95,10 @@ static cl::opt<CFLAAType>
 static cl::opt<bool> EnableLoopInterchange(
     "enable-loopinterchange", cl::init(false), cl::Hidden,
     cl::desc("Enable the new, experimental LoopInterchange Pass"));
+
+static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
+                                        cl::init(false), cl::Hidden,
+                                        cl::desc("Enable Unroll And Jam Pass"));
 
 static cl::opt<bool>
     EnablePrepareForThinLTO("prepare-for-thinlto", cl::init(false), cl::Hidden,
@@ -668,6 +673,13 @@ void PassManagerBuilder::populateModulePassManager(
   addInstructionCombiningPass(MPM);
 
   if (!DisableUnrollLoops) {
+    if (EnableUnrollAndJam) {
+      // Unroll and Jam. We do this before unroll but need to be in a separate
+      // loop pass manager in order for the outer loop to be processed by
+      // unroll and jam before the inner loop is unrolled.
+      MPM.add(createLoopUnrollAndJamPass(OptLevel));
+    }
+
     MPM.add(createLoopUnrollPass(OptLevel));    // Unroll small loops
 
     // LoopUnroll may generate some redundency to cleanup.
@@ -703,7 +715,7 @@ void PassManagerBuilder::populateModulePassManager(
   // result too early.
   MPM.add(createLoopSinkPass());
   // Get rid of LCSSA nodes.
-  MPM.add(createInstructionSimplifierPass());
+  MPM.add(createInstSimplifyLegacyPass());
 
   // This hoists/decomposes div/rem ops. It should run after other sink/hoist
   // passes to avoid re-sinking, but before SimplifyCFG because it can allow

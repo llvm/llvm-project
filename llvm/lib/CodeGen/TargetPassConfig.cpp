@@ -111,11 +111,11 @@ static cl::opt<bool> VerifyMachineCode("verify-machineinstrs", cl::Hidden,
     cl::desc("Verify generated machine code"),
     cl::init(false),
     cl::ZeroOrMore);
-enum RunOutliner { AlwaysOutline, NeverOutline };
+enum RunOutliner { AlwaysOutline, NeverOutline, TargetDefault };
 // Enable or disable the MachineOutliner.
 static cl::opt<RunOutliner> EnableMachineOutliner(
     "enable-machine-outliner", cl::desc("Enable the machine outliner"),
-    cl::Hidden, cl::ValueOptional, cl::init(NeverOutline),
+    cl::Hidden, cl::ValueOptional, cl::init(TargetDefault),
     cl::values(clEnumValN(AlwaysOutline, "always",
                           "Run on all functions guaranteed to be beneficial"),
                clEnumValN(NeverOutline, "never", "Disable all outlining"),
@@ -914,8 +914,13 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&PatchableFunctionID, false);
 
   if (TM->Options.EnableMachineOutliner && getOptLevel() != CodeGenOpt::None &&
-      EnableMachineOutliner == AlwaysOutline)
-    addPass(createMachineOutlinerPass());
+      EnableMachineOutliner != NeverOutline) {
+    bool RunOnAllFunctions = (EnableMachineOutliner == AlwaysOutline);
+    bool AddOutliner = RunOnAllFunctions ||
+                       TM->Options.SupportsDefaultOutlining;
+    if (AddOutliner)
+      addPass(createMachineOutlinerPass(RunOnAllFunctions));
+  }
 
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();

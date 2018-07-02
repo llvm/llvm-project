@@ -3051,11 +3051,8 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   auto IsPowerOfTwo = [](ConstantSDNode *C) {
     if (C->isNullValue() || C->isOpaque())
       return false;
-    if (C->getAPIntValue().isAllOnesValue())
-      return false;
     if (C->getAPIntValue().isMinSignedValue())
       return false;
-
     if (C->getAPIntValue().isPowerOf2())
       return true;
     if ((-C->getAPIntValue()).isPowerOf2())
@@ -3095,6 +3092,15 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Add, C1);
     AddToWorklist(Sra.getNode());
 
+    // Special case: (sdiv X, 1) -> X
+    // Special Case: (sdiv X, -1) -> 0-X
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
+    SDValue IsOne = DAG.getSetCC(DL, CCVT, N1, One, ISD::SETEQ);
+    SDValue IsAllOnes = DAG.getSetCC(DL, CCVT, N1, AllOnes, ISD::SETEQ);
+    SDValue IsOneOrAllOnes = DAG.getNode(ISD::OR, DL, CCVT, IsOne, IsAllOnes);
+    Sra = DAG.getSelect(DL, VT, IsOneOrAllOnes, N0, Sra);
+
     // If dividing by a positive value, we're done. Otherwise, the result must
     // be negated.
     SDValue Zero = DAG.getConstant(0, DL, VT);
@@ -3103,10 +3109,6 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     // FIXME: Use SELECT_CC once we improve SELECT_CC constant-folding.
     SDValue IsNeg = DAG.getSetCC(DL, CCVT, N1, Zero, ISD::SETLT);
     SDValue Res = DAG.getSelect(DL, VT, IsNeg, Sub, Sra);
-    // Special case: (sdiv X, 1) -> X
-    SDValue One = DAG.getConstant(1, DL, VT);
-    SDValue IsOne = DAG.getSetCC(DL, CCVT, N1, One, ISD::SETEQ);
-    Res = DAG.getSelect(DL, VT, IsOne, N0, Res);
     return Res;
   }
 

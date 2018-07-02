@@ -60,3 +60,17 @@ cmpeq p0.d, p0/z, z0.s, z0.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: cmpeq p0.d, p0/z, z0.s, z0.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid immediate range
+
+cmpeq p0.s, p0/z, z0.s, #-17
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-16, 15].
+// CHECK-NEXT: cmpeq p0.s, p0/z, z0.s, #-17
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cmpeq p0.s, p0/z, z0.s, #16
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-16, 15].
+// CHECK-NEXT: cmpeq p0.s, p0/z, z0.s, #16
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

@@ -580,7 +580,7 @@ namespace X86II {
   // getBaseOpcodeFor - This function returns the "base" X86 opcode for the
   // specified machine instruction.
   //
-  inline unsigned char getBaseOpcodeFor(uint64_t TSFlags) {
+  inline uint8_t getBaseOpcodeFor(uint64_t TSFlags) {
     return TSFlags >> X86II::OpcodeShift;
   }
 
