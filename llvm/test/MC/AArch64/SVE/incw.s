@@ -7,6 +7,39 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+// ---------------------------------------------------------------------------//
+// Test vector form and aliases.
+// ---------------------------------------------------------------------------//
+
+incw    z0.s
+// CHECK-INST: incw    z0.s
+// CHECK-ENCODING: [0xe0,0xc3,0xb0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 b0 04 <unknown>
+
+incw    z0.s, all
+// CHECK-INST: incw    z0.s
+// CHECK-ENCODING: [0xe0,0xc3,0xb0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 b0 04 <unknown>
+
+incw    z0.s, all, mul #1
+// CHECK-INST: incw    z0.s
+// CHECK-ENCODING: [0xe0,0xc3,0xb0,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 b0 04 <unknown>
+
+incw    z0.s, all, mul #16
+// CHECK-INST: incw    z0.s, all, mul #16
+// CHECK-ENCODING: [0xe0,0xc3,0xbf,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 c3 bf 04 <unknown>
+
+
+// ---------------------------------------------------------------------------//
+// Test scalar form and aliases.
+// ---------------------------------------------------------------------------//
+
 incw    x0
 // CHECK-INST: incw    x0
 // CHECK-ENCODING: [0xe0,0xe3,0xb0,0x04]
@@ -30,6 +63,12 @@ incw    x0, all, mul #16
 // CHECK-ENCODING: [0xe0,0xe3,0xbf,0x04]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 e3 bf 04 <unknown>
+
+
+// ---------------------------------------------------------------------------//
+// Test predicate patterns
+// ---------------------------------------------------------------------------//
+
 
 incw    x0, pow2
 // CHECK-INST: incw    x0, pow2

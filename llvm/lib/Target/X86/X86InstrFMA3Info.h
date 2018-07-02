@@ -43,17 +43,17 @@ struct X86InstrFMA3Group {
   enum : uint16_t {
     /// This bit must be set in the 'Attributes' field of FMA group if such
     /// group of FMA opcodes consists of FMA intrinsic opcodes.
-    X86FMA3Intrinsic = 0x1,
+    Intrinsic = 0x1,
 
     /// This bit must be set in the 'Attributes' field of FMA group if such
     /// group of FMA opcodes consists of AVX512 opcodes accepting a k-mask and
     /// passing the elements from the 1st operand to the result of the operation
     /// when the correpondings bits in the k-mask are unset.
-    X86FMA3KMergeMasked = 0x2,
+    KMergeMasked = 0x2,
 
     /// This bit must be set in the 'Attributes' field of FMA group if such
     /// group of FMA opcodes consists of AVX512 opcodes accepting a k-zeromask.
-    X86FMA3KZeroMasked = 0x4,
+    KZeroMasked = 0x4,
   };
 
   /// Returns the 132 form of FMA opcode.
@@ -72,26 +72,30 @@ struct X86InstrFMA3Group {
   }
 
   /// Returns true iff the group of FMA opcodes holds intrinsic opcodes.
-  bool isIntrinsic() const { return (Attributes & X86FMA3Intrinsic) != 0; }
+  bool isIntrinsic() const { return (Attributes & Intrinsic) != 0; }
 
   /// Returns true iff the group of FMA opcodes holds k-merge-masked opcodes.
   bool isKMergeMasked() const {
-    return (Attributes & X86FMA3KMergeMasked) != 0;
+    return (Attributes & KMergeMasked) != 0;
   }
 
   /// Returns true iff the group of FMA opcodes holds k-zero-masked opcodes.
-  bool isKZeroMasked() const { return (Attributes & X86FMA3KZeroMasked) != 0; }
+  bool isKZeroMasked() const { return (Attributes &KZeroMasked) != 0; }
 
   /// Returns true iff the group of FMA opcodes holds any of k-masked opcodes.
   bool isKMasked() const {
-    return (Attributes & (X86FMA3KMergeMasked | X86FMA3KZeroMasked)) != 0;
+    return (Attributes & (KMergeMasked | KZeroMasked)) != 0;
+  }
+
+  bool operator<(const X86InstrFMA3Group &RHS) const {
+    return Opcodes[0] < RHS.Opcodes[0];
   }
 };
 
 /// Returns a reference to a group of FMA3 opcodes to where the given
 /// \p Opcode is included. If the given \p Opcode is not recognized as FMA3
 /// and not included into any FMA3 group, then nullptr is returned.
-const X86InstrFMA3Group *getFMA3Group(unsigned Opcode);
+const X86InstrFMA3Group *getFMA3Group(unsigned Opcode, uint64_t TSFlags);
 
 } // end namespace llvm
 

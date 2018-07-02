@@ -18,6 +18,25 @@ sqincb sp
 // CHECK-NEXT: sqincb sp
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+sqincb z0.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: sqincb z0.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// ------------------------------------------------------------------------- //
+// Operands not matching up
+
+sqincb x0, w1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must be 32-bit form of destination register
+// CHECK-NEXT: sqincb x0, w1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+sqincb x0, x0
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK-NEXT: sqincb x0, x0
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 
 // ------------------------------------------------------------------------- //
 // Immediate not compatible with encode/decode function.
@@ -42,12 +61,12 @@ sqincb x0, all, mul #17
 // Invalid predicate patterns
 
 sqincb x0, vl512
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: sqincb x0, vl512
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 sqincb x0, vl9
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate pattern
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: sqincb x0, vl9
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

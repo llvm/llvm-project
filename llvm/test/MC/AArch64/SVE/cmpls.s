@@ -48,3 +48,51 @@ cmpls   p0.s, p0/z, z0.s, z0.d
 // CHECK-ENCODING: [0x10,0xe0,0x80,0x24]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 10 e0 80 24 <unknown>
+
+cmpls   p0.b, p0/z, z0.b, #0
+// CHECK-INST: cmpls p0.b, p0/z, z0.b, #0
+// CHECK-ENCODING: [0x10,0x20,0x20,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 20 20 24 <unknown>
+
+cmpls   p0.h, p0/z, z0.h, #0
+// CHECK-INST: cmpls p0.h, p0/z, z0.h, #0
+// CHECK-ENCODING: [0x10,0x20,0x60,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 20 60 24 <unknown>
+
+cmpls   p0.s, p0/z, z0.s, #0
+// CHECK-INST: cmpls p0.s, p0/z, z0.s, #0
+// CHECK-ENCODING: [0x10,0x20,0xa0,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 20 a0 24 <unknown>
+
+cmpls   p0.d, p0/z, z0.d, #0
+// CHECK-INST: cmpls p0.d, p0/z, z0.d, #0
+// CHECK-ENCODING: [0x10,0x20,0xe0,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 20 e0 24 <unknown>
+
+cmpls   p0.b, p0/z, z0.b, #127
+// CHECK-INST: cmpls p0.b, p0/z, z0.b, #127
+// CHECK-ENCODING: [0x10,0xe0,0x3f,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 e0 3f 24 <unknown>
+
+cmpls   p0.h, p0/z, z0.h, #127
+// CHECK-INST: cmpls p0.h, p0/z, z0.h, #127
+// CHECK-ENCODING: [0x10,0xe0,0x7f,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 e0 7f 24 <unknown>
+
+cmpls   p0.s, p0/z, z0.s, #127
+// CHECK-INST: cmpls p0.s, p0/z, z0.s, #127
+// CHECK-ENCODING: [0x10,0xe0,0xbf,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 e0 bf 24 <unknown>
+
+cmpls   p0.d, p0/z, z0.d, #127
+// CHECK-INST: cmpls p0.d, p0/z, z0.d, #127
+// CHECK-ENCODING: [0x10,0xe0,0xff,0x24]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 10 e0 ff 24 <unknown>
