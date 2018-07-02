@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t
-# RUN: ld.lld --icf=all --print-icf-sections %t -o %t2 | FileCheck %s -allow-empty
+# RUN: ld.lld --icf=all --print-icf-sections %t -o /dev/null | FileCheck %s -allow-empty
 
 # CHECK-NOT: selected
 
