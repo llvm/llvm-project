@@ -60,3 +60,17 @@ cmplo p0.d, p0/z, z0.s, z0.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: cmplo p0.d, p0/z, z0.s, z0.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Invalid immediate range
+
+cmplo p0.s, p0/z, z0.s, #-1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 127].
+// CHECK-NEXT: cmplo p0.s, p0/z, z0.s, #-1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+cmplo p0.s, p0/z, z0.s, #128
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 127].
+// CHECK-NEXT: cmplo p0.s, p0/z, z0.s, #128
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

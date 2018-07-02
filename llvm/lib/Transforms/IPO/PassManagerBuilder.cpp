@@ -96,6 +96,10 @@ static cl::opt<bool> EnableLoopInterchange(
     "enable-loopinterchange", cl::init(false), cl::Hidden,
     cl::desc("Enable the new, experimental LoopInterchange Pass"));
 
+static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
+                                        cl::init(false), cl::Hidden,
+                                        cl::desc("Enable Unroll And Jam Pass"));
+
 static cl::opt<bool>
     EnablePrepareForThinLTO("prepare-for-thinlto", cl::init(false), cl::Hidden,
                             cl::desc("Enable preparation for ThinLTO."));
@@ -669,6 +673,13 @@ void PassManagerBuilder::populateModulePassManager(
   addInstructionCombiningPass(MPM);
 
   if (!DisableUnrollLoops) {
+    if (EnableUnrollAndJam) {
+      // Unroll and Jam. We do this before unroll but need to be in a separate
+      // loop pass manager in order for the outer loop to be processed by
+      // unroll and jam before the inner loop is unrolled.
+      MPM.add(createLoopUnrollAndJamPass(OptLevel));
+    }
+
     MPM.add(createLoopUnrollPass(OptLevel));    // Unroll small loops
 
     // LoopUnroll may generate some redundency to cleanup.

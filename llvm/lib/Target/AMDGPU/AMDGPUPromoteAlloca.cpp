@@ -457,6 +457,7 @@ static bool isCallPromotable(CallInst *CI) {
   case Intrinsic::invariant_start:
   case Intrinsic::invariant_end:
   case Intrinsic::launder_invariant_group:
+  case Intrinsic::strip_invariant_group:
   case Intrinsic::objectsize:
     return true;
   default:
@@ -882,6 +883,7 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
+    case Intrinsic::strip_invariant_group:
       Intr->eraseFromParent();
       // FIXME: I think the invariant marker should still theoretically apply,
       // but the intrinsics need to be changed to accept pointers with any

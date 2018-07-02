@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <thread>
+#include <alloca.h>
 
 #include "callback.h"
 #include "omp.h"
@@ -14,6 +15,9 @@ void f() {
   // (omp_get_thread_num() does not work because it just returns 0 if the
   // runtime isn't initialized yet...)
   omp_get_num_threads();
+
+  // Call alloca() to force availability of frame pointer
+  void *p = alloca(0);
 
   OMPT_SIGNAL(condition);
   // Wait for both initial threads to arrive that will eventually become the

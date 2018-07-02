@@ -52,6 +52,19 @@ entry:
     ret i8 %b
 }
 
+; CHECK-LABEL: define i1 @proveEqualityForStrip(
+define i1 @proveEqualityForStrip(i8* %a) {
+; FIXME: The first call could be also removed by GVN. Right now
+; DCE removes it. The second call is CSE'd with the first one.
+; CHECK: %b1 = call i8* @llvm.strip.invariant.group.p0i8(i8* %a)
+  %b1 = call i8* @llvm.strip.invariant.group.p0i8(i8* %a)
+; CHECK-NOT: llvm.strip.invariant.group
+  %b2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %a)
+  %r = icmp eq i8* %b1, %b2
+; CHECK: ret i1 true
+  ret i1 %r
+}
+
 ; CHECK-LABEL: define i8 @unoptimizable1() {
 define i8 @unoptimizable1() {
 entry:

@@ -237,4 +237,21 @@ define void @captureLaunder(i8* %p) {
   ret void
 }
 
+; CHECK: @nocaptureStrip(i8* nocapture %p)
+define void @nocaptureStrip(i8* %p) {
+entry:
+  %b = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
+  store i8 42, i8* %b
+  ret void
+}
+
+@g3 = global i8* null
+; CHECK: define void @captureStrip(i8* %p)
+define void @captureStrip(i8* %p) {
+  %b = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
+  store i8* %b, i8** @g3
+  ret void
+}
+
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
+declare i8* @llvm.strip.invariant.group.p0i8(i8*)

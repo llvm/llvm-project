@@ -165,7 +165,7 @@ static const unsigned NoThreshold = std::numeric_limits<unsigned>::max();
 
 /// Gather the various unrolling parameters based on the defaults, compiler
 /// flags, TTI overrides and user specified parameters.
-static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
+TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
@@ -192,6 +192,8 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.Force = false;
   UP.UpperBound = false;
   UP.AllowPeeling = true;
+  UP.UnrollAndJam = false;
+  UP.UnrollAndJamInnerLoopThreshold = 60;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP);
@@ -615,11 +617,10 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 }
 
 /// ApproximateLoopSize - Approximate the size of the loop.
-static unsigned
-ApproximateLoopSize(const Loop *L, unsigned &NumCalls, bool &NotDuplicatable,
-                    bool &Convergent, const TargetTransformInfo &TTI,
-                    const SmallPtrSetImpl<const Value *> &EphValues,
-                    unsigned BEInsns) {
+unsigned llvm::ApproximateLoopSize(
+    const Loop *L, unsigned &NumCalls, bool &NotDuplicatable, bool &Convergent,
+    const TargetTransformInfo &TTI,
+    const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns) {
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
     Metrics.analyzeBasicBlock(BB, TTI, EphValues);
@@ -712,7 +713,7 @@ static uint64_t getUnrolledLoopSize(
 
 // Returns true if unroll count was set explicitly.
 // Calculates unroll count and writes it to UP.Count.
-static bool computeUnrollCount(
+bool llvm::computeUnrollCount(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
     ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
     OptimizationRemarkEmitter *ORE, unsigned &TripCount, unsigned MaxTripCount,
@@ -753,8 +754,8 @@ static bool computeUnrollCount(
 
   if (ExplicitUnroll && TripCount != 0) {
     // If the loop has an unrolling pragma, we want to be more aggressive with
-    // unrolling limits. Set thresholds to at least the PragmaThreshold value
-    // which is larger than the default limits.
+    // unrolling limits. Set thresholds to at least the PragmaUnrollThreshold
+    // value which is larger than the default limits.
     UP.Threshold = std::max<unsigned>(UP.Threshold, PragmaUnrollThreshold);
     UP.PartialThreshold =
         std::max<unsigned>(UP.PartialThreshold, PragmaUnrollThreshold);

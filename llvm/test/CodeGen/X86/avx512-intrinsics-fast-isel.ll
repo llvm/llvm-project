@@ -784,8 +784,8 @@ define <16 x float> @test_mm512_maskz_broadcastss_ps(i16 %a0, <4 x float> %a1) {
   ret <16 x float> %res1
 }
 
-define <8 x double> @test_mm512_movddup_pd(<8 x double> %a0) {
-; CHECK-LABEL: test_mm512_movddup_pd:
+define <8 x double> @test_mm512_movedup_pd(<8 x double> %a0) {
+; CHECK-LABEL: test_mm512_movedup_pd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovddup {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6]
 ; CHECK-NEXT:    ret{{[l|q]}}
@@ -793,15 +793,15 @@ define <8 x double> @test_mm512_movddup_pd(<8 x double> %a0) {
   ret <8 x double> %res
 }
 
-define <8 x double> @test_mm512_mask_movddup_pd(<8 x double> %a0, i8 %a1, <8 x double> %a2) {
-; X86-LABEL: test_mm512_mask_movddup_pd:
+define <8 x double> @test_mm512_mask_movedup_pd(<8 x double> %a0, i8 %a1, <8 x double> %a2) {
+; X86-LABEL: test_mm512_mask_movedup_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovddup {{.*#+}} zmm0 {%k1} = zmm1[0,0,2,2,4,4,6,6]
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_mm512_mask_movddup_pd:
+; X64-LABEL: test_mm512_mask_movedup_pd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovddup {{.*#+}} zmm0 {%k1} = zmm1[0,0,2,2,4,4,6,6]
@@ -812,15 +812,15 @@ define <8 x double> @test_mm512_mask_movddup_pd(<8 x double> %a0, i8 %a1, <8 x d
   ret <8 x double> %res1
 }
 
-define <8 x double> @test_mm512_maskz_movddup_pd(i8 %a0, <8 x double> %a1) {
-; X86-LABEL: test_mm512_maskz_movddup_pd:
+define <8 x double> @test_mm512_maskz_movedup_pd(i8 %a0, <8 x double> %a1) {
+; X86-LABEL: test_mm512_maskz_movedup_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovddup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6]
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: test_mm512_maskz_movddup_pd:
+; X64-LABEL: test_mm512_maskz_movedup_pd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovddup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6]
