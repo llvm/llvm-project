@@ -77,8 +77,14 @@ define i8 @unoptimizable2() {
 define void @dontProveEquality(i8* %a) {
   %b = call i8* @llvm.launder.invariant.group.p0i8(i8* %a)
   %r = icmp eq i8* %b, %a
-;CHECK: call void @useBool(i1 %r)
+; CHECK: call void @useBool(i1 %r)
   call void @useBool(i1 %r)
+
+  %b2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %a)
+  %r2 = icmp eq i8* %b2, %a
+; CHECK: call void @useBool(i1 %r2)
+  call void @useBool(i1 %r2)
+
   ret void
 }
 
@@ -90,5 +96,9 @@ declare void @clobber(i8*)
 ; CHECK-NEXT: declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 
-!0 = !{}
+; CHECK: Function Attrs: nounwind readnone speculatable{{$}}
+; CHECK-NEXT: declare i8* @llvm.strip.invariant.group.p0i8(i8*)
+declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 
+
+!0 = !{}
