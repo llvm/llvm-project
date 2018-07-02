@@ -320,11 +320,15 @@ void ClangdLSPServer::onCodeAction(CodeActionParams &Params) {
 
 void ClangdLSPServer::onCompletion(TextDocumentPositionParams &Params) {
   Server.codeComplete(Params.textDocument.uri.file(), Params.position, CCOpts,
-                      [](llvm::Expected<CompletionList> List) {
+                      [this](llvm::Expected<CodeCompleteResult> List) {
                         if (!List)
                           return replyError(ErrorCode::InvalidParams,
                                             llvm::toString(List.takeError()));
-                        reply(*List);
+                        CompletionList LSPList;
+                        LSPList.isIncomplete = List->HasMore;
+                        for (const auto &R : List->Completions)
+                          LSPList.items.push_back(R.render(CCOpts));
+                        reply(std::move(LSPList));
                       });
 }
 

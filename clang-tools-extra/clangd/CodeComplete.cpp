@@ -1248,5 +1248,18 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   return LSP;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const CodeCompletion &C) {
+  // For now just lean on CompletionItem.
+  return OS << C.render(CodeCompleteOptions());
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const CodeCompleteResult &R) {
+  OS << "CodeCompleteResult: " << R.Completions.size() << (R.HasMore ? "+" : "")
+     << " items:\n";
+  for (const auto &C : R.Completions)
+    OS << C << "\n";
+  return OS;
+}
+
 } // namespace clangd
 } // namespace clang

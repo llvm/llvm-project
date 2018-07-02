@@ -1,11 +1,10 @@
-; RUN: opt -check-debugify < %s -S -o - 2>&1 | FileCheck %s
+; RUN: opt -check-debugify < %s -S -o - 2>&1 | FileCheck %s -implicit-check-not "ERROR: Instruction with empty DebugLoc in function bar"
 
 ; CHECK: ERROR: Instruction with empty DebugLoc in function foo --   ret void
 define void @foo() !dbg !6 {
   ret void
 }
 
-; CHECK-NOT: ERROR: Instruction with empty DebugLoc in function bar
 define i32 @bar() !dbg !9 {
   ret i32 0, !dbg !15
 }

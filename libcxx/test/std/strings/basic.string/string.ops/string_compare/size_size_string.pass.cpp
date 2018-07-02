@@ -15,9 +15,8 @@
 #include <stdexcept>
 #include <cassert>
 
-#include "min_allocator.h"
-
 #include "test_macros.h"
+#include "min_allocator.h"
 
 int sign(int x)
 {
@@ -376,6 +375,13 @@ int main()
     test0<S>();
     test1<S>();
     test2<S>();
+    }
+#endif
+
+#if TEST_STD_VER > 3
+    {   // LWG 2946
+    std::string s = " !";
+    assert(s.compare(0, 1, {"abc", 1}) < 0);
     }
 #endif
 }

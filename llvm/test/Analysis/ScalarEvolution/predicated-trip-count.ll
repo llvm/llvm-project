@@ -80,7 +80,7 @@ return:         ; preds = %bb5
 ; CHECK-NEXT:    -->  (sext i16 {%Start,+,-1}<%bb3> to i32)
 ; CHECK:       Loop %bb3: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %bb3: Unpredictable max backedge-taken count.
-; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is (2 + (sext i16 %Start to i32) + ((-2 + (-1 * (sext i16 %Start to i32))) smax (-1 + (-1 * %M))))
+; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is (2 + (sext i16 %Start to i32) + ((-2 + (-1 * (sext i16 %Start to i32))<nsw>) smax (-1 + (-1 * %M))))
 ; CHECK-NEXT:  Predicates:
 ; CHECK-NEXT:    {%Start,+,-1}<%bb3> Added Flags: <nssw>
 

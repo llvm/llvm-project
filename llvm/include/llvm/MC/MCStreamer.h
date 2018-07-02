@@ -566,7 +566,8 @@ public:
   /// \param ByteAlignment - The alignment of the zerofill symbol if
   /// non-zero. This must be a power of 2 on some targets.
   virtual void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                            uint64_t Size = 0, unsigned ByteAlignment = 0) = 0;
+                            uint64_t Size = 0, unsigned ByteAlignment = 0,
+                            SMLoc Loc = SMLoc()) = 0;
 
   /// Emit a thread local bss (.tbss) symbol.
   ///

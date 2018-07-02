@@ -69,6 +69,8 @@ public:
     return ProcResourceMasks;
   }
 
+  void clear() { VariantDescriptors.shrink_and_clear(); }
+
   std::unique_ptr<Instruction> createInstruction(const llvm::MCInst &MCI);
 };
 } // namespace mca

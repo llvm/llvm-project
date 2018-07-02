@@ -45,9 +45,12 @@ static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config C;
   C.Options = InitTargetOptionsFromCodeGenFlags();
 
-  // Always emit a section per function/datum with LTO.
+  // Always emit a section per function/data with LTO.
   C.Options.FunctionSections = true;
   C.Options.DataSections = true;
+
+  // Wasm currently only supports ThreadModel::Single
+  C.Options.ThreadModel = ThreadModel::Single;
 
   C.DisableVerify = Config->DisableVerify;
   C.DiagHandler = diagnosticHandler;

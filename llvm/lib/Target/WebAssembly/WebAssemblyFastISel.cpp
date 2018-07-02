@@ -419,7 +419,7 @@ unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V, bool &Not) {
         return getRegForValue(ICmp->getOperand(0));
       }
 
-  if (BinaryOperator::isNot(V)) {
+  if (BinaryOperator::isNot(V) && V->getType()->isIntegerTy(32)) {
     Not = true;
     return getRegForValue(BinaryOperator::getNotArgument(V));
   }
