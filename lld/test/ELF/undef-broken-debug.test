@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: yaml2obj %s -o %t.o
-# RUN: not ld.lld %t.o -o %t.exe 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # The debug info has a broken relocation. Check that we don't crash
 # and still report the undefined symbol.

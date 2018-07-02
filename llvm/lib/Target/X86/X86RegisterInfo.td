@@ -23,6 +23,7 @@ class X86Reg<string n, bits<16> Enc, list<Register> subregs = []> : Register<n> 
 let Namespace = "X86" in {
   def sub_8bit     : SubRegIndex<8>;
   def sub_8bit_hi  : SubRegIndex<8, 8>;
+  def sub_8bit_hi_phony  : SubRegIndex<8, 8>;
   def sub_16bit    : SubRegIndex<16>;
   def sub_16bit_hi : SubRegIndex<16, 16>;
   def sub_32bit    : SubRegIndex<32>;
@@ -74,6 +75,40 @@ def R14B : X86Reg<"r14b", 14>;
 def R15B : X86Reg<"r15b", 15>;
 }
 
+let isArtificial = 1 in {
+// High byte of the low 16 bits of the super-register:
+def SIH   : X86Reg<"", -1>;
+def DIH   : X86Reg<"", -1>;
+def BPH   : X86Reg<"", -1>;
+def SPH   : X86Reg<"", -1>;
+def R8BH  : X86Reg<"", -1>;
+def R9BH  : X86Reg<"", -1>;
+def R10BH : X86Reg<"", -1>;
+def R11BH : X86Reg<"", -1>;
+def R12BH : X86Reg<"", -1>;
+def R13BH : X86Reg<"", -1>;
+def R14BH : X86Reg<"", -1>;
+def R15BH : X86Reg<"", -1>;
+// High word of the low 32 bits of the super-register:
+def HAX   : X86Reg<"", -1>;
+def HDX   : X86Reg<"", -1>;
+def HCX   : X86Reg<"", -1>;
+def HBX   : X86Reg<"", -1>;
+def HSI   : X86Reg<"", -1>;
+def HDI   : X86Reg<"", -1>;
+def HBP   : X86Reg<"", -1>;
+def HSP   : X86Reg<"", -1>;
+def HIP   : X86Reg<"", -1>;
+def R8WH  : X86Reg<"", -1>;
+def R9WH  : X86Reg<"", -1>;
+def R10WH : X86Reg<"", -1>;
+def R11WH : X86Reg<"", -1>;
+def R12WH : X86Reg<"", -1>;
+def R13WH : X86Reg<"", -1>;
+def R14WH : X86Reg<"", -1>;
+def R15WH : X86Reg<"", -1>;
+}
+
 // 16-bit registers
 let SubRegIndices = [sub_8bit, sub_8bit_hi], CoveredBySubRegs = 1 in {
 def AX : X86Reg<"ax", 0, [AL,AH]>;
@@ -81,36 +116,25 @@ def DX : X86Reg<"dx", 2, [DL,DH]>;
 def CX : X86Reg<"cx", 1, [CL,CH]>;
 def BX : X86Reg<"bx", 3, [BL,BH]>;
 }
-let SubRegIndices = [sub_8bit] in {
-def SI : X86Reg<"si", 6, [SIL]>;
-def DI : X86Reg<"di", 7, [DIL]>;
-def BP : X86Reg<"bp", 5, [BPL]>;
-def SP : X86Reg<"sp", 4, [SPL]>;
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CoveredBySubRegs = 1 in {
+def SI : X86Reg<"si", 6, [SIL,SIH]>;
+def DI : X86Reg<"di", 7, [DIL,DIH]>;
+def BP : X86Reg<"bp", 5, [BPL,BPH]>;
+def SP : X86Reg<"sp", 4, [SPL,SPH]>;
 }
 def IP : X86Reg<"ip", 0>;
 
-let isArtificial = 1 in {
-  def HAX : X86Reg<"", -1>;
-  def HDX : X86Reg<"", -3>;
-  def HCX : X86Reg<"", -2>;
-  def HBX : X86Reg<"", -4>;
-  def HSI : X86Reg<"", -7>;
-  def HDI : X86Reg<"", -8>;
-  def HBP : X86Reg<"", -6>;
-  def HSP : X86Reg<"", -5>;
-  def HIP : X86Reg<"", -1>;
-}
-
 // X86-64 only, requires REX.
-let SubRegIndices = [sub_8bit], CostPerUse = 1 in {
-def R8W  : X86Reg<"r8w",   8, [R8B]>;
-def R9W  : X86Reg<"r9w",   9, [R9B]>;
-def R10W : X86Reg<"r10w", 10, [R10B]>;
-def R11W : X86Reg<"r11w", 11, [R11B]>;
-def R12W : X86Reg<"r12w", 12, [R12B]>;
-def R13W : X86Reg<"r13w", 13, [R13B]>;
-def R14W : X86Reg<"r14w", 14, [R14B]>;
-def R15W : X86Reg<"r15w", 15, [R15B]>;
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CostPerUse = 1,
+    CoveredBySubRegs = 1 in {
+def R8W  : X86Reg<"r8w",   8, [R8B,R8BH]>;
+def R9W  : X86Reg<"r9w",   9, [R9B,R9BH]>;
+def R10W : X86Reg<"r10w", 10, [R10B,R10BH]>;
+def R11W : X86Reg<"r11w", 11, [R11B,R11BH]>;
+def R12W : X86Reg<"r12w", 12, [R12B,R12BH]>;
+def R13W : X86Reg<"r13w", 13, [R13B,R13BH]>;
+def R14W : X86Reg<"r14w", 14, [R14B,R14BH]>;
+def R15W : X86Reg<"r15w", 15, [R15B,R15BH]>;
 }
 
 // 32-bit registers
@@ -127,15 +151,16 @@ def EIP : X86Reg<"eip", 0, [IP, HIP]>, DwarfRegNum<[-2, 8, 8]>;
 }
 
 // X86-64 only, requires REX
-let SubRegIndices = [sub_16bit], CostPerUse = 1 in {
-def R8D  : X86Reg<"r8d",   8, [R8W]>;
-def R9D  : X86Reg<"r9d",   9, [R9W]>;
-def R10D : X86Reg<"r10d", 10, [R10W]>;
-def R11D : X86Reg<"r11d", 11, [R11W]>;
-def R12D : X86Reg<"r12d", 12, [R12W]>;
-def R13D : X86Reg<"r13d", 13, [R13W]>;
-def R14D : X86Reg<"r14d", 14, [R14W]>;
-def R15D : X86Reg<"r15d", 15, [R15W]>;
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CostPerUse = 1,
+    CoveredBySubRegs = 1 in {
+def R8D  : X86Reg<"r8d",   8, [R8W,R8WH]>;
+def R9D  : X86Reg<"r9d",   9, [R9W,R9WH]>;
+def R10D : X86Reg<"r10d", 10, [R10W,R10WH]>;
+def R11D : X86Reg<"r11d", 11, [R11W,R11WH]>;
+def R12D : X86Reg<"r12d", 12, [R12W,R12WH]>;
+def R13D : X86Reg<"r13d", 13, [R13W,R13WH]>;
+def R14D : X86Reg<"r14d", 14, [R14W,R14WH]>;
+def R15D : X86Reg<"r15d", 15, [R15W,R15WH]>;
 }
 
 // 64-bit registers, X86-64 only
@@ -361,13 +386,20 @@ def GR8 : RegisterClass<"X86", [i8],  8,
   }];
 }
 
+let isAllocatable = 0 in
+def GRH8 : RegisterClass<"X86", [i8],  8,
+                         (add SIH, DIH, BPH, SPH, R8BH, R9BH, R10BH, R11BH,
+                              R12BH, R13BH, R14BH, R15BH)>;
+
 def GR16 : RegisterClass<"X86", [i16], 16,
                          (add AX, CX, DX, SI, DI, BX, BP, SP,
                               R8W, R9W, R10W, R11W, R14W, R15W, R12W, R13W)>;
 
 let isAllocatable = 0 in
 def GRH16 : RegisterClass<"X86", [i16], 16,
-                          (add HAX, HCX, HDX, HSI, HDI, HBX, HBP, HSP, HIP)>;
+                          (add HAX, HCX, HDX, HSI, HDI, HBX, HBP, HSP, HIP,
+                               R8WH, R9WH, R10WH, R11WH, R12WH, R13WH, R14WH,
+                               R15WH)>;
 
 def GR32 : RegisterClass<"X86", [i32], 32,
                          (add EAX, ECX, EDX, ESI, EDI, EBX, EBP, ESP,

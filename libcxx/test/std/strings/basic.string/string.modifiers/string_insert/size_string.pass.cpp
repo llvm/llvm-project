@@ -218,4 +218,13 @@ int main()
     test(S("abcdefghijklmnopqrst"), 21, S("12345678901234567890"), S("can't happen"));
     }
 #endif
+
+#if TEST_STD_VER > 3
+    {   // LWG 2946
+    std::string s;
+    s.insert(0, {"abc", 1});
+    assert(s.size() == 1);
+    assert(s == "a");
+    }
+#endif
 }

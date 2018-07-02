@@ -58,8 +58,12 @@
 // Hooks in the allocation & deallocation paths can become a security concern if
 // implemented improperly, or if overwritten by an attacker. Use with caution.
 #ifndef SCUDO_CAN_USE_HOOKS
-# define SCUDO_CAN_USE_HOOKS 0
-#endif
+# if SANITIZER_FUCHSIA
+#  define SCUDO_CAN_USE_HOOKS 1
+# else
+#  define SCUDO_CAN_USE_HOOKS 0
+# endif  // SANITIZER_FUCHSIA
+#endif  // SCUDO_CAN_USE_HOOKS
 
 namespace __scudo {
 

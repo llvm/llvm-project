@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1
-# RUN: ld.lld %t1 -o %t --icf=all --print-icf-sections 2>&1 | FileCheck -allow-empty %s
+# RUN: ld.lld %t1 -o /dev/null --icf=all --print-icf-sections 2>&1 | FileCheck -allow-empty %s
 
 ## Check that ICF does not merge sections which relocations have equal addends,
 ## but different target values.
