@@ -2911,6 +2911,9 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
     }
 
+    // Set up the required state for the evaluator in the TypeChecker.
+    registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
+
     GetASTMap().Insert(m_ast_context_ap.get(), this);
   }
 
