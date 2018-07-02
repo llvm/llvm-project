@@ -7,7 +7,7 @@
 # RUN: echo "dipsy " >> %t_order_lto.txt
 # RUN: echo "pat " >> %t_order_lto.txt
 
-# RUN: ld.lld --symbol-ordering-file %t_order_lto.txt %t.o %t.bc -o %t2.out
+# RUN: ld.lld --symbol-ordering-file %t_order_lto.txt %t.o %t.bc -o /dev/null
 # RUN: llvm-readelf -t %t2.out| FileCheck %s
 
 # Check that the order is tin -> dipsy -> pat.
