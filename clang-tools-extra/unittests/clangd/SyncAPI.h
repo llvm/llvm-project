@@ -22,7 +22,7 @@ namespace clangd {
 void runAddDocument(ClangdServer &Server, PathRef File, StringRef Contents,
                     WantDiagnostics WantDiags = WantDiagnostics::Auto);
 
-llvm::Expected<CompletionList>
+llvm::Expected<CodeCompleteResult>
 runCodeComplete(ClangdServer &Server, PathRef File, Position Pos,
                 clangd::CodeCompleteOptions Opts);
 

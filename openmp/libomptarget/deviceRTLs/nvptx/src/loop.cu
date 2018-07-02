@@ -240,12 +240,17 @@ public:
 
     // Process schedule.
     if (tnum == 1 || tripCount <= 1 || OrderedSchedule(schedule)) {
+      if (OrderedSchedule(schedule)) {
+        if (isSPMDMode())
+          __syncthreads();
+        else
+          __kmpc_barrier(loc, threadId);
+      }
       PRINT(LD_LOOP,
             "go sequential as tnum=%ld, trip count %lld, ordered sched=%d\n",
             (long)tnum, P64(tripCount), schedule);
       schedule = kmp_sched_static_chunk;
       chunk = tripCount; // one thread gets the whole loop
-
     } else if (schedule == kmp_sched_runtime) {
       // process runtime
       omp_sched_t rtSched = currTaskDescr->GetRuntimeSched();

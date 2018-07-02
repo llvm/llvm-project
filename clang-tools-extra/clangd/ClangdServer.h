@@ -141,7 +141,7 @@ public:
   /// when codeComplete results become available.
   void codeComplete(PathRef File, Position Pos,
                     const clangd::CodeCompleteOptions &Opts,
-                    Callback<CompletionList> CB);
+                    Callback<CodeCompleteResult> CB);
 
   /// Provide signature help for \p File at \p Pos.  This method should only be
   /// called for tracked files.
