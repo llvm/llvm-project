@@ -2,7 +2,7 @@
 
 # RUN: mkdir -p %t.dir
 # RUN: rm -f %t.dir/libxyz.a
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o /dev/null
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 # RUN:   %p/Inputs/libsearch-st.s -o %t2.o
 # RUN: llvm-ar rcs %t.dir/libxyz.a %t2.o
