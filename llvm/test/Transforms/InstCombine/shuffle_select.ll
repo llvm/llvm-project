@@ -30,19 +30,18 @@ define <4 x i32> @sub(<4 x i32> %v) {
 
 ; If any element of the shuffle mask operand is undef, that element of the result is undef.
 ; The shuffle is eliminated in this transform, but we can replace a constant element with undef.
+; Preserve flags when possible.
 
 define <4 x i32> @mul(<4 x i32> %v) {
 ; CHECK-LABEL: @mul(
-; CHECK-NEXT:    [[B:%.*]] = mul <4 x i32> [[V:%.*]], <i32 undef, i32 12, i32 undef, i32 14>
+; CHECK-NEXT:    [[B:%.*]] = mul nuw nsw <4 x i32> [[V:%.*]], <i32 undef, i32 12, i32 undef, i32 14>
 ; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> [[B]], <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
-  %b = mul <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
+  %b = mul nsw nuw <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
   %s = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
   ret <4 x i32> %s
 }
-
-; Preserve flags when possible.
 
 define <4 x i32> @shl(<4 x i32> %v) {
 ; CHECK-LABEL: @shl(
@@ -801,9 +800,7 @@ define <4 x i32> @shl_mul_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
 define <4 x i32> @add_or(<4 x i32> %v) {
 ; CHECK-LABEL: @add_or(
 ; CHECK-NEXT:    [[V0:%.*]] = shl <4 x i32> [[V:%.*]], <i32 5, i32 5, i32 5, i32 5>
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[V0]], <i32 undef, i32 undef, i32 65536, i32 65537>
-; CHECK-NEXT:    [[T2:%.*]] = or <4 x i32> [[V0]], <i32 31, i32 31, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = add <4 x i32> [[V0]], <i32 31, i32 31, i32 65536, i32 65537>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %v0 = shl <4 x i32> %v, <i32 5, i32 5, i32 5, i32 5>                   ; clear the bottom bits
@@ -818,9 +815,7 @@ define <4 x i32> @add_or(<4 x i32> %v) {
 define <4 x i8> @or_add(<4 x i8> %v) {
 ; CHECK-LABEL: @or_add(
 ; CHECK-NEXT:    [[V0:%.*]] = lshr <4 x i8> [[V:%.*]], <i8 3, i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[T1:%.*]] = or <4 x i8> [[V0]], <i8 undef, i8 undef, i8 -64, i8 -64>
-; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw <4 x i8> [[V0]], <i8 1, i8 2, i8 undef, i8 undef>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i8> [[T1]], <4 x i8> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = add nsw <4 x i8> [[V0]], <i8 1, i8 2, i8 -64, i8 -64>
 ; CHECK-NEXT:    ret <4 x i8> [[T3]]
 ;
   %v0 = lshr <4 x i8> %v, <i8 3, i8 3, i8 3, i8 3>          ; clear the top bits
@@ -829,6 +824,8 @@ define <4 x i8> @or_add(<4 x i8> %v) {
   %t3 = shufflevector <4 x i8> %t1, <4 x i8> %t2, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   ret <4 x i8> %t3
 }
+
+; Negative test: not all 'or' insts can be converted to 'add'.
 
 define <4 x i8> @or_add_not_enough_masking(<4 x i8> %v) {
 ; CHECK-LABEL: @or_add_not_enough_masking(
@@ -850,9 +847,8 @@ define <4 x i8> @or_add_not_enough_masking(<4 x i8> %v) {
 define <4 x i32> @add_or_2_vars(<4 x i32> %v, <4 x i32> %v1) {
 ; CHECK-LABEL: @add_or_2_vars(
 ; CHECK-NEXT:    [[V0:%.*]] = shl <4 x i32> [[V:%.*]], <i32 5, i32 5, i32 5, i32 5>
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[V1:%.*]], <i32 undef, i32 undef, i32 65536, i32 65537>
-; CHECK-NEXT:    [[T2:%.*]] = or <4 x i32> [[V0]], <i32 31, i32 31, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V1:%.*]], <4 x i32> [[V0]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = add <4 x i32> [[TMP1]], <i32 31, i32 31, i32 65536, i32 65537>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %v0 = shl <4 x i32> %v, <i32 5, i32 5, i32 5, i32 5>                   ; clear the bottom bits
@@ -865,9 +861,8 @@ define <4 x i32> @add_or_2_vars(<4 x i32> %v, <4 x i32> %v1) {
 define <4 x i8> @or_add_2_vars(<4 x i8> %v, <4 x i8> %v1) {
 ; CHECK-LABEL: @or_add_2_vars(
 ; CHECK-NEXT:    [[V0:%.*]] = lshr <4 x i8> [[V:%.*]], <i8 3, i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[T1:%.*]] = or <4 x i8> [[V0]], <i8 undef, i8 undef, i8 -64, i8 -64>
-; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw <4 x i8> [[V1:%.*]], <i8 1, i8 2, i8 undef, i8 undef>
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i8> [[T1]], <4 x i8> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[V0]], <4 x i8> [[V1:%.*]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = add <4 x i8> [[TMP1]], <i8 1, i8 2, i8 -64, i8 -64>
 ; CHECK-NEXT:    ret <4 x i8> [[T3]]
 ;
   %v0 = lshr <4 x i8> %v, <i8 3, i8 3, i8 3, i8 3>          ; clear the top bits

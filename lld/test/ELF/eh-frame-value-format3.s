@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t
-# RUN: ld.lld --eh-frame-hdr %t -o %t2
+# RUN: ld.lld --eh-frame-hdr %t -o /dev/null
 
 .section .eh_frame
   .byte 0x0E

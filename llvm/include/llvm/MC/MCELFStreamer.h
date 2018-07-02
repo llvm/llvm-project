@@ -59,7 +59,8 @@ public:
                              unsigned ByteAlignment) override;
 
   void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, unsigned ByteAlignment = 0) override;
+                    uint64_t Size = 0, unsigned ByteAlignment = 0,
+                    SMLoc L = SMLoc()) override;
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
   void EmitValueImpl(const MCExpr *Value, unsigned Size,

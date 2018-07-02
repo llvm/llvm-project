@@ -1,5 +1,6 @@
 if (LLVM_TARGETS_TO_BUILD MATCHES "X86")
   add_subdirectory(X86)
+  set(LLVM_EXEGESIS_TARGETS "${LLVM_EXEGESIS_TARGETS} X86" PARENT_SCOPE)
 endif()
 
 add_library(LLVMExegesis

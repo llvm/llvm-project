@@ -7,7 +7,7 @@
 # RUN: echo "B C 30" >> %t.call_graph
 # RUN: echo "adena A 30" >> %t.call_graph
 # RUN: echo "poppy A 30" >> %t.call_graph
-# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t.out \
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o /dev/null \
 # RUN:   -noinhibit-exec -icf=all 2>&1 | FileCheck %s
 
     .section    .text.C,"ax",@progbits

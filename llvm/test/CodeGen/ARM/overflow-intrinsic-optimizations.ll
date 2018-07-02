@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm-eabi -mcpu=generic | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv6m-eabi | FileCheck %s -check-prefix=CHECK-V6M-THUMB
 
 define i32 @sadd(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: sadd:
@@ -81,6 +82,8 @@ define i32 @smul(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; CHECK: smull r0, r[[RHI:[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}
 ; CHECK-NEXT: cmp r[[RHI]], r0, asr #31
 ; CHECK-NEXT: moveq pc, lr
+; CHECK-V6M-THUMB-LABEL: smul:
+; CHECK-V6M-THUMB: bl __aeabi_lmul
 entry:
   %0 = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %a, i32 %b)
   %1 = extractvalue { i32, i1 } %0, 1
@@ -100,6 +103,8 @@ define i32 @umul(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; CHECK: umull r0, r[[RHI:[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}
 ; CHECK-NEXT: cmp r[[RHI]], #0
 ; CHECK-NEXT: moveq pc, lr
+; CHECK-V6M-THUMB-LABEL: umul:
+; CHECK-V6M-THUMB: bl __aeabi_lmul
 entry:
   %0 = tail call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %a, i32 %b)
   %1 = extractvalue { i32, i1 } %0, 1

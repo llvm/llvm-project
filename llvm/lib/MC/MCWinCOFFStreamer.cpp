@@ -279,7 +279,8 @@ void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWinCOFFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                     uint64_t Size, unsigned ByteAlignment) {
+                                     uint64_t Size, unsigned ByteAlignment,
+                                     SMLoc Loc) {
   llvm_unreachable("not implemented");
 }
 

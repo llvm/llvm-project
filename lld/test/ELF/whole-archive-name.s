@@ -3,7 +3,7 @@
 // RUN: mkdir -p %t.dir
 // RUN: rm -f %t.dir/liba.a
 // RUN: llvm-ar rcs %t.dir/liba.a %t.o
-// RUN: ld.lld -L%t.dir --whole-archive -la -o %t -Map=- | FileCheck %s
+// RUN: ld.lld -L%t.dir --whole-archive -la -o /dev/null -Map=- | FileCheck %s
 
 .globl _start
 _start:

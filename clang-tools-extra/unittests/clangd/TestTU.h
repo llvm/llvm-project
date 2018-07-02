@@ -44,6 +44,9 @@ struct TestTU {
   std::string HeaderCode;
   std::string HeaderFilename = "TestTU.h";
 
+  // Extra arguments for the compiler invocation.
+  std::vector<const char *> ExtraArgs;
+
   ParsedAST build() const;
   SymbolSlab headerSymbols() const;
   std::unique_ptr<SymbolIndex> index() const;

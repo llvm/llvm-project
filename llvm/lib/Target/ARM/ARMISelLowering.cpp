@@ -4681,9 +4681,11 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   // Optimize {s|u}{add|sub|mul}.with.overflow feeding into a branch
   // instruction.
   unsigned Opc = Cond.getOpcode();
+  bool OptimizeMul = (Opc == ISD::SMULO || Opc == ISD::UMULO) &&
+                      !Subtarget->isThumb1Only();
   if (Cond.getResNo() == 1 &&
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
-       Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO)) {
+       Opc == ISD::USUBO || OptimizeMul)) {
     // Only lower legal XALUO ops.
     if (!DAG.getTargetLoweringInfo().isTypeLegal(Cond->getValueType(0)))
       return SDValue();
@@ -4730,9 +4732,11 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   // Optimize {s|u}{add|sub|mul}.with.overflow feeding into a branch
   // instruction.
   unsigned Opc = LHS.getOpcode();
+  bool OptimizeMul = (Opc == ISD::SMULO || Opc == ISD::UMULO) &&
+                      !Subtarget->isThumb1Only();
   if (LHS.getResNo() == 1 && (isOneConstant(RHS) || isNullConstant(RHS)) &&
       (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
-       Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO) &&
+       Opc == ISD::USUBO || OptimizeMul) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     // Only lower legal XALUO ops.
     if (!DAG.getTargetLoweringInfo().isTypeLegal(LHS->getValueType(0)))

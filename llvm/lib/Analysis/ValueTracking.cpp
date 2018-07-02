@@ -4605,39 +4605,34 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     }
   }
 
-  const APInt *C1;
-  if (match(CmpRHS, m_APInt(C1))) {
-    // Sign-extending LHS does not change its sign, so TrueVal/FalseVal can
-    // match against either LHS or sext(LHS).
-    auto MaybeSExtLHS = m_CombineOr(m_Specific(CmpLHS),
-                                    m_SExt(m_Specific(CmpLHS)));
-    if ((match(TrueVal, MaybeSExtLHS) &&
-         match(FalseVal, m_Neg(m_Specific(TrueVal)))) ||
-        (match(FalseVal, MaybeSExtLHS) &&
-         match(TrueVal, m_Neg(m_Specific(FalseVal))))) {
-      // Set LHS and RHS so that RHS is the negated operand of the select
-      if (match(TrueVal, MaybeSExtLHS)) {
-        LHS = TrueVal;
-        RHS = FalseVal;
-      } else {
-        LHS = FalseVal;
-        RHS = TrueVal;
-      }
-
-      // ABS(X) ==> (X >s 0) ? X : -X and (X >s -1) ? X : -X
-      // NABS(X) ==> (X >s 0) ? -X : X and (X >s -1) ? -X : X
-      if (Pred == ICmpInst::ICMP_SGT &&
-          (C1->isNullValue() || C1->isAllOnesValue())) {
-        return {(LHS == TrueVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
-      }
-
-      // ABS(X) ==> (X <s 0) ? -X : X and (X <s 1) ? -X : X
-      // NABS(X) ==> (X <s 0) ? X : -X and (X <s 1) ? X : -X
-      if (Pred == ICmpInst::ICMP_SLT &&
-          (C1->isNullValue() || C1->isOneValue())) {
-        return {(LHS == FalseVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
-      }
+  // Sign-extending LHS does not change its sign, so TrueVal/FalseVal can
+  // match against either LHS or sext(LHS).
+  auto MaybeSExtLHS = m_CombineOr(m_Specific(CmpLHS),
+                                  m_SExt(m_Specific(CmpLHS)));
+  if ((match(TrueVal, MaybeSExtLHS) &&
+       match(FalseVal, m_Neg(m_Specific(TrueVal)))) ||
+      (match(FalseVal, MaybeSExtLHS) &&
+       match(TrueVal, m_Neg(m_Specific(FalseVal))))) {
+    // Set LHS and RHS so that RHS is the negated operand of the select
+    if (match(TrueVal, MaybeSExtLHS)) {
+      LHS = TrueVal;
+      RHS = FalseVal;
+    } else {
+      LHS = FalseVal;
+      RHS = TrueVal;
     }
+
+    // (X >s 0) ? X : -X or (X >s -1) ? X : -X --> ABS(X)
+    // (X >s 0) ? -X : X or (X >s -1) ? -X : X --> NABS(X)
+    if (Pred == ICmpInst::ICMP_SGT &&
+        match(CmpRHS, m_CombineOr(m_ZeroInt(), m_AllOnes())))
+      return {(LHS == TrueVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
+
+    // (X <s 0) ? -X : X or (X <s 1) ? -X : X --> ABS(X)
+    // (X <s 0) ? X : -X or (X <s 1) ? X : -X --> NABS(X)
+    if (Pred == ICmpInst::ICMP_SLT &&
+        match(CmpRHS, m_CombineOr(m_ZeroInt(), m_One())))
+      return {(LHS == FalseVal) ? SPF_ABS : SPF_NABS, SPNB_NA, false};
   }
 
   if (CmpInst::isIntPredicate(Pred))

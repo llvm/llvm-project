@@ -81,6 +81,11 @@ cl::alias ExternalOnly2("g", cl::desc("Alias for --extern-only"),
                         cl::aliasopt(ExternalOnly), cl::Grouping,
                         cl::ZeroOrMore);
 
+cl::opt<bool> NoWeakSymbols("no-weak",
+                            cl::desc("Show only non-weak symbols"));
+cl::alias NoWeakSymbols2("W", cl::desc("Alias for --no-weak"),
+                         cl::aliasopt(NoWeakSymbols), cl::Grouping);
+
 cl::opt<bool> BSDFormat("B", cl::desc("Alias for --format=bsd"),
                         cl::Grouping);
 cl::opt<bool> POSIXFormat("P", cl::desc("Alias for --format=posix"),
@@ -768,8 +773,10 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
 
     bool Undefined = SymFlags & SymbolRef::SF_Undefined;
     bool Global = SymFlags & SymbolRef::SF_Global;
+    bool Weak = SymFlags & SymbolRef::SF_Weak;
     if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
-        (!Global && ExternalOnly) || (SizeSort && !PrintAddress))
+        (!Global && ExternalOnly) || (SizeSort && !PrintAddress) ||
+        (Weak && NoWeakSymbols))
       continue;
     if (PrintFileName) {
       if (!ArchitectureName.empty())

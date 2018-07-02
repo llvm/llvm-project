@@ -5638,15 +5638,15 @@ struct __temp_value {
     };
 #endif
 
-#if _LIBCPP_STD_VER > 14
-template<typename _Alloc, typename = void>
+template<typename _Alloc, typename = void, typename = void>
 struct __is_allocator : false_type {};
 
 template<typename _Alloc>
 struct __is_allocator<_Alloc,
-     void_t<typename _Alloc::value_type, decltype(_VSTD::declval<_Alloc&>().allocate(size_t{}))>>
+       typename __void_t<typename _Alloc::value_type>::type,
+       typename __void_t<decltype(_VSTD::declval<_Alloc&>().allocate(size_t(0)))>::type
+     >
    : true_type {};
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

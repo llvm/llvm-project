@@ -1093,6 +1093,15 @@ def loadf32  : PatFrag<(ops node:$ptr), (f32 (load node:$ptr))>;
 def loadf64  : PatFrag<(ops node:$ptr), (f64 (load node:$ptr))>;
 def loadf80  : PatFrag<(ops node:$ptr), (f80 (load node:$ptr))>;
 def loadf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr))>;
+def alignedloadf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr)), [{
+  LoadSDNode *Ld = cast<LoadSDNode>(N);
+  return Ld->getAlignment() >= Ld->getMemoryVT().getStoreSize();
+}]>;
+def memopf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr)), [{
+  LoadSDNode *Ld = cast<LoadSDNode>(N);
+  return Subtarget->hasSSEUnalignedMem() ||
+         Ld->getAlignment() >= Ld->getMemoryVT().getStoreSize();
+}]>;
 
 def sextloadi16i8  : PatFrag<(ops node:$ptr), (i16 (sextloadi8 node:$ptr))>;
 def sextloadi32i8  : PatFrag<(ops node:$ptr), (i32 (sextloadi8 node:$ptr))>;

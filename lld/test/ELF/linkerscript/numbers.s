@@ -29,12 +29,12 @@
 
 ## Mailformed number errors.
 # RUN: echo "SECTIONS { . = 0x11h; }" > %t2.script
-# RUN: not ld.lld %t --script %t2.script -o %t3 2>&1 | \
+# RUN: not ld.lld %t --script %t2.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR1 %s
 # ERR1: malformed number: 0x11h
 
 # RUN: echo "SECTIONS { . = 0x11k; }" > %t3.script
-# RUN: not ld.lld %t --script %t3.script -o %t4 2>&1 | \
+# RUN: not ld.lld %t --script %t3.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR2 %s
 # ERR2: malformed number: 0x11k
 
@@ -54,7 +54,7 @@
 # ERR5: malformed number: 1zk
 
 # RUN: echo "SECTIONS { . = 1zm; }" > %t7.script
-# RUN: not ld.lld %t --script %t7.script -o %t7 2>&1 | \
+# RUN: not ld.lld %t --script %t7.script -o /dev/null 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERR6 %s
 # ERR6: malformed number: 1zm
 

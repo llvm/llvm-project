@@ -93,6 +93,10 @@ OPTIONS
  Print only symbols whose definitions are external; that is, accessible
  from other files.
 
+.. option:: --no-weak, -W
+
+ Don't print any weak symbols in the output.
+
 .. option:: --format=format, -f format
 
  Select an output format; *format* may be *sysv*, *posix*, or *bsd*.  The default

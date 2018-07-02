@@ -810,6 +810,13 @@ public:
   /// Return true if this is a trivially copyable type (C++0x [basic.types]p9)
   bool isTriviallyCopyableType(const ASTContext &Context) const;
 
+
+  /// Returns true if it is a class and it might be dynamic.
+  bool mayBeDynamicClass() const;
+
+  /// Returns true if it is not a class or if the class might not be dynamic.
+  bool mayBeNotDynamicClass() const;
+
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
 

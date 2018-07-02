@@ -94,6 +94,18 @@ LatencyBenchmarkRunner::generatePrototype(unsigned Opcode) const {
   return generateTwoInstructionPrototype(Instr);
 }
 
+const char *LatencyBenchmarkRunner::getCounterName() const {
+  if (!State.getSubtargetInfo().getSchedModel().hasExtraProcessorInfo())
+    llvm::report_fatal_error("sched model is missing extra processor info!");
+  const char *CounterName = State.getSubtargetInfo()
+                                .getSchedModel()
+                                .getExtraProcessorInfo()
+                                .PfmCounters.CycleCounter;
+  if (!CounterName)
+    llvm::report_fatal_error("sched model does not define a cycle counter");
+  return CounterName;
+}
+
 std::vector<BenchmarkMeasure>
 LatencyBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
                                         const unsigned NumRepetitions) const {
@@ -101,12 +113,9 @@ LatencyBenchmarkRunner::runMeasurements(const ExecutableFunction &Function,
   // measure several times and take the minimum value.
   constexpr const int NumMeasurements = 30;
   int64_t MinLatency = std::numeric_limits<int64_t>::max();
-  const char *CounterName = State.getSubtargetInfo()
-                                .getSchedModel()
-                                .getExtraProcessorInfo()
-                                .PfmCounters.CycleCounter;
+  const char *CounterName = getCounterName();
   if (!CounterName)
-    llvm::report_fatal_error("sched model does not define a cycle counter");
+    llvm::report_fatal_error("could not determine cycle counter name");
   const pfm::PerfEvent CyclesPerfEvent(CounterName);
   if (!CyclesPerfEvent.valid())
     llvm::report_fatal_error("invalid perf event");
