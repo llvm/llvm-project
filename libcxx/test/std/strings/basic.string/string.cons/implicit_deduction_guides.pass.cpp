@@ -36,7 +36,7 @@ using BStr = std::basic_string<T, std::char_traits<T>, Alloc>;
 // (2)  basic_string(A const&) - BROKEN
 // (3)  basic_string(size_type, CharT, const A& = A())
 // (4)  basic_string(BS const&, size_type, A const& = A())
-// (5)  basic_string(BS const&, size_type, size_type, A const& = A()) - PARTIALLY BROKEN
+// (5)  basic_string(BS const&, size_type, size_type, A const& = A())
 // (6)  basic_string(const CharT*, size_type, A const& = A())
 // (7)  basic_string(const CharT*, A const& = A())
 // (8)  basic_string(InputIt, InputIt, A const& = A()) - BROKEN
@@ -46,7 +46,7 @@ using BStr = std::basic_string<T, std::char_traits<T>, Alloc>;
 // (12) basic_string(BS&&, A const&)
 // (13) basic_string(initializer_list<CharT>, A const& = A())
 // (14) basic_string(BSV, A const& = A())
-// (15) basic_string(const T&, size_type, size_type, A const& = A()) - BROKEN
+// (15) basic_string(const T&, size_type, size_type, A const& = A())
 int main()
 {
   using TestSizeT = test_allocator<char>::size_type;
@@ -106,7 +106,6 @@ int main()
     assert(w == L"def");
   }
   { // Testing (5) w/o allocator
-#if 0 // FIXME: This doesn't work
     const std::string sin("abc");
     std::basic_string s(sin, (size_t)1, (size_t)3);
     ASSERT_SAME_TYPE(decltype(s), std::string);
@@ -119,7 +118,6 @@ int main()
     std::basic_string w(win, (TestSizeT)2, (TestSizeT)3);
     ASSERT_SAME_TYPE(decltype(w), WStr);
     assert(w == L"cde");
-#endif
   }
   { // Testing (5) w/ allocator
     const std::string sin("abc");
@@ -178,20 +176,19 @@ int main()
     assert(w == L"abcdef");
   }
   { // (8) w/o allocator
-    // This overload isn't compatible with implicit deduction guides as
-    // specified in the standard.
-    // FIXME: Propose adding an explicit guide to the standard?
-  }
-  { // (8) w/ allocator
-    // This overload isn't compatible with implicit deduction guides as
-    // specified in the standard.
-    // FIXME: Propose adding an explicit guide to the standard?
-#if 0
     using It = input_iterator<const char*>;
     const char* input = "abcdef";
     std::basic_string s(It(input), It(input + 3), std::allocator<char>{});
     ASSERT_SAME_TYPE(decltype(s), std::string);
-#endif
+    assert(s == "abc");
+  }
+  { // (8) w/ allocator
+    using ExpectW = std::basic_string<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>;
+    using It = input_iterator<const wchar_t*>;
+    const wchar_t* input = L"abcdef";
+    std::basic_string s(It(input), It(input + 3), test_allocator<wchar_t>{});
+    ASSERT_SAME_TYPE(decltype(s), ExpectW);
+    assert(s == L"abc");
   }
   { // Testing (9)
     const std::string sin("abc");
@@ -293,8 +290,28 @@ int main()
     ASSERT_SAME_TYPE(decltype(w), ExpectW);
     assert(w == L"abcdef");
   }
-  { // Testing (15)
-    // This overload isn't compatible with implicit deduction guides as
-    // specified in the standard.
+  { // Testing (15) w/o allocator
+    std::string s0("abc");
+    std::basic_string s(s0, 1, 1);
+    ASSERT_SAME_TYPE(decltype(s), std::string);
+    assert(s == "b");
+
+    std::wstring w0(L"abcdef");
+    std::basic_string w(w0, 2, 2);
+    ASSERT_SAME_TYPE(decltype(w), std::wstring);
+    assert(w == L"cd");
+  }
+  { // Testing (15) w/ allocator
+    using ExpectS = std::basic_string<char, std::char_traits<char>, test_allocator<char>>;
+    ExpectS s0("abc");
+    std::basic_string s(s0, 1, 1, test_allocator<char>{4});
+    ASSERT_SAME_TYPE(decltype(s), ExpectS);
+    assert(s == "b");
+
+    using ExpectW = std::basic_string<wchar_t, std::char_traits<wchar_t>, test_allocator<wchar_t>>;
+    ExpectW w0(L"abcdef");
+    std::basic_string w(w0, 2, 2, test_allocator<wchar_t>{6});
+    ASSERT_SAME_TYPE(decltype(w), ExpectW);
+    assert(w == L"cd");
   }
 }

@@ -107,7 +107,8 @@ bool RecordStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
 }
 
 void RecordStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                  uint64_t Size, unsigned ByteAlignment) {
+                                  uint64_t Size, unsigned ByteAlignment,
+                                  SMLoc Loc) {
   markDefined(*Symbol);
 }
 

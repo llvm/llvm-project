@@ -102,7 +102,8 @@ public:
   void EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
   void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, unsigned ByteAlignment = 0) override;
+                    uint64_t Size = 0, unsigned ByteAlignment = 0,
+                    SMLoc Loc = SMLoc()) override;
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
 
@@ -413,9 +414,18 @@ void MCMachOStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 }
 
 void MCMachOStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                   uint64_t Size, unsigned ByteAlignment) {
-  // On darwin all virtual sections have zerofill type.
-  assert(Section->isVirtualSection() && "Section does not have zerofill type!");
+                                   uint64_t Size, unsigned ByteAlignment,
+                                   SMLoc Loc) {
+  // On darwin all virtual sections have zerofill type. Disallow the usage of
+  // .zerofill in non-virtual functions. If something similar is needed, use
+  // .space or .zero.
+  if (!Section->isVirtualSection()) {
+    getContext().reportError(
+        Loc, "The usage of .zerofill is restricted to sections of "
+             "ZEROFILL type. Use .zero or .space instead.");
+    return; // Early returning here shouldn't harm. EmitZeros should work on any
+            // section.
+  }
 
   PushSection();
   SwitchSection(Section);

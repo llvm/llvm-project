@@ -29,6 +29,7 @@ ParsedAST TestTU::build() const {
     Cmd.push_back("-include");
     Cmd.push_back(FullHeaderName.c_str());
   }
+  Cmd.insert(Cmd.end(), ExtraArgs.begin(), ExtraArgs.end());
   auto AST = ParsedAST::Build(
       createInvocationFromCommandLine(Cmd), nullptr,
       MemoryBuffer::getMemBufferCopy(Code),

@@ -274,7 +274,7 @@ public:
 };
 
 // This class provides generic methods to write tests which can check internal
-// attributes of AST nodes like getPreviousDecl(), isVirtual(), etc.  Also,
+// attributes of AST nodes like getPreviousDecl(), isVirtual(), etc. Also,
 // this fixture makes it possible to import from several "From" contexts.
 class ASTImporterTestBase : public ParameterizedTestsFixture {
 

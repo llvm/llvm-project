@@ -303,6 +303,7 @@ def runScanBuild(Dir, SBOutputDir, PBuildLogFile):
             if Command == NoPrefixCmd:
                 SBPrefix = ""
                 ExtraEnv['OUTPUT'] = SBOutputDir
+                ExtraEnv['CC'] = Clang
                 continue
 
             # If using 'make', auto imply a -jX argument

@@ -77,9 +77,9 @@ define <2 x i8> @abs_canonical_2(<2 x i8> %x) {
 
 define <2 x i8> @abs_canonical_2_vec_undef_elts(<2 x i8> %x) {
 ; CHECK-LABEL: @abs_canonical_2_vec_undef_elts(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 undef, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> [[NEG]]
+; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[NEG]], <2 x i8> [[X]]
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
   %cmp = icmp sgt <2 x i8> %x, <i8 undef, i8 -1>
@@ -165,9 +165,9 @@ define <2 x i8> @nabs_canonical_2(<2 x i8> %x) {
 
 define <2 x i8> @nabs_canonical_2_vec_undef_elts(<2 x i8> %x) {
 ; CHECK-LABEL: @nabs_canonical_2_vec_undef_elts(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -1, i8 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[NEG]], <2 x i8> [[X]]
+; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> [[NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
   %cmp = icmp sgt <2 x i8> %x, <i8 -1, i8 undef>
