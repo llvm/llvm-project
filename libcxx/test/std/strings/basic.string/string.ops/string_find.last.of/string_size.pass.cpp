@@ -14,6 +14,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class S>
@@ -152,6 +153,13 @@ int main()
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test0<S>();
     test1<S>();
+    }
+#endif
+
+#if TEST_STD_VER > 3
+    {   // LWG 2946
+    std::string s = " !";
+    assert(s.find_last_of({"abc", 1}) == std::string::npos);
     }
 #endif
 }

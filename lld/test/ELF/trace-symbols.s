@@ -29,7 +29,7 @@
 # RUN: ld.lld -y foo -trace-symbol=common -trace-symbol=hsymbol \
 # RUN:   %t %t1 %t2 -o %t3 2>&1 | FileCheck -check-prefix=OBJECTD2FOO %s
 # RUN: ld.lld -y foo -y common --trace-symbol=hsymbol \
-# RUN:   %t %t2 %t1 -o %t4 2>&1 | FileCheck -check-prefix=OBJECTD2FOO %s
+# RUN:   %t %t2 %t1 -o /dev/null 2>&1 | FileCheck -check-prefix=OBJECTD2FOO %s
 # RUN: ld.lld -y foo -y common %t %t1.so %t2 -o %t3 2>&1 | \
 # RUN:   FileCheck -check-prefix=OBJECTD2FOO %s
 # OBJECTD2FOO: trace-symbols.s.tmp2: definition of foo

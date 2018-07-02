@@ -35,11 +35,11 @@
 # RUN: llvm-objdump -section-headers %t4 | FileCheck %s
 
 ## Errors:
-# RUN: not ld.lld %t.o --section-start .text100000 -o %t2 2>&1 \
+# RUN: not ld.lld %t.o --section-start .text100000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR1 %s
 # ERR1: invalid argument: --section-start .text100000
 
-# RUN: not ld.lld %t.o --section-start .text=1Q0000 -o %t3 2>&1 \
+# RUN: not ld.lld %t.o --section-start .text=1Q0000 -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR2 %s
 # ERR2: invalid argument: --section-start .text=1Q0000
 

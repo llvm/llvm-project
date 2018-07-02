@@ -83,4 +83,12 @@ int main()
     test("123456798012345679801234567980123456798012345679801234567980", 60, A());
     }
 #endif
+
+#if TEST_STD_VER > 3
+    {   // LWG 2946
+    std::string s({"abc", 1});
+    assert(s.size() == 1);
+    assert(s == "a");
+    }
+#endif
 }
