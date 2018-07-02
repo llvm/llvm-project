@@ -120,9 +120,30 @@ define <8 x float> @fmul_fdiv_v8f32(<8 x float> %a, <8 x float> %b) {
 }
 
 define <4 x float> @fmul_fdiv_v4f32_const(<4 x float> %a) {
-; CHECK-LABEL: @fmul_fdiv_v4f32_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[A:%.*]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 2.000000e+00>
-; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+; SSE-LABEL: @fmul_fdiv_v4f32_const(
+; SSE-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[A:%.*]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 2.000000e+00>
+; SSE-NEXT:    ret <4 x float> [[TMP1]]
+;
+; SLM-LABEL: @fmul_fdiv_v4f32_const(
+; SLM-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; SLM-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
+; SLM-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
+; SLM-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
+; SLM-NEXT:    [[AB0:%.*]] = fmul float [[A0]], 2.000000e+00
+; SLM-NEXT:    [[AB3:%.*]] = fmul float [[A3]], 2.000000e+00
+; SLM-NEXT:    [[R0:%.*]] = insertelement <4 x float> undef, float [[AB0]], i32 0
+; SLM-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[A1]], i32 1
+; SLM-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[A2]], i32 2
+; SLM-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[AB3]], i32 3
+; SLM-NEXT:    ret <4 x float> [[R3]]
+;
+; AVX-LABEL: @fmul_fdiv_v4f32_const(
+; AVX-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[A:%.*]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 2.000000e+00>
+; AVX-NEXT:    ret <4 x float> [[TMP1]]
+;
+; AVX512-LABEL: @fmul_fdiv_v4f32_const(
+; AVX512-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[A:%.*]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 2.000000e+00>
+; AVX512-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %a1 = extractelement <4 x float> %a, i32 1

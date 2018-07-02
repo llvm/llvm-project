@@ -534,7 +534,7 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   // can't parse the file.
   EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, Position(),
                                        clangd::CodeCompleteOptions()))
-                  .items,
+                  .Completions,
               IsEmpty());
   auto SigHelp = runSignatureHelp(Server, FooCpp, Position());
   ASSERT_TRUE(bool(SigHelp)) << "signatureHelp returned an error";

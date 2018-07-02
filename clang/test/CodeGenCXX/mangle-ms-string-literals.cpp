@@ -719,9 +719,35 @@ const wchar_t *LongWideString = L"012345678901234567890123456789ABCDEF";
 // CHECK: @"??_C@_1EK@KFPEBLPK@?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AAA?$AAB@"
 const wchar_t *UnicodeLiteral = L"\ud7ff";
 // CHECK: @"??_C@_13IIHIAFKH@?W?$PP?$AA?$AA@"
+
 const char *U8Literal = u8"hi";
 // CHECK: @"??_C@_02PCEFGMJL@hi?$AA@"
+const char *LongU8Literal = u8"012345678901234567890123456789ABCDEF";
+// CHECK: @"??_C@_0CF@LABBIIMO@012345678901234567890123456789AB@"
+
 const char16_t *U16Literal = u"hi";
 // CHECK: @"??_C@_05OMLEGLOC@h?$AAi?$AA?$AA?$AA@"
+// Note this starts with o instead of 0. Else LongWideString would have
+// the same initializer and CodeGenModule::ConstantStringMap would map them
+// to the same global with a shared mangling.
+// FIXME: ConstantStringMap probably shouldn't map things with the same data
+// but different manglings to the same variable.
+const char16_t *LongU16Literal = u"o12345678901234567890123456789ABCDEF";
+// CHECK: @"??_C@_0EK@FEAOBHPP@o?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA@"
+
 const char32_t *U32Literal = U"hi";
 // CHECK: @"??_C@_0M@GFNAJIPG@h?$AA?$AA?$AAi?$AA?$AA?$AA?$AA?$AA?$AA?$AA@"
+const char32_t *LongU32Literal = U"012345678901234567890123456789ABCDEF";
+// CHECK: @"??_C@_0JE@IMHFEDAA@0?$AA?$AA?$AA1?$AA?$AA?$AA2?$AA?$AA?$AA3?$AA?$AA?$AA4?$AA?$AA?$AA5?$AA?$AA?$AA6?$AA?$AA?$AA7?$AA?$AA?$AA@"
+
+// These all have just the right length that the trailing 0 just fits.
+const char *MaxASCIIString = "012345678901234567890123456789A";
+// CHECK: @"??_C@_0CA@NMANGEKF@012345678901234567890123456789A?$AA@"
+const wchar_t *MaxWideString = L"012345678901234567890123456789A";
+// CHECK: @"??_C@_1EA@LJAFPILO@?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AAA?$AA?$AA@"
+const char *MaxU8String = u8"012345678901234567890123456789A";
+// CHECK: @"??_C@_0CA@NMANGEKF@012345678901234567890123456789A?$AA@"
+const char16_t *MaxU16String = u"012345678901234";
+// CHECK: @"??_C@_0CA@NFEFHIFO@0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA?$AA?$AA@"
+const char32_t *MaxU32String = U"0123456";
+// CHECK: @"??_C@_0CA@KFPHPCC@0?$AA?$AA?$AA1?$AA?$AA?$AA2?$AA?$AA?$AA3?$AA?$AA?$AA4?$AA?$AA?$AA5?$AA?$AA?$AA6?$AA?$AA?$AA?$AA?$AA?$AA?$AA@"

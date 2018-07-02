@@ -132,32 +132,24 @@ class ExegesisX86Target : public ExegesisTarget {
 
   std::vector<llvm::MCInst>
   setRegToConstant(unsigned Reg) const override {
-    if (llvm::X86::GR8RegClass.contains(Reg)) {
+    if (llvm::X86::GR8RegClass.contains(Reg))
       return {llvm::MCInstBuilder(llvm::X86::MOV8ri).addReg(Reg).addImm(1)};
-    }
-    if (llvm::X86::GR16RegClass.contains(Reg)) {
+    if (llvm::X86::GR16RegClass.contains(Reg))
       return {llvm::MCInstBuilder(llvm::X86::MOV16ri).addReg(Reg).addImm(1)};
-    }
-    if (llvm::X86::GR32RegClass.contains(Reg)) {
+    if (llvm::X86::GR32RegClass.contains(Reg))
       return {llvm::MCInstBuilder(llvm::X86::MOV32ri).addReg(Reg).addImm(1)};
-    }
-    if (llvm::X86::GR64RegClass.contains(Reg)) {
+    if (llvm::X86::GR64RegClass.contains(Reg))
       return {llvm::MCInstBuilder(llvm::X86::MOV64ri32).addReg(Reg).addImm(1)};
-    }
-    if (llvm::X86::VR128XRegClass.contains(Reg)) {
+    if (llvm::X86::VR128XRegClass.contains(Reg))
       return setVectorRegToConstant(Reg, 16, llvm::X86::VMOVDQUrm);
-    }
-    if (llvm::X86::VR256XRegClass.contains(Reg)) {
+    if (llvm::X86::VR256XRegClass.contains(Reg))
       return setVectorRegToConstant(Reg, 32, llvm::X86::VMOVDQUYrm);
-    }
-    if (llvm::X86::VR512RegClass.contains(Reg)) {
+    if (llvm::X86::VR512RegClass.contains(Reg))
       return setVectorRegToConstant(Reg, 64, llvm::X86::VMOVDQU64Zrm);
-    }
     if (llvm::X86::RFP32RegClass.contains(Reg) ||
         llvm::X86::RFP64RegClass.contains(Reg) ||
-        llvm::X86::RFP80RegClass.contains(Reg)) {
+        llvm::X86::RFP80RegClass.contains(Reg))
       return setVectorRegToConstant(Reg, 8, llvm::X86::LD_Fp64m);
-    }
     return {};
   }
 

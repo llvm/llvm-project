@@ -2350,6 +2350,9 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       return ReuseShuffleCost + VecCallCost - ScalarCallCost;
     }
     case Instruction::ShuffleVector: {
+      assert(S.isAltShuffle() && Instruction::isBinaryOp(S.Opcode) &&
+             Instruction::isBinaryOp(S.AltOpcode) &&
+             "Invalid Shuffle Vector Operand");
       int ScalarCost = 0;
       if (NeedToShuffleReuses) {
         for (unsigned Idx : E->ReuseShuffleIndices) {
@@ -2372,14 +2375,13 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
         Instruction *I = cast<Instruction>(i);
         if (!I)
           break;
+        assert(S.isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
         ScalarCost += TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy);
       }
       // VecCost is equal to sum of the cost of creating 2 vectors
       // and the cost of creating shuffle.
-      Instruction *I0 = cast<Instruction>(VL[0]);
-      VecCost = TTI->getArithmeticInstrCost(I0->getOpcode(), VecTy);
-      Instruction *I1 = cast<Instruction>(VL[1]);
-      VecCost += TTI->getArithmeticInstrCost(I1->getOpcode(), VecTy);
+      VecCost = TTI->getArithmeticInstrCost(S.Opcode, VecTy);
+      VecCost += TTI->getArithmeticInstrCost(S.AltOpcode, VecTy);
       VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, 0);
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
@@ -3461,7 +3463,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::ShuffleVector: {
       ValueList LHSVL, RHSVL;
-      assert(Instruction::isBinaryOp(S.Opcode) &&
+      assert(S.isAltShuffle() && Instruction::isBinaryOp(S.Opcode) &&
+             Instruction::isBinaryOp(S.AltOpcode) &&
              "Invalid Shuffle Vector Operand");
       reorderAltShuffleOperands(S, E->Scalars, LHSVL, RHSVL);
       setInsertPointAfterBundle(E->Scalars, S);

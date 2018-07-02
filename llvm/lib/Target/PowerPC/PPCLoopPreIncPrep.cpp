@@ -294,6 +294,19 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
       if (const SCEVAddRecExpr *LARSCEV = dyn_cast<SCEVAddRecExpr>(LSCEV)) {
         if (LARSCEV->getLoop() != L)
           continue;
+        // See getPreIndexedAddressParts, the displacement for LDU/STDU has to
+        // be 4's multiple (DS-form). For i64 loads/stores when the displacement
+        // fits in a 16-bit signed field but isn't a multiple of 4, it will be
+        // useless and possible to break some original well-form addressing mode
+        // to make this pre-inc prep for it.
+        if (PtrValue->getType()->getPointerElementType()->isIntegerTy(64)) {
+          if (const SCEVConstant *StepConst =
+                  dyn_cast<SCEVConstant>(LARSCEV->getStepRecurrence(*SE))) {
+            const APInt &ConstInt = StepConst->getValue()->getValue();
+            if (ConstInt.isSignedIntN(16) && ConstInt.srem(4) != 0)
+              continue;
+          }
+        }
       } else {
         continue;
       }
