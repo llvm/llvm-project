@@ -343,6 +343,13 @@ TEST(Hover, All) {
 
   OneTest Tests[] = {
       {
+          R"cpp(// No hover
+            ^int main() {
+            }
+          )cpp",
+          "",
+      },
+      {
           R"cpp(// Local variable
             int main() {
               int bonjour;
@@ -637,16 +644,275 @@ TEST(Hover, All) {
           )cpp",
           "",
       },
+      {
+          R"cpp(// Simple initialization with auto
+            void foo() {
+              ^auto i = 1;
+            }
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// Simple initialization with const auto
+            void foo() {
+              const ^auto i = 1;
+            }
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// Simple initialization with const auto&
+            void foo() {
+              const ^auto& i = 1;
+            }
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// Simple initialization with auto&
+            void foo() {
+              ^auto& i = 1;
+            }
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// Auto with initializer list.
+            namespace std
+            {
+              template<class _E>
+              class initializer_list {};
+            }
+            void foo() {
+              ^auto i = {1,2};
+            }
+          )cpp",
+          "class std::initializer_list<int>",
+      },
+      {
+          R"cpp(// User defined conversion to auto
+            struct Bar {
+              operator ^auto() const { return 10; }
+            };
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// Simple initialization with decltype(auto)
+            void foo() {
+              ^decltype(auto) i = 1;
+            }
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// Simple initialization with const decltype(auto)
+            void foo() {
+              const int j = 0;
+              ^decltype(auto) i = j;
+            }
+          )cpp",
+          "const int",
+      },
+      {
+          R"cpp(// Simple initialization with const& decltype(auto)
+            void foo() {
+              int k = 0;
+              const int& j = k;
+              ^decltype(auto) i = j;
+            }
+          )cpp",
+          "const int &",
+      },
+      {
+          R"cpp(// Simple initialization with & decltype(auto)
+            void foo() {
+              int k = 0;
+              int& j = k;
+              ^decltype(auto) i = j;
+            }
+          )cpp",
+          "int &",
+      },
+      {
+          R"cpp(// decltype with initializer list: nothing
+            namespace std
+            {
+              template<class _E>
+              class initializer_list {};
+            }
+            void foo() {
+              ^decltype(auto) i = {1,2};
+            }
+          )cpp",
+          "",
+      },
+      {
+          R"cpp(// auto function return with trailing type
+            struct Bar {};
+            ^auto test() -> decltype(Bar()) {
+              return Bar();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// trailing return type
+            struct Bar {};
+            auto test() -> ^decltype(Bar()) {
+              return Bar();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// auto in function return
+            struct Bar {};
+            ^auto test() {
+              return Bar();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// auto& in function return
+            struct Bar {};
+            ^auto& test() {
+              return Bar();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// const auto& in function return
+            struct Bar {};
+            const ^auto& test() {
+              return Bar();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// decltype(auto) in function return
+            struct Bar {};
+            ^decltype(auto) test() {
+              return Bar();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// decltype(auto) reference in function return
+            struct Bar {};
+            ^decltype(auto) test() {
+              int a;
+              return (a);
+            }
+          )cpp",
+          "int &",
+      },
+      {
+          R"cpp(// decltype lvalue reference
+            void foo() {
+              int I = 0;
+              ^decltype(I) J = I;
+            }
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// decltype lvalue reference
+            void foo() {
+              int I= 0;
+              int &K = I;
+              ^decltype(K) J = I;
+            }
+          )cpp",
+          "int &",
+      },
+      {
+          R"cpp(// decltype lvalue reference parenthesis
+            void foo() {
+              int I = 0;
+              ^decltype((I)) J = I;
+            }
+          )cpp",
+          "int &",
+      },
+      {
+          R"cpp(// decltype rvalue reference
+            void foo() {
+              int I = 0;
+              ^decltype(static_cast<int&&>(I)) J = static_cast<int&&>(I);
+            }
+          )cpp",
+          "int &&",
+      },
+      {
+          R"cpp(// decltype rvalue reference function call
+            int && bar();
+            void foo() {
+              int I = 0;
+              ^decltype(bar()) J = bar();
+            }
+          )cpp",
+          "int &&",
+      },
+      {
+          R"cpp(// decltype of function with trailing return type.
+            struct Bar {};
+            auto test() -> decltype(Bar()) {
+              return Bar();
+            }
+            void foo() {
+              ^decltype(test()) i = test();
+            }
+          )cpp",
+          "struct Bar",
+      },
+      {
+          R"cpp(// decltype of var with decltype.
+            void foo() {
+              int I = 0;
+              decltype(I) J = I;
+              ^decltype(J) K = J;
+            }
+          )cpp",
+          "int",
+      },
+      {
+          R"cpp(// structured binding. Not supported yet
+            struct Bar {};
+            void foo() {
+              Bar a[2];
+              ^auto [x,y] = a;
+            }
+          )cpp",
+          "",
+      },
+      {
+          R"cpp(// Template auto parameter. Nothing (Not useful).
+            template<^auto T>
+            void func() {
+            }
+            void foo() {
+               func<1>();
+            }
+          )cpp",
+          "",
+      },
   };
 
   for (const OneTest &Test : Tests) {
     Annotations T(Test.Input);
-    auto AST = TestTU::withCode(T.code()).build();
+    TestTU TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-std=c++17");
+    auto AST = TU.build();
     if (auto H = getHover(AST, T.point())) {
       EXPECT_NE("", Test.ExpectedHover) << Test.Input;
-      EXPECT_EQ(H->contents.value, Test.ExpectedHover) << Test.Input;
+      EXPECT_EQ(H->contents.value, Test.ExpectedHover.str()) << Test.Input;
     } else
-      EXPECT_EQ("", Test.ExpectedHover) << Test.Input;
+      EXPECT_EQ("", Test.ExpectedHover.str()) << Test.Input;
   }
 }
 
