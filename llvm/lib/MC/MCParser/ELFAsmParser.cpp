@@ -486,6 +486,9 @@ static bool hasPrefix(StringRef SectionName, StringRef Prefix) {
 // defaults.
 static unsigned defaultSectionFlags(StringRef SectionName) {
 
+  if (hasPrefix(SectionName, ".rodata.cst"))
+    return ELF::SHF_ALLOC | ELF::SHF_MERGE;
+
   if (hasPrefix(SectionName, ".rodata.") || SectionName == ".rodata1")
     return ELF::SHF_ALLOC;
 

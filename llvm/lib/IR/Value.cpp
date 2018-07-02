@@ -521,7 +521,8 @@ static const Value *stripPointerCastsAndOffsets(const Value *V) {
         // but it can't be marked with returned attribute, that's why it needs
         // special case.
         if (StripKind == PSK_ZeroIndicesAndAliasesAndInvariantGroups &&
-            CS.getIntrinsicID() == Intrinsic::launder_invariant_group) {
+            (CS.getIntrinsicID() == Intrinsic::launder_invariant_group ||
+             CS.getIntrinsicID() == Intrinsic::strip_invariant_group)) {
           V = CS.getArgOperand(0);
           continue;
         }
