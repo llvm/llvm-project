@@ -4,8 +4,228 @@
 ; Try to eliminate binops and shuffles when the shuffle is a select in disguise:
 ; PR37806 - https://bugs.llvm.org/show_bug.cgi?id=37806
 
-define <4 x i32> @add(<4 x i32> %v0) {
+define <4 x i32> @add(<4 x i32> %v) {
 ; CHECK-LABEL: @add(
+; CHECK-NEXT:    [[B:%.*]] = add <4 x i32> [[V:%.*]], <i32 11, i32 undef, i32 13, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[V]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = add <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
+  %s = shufflevector <4 x i32> %b, <4 x i32> %v, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i32> %s
+}
+
+; Constant operand 0 (LHS) could work for some non-commutative binops?
+
+define <4 x i32> @sub(<4 x i32> %v) {
+; CHECK-LABEL: @sub(
+; CHECK-NEXT:    [[B:%.*]] = sub <4 x i32> <i32 undef, i32 undef, i32 undef, i32 14>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = sub <4 x i32> <i32 11, i32 12, i32 13, i32 14>, %v
+  %s = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  ret <4 x i32> %s
+}
+
+; If any element of the shuffle mask operand is undef, that element of the result is undef.
+; The shuffle is eliminated in this transform, but we can replace a constant element with undef.
+; Preserve flags when possible.
+
+define <4 x i32> @mul(<4 x i32> %v) {
+; CHECK-LABEL: @mul(
+; CHECK-NEXT:    [[B:%.*]] = mul nuw nsw <4 x i32> [[V:%.*]], <i32 undef, i32 12, i32 undef, i32 14>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> [[B]], <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = mul nsw nuw <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
+  %s = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 undef, i32 5, i32 2, i32 7>
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @shl(<4 x i32> %v) {
+; CHECK-LABEL: @shl(
+; CHECK-NEXT:    [[B:%.*]] = shl nuw <4 x i32> [[V:%.*]], <i32 11, i32 12, i32 13, i32 14>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[V]], <4 x i32> <i32 undef, i32 5, i32 2, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = shl nuw <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
+  %s = shufflevector <4 x i32> %b, <4 x i32> %v, <4 x i32> <i32 undef, i32 5, i32 2, i32 undef>
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @lshr(<4 x i32> %v) {
+; CHECK-LABEL: @lshr(
+; CHECK-NEXT:    [[B:%.*]] = lshr exact <4 x i32> <i32 11, i32 12, i32 13, i32 14>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> [[B]], <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = lshr exact <4 x i32> <i32 11, i32 12, i32 13, i32 14>, %v
+  %s = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+  ret <4 x i32> %s
+}
+
+; Try weird types.
+
+define <3 x i32> @ashr(<3 x i32> %v) {
+; CHECK-LABEL: @ashr(
+; CHECK-NEXT:    [[B:%.*]] = ashr <3 x i32> [[V:%.*]], <i32 11, i32 12, i32 13>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x i32> [[B]], <3 x i32> [[V]], <3 x i32> <i32 3, i32 1, i32 2>
+; CHECK-NEXT:    ret <3 x i32> [[S]]
+;
+  %b = ashr <3 x i32> %v, <i32 11, i32 12, i32 13>
+  %s = shufflevector <3 x i32> %b, <3 x i32> %v, <3 x i32> <i32 3, i32 1, i32 2>
+  ret <3 x i32> %s
+}
+
+define <3 x i42> @and(<3 x i42> %v) {
+; CHECK-LABEL: @and(
+; CHECK-NEXT:    [[B:%.*]] = and <3 x i42> [[V:%.*]], <i42 undef, i42 12, i42 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x i42> [[V]], <3 x i42> [[B]], <3 x i32> <i32 0, i32 4, i32 undef>
+; CHECK-NEXT:    ret <3 x i42> [[S]]
+;
+  %b = and <3 x i42> %v, <i42 11, i42 12, i42 13>
+  %s = shufflevector <3 x i42> %v, <3 x i42> %b, <3 x i32> <i32 0, i32 4, i32 undef>
+  ret <3 x i42> %s
+}
+
+; It doesn't matter if the intermediate op has extra uses.
+
+declare void @use_v4i32(<4 x i32>)
+
+define <4 x i32> @or(<4 x i32> %v) {
+; CHECK-LABEL: @or(
+; CHECK-NEXT:    [[B:%.*]] = or <4 x i32> [[V:%.*]], <i32 11, i32 12, i32 13, i32 14>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[V]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[B]])
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = or <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
+  %s = shufflevector <4 x i32> %b, <4 x i32> %v, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  call void @use_v4i32(<4 x i32> %b)
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @xor(<4 x i32> %v) {
+; CHECK-LABEL: @xor(
+; CHECK-NEXT:    [[B:%.*]] = xor <4 x i32> [[V:%.*]], <i32 undef, i32 12, i32 undef, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = xor <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
+  %s = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @udiv(<4 x i32> %v) {
+; CHECK-LABEL: @udiv(
+; CHECK-NEXT:    [[B:%.*]] = udiv <4 x i32> <i32 11, i32 12, i32 13, i32 14>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[V]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = udiv <4 x i32> <i32 11, i32 12, i32 13, i32 14>, %v
+  %s = shufflevector <4 x i32> %b, <4 x i32> %v, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  ret <4 x i32> %s
+}
+
+; Div/rem need special handling if the shuffle has undef elements.
+
+define <4 x i32> @sdiv(<4 x i32> %v) {
+; CHECK-LABEL: @sdiv(
+; CHECK-NEXT:    [[B:%.*]] = sdiv <4 x i32> [[V:%.*]], <i32 11, i32 12, i32 13, i32 14>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> [[B]], <4 x i32> <i32 undef, i32 1, i32 6, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = sdiv <4 x i32> %v, <i32 11, i32 12, i32 13, i32 14>
+  %s = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 undef, i32 1, i32 6, i32 undef>
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @urem(<4 x i32> %v) {
+; CHECK-LABEL: @urem(
+; CHECK-NEXT:    [[B:%.*]] = urem <4 x i32> <i32 11, i32 12, i32 13, i32 14>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[B]], <4 x i32> [[V]], <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = urem <4 x i32> <i32 11, i32 12, i32 13, i32 14>, %v
+  %s = shufflevector <4 x i32> %b, <4 x i32> %v, <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @srem(<4 x i32> %v) {
+; CHECK-LABEL: @srem(
+; CHECK-NEXT:    [[B:%.*]] = srem <4 x i32> <i32 11, i32 12, i32 13, i32 14>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[V]], <4 x i32> [[B]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %b = srem <4 x i32> <i32 11, i32 12, i32 13, i32 14>, %v
+  %s = shufflevector <4 x i32> %v, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+  ret <4 x i32> %s
+}
+
+; Try FP ops/types.
+
+define <4 x float> @fadd(<4 x float> %v) {
+; CHECK-LABEL: @fadd(
+; CHECK-NEXT:    [[B:%.*]] = fadd <4 x float> [[V:%.*]], <float 4.100000e+01, float 4.200000e+01, float 4.300000e+01, float 4.400000e+01>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[B]], <4 x float> [[V]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %b = fadd <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
+  %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x float> %s
+}
+
+define <4 x double> @fsub(<4 x double> %v) {
+; CHECK-LABEL: @fsub(
+; CHECK-NEXT:    [[B:%.*]] = fsub <4 x double> <double 4.100000e+01, double 4.200000e+01, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[V]], <4 x double> [[B]], <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x double> [[S]]
+;
+  %b = fsub <4 x double> <double 41.0, double 42.0, double 43.0, double 44.0>, %v
+  %s = shufflevector <4 x double> %v, <4 x double> %b, <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
+  ret <4 x double> %s
+}
+
+; Propagate any FMF.
+
+define <4 x float> @fmul(<4 x float> %v) {
+; CHECK-LABEL: @fmul(
+; CHECK-NEXT:    [[B:%.*]] = fmul nnan ninf <4 x float> [[V:%.*]], <float 4.100000e+01, float 4.200000e+01, float 4.300000e+01, float 4.400000e+01>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x float> [[B]], <4 x float> [[V]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %b = fmul nnan ninf <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
+  %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %s
+}
+
+define <4 x double> @fdiv(<4 x double> %v) {
+; CHECK-LABEL: @fdiv(
+; CHECK-NEXT:    [[B:%.*]] = fdiv fast <4 x double> <double 4.100000e+01, double 4.200000e+01, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[V]], <4 x double> [[B]], <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x double> [[S]]
+;
+  %b = fdiv fast <4 x double> <double 41.0, double 42.0, double 43.0, double 44.0>, %v
+  %s = shufflevector <4 x double> %v, <4 x double> %b, <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
+  ret <4 x double> %s
+}
+
+define <4 x double> @frem(<4 x double> %v) {
+; CHECK-LABEL: @frem(
+; CHECK-NEXT:    [[B:%.*]] = frem <4 x double> <double 4.100000e+01, double 4.200000e+01, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[B]], <4 x double> [[V]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    ret <4 x double> [[S]]
+;
+  %b = frem <4 x double> <double 41.0, double 42.0, double 43.0, double 44.0>, %v
+  %s = shufflevector <4 x double> %b, <4 x double> %v, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  ret <4 x double> %s
+}
+
+; Tests where both operands of the shuffle are binops with the same opcode.
+
+define <4 x i32> @add_add(<4 x i32> %v0) {
+; CHECK-LABEL: @add_add(
 ; CHECK-NEXT:    [[T3:%.*]] = add <4 x i32> [[V0:%.*]], <i32 1, i32 6, i32 3, i32 8>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -17,8 +237,8 @@ define <4 x i32> @add(<4 x i32> %v0) {
 
 ; Constant operand 0 (LHS) also works.
 
-define <4 x i32> @sub(<4 x i32> %v0) {
-; CHECK-LABEL: @sub(
+define <4 x i32> @sub_sub(<4 x i32> %v0) {
+; CHECK-LABEL: @sub_sub(
 ; CHECK-NEXT:    [[T3:%.*]] = sub <4 x i32> <i32 1, i32 2, i32 3, i32 8>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -31,8 +251,8 @@ define <4 x i32> @sub(<4 x i32> %v0) {
 ; If any element of the shuffle mask operand is undef, that element of the result is undef.
 ; The shuffle is eliminated in this transform, but we can replace a constant element with undef.
 
-define <4 x i32> @mul(<4 x i32> %v0) {
-; CHECK-LABEL: @mul(
+define <4 x i32> @mul_mul(<4 x i32> %v0) {
+; CHECK-LABEL: @mul_mul(
 ; CHECK-NEXT:    [[T3:%.*]] = mul <4 x i32> [[V0:%.*]], <i32 undef, i32 6, i32 3, i32 8>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -44,8 +264,8 @@ define <4 x i32> @mul(<4 x i32> %v0) {
 
 ; Preserve flags when possible.
 
-define <4 x i32> @shl(<4 x i32> %v0) {
-; CHECK-LABEL: @shl(
+define <4 x i32> @shl_shl(<4 x i32> %v0) {
+; CHECK-LABEL: @shl_shl(
 ; CHECK-NEXT:    [[T3:%.*]] = shl nuw <4 x i32> [[V0:%.*]], <i32 undef, i32 6, i32 3, i32 undef>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -57,8 +277,8 @@ define <4 x i32> @shl(<4 x i32> %v0) {
 
 ; Can't propagate the flag here.
 
-define <4 x i32> @lshr(<4 x i32> %v0) {
-; CHECK-LABEL: @lshr(
+define <4 x i32> @lshr_lshr(<4 x i32> %v0) {
+; CHECK-LABEL: @lshr_lshr(
 ; CHECK-NEXT:    [[T3:%.*]] = lshr <4 x i32> <i32 5, i32 6, i32 3, i32 8>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -70,8 +290,8 @@ define <4 x i32> @lshr(<4 x i32> %v0) {
 
 ; Try weird types.
 
-define <3 x i32> @ashr(<3 x i32> %v0) {
-; CHECK-LABEL: @ashr(
+define <3 x i32> @ashr_ashr(<3 x i32> %v0) {
+; CHECK-LABEL: @ashr_ashr(
 ; CHECK-NEXT:    [[T3:%.*]] = ashr <3 x i32> [[V0:%.*]], <i32 4, i32 2, i32 3>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
@@ -81,8 +301,8 @@ define <3 x i32> @ashr(<3 x i32> %v0) {
   ret <3 x i32> %t3
 }
 
-define <3 x i42> @and(<3 x i42> %v0) {
-; CHECK-LABEL: @and(
+define <3 x i42> @and_and(<3 x i42> %v0) {
+; CHECK-LABEL: @and_and(
 ; CHECK-NEXT:    [[T3:%.*]] = and <3 x i42> [[V0:%.*]], <i42 1, i42 5, i42 undef>
 ; CHECK-NEXT:    ret <3 x i42> [[T3]]
 ;
@@ -94,10 +314,8 @@ define <3 x i42> @and(<3 x i42> %v0) {
 
 ; It doesn't matter if the intermediate ops have extra uses.
 
-declare void @use_v4i32(<4 x i32>)
-
-define <4 x i32> @or(<4 x i32> %v0) {
-; CHECK-LABEL: @or(
+define <4 x i32> @or_or(<4 x i32> %v0) {
+; CHECK-LABEL: @or_or(
 ; CHECK-NEXT:    [[T1:%.*]] = or <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[T3:%.*]] = or <4 x i32> [[V0]], <i32 5, i32 6, i32 3, i32 4>
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T1]])
@@ -110,8 +328,8 @@ define <4 x i32> @or(<4 x i32> %v0) {
   ret <4 x i32> %t3
 }
 
-define <4 x i32> @xor(<4 x i32> %v0) {
-; CHECK-LABEL: @xor(
+define <4 x i32> @xor_xor(<4 x i32> %v0) {
+; CHECK-LABEL: @xor_xor(
 ; CHECK-NEXT:    [[T2:%.*]] = xor <4 x i32> [[V0:%.*]], <i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[T3:%.*]] = xor <4 x i32> [[V0]], <i32 1, i32 6, i32 3, i32 4>
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[T2]])
@@ -124,8 +342,8 @@ define <4 x i32> @xor(<4 x i32> %v0) {
   ret <4 x i32> %t3
 }
 
-define <4 x i32> @udiv(<4 x i32> %v0) {
-; CHECK-LABEL: @udiv(
+define <4 x i32> @udiv_udiv(<4 x i32> %v0) {
+; CHECK-LABEL: @udiv_udiv(
 ; CHECK-NEXT:    [[T1:%.*]] = udiv <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = udiv <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V0]]
 ; CHECK-NEXT:    [[T3:%.*]] = udiv <4 x i32> <i32 1, i32 2, i32 3, i32 8>, [[V0]]
@@ -143,8 +361,8 @@ define <4 x i32> @udiv(<4 x i32> %v0) {
 
 ; Div/rem need special handling if the shuffle has undef elements.
 
-define <4 x i32> @sdiv(<4 x i32> %v0) {
-; CHECK-LABEL: @sdiv(
+define <4 x i32> @sdiv_sdiv(<4 x i32> %v0) {
+; CHECK-LABEL: @sdiv_sdiv(
 ; CHECK-NEXT:    [[T3:%.*]] = sdiv <4 x i32> [[V0:%.*]], <i32 1, i32 2, i32 7, i32 1>
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -154,8 +372,8 @@ define <4 x i32> @sdiv(<4 x i32> %v0) {
   ret <4 x i32> %t3
 }
 
-define <4 x i32> @urem(<4 x i32> %v0) {
-; CHECK-LABEL: @urem(
+define <4 x i32> @urem_urem(<4 x i32> %v0) {
+; CHECK-LABEL: @urem_urem(
 ; CHECK-NEXT:    [[T3:%.*]] = urem <4 x i32> <i32 1, i32 2, i32 7, i32 1>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -165,8 +383,8 @@ define <4 x i32> @urem(<4 x i32> %v0) {
   ret <4 x i32> %t3
 }
 
-define <4 x i32> @srem(<4 x i32> %v0) {
-; CHECK-LABEL: @srem(
+define <4 x i32> @srem_srem(<4 x i32> %v0) {
+; CHECK-LABEL: @srem_srem(
 ; CHECK-NEXT:    [[T3:%.*]] = srem <4 x i32> <i32 1, i32 2, i32 7, i32 4>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
@@ -178,8 +396,8 @@ define <4 x i32> @srem(<4 x i32> %v0) {
 
 ; Try FP ops/types.
 
-define <4 x float> @fadd(<4 x float> %v0) {
-; CHECK-LABEL: @fadd(
+define <4 x float> @fadd_fadd(<4 x float> %v0) {
+; CHECK-LABEL: @fadd_fadd(
 ; CHECK-NEXT:    [[T3:%.*]] = fadd <4 x float> [[V0:%.*]], <float 1.000000e+00, float 2.000000e+00, float 7.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
@@ -189,8 +407,8 @@ define <4 x float> @fadd(<4 x float> %v0) {
   ret <4 x float> %t3
 }
 
-define <4 x double> @fsub(<4 x double> %v0) {
-; CHECK-LABEL: @fsub(
+define <4 x double> @fsub_fsub(<4 x double> %v0) {
+; CHECK-LABEL: @fsub_fsub(
 ; CHECK-NEXT:    [[T3:%.*]] = fsub <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[T3]]
 ;
@@ -202,8 +420,8 @@ define <4 x double> @fsub(<4 x double> %v0) {
 
 ; Intersect any FMF.
 
-define <4 x float> @fmul(<4 x float> %v0) {
-; CHECK-LABEL: @fmul(
+define <4 x float> @fmul_fmul(<4 x float> %v0) {
+; CHECK-LABEL: @fmul_fmul(
 ; CHECK-NEXT:    [[T3:%.*]] = fmul nnan ninf <4 x float> [[V0:%.*]], <float 1.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[T3]]
 ;
@@ -213,8 +431,8 @@ define <4 x float> @fmul(<4 x float> %v0) {
   ret <4 x float> %t3
 }
 
-define <4 x double> @fdiv(<4 x double> %v0) {
-; CHECK-LABEL: @fdiv(
+define <4 x double> @fdiv_fdiv(<4 x double> %v0) {
+; CHECK-LABEL: @fdiv_fdiv(
 ; CHECK-NEXT:    [[T3:%.*]] = fdiv nnan arcp <4 x double> <double undef, double 2.000000e+00, double 7.000000e+00, double 8.000000e+00>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x double> [[T3]]
 ;
@@ -226,8 +444,8 @@ define <4 x double> @fdiv(<4 x double> %v0) {
 
 ; The variable operand must be either the first operand or second operand in both binops.
 
-define <4 x double> @frem(<4 x double> %v0) {
-; CHECK-LABEL: @frem(
+define <4 x double> @frem_frem(<4 x double> %v0) {
+; CHECK-LABEL: @frem_frem(
 ; CHECK-NEXT:    [[T1:%.*]] = frem <4 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>, [[V0:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = frem <4 x double> [[V0]], <double 5.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x double> [[T1]], <4 x double> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>

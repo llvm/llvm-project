@@ -593,6 +593,24 @@ let Predicates = [HasSVE] in {
   defm INCD_ZPiI   : sve_int_countvlv<0b11100, "incd",   ZPR64>;
   defm DECD_ZPiI   : sve_int_countvlv<0b11101, "decd",   ZPR64>;
 
+  defm SQINCP_XPWd : sve_int_count_r_s32<0b00000, "sqincp">;
+  defm SQINCP_XP   : sve_int_count_r_x64<0b00010, "sqincp">;
+  defm UQINCP_WP   : sve_int_count_r_u32<0b00100, "uqincp">;
+  defm UQINCP_XP   : sve_int_count_r_x64<0b00110, "uqincp">;
+  defm SQDECP_XPWd : sve_int_count_r_s32<0b01000, "sqdecp">;
+  defm SQDECP_XP   : sve_int_count_r_x64<0b01010, "sqdecp">;
+  defm UQDECP_WP   : sve_int_count_r_u32<0b01100, "uqdecp">;
+  defm UQDECP_XP   : sve_int_count_r_x64<0b01110, "uqdecp">;
+  defm INCP_XP     : sve_int_count_r_x64<0b10000, "incp">;
+  defm DECP_XP     : sve_int_count_r_x64<0b10100, "decp">;
+
+  defm SQINCP_ZP   : sve_int_count_v<0b00000, "sqincp">;
+  defm UQINCP_ZP   : sve_int_count_v<0b00100, "uqincp">;
+  defm SQDECP_ZP   : sve_int_count_v<0b01000, "sqdecp">;
+  defm UQDECP_ZP   : sve_int_count_v<0b01100, "uqdecp">;
+  defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
+  defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
+
   defm INDEX_RR : sve_int_index_rr<"index">;
   defm INDEX_IR : sve_int_index_ir<"index">;
   defm INDEX_RI : sve_int_index_ri<"index">;

@@ -846,7 +846,6 @@ private:
                         const InlineAsmIdentifierInfo &Info);
 
   bool parseDirectiveEven(SMLoc L);
-  bool ParseDirectiveWord(unsigned Size, SMLoc L);
   bool ParseDirectiveCode(StringRef IDVal, SMLoc L);
 
   /// CodeView FPO data directives.
@@ -944,6 +943,8 @@ public:
                const MCInstrInfo &mii, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, sti, mii),  InstInfo(nullptr),
         Code16GCC(false) {
+
+    Parser.addAliasForDirective(".word", ".2byte");
 
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
@@ -3264,9 +3265,7 @@ bool X86AsmParser::OmitRegisterFromClobberLists(unsigned RegNo) {
 bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
   MCAsmParser &Parser = getParser();
   StringRef IDVal = DirectiveID.getIdentifier();
-  if (IDVal == ".word")
-    return ParseDirectiveWord(2, DirectiveID.getLoc());
-  else if (IDVal.startswith(".code"))
+  if (IDVal.startswith(".code"))
     return ParseDirectiveCode(IDVal, DirectiveID.getLoc());
   else if (IDVal.startswith(".att_syntax")) {
     getParser().setParsingInlineAsm(false);
@@ -3325,27 +3324,6 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     getStreamer().EmitCodeAlignment(2, 0);
   else
     getStreamer().EmitValueToAlignment(2, 0, 1, 0);
-  return false;
-}
-/// ParseDirectiveWord
-///  ::= .word [ expression (, expression)* ]
-bool X86AsmParser::ParseDirectiveWord(unsigned Size, SMLoc L) {
-  auto parseOp = [&]() -> bool {
-    const MCExpr *Value;
-    SMLoc ExprLoc = getLexer().getLoc();
-    if (getParser().parseExpression(Value))
-      return true;
-    if (const auto *MCE = dyn_cast<MCConstantExpr>(Value)) {
-      assert(Size <= 8 && "Invalid size");
-      uint64_t IntValue = MCE->getValue();
-      if (!isUIntN(8 * Size, IntValue) && !isIntN(8 * Size, IntValue))
-        return Error(ExprLoc, "literal value out of range for directive");
-      getStreamer().EmitIntValue(IntValue, Size);
-    } else
-      getStreamer().EmitValue(Value, Size, ExprLoc);
-    return false;
-  };
-  parseMany(parseOp);
   return false;
 }
 

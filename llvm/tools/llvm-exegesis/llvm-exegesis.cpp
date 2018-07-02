@@ -140,10 +140,6 @@ void benchmarkMain() {
     return;
   }
 
-  // FIXME: Do not require SchedModel for latency.
-  if (!State.getSubtargetInfo().getSchedModel().hasExtraProcessorInfo())
-    llvm::report_fatal_error("sched model is missing extra processor info!");
-
   const std::unique_ptr<BenchmarkRunner> Runner =
       State.getExegesisTarget().createBenchmarkRunner(BenchmarkMode, State);
   if (!Runner) {

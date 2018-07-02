@@ -207,3 +207,25 @@ define <4 x i32> @test8(<4 x i32> %a) {
   %lshr = ashr <4 x i32> %a, <i32 3, i32 3, i32 2, i32 2>
   ret <4 x i32> %lshr
 }
+
+define <8 x i16> @test9(<8 x i16> %a) {
+; SSE-LABEL: test9:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psraw $3, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,65535,65535,0,0,0]
+; SSE-NEXT:    psraw $1, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pandn %xmm1, %xmm2
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test9:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsraw $3, %xmm0, %xmm1
+; AVX-NEXT:    vpsraw $1, %xmm0, %xmm0
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4],xmm1[5,6,7]
+; AVX-NEXT:    retq
+  %lshr = ashr <8 x i16> %a, <i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3>
+  ret <8 x i16> %lshr
+}

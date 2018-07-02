@@ -282,6 +282,82 @@ let Predicates = [HasSVE] in {
 
 
 //===----------------------------------------------------------------------===//
+// SVE Predicate Count Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_count_r<bits<2> sz8_64, bits<5> opc, string asm,
+                      RegisterOperand dty, PPRRegOp pprty, RegisterOperand sty>
+: I<(outs dty:$Rdn), (ins pprty:$Pg, sty:$_Rdn),
+  asm, "\t$Rdn, $Pg",
+  "",
+  []>, Sched<[]> {
+  bits<5> Rdn;
+  bits<4> Pg;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-19} = 0b101;
+  let Inst{18-16} = opc{4-2};
+  let Inst{15-11} = 0b10001;
+  let Inst{10-9}  = opc{1-0};
+  let Inst{8-5}   = Pg;
+  let Inst{4-0}   = Rdn;
+
+  // Signed 32bit forms require their GPR operand printed.
+  let AsmString = !if(!eq(opc{4,2-0}, 0b0000),
+                      !strconcat(asm, "\t$Rdn, $Pg, $_Rdn"),
+                      !strconcat(asm, "\t$Rdn, $Pg"));
+  let Constraints = "$Rdn = $_Rdn";
+}
+
+multiclass sve_int_count_r_s32<bits<5> opc, string asm> {
+  def _B : sve_int_count_r<0b00, opc, asm, GPR64z, PPR8, GPR64as32>;
+  def _H : sve_int_count_r<0b01, opc, asm, GPR64z, PPR16, GPR64as32>;
+  def _S : sve_int_count_r<0b10, opc, asm, GPR64z, PPR32, GPR64as32>;
+  def _D : sve_int_count_r<0b11, opc, asm, GPR64z, PPR64, GPR64as32>;
+}
+
+multiclass sve_int_count_r_u32<bits<5> opc, string asm> {
+  def _B : sve_int_count_r<0b00, opc, asm, GPR32z, PPR8, GPR32z>;
+  def _H : sve_int_count_r<0b01, opc, asm, GPR32z, PPR16, GPR32z>;
+  def _S : sve_int_count_r<0b10, opc, asm, GPR32z, PPR32, GPR32z>;
+  def _D : sve_int_count_r<0b11, opc, asm, GPR32z, PPR64, GPR32z>;
+}
+
+multiclass sve_int_count_r_x64<bits<5> opc, string asm> {
+  def _B : sve_int_count_r<0b00, opc, asm, GPR64z, PPR8, GPR64z>;
+  def _H : sve_int_count_r<0b01, opc, asm, GPR64z, PPR16, GPR64z>;
+  def _S : sve_int_count_r<0b10, opc, asm, GPR64z, PPR32, GPR64z>;
+  def _D : sve_int_count_r<0b11, opc, asm, GPR64z, PPR64, GPR64z>;
+}
+
+class sve_int_count_v<bits<2> sz8_64, bits<5> opc, string asm,
+                      ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins zprty:$_Zdn, PPRAny:$Pg),
+  asm, "\t$Zdn, $Pg",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pg;
+  bits<5> Zdn;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-19} = 0b101;
+  let Inst{18-16} = opc{4-2};
+  let Inst{15-11} = 0b10000;
+  let Inst{10-9}  = opc{1-0};
+  let Inst{8-5}   = Pg;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sve_int_count_v<bits<5> opc, string asm> {
+  def _H : sve_int_count_v<0b01, opc, asm, ZPR16>;
+  def _S : sve_int_count_v<0b10, opc, asm, ZPR32>;
+  def _D : sve_int_count_v<0b11, opc, asm, ZPR64>;
+}
+
+
+//===----------------------------------------------------------------------===//
 // SVE Element Count Group
 //===----------------------------------------------------------------------===//
 

@@ -38,6 +38,8 @@ private:
   std::vector<BenchmarkMeasure>
   runMeasurements(const ExecutableFunction &EF,
                   const unsigned NumRepetitions) const override;
+
+  virtual const char *getCounterName() const;
 };
 
 } // namespace exegesis
