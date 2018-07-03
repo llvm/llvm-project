@@ -2,7 +2,8 @@
 ; RUN: opt -instcombine -S < %s | FileCheck %s
 
 ; Test that presence of range does not cause unprofitable transforms with bit
-; arithmetics, and instcombine behaves exactly the same as without the range.
+; arithmetics. InstCombine needs to be smart about dealing with range-annotated
+; values.
 
 define i1 @without_range(i32* %A) {
 ; CHECK-LABEL: @without_range(
@@ -19,8 +20,7 @@ define i1 @without_range(i32* %A) {
 define i1 @with_range(i32* %A) {
 ; CHECK-LABEL: @with_range(
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, i32* [[A:%.*]], align 8, !range !0
-; CHECK-NEXT:    [[B_MASK:%.*]] = and i32 [[A_VAL]], 2147483646
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B_MASK]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A_VAL]], 2
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A.val = load i32, i32* %A, align 8, !range !0

@@ -8,7 +8,7 @@ define i32 @udiv_biggerLshr(i32 %val) nounwind {
 ; CHECK-NEXT:    %tmp1 = udiv i32 %val, 64
 ; CHECK-NEXT:    -->  (%val /u 64) U: [0,67108864) S: [0,67108864)
 ; CHECK-NEXT:    %tmp2 = mul i32 %tmp1, 16
-; CHECK-NEXT:    -->  (16 * (%val /u 64)) U: [0,1073741809) S: [0,1073741809)
+; CHECK-NEXT:    -->  (16 * (%val /u 64))<nuw><nsw> U: [0,1073741809) S: [0,1073741809)
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_biggerLshr
 ;
   %tmp1 = udiv i32 %val, 64
@@ -38,7 +38,7 @@ define i32 @shifty_biggerLshr(i32 %val) {
 ; CHECK-NEXT:    %tmp1 = lshr i32 %val, 6
 ; CHECK-NEXT:    -->  (%val /u 64) U: [0,67108864) S: [0,67108864)
 ; CHECK-NEXT:    %tmp2 = shl i32 %tmp1, 4
-; CHECK-NEXT:    -->  (16 * (%val /u 64)) U: [0,1073741809) S: [0,1073741809)
+; CHECK-NEXT:    -->  (16 * (%val /u 64))<nuw><nsw> U: [0,1073741809) S: [0,1073741809)
 ; CHECK-NEXT:  Determining loop execution counts for: @shifty_biggerLshr
 ;
   %tmp1 = lshr i32 %val, 6
@@ -52,7 +52,7 @@ define i32 @shifty_biggerLshr_lshrexact(i32 %val) {
 ; CHECK-NEXT:    %tmp1 = lshr exact i32 %val, 6
 ; CHECK-NEXT:    -->  (%val /u 64) U: [0,67108864) S: [0,67108864)
 ; CHECK-NEXT:    %tmp2 = shl i32 %tmp1, 4
-; CHECK-NEXT:    -->  (16 * (%val /u 64)) U: [0,1073741809) S: [0,1073741809)
+; CHECK-NEXT:    -->  (16 * (%val /u 64))<nuw><nsw> U: [0,1073741809) S: [0,1073741809)
 ; CHECK-NEXT:  Determining loop execution counts for: @shifty_biggerLshr_lshrexact
 ;
   %tmp1 = lshr exact i32 %val, 6
@@ -96,7 +96,7 @@ define i32 @masky_biggerLshr(i32 %val) {
 ; CHECK-NEXT:    %tmp1 = lshr i32 %val, 2
 ; CHECK-NEXT:    -->  (%val /u 4) U: [0,1073741824) S: [0,1073741824)
 ; CHECK-NEXT:    %tmp2 = and i32 %tmp1, -16
-; CHECK-NEXT:    -->  (16 * (%val /u 64)) U: [0,1073741809) S: [0,1073741809)
+; CHECK-NEXT:    -->  (16 * (%val /u 64))<nuw><nsw> U: [0,1073741809) S: [0,1073741809)
 ; CHECK-NEXT:  Determining loop execution counts for: @masky_biggerLshr
 ;
   %tmp1 = lshr i32 %val, 2
@@ -121,7 +121,7 @@ define i32 @masky_biggerShr(i32 %val) {
 ; CHECK-NEXT:    %tmp1 = shl i32 %val, 2
 ; CHECK-NEXT:    -->  (4 * %val) U: [0,-3) S: [-2147483648,2147483645)
 ; CHECK-NEXT:    %tmp2 = and i32 %tmp1, -64
-; CHECK-NEXT:    -->  (64 * (zext i26 (trunc i32 (%val /u 16) to i26) to i32)) U: [0,-63) S: [0,-63)
+; CHECK-NEXT:    -->  (64 * (zext i26 (trunc i32 (%val /u 16) to i26) to i32))<nuw> U: [0,-63) S: [0,-63)
 ; CHECK-NEXT:  Determining loop execution counts for: @masky_biggerShr
 ;
   %tmp1 = shl i32 %val, 2

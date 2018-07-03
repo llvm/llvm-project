@@ -45,7 +45,10 @@ Value *DbgInfoIntrinsic::getVariableLocation(bool AllowNullOp) const {
     return V->getValue();
 
   // When the value goes to null, it gets replaced by an empty MDNode.
-  assert(!cast<MDNode>(MD)->getNumOperands() && "Expected an empty MDNode");
+  assert((isa<DbgLabelInst>(this)
+          || !cast<MDNode>(MD)->getNumOperands())
+	 && "DbgValueInst Expected an empty MDNode");
+
   return nullptr;
 }
 

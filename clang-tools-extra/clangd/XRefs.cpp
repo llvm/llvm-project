@@ -230,13 +230,10 @@ llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
 std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
                                       const SymbolIndex *Index) {
   const SourceManager &SourceMgr = AST.getASTContext().getSourceManager();
-  SourceLocation SourceLocationBeg =
-      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
 
   std::vector<Location> Result;
   // Handle goto definition for #include.
-  for (auto &Inc : AST.getInclusions()) {
-    Position Pos = sourceLocToPosition(SourceMgr, SourceLocationBeg);
+  for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (!Inc.Resolved.empty() && Inc.R.contains(Pos))
       Result.push_back(Location{URIForFile{Inc.Resolved}, {}});
   }
@@ -244,6 +241,8 @@ std::vector<Location> findDefinitions(ParsedAST &AST, Position Pos,
     return Result;
 
   // Identified symbols at a specific position.
+  SourceLocation SourceLocationBeg =
+      getBeginningOfIdentifier(AST, Pos, SourceMgr.getMainFileID());
   auto Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
 
   for (auto Item : Symbols.Macros) {

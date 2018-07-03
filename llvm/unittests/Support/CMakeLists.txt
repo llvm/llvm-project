@@ -59,6 +59,7 @@ add_llvm_unittest(SupportTests
   Threading.cpp
   TimerTest.cpp
   TypeNameTest.cpp
+  TypeTraitsTest.cpp
   TrailingObjectsTest.cpp
   TrigramIndexTest.cpp
   UnicodeTest.cpp

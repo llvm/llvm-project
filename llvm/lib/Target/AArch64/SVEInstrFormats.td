@@ -1232,6 +1232,71 @@ multiclass sve_int_ucmp_vi<bits<2> opc, string asm> {
 
 
 //===----------------------------------------------------------------------===//
+// SVE Floating Point Compare - Vectors Group
+//===----------------------------------------------------------------------===//
+
+class sve_fp_3op_p_pd<bits<2> sz, bits<3> opc, string asm, PPRRegOp pprty,
+                      ZPRRegOp zprty>
+: I<(outs pprty:$Pd), (ins PPR3bAny:$Pg, zprty:$Zn, zprty:$Zm),
+  asm, "\t$Pd, $Pg/z, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  bits<3> Pg;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = opc{2};
+  let Inst{14}    = 0b1;
+  let Inst{13}    = opc{1};
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = opc{0};
+  let Inst{3-0}   = Pd;
+}
+
+multiclass sve_fp_3op_p_pd<bits<3> opc, string asm> {
+  def _H : sve_fp_3op_p_pd<0b01, opc, asm, PPR16, ZPR16>;
+  def _S : sve_fp_3op_p_pd<0b10, opc, asm, PPR32, ZPR32>;
+  def _D : sve_fp_3op_p_pd<0b11, opc, asm, PPR64, ZPR64>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// SVE Floating Point Compare - with Zero Group
+//===----------------------------------------------------------------------===//
+
+class sve_fp_2op_p_pd<bits<2> sz, bits<3> opc, string asm, PPRRegOp pprty,
+                      ZPRRegOp zprty>
+: I<(outs pprty:$Pd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Pd, $Pg/z, $Zn, #0.0",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  bits<3> Pg;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = sz;
+  let Inst{21-18} = 0b0100;
+  let Inst{17-16} = opc{2-1};
+  let Inst{15-13} = 0b001;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4}     = opc{0};
+  let Inst{3-0}   = Pd;
+}
+
+multiclass sve_fp_2op_p_pd<bits<3> opc, string asm> {
+  def _H : sve_fp_2op_p_pd<0b01, opc, asm, PPR16, ZPR16>;
+  def _S : sve_fp_2op_p_pd<0b10, opc, asm, PPR32, ZPR32>;
+  def _D : sve_fp_2op_p_pd<0b11, opc, asm, PPR64, ZPR64>;
+}
+
+
+//===----------------------------------------------------------------------===//
 //SVE Index Generation Group
 //===----------------------------------------------------------------------===//
 

@@ -32,12 +32,20 @@ public:
     virtual ~MipsHandler() = default;
 
   protected:
-    virtual void assignValueToReg(unsigned ValVReg, unsigned PhysReg) = 0;
-
     bool assign(const CCValAssign &VA, unsigned vreg);
 
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
+
+  private:
+    virtual unsigned getStackAddress(uint64_t Size, int64_t Offset,
+                                     MachinePointerInfo &MPO) = 0;
+
+    virtual void assignValueToReg(unsigned ValVReg, unsigned PhysReg) = 0;
+
+    virtual void assignValueToAddress(unsigned ValVReg, unsigned Addr,
+                                      uint64_t Size,
+                                      MachinePointerInfo &MPO) = 0;
   };
 
   MipsCallLowering(const MipsTargetLowering &TLI);
