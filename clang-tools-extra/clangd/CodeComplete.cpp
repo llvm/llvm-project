@@ -1244,7 +1244,6 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
                                              : InsertTextFormat::PlainText;
   if (HeaderInsertion)
     LSP.additionalTextEdits = {*HeaderInsertion};
-  LSP.SymbolScope = Scope;
   return LSP;
 }
 
