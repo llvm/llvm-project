@@ -566,7 +566,7 @@ static bool isBlacklistedMember(const NamedDecl &D) {
 // within the callback.
 struct CompletionRecorder : public CodeCompleteConsumer {
   CompletionRecorder(const CodeCompleteOptions &Opts,
-                     UniqueFunction<void()> ResultsCallback)
+                     llvm::unique_function<void()> ResultsCallback)
       : CodeCompleteConsumer(Opts.getClangCompleteOpts(),
                              /*OutputIsBinary=*/false),
         CCContext(CodeCompletionContext::CCC_Other), Opts(Opts),
@@ -657,7 +657,7 @@ private:
   CodeCompleteOptions Opts;
   std::shared_ptr<GlobalCodeCompletionAllocator> CCAllocator;
   CodeCompletionTUInfo CCTUInfo;
-  UniqueFunction<void()> ResultsCallback;
+  llvm::unique_function<void()> ResultsCallback;
 };
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
