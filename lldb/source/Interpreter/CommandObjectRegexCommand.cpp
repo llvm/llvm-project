@@ -99,23 +99,21 @@ bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
   return false;
 }
 
-int CommandObjectRegexCommand::HandleCompletion(Args &input, int &cursor_index,
-                                                int &cursor_char_position,
-                                                int match_start_point,
-                                                int max_return_elements,
-                                                bool &word_complete,
-                                                StringList &matches) {
+int CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
   if (m_completion_type_mask) {
-    std::string completion_str(input.GetArgumentAtIndex(cursor_index),
-                               cursor_char_position);
+    std::string completion_str(
+        request.GetParsedLine().GetArgumentAtIndex(request.GetCursorIndex()),
+        request.GetCursorCharPosition());
+    bool word_complete = request.GetWordComplete();
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), m_completion_type_mask, completion_str.c_str(),
-        match_start_point, max_return_elements, nullptr, word_complete,
-        matches);
-    return matches.GetSize();
+        request.GetMatchStartPoint(), request.GetMaxReturnElements(), nullptr,
+        word_complete, request.GetMatches());
+    request.SetWordComplete(word_complete);
+    return request.GetMatches().GetSize();
   } else {
-    matches.Clear();
-    word_complete = false;
+    request.GetMatches().Clear();
+    request.SetWordComplete(false);
   }
   return 0;
 }

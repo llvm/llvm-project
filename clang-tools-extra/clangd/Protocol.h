@@ -717,12 +717,6 @@ struct CompletionItem {
   //
   // data?: any - A data entry field that is preserved on a completion item
   //              between a completion and a completion resolve request.
-
-  // C++ extension that is only expected to be used by users of ClangdServer's
-  // C++ API. Not serialized from/to json.
-  /// The containing scope (e.g. namespace) of the symbol this item corresponds
-  /// to, e.g. "" (global scope), "ns::" (top-level namespace).
-  std::string SymbolScope;
 };
 json::Expr toJSON(const CompletionItem &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CompletionItem &);

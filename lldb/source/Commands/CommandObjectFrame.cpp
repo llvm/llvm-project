@@ -463,21 +463,21 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  int HandleArgumentCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position,
-                               OptionElementVector &opt_element_vector,
-                               int match_start_point, int max_return_elements,
-                               bool &word_complete,
-                               StringList &matches) override {
+  int HandleArgumentCompletion(
+      CompletionRequest &request,
+      OptionElementVector &opt_element_vector) override {
     // Arguments are the standard source file completer.
-    auto completion_str = input[cursor_index].ref;
-    completion_str = completion_str.take_front(cursor_char_position);
+    auto completion_str = request.GetParsedLine()[request.GetCursorIndex()].ref;
+    completion_str = completion_str.take_front(request.GetCursorCharPosition());
 
+    bool word_complete = request.GetWordComplete();
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-        completion_str, match_start_point, max_return_elements, nullptr,
-        word_complete, matches);
-    return matches.GetSize();
+        completion_str, request.GetMatchStartPoint(),
+        request.GetMaxReturnElements(), nullptr, word_complete,
+        request.GetMatches());
+    request.SetWordComplete(word_complete);
+    return request.GetMatches().GetSize();
   }
 
 protected:

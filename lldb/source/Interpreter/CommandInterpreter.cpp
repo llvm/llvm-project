@@ -1677,13 +1677,14 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // We didn't find the first command object, so complete the first argument.
     Args command_args(command_string);
     StringList matches;
-    int num_matches;
     int cursor_index = 0;
     int cursor_char_position = strlen(command_args.GetArgumentAtIndex(0));
-    bool word_complete;
-    num_matches = HandleCompletionMatches(command_args, cursor_index,
-                                          cursor_char_position, 0, -1,
-                                          word_complete, matches);
+    bool word_complete = true;
+    CompletionRequest request(command_line, cursor_char_position, command_args,
+                              cursor_index, cursor_char_position, 0, -1,
+                              word_complete, matches);
+    int num_matches = HandleCompletionMatches(request);
+    word_complete = request.GetWordComplete();
 
     if (num_matches > 0) {
       std::string error_msg;
@@ -1712,59 +1713,55 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   return result.Succeeded();
 }
 
-int CommandInterpreter::HandleCompletionMatches(
-    Args &parsed_line, int &cursor_index, int &cursor_char_position,
-    int match_start_point, int max_return_elements, bool &word_complete,
-    StringList &matches) {
+int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
+  auto &matches = request.GetMatches();
   int num_command_matches = 0;
   bool look_for_subcommand = false;
 
   // For any of the command completions a unique match will be a complete word.
-  word_complete = true;
+  request.SetWordComplete(true);
 
-  if (cursor_index == -1) {
+  if (request.GetCursorIndex() == -1) {
     // We got nothing on the command line, so return the list of commands
     bool include_aliases = true;
     num_command_matches =
         GetCommandNamesMatchingPartialString("", include_aliases, matches);
-  } else if (cursor_index == 0) {
+  } else if (request.GetCursorIndex() == 0) {
     // The cursor is in the first argument, so just do a lookup in the
     // dictionary.
-    CommandObject *cmd_obj =
-        GetCommandObject(parsed_line.GetArgumentAtIndex(0), &matches);
+    CommandObject *cmd_obj = GetCommandObject(
+        request.GetParsedLine().GetArgumentAtIndex(0), &matches);
     num_command_matches = matches.GetSize();
 
     if (num_command_matches == 1 && cmd_obj && cmd_obj->IsMultiwordObject() &&
         matches.GetStringAtIndex(0) != nullptr &&
-        strcmp(parsed_line.GetArgumentAtIndex(0),
+        strcmp(request.GetParsedLine().GetArgumentAtIndex(0),
                matches.GetStringAtIndex(0)) == 0) {
-      if (parsed_line.GetArgumentCount() == 1) {
-        word_complete = true;
+      if (request.GetParsedLine().GetArgumentCount() == 1) {
+        request.SetWordComplete(true);
       } else {
         look_for_subcommand = true;
         num_command_matches = 0;
         matches.DeleteStringAtIndex(0);
-        parsed_line.AppendArgument(llvm::StringRef());
-        cursor_index++;
-        cursor_char_position = 0;
+        request.GetParsedLine().AppendArgument(llvm::StringRef());
+        request.SetCursorIndex(request.GetCursorIndex() + 1);
+        request.SetCursorCharPosition(0);
       }
     }
   }
 
-  if (cursor_index > 0 || look_for_subcommand) {
+  if (request.GetCursorIndex() > 0 || look_for_subcommand) {
     // We are completing further on into a commands arguments, so find the
     // command and tell it to complete the command. First see if there is a
     // matching initial command:
     CommandObject *command_object =
-        GetCommandObject(parsed_line.GetArgumentAtIndex(0));
+        GetCommandObject(request.GetParsedLine().GetArgumentAtIndex(0));
     if (command_object == nullptr) {
       return 0;
     } else {
-      parsed_line.Shift();
-      cursor_index--;
-      num_command_matches = command_object->HandleCompletion(
-          parsed_line, cursor_index, cursor_char_position, match_start_point,
-          max_return_elements, word_complete, matches);
+      request.GetParsedLine().Shift();
+      request.SetCursorIndex(request.GetCursorIndex() - 1);
+      num_command_matches = command_object->HandleCompletion(request);
     }
   }
 
@@ -1778,7 +1775,8 @@ int CommandInterpreter::HandleCompletion(
   // parsed_line is the one containing the cursor, and the cursor is after the
   // last character.
 
-  Args parsed_line(llvm::StringRef(current_line, last_char - current_line));
+  llvm::StringRef command_line(current_line, last_char - current_line);
+  Args parsed_line(command_line);
   Args partial_parsed_line(
       llvm::StringRef(current_line, cursor - current_line));
 
@@ -1833,10 +1831,15 @@ int CommandInterpreter::HandleCompletion(
 
   // Only max_return_elements == -1 is supported at present:
   lldbassert(max_return_elements == -1);
-  bool word_complete;
-  num_command_matches = HandleCompletionMatches(
-      parsed_line, cursor_index, cursor_char_position, match_start_point,
-      max_return_elements, word_complete, matches);
+  bool word_complete = false;
+
+  CompletionRequest request(command_line, cursor - current_line, parsed_line,
+                            cursor_index, cursor_char_position,
+                            match_start_point, max_return_elements,
+                            word_complete, matches);
+
+  num_command_matches = HandleCompletionMatches(request);
+  word_complete = request.GetWordComplete();
 
   if (num_command_matches <= 0)
     return num_command_matches;

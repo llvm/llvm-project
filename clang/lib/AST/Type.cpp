@@ -88,6 +88,16 @@ const IdentifierInfo* QualType::getBaseTypeIdentifier() const {
   return nullptr;
 }
 
+bool QualType::mayBeDynamicClass() const {
+  const auto *ClassDecl = getTypePtr()->getPointeeCXXRecordDecl();
+  return ClassDecl && ClassDecl->mayBeDynamicClass();
+}
+
+bool QualType::mayBeNotDynamicClass() const {
+  const auto *ClassDecl = getTypePtr()->getPointeeCXXRecordDecl();
+  return !ClassDecl || ClassDecl->mayBeNonDynamicClass();
+}
+
 bool QualType::isConstant(QualType T, const ASTContext &Ctx) {
   if (T.isConstQualified())
     return true;

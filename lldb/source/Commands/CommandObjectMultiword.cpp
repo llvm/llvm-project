@@ -186,18 +186,14 @@ void CommandObjectMultiword::GenerateHelpText(Stream &output_stream) {
                            "'help <command> <subcommand>'.\n");
 }
 
-int CommandObjectMultiword::HandleCompletion(Args &input, int &cursor_index,
-                                             int &cursor_char_position,
-                                             int match_start_point,
-                                             int max_return_elements,
-                                             bool &word_complete,
-                                             StringList &matches) {
+int CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   // Any of the command matches will provide a complete word, otherwise the
   // individual completers will override this.
-  word_complete = true;
+  request.SetWordComplete(true);
+  auto &matches = request.GetMatches();
 
-  auto arg0 = input[0].ref;
-  if (cursor_index == 0) {
+  auto arg0 = request.GetParsedLine()[0].ref;
+  if (request.GetCursorIndex() == 0) {
     AddNamesMatchingPartialString(m_subcommand_dict, arg0, matches);
 
     if (matches.GetSize() == 1 && matches.GetStringAtIndex(0) != nullptr &&
@@ -205,16 +201,14 @@ int CommandObjectMultiword::HandleCompletion(Args &input, int &cursor_index,
       StringList temp_matches;
       CommandObject *cmd_obj = GetSubcommandObject(arg0, &temp_matches);
       if (cmd_obj != nullptr) {
-        if (input.GetArgumentCount() == 1) {
-          word_complete = true;
+        if (request.GetParsedLine().GetArgumentCount() == 1) {
+          request.SetWordComplete(true);
         } else {
           matches.DeleteStringAtIndex(0);
-          input.Shift();
-          cursor_char_position = 0;
-          input.AppendArgument(llvm::StringRef());
-          return cmd_obj->HandleCompletion(
-              input, cursor_index, cursor_char_position, match_start_point,
-              max_return_elements, word_complete, matches);
+          request.GetParsedLine().Shift();
+          request.SetCursorCharPosition(0);
+          request.GetParsedLine().AppendArgument(llvm::StringRef());
+          return cmd_obj->HandleCompletion(request);
         }
       }
     }
@@ -226,11 +220,9 @@ int CommandObjectMultiword::HandleCompletion(Args &input, int &cursor_index,
     } else {
       // Remove the one match that we got from calling GetSubcommandObject.
       matches.DeleteStringAtIndex(0);
-      input.Shift();
-      cursor_index--;
-      return sub_command_object->HandleCompletion(
-          input, cursor_index, cursor_char_position, match_start_point,
-          max_return_elements, word_complete, matches);
+      request.GetParsedLine().Shift();
+      request.SetCursorIndex(request.GetCursorIndex() - 1);
+      return sub_command_object->HandleCompletion(request);
     }
   }
 }
@@ -370,31 +362,20 @@ Options *CommandObjectProxy::GetOptions() {
   return nullptr;
 }
 
-int CommandObjectProxy::HandleCompletion(Args &input, int &cursor_index,
-                                         int &cursor_char_position,
-                                         int match_start_point,
-                                         int max_return_elements,
-                                         bool &word_complete,
-                                         StringList &matches) {
+int CommandObjectProxy::HandleCompletion(CompletionRequest &request) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
-    return proxy_command->HandleCompletion(
-        input, cursor_index, cursor_char_position, match_start_point,
-        max_return_elements, word_complete, matches);
-  matches.Clear();
+    return proxy_command->HandleCompletion(request);
+  request.GetMatches().Clear();
   return 0;
 }
 
 int CommandObjectProxy::HandleArgumentCompletion(
-    Args &input, int &cursor_index, int &cursor_char_position,
-    OptionElementVector &opt_element_vector, int match_start_point,
-    int max_return_elements, bool &word_complete, StringList &matches) {
+    CompletionRequest &request, OptionElementVector &opt_element_vector) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
-    return proxy_command->HandleArgumentCompletion(
-        input, cursor_index, cursor_char_position, opt_element_vector,
-        match_start_point, max_return_elements, word_complete, matches);
-  matches.Clear();
+    return proxy_command->HandleArgumentCompletion(request, opt_element_vector);
+  request.GetMatches().Clear();
   return 0;
 }
 

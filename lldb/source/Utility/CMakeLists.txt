@@ -45,6 +45,7 @@ add_lldb_library(lldbUtility
   Baton.cpp
   Connection.cpp
   ConstString.cpp
+  CompletionRequest.cpp
   DataBufferHeap.cpp
   DataBufferLLVM.cpp
   DataEncoder.cpp

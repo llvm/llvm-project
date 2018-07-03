@@ -59,7 +59,7 @@ class RegisterCommandsTestCase(TestBase):
     # problem
     @skipIfTargetAndroid(archs=["i386"])
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
         self.build()
@@ -71,7 +71,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr25057
     @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
     @skipIfOutOfTreeDebugserver
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
         self.build()

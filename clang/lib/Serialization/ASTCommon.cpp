@@ -419,21 +419,9 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
     return true;
   }
 
-  // At block scope, we number everything that we need to deduplicate, since we
-  // can't just use name matching to keep things lined up.
-  // FIXME: This is only necessary for an inline function or a template or
-  // similar.
-  if (D->getLexicalDeclContext()->isFunctionOrMethod()) {
-    if (auto *VD = dyn_cast<VarDecl>(D))
-      return VD->isStaticLocal();
-    // FIXME: What about CapturedDecls (and declarations nested within them)?
-    return isa<TagDecl>(D) || isa<BlockDecl>(D);
-  }
-
-  // Otherwise, we only care about anonymous class members / block-scope decls.
-  // FIXME: We need to handle lambdas and blocks within inline / templated
-  // variables too.
+  // Otherwise, we only care about anonymous class members.
   if (D->getDeclName() || !isa<CXXRecordDecl>(D->getLexicalDeclContext()))
     return false;
   return isa<TagDecl>(D) || isa<FieldDecl>(D);
 }
+

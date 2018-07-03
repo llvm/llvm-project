@@ -210,6 +210,7 @@
 		265192C61BA8E905002F08F6 /* CompilerDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 265192C51BA8E905002F08F6 /* CompilerDecl.cpp */; };
 		2657AFB71B86910100958979 /* CompilerDeclContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2657AFB61B86910100958979 /* CompilerDeclContext.cpp */; };
 		268900D213353E6F00698AC0 /* CompilerType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E45FAD11F660FE008F7B28 /* CompilerType.cpp */; };
+		58EC744120EAEB5200695209 /* CompletionRequest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 58EC744020EAEB5200695209 /* CompletionRequest.cpp */; };
 		2689003313353E0400698AC0 /* Connection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E6F10F1B85900F91463 /* Connection.cpp */; };
 		AFDFDFD119E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */; };
 		26764C971E48F482008D3573 /* ConstString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26764C961E48F482008D3573 /* ConstString.cpp */; };
@@ -1619,6 +1620,8 @@
 		2657AFB51B8690EC00958979 /* CompilerDeclContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CompilerDeclContext.h; path = include/lldb/Symbol/CompilerDeclContext.h; sourceTree = "<group>"; };
 		49E45FAD11F660FE008F7B28 /* CompilerType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompilerType.cpp; path = source/Symbol/CompilerType.cpp; sourceTree = "<group>"; };
 		49E45FA911F660DC008F7B28 /* CompilerType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CompilerType.h; path = include/lldb/Symbol/CompilerType.h; sourceTree = "<group>"; };
+		58EC744020EAEB5200695209 /* CompletionRequest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompletionRequest.cpp; path = source/Utility/CompletionRequest.cpp; sourceTree = "<group>"; };
+		58EC744220EAEB6C00695209 /* CompletionRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CompletionRequest.h; path = include/lldb/Utility/CompletionRequest.h; sourceTree = "<group>"; };
 		266F5CBB12FC846200DFCE33 /* Config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Config.h; path = include/lldb/Host/Config.h; sourceTree = "<group>"; };
 		3FDFE53C19A293CA009756A7 /* Config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Config.h; path = include/lldb/Host/freebsd/Config.h; sourceTree = "<group>"; };
 		3FDFE56319AF9B77009756A7 /* Config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Config.h; path = include/lldb/Host/linux/Config.h; sourceTree = SOURCE_ROOT; };
@@ -4447,6 +4450,8 @@
 		2682F168115ED9C800CCFF99 /* Utility */ = {
 			isa = PBXGroup;
 			children = (
+				58EC744220EAEB6C00695209 /* CompletionRequest.h */,
+				58EC744020EAEB5200695209 /* CompletionRequest.cpp */,
 				6B74D89C2006972D0074051B /* Environment.h */,
 				22DC561920064C9600A7E9E8 /* Environment.cpp */,
 				AF6CA6651FBBAF27005A0DC3 /* ArchSpec.cpp */,
@@ -8100,6 +8105,7 @@
 				3FBA69EC1B6067430008F44A /* PythonDataObjects.cpp in Sources */,
 				26274FA714030F79006BA130 /* DynamicLoaderDarwinKernel.cpp in Sources */,
 				94FA3DE01405D50400833217 /* ValueObjectConstResultChild.cpp in Sources */,
+				58EC744120EAEB5200695209 /* CompletionRequest.cpp in Sources */,
 				3FDFED2819BA6D96009756A7 /* HostThread.cpp in Sources */,
 				949ADF031406F648004833E1 /* ValueObjectConstResultImpl.cpp in Sources */,
 				B27318421416AC12006039C8 /* WatchpointList.cpp in Sources */,
