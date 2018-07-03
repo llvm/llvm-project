@@ -16,9 +16,12 @@ target triple = "aarch64-apple-ios9.0"
 ; CHECK: $w0 = COPY [[ANSWER]]
 ; CHECK: $d0 = COPY [[D_ONE]]
 ; CHECK: $x1 = COPY [[TWELVE]]
-; CHECK: G_STORE [[THREE]](s8), {{%[0-9]+}}(p0) :: (store 8 into stack, align 0)
-; CHECK: G_STORE [[ONE]](s16), {{%[0-9]+}}(p0) :: (store 8 into stack + 8, align 0)
-; CHECK: G_STORE [[FOUR]](s32), {{%[0-9]+}}(p0) :: (store 8 into stack + 16, align 0)
+; CHECK: [[THREE_EXT:%[0-9]+]]:_(s64) = G_ANYEXT [[THREE]]
+; CHECK: G_STORE [[THREE_EXT]](s64), {{%[0-9]+}}(p0) :: (store 8 into stack, align 0)
+; CHECK: [[ONE_EXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ONE]]
+; CHECK: G_STORE [[ONE_EXT]](s64), {{%[0-9]+}}(p0) :: (store 8 into stack + 8, align 0)
+; CHECK: [[FOUR_EXT:%[0-9]+]]:_(s64) = G_ANYEXT [[FOUR]]
+; CHECK: G_STORE [[FOUR_EXT]](s64), {{%[0-9]+}}(p0) :: (store 8 into stack + 16, align 0)
 ; CHECK: G_STORE [[F_ONE]](s32), {{%[0-9]+}}(p0) :: (store 4 into stack + 24, align 0)
 ; CHECK: G_STORE [[TWO]](s64), {{%[0-9]+}}(p0) :: (store 8 into stack + 32, align 0)
 declare void @varargs(i32, double, i64, ...)

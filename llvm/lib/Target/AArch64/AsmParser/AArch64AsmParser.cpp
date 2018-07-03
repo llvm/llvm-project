@@ -922,6 +922,7 @@ public:
   bool isSystemPStateFieldWithImm0_1() const {
     if (!isSysReg()) return false;
     return (SysReg.PStateField == AArch64PState::PAN ||
+            SysReg.PStateField == AArch64PState::DIT ||
             SysReg.PStateField == AArch64PState::UAO);
   }
 
@@ -952,6 +953,8 @@ public:
     RegKind RK;
     switch (Class) {
     case AArch64::ZPRRegClassID:
+    case AArch64::ZPR_3bRegClassID:
+    case AArch64::ZPR_4bRegClassID:
       RK = RegKind::SVEDataVector;
       break;
     case AArch64::PPRRegClassID:
@@ -1041,14 +1044,16 @@ public:
   }
 
   template<int64_t Angle, int64_t Remainder>
-  bool isComplexRotation() const {
-    if (!isImm()) return false;
+  DiagnosticPredicate isComplexRotation() const {
+    if (!isImm()) return DiagnosticPredicateTy::NoMatch;
 
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
+    if (!CE) return DiagnosticPredicateTy::NoMatch;
     uint64_t Value = CE->getValue();
 
-    return (Value % Angle == Remainder && Value <= 270);
+    if (Value % Angle == Remainder && Value <= 270)
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <unsigned RegClassID> bool isGPR64() const {
@@ -4092,6 +4097,18 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPR64:
   case Match_InvalidZPR128:
     return Error(Loc, "invalid element width");
+  case Match_InvalidZPR_3b8:
+    return Error(Loc, "Invalid restricted vector register, expected z0.b..z7.b");
+  case Match_InvalidZPR_3b16:
+    return Error(Loc, "Invalid restricted vector register, expected z0.h..z7.h");
+  case Match_InvalidZPR_3b32:
+    return Error(Loc, "Invalid restricted vector register, expected z0.s..z7.s");
+  case Match_InvalidZPR_4b16:
+    return Error(Loc, "Invalid restricted vector register, expected z0.h..z15.h");
+  case Match_InvalidZPR_4b32:
+    return Error(Loc, "Invalid restricted vector register, expected z0.s..z15.s");
+  case Match_InvalidZPR_4b64:
+    return Error(Loc, "Invalid restricted vector register, expected z0.d..z15.d");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPredicateAnyReg:
@@ -4599,6 +4616,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPR32:
   case Match_InvalidZPR64:
   case Match_InvalidZPR128:
+  case Match_InvalidZPR_3b8:
+  case Match_InvalidZPR_3b16:
+  case Match_InvalidZPR_3b32:
+  case Match_InvalidZPR_4b16:
+  case Match_InvalidZPR_4b32:
+  case Match_InvalidZPR_4b64:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPattern:
   case Match_InvalidSVEPredicateBReg:

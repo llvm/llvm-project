@@ -792,7 +792,7 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
   SmallVector<uint64_t, 8> Ops;
   if (DerefBefore)
     Ops.push_back(dwarf::DW_OP_deref);
-  
+
   appendOffset(Ops, Offset);
   if (DerefAfter)
     Ops.push_back(dwarf::DW_OP_deref);
@@ -803,6 +803,9 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
 DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
                                            SmallVectorImpl<uint64_t> &Ops,
                                            bool StackValue) {
+  // If there are no ops to prepend, do not even add the DW_OP_stack_value.
+  if (Ops.empty())
+    StackValue = false;
   if (Expr)
     for (auto Op : Expr->expr_ops()) {
       // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.

@@ -45,7 +45,7 @@ namespace {
   using ParallelMACList = SmallVector<ParallelMAC, 8>;
   using ReductionList   = SmallVector<Reduction, 8>;
   using ValueList       = SmallVector<Value*, 8>;
-  using LoadInstList    = SmallVector<LoadInst*, 8>;
+  using MemInstList     = SmallVector<Instruction*, 8>;
   using PMACPair        = std::pair<ParallelMAC*,ParallelMAC*>;
   using PMACPairList    = SmallVector<PMACPair, 8>;
   using Instructions    = SmallVector<Instruction*,16>;
@@ -58,7 +58,7 @@ namespace {
   struct ParallelMAC {
     Instruction *Mul;
     ValueList    VL;        // List of all (narrow) operands of this Mul
-    LoadInstList VecLd;     // List of all load instructions of this Mul
+    MemInstList  VecLd;     // List of all load instructions of this Mul
     MemLocList   MemLocs;   // All memory locations read by this Mul
 
     ParallelMAC(Instruction *I, ValueList &V) : Mul(I), VL(V) {};
@@ -84,7 +84,7 @@ namespace {
     Module            *M;
 
     bool InsertParallelMACs(Reduction &Reduction, PMACPairList &PMACPairs);
-    bool AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1, LoadInstList &VecLd);
+    bool AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1, MemInstList &VecMem);
     PMACPairList CreateParallelMACPairs(ParallelMACList &Candidates);
     Instruction *CreateSMLADCall(LoadInst *VecLd0, LoadInst *VecLd1,
                                  Instruction *Acc, Instruction *InsertAfter);
@@ -254,8 +254,26 @@ static bool AreSymmetrical(const ValueList &VL0,
   return true;
 }
 
+template<typename MemInst>
+static bool AreSequentialAccesses(MemInst *MemOp0, MemInst *MemOp1,
+                                  MemInstList &VecMem, const DataLayout &DL,
+                                  ScalarEvolution &SE) {
+  if (!MemOp0->isSimple() || !MemOp1->isSimple()) {
+    LLVM_DEBUG(dbgs() << "No, not touching volatile access\n");
+    return false;
+  }
+  if (isConsecutiveAccess(MemOp0, MemOp1, DL, SE)) {
+    VecMem.push_back(MemOp0);
+    VecMem.push_back(MemOp1);
+    LLVM_DEBUG(dbgs() << "OK: accesses are consecutive.\n");
+    return true;
+  }
+  LLVM_DEBUG(dbgs() << "No, accesses aren't consecutive.\n");
+  return false;
+}
+
 bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
-                                        LoadInstList &VecLd) {
+                                        MemInstList &VecMem) {
   if (!Ld0 || !Ld1)
     return false;
 
@@ -264,22 +282,12 @@ bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
     dbgs() << "Ld1:"; Ld1->dump();
   );
 
-  if (!Ld0->isSimple() || !Ld1->isSimple()) {
-    LLVM_DEBUG(dbgs() << "No, not touching volatile loads\n");
-    return false;
-  }
   if (!Ld0->hasOneUse() || !Ld1->hasOneUse()) {
     LLVM_DEBUG(dbgs() << "No, load has more than one use.\n");
     return false;
   }
-  if (isConsecutiveAccess(Ld0, Ld1, *DL, *SE)) {
-    VecLd.push_back(Ld0);
-    VecLd.push_back(Ld1);
-    LLVM_DEBUG(dbgs() << "OK: loads are consecutive.\n");
-    return true;
-  }
-  LLVM_DEBUG(dbgs() << "No, Ld0 and Ld1 aren't consecutive.\n");
-  return false;
+
+  return AreSequentialAccesses<LoadInst>(Ld0, Ld1, VecMem, *DL, *SE);
 }
 
 PMACPairList
@@ -349,8 +357,9 @@ bool ARMParallelDSP::InsertParallelMACs(Reduction &Reduction,
     LLVM_DEBUG(dbgs() << "Found parallel MACs!!\n";
                dbgs() << "- "; Pair.first->Mul->dump();
                dbgs() << "- "; Pair.second->Mul->dump());
-    Acc = CreateSMLADCall(Pair.first->VecLd[0], Pair.second->VecLd[0], Acc,
-	                        InsertAfter);
+    auto *VecLd0 = cast<LoadInst>(Pair.first->VecLd[0]);
+    auto *VecLd1 = cast<LoadInst>(Pair.second->VecLd[0]);
+    Acc = CreateSMLADCall(VecLd0, VecLd1, Acc, InsertAfter);
     InsertAfter = Acc;
   }
 
