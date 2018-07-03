@@ -566,7 +566,7 @@ static bool isBlacklistedMember(const NamedDecl &D) {
 // within the callback.
 struct CompletionRecorder : public CodeCompleteConsumer {
   CompletionRecorder(const CodeCompleteOptions &Opts,
-                     UniqueFunction<void()> ResultsCallback)
+                     llvm::unique_function<void()> ResultsCallback)
       : CodeCompleteConsumer(Opts.getClangCompleteOpts(),
                              /*OutputIsBinary=*/false),
         CCContext(CodeCompletionContext::CCC_Other), Opts(Opts),
@@ -657,7 +657,7 @@ private:
   CodeCompleteOptions Opts;
   std::shared_ptr<GlobalCodeCompletionAllocator> CCAllocator;
   CodeCompletionTUInfo CCTUInfo;
-  UniqueFunction<void()> ResultsCallback;
+  llvm::unique_function<void()> ResultsCallback;
 };
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
@@ -955,10 +955,10 @@ public:
     CodeCompleteResult Output;
     auto RecorderOwner = llvm::make_unique<CompletionRecorder>(Opts, [&]() {
       assert(Recorder && "Recorder is not set");
-      // FIXME(ioeric): needs more consistent style support in clangd server.
       auto Style =
-          format::getStyle("file", SemaCCInput.FileName, "LLVM",
-                           SemaCCInput.Contents, SemaCCInput.VFS.get());
+          format::getStyle(format::DefaultFormatStyle, SemaCCInput.FileName,
+                           format::DefaultFallbackStyle, SemaCCInput.Contents,
+                           SemaCCInput.VFS.get());
       if (!Style) {
         log("Failed to get FormatStyle for file" + SemaCCInput.FileName + ": " +
             llvm::toString(Style.takeError()) + ". Fallback is LLVM style.");

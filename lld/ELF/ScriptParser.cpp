@@ -524,12 +524,14 @@ void ScriptParser::readSections() {
 
 static int precedence(StringRef Op) {
   return StringSwitch<int>(Op)
-      .Cases("*", "/", "%", 6)
-      .Cases("+", "-", 5)
-      .Cases("<<", ">>", 4)
-      .Cases("<", "<=", ">", ">=", "==", "!=", 3)
-      .Case("&", 2)
-      .Case("|", 1)
+      .Cases("*", "/", "%", 8)
+      .Cases("+", "-", 7)
+      .Cases("<<", ">>", 6)
+      .Cases("<", "<=", ">", ">=", "==", "!=", 5)
+      .Case("&", 4)
+      .Case("|", 3)
+      .Case("&&", 2)
+      .Case("||", 1)
       .Default(-1);
 }
 
@@ -924,6 +926,10 @@ Expr ScriptParser::combine(StringRef Op, Expr L, Expr R) {
     return [=] { return L().getValue() == R().getValue(); };
   if (Op == "!=")
     return [=] { return L().getValue() != R().getValue(); };
+  if (Op == "||")
+    return [=] { return L().getValue() || R().getValue(); };
+  if (Op == "&&")
+    return [=] { return L().getValue() && R().getValue(); };
   if (Op == "&")
     return [=] { return bitAnd(L(), R()); };
   if (Op == "|")

@@ -17,6 +17,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
@@ -1193,7 +1194,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
-  const unsigned ThreadStackSize = 8 << 20;
   llvm::CrashRecoveryContext CRC;
   CRC.RunSafelyOnThread(
       [&]() {
@@ -1206,7 +1206,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
         }
         Instance.ExecuteAction(*Action);
       },
-      ThreadStackSize);
+      DesiredStackSize);
 
   PostBuildStep(Instance);
 
