@@ -1089,6 +1089,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
+  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
 
   if (!arch.IsValid())
     return TypeSystemSP();
