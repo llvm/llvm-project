@@ -65,7 +65,18 @@ void lld::diagnosticHandler(const DiagnosticInfo &DI) {
   raw_svector_ostream OS(S);
   DiagnosticPrinterRawOStream DP(OS);
   DI.print(DP);
-  warn(S);
+  switch (DI.getSeverity()) {
+  case DS_Error:
+    error(S);
+    break;
+  case DS_Warning:
+    warn(S);
+    break;
+  case DS_Remark:
+  case DS_Note:
+    message(S);
+    break;
+  }
 }
 
 void lld::checkError(Error E) {
