@@ -37,13 +37,6 @@ public:
     return Size == w.Size && 0 == memcmp(Data, w.Data, Size);
   }
 
-  bool operator<(const FixedWord<kMaxSize> &w) const {
-    ScopedDoingMyOwnMemOrStr scoped_doing_my_own_mem_os_str;
-    if (Size != w.Size)
-      return Size < w.Size;
-    return memcmp(Data, w.Data, Size) < 0;
-  }
-
   static size_t GetMaxSize() { return kMaxSize; }
   const uint8_t *data() const { return Data; }
   uint8_t size() const { return Size; }
