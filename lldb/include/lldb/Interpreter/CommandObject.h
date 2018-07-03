@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-#include <lldb/Utility/CompletionRequest.h>
+#include "lldb/Utility/CompletionRequest.h"
 
 // Other libraries and framework includes
 // Project includes

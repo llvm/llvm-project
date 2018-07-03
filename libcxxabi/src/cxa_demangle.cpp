@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <numeric>
 #include <cassert>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1890,7 +1891,7 @@ class BumpPointerAllocator {
   static constexpr size_t AllocSize = 4096;
   static constexpr size_t UsableAllocSize = AllocSize - sizeof(BlockMeta);
 
-  alignas(16) char InitialBuffer[AllocSize];
+  alignas(std::max_align_t) char InitialBuffer[AllocSize];
   BlockMeta* BlockList = nullptr;
 
   void grow() {

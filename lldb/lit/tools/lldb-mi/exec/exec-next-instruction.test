@@ -1,0 +1,30 @@
+# XFAIL: windows
+# -> llvm.org/pr24452
+#
+# RUN: %cc -o %t %p/inputs/main.c -g
+# RUN: %lldbmi %t < %s | FileCheck %s
+
+# Test lldb-mi -exec-next-instruction command.
+
+# Check that we have a valid target created via '%lldbmi %t'.
+# CHECK: ^done
+
+-break-insert main
+# CHECK: ^done,bkpt={number="1"
+
+-exec-run
+# CHECK: ^running
+# CHECK: *stopped,reason="breakpoint-hit"
+
+-exec-next-instruction --thread 0
+# Check that exec-next-instruction can process the case of invalid thread ID.
+# CHECK: ^error,msg="Command 'exec-next-instruction'. Thread ID invalid"
+
+-exec-next-instruction --thread 1
+# CHECK: ^running
+# CHECK: *stopped,reason="end-stepping-range"
+
+-exec-next-instruction
+# Check exec-next-instruction in a selected thread.
+# CHECK: ^running
+# CHECK: *stopped,reason="end-stepping-range"

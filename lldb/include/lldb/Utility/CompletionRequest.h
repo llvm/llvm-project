@@ -10,9 +10,9 @@
 #ifndef LLDB_UTILITY_COMPLETIONREQUEST_H
 #define LLDB_UTILITY_COMPLETIONREQUEST_H
 
-#include <lldb/Utility/Args.h>
-#include <lldb/Utility/StringList.h>
-#include <llvm/ADT/StringRef.h>
+#include "lldb/Utility/Args.h"
+#include "lldb/Utility/StringList.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
