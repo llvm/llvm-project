@@ -2,6 +2,7 @@ set(files
   __bit_reference
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
+  __errc
   __debug
   __functional_03
   __functional_base
