@@ -11,6 +11,12 @@
 
 // Third Party Headers:
 #include "llvm/ADT/Twine.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBSymbolContext.h"
+#include "lldb/API/SBSymbolContextList.h"
 
 // In-house headers:
 #include "MICmdArgValFile.h"
