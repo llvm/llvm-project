@@ -144,12 +144,14 @@ struct CodeCompleteResult {
 raw_ostream &operator<<(raw_ostream &, const CodeCompleteResult &);
 
 /// Get code completions at a specified \p Pos in \p FileName.
-CodeCompleteResult codeComplete(
-    PathRef FileName, const tooling::CompileCommand &Command,
-    PrecompiledPreamble const *Preamble,
-    const std::vector<Inclusion> &PreambleInclusions, StringRef Contents,
-    Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-    std::shared_ptr<PCHContainerOperations> PCHs, CodeCompleteOptions Opts);
+CodeCompleteResult codeComplete(PathRef FileName,
+                                const tooling::CompileCommand &Command,
+                                PrecompiledPreamble const *Preamble,
+                                const IncludeStructure &PreambleInclusions,
+                                StringRef Contents, Position Pos,
+                                IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                                std::shared_ptr<PCHContainerOperations> PCHs,
+                                CodeCompleteOptions Opts);
 
 /// Get signature help at a specified \p Pos in \p FileName.
 SignatureHelp signatureHelp(PathRef FileName,
