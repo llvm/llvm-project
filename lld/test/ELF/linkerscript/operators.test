@@ -38,6 +38,14 @@ SECTIONS {
   minus_abs = _end - _start;
   max = MAX(11, 22);
   min = MIN(11, 22);
+  logicaland1 = 0 && 0;
+  logicaland2 = 0 && 1;
+  logicaland3 = 1 && 0;
+  logicaland4 = 1 && 1;
+  logicalor1 = 0 || 0;
+  logicalor2 = 0 || 1;
+  logicalor3 = 1 || 0;
+  logicalor4 = 1 || 1;
 }
 
 # CHECK: 00000000000006 *ABS* 00000000 plus
@@ -70,6 +78,14 @@ SECTIONS {
 # CHECK: 0000000000fff0 *ABS* 00000000 minus_abs
 # CHECK: 00000000000016 *ABS* 00000000 max
 # CHECK: 0000000000000b *ABS* 00000000 min
+# CHECK: 00000000000000 *ABS* 00000000 logicaland1
+# CHECK: 00000000000000 *ABS* 00000000 logicaland2
+# CHECK: 00000000000000 *ABS* 00000000 logicaland3
+# CHECK: 00000000000001 *ABS* 00000000 logicaland4
+# CHECK: 00000000000000 *ABS* 00000000 logicalor1
+# CHECK: 00000000000001 *ABS* 00000000 logicalor2
+# CHECK: 00000000000001 *ABS* 00000000 logicalor3
+# CHECK: 00000000000001 *ABS* 00000000 logicalor4
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { . = 0x12Q41; }" > %t.script

@@ -18,7 +18,7 @@
 # RELOCS-NEXT:  0x20018 R_MIPS_TLS_DTPMOD64/R_MIPS_NONE/R_MIPS_NONE
 # RELOCS-NEXT: }
 
-# Test case generated using clang -mcpu=mips4 -target mips64-unknown-freebsd12.0 -fpic -O -G0 -EB -mabi=n64 -msoft-float -std=gnu99 -S %s -o /dev/null
+# Test case generated using clang -mcpu=mips4 -target mips64-unknown-freebsd12.0 -fpic -O -G0 -EB -mabi=n64 -msoft-float -std=gnu99 -S %s -o %t.s
 # from the following source:
 #
 # _Thread_local int x;

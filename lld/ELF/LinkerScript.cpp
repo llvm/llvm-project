@@ -834,9 +834,16 @@ static bool isDiscardable(OutputSection &Sec) {
   if (Sec.ExpressionsUseSymbols)
     return false;
 
-  for (BaseCommand *Base : Sec.SectionCommands)
+  for (BaseCommand *Base : Sec.SectionCommands) {
+    if (auto Cmd = dyn_cast<SymbolAssignment>(Base))
+      // Don't create empty output sections just for unreferenced PROVIDE
+      // symbols.
+      if (Cmd->Name != "." && !Cmd->Sym)
+        continue;
+
     if (!isa<InputSectionDescription>(*Base))
       return false;
+  }
   return true;
 }
 
