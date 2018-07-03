@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
@@ -61,6 +62,7 @@ struct LowerTapirToTarget : public ModulePass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TaskInfoWrapperPass>();
   }
 private:
   ValueToValueMapTy DetachCtxToStackFrame;
@@ -75,6 +77,7 @@ INITIALIZE_PASS_BEGIN(LowerTapirToTarget, "tapir2target",
                       "Lower Tapir to Target ABI", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_END(LowerTapirToTarget, "tapir2target",
                     "Lower Tapir to Target ABI", false, false)
 
@@ -211,15 +214,78 @@ SmallVectorImpl<Function *> *LowerTapirToTarget::processFunction(
   return NewHelpers;
 }
 
+static int64_t countRedundantSyncs(TaskInfo &TI, BasicBlock *B) {
+  Spindle *S = TI.getSpindleFor(B);
+  if (!S->isPhi())
+    return 1;
+
+  SmallVector<Spindle *, 8> WorkList;
+  SmallVector<Spindle *, 8> ToProcess;
+  SmallPtrSet<Spindle *, 8> Visited;
+  DenseMap<Spindle *, unsigned> MightBeSynced;
+  WorkList.push_back(S);
+
+  while (!WorkList.empty()) {
+    Spindle *SP = WorkList.pop_back_val();
+
+    if (!Visited.insert(SP).second) continue;
+    if (!SP->isPhi()) {
+      MightBeSynced[SP] = SP->isSync();
+      continue;
+    }
+
+    bool Queue = true;
+    for (BasicBlock *PredB : predecessors(SP->getEntry())) {
+      // if (isa<ReattachInst>(PredB->getTerminator()) ||
+      //     isDetachedRethrow(PredB->getTerminator())) {
+      if (TI.getTaskFor(PredB) != TI.getTaskFor(SP)) {
+        Queue = false;
+        MightBeSynced[SP] = 0;
+        break;
+      }
+    }
+    if (!Queue) continue;
+
+    ToProcess.push_back(SP);
+    for (Spindle *PredS : TI.predecessors(SP))
+      WorkList.push_back(PredS);
+  }
+
+  for (Spindle *S : reverse(ToProcess)) {
+    MightBeSynced[S] = 0;
+    for (Spindle *Pred : TI.predecessors(S)) {
+      if (MightBeSynced[Pred])
+        MightBeSynced[S] |= MightBeSynced[Pred];
+    }
+  }
+  return MightBeSynced[S];
+}
+
+static void analyzeSyncs(TaskInfo &TI, Function *F) {
+  int64_t numRedundantSyncs = 0;
+  for (BasicBlock &B : *F) {
+    if (!isa<SyncInst>(B.getTerminator()))
+      continue;
+
+    numRedundantSyncs += countRedundantSyncs(TI, &B);
+  }
+  dbgs() << "Counted " << numRedundantSyncs << " partially redundant syncs.\n";
+}
+
 bool LowerTapirToTarget::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
   // Add functions that detach to the work list.
   SmallVector<Function *, 4> WorkList;
-  for (Function &F : M)
-    if (tapirTarget->shouldProcessFunction(F))
+  for (Function &F : M) {
+    if (tapirTarget->shouldProcessFunction(F)) {
+      dbgs() << "Checking " << F.getName() << "\n";
+      TaskInfo &TI = getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
+      analyzeSyncs(TI, &F);
       WorkList.push_back(&F);
+    }
+  }
 
   if (WorkList.empty())
     return false;
