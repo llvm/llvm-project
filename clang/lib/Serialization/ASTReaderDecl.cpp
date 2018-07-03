@@ -87,7 +87,7 @@ namespace clang {
 
     using RecordData = ASTReader::RecordData;
 
-    TypeID DeferredTypeID = 0;
+    TypeID TypeIDForTypeDecl = 0;
     unsigned AnonymousDeclNumber;
     GlobalDeclID NamedDeclForTagDecl = 0;
     IdentifierInfo *TypedefNameForLinkage = nullptr;
@@ -176,8 +176,6 @@ namespace clang {
     void ReadObjCDefinitionData(struct ObjCProtocolDecl::DefinitionData &Data);
     void MergeDefinitionData(ObjCProtocolDecl *D,
                              struct ObjCProtocolDecl::DefinitionData &&NewDD);
-
-    static DeclContext *getPrimaryDCForAnonymousDecl(DeclContext *LexicalDC);
 
     static NamedDecl *getAnonymousDeclForMerging(ASTReader &Reader,
                                                  DeclContext *DC,
@@ -530,7 +528,7 @@ void ASTDeclReader::Visit(Decl *D) {
 
   if (auto *TD = dyn_cast<TypeDecl>(D)) {
     // We have a fully initialized TypeDecl. Read its type now.
-    TD->setTypeForDecl(Reader.GetType(DeferredTypeID).getTypePtrOrNull());
+    TD->setTypeForDecl(Reader.GetType(TypeIDForTypeDecl).getTypePtrOrNull());
 
     // If this is a tag declaration with a typedef name for linkage, it's safe
     // to load that typedef now.
@@ -539,11 +537,8 @@ void ASTDeclReader::Visit(Decl *D) {
           cast<TypedefNameDecl>(Reader.GetDecl(NamedDeclForTagDecl));
   } else if (auto *ID = dyn_cast<ObjCInterfaceDecl>(D)) {
     // if we have a fully initialized TypeDecl, we can safely read its type now.
-    ID->TypeForDecl = Reader.GetType(DeferredTypeID).getTypePtrOrNull();
+    ID->TypeForDecl = Reader.GetType(TypeIDForTypeDecl).getTypePtrOrNull();
   } else if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (DeferredTypeID)
-      FD->setType(Reader.GetType(DeferredTypeID));
-
     // FunctionDecl's body was written last after all other Stmts/Exprs.
     // We only read it if FD doesn't already have a body (e.g., from another
     // module).
@@ -663,7 +658,7 @@ void ASTDeclReader::VisitTypeDecl(TypeDecl *TD) {
   VisitNamedDecl(TD);
   TD->setLocStart(ReadSourceLocation());
   // Delay type reading until after we have fully initialized the decl.
-  DeferredTypeID = Record.getGlobalTypeID(Record.readInt());
+  TypeIDForTypeDecl = Record.getGlobalTypeID(Record.readInt());
 }
 
 ASTDeclReader::RedeclarableResult
@@ -796,13 +791,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
 
 void ASTDeclReader::VisitValueDecl(ValueDecl *VD) {
   VisitNamedDecl(VD);
-  // For function declarations, defer reading the type in case the function has
-  // a deduced return type that references an entity declared within the
-  // function.
-  if (isa<FunctionDecl>(VD))
-    DeferredTypeID = Record.getGlobalTypeID(Record.readInt());
-  else
-    VD->setType(Record.readType());
+  VD->setType(Record.readType());
 }
 
 void ASTDeclReader::VisitEnumConstantDecl(EnumConstantDecl *ECD) {
@@ -830,19 +819,6 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
 void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   RedeclarableResult Redecl = VisitRedeclarable(FD);
   VisitDeclaratorDecl(FD);
-
-  // Attach a type to this function. Use the real type if possible, but fall
-  // back to the type as written if it involves a deduced return type.
-  if (FD->getTypeSourceInfo() &&
-      FD->getTypeSourceInfo()->getType()->castAs<FunctionType>()
-                             ->getReturnType()->getContainedAutoType()) {
-    // We'll set up the real type in Visit, once we've finished loading the
-    // function.
-    FD->setType(FD->getTypeSourceInfo()->getType());
-  } else {
-    FD->setType(Reader.GetType(DeferredTypeID));
-    DeferredTypeID = 0;
-  }
 
   ReadDeclarationNameLoc(FD->DNLoc, FD->getDeclName());
   FD->IdentifierNamespace = Record.readInt();
@@ -1108,7 +1084,7 @@ void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
 void ASTDeclReader::VisitObjCInterfaceDecl(ObjCInterfaceDecl *ID) {
   RedeclarableResult Redecl = VisitRedeclarable(ID);
   VisitObjCContainerDecl(ID);
-  DeferredTypeID = Record.getGlobalTypeID(Record.readInt());
+  TypeIDForTypeDecl = Record.getGlobalTypeID(Record.readInt());
   mergeRedeclarable(ID, Redecl);
 
   ID->TypeParamList = ReadObjCTypeParamList();
@@ -1914,7 +1890,7 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
       //
       // Beware: we do not yet know our canonical declaration, and may still
       // get merged once the surrounding class template has got off the ground.
-      DeferredTypeID = 0;
+      TypeIDForTypeDecl = 0;
     }
     break;
   }
@@ -2867,12 +2843,8 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
     return true;
 
   // Must be in the same context.
-  //
-  // Note that we can't use DeclContext::Equals here, because the DeclContexts
-  // could be two different declarations of the same function. (We will fix the
-  // semantic DC to refer to the primary definition after merging.)
-  if (!declaresSameEntity(cast<Decl>(X->getDeclContext()->getRedeclContext()),
-                          cast<Decl>(Y->getDeclContext()->getRedeclContext())))
+  if (!X->getDeclContext()->getRedeclContext()->Equals(
+         Y->getDeclContext()->getRedeclContext()))
     return false;
 
   // Two typedefs refer to the same entity if they have the same underlying
@@ -2934,21 +2906,18 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
     }
 
     ASTContext &C = FuncX->getASTContext();
-    auto GetTypeAsWritten = [](const FunctionDecl *FD) {
-      return FD->getTypeSourceInfo() ? FD->getTypeSourceInfo()->getType()
-                                     : FD->getType();
-    };
-    QualType XT = GetTypeAsWritten(FuncX), YT = GetTypeAsWritten(FuncY);
-    if (!C.hasSameType(XT, YT)) {
+    if (!C.hasSameType(FuncX->getType(), FuncY->getType())) {
       // We can get functions with different types on the redecl chain in C++17
       // if they have differing exception specifications and at least one of
       // the excpetion specs is unresolved.
-      auto *XFPT = XT->getAs<FunctionProtoType>();
-      auto *YFPT = YT->getAs<FunctionProtoType>();
+      // FIXME: Do we need to check for C++14 deduced return types here too?
+      auto *XFPT = FuncX->getType()->getAs<FunctionProtoType>();
+      auto *YFPT = FuncY->getType()->getAs<FunctionProtoType>();
       if (C.getLangOpts().CPlusPlus17 && XFPT && YFPT &&
           (isUnresolvedExceptionSpec(XFPT->getExceptionSpecType()) ||
            isUnresolvedExceptionSpec(YFPT->getExceptionSpecType())) &&
-          C.hasSameFunctionTypeIgnoringExceptionSpec(XT, YT))
+          C.hasSameFunctionTypeIgnoringExceptionSpec(FuncX->getType(),
+                                                     FuncY->getType()))
         return true;
       return false;
     }
@@ -3140,50 +3109,23 @@ static NamedDecl *getDeclForMerging(NamedDecl *Found,
   return nullptr;
 }
 
-/// Find the declaration to use to populate the anonymous declaration table
-/// for the given lexical DeclContext. We only care about finding local
-/// definitions of the context; we'll merge imported ones as we go.
-DeclContext *
-ASTDeclReader::getPrimaryDCForAnonymousDecl(DeclContext *LexicalDC) {
-  // For classes, we track the definition as we merge.
-  if (auto *RD = dyn_cast<CXXRecordDecl>(LexicalDC)) {
-    auto *DD = RD->getCanonicalDecl()->DefinitionData;
-    return DD ? DD->Definition : nullptr;
-  }
-
-  // For anything else, walk its merged redeclarations looking for a definition.
-  // Note that we can't just call getDefinition here because the redeclaration
-  // chain isn't wired up.
-  for (auto *D : merged_redecls(cast<Decl>(LexicalDC))) {
-    if (auto *FD = dyn_cast<FunctionDecl>(D))
-      if (FD->isThisDeclarationADefinition())
-        return FD;
-    if (auto *MD = dyn_cast<ObjCMethodDecl>(D))
-      if (MD->isThisDeclarationADefinition())
-        return MD;
-  }
-
-  // No merged definition yet.
-  return nullptr;
-}
-
 NamedDecl *ASTDeclReader::getAnonymousDeclForMerging(ASTReader &Reader,
                                                      DeclContext *DC,
                                                      unsigned Index) {
   // If the lexical context has been merged, look into the now-canonical
   // definition.
-  auto *CanonDC = cast<Decl>(DC)->getCanonicalDecl();
+  if (auto *Merged = Reader.MergedDeclContexts.lookup(DC))
+    DC = Merged;
 
   // If we've seen this before, return the canonical declaration.
-  auto &Previous = Reader.AnonymousDeclarationsForMerging[CanonDC];
+  auto &Previous = Reader.AnonymousDeclarationsForMerging[DC];
   if (Index < Previous.size() && Previous[Index])
     return Previous[Index];
 
   // If this is the first time, but we have parsed a declaration of the context,
   // build the anonymous declaration list from the parsed declaration.
-  auto *PrimaryDC = getPrimaryDCForAnonymousDecl(DC);
-  if (PrimaryDC && !cast<Decl>(PrimaryDC)->isFromASTFile()) {
-    numberAnonymousDeclsWithin(PrimaryDC, [&](NamedDecl *ND, unsigned Number) {
+  if (!cast<Decl>(DC)->isFromASTFile()) {
+    numberAnonymousDeclsWithin(DC, [&](NamedDecl *ND, unsigned Number) {
       if (Previous.size() == Number)
         Previous.push_back(cast<NamedDecl>(ND->getCanonicalDecl()));
       else
@@ -3197,9 +3139,10 @@ NamedDecl *ASTDeclReader::getAnonymousDeclForMerging(ASTReader &Reader,
 void ASTDeclReader::setAnonymousDeclForMerging(ASTReader &Reader,
                                                DeclContext *DC, unsigned Index,
                                                NamedDecl *D) {
-  auto *CanonDC = cast<Decl>(DC)->getCanonicalDecl();
+  if (auto *Merged = Reader.MergedDeclContexts.lookup(DC))
+    DC = Merged;
 
-  auto &Previous = Reader.AnonymousDeclarationsForMerging[CanonDC];
+  auto &Previous = Reader.AnonymousDeclarationsForMerging[DC];
   if (Index >= Previous.size())
     Previous.resize(Index + 1);
   if (!Previous[Index])

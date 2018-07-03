@@ -26,7 +26,7 @@ void TrivialityTester() {
                     IsTriviallyMoveConstructible,
                 "Mismatch in expected trivial move construction!");
 
-#if __clang__ || _MSC_VER || __GNUC__ > 5
+#if defined(_LIBCPP_VERSION) || defined(_MSC_VER)
   // On compilers with support for the standard traits, make sure they agree.
   static_assert(std::is_trivially_copy_constructible<T>::value ==
                     IsTriviallyCopyConstructible,

@@ -2052,8 +2052,7 @@ define void @foo4(double* %A, double* %B, i32* %trigger)  {
 ; AVX512-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp eq i64 [[PROL_ITER_SUB]], 0
 ; AVX512-NEXT:    br i1 [[PROL_ITER_CMP]], label [[FOR_BODY_PROL_LOOPEXIT:%.*]], label [[FOR_BODY_PROL]], !llvm.loop !50
 ; AVX512:       for.body.prol.loopexit:
-; AVX512-NEXT:    [[DOTMASK:%.*]] = and i64 [[TMP24]], 9984
-; AVX512-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[DOTMASK]], 0
+; AVX512-NEXT:    [[TMP28:%.*]] = icmp ult i64 [[TMP24]], 48
 ; AVX512-NEXT:    br i1 [[TMP28]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
 ; AVX512:       for.body:
 ; AVX512-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_3:%.*]], [[FOR_INC_3:%.*]] ], [ [[INDVARS_IV_NEXT_PROL]], [[FOR_BODY_PROL_LOOPEXIT]] ]

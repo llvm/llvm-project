@@ -34,7 +34,8 @@ public:
   virtual void addTargetSpecificPasses(llvm::PassManagerBase &PM) const {}
 
   // Generates code to move a constant into a the given register.
-  virtual std::vector<llvm::MCInst> setRegToConstant(unsigned Reg) const {
+  virtual std::vector<llvm::MCInst>
+  setRegToConstant(const llvm::MCSubtargetInfo &STI, unsigned Reg) const {
     return {};
   }
 

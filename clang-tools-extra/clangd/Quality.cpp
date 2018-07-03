@@ -7,17 +7,18 @@
 //
 //===---------------------------------------------------------------------===//
 #include "Quality.h"
-#include <cmath>
+#include "FileDistance.h"
 #include "URI.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 
 namespace clang {
 namespace clangd {
@@ -187,60 +188,6 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolQualitySignals &S) {
   return OS;
 }
 
-/// Calculates a proximity score from \p From and \p To, which are URI strings
-/// that have the same scheme. This does not parse URI. A URI (sans "<scheme>:")
-/// is split into chunks by '/' and each chunk is considered a file/directory.
-/// For example, "uri:///a/b/c" will be treated as /a/b/c
-static float uriProximity(StringRef From, StringRef To) {
-  auto SchemeSplitFrom = From.split(':');
-  auto SchemeSplitTo = To.split(':');
-  assert((SchemeSplitFrom.first == SchemeSplitTo.first) &&
-         "URIs must have the same scheme in order to compute proximity.");
-  auto Split = [](StringRef URIWithoutScheme) {
-    SmallVector<StringRef, 8> Split;
-    URIWithoutScheme.split(Split, '/', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-    return Split;
-  };
-  SmallVector<StringRef, 8> Fs = Split(SchemeSplitFrom.second);
-  SmallVector<StringRef, 8> Ts = Split(SchemeSplitTo.second);
-  auto F = Fs.begin(), T = Ts.begin(), FE = Fs.end(), TE = Ts.end();
-  for (; F != FE && T != TE && *F == *T; ++F, ++T) {
-  }
-  // We penalize for traversing up and down from \p From to \p To but penalize
-  // less for traversing down because subprojects are more closely related than
-  // superprojects.
-  int UpDist = FE - F;
-  int DownDist = TE - T;
-  return std::pow(0.7, UpDist + DownDist/2);
-}
-
-FileProximityMatcher::FileProximityMatcher(ArrayRef<StringRef> ProximityPaths)
-    : ProximityPaths(ProximityPaths.begin(), ProximityPaths.end()) {}
-
-float FileProximityMatcher::uriProximity(StringRef SymbolURI) const {
-  float Score = 0;
-  if (!ProximityPaths.empty() && !SymbolURI.empty()) {
-    for (const auto &Path : ProximityPaths)
-      // Only calculate proximity score for two URIs with the same scheme so
-      // that the computation can be purely text-based and thus avoid expensive
-      // URI encoding/decoding.
-      if (auto U = URI::create(Path, SymbolURI.split(':').first)) {
-        Score = std::max(Score, clangd::uriProximity(U->toString(), SymbolURI));
-      } else {
-        llvm::consumeError(U.takeError());
-      }
-  }
-  return Score;
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const FileProximityMatcher &M) {
-  OS << formatv("File proximity matcher: ");
-  OS << formatv("ProximityPaths[{0}]", llvm::join(M.ProximityPaths.begin(),
-                                                  M.ProximityPaths.end(), ","));
-  return OS;
-}
-
 static SymbolRelevanceSignals::AccessibleScope
 ComputeScope(const NamedDecl *D) {
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
@@ -288,6 +235,15 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
     Scope = std::min(Scope, ComputeScope(SemaCCResult.Declaration));
 }
 
+static std::pair<float, unsigned> proximityScore(llvm::StringRef SymbolURI,
+                                                 URIDistance *D) {
+  if (!D || SymbolURI.empty())
+    return {0.f, 0u};
+  unsigned Distance = D->distance(SymbolURI);
+  // Assume approximately default options are used for sensible scoring.
+  return {std::exp(Distance * -0.4f / FileDistanceOptions().UpCost), Distance};
+}
+
 float SymbolRelevanceSignals::evaluate() const {
   float Score = 1;
 
@@ -296,11 +252,10 @@ float SymbolRelevanceSignals::evaluate() const {
 
   Score *= NameMatch;
 
-  float IndexProximityScore =
-      FileProximityMatch ? FileProximityMatch->uriProximity(SymbolURI) : 0;
   // Proximity scores are [0,1] and we translate them into a multiplier in the
-  // range from 1 to 2.
-  Score *= 1 + std::max(IndexProximityScore, SemaProximityScore);
+  // range from 1 to 3.
+  Score *= 1 + 2 * std::max(proximityScore(SymbolURI, FileProximityMatch).first,
+                            SemaProximityScore);
 
   // Symbols like local variables may only be referenced within their scope.
   // Conversely if we're in that scope, it's likely we'll reference them.
@@ -331,9 +286,9 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolRelevanceSignals &S) {
   OS << formatv("\tForbidden: {0}\n", S.Forbidden);
   OS << formatv("\tSymbol URI: {0}\n", S.SymbolURI);
   if (S.FileProximityMatch) {
-    OS << "\tIndex proximity: "
-       << S.FileProximityMatch->uriProximity(S.SymbolURI) << " ("
-       << *S.FileProximityMatch << ")\n";
+    auto Score = proximityScore(S.SymbolURI, S.FileProximityMatch);
+    OS << formatv("\tIndex proximity: {0} (distance={1})\n", Score.first,
+                  Score.second);
   }
   OS << formatv("\tSema proximity: {0}\n", S.SemaProximityScore);
   OS << formatv("\tQuery type: {0}\n", static_cast<int>(S.Query));

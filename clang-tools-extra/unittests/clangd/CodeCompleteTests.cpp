@@ -1266,7 +1266,6 @@ TEST(CompletionTest, Render) {
   EXPECT_EQ(R.detail, "int\n\"foo.h\"");
   EXPECT_EQ(R.documentation, "This is x().");
   EXPECT_THAT(R.additionalTextEdits, IsEmpty());
-  EXPECT_EQ(R.SymbolScope, "ns::Foo::");
   EXPECT_EQ(R.sortText, sortText(1.0, "x"));
 
   Opts.EnableSnippets = true;

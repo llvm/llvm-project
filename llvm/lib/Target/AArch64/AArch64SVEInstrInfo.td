@@ -14,6 +14,10 @@
 let Predicates = [HasSVE] in {
   defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add">;
   defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub">;
+  defm SQADD_ZZZ : sve_int_bin_cons_arit_0<0b100, "sqadd">;
+  defm UQADD_ZZZ : sve_int_bin_cons_arit_0<0b101, "uqadd">;
+  defm SQSUB_ZZZ : sve_int_bin_cons_arit_0<0b110, "sqsub">;
+  defm UQSUB_ZZZ : sve_int_bin_cons_arit_0<0b111, "uqsub">;
 
   def AND_ZZZ : sve_int_bin_cons_log<0b00, "and">;
   def ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr">;
@@ -30,6 +34,10 @@ let Predicates = [HasSVE] in {
 
   defm ADD_ZI   : sve_int_arith_imm0<0b000, "add">;
   defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub">;
+  defm SQADD_ZI : sve_int_arith_imm0<0b100, "sqadd">;
+  defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd">;
+  defm SQSUB_ZI : sve_int_arith_imm0<0b110, "sqsub">;
+  defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub">;
 
   defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn">;
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon">;
@@ -538,6 +546,21 @@ let Predicates = [HasSVE] in {
   defm CMPLO_PPzZI : sve_int_ucmp_vi<0b10, "cmplo">;
   defm CMPLS_PPzZI : sve_int_ucmp_vi<0b11, "cmpls">;
 
+  defm FCMGE_PPzZZ : sve_fp_3op_p_pd<0b000, "fcmge">;
+  defm FCMGT_PPzZZ : sve_fp_3op_p_pd<0b001, "fcmgt">;
+  defm FCMEQ_PPzZZ : sve_fp_3op_p_pd<0b010, "fcmeq">;
+  defm FCMNE_PPzZZ : sve_fp_3op_p_pd<0b011, "fcmne">;
+  defm FCMUO_PPzZZ : sve_fp_3op_p_pd<0b100, "fcmuo">;
+  defm FACGE_PPzZZ : sve_fp_3op_p_pd<0b101, "facge">;
+  defm FACGT_PPzZZ : sve_fp_3op_p_pd<0b111, "facgt">;
+
+  defm FCMGE_PPzZ0 : sve_fp_2op_p_pd<0b000, "fcmge">;
+  defm FCMGT_PPzZ0 : sve_fp_2op_p_pd<0b001, "fcmgt">;
+  defm FCMLT_PPzZ0 : sve_fp_2op_p_pd<0b010, "fcmlt">;
+  defm FCMLE_PPzZ0 : sve_fp_2op_p_pd<0b011, "fcmle">;
+  defm FCMEQ_PPzZ0 : sve_fp_2op_p_pd<0b100, "fcmeq">;
+  defm FCMNE_PPzZ0 : sve_fp_2op_p_pd<0b110, "fcmne">;
+
   defm SQINCB_XPiWdI : sve_int_pred_pattern_b_s32<0b00000, "sqincb">;
   defm UQINCB_WPiI   : sve_int_pred_pattern_b_u32<0b00001, "uqincb">;
   defm SQDECB_XPiWdI : sve_int_pred_pattern_b_s32<0b00010, "sqdecb">;
@@ -678,4 +701,32 @@ let Predicates = [HasSVE] in {
                   (CMPGT_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
   def : InstAlias<"cmplt $Zd, $Pg/z, $Zm, $Zn",
                   (CMPGT_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"facle $Zd, $Pg/z, $Zm, $Zn",
+                  (FACGE_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"facle $Zd, $Pg/z, $Zm, $Zn",
+                  (FACGE_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"facle $Zd, $Pg/z, $Zm, $Zn",
+                  (FACGE_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"faclt $Zd, $Pg/z, $Zm, $Zn",
+                  (FACGT_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"faclt $Zd, $Pg/z, $Zm, $Zn",
+                  (FACGT_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"faclt $Zd, $Pg/z, $Zm, $Zn",
+                  (FACGT_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"fcmle $Zd, $Pg/z, $Zm, $Zn",
+                  (FCMGE_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"fcmle $Zd, $Pg/z, $Zm, $Zn",
+                  (FCMGE_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"fcmle $Zd, $Pg/z, $Zm, $Zn",
+                  (FCMGE_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : InstAlias<"fcmlt $Zd, $Pg/z, $Zm, $Zn",
+                  (FCMGT_PPzZZ_H PPR16:$Zd, PPR3bAny:$Pg, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<"fcmlt $Zd, $Pg/z, $Zm, $Zn",
+                  (FCMGT_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<"fcmlt $Zd, $Pg/z, $Zm, $Zn",
+                  (FCMGT_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
 }

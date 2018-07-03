@@ -17,6 +17,7 @@ add_extra_unittest(ClangdTests
   ContextTests.cpp
   DraftStoreTests.cpp
   FileIndexTests.cpp
+  FileDistanceTests.cpp
   FindSymbolsTests.cpp
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
