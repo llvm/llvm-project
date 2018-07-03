@@ -1468,10 +1468,16 @@ Optional<DarwinPlatform> inferDeploymentTargetFromSDK(DerivedArgList &Args) {
 std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
                          const Driver &TheDriver) {
   unsigned Major, Minor, Micro;
+  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
   switch (OS) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
-    if (!Triple.getMacOSXVersion(Major, Minor, Micro))
+    // If there is no version specified on triple, and both host and target are
+    // macos, use the host triple to infer OS version.
+    if (Triple.isMacOSX() && SystemTriple.isMacOSX() &&
+        !Triple.getOSMajorVersion())
+      SystemTriple.getMacOSXVersion(Major, Minor, Micro);
+    else if (!Triple.getMacOSXVersion(Major, Minor, Micro))
       TheDriver.Diag(diag::err_drv_invalid_darwin_version)
           << Triple.getOSName();
     break;
