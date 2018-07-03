@@ -253,6 +253,17 @@ SBCompileUnit SBModule::GetCompileUnitAtIndex(uint32_t index) {
   return sb_cu;
 }
 
+SBSymbolContextList
+SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
+  SBSymbolContextList sb_sc_list;
+  const ModuleSP module_sp(GetSP());
+  if (sb_file_spec.IsValid() && module_sp) {
+    const bool append = true;
+    module_sp->FindCompileUnits(*sb_file_spec, append, *sb_sc_list);
+  }
+  return sb_sc_list;
+}
+
 static Symtab *GetUnifiedSymbolTable(const lldb::ModuleSP &module_sp) {
   if (module_sp) {
     SymbolVendor *symbols = module_sp->GetSymbolVendor();

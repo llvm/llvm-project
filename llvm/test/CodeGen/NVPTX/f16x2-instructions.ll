@@ -1431,5 +1431,13 @@ define <2 x half> @test_shufflevector(<2 x half> %a) #0 {
   ret <2 x half> %s
 }
 
+; CHECK-LABEL: test_insertelement(
+; CHECK: mov.b32 {%h2, %tmp_hi}, %hh1;
+; CHECK: mov.b32 %hh2, {%h2, %h1};
+define <2 x half> @test_insertelement(<2 x half> %a, half %x) #0 {
+  %i = insertelement <2 x half> %a, half %x, i64 1
+  ret <2 x half> %i
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { "unsafe-fp-math" = "true" }

@@ -2261,6 +2261,9 @@ Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
              isExact ? PossiblyExactOperator::IsExact : 0);
 }
 
+// FIXME: Add a parameter to specify the operand number for non-commutative ops.
+// For example, the operand 1 identity constant for any shift is the null value
+// because shift-by-0 always returns operand 0.
 Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty) {
   switch (Opcode) {
   default:
@@ -2277,6 +2280,13 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty) {
 
   case Instruction::And:
     return Constant::getAllOnesValue(Ty);
+
+  // TODO: If the fadd has 'nsz', should we return +0.0?
+  case Instruction::FAdd:
+    return ConstantFP::getNegativeZero(Ty);
+
+  case Instruction::FMul:
+    return ConstantFP::get(Ty, 1.0);
   }
 }
 

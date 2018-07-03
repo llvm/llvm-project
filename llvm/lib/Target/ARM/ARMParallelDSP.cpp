@@ -84,7 +84,7 @@ namespace {
     Module            *M;
 
     bool InsertParallelMACs(Reduction &Reduction, PMACPairList &PMACPairs);
-    bool AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1, MemInstList &VecLd);
+    bool AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1, MemInstList &VecMem);
     PMACPairList CreateParallelMACPairs(ParallelMACList &Candidates);
     Instruction *CreateSMLADCall(LoadInst *VecLd0, LoadInst *VecLd1,
                                  Instruction *Acc, Instruction *InsertAfter);

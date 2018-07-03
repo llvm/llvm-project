@@ -770,8 +770,8 @@ public:
   using guid_iterator = DenseMap<GlobalValue::GUID, unsigned>::iterator;
 
   /// These functions do the actual initialization.
-  inline void initialize();
-  void initializeIndex();
+  inline void initializeIfNeeded();
+  void initializeIndexIfNeeded();
 
   // Implementation Details
 private:
@@ -897,7 +897,7 @@ SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata)
 SlotTracker::SlotTracker(const ModuleSummaryIndex *Index)
     : TheModule(nullptr), ShouldInitializeAllMetadata(false), TheIndex(Index) {}
 
-inline void SlotTracker::initialize() {
+inline void SlotTracker::initializeIfNeeded() {
   if (TheModule) {
     processModule();
     TheModule = nullptr; ///< Prevent re-processing next time we're called.
@@ -907,7 +907,7 @@ inline void SlotTracker::initialize() {
     processFunction();
 }
 
-void SlotTracker::initializeIndex() {
+void SlotTracker::initializeIndexIfNeeded() {
   if (!TheIndex)
     return;
   processIndex();
@@ -1077,7 +1077,7 @@ void SlotTracker::purgeFunction() {
 /// getGlobalSlot - Get the slot number of a global value.
 int SlotTracker::getGlobalSlot(const GlobalValue *V) {
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   // Find the value in the module map
   ValueMap::iterator MI = mMap.find(V);
@@ -1087,7 +1087,7 @@ int SlotTracker::getGlobalSlot(const GlobalValue *V) {
 /// getMetadataSlot - Get the slot number of a MDNode.
 int SlotTracker::getMetadataSlot(const MDNode *N) {
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   // Find the MDNode in the module map
   mdn_iterator MI = mdnMap.find(N);
@@ -1099,7 +1099,7 @@ int SlotTracker::getLocalSlot(const Value *V) {
   assert(!isa<Constant>(V) && "Can't get a constant or global slot with this!");
 
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   ValueMap::iterator FI = fMap.find(V);
   return FI == fMap.end() ? -1 : (int)FI->second;
@@ -1107,7 +1107,7 @@ int SlotTracker::getLocalSlot(const Value *V) {
 
 int SlotTracker::getAttributeGroupSlot(AttributeSet AS) {
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   // Find the AttributeSet in the module map.
   as_iterator AI = asMap.find(AS);
@@ -1116,7 +1116,7 @@ int SlotTracker::getAttributeGroupSlot(AttributeSet AS) {
 
 int SlotTracker::getModulePathSlot(StringRef Path) {
   // Check for uninitialized state and do lazy initialization.
-  initializeIndex();
+  initializeIndexIfNeeded();
 
   // Find the Module path in the map
   auto I = ModulePathMap.find(Path);
@@ -1125,7 +1125,7 @@ int SlotTracker::getModulePathSlot(StringRef Path) {
 
 int SlotTracker::getGUIDSlot(GlobalValue::GUID GUID) {
   // Check for uninitialized state and do lazy initialization.
-  initializeIndex();
+  initializeIndexIfNeeded();
 
   // Find the GUID in the map
   guid_iterator I = GUIDMap.find(GUID);
@@ -2502,7 +2502,7 @@ void AssemblyWriter::writeOperandBundles(ImmutableCallSite CS) {
 }
 
 void AssemblyWriter::printModule(const Module *M) {
-  Machine.initialize();
+  Machine.initializeIfNeeded();
 
   if (ShouldPreserveUseListOrder)
     UseListOrders = predictUseListOrder(M);
@@ -2598,7 +2598,7 @@ void AssemblyWriter::printModule(const Module *M) {
 
 void AssemblyWriter::printModuleSummaryIndex() {
   assert(TheIndex);
-  Machine.initializeIndex();
+  Machine.initializeIndexIfNeeded();
 
   Out << "\n";
 
