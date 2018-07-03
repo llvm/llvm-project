@@ -5221,9 +5221,9 @@ bool SwiftASTContext::GetProtocolTypeInfo(const CompilerType &type,
     protocol_info.m_is_anyobject = layout.isAnyObject();
     protocol_info.m_is_errortype = layout.isErrorExistential();
 
-    if (layout.superclass) {
+    if (auto superclass = layout.explicitSuperclass) {
       protocol_info.m_superclass =
-        CompilerType(ast->GetASTContext(), layout.superclass.getPointer());
+        CompilerType(ast->GetASTContext(), superclass.getPointer());
     }
 
     unsigned num_witness_tables = 0;
