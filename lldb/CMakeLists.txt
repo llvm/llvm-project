@@ -100,7 +100,7 @@ if(LLDB_INCLUDE_TESTS)
   # The difference between the following two paths is significant. The path to
   # LLDB will point to LLDB's binary directory, while the other will point to
   # LLVM's binary directory in case the two differ.
-  set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/bin/lldb${CMAKE_EXECUTABLE_SUFFIX}")
+  set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXECUTABLE_SUFFIX}")
   set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
 
   # BEGIN - Swift Mods
