@@ -37,7 +37,7 @@ if(TARGET lldb-mi)
 endif()
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS yaml2obj)
+  list(APPEND LLDB_TEST_DEPS yaml2obj dsymutil)
 endif()
 
 if(TARGET liblldb)
@@ -81,6 +81,7 @@ set(LLDB_TEST_USER_ARGS
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
   --executable $<TARGET_FILE:lldb>
+  --dsymutil $<TARGET_FILE:llvm-dsymutil>
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
   --build-dir
