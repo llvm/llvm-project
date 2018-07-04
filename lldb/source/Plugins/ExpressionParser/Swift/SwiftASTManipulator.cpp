@@ -767,6 +767,11 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
           var_decl->overwriteSetterAccess(access);
       }
 
+      // FIXME: Remove this once LLDB has proper support for resilience.
+      if (swift::VarDecl *var_decl =
+              llvm::dyn_cast<swift::VarDecl>(decl)) {
+        var_decl->setREPLVar(true);
+      }
       return true;
     }
   };
