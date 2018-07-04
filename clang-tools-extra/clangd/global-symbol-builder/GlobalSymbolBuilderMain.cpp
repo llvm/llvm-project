@@ -82,6 +82,14 @@ public:
       void EndSourceFileAction() override {
         WrapperFrontendAction::EndSourceFileAction();
 
+        const auto &CI = getCompilerInstance();
+        if (CI.hasDiagnostics() &&
+            (CI.getDiagnosticClient().getNumErrors() > 0)) {
+          llvm::errs() << "Found errors in the translation unit. Igoring "
+                          "collected symbols...\n";
+          return;
+        }
+
         auto Symbols = Collector->takeSymbols();
         for (const auto &Sym : Symbols) {
           Ctx->reportResult(Sym.ID.str(), SymbolToYAML(Sym));
