@@ -113,6 +113,8 @@ ParsedType Sema::getConstructorName(IdentifierInfo &II,
       break;
     }
   }
+  if (!InjectedClassName && CurClass->isInvalidDecl())
+    return ParsedType();
   assert(InjectedClassName && "couldn't find injected class name");
 
   QualType T = Context.getTypeDeclType(InjectedClassName);

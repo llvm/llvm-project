@@ -2757,12 +2757,12 @@ __m512d test_mm512_maskz_div_round_pd(__mmask8 __U, __m512d __A, __m512d __B) {
   return _mm512_maskz_div_round_pd(__U,__A,__B,_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC); 
 }
 __m512d test_mm512_div_pd(__m512d __a, __m512d __b) {
-  // CHECK-LABLE: @test_mm512_div_pd
+  // CHECK-LABEL: @test_mm512_div_pd
   // CHECK: fdiv <8 x double>
   return _mm512_div_pd(__a,__b); 
 }
 __m512d test_mm512_mask_div_pd(__m512d __w, __mmask8 __u, __m512d __a, __m512d __b) {
-  // CHECK-LABLE: @test_mm512_mask_div_pd
+  // CHECK-LABEL: @test_mm512_mask_div_pd
   // CHECK: fdiv <8 x double> %{{.*}}, %{{.*}}
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_div_pd(__w,__u,__a,__b); 
