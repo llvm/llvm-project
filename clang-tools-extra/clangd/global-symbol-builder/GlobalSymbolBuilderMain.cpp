@@ -84,9 +84,10 @@ public:
 
         const auto &CI = getCompilerInstance();
         if (CI.hasDiagnostics() &&
-            (CI.getDiagnosticClient().getNumErrors() > 0)) {
-          llvm::errs() << "Found errors in the translation unit. Igoring "
-                          "collected symbols...\n";
+            CI.getDiagnostics().hasUncompilableErrorOccurred()) {
+          llvm::errs()
+              << "Found uncompilable errors in the translation unit. Igoring "
+                 "collected symbols...\n";
           return;
         }
 
