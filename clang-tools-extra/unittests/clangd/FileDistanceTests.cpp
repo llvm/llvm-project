@@ -76,8 +76,8 @@ TEST(FileDistanceTests, URI) {
 #else
   EXPECT_EQ(D.distance("file:///not/a/testpath/either"), 3u);
 #endif
-  EXPECT_EQ(D.distance("unittest:foo"), 1000u);
-  EXPECT_EQ(D.distance("unittest:bar"), 1008u);
+  EXPECT_EQ(D.distance("unittest:///foo"), 1000u);
+  EXPECT_EQ(D.distance("unittest:///bar"), 1008u);
 }
 
 TEST(FileDistance, LimitUpTraversals) {
