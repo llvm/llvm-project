@@ -46,3 +46,16 @@ namespace Cxx17CD_NB_GB19 {
   const int &r = 0;
   constexpr int n = r;
 }
+
+namespace PR37585 {
+template <class T> struct S { static constexpr bool value = true; };
+template <class T> constexpr bool f() { return true; }
+template <class T> constexpr bool v = true;
+
+void test() {
+  if constexpr (true) {}
+  else if constexpr (f<int>()) {}
+  else if constexpr (S<int>::value) {}
+  else if constexpr (v<int>) {}
+}
+}

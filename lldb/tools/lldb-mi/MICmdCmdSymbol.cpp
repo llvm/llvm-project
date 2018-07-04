@@ -39,6 +39,8 @@ CreateMITuplePCLine(const uint32_t addr, const uint32_t line_number) {
 }
 } // namespace
 
+using namespace lldb; // For operator==(const SBAddress &, const SBAddress &).
+
 //++
 //------------------------------------------------------------------------------------
 // Details: CMICmdCmdSymbolListLines constructor.
