@@ -17,4 +17,7 @@ func main() {
    //% self.expect("expression -d run -- url", substrs=['www.apple.com'])
 }
 
-main()
+var g_url = URL(string: "http://www.apple.com")!
+
+main() //% self.expect("target variable g_url", substrs=['www.apple.com'])
+       //% self.expect("expression -d run -- g_url", substrs=['www.apple.com'])
