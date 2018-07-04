@@ -1,0 +1,29 @@
+// Test that we can correctly print (resilient) Foundation
+// types when they're stored in REPL-defined globals.
+
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+import Foundation
+
+let u = URL(string: "http://www.apple.com")!
+// CHECK:      u: URL = "http://www.apple.com"
+
+
+let n = Notification(name: Notification.Name("abc"), object: Double(42.0), userInfo: ["hello":"world"])
+
+// CHECK:      n: Notification = {
+// CHECK-NEXT:   name = "abc"
+// CHECK-NEXT:   object = 42
+// CHECK-NEXT:   userInfo = 1 key/value pair {
+// CHECK-NEXT:     [0] = {
+// CHECK-NEXT:       key = {
+// CHECK-NEXT:         _box = {
+// CHECK-NEXT:           _baseHashable = "hello"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:       value = "world"
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
