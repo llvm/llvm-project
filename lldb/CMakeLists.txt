@@ -96,13 +96,19 @@ option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests."
 option(LLDB_TEST_USE_CUSTOM_C_COMPILER "Use the C compiler provided via LLDB_TEST_C_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 option(LLDB_TEST_USE_CUSTOM_CXX_COMPILER "Use the C++ compiler provided via LLDB_TEST_CXX_COMPILER for building test inferiors (instead of the just-built compiler). Defaults to OFF." OFF)
 if(LLDB_INCLUDE_TESTS)
+
+  set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/lldb${CMAKE_EXECUTABLE_SUFFIX}")
+  set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
+
   # BEGIN - Swift Mods
   set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
   set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
   # END - Swift Mods
 
+  set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
   set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
   set(LLDB_TEST_CXX_COMPILER "${LLDB_DEFAULT_TEST_CXX_COMPILER}" CACHE PATH "C++ Compiler to use for building LLDB test inferiors")
+  set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
 
   if (("${LLDB_TEST_C_COMPILER}" STREQUAL "") OR
       ("${LLDB_TEST_CXX_COMPILER}" STREQUAL ""))
@@ -131,7 +137,7 @@ if(LLDB_INCLUDE_TESTS)
   endif()
 
   if(NOT LLDB_BUILT_STANDALONE)
-    list(APPEND LLDB_TEST_DEPS yaml2obj dsymutil)
+    list(APPEND LLDB_TEST_DEPS yaml2obj)
   endif()
 
   if(TARGET liblldb)
@@ -140,6 +146,10 @@ if(LLDB_INCLUDE_TESTS)
 
   if(TARGET clang)
     list(APPEND LLDB_TEST_DEPS clang)
+  endif()
+
+  if(TARGET dsymutil)
+    list(APPEND LLDB_TEST_DEPS dsymutil)
   endif()
 
   add_subdirectory(test)
