@@ -105,9 +105,8 @@ entry:
   ret ppc_fp128 %0
 }
 ; CHECK: convert_to:
-; CHECK: std 3, [[OFF1:.*]](1)
-; CHECK: std 4, [[OFF2:.*]](1)
-; CHECK: ori 2, 2, 0
+; CHECK-DAG: std 3, [[OFF1:.*]](1)
+; CHECK-DAG: std 4, [[OFF2:.*]](1)
 ; CHECK: lfd 1, [[OFF1]](1)
 ; CHECK: lfd 2, [[OFF2]](1)
 ; CHECK: blr
@@ -122,7 +121,6 @@ entry:
 ; CHECK: convert_to2:
 ; CHECK: std 3, [[OFF1:.*]](1)
 ; CHECK: std 5, [[OFF2:.*]](1)
-; CHECK: ori 2, 2, 0
 ; CHECK: lfd 1, [[OFF1]](1)
 ; CHECK: lfd 2, [[OFF2]](1)
 ; CHECK: blr

@@ -30,10 +30,10 @@ entry:
 ; COLDCC: std 8, -24(1)
 ; COLDCC: std 9, -32(1)
 ; COLDCC: std 10, -40(1)
+; COLDCC: ld 10, -40(1)
 ; COLDCC: ld 9, -32(1)
 ; COLDCC: ld 8, -24(1)
 ; COLDCC: ld 7, -16(1)
-; COLDCC: ld 10, -40(1)
 ; COLDCC: ld 6, -8(1)
   %0 = tail call i32 asm "add $0, $1, $2", "=r,r,r,~{r6},~{r7},~{r8},~{r9},~{r10}"(i32 %a, i32 %b)
   %mul = mul nsw i32 %a, 3

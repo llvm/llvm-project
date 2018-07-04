@@ -1577,6 +1577,66 @@ TEST_P(ASTImporterTestBase,
                     ToTU, cxxRecordDecl(unless(isImplicit()))));
 }
 
+static void CompareSourceLocs(FullSourceLoc Loc1, FullSourceLoc Loc2) {
+  EXPECT_EQ(Loc1.getExpansionLineNumber(), Loc2.getExpansionLineNumber());
+  EXPECT_EQ(Loc1.getExpansionColumnNumber(), Loc2.getExpansionColumnNumber());
+  EXPECT_EQ(Loc1.getSpellingLineNumber(), Loc2.getSpellingLineNumber());
+  EXPECT_EQ(Loc1.getSpellingColumnNumber(), Loc2.getSpellingColumnNumber());
+}
+static void CompareSourceRanges(SourceRange Range1, SourceRange Range2,
+                                SourceManager &SM1, SourceManager &SM2) {
+  CompareSourceLocs(FullSourceLoc{ Range1.getBegin(), SM1 },
+                    FullSourceLoc{ Range2.getBegin(), SM2 });
+  CompareSourceLocs(FullSourceLoc{ Range1.getEnd(), SM1 },
+                    FullSourceLoc{ Range2.getEnd(), SM2 });
+}
+TEST_P(ASTImporterTestBase, ImportSourceLocs) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      #define MFOO(arg) arg = arg + 1
+
+      void foo() {
+        int a = 5;
+        MFOO(a);
+      }
+      )",
+      Lang_CXX);
+  auto FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU, functionDecl());
+  auto ToD = Import(FromD, Lang_CXX);
+
+  auto ToLHS = LastDeclMatcher<DeclRefExpr>().match(ToD, declRefExpr());
+  auto FromLHS = LastDeclMatcher<DeclRefExpr>().match(FromTU, declRefExpr());
+  auto ToRHS = LastDeclMatcher<IntegerLiteral>().match(ToD, integerLiteral());
+  auto FromRHS =
+      LastDeclMatcher<IntegerLiteral>().match(FromTU, integerLiteral());
+
+  SourceManager &ToSM = ToAST->getASTContext().getSourceManager();
+  SourceManager &FromSM = FromD->getASTContext().getSourceManager();
+  CompareSourceRanges(ToD->getSourceRange(), FromD->getSourceRange(), ToSM,
+                      FromSM);
+  CompareSourceRanges(ToLHS->getSourceRange(), FromLHS->getSourceRange(), ToSM,
+                      FromSM);
+  CompareSourceRanges(ToRHS->getSourceRange(), FromRHS->getSourceRange(), ToSM,
+                      FromSM);
+}
+
+TEST_P(ASTImporterTestBase, DISABLED_ImportNestedMacro) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      #define FUNC_INT void declToImport
+      #define FUNC FUNC_INT
+      FUNC(int a);
+      )",
+      Lang_CXX);
+  auto FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU, functionDecl());
+  auto ToD = Import(FromD, Lang_CXX);
+
+  SourceManager &ToSM = ToAST->getASTContext().getSourceManager();
+  SourceManager &FromSM = FromD->getASTContext().getSourceManager();
+  CompareSourceRanges(ToD->getSourceRange(), FromD->getSourceRange(), ToSM,
+                      FromSM);
+}
+
 TEST_P(
     ASTImporterTestBase,
     ImportDefinitionOfClassTemplateSpecIfThereIsAnExistingFwdDeclAndDefinition)

@@ -79,9 +79,9 @@ define i32 @foo7(i32 %a, i32 %b) nounwind {
 entry:
 ; CHECK-LABEL: foo7:
 ; CHECK: sub
-; CHECK-next: adds
-; CHECK-next: csneg
-; CHECK-next: b
+; CHECK-NEXT: adds
+; CHECK-NEXT: csneg
+; CHECK-NEXT: b
   %sub = sub nsw i32 %a, %b
   %cmp = icmp sgt i32 %sub, -1
   %sub3 = sub nsw i32 0, %sub

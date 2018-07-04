@@ -287,6 +287,9 @@ public:
   virtual Triple::ArchType getArch() const = 0;
   virtual SubtargetFeatures getFeatures() const = 0;
   virtual void setARMSubArch(Triple &TheTriple) const { }
+  virtual Expected<uint64_t> getStartAddress() const {
+    return errorCodeToError(object_error::parse_failed);
+  };
 
   /// Create a triple from the data in this object file.
   Triple makeTriple() const;

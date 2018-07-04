@@ -68,12 +68,12 @@ define float @reassociate_adds4(float %x0, float %x1, float %x2, float %x3) {
 define float @reassociate_adds5(float %x0, float %x1, float %x2, float %x3, float %x4, float %x5, float %x6, float %x7) {
 ; CHECK-LABEL: reassociate_adds5:
 ; CHECK:       # %bb.0:
-; CHECK:       fadds [[REG12:[0-9]+]], 5, 6
-; CHECK:       fadds [[REG0:[0-9]+]], 1, 2
-; CHECK:       fadds [[REG11:[0-9]+]], 3, 4
+; CHECK-DAG:   fadds [[REG12:[0-9]+]], 5, 6
+; CHECK-DAG:   fadds [[REG0:[0-9]+]], 1, 2
+; CHECK-DAG:   fadds [[REG11:[0-9]+]], 3, 4
 ; CHECK:       fadds [[REG13:[0-9]+]], [[REG12]], 7
-; CHECK:       fadds [[REG1:[0-9]+]], [[REG0]], [[REG11]]
-; CHECK:       fadds [[REG2:[0-9]+]], [[REG1]], [[REG13]]
+; CHECK-DAG:   fadds [[REG1:[0-9]+]], [[REG0]], [[REG11]]
+; CHECK-DAG:   fadds [[REG2:[0-9]+]], [[REG1]], [[REG13]]
 ; CHECK:       fadds 1, [[REG2]], 8
 ; CHECK-NEXT:    blr
 

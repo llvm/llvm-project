@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "arm64--linux-gnu"
 
-; CHECK-LABLE: @aarch64_tree_tests_and
+; CHECK-LABEL: @aarch64_tree_tests_and
 ; CHECK: .hword	32768                   
 ; CHECK: .hword	32767                   
 ; CHECK: .hword	4664                    
@@ -22,7 +22,7 @@ entry:
   ret <8 x i16> %ret
 }
 
-; CHECK-LABLE: @aarch64_tree_tests_or
+; CHECK-LABEL: @aarch64_tree_tests_or
 ; CHECK: .hword	32768                 
 ; CHECK: .hword	32766
 ; CHECK: .hword	4664     

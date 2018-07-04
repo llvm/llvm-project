@@ -4825,13 +4825,12 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned MinVF = std::max(2U, R.getMinVecRegSize() / Sz);
   unsigned MaxVF = std::max<unsigned>(PowerOf2Floor(VL.size()), MinVF);
   if (MaxVF < 2) {
-     R.getORE()->emit([&]() {
-         return OptimizationRemarkMissed(
-                    SV_NAME, "SmallVF", I0)
-                << "Cannot SLP vectorize list: vectorization factor "
-                << "less than 2 is not supported";
-     });
-     return false;
+    R.getORE()->emit([&]() {
+      return OptimizationRemarkMissed(SV_NAME, "SmallVF", I0)
+             << "Cannot SLP vectorize list: vectorization factor "
+             << "less than 2 is not supported";
+    });
+    return false;
   }
 
   for (Value *V : VL) {
@@ -4926,18 +4925,16 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
   if (!Changed && CandidateFound) {
     R.getORE()->emit([&]() {
-        return OptimizationRemarkMissed(
-                   SV_NAME, "NotBeneficial",  I0)
-               << "List vectorization was possible but not beneficial with cost "
-               << ore::NV("Cost", MinCost) << " >= "
-               << ore::NV("Treshold", -SLPCostThreshold);
+      return OptimizationRemarkMissed(SV_NAME, "NotBeneficial", I0)
+             << "List vectorization was possible but not beneficial with cost "
+             << ore::NV("Cost", MinCost) << " >= "
+             << ore::NV("Treshold", -SLPCostThreshold);
     });
   } else if (!Changed) {
     R.getORE()->emit([&]() {
-        return OptimizationRemarkMissed(
-                   SV_NAME, "NotPossible", I0)
-               << "Cannot SLP vectorize list: vectorization was impossible"
-               << " with available vectorization factors";
+      return OptimizationRemarkMissed(SV_NAME, "NotPossible", I0)
+             << "Cannot SLP vectorize list: vectorization was impossible"
+             << " with available vectorization factors";
     });
   }
   return Changed;
@@ -6307,7 +6304,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     if (isa<InsertElementInst>(it) || isa<CmpInst>(it) ||
         isa<InsertValueInst>(it))
       PostProcessInstructions.push_back(&*it);
-
   }
 
   return Changed;
@@ -6411,7 +6407,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     // TODO: The limit of 16 inhibits greater vectorization factors.
     //       For example, AVX2 supports v32i8. Increasing this limit, however,
     //       may cause a significant compile-time increase.
-    for (unsigned CI = 0, CE = it->second.size(); CI < CE; CI+=16) {
+    for (unsigned CI = 0, CE = it->second.size(); CI < CE; CI += 16) {
       unsigned Len = std::min<unsigned>(CE - CI, 16);
       Changed |= vectorizeStores(makeArrayRef(&it->second[CI], Len), R);
     }

@@ -1137,10 +1137,10 @@ define <2 x i32> @test80(i32 %v) {
   ret <2 x i32> %i
 
 ; CHECK-REG-LABEL: @test80
-; CHECK-REG: stw 3, -16(1)
-; CHECK-REG: addi [[R1:[0-9]+]], 1, -16
+; CHECK-REG-DAG: stw 3, -16(1)
+; CHECK-REG-DAG: addi [[R1:[0-9]+]], 1, -16
 ; CHECK-REG: addis [[R2:[0-9]+]]
-; CHECK-REG: addi [[R2]], [[R2]]
+; CHECK-REG-DAG: addi [[R2]], [[R2]]
 ; CHECK-REG-DAG: lxvw4x [[VS1:[0-9]+]], 0, [[R1]]
 ; CHECK-REG-DAG: lxvw4x 35, 0, [[R2]]
 ; CHECK-REG: xxspltw 34, [[VS1]], 0

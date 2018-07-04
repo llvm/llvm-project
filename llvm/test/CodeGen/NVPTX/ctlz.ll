@@ -108,7 +108,7 @@ define i16 @myctlz_ret16_2(i16 %a) {
 define void @myctlz_store16(i16 %a, i16* %b) {
 ; CHECK: ld.param.
 ; CHECK-NEXT: cvt.u32.u16
-; CHECK-NET: clz.b32
+; CHECK-NEXT: clz.b32
 ; CHECK-DAG: cvt.u16.u32
 ; CHECK-DAG: sub.
 ; CHECK: st.{{[a-z]}}16
@@ -121,7 +121,7 @@ define void @myctlz_store16(i16 %a, i16* %b) {
 define void @myctlz_store16_2(i16 %a, i16* %b) {
 ; CHECK: ld.param.
 ; CHECK-NEXT: cvt.u32.u16
-; CHECK-NET: clz.b32
+; CHECK-NEXT: clz.b32
 ; CHECK-DAG: cvt.u16.u32
 ; CHECK-DAG: sub.
 ; CHECK: st.{{[a-z]}}16

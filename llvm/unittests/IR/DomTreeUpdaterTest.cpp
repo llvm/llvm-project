@@ -235,7 +235,8 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
 
   // Make the DTU.
   DominatorTree DT(*F);
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  PostDominatorTree *PDT = nullptr;
+  DomTreeUpdater DTU(&DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_FALSE(DTU.hasPostDomTree());
   ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);
@@ -323,7 +324,8 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
 
   // Make the DTU.
   DominatorTree DT(*F);
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  PostDominatorTree *PDT = nullptr;
+  DomTreeUpdater DTU(&DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_FALSE(DTU.hasPostDomTree());
   ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);
@@ -449,7 +451,7 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
   // Make the DTU.
   DominatorTree DT(*F);
   PostDominatorTree PDT(*F);
-  DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
+  DomTreeUpdater DTU(&DT, &PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_TRUE(DTU.hasPostDomTree());
   ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);

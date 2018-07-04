@@ -31,11 +31,18 @@ public:
   explicit DomTreeUpdater(UpdateStrategy Strategy_) : Strategy(Strategy_) {}
   DomTreeUpdater(DominatorTree &DT_, UpdateStrategy Strategy_)
       : DT(&DT_), Strategy(Strategy_) {}
+  DomTreeUpdater(DominatorTree *DT_, UpdateStrategy Strategy_)
+      : DT(DT_), Strategy(Strategy_) {}
   DomTreeUpdater(PostDominatorTree &PDT_, UpdateStrategy Strategy_)
       : PDT(&PDT_), Strategy(Strategy_) {}
+  DomTreeUpdater(PostDominatorTree *PDT_, UpdateStrategy Strategy_)
+      : PDT(PDT_), Strategy(Strategy_) {}
   DomTreeUpdater(DominatorTree &DT_, PostDominatorTree &PDT_,
                  UpdateStrategy Strategy_)
       : DT(&DT_), PDT(&PDT_), Strategy(Strategy_) {}
+  DomTreeUpdater(DominatorTree *DT_, PostDominatorTree *PDT_,
+                 UpdateStrategy Strategy_)
+      : DT(DT_), PDT(PDT_), Strategy(Strategy_) {}
 
   ~DomTreeUpdater() { flush(); }
 

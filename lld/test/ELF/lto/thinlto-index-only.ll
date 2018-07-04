@@ -29,6 +29,11 @@
 ; RUN: ls %t2.o.thinlto.bc
 ; RUN: not test -e %t4
 
+; Test that LLD generates an empty index even for lazy object file that is not added to link.
+; RUN: rm -f %t1.o.thinlto.bc %t3
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t2.o --start-lib %t1.o --end-lib -o %t3
+; RUN: ls %t1.o.thinlto.bc
+
 ; NM: T f
 
 ; The backend index for this module contains summaries from itself and

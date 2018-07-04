@@ -18,10 +18,8 @@ entry:
 
 ; CHECK: lfs [[REG1:[0-9]+]], 0(4)
 ; CHECK: stfs [[REG1]], 0(3)
-; CHECK: ori 2, 2, 0
 ; CHECK: lfs [[REG2:[0-9]+]], 0(5)
 ; CHECK: stfs [[REG2]], 0(4)
-; CHECK: ori 2, 2, 0
 ; CHECK: lfs [[REG3:[0-9]+]], 0(3)
 ; CHECK: stfs [[REG3]], 0(6)
 ; CHECK: blr

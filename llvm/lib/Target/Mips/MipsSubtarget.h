@@ -54,6 +54,15 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Used to avoid printing msa warnings multiple times.
   static bool MSAWarningPrinted;
 
+  // Used to avoid printing crc warnings multiple times.
+  static bool CRCWarningPrinted;
+
+  // Used to avoid printing ginv warnings multiple times.
+  static bool GINVWarningPrinted;
+
+  // Used to avoid printing virt warnings multiple times.
+  static bool VirtWarningPrinted;
+
   // Mips architecture version
   MipsArchEnum MipsArchVersion;
 

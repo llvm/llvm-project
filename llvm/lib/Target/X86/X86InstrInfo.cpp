@@ -7406,7 +7406,7 @@ enum MachineOutlinerClass {
 };
 
 outliner::TargetCostInfo
-X86InstrInfo::getOutlininingCandidateInfo(
+X86InstrInfo::getOutliningCandidateInfo(
   std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = std::accumulate(
       RepeatedSequenceLocs[0].front(), std::next(RepeatedSequenceLocs[0].back()),

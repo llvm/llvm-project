@@ -999,11 +999,9 @@ static int getRankProximity(OutputSection *A, BaseCommand *B) {
 //  rw_sec : { *(rw_sec) }
 // would mean that the RW PT_LOAD would become unaligned.
 static bool shouldSkip(BaseCommand *Cmd) {
-  if (isa<OutputSection>(Cmd))
-    return false;
   if (auto *Assign = dyn_cast<SymbolAssignment>(Cmd))
     return Assign->Name != ".";
-  return true;
+  return false;
 }
 
 // We want to place orphan sections so that they share as much
