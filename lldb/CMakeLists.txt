@@ -171,7 +171,7 @@ if (NOT LLDB_DISABLE_PYTHON)
                ""
         VERBATIM
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/scripts/lldb.py
+        DEPENDS ${LLDB_PYTHON_TARGET_DIR}/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
     else()
     add_custom_target(finish_swig ALL
