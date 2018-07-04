@@ -49,6 +49,7 @@ class CmdPythonTestCase(TestBase):
             self.runCmd('command script delete tell_curr', check=False)
             self.runCmd('command script delete bug11569', check=False)
             self.runCmd('command script delete takes_exe_ctx', check=False)
+            self.runCmd('command script delete decorated', check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -67,13 +68,19 @@ class CmdPythonTestCase(TestBase):
                     substrs=['Just a docstring for welcome_impl',
                              'A command that says hello to LLDB users'])
 
+        decorated_commands = ["decorated" + str(n) for n in range(1, 5)]
+        for name in decorated_commands:
+            self.expect(name, substrs=["hello from " + name])
+            self.expect("help " + name,
+                        substrs=["Python command defined by @lldb.command"])
+
         self.expect("help",
                     substrs=['For more information run',
-                             'welcome'])
+                             'welcome'] + decorated_commands)
 
         self.expect("help -a",
                     substrs=['For more information run',
-                             'welcome'])
+                             'welcome'] + decorated_commands)
 
         self.expect("help -u", matching=False,
                     substrs=['For more information run'])

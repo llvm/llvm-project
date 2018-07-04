@@ -3757,6 +3757,8 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
     if (Consolidated)
       continue;
 
+    MACtx = MACtx.coalesce();
+
     // If we did not consolidate MA, thus did not find an equivalence class
     // for it, we create a new one.
     InvariantEquivClasses.emplace_back(
