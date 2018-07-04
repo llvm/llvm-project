@@ -15,6 +15,8 @@
 #ifndef LLVM_CLANG_BASIC_STACK_H
 #define LLVM_CLANG_BASIC_STACK_H
 
+#include <cstddef>
+
 namespace clang {
   /// The amount of stack space that Clang would like to be provided with.
   /// If less than this much is available, we may be unable to reach our

@@ -54,7 +54,7 @@ static SmallString<128> canonicalize(StringRef Path) {
   return Result;
 }
 
-const unsigned FileDistance::kUnreachable;
+constexpr const unsigned FileDistance::kUnreachable;
 
 FileDistance::FileDistance(StringMap<SourceParams> Sources,
                            const FileDistanceOptions &Opts)
@@ -72,7 +72,9 @@ FileDistance::FileDistance(StringMap<SourceParams> Sources,
     for (unsigned I = 0; !Rest.empty(); ++I) {
       Rest = parent_path(Rest, sys::path::Style::posix);
       auto NextHash = hash_value(Rest);
-      DownEdges[NextHash].push_back(Hash);
+      auto &Down = DownEdges[NextHash];
+      if (std::find(Down.begin(), Down.end(), Hash) == Down.end())
+        DownEdges[NextHash].push_back(Hash);
       // We can't just break after MaxUpTraversals, must still set DownEdges.
       if (I > S.getValue().MaxUpTraversals) {
         if (Cache.find(Hash) != Cache.end())

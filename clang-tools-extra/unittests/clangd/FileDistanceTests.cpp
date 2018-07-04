@@ -67,11 +67,17 @@ TEST(FileDistanceTests, URI) {
   SourceParams CostLots;
   CostLots.Cost = 1000;
 
-  URIDistance D(
-      {{testPath("foo"), CostLots}, {"/not/a/testpath", SourceParams()}}, Opts);
+  URIDistance D({{testPath("foo"), CostLots},
+                 {"/not/a/testpath", SourceParams()},
+                 {"C:\\not\\a\\testpath", SourceParams()}},
+                Opts);
+#ifdef _WIN32
+  EXPECT_EQ(D.distance("file:///C%3a/not/a/testpath/either"), 3u);
+#else
   EXPECT_EQ(D.distance("file:///not/a/testpath/either"), 3u);
-  EXPECT_EQ(D.distance("unittest:foo"), 1000u);
-  EXPECT_EQ(D.distance("unittest:bar"), 1008u);
+#endif
+  EXPECT_EQ(D.distance("unittest:///foo"), 1000u);
+  EXPECT_EQ(D.distance("unittest:///bar"), 1008u);
 }
 
 TEST(FileDistance, LimitUpTraversals) {

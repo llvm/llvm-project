@@ -2523,6 +2523,22 @@ AArch64CC::CondCode AArch64AsmParser::parseCondCodeString(StringRef Cond) {
                     .Case("al", AArch64CC::AL)
                     .Case("nv", AArch64CC::NV)
                     .Default(AArch64CC::Invalid);
+
+  if (CC == AArch64CC::Invalid &&
+      getSTI().getFeatureBits()[AArch64::FeatureSVE])
+    CC = StringSwitch<AArch64CC::CondCode>(Cond.lower())
+                    .Case("none",  AArch64CC::EQ)
+                    .Case("any",   AArch64CC::NE)
+                    .Case("nlast", AArch64CC::HS)
+                    .Case("last",  AArch64CC::LO)
+                    .Case("first", AArch64CC::MI)
+                    .Case("nfrst", AArch64CC::PL)
+                    .Case("pmore", AArch64CC::HI)
+                    .Case("plast", AArch64CC::LS)
+                    .Case("tcont", AArch64CC::GE)
+                    .Case("tstop", AArch64CC::LT)
+                    .Default(AArch64CC::Invalid);
+
   return CC;
 }
 

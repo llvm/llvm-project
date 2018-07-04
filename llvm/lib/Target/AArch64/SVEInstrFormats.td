@@ -994,6 +994,32 @@ multiclass sve_int_perm_bin_perm_zz<bits<3> opc, string asm> {
 }
 
 //===----------------------------------------------------------------------===//
+// SVE Floating Point Unary Operations Group
+//===----------------------------------------------------------------------===//
+
+class sve_fp_2op_p_zd<bits<7> opc, string asm, RegisterOperand i_zprtype,
+                      RegisterOperand o_zprtype>
+: I<(outs o_zprtype:$Zd), (ins i_zprtype:$_Zd, PPR3bAny:$Pg, i_zprtype:$Zn),
+  asm, "\t$Zd, $Pg/m, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = opc{6-5};
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = opc{4-0};
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+}
+
+
+//===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic - Binary Predicated Group
 //===----------------------------------------------------------------------===//
 
@@ -2066,6 +2092,60 @@ multiclass sve_int_perm_bin_perm_pp<bits<3> opc, string asm> {
   def _D : sve_int_perm_bin_perm_pp<opc, 0b11, asm, PPR64>;
 }
 
+class sve_int_rdffr_pred<bit s, string asm>
+: I<(outs PPR8:$Pd), (ins PPRAny:$Pg),
+  asm, "\t$Pd, $Pg/z",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  bits<4> Pg;
+  let Inst{31-23} = 0b001001010;
+  let Inst{22}    = s;
+  let Inst{21-9}  = 0b0110001111000;
+  let Inst{8-5}   = Pg;
+  let Inst{4}     = 0;
+  let Inst{3-0}   = Pd;
+
+  let Defs = !if(!eq (s, 1), [NZCV], []);
+  let Uses = [FFR];
+}
+
+class sve_int_rdffr_unpred<string asm> : I<
+  (outs PPR8:$Pd), (ins),
+  asm, "\t$Pd",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pd;
+  let Inst{31-4} = 0b0010010100011001111100000000;
+  let Inst{3-0}   = Pd;
+
+  let Uses = [FFR];
+}
+
+class sve_int_wrffr<string asm>
+: I<(outs), (ins PPR8:$Pn),
+  asm, "\t$Pn",
+  "",
+  []>, Sched<[]> {
+  bits<4> Pn;
+  let Inst{31-9} = 0b00100101001010001001000;
+  let Inst{8-5}  = Pn;
+  let Inst{4-0}  = 0b00000;
+
+  let hasSideEffects = 1;
+  let Defs = [FFR];
+}
+
+class sve_int_setffr<string asm>
+: I<(outs), (ins),
+  asm, "",
+  "",
+  []>, Sched<[]> {
+  let Inst{31-0} = 0b00100101001011001001000000000000;
+
+  let hasSideEffects = 1;
+  let Defs = [FFR];
+}
 
 //===----------------------------------------------------------------------===//
 // SVE Permute Vector - Predicated Group

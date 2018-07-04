@@ -51,5 +51,5 @@
 // And check that we get a pointer to it in the right place
 // CHECK: @._OBJC_REF_CLASS_X = global 
 // CHECK-SAME: @._OBJC_CLASS_X
-// CHECK-SAMEsection "__objc_class_refs"
+// CHECK-SAME: section "__objc_class_refs"
 

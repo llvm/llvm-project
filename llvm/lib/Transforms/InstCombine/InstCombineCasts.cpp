@@ -1079,6 +1079,17 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
     Value *Res = EvaluateInDifferentType(Src, DestTy, false);
     assert(Res->getType() == DestTy);
 
+    // When DestTy is integer, try to preserve any debug values referring
+    // to the zext being replaced.
+    // TODO: This should work for vectors as well, possibly via the use
+    // of DWARF fragments.
+    if (DestTy->isIntegerTy()) {
+      insertReplacementDbgValues(
+          *Src, *Res, CI, [](DbgInfoIntrinsic &OldDII) -> DIExpression * {
+            return OldDII.getExpression();
+          });
+    }
+
     uint32_t SrcBitsKept = SrcTy->getScalarSizeInBits()-BitsToClear;
     uint32_t DestBitSize = DestTy->getScalarSizeInBits();
 

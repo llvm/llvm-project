@@ -546,7 +546,7 @@ private:
 
   /// Mergeable declaration contexts that have anonymous declarations
   /// within them, and those anonymous declarations.
-  llvm::DenseMap<DeclContext*, llvm::SmallVector<NamedDecl*, 2>>
+  llvm::DenseMap<Decl*, llvm::SmallVector<NamedDecl*, 2>>
     AnonymousDeclarationsForMerging;
 
   struct FileDeclsInfo {
