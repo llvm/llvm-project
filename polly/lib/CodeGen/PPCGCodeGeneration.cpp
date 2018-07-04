@@ -3163,7 +3163,7 @@ public:
     auto *Options = isl_ast_print_options_alloc(S->getIslCtx().get());
     P = isl_ast_node_print(Kernel->tree, P, Options);
     char *String = isl_printer_get_str(P);
-    printf("%s\n", String);
+    outs() << String << "\n";
     free(String);
     isl_printer_free(P);
   }
@@ -3184,13 +3184,13 @@ public:
         isl_ast_print_options_set_print_user(Options, printHostUser, &Data);
     P = isl_ast_node_print(Tree, P, Options);
     char *String = isl_printer_get_str(P);
-    printf("# host\n");
-    printf("%s\n", String);
+    outs() << "# host\n";
+    outs() << String << "\n";
     free(String);
     isl_printer_free(P);
 
     for (auto Kernel : Data.Kernels) {
-      printf("# kernel%d\n", Kernel->id);
+      outs() << "# kernel" << Kernel->id << "\n";
       printKernel(Kernel);
     }
   }
@@ -3255,17 +3255,17 @@ public:
       else
         P = isl_printer_print_str(P, "No schedule found\n");
 
-      printf("%s\n", isl_printer_get_str(P));
+      outs() << isl_printer_get_str(P) << "\n";
       isl_printer_free(P);
     }
 
     if (DumpCode) {
-      printf("Code\n");
-      printf("====\n");
+      outs() << "Code\n";
+      outs() << "====\n";
       if (PPCGGen->tree)
         printGPUTree(PPCGGen->tree, PPCGProg);
       else
-        printf("No code generated\n");
+        outs() << "No code generated\n";
     }
 
     isl_schedule_free(Schedule);
