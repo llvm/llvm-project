@@ -496,6 +496,32 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   if (NotNullSucc->pred_size() != 1)
     return false;
 
+  // To prevent the invalid transformation of the following code:
+  //
+  //   mov %rax, %rcx
+  //   test %rax, %rax
+  //   %rax = ...
+  //   je throw_npe
+  //   mov(%rcx), %r9
+  //   mov(%rax), %r10
+  //
+  // into:
+  //
+  //   mov %rax, %rcx
+  //   %rax = ....
+  //   faulting_load_op("movl (%rax), %r10", throw_npe)
+  //   mov(%rcx), %r9
+  //
+  // we must ensure that there are no instructions between the 'test' and
+  // conditional jump that modify %rax.
+  const unsigned PointerReg = MBP.LHS.getReg();
+
+  assert(MBP.ConditionDef->getParent() ==  &MBB && "Should be in basic block");
+
+  for (auto I = MBB.rbegin(); MBP.ConditionDef != &*I; ++I)
+    if (I->modifiesRegister(PointerReg, TRI))
+      return false;
+
   // Starting with a code fragment like:
   //
   //   test %rax, %rax
@@ -549,8 +575,6 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   // the safety of ptr->field can be dependent on some_cond; and, for instance,
   // ptr could be some non-null invalid reference that never gets loaded from
   // because some_cond is always true.
-
-  const unsigned PointerReg = MBP.LHS.getReg();
 
   SmallVector<MachineInstr *, 8> InstsSeenSoFar;
 
