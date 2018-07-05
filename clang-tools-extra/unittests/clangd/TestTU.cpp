@@ -93,25 +93,34 @@ const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
   return LookupDecl(*Scope, Components.back());
 }
 
-const NamedDecl &findAnyDecl(ParsedAST &AST, llvm::StringRef Name) {
+const NamedDecl &findAnyDecl(ParsedAST &AST,
+                             std::function<bool(const NamedDecl &)> Callback) {
   struct Visitor : RecursiveASTVisitor<Visitor> {
-    llvm::StringRef Name;
+    decltype(Callback) CB;
     llvm::SmallVector<const NamedDecl *, 1> Decls;
     bool VisitNamedDecl(const NamedDecl *ND) {
-      if (auto *ID = ND->getIdentifier())
-        if (ID->getName() == Name)
-          Decls.push_back(ND);
+      if (CB(*ND))
+        Decls.push_back(ND);
       return true;
     }
   } Visitor;
-  Visitor.Name = Name;
+  Visitor.CB = Callback;
   for (Decl *D : AST.getLocalTopLevelDecls())
     Visitor.TraverseDecl(D);
   if (Visitor.Decls.size() != 1) {
-    ADD_FAILURE() << Visitor.Decls.size() << " symbols named " << Name;
+    ADD_FAILURE() << Visitor.Decls.size() << " symbols matched.";
     assert(Visitor.Decls.size() == 1);
   }
   return *Visitor.Decls.front();
+}
+
+const NamedDecl &findAnyDecl(ParsedAST &AST, llvm::StringRef Name) {
+  return findAnyDecl(AST, [Name](const NamedDecl &ND) {
+    if (auto *ID = ND.getIdentifier())
+      if (ID->getName() == Name)
+        return true;
+    return false;
+  });
 }
 
 } // namespace clangd

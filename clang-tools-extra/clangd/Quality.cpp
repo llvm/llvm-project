@@ -11,10 +11,12 @@
 #include "URI.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -195,6 +197,9 @@ ComputeScope(const NamedDecl *D) {
   if (auto *R = dyn_cast_or_null<RecordDecl>(D))
     if (R->isInjectedClassName())
       DC = DC->getParent();
+  // Class constructor should have the same scope as the class.
+  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(D))
+    DC = DC->getParent();
   bool InClass = false;
   for (; !DC->isFileContext(); DC = DC->getParent()) {
     if (DC->isFunctionOrMethod())
