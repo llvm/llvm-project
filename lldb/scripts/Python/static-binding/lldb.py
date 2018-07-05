@@ -7628,6 +7628,16 @@ class SBProcess(_object):
         """LoadImage(self, SBFileSpec image_spec, SBError error) -> uint32_t"""
         return _lldb.SBProcess_LoadImage(self, *args)
 
+    def LoadImageUsingPaths(self, *args):
+        """
+        Load the library whose filename is given by image_spec looking in all the
+        paths supplied in the paths argument.  If successful, return a token that
+        can be passed to UnloadImage and fill loaded_path with the path that was
+        successfully loaded.  On failure, return 
+        lldb.LLDB_INVALID_IMAGE_TOKEN.
+        """
+        return _lldb.SBProcess_LoadImageUsingPaths(self, *args)
+
     def UnloadImage(self, *args):
         """UnloadImage(self, uint32_t image_token) -> SBError"""
         return _lldb.SBProcess_UnloadImage(self, *args)
