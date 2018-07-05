@@ -14,12 +14,9 @@
 
 ; HSA-VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x8
 ; HSA-VI: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xff
-
-
 define amdgpu_kernel void @i8_arg(i32 addrspace(1)* nocapture %out, i8 %in) nounwind {
-entry:
-  %0 = zext i8 %in to i32
-  store i32 %0, i32 addrspace(1)* %out, align 4
+  %ext = zext i8 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
 }
 
@@ -33,9 +30,8 @@ entry:
 ; HSA-VI: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x8
 ; HSA-VI: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xff
 define amdgpu_kernel void @i8_zext_arg(i32 addrspace(1)* nocapture %out, i8 zeroext %in) nounwind {
-entry:
-  %0 = zext i8 %in to i32
-  store i32 %0, i32 addrspace(1)* %out, align 4
+  %ext = zext i8 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
 }
 
@@ -51,9 +47,8 @@ entry:
 ; HSA-VI: s_sext_i32_i8 s{{[0-9]+}}, [[VAL]]
 ; HSA-VI: flat_store_dword
 define amdgpu_kernel void @i8_sext_arg(i32 addrspace(1)* nocapture %out, i8 signext %in) nounwind {
-entry:
-  %0 = sext i8 %in to i32
-  store i32 %0, i32 addrspace(1)* %out, align 4
+  %ext = sext i8 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
 }
 
@@ -71,9 +66,8 @@ entry:
 ; HSA-VI: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xffff{{$}}
 ; HSA-VI: flat_store_dword
 define amdgpu_kernel void @i16_arg(i32 addrspace(1)* nocapture %out, i16 %in) nounwind {
-entry:
-  %0 = zext i16 %in to i32
-  store i32 %0, i32 addrspace(1)* %out, align 4
+  %ext = zext i16 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
 }
 
@@ -89,9 +83,8 @@ entry:
 ; HSA-VI: s_and_b32 s{{[0-9]+}}, [[VAL]], 0xffff{{$}}
 ; HSA-VI: flat_store_dword
 define amdgpu_kernel void @i16_zext_arg(i32 addrspace(1)* nocapture %out, i16 zeroext %in) nounwind {
-entry:
-  %0 = zext i16 %in to i32
-  store i32 %0, i32 addrspace(1)* %out, align 4
+  %ext = zext i16 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
 }
 
@@ -108,9 +101,8 @@ entry:
 ; HSA-VI: s_sext_i32_i16 s{{[0-9]+}}, [[VAL]]
 ; HSA-VI: flat_store_dword
 define amdgpu_kernel void @i16_sext_arg(i32 addrspace(1)* nocapture %out, i16 signext %in) nounwind {
-entry:
-  %0 = sext i16 %in to i32
-  store i32 %0, i32 addrspace(1)* %out, align 4
+  %ext = sext i16 %in to i32
+  store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
 }
 
@@ -655,5 +647,59 @@ define amdgpu_kernel void @i1_arg_sext_i32(i32 addrspace(1)* %out, i1 %x) nounwi
 define amdgpu_kernel void @i1_arg_sext_i64(i64 addrspace(1)* %out, i1 %x) nounwind {
   %ext = sext i1 %x to i64
   store i64 %ext, i64 addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}empty_struct_arg:
+; HSA: kernarg_segment_byte_size = 0
+define amdgpu_kernel void @empty_struct_arg({} %in) nounwind {
+  ret void
+}
+
+; The correct load offsets for these:
+; load 4 from 0,
+; load 8 from 8
+; load 4 from 24
+; load 8 from 32
+
+; With the SelectionDAG argument lowering, the alignments for the
+; struct members is not properly considered, making these wrong.
+
+; FIXME: Total argument size is computed wrong
+; FUNC-LABEL: {{^}}struct_argument_alignment:
+; HSA: kernarg_segment_byte_size = 40
+; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
+; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x8
+; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0x18
+; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x20
+define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32, i64} %arg1) {
+  %val0 = extractvalue {i32, i64} %arg0, 0
+  %val1 = extractvalue {i32, i64} %arg0, 1
+  %val2 = extractvalue {i32, i64} %arg1, 0
+  %val3 = extractvalue {i32, i64} %arg1, 1
+  store volatile i32 %val0, i32 addrspace(1)* null
+  store volatile i64 %val1, i64 addrspace(1)* null
+  store volatile i32 %val2, i32 addrspace(1)* null
+  store volatile i64 %val3, i64 addrspace(1)* null
+  ret void
+}
+
+; No padding between i8 and next struct, but round up at end to 4 byte
+; multiple.
+; FUNC-LABEL: {{^}}packed_struct_argument_alignment:
+; HSA: kernarg_segment_byte_size = 28
+; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
+; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x4
+; HSA: s_load_dword s{{[0-9]+}}, s[4:5], 0xc
+; HSA: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x10
+define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) {
+  %val0 = extractvalue <{i32, i64}> %arg0, 0
+  %val1 = extractvalue <{i32, i64}> %arg0, 1
+  %val2 = extractvalue <{i32, i64}> %arg1, 0
+  %val3 = extractvalue <{i32, i64}> %arg1, 1
+  store volatile i32 %val0, i32 addrspace(1)* null
+  store volatile i64 %val1, i64 addrspace(1)* null
+  store volatile i32 %val2, i32 addrspace(1)* null
+  store volatile i64 %val3, i64 addrspace(1)* null
   ret void
 }

@@ -94,10 +94,11 @@ void ReadState::cycleEvent() {
 #ifndef NDEBUG
 void WriteState::dump() const {
   dbgs() << "{ OpIdx=" << WD.OpIndex << ", Lat=" << WD.Latency << ", RegID "
-         << getRegisterID() << ", Cycles Left=" << getCyclesLeft() << " }\n";
+         << getRegisterID() << ", Cycles Left=" << getCyclesLeft() << " }";
 }
 
 void WriteRef::dump() const {
+  dbgs() << "IID=" << getSourceIndex() << ' ';
   if (isValid())
     getWriteState()->dump();
   else

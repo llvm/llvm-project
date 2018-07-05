@@ -30,6 +30,8 @@
 
 #cmakedefine01 HAVE_NR_PROCESS_VM_READV
 
+#ifndef HAVE_LIBCOMPRESSION
 #cmakedefine HAVE_LIBCOMPRESSION
+#endif
 
 #endif // #ifndef LLDB_HOST_CONFIG_H
