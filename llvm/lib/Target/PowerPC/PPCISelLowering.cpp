@@ -815,6 +815,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setTruncStoreAction(MVT::f128, MVT::f64, Expand);
         setTruncStoreAction(MVT::f128, MVT::f32, Expand);
         setOperationAction(ISD::BITCAST, MVT::i128, Custom);
+        // No implementation for these ops for PowerPC.
+        setOperationAction(ISD::FSIN , MVT::f128, Expand);
+        setOperationAction(ISD::FCOS , MVT::f128, Expand);
+        setOperationAction(ISD::FPOW, MVT::f128, Expand);
+        setOperationAction(ISD::FPOWI, MVT::f128, Expand);
       }
 
     }
@@ -1051,6 +1056,20 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLibcallName(RTLIB::LOG10_PPCF128, "log10l$LDBL128");
     setLibcallName(RTLIB::EXP_PPCF128, "expl$LDBL128");
     setLibcallName(RTLIB::EXP2_PPCF128, "exp2l$LDBL128");
+  }
+
+  if (EnableQuadPrecision) {
+    setLibcallName(RTLIB::LOG_F128, "logf128");
+    setLibcallName(RTLIB::LOG2_F128, "log2f128");
+    setLibcallName(RTLIB::LOG10_F128, "log10f128");
+    setLibcallName(RTLIB::EXP_F128, "expf128");
+    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
+    setLibcallName(RTLIB::SIN_F128, "sinf128");
+    setLibcallName(RTLIB::COS_F128, "cosf128");
+    setLibcallName(RTLIB::POW_F128, "powf128");
+    setLibcallName(RTLIB::FMIN_F128, "fminf128");
+    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+    setLibcallName(RTLIB::POWI_F128, "__powikf2");
   }
 
   // With 32 condition bits, we don't need to sink (and duplicate) compares

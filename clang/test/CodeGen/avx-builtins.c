@@ -280,8 +280,7 @@ __m256d test_mm256_cmp_pd_ngt_us(__m256d a, __m256d b) {
 
 __m256d test_mm256_cmp_pd_false_oq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret <4 x double> zeroinitializer
+  // CHECK: fcmp false <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_FALSE_OQ);
 }
 
@@ -305,8 +304,7 @@ __m256d test_mm256_cmp_pd_gt_os(__m256d a, __m256d b) {
 
 __m256d test_mm256_cmp_pd_true_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret <4 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>
+  // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_TRUE_UQ);
 }
 
@@ -378,8 +376,7 @@ __m256d test_mm256_cmp_pd_ngt_uq(__m256d a, __m256d b) {
 
 __m256d test_mm256_cmp_pd_false_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_false_os
-  // CHECK-NOT: call
-  // CHECK: ret <4 x double> zeroinitializer
+  // CHECK: fcmp false <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_FALSE_OS);
 }
 
@@ -403,8 +400,7 @@ __m256d test_mm256_cmp_pd_gt_oq(__m256d a, __m256d b) {
 
 __m256d test_mm256_cmp_pd_true_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_true_us
-  // CHECK-NOT: call
-  // CHECK: ret <4 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>
+  // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_TRUE_US);
 }
 
@@ -476,8 +472,7 @@ __m256 test_mm256_cmp_ps_ngt_us(__m256 a, __m256 b) {
 
 __m256 test_mm256_cmp_ps_false_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret <8 x float> zeroinitializer
+  // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_FALSE_OQ);
 }
 
@@ -501,8 +496,7 @@ __m256 test_mm256_cmp_ps_gt_os(__m256 a, __m256 b) {
 
 __m256 test_mm256_cmp_ps_true_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>
+  // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_TRUE_UQ);
 }
 
@@ -574,8 +568,7 @@ __m256 test_mm256_cmp_ps_ngt_uq(__m256 a, __m256 b) {
 
 __m256 test_mm256_cmp_ps_false_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_false_os
-  // CHECK-NOT: call
-  // CHECK: ret <8 x float> zeroinitializer
+  // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_FALSE_OS);
 }
 
@@ -599,8 +592,7 @@ __m256 test_mm256_cmp_ps_gt_oq(__m256 a, __m256 b) {
 
 __m256 test_mm256_cmp_ps_true_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_true_us
-  // CHECK-NOT: call
-  // CHECK: ret <8 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>
+  // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_TRUE_US);
 }
 
@@ -672,8 +664,7 @@ __m128d test_mm_cmp_pd_ngt_us(__m128d a, __m128d b) {
 
 __m128d test_mm_cmp_pd_false_oq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret <2 x double> zeroinitializer
+  // CHECK: fcmp false <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_FALSE_OQ);
 }
 
@@ -697,8 +688,7 @@ __m128d test_mm_cmp_pd_gt_os(__m128d a, __m128d b) {
 
 __m128d test_mm_cmp_pd_true_uq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret <2 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>
+  // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_TRUE_UQ);
 }
 
@@ -770,8 +760,7 @@ __m128d test_mm_cmp_pd_ngt_uq(__m128d a, __m128d b) {
 
 __m128d test_mm_cmp_pd_false_os(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_false_os
-  // CHECK-NOT: call
-  // CHECK: ret <2 x double> zeroinitializer
+  // CHECK: fcmp false <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_FALSE_OS);
 }
 
@@ -795,8 +784,7 @@ __m128d test_mm_cmp_pd_gt_oq(__m128d a, __m128d b) {
 
 __m128d test_mm_cmp_pd_true_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_true_us
-  // CHECK-NOT: call
-  // CHECK: ret <2 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>
+  // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_TRUE_US);
 }
 
@@ -868,8 +856,7 @@ __m128 test_mm_cmp_ps_ngt_us(__m128 a, __m128 b) {
 
 __m128 test_mm_cmp_ps_false_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret <4 x float> zeroinitializer
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_FALSE_OQ);
 }
 
@@ -893,8 +880,7 @@ __m128 test_mm_cmp_ps_gt_os(__m128 a, __m128 b) {
 
 __m128 test_mm_cmp_ps_true_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_TRUE_UQ);
 }
 
@@ -966,8 +952,7 @@ __m128 test_mm_cmp_ps_ngt_uq(__m128 a, __m128 b) {
 
 __m128 test_mm_cmp_ps_false_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_false_os
-  // CHECK-NOT: call
-  // CHECK: ret <4 x float> zeroinitializer
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_FALSE_OS);
 }
 
@@ -991,8 +976,7 @@ __m128 test_mm_cmp_ps_gt_oq(__m128 a, __m128 b) {
 
 __m128 test_mm_cmp_ps_true_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_true_us
-  // CHECK-NOT: call
-  // CHECK: ret <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_TRUE_US);
 }
 

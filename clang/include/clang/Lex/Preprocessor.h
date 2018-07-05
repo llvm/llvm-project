@@ -720,6 +720,12 @@ private:
   /// The file ID for the preprocessor predefines.
   FileID PredefinesFileID;
 
+  /// The file ID for the PCH through header.
+  FileID PCHThroughHeaderFileID;
+
+  /// Whether tokens are being skipped until the through header is seen.
+  bool SkippingUntilPCHThroughHeader = false;
+
   /// \{
   /// Cache of macro expanders to reduce malloc traffic.
   enum { TokenLexerCacheSize = 8 };
@@ -1139,6 +1145,22 @@ public:
   /// Create a new preprocessing record, which will keep track of
   /// all macro expansions, macro definitions, etc.
   void createPreprocessingRecord();
+
+  /// Returns true if the FileEntry is the PCH through header.
+  bool isPCHThroughHeader(const FileEntry *File);
+
+  /// True if creating a PCH with a through header.
+  bool creatingPCHWithThroughHeader();
+
+  /// True if using a PCH with a through header.
+  bool usingPCHWithThroughHeader();
+
+  /// Skip tokens until after the #include of the through header.
+  void SkipTokensUntilPCHThroughHeader();
+
+  /// Process directives while skipping until the through header is found.
+  void HandleSkippedThroughHeaderDirective(Token &Result,
+                                           SourceLocation HashLoc);
 
   /// Enter the specified FileID as the main source file,
   /// which implicitly adds the builtin defines etc.
@@ -2019,6 +2041,9 @@ private:
     assert(PredefinesFileID.isInvalid() && "PredefinesFileID already set!");
     PredefinesFileID = FID;
   }
+
+  /// Set the FileID for the PCH through header.
+  void setPCHThroughHeaderFileID(FileID FID);
 
   /// Returns true if we are lexing from a file and not a
   /// pragma or a macro.

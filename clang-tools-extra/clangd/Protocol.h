@@ -479,6 +479,12 @@ struct DocumentFormattingParams {
 };
 bool fromJSON(const json::Expr &, DocumentFormattingParams &);
 
+struct DocumentSymbolParams {
+  // The text document to find symbols in.
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const json::Expr &, DocumentSymbolParams &);
+
 struct Diagnostic {
   /// The range at which the message applies.
   Range range;

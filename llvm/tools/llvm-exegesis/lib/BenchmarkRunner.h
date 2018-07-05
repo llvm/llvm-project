@@ -70,8 +70,13 @@ protected:
   const LLVMState &State;
   const RegisterAliasingTrackerCache RATC;
 
+  // Generates a single instruction prototype that has a self-dependency.
   llvm::Expected<SnippetPrototype>
   generateSelfAliasingPrototype(const Instruction &Instr) const;
+  // Generates a single instruction prototype without assignment constraints.
+  llvm::Expected<SnippetPrototype>
+  generateUnconstrainedPrototype(const Instruction &Instr,
+                                 llvm::StringRef Msg) const;
 
 private:
   // API to be implemented by subclasses.

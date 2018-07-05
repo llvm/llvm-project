@@ -843,7 +843,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   switch (CC) {
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
-    return CC_AMDGPU_Kernel;
+    llvm_unreachable("kernels should not be handled here");
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
@@ -866,7 +866,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
   switch (CC) {
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
-    return CC_AMDGPU_Kernel;
+    llvm_unreachable("kernels should not be handled here");
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -35,24 +36,10 @@ class Module;
 
 namespace orc {
 
-/// Simple compile functor: Takes a single IR module and returns an
-///        ObjectFile.
+/// Simple compile functor: Takes a single IR module and returns an ObjectFile.
+/// This compiler supports a single compilation thread and LLVMContext only.
+/// For multithreaded compilation, use MultiThreadedSimpleCompiler below.
 class SimpleCompiler {
-private:
-  class SmallVectorMemoryBuffer : public MemoryBuffer {
-  public:
-    SmallVectorMemoryBuffer(SmallVector<char, 0> Buffer)
-        : Buffer(std::move(Buffer)) {
-      init(this->Buffer.data(), this->Buffer.data() + this->Buffer.size(),
-           false);
-    }
-
-    BufferKind getBufferKind() const override { return MemoryBuffer_Malloc; }
-
-  private:
-    SmallVector<char, 0> Buffer;
-  };
-
 public:
   using CompileResult = std::unique_ptr<MemoryBuffer>;
 
@@ -111,6 +98,29 @@ private:
   }
 
   TargetMachine &TM;
+  ObjectCache *ObjCache = nullptr;
+};
+
+/// A thread-safe version of SimpleCompiler.
+///
+/// This class creates a new TargetMachine and SimpleCompiler instance for each
+/// compile.
+class MultiThreadedSimpleCompiler {
+public:
+  MultiThreadedSimpleCompiler(JITTargetMachineBuilder JTMB,
+                              ObjectCache *ObjCache = nullptr)
+      : JTMB(std::move(JTMB)), ObjCache(ObjCache) {}
+
+  void setObjectCache(ObjectCache *ObjCache) { this->ObjCache = ObjCache; }
+
+  std::unique_ptr<MemoryBuffer> operator()(Module &M) {
+    auto TM = cantFail(JTMB.createTargetMachine());
+    SimpleCompiler C(*TM, ObjCache);
+    return C(M);
+  }
+
+private:
+  JITTargetMachineBuilder JTMB;
   ObjectCache *ObjCache = nullptr;
 };
 

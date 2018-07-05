@@ -43,7 +43,7 @@ bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
 unsigned AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &MIRBuilder,
                                                Type *ParamTy,
-                                               unsigned Offset) const {
+                                               uint64_t Offset) const {
 
   MachineFunction &MF = MIRBuilder.getMF();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
@@ -66,7 +66,8 @@ unsigned AMDGPUCallLowering::lowerParameterPtr(MachineIRBuilder &MIRBuilder,
 }
 
 void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &MIRBuilder,
-                                        Type *ParamTy, unsigned Offset,
+                                        Type *ParamTy, uint64_t Offset,
+                                        unsigned Align,
                                         unsigned DstReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
@@ -74,7 +75,6 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &MIRBuilder,
   PointerType *PtrTy = PointerType::get(ParamTy, AMDGPUASI.CONSTANT_ADDRESS);
   MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
   unsigned TypeSize = DL.getTypeStoreSize(ParamTy);
-  unsigned Align = DL.getABITypeAlignment(ParamTy);
   unsigned PtrReg = lowerParameterPtr(MIRBuilder, ParamTy, Offset);
 
   MachineMemOperand *MMO =
@@ -95,7 +95,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
-  const SISubtarget *Subtarget = static_cast<const SISubtarget *>(&MF.getSubtarget());
+  const SISubtarget *Subtarget = &MF.getSubtarget<SISubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = MF.getSubtarget<SISubtarget>().getRegisterInfo();
@@ -143,6 +143,36 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     unsigned FlatScratchInitReg = Info->addFlatScratchInit(*TRI);
     // FIXME: Need to add reg as live-in
     CCInfo.AllocateReg(FlatScratchInitReg);
+  }
+
+  // The infrastructure for normal calling convention lowering is essentially
+  // useless for kernels. We want to avoid any kind of legalization or argument
+  // splitting.
+  if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
+    unsigned i = 0;
+    const unsigned KernArgBaseAlign = 16;
+    const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset(F);
+    uint64_t ExplicitArgOffset = 0;
+
+    // TODO: Align down to dword alignment and extract bits for extending loads.
+    for (auto &Arg : F.args()) {
+      Type *ArgTy = Arg.getType();
+      unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
+      if (AllocSize == 0)
+        continue;
+
+      unsigned ABIAlign = DL.getABITypeAlignment(ArgTy);
+
+      uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
+      ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
+
+      unsigned Align = MinAlign(KernArgBaseAlign, ArgOffset);
+      ArgOffset = alignTo(ArgOffset, DL.getABITypeAlignment(ArgTy));
+      lowerParameter(MIRBuilder, ArgTy, ArgOffset, Align, VRegs[i]);
+      ++i;
+    }
+
+    return true;
   }
 
   unsigned NumArgs = F.arg_size();
@@ -216,13 +246,5 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     return true;
   }
 
-  for (unsigned i = 0; i != ArgLocs.size(); ++i, ++Arg) {
-    // FIXME: We should be getting DebugInfo from the arguments some how.
-    CCValAssign &VA = ArgLocs[i];
-    lowerParameter(MIRBuilder, Arg->getType(),
-                   VA.getLocMemOffset() +
-                   Subtarget->getExplicitKernelArgOffset(F), VRegs[i]);
-  }
-
-  return true;
+  return false;
 }

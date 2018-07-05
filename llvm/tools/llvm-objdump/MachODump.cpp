@@ -76,11 +76,6 @@ cl::opt<bool> llvm::UniversalHeaders("universal-headers",
                                               "(requires -macho)"));
 
 cl::opt<bool>
-    llvm::ArchiveHeaders("archive-headers",
-                         cl::desc("Print archive headers for Mach-O archives "
-                                  "(requires -macho)"));
-
-cl::opt<bool>
     ArchiveMemberOffsets("archive-member-offsets",
                          cl::desc("Print the offset to each archive member for "
                                   "Mach-O archives (requires -macho and "

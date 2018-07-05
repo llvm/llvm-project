@@ -22,6 +22,7 @@ namespace {
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::ElementsAre;
+using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
@@ -37,6 +38,7 @@ MATCHER_P(QName, Name, "") {
   return (arg.containerName + "::" + arg.name) == Name;
 }
 MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
+MATCHER_P(SymRange, Range, "") { return arg.location.range == Range; }
 
 ClangdServer::Options optsForTests() {
   auto ServerOpts = ClangdServer::optsForTest();
@@ -285,6 +287,275 @@ TEST_F(WorkspaceSymbolsTest, WithLimit) {
 
   Limit = 1;
   EXPECT_THAT(getSymbols("foo"), ElementsAre(QName("foo")));
+}
+
+namespace {
+class DocumentSymbolsTest : public ::testing::Test {
+public:
+  DocumentSymbolsTest()
+      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {}
+
+protected:
+  MockFSProvider FSProvider;
+  MockCompilationDatabase CDB;
+  IgnoreDiagnostics DiagConsumer;
+  ClangdServer Server;
+
+  std::vector<SymbolInformation> getSymbols(PathRef File) {
+    EXPECT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for preamble";
+    auto SymbolInfos = runDocumentSymbols(Server, File);
+    EXPECT_TRUE(bool(SymbolInfos)) << "documentSymbols returned an error";
+    return *SymbolInfos;
+  }
+
+  void addFile(StringRef FilePath, StringRef Contents) {
+    FSProvider.Files[FilePath] = Contents;
+    Server.addDocument(FilePath, Contents);
+  }
+};
+} // namespace
+
+TEST_F(DocumentSymbolsTest, BasicSymbols) {
+  std::string FilePath = testPath("foo.cpp");
+  Annotations Main(R"(
+      class Foo;
+      class Foo {
+        Foo() {}
+        Foo(int a) {}
+        void $decl[[f]]();
+        friend void f1();
+        friend class Friend;
+        Foo& operator=(const Foo&);
+        ~Foo();
+        class Nested {
+        void f();
+        };
+      };
+      class Friend {
+      };
+
+      void f1();
+      inline void f2() {}
+      static const int KInt = 2;
+      const char* kStr = "123";
+
+      void f1() {}
+
+      namespace foo {
+      // Type alias
+      typedef int int32;
+      using int32_t = int32;
+
+      // Variable
+      int v1;
+
+      // Namespace
+      namespace bar {
+      int v2;
+      }
+      // Namespace alias
+      namespace baz = bar;
+
+      // FIXME: using declaration is not supported as the IndexAction will ignore
+      // implicit declarations (the implicit using shadow declaration) by default,
+      // and there is no way to customize this behavior at the moment.
+      using bar::v2;
+      } // namespace foo
+    )");
+
+  addFile(FilePath, Main.code());
+  EXPECT_THAT(getSymbols(FilePath),
+              ElementsAreArray(
+                  {AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
+                   AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
+                   AllOf(QName("Foo::Foo"), WithKind(SymbolKind::Method)),
+                   AllOf(QName("Foo::Foo"), WithKind(SymbolKind::Method)),
+                   AllOf(QName("Foo::f"), WithKind(SymbolKind::Method)),
+                   AllOf(QName("f1"), WithKind(SymbolKind::Function)),
+                   AllOf(QName("Foo::operator="), WithKind(SymbolKind::Method)),
+                   AllOf(QName("Foo::~Foo"), WithKind(SymbolKind::Method)),
+                   AllOf(QName("Foo::Nested"), WithKind(SymbolKind::Class)),
+                   AllOf(QName("Foo::Nested::f"), WithKind(SymbolKind::Method)),
+                   AllOf(QName("Friend"), WithKind(SymbolKind::Class)),
+                   AllOf(QName("f1"), WithKind(SymbolKind::Function)),
+                   AllOf(QName("f2"), WithKind(SymbolKind::Function)),
+                   AllOf(QName("KInt"), WithKind(SymbolKind::Variable)),
+                   AllOf(QName("kStr"), WithKind(SymbolKind::Variable)),
+                   AllOf(QName("f1"), WithKind(SymbolKind::Function)),
+                   AllOf(QName("foo"), WithKind(SymbolKind::Namespace)),
+                   AllOf(QName("foo::int32"), WithKind(SymbolKind::Class)),
+                   AllOf(QName("foo::int32_t"), WithKind(SymbolKind::Class)),
+                   AllOf(QName("foo::v1"), WithKind(SymbolKind::Variable)),
+                   AllOf(QName("foo::bar"), WithKind(SymbolKind::Namespace)),
+                   AllOf(QName("foo::bar::v2"), WithKind(SymbolKind::Variable)),
+                   AllOf(QName("foo::baz"), WithKind(SymbolKind::Namespace))}));
+}
+
+TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
+  std::string FilePath = testPath("foo.cpp");
+  Annotations Main(R"(
+      class Foo {
+        void $decl[[f]]();
+      };
+      void Foo::$def[[f]]() {
+      }
+    )");
+
+  addFile(FilePath, Main.code());
+  EXPECT_THAT(getSymbols(FilePath),
+              ElementsAre(AllOf(QName("Foo"), WithKind(SymbolKind::Class)),
+                          AllOf(QName("Foo::f"), WithKind(SymbolKind::Method),
+                                SymRange(Main.range("decl"))),
+                          AllOf(QName("Foo::f"), WithKind(SymbolKind::Method),
+                                SymRange(Main.range("def")))));
+}
+
+TEST_F(DocumentSymbolsTest, ExternSymbol) {
+  std::string FilePath = testPath("foo.cpp");
+  addFile(testPath("foo.h"), R"cpp(
+      extern int var = 2;
+      )cpp");
+  addFile(FilePath, R"cpp(
+      #include "foo.h"
+      )cpp");
+
+  EXPECT_THAT(getSymbols(FilePath), IsEmpty());
+}
+
+TEST_F(DocumentSymbolsTest, NoLocals) {
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath,
+          R"cpp(
+      void test(int FirstParam, int SecondParam) {
+        struct LocalClass {};
+        int local_var;
+      })cpp");
+  EXPECT_THAT(getSymbols(FilePath), ElementsAre(QName("test")));
+}
+
+TEST_F(DocumentSymbolsTest, Unnamed) {
+  std::string FilePath = testPath("foo.h");
+  addFile(FilePath,
+          R"cpp(
+      struct {
+        int InUnnamed;
+      } UnnamedStruct;
+      )cpp");
+  EXPECT_THAT(
+      getSymbols(FilePath),
+      ElementsAre(AllOf(QName("UnnamedStruct"), WithKind(SymbolKind::Variable)),
+                  AllOf(QName("(anonymous struct)::InUnnamed"),
+                        WithKind(SymbolKind::Field))));
+}
+
+TEST_F(DocumentSymbolsTest, InHeaderFile) {
+  addFile("bar.h", R"cpp(
+      int foo() {
+      }
+      )cpp");
+  std::string FilePath = testPath("foo.h");
+  addFile(FilePath, R"cpp(
+      #include "bar.h"
+      int test() {
+      }
+      )cpp");
+  addFile("foo.cpp", R"cpp(
+      #include "foo.h"
+      )cpp");
+  EXPECT_THAT(getSymbols(FilePath), ElementsAre(QName("test")));
+}
+
+TEST_F(DocumentSymbolsTest, Template) {
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath, R"(
+    // Primary templates and specializations are included but instantiations
+    // are not.
+    template <class T> struct Tmpl {T x = 0;};
+    template <> struct Tmpl<int> {};
+    extern template struct Tmpl<float>;
+    template struct Tmpl<double>;
+  )");
+  EXPECT_THAT(getSymbols(FilePath),
+              ElementsAre(AllOf(QName("Tmpl"), WithKind(SymbolKind::Struct)),
+                          AllOf(QName("Tmpl::x"), WithKind(SymbolKind::Field)),
+                          AllOf(QName("Tmpl"), WithKind(SymbolKind::Struct))));
+}
+
+TEST_F(DocumentSymbolsTest, Namespaces) {
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath, R"cpp(
+      namespace ans1 {
+        int ai1;
+      namespace ans2 {
+        int ai2;
+      }
+      }
+      namespace {
+      void test() {}
+      }
+
+      namespace na {
+      inline namespace nb {
+      class Foo {};
+      }
+      }
+      namespace na {
+      // This is still inlined.
+      namespace nb {
+      class Bar {};
+      }
+      }
+      )cpp");
+  EXPECT_THAT(
+      getSymbols(FilePath),
+      ElementsAreArray({QName("ans1"), QName("ans1::ai1"), QName("ans1::ans2"),
+                        QName("ans1::ans2::ai2"), QName("test"), QName("na"),
+                        QName("na::nb"), QName("na::Foo"), QName("na"),
+                        QName("na::nb"), QName("na::Bar")}));
+}
+
+TEST_F(DocumentSymbolsTest, Enums) {
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath, R"(
+      enum {
+        Red
+      };
+      enum Color {
+        Green
+      };
+      enum class Color2 {
+        Yellow
+      };
+      namespace ns {
+      enum {
+        Black
+      };
+      }
+    )");
+  EXPECT_THAT(getSymbols(FilePath),
+              ElementsAre(QName("Red"), QName("Color"), QName("Green"),
+                          QName("Color2"), QName("Color2::Yellow"), QName("ns"),
+                          QName("ns::Black")));
+}
+
+TEST_F(DocumentSymbolsTest, FromMacro) {
+  std::string FilePath = testPath("foo.cpp");
+  Annotations Main(R"(
+    #define FF(name) \
+      class name##_Test {};
+
+    $expansion[[FF]](abc);
+
+    #define FF2() \
+      class $spelling[[Test]] {};
+
+    FF2();
+  )");
+  addFile(FilePath, Main.code());
+  EXPECT_THAT(
+      getSymbols(FilePath),
+      ElementsAre(AllOf(QName("abc_Test"), SymRange(Main.range("expansion"))),
+                  AllOf(QName("Test"), SymRange(Main.range("spelling")))));
 }
 
 } // namespace clangd

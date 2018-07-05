@@ -167,6 +167,10 @@ public:
   void workspaceSymbols(StringRef Query, int Limit,
                         Callback<std::vector<SymbolInformation>> CB);
 
+  /// Retrieve the symbols within the specified file.
+  void documentSymbols(StringRef File,
+                       Callback<std::vector<SymbolInformation>> CB);
+
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,
                                                     PathRef File, Range Rng);

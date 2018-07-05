@@ -1139,8 +1139,7 @@ __mmask8 test_mm256_cmp_ps_mask_ngt_us(__m256 a, __m256 b) {
 
 __mmask8 test_mm256_cmp_ps_mask_false_oq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps_mask(a, b, _CMP_FALSE_OQ);
 }
 
@@ -1164,8 +1163,7 @@ __mmask8 test_mm256_cmp_ps_mask_gt_os(__m256 a, __m256 b) {
 
 __mmask8 test_mm256_cmp_ps_mask_true_uq(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_mask_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps_mask(a, b, _CMP_TRUE_UQ);
 }
 
@@ -1237,8 +1235,7 @@ __mmask8 test_mm256_cmp_ps_mask_ngt_uq(__m256 a, __m256 b) {
 
 __mmask8 test_mm256_cmp_ps_mask_false_os(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps_mask(a, b, _CMP_FALSE_OS);
 }
 
@@ -1262,8 +1259,7 @@ __mmask8 test_mm256_cmp_ps_mask_gt_oq(__m256 a, __m256 b) {
 
 __mmask8 test_mm256_cmp_ps_mask_true_us(__m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_cmp_ps_mask_true_us
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps_mask(a, b, _CMP_TRUE_US);
 }
 
@@ -1346,8 +1342,8 @@ __mmask8 test_mm256_mask_cmp_ps_mask_ngt_us(__mmask8 m, __m256 a, __m256 b) {
 
 __mmask8 test_mm256_mask_cmp_ps_mask_false_oq(__mmask8 m, __m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_mask_cmp_ps_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <8 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_ps_mask(m, a, b, _CMP_FALSE_OQ);
 }
 
@@ -1374,7 +1370,8 @@ __mmask8 test_mm256_mask_cmp_ps_mask_gt_os(__mmask8 m, __m256 a, __m256 b) {
 
 __mmask8 test_mm256_mask_cmp_ps_mask_true_uq(__mmask8 m, __m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_mask_cmp_ps_mask_true_uq
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <8 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_ps_mask(m, a, b, _CMP_TRUE_UQ);
 }
 
@@ -1457,8 +1454,8 @@ __mmask8 test_mm256_mask_cmp_ps_mask_ngt_uq(__mmask8 m, __m256 a, __m256 b) {
 
 __mmask8 test_mm256_mask_cmp_ps_mask_false_os(__mmask8 m, __m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_mask_cmp_ps_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <8 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_ps_mask(m, a, b, _CMP_FALSE_OS);
 }
 
@@ -1485,7 +1482,8 @@ __mmask8 test_mm256_mask_cmp_ps_mask_gt_oq(__mmask8 m, __m256 a, __m256 b) {
 
 __mmask8 test_mm256_mask_cmp_ps_mask_true_us(__mmask8 m, __m256 a, __m256 b) {
   // CHECK-LABEL: test_mm256_mask_cmp_ps_mask_true_us
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <8 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_ps_mask(m, a, b, _CMP_TRUE_US);
 }
 
@@ -1557,8 +1555,7 @@ __mmask8 test_mm256_cmp_pd_mask_ngt_us(__m256d a, __m256d b) {
 
 __mmask8 test_mm256_cmp_pd_mask_false_oq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd_mask(a, b, _CMP_FALSE_OQ);
 }
 
@@ -1582,8 +1579,7 @@ __mmask8 test_mm256_cmp_pd_mask_gt_os(__m256d a, __m256d b) {
 
 __mmask8 test_mm256_cmp_pd_mask_true_uq(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_mask_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd_mask(a, b, _CMP_TRUE_UQ);
 }
 
@@ -1655,8 +1651,7 @@ __mmask8 test_mm256_cmp_pd_mask_ngt_uq(__m256d a, __m256d b) {
 
 __mmask8 test_mm256_cmp_pd_mask_false_os(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd_mask(a, b, _CMP_FALSE_OS);
 }
 
@@ -1680,8 +1675,7 @@ __mmask8 test_mm256_cmp_pd_mask_gt_oq(__m256d a, __m256d b) {
 
 __mmask8 test_mm256_cmp_pd_mask_true_us(__m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_cmp_pd_mask_true_us
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd_mask(a, b, _CMP_TRUE_US);
 }
 
@@ -1764,8 +1758,8 @@ __mmask8 test_mm256_mask_cmp_pd_mask_ngt_us(__mmask8 m, __m256d a, __m256d b) {
 
 __mmask8 test_mm256_mask_cmp_pd_mask_false_oq(__mmask8 m, __m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_mask_cmp_pd_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <4 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_pd_mask(m, a, b, _CMP_FALSE_OQ);
 }
 
@@ -1792,7 +1786,8 @@ __mmask8 test_mm256_mask_cmp_pd_mask_gt_os(__mmask8 m, __m256d a, __m256d b) {
 
 __mmask8 test_mm256_mask_cmp_pd_mask_true_uq(__mmask8 m, __m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_mask_cmp_pd_mask_true_uq
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <4 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_pd_mask(m, a, b, _CMP_TRUE_UQ);
 }
 
@@ -1875,8 +1870,8 @@ __mmask8 test_mm256_mask_cmp_pd_mask_ngt_uq(__mmask8 m, __m256d a, __m256d b) {
 
 __mmask8 test_mm256_mask_cmp_pd_mask_false_os(__mmask8 m, __m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_mask_cmp_pd_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <4 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_pd_mask(m, a, b, _CMP_FALSE_OS);
 }
 
@@ -1903,7 +1898,8 @@ __mmask8 test_mm256_mask_cmp_pd_mask_gt_oq(__mmask8 m, __m256d a, __m256d b) {
 
 __mmask8 test_mm256_mask_cmp_pd_mask_true_us(__mmask8 m, __m256d a, __m256d b) {
   // CHECK-LABEL: test_mm256_mask_cmp_pd_mask_true_us
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <4 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm256_mask_cmp_pd_mask(m, a, b, _CMP_TRUE_US);
 }
 
@@ -1975,8 +1971,7 @@ __mmask8 test_mm_cmp_ps_mask_ngt_us(__m128 a, __m128 b) {
 
 __mmask8 test_mm_cmp_ps_mask_false_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps_mask(a, b, _CMP_FALSE_OQ);
 }
 
@@ -2000,8 +1995,7 @@ __mmask8 test_mm_cmp_ps_mask_gt_os(__m128 a, __m128 b) {
 
 __mmask8 test_mm_cmp_ps_mask_true_uq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_mask_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps_mask(a, b, _CMP_TRUE_UQ);
 }
 
@@ -2073,8 +2067,7 @@ __mmask8 test_mm_cmp_ps_mask_ngt_uq(__m128 a, __m128 b) {
 
 __mmask8 test_mm_cmp_ps_mask_false_os(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps_mask(a, b, _CMP_FALSE_OS);
 }
 
@@ -2098,8 +2091,7 @@ __mmask8 test_mm_cmp_ps_mask_gt_oq(__m128 a, __m128 b) {
 
 __mmask8 test_mm_cmp_ps_mask_true_us(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_mask_true_us
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps_mask(a, b, _CMP_TRUE_US);
 }
 
@@ -2182,8 +2174,8 @@ __mmask8 test_mm_mask_cmp_ps_mask_ngt_us(__mmask8 m, __m128 a, __m128 b) {
 
 __mmask8 test_mm_mask_cmp_ps_mask_false_oq(__mmask8 m, __m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_mask_cmp_ps_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <4 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_ps_mask(m, a, b, _CMP_FALSE_OQ);
 }
 
@@ -2210,7 +2202,8 @@ __mmask8 test_mm_mask_cmp_ps_mask_gt_os(__mmask8 m, __m128 a, __m128 b) {
 
 __mmask8 test_mm_mask_cmp_ps_mask_true_uq(__mmask8 m, __m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_mask_cmp_ps_mask_true_uq
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <4 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_ps_mask(m, a, b, _CMP_TRUE_UQ);
 }
 
@@ -2293,8 +2286,8 @@ __mmask8 test_mm_mask_cmp_ps_mask_ngt_uq(__mmask8 m, __m128 a, __m128 b) {
 
 __mmask8 test_mm_mask_cmp_ps_mask_false_os(__mmask8 m, __m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_mask_cmp_ps_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <4 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_ps_mask(m, a, b, _CMP_FALSE_OS);
 }
 
@@ -2321,7 +2314,8 @@ __mmask8 test_mm_mask_cmp_ps_mask_gt_oq(__mmask8 m, __m128 a, __m128 b) {
 
 __mmask8 test_mm_mask_cmp_ps_mask_true_us(__mmask8 m, __m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_mask_cmp_ps_mask_true_us
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <4 x float> %{{.*}}, %{{.*}}
+  // CHECK: and <4 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_ps_mask(m, a, b, _CMP_TRUE_US);
 }
 
@@ -2393,8 +2387,7 @@ __mmask8 test_mm_cmp_pd_mask_ngt_us(__m128d a, __m128d b) {
 
 __mmask8 test_mm_cmp_pd_mask_false_oq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd_mask(a, b, _CMP_FALSE_OQ);
 }
 
@@ -2418,8 +2411,7 @@ __mmask8 test_mm_cmp_pd_mask_gt_os(__m128d a, __m128d b) {
 
 __mmask8 test_mm_cmp_pd_mask_true_uq(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_mask_true_uq
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd_mask(a, b, _CMP_TRUE_UQ);
 }
 
@@ -2491,8 +2483,7 @@ __mmask8 test_mm_cmp_pd_mask_ngt_uq(__m128d a, __m128d b) {
 
 __mmask8 test_mm_cmp_pd_mask_false_os(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: fcmp false <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd_mask(a, b, _CMP_FALSE_OS);
 }
 
@@ -2516,8 +2507,7 @@ __mmask8 test_mm_cmp_pd_mask_gt_oq(__m128d a, __m128d b) {
 
 __mmask8 test_mm_cmp_pd_mask_true_us(__m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_cmp_pd_mask_true_us
-  // CHECK-NOT: call
-  // CHECK: ret i8 -1
+  // CHECK: fcmp true <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd_mask(a, b, _CMP_TRUE_US);
 }
 
@@ -2600,8 +2590,8 @@ __mmask8 test_mm_mask_cmp_pd_mask_ngt_us(__mmask8 m, __m128d a, __m128d b) {
 
 __mmask8 test_mm_mask_cmp_pd_mask_false_oq(__mmask8 m, __m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_mask_cmp_pd_mask_false_oq
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <2 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <2 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_pd_mask(m, a, b, _CMP_FALSE_OQ);
 }
 
@@ -2628,7 +2618,8 @@ __mmask8 test_mm_mask_cmp_pd_mask_gt_os(__mmask8 m, __m128d a, __m128d b) {
 
 __mmask8 test_mm_mask_cmp_pd_mask_true_uq(__mmask8 m, __m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_mask_cmp_pd_mask_true_uq
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <2 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <2 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_pd_mask(m, a, b, _CMP_TRUE_UQ);
 }
 
@@ -2711,8 +2702,8 @@ __mmask8 test_mm_mask_cmp_pd_mask_ngt_uq(__mmask8 m, __m128d a, __m128d b) {
 
 __mmask8 test_mm_mask_cmp_pd_mask_false_os(__mmask8 m, __m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_mask_cmp_pd_mask_false_os
-  // CHECK-NOT: call
-  // CHECK: ret i8 0
+  // CHECK: [[CMP:%.*]] = fcmp false <2 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <2 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_pd_mask(m, a, b, _CMP_FALSE_OS);
 }
 
@@ -2739,7 +2730,8 @@ __mmask8 test_mm_mask_cmp_pd_mask_gt_oq(__mmask8 m, __m128d a, __m128d b) {
 
 __mmask8 test_mm_mask_cmp_pd_mask_true_us(__mmask8 m, __m128d a, __m128d b) {
   // CHECK-LABEL: test_mm_mask_cmp_pd_mask_true_us
-  // FIXME
+  // CHECK: [[CMP:%.*]] = fcmp true <2 x double> %{{.*}}, %{{.*}}
+  // CHECK: and <2 x i1> [[CMP]], {{.*}}
   return _mm_mask_cmp_pd_mask(m, a, b, _CMP_TRUE_US);
 }
 
@@ -3049,10 +3041,10 @@ __m256 test_mm256_maskz_fnmsub_ps(__mmask8 __U, __m256 __A, __m256 __B, __m256 _
 
 __m128d test_mm_mask_fmaddsub_pd(__m128d __A, __mmask8 __U, __m128d __B, __m128d __C) {
   // CHECK-LABEL: @test_mm_mask_fmaddsub_pd
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: select <2 x i1> <i1 true, i1 false>, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]
+  // CHECK: shufflevector <2 x double> [[SUB]], <2 x double> [[ADD]], <2 x i32> <i32 0, i32 3>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
@@ -3061,10 +3053,10 @@ __m128d test_mm_mask_fmaddsub_pd(__m128d __A, __mmask8 __U, __m128d __B, __m128d
 
 __m128d test_mm_mask_fmsubadd_pd(__m128d __A, __mmask8 __U, __m128d __B, __m128d __C) {
   // CHECK-LABEL: @test_mm_mask_fmsubadd_pd
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: select <2 x i1> <i1 true, i1 false>, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: shufflevector <2 x double> [[ADD]], <2 x double> [[SUB]], <2 x i32> <i32 0, i32 3>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
@@ -3073,10 +3065,10 @@ __m128d test_mm_mask_fmsubadd_pd(__m128d __A, __mmask8 __U, __m128d __B, __m128d
 
 __m128d test_mm_mask3_fmaddsub_pd(__m128d __A, __m128d __B, __m128d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm_mask3_fmaddsub_pd
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: select <2 x i1> <i1 true, i1 false>, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]
+  // CHECK: shufflevector <2 x double> [[SUB]], <2 x double> [[ADD]], <2 x i32> <i32 0, i32 3>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
@@ -3085,10 +3077,10 @@ __m128d test_mm_mask3_fmaddsub_pd(__m128d __A, __m128d __B, __m128d __C, __mmask
 
 __m128d test_mm_maskz_fmaddsub_pd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C) {
   // CHECK-LABEL: @test_mm_maskz_fmaddsub_pd
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: select <2 x i1> <i1 true, i1 false>, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]
+  // CHECK: shufflevector <2 x double> [[SUB]], <2 x double> [[ADD]], <2 x i32> <i32 0, i32 3>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
@@ -3097,10 +3089,10 @@ __m128d test_mm_maskz_fmaddsub_pd(__mmask8 __U, __m128d __A, __m128d __B, __m128
 
 __m128d test_mm_maskz_fmsubadd_pd(__mmask8 __U, __m128d __A, __m128d __B, __m128d __C) {
   // CHECK-LABEL: @test_mm_maskz_fmsubadd_pd
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: select <2 x i1> <i1 true, i1 false>, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: shufflevector <2 x double> [[ADD]], <2 x double> [[SUB]], <2 x i32> <i32 0, i32 3>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
@@ -3109,10 +3101,10 @@ __m128d test_mm_maskz_fmsubadd_pd(__mmask8 __U, __m128d __A, __m128d __B, __m128
 
 __m256d test_mm256_mask_fmaddsub_pd(__m256d __A, __mmask8 __U, __m256d __B, __m256d __C) {
   // CHECK-LABEL: @test_mm256_mask_fmaddsub_pd
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: shufflevector <4 x double> [[SUB]], <4 x double> [[ADD]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
@@ -3121,10 +3113,10 @@ __m256d test_mm256_mask_fmaddsub_pd(__m256d __A, __mmask8 __U, __m256d __B, __m2
 
 __m256d test_mm256_mask_fmsubadd_pd(__m256d __A, __mmask8 __U, __m256d __B, __m256d __C) {
   // CHECK-LABEL: @test_mm256_mask_fmsubadd_pd
-  // CHECK: fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: shufflevector <4 x double> [[ADD]], <4 x double> [[SUB]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
@@ -3133,10 +3125,10 @@ __m256d test_mm256_mask_fmsubadd_pd(__m256d __A, __mmask8 __U, __m256d __B, __m2
 
 __m256d test_mm256_mask3_fmaddsub_pd(__m256d __A, __m256d __B, __m256d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm256_mask3_fmaddsub_pd
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: shufflevector <4 x double> [[SUB]], <4 x double> [[ADD]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
@@ -3145,10 +3137,10 @@ __m256d test_mm256_mask3_fmaddsub_pd(__m256d __A, __m256d __B, __m256d __C, __mm
 
 __m256d test_mm256_maskz_fmaddsub_pd(__mmask8 __U, __m256d __A, __m256d __B, __m256d __C) {
   // CHECK-LABEL: @test_mm256_maskz_fmaddsub_pd
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: shufflevector <4 x double> [[SUB]], <4 x double> [[ADD]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
@@ -3157,10 +3149,10 @@ __m256d test_mm256_maskz_fmaddsub_pd(__mmask8 __U, __m256d __A, __m256d __B, __m
 
 __m256d test_mm256_maskz_fmsubadd_pd(__mmask8 __U, __m256d __A, __m256d __B, __m256d __C) {
   // CHECK-LABEL: @test_mm256_maskz_fmsubadd_pd
-  // CHECK: fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: shufflevector <4 x double> [[ADD]], <4 x double> [[SUB]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
@@ -3169,10 +3161,10 @@ __m256d test_mm256_maskz_fmsubadd_pd(__mmask8 __U, __m256d __A, __m256d __B, __m
 
 __m128 test_mm_mask_fmaddsub_ps(__m128 __A, __mmask8 __U, __m128 __B, __m128 __C) {
   // CHECK-LABEL: @test_mm_mask_fmaddsub_ps
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]
+  // CHECK: shufflevector <4 x float> [[SUB]], <4 x float> [[ADD]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
@@ -3181,10 +3173,10 @@ __m128 test_mm_mask_fmaddsub_ps(__m128 __A, __mmask8 __U, __m128 __B, __m128 __C
 
 __m128 test_mm_mask_fmsubadd_ps(__m128 __A, __mmask8 __U, __m128 __B, __m128 __C) {
   // CHECK-LABEL: @test_mm_mask_fmsubadd_ps
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: shufflevector <4 x float> [[ADD]], <4 x float> [[SUB]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
@@ -3193,10 +3185,10 @@ __m128 test_mm_mask_fmsubadd_ps(__m128 __A, __mmask8 __U, __m128 __B, __m128 __C
 
 __m128 test_mm_mask3_fmaddsub_ps(__m128 __A, __m128 __B, __m128 __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm_mask3_fmaddsub_ps
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]
+  // CHECK: shufflevector <4 x float> [[SUB]], <4 x float> [[ADD]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
@@ -3205,10 +3197,10 @@ __m128 test_mm_mask3_fmaddsub_ps(__m128 __A, __m128 __B, __m128 __C, __mmask8 __
 
 __m128 test_mm_maskz_fmaddsub_ps(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C) {
   // CHECK-LABEL: @test_mm_maskz_fmaddsub_ps
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]
+  // CHECK: shufflevector <4 x float> [[SUB]], <4 x float> [[ADD]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
@@ -3217,10 +3209,10 @@ __m128 test_mm_maskz_fmaddsub_ps(__mmask8 __U, __m128 __A, __m128 __B, __m128 __
 
 __m128 test_mm_maskz_fmsubadd_ps(__mmask8 __U, __m128 __A, __m128 __B, __m128 __C) {
   // CHECK-LABEL: @test_mm_maskz_fmsubadd_ps
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: shufflevector <4 x float> [[ADD]], <4 x float> [[SUB]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
@@ -3229,10 +3221,10 @@ __m128 test_mm_maskz_fmsubadd_ps(__mmask8 __U, __m128 __A, __m128 __B, __m128 __
 
 __m256 test_mm256_mask_fmaddsub_ps(__m256 __A, __mmask8 __U, __m256 __B, __m256 __C) {
   // CHECK-LABEL: @test_mm256_mask_fmaddsub_ps
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[SUB:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> [[NEG]]
+  // CHECK: shufflevector <8 x float> [[SUB]], <8 x float> [[ADD]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_fmaddsub_ps(__A, __U, __B, __C);
@@ -3240,10 +3232,10 @@ __m256 test_mm256_mask_fmaddsub_ps(__m256 __A, __mmask8 __U, __m256 __B, __m256 
 
 __m256 test_mm256_mask_fmsubadd_ps(__m256 __A, __mmask8 __U, __m256 __B, __m256 __C) {
   // CHECK-LABEL: @test_mm256_mask_fmsubadd_ps
-  // CHECK: fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[SUB:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: shufflevector <8 x float> [[ADD]], <8 x float> [[SUB]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_fmsubadd_ps(__A, __U, __B, __C);
@@ -3251,10 +3243,10 @@ __m256 test_mm256_mask_fmsubadd_ps(__m256 __A, __mmask8 __U, __m256 __B, __m256 
 
 __m256 test_mm256_mask3_fmaddsub_ps(__m256 __A, __m256 __B, __m256 __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm256_mask3_fmaddsub_ps
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[SUB:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> [[NEG]]
+  // CHECK: shufflevector <8 x float> [[SUB]], <8 x float> [[ADD]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask3_fmaddsub_ps(__A, __B, __C, __U);
@@ -3262,10 +3254,10 @@ __m256 test_mm256_mask3_fmaddsub_ps(__m256 __A, __m256 __B, __m256 __C, __mmask8
 
 __m256 test_mm256_maskz_fmaddsub_ps(__mmask8 __U, __m256 __A, __m256 __B, __m256 __C) {
   // CHECK-LABEL: @test_mm256_maskz_fmaddsub_ps
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  // CHECK: [[ADD:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: [[NEG:%.+]] = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[SUB:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> [[NEG]]
+  // CHECK: shufflevector <8 x float> [[SUB]], <8 x float> [[ADD]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_fmaddsub_ps(__U, __A, __B, __C);
@@ -3273,10 +3265,10 @@ __m256 test_mm256_maskz_fmaddsub_ps(__mmask8 __U, __m256 __A, __m256 __B, __m256
 
 __m256 test_mm256_maskz_fmsubadd_ps(__mmask8 __U, __m256 __A, __m256 __B, __m256 __C) {
   // CHECK-LABEL: @test_mm256_maskz_fmsubadd_ps
-  // CHECK: fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[SUB:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: shufflevector <8 x float> [[ADD]], <8 x float> [[SUB]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_fmsubadd_ps(__U, __A, __B, __C);
@@ -3323,10 +3315,10 @@ __m256 test_mm256_mask3_fmsub_ps(__m256 __A, __m256 __B, __m256 __C, __mmask8 __
 
 __m128d test_mm_mask3_fmsubadd_pd(__m128d __A, __m128d __B, __m128d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm_mask3_fmsubadd_pd
-  // CHECK: fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  // CHECK: select <2 x i1> <i1 true, i1 false>, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
+  // CHECK: shufflevector <2 x double> [[ADD]], <2 x double> [[SUB]], <2 x i32> <i32 0, i32 3>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
@@ -3335,10 +3327,10 @@ __m128d test_mm_mask3_fmsubadd_pd(__m128d __A, __m128d __B, __m128d __C, __mmask
 
 __m256d test_mm256_mask3_fmsubadd_pd(__m256d __A, __m256d __B, __m256d __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm256_mask3_fmsubadd_pd
-  // CHECK: fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <4 x double> <double -0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <4 x double> @llvm.fma.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}})
+  // CHECK: shufflevector <4 x double> [[ADD]], <4 x double> [[SUB]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
@@ -3347,10 +3339,10 @@ __m256d test_mm256_mask3_fmsubadd_pd(__m256d __A, __m256d __B, __m256d __C, __mm
 
 __m128 test_mm_mask3_fmsubadd_ps(__m128 __A, __m128 __B, __m128 __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm_mask3_fmsubadd_ps
-  // CHECK: fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
-  // CHECK: select <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.+}}
+  // CHECK: [[SUB:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: shufflevector <4 x float> [[ADD]], <4 x float> [[SUB]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: shufflevector <8 x i1> %{{.*}}, <8 x i1> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
@@ -3359,10 +3351,10 @@ __m128 test_mm_mask3_fmsubadd_ps(__m128 __A, __m128 __B, __m128 __C, __mmask8 __
 
 __m256 test_mm256_mask3_fmsubadd_ps(__m256 __A, __m256 __B, __m256 __C, __mmask8 __U) {
   // CHECK-LABEL: @test_mm256_mask3_fmsubadd_ps
-  // CHECK: fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
-  // CHECK: select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false>, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  // CHECK: [[NEG:%.+]] = fsub <8 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %{{.*}}
+  // CHECK: [[SUB:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> [[NEG]]
+  // CHECK: [[ADD:%.+]] = call <8 x float> @llvm.fma.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: shufflevector <8 x float> [[ADD]], <8 x float> [[SUB]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   // CHECK: bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask3_fmsubadd_ps(__A, __B, __C, __U);
