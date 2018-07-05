@@ -160,11 +160,13 @@ static llvm::Value *getMemAccInstPointerOperand(Instruction *Inst) {
 
 void ScopAnnotator::annotateSecondLevel(llvm::Instruction *Inst,
                                         llvm::Value *BasePtr) {
-  auto *PtrSCEV = SE->getSCEV(getMemAccInstPointerOperand(Inst));
+  Value *Ptr = getMemAccInstPointerOperand(Inst);
+  if (!Ptr)
+    return;
+
+  auto *PtrSCEV = SE->getSCEV(Ptr);
   auto *BasePtrSCEV = SE->getPointerBase(PtrSCEV);
 
-  if (!PtrSCEV)
-    return;
   auto SecondLevelAliasScope = SecondLevelAliasScopeMap.lookup(PtrSCEV);
   auto SecondLevelOtherAliasScopeList =
       SecondLevelOtherAliasScopeListMap.lookup(PtrSCEV);
