@@ -470,23 +470,23 @@ public:
     file_status& operator=(file_status&&) _NOEXCEPT = default;
 
     // observers
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_ALWAYS_INLINE
     file_type type() const _NOEXCEPT {
         return __ft_;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_ALWAYS_INLINE
     perms permissions() const _NOEXCEPT {
         return __prms_;
     }
 
     // modifiers
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_ALWAYS_INLINE
     void type(file_type __ft) _NOEXCEPT {
         __ft_ = __ft;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_ALWAYS_INLINE
     void permissions(perms __p) _NOEXCEPT {
         __prms_ = __p;
     }
@@ -1106,7 +1106,7 @@ private:
     string_type __pn_;
 };
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_ALWAYS_INLINE
 void swap(path& __lhs, path& __rhs) _NOEXCEPT {
     __lhs.swap(__rhs);
 }
@@ -1298,7 +1298,7 @@ private:
 };
 
 template <class... _Args>
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 #ifndef _LIBCPP_NO_EXCEPTIONS
 void __throw_filesystem_error(_Args && ...__args)
 {

@@ -679,7 +679,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ValueType>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_ALWAYS_INLINE
 _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
 #if !defined(_LIBCPP_HAS_NO_THREADS) && \
     defined(__ATOMIC_RELAXED) &&        \
@@ -691,7 +691,7 @@ _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
 }
 
 template <class _ValueType>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_ALWAYS_INLINE
 _ValueType __libcpp_acquire_load(_ValueType const* __value) {
 #if !defined(_LIBCPP_HAS_NO_THREADS) && \
     defined(__ATOMIC_ACQUIRE) &&        \
@@ -3483,7 +3483,7 @@ public:
     virtual const char* what() const  _NOEXCEPT;
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_bad_weak_ptr()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
