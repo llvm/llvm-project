@@ -198,7 +198,7 @@ ComputeScope(const NamedDecl *D) {
     if (R->isInjectedClassName())
       DC = DC->getParent();
   // Class constructor should have the same scope as the class.
-  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(D))
+  if (isa<CXXConstructorDecl>(D))
     DC = DC->getParent();
   bool InClass = false;
   for (; !DC->isFileContext(); DC = DC->getParent()) {
