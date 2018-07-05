@@ -1399,7 +1399,7 @@ public:
 #endif
 };
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_bad_function_call()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS

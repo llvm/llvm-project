@@ -185,7 +185,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // in the dylib
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_runtime_error(const char*);
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_logic_error(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -196,7 +196,7 @@ void __throw_logic_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_domain_error(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -207,7 +207,7 @@ void __throw_domain_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_invalid_argument(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -218,7 +218,7 @@ void __throw_invalid_argument(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_length_error(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -229,7 +229,7 @@ void __throw_length_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_out_of_range(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -240,7 +240,7 @@ void __throw_out_of_range(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_range_error(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -251,7 +251,7 @@ void __throw_range_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_overflow_error(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -262,7 +262,7 @@ void __throw_overflow_error(const char*__msg)
 #endif
 }
 
-_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
 void __throw_underflow_error(const char*__msg)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
