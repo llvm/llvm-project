@@ -806,8 +806,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::FDIV, MVT::f128, Legal);
         setOperationAction(ISD::FMUL, MVT::f128, Legal);
         setOperationAction(ISD::FP_EXTEND, MVT::f128, Legal);
-        setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f64, Expand);
+        // No extending loads to f128 on PPC.
+        for (MVT FPT : MVT::fp_valuetypes())
+          setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
         setOperationAction(ISD::FMA, MVT::f128, Legal);
+        setOperationAction(ISD::FP_ROUND, MVT::f64, Legal);
+        setOperationAction(ISD::FP_ROUND, MVT::f32, Legal);
+        setTruncStoreAction(MVT::f128, MVT::f64, Expand);
+        setTruncStoreAction(MVT::f128, MVT::f32, Expand);
       }
 
     }
@@ -3148,7 +3154,7 @@ static unsigned CalculateStackSlotAlignment(EVT ArgVT, EVT OrigVT,
   if (ArgVT == MVT::v4f32 || ArgVT == MVT::v4i32 ||
       ArgVT == MVT::v8i16 || ArgVT == MVT::v16i8 ||
       ArgVT == MVT::v2f64 || ArgVT == MVT::v2i64 ||
-      ArgVT == MVT::v1i128)
+      ArgVT == MVT::v1i128 || ArgVT == MVT::f128)
     Align = 16;
   // QPX vector types stored in double-precision are padded to a 32 byte
   // boundary.
@@ -3228,7 +3234,7 @@ static bool CalculateStackSlotUsed(EVT ArgVT, EVT OrigVT,
     if (ArgVT == MVT::v4f32 || ArgVT == MVT::v4i32 ||
         ArgVT == MVT::v8i16 || ArgVT == MVT::v16i8 ||
         ArgVT == MVT::v2f64 || ArgVT == MVT::v2i64 ||
-        ArgVT == MVT::v1i128)
+        ArgVT == MVT::v1i128 || ArgVT == MVT::f128)
       if (AvailableVRs > 0) {
         --AvailableVRs;
         return false;
@@ -3817,6 +3823,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
     case MVT::v2f64:
     case MVT::v2i64:
     case MVT::v1i128:
+    case MVT::f128:
       if (!Subtarget.hasQPX()) {
         // These can be scalar arguments or elements of a vector array type
         // passed directly.  The latter are used to implement ELFv2 homogenous
@@ -5532,6 +5539,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
         case MVT::v2f64:
         case MVT::v2i64:
         case MVT::v1i128:
+        case MVT::f128:
           if (++NumVRsUsed <= NumVRs)
             continue;
           break;
@@ -5912,6 +5920,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
     case MVT::v2f64:
     case MVT::v2i64:
     case MVT::v1i128:
+    case MVT::f128:
       if (!Subtarget.hasQPX()) {
       // These can be scalar arguments or elements of a vector array type
       // passed directly.  The latter are used to implement ELFv2 homogenous
@@ -13732,6 +13741,9 @@ bool PPCTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
 bool PPCTargetLowering::isFPExtFree(EVT DestVT, EVT SrcVT) const {
   assert(DestVT.isFloatingPoint() && SrcVT.isFloatingPoint() &&
          "invalid fpext types");
+  // Extending to float128 is not free.
+  if (DestVT == MVT::f128)
+    return false;
   return true;
 }
 

@@ -1326,6 +1326,9 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                         (outs vssrc:$XT), (ins vssrc:$XB),
                         "xsresp $XT, $XB", IIC_VecFP,
                         [(set f32:$XT, (PPCfre f32:$XB))]>;
+  def XSRSP : XX2Form<60, 281,
+                        (outs vssrc:$XT), (ins vsfrc:$XB),
+                        "xsrsp $XT, $XB", IIC_VecFP, []>;
   def XSSQRTSP : XX2Form<60, 11,
                         (outs vssrc:$XT), (ins vssrc:$XB),
                         "xssqrtsp $XT, $XB", IIC_FPSqrtS,
@@ -2370,6 +2373,17 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
     : X_RD5_XO5_RS5<opcode, xo2, xo, (outs vrrc:$vT), (ins vbtype:$vB),
                     !strconcat(opc, " $vT, $vB"), IIC_VecFP, pattern>;
 
+  // [PO VRT XO VRB XO /]
+  class X_VT5_XO5_VB5_VSFR<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
+                      list<dag> pattern>
+    : X_RD5_XO5_RS5<opcode, xo2, xo, (outs vfrc:$vT), (ins vrrc:$vB),
+                    !strconcat(opc, " $vT, $vB"), IIC_VecFP, pattern>;
+
+  // [PO VRT XO VRB XO RO], Round to Odd version of [PO VRT XO VRB XO /]
+  class X_VT5_XO5_VB5_VSFR_Ro<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
+                         list<dag> pattern>
+    : X_VT5_XO5_VB5_VSFR<opcode, xo2, xo, opc, pattern>, isDOT;
+
   let UseVSXReg = 1 in {
   // [PO T XO B XO BX /]
   class XX2_RT5_XO5_XB6<bits<6> opcode, bits<5> xo2, bits<9> xo, string opc,
@@ -2517,12 +2531,12 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // Quad-Precision Floating-Point Conversion Instructions:
 
   // Convert DP -> QP
-  def XSCVDPQP  : X_VT5_XO5_VB5_TyVB<63, 22, 836, "xscvdpqp", vfrc, []>;
-  def : Pat<(f128 (fpextend f64:$src)), (f128 (XSCVDPQP $src))>;
+  def XSCVDPQP  : X_VT5_XO5_VB5_TyVB<63, 22, 836, "xscvdpqp", vfrc,
+                                     [(set f128:$vT, (fpextend f64:$vB))]>;
 
   // Round & Convert QP -> DP (dword[1] is set to zero)
-  def XSCVQPDP  : X_VT5_XO5_VB5   <63, 20, 836, "xscvqpdp" , []>;
-  def XSCVQPDPO : X_VT5_XO5_VB5_Ro<63, 20, 836, "xscvqpdpo", []>;
+  def XSCVQPDP  : X_VT5_XO5_VB5_VSFR<63, 20, 836, "xscvqpdp" , []>;
+  def XSCVQPDPO : X_VT5_XO5_VB5_VSFR_Ro<63, 20, 836, "xscvqpdpo", []>;
 
   // Truncate & Convert QP -> (Un)Signed (D)Word (dword[1] is set to zero)
   def XSCVQPSDZ : X_VT5_XO5_VB5<63, 25, 836, "xscvqpsdz", []>;
@@ -3363,7 +3377,16 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
               (f64 (PPCcv_fp_to_uint_in_vsr f64:$src)), xoaddr:$dst, 1),
             (STXSIBX (XSCVDPUXWS f64:$src), xoaddr:$dst)>;
 
+  // Round & Convert QP -> DP/SP
+  def : Pat<(f64 (fpround f128:$src)), (f64 (XSCVQPDP $src))>;
+  def : Pat<(f32 (fpround f128:$src)), (f32 (XSRSP (XSCVQPDPO $src)))>;
+
+  // Convert SP -> QP
+  def : Pat<(f128 (fpextend f32:$src)),
+            (f128 (XSCVDPQP (COPY_TO_REGCLASS $src, VFRC)))>;
+
 } // end HasP9Vector, AddedComplexity
+
 let Predicates = [HasP9Vector] in {
   let isPseudo = 1 in {
     let mayStore = 1 in {

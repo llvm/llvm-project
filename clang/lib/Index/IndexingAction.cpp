@@ -19,8 +19,6 @@
 using namespace clang;
 using namespace clang::index;
 
-void IndexDataConsumer::_anchor() {}
-
 bool IndexDataConsumer::handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
                                             ArrayRef<SymbolRelation> Relations,
                                             SourceLocation Loc,

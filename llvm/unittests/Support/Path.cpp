@@ -1270,7 +1270,6 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   ::close(FileDescriptor);
 
   // Open the file and ensure access time is updated, when forced.
-  bool ForceATime = true;
   ASSERT_NO_ERROR(fs::openFileForRead(Twine(TempPath), FileDescriptor,
                                       fs::OF_UpdateAtime, &ResultPath));
 
