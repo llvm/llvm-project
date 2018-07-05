@@ -411,6 +411,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   Detail.IncludeHeader = Include;
   S.Detail = &Detail;
 
+  S.Origin = Opts.Origin;
   Symbols.insert(S);
   return Symbols.find(S.ID);
 }

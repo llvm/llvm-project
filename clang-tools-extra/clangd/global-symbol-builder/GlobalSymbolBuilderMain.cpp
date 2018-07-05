@@ -112,6 +112,7 @@ public:
     CollectorOpts.FallbackDir = AssumedHeaderDir;
     CollectorOpts.CollectIncludePath = true;
     CollectorOpts.CountReferences = true;
+    CollectorOpts.Origin = SymbolOrigin::Static;
     auto Includes = llvm::make_unique<CanonicalIncludes>();
     addSystemHeadersMapping(Includes.get());
     CollectorOpts.Includes = Includes.get();

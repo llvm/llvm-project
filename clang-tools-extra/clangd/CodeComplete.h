@@ -67,6 +67,9 @@ struct CodeCompleteOptions {
     std::string NoInsert = " ";
   } IncludeIndicator;
 
+  /// Expose origins of completion items in the label (for debugging).
+  bool ShowOrigins = false;
+
   // Populated internally by clangd, do not set.
   /// If `Index` is set, it is used to augment the code completion
   /// results.
@@ -103,6 +106,7 @@ struct CodeCompletion {
   //  - Documentation may be from one symbol, or a combination of several
   // Other fields should apply equally to all bundled completions.
   unsigned BundleSize = 1;
+  SymbolOrigin Origin = SymbolOrigin::Unknown;
   // The header through which this symbol could be included.
   // Quoted string as expected by an #include directive, e.g. "<memory>".
   // Empty for non-symbol completions, or when not known.
