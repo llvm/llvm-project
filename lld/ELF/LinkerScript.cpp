@@ -710,8 +710,6 @@ void LinkerScript::output(InputSection *S) {
 }
 
 void LinkerScript::switchTo(OutputSection *Sec) {
-  if (Ctx->OutSec == Sec)
-    return;
   Ctx->OutSec = Sec;
 
   uint64_t Before = advance(0, 1);
