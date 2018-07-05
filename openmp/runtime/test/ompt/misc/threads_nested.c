@@ -4,14 +4,16 @@
 #include <omp.h>
 
 int main() {
+
+  int condition = 0;
   int x = 0;
   omp_set_nested(1);
 #pragma omp parallel num_threads(2)
   {
 #pragma omp parallel num_threads(2)
     {
-#pragma omp atomic
-      x++;
+      OMPT_SIGNAL(condition);
+      OMPT_WAIT(condition, 4);
     }
   }
 

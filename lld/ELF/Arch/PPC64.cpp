@@ -111,52 +111,21 @@ PPC64::PPC64() {
 }
 
 static uint32_t getEFlags(InputFile *File) {
-  // Get the e_flag from the input file and issue an error if incompatible
-  // e_flag encountered.
-  uint32_t EFlags;
-  switch (Config->EKind) {
-  case ELF64BEKind:
-    EFlags = cast<ObjFile<ELF64BE>>(File)->getObj().getHeader()->e_flags;
-    break;
-  case ELF64LEKind:
-    EFlags = cast<ObjFile<ELF64LE>>(File)->getObj().getHeader()->e_flags;
-    break;
-  default:
-    llvm_unreachable("unknown Config->EKind");
-  }
-  if (EFlags > 2) {
-    error("incompatible e_flags: " +  toString(File));
-    return 0;
-  }
-  return EFlags;
+  if (Config->EKind == ELF64BEKind)
+    return cast<ObjFile<ELF64BE>>(File)->getObj().getHeader()->e_flags;
+  return cast<ObjFile<ELF64LE>>(File)->getObj().getHeader()->e_flags;
 }
 
+// This file implements v2 ABI. This function makes sure that all
+// object files have v2 or an unspecified version as an ABI version.
 uint32_t PPC64::calcEFlags() const {
-  assert(!ObjectFiles.empty());
-
-  uint32_t NonZeroFlag;
-  for (InputFile *F : makeArrayRef(ObjectFiles)) {
-    NonZeroFlag = getEFlags(F);
-    if (NonZeroFlag)
-      break;
-  }
-
-  // Verify that all input files have either the same e_flags, or zero.
   for (InputFile *F : makeArrayRef(ObjectFiles)) {
     uint32_t Flag = getEFlags(F);
-    if (Flag == 0 || Flag == NonZeroFlag)
-      continue;
-    error(toString(F) + ": ABI version " + Twine(Flag) +
-          " is not compatible with ABI version " + Twine(NonZeroFlag) +
-          " output");
-    return 0;
+    if (Flag == 1)
+      error(toString(F) + ": ABI version 1 is not supported");
+    else if (Flag > 2)
+      error(toString(F) + ": unrecognized e_flags: " + Twine(Flag));
   }
-
-  if (NonZeroFlag == 1) {
-    error("PPC64 V1 ABI not supported");
-    return 0;
-  }
-
   return 2;
 }
 
