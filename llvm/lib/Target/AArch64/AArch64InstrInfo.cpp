@@ -4928,7 +4928,7 @@ enum MachineOutlinerMBBFlags {
 };
 
 outliner::TargetCostInfo
-AArch64InstrInfo::getOutlininingCandidateInfo(
+AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   unsigned SequenceSize = std::accumulate(
       RepeatedSequenceLocs[0].front(),

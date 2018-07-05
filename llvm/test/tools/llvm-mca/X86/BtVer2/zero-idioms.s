@@ -8,11 +8,14 @@ xorq  %rax, %rax
 
 pcmpgtb   %mm2, %mm2
 pcmpgtd   %mm2, %mm2
+# pcmpgtq   %mm2, %mm2 # invalid operand for instruction
 pcmpgtw   %mm2, %mm2
+
 pcmpgtb   %xmm2, %xmm2
 pcmpgtd   %xmm2, %xmm2
 pcmpgtq   %xmm2, %xmm2
 pcmpgtw   %xmm2, %xmm2
+
 vpcmpgtb  %xmm3, %xmm3, %xmm3
 vpcmpgtd  %xmm3, %xmm3, %xmm3
 vpcmpgtq  %xmm3, %xmm3, %xmm3

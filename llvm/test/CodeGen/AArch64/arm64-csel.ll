@@ -79,6 +79,7 @@ define i32 @foo7(i32 %a, i32 %b) nounwind {
 entry:
 ; CHECK-LABEL: foo7:
 ; CHECK: sub
+; FIXME: Misspelled CHECK-NEXT
 ; CHECK-next: adds
 ; CHECK-next: csneg
 ; CHECK-next: b

@@ -2935,6 +2935,11 @@ static bool isSameEntity(NamedDecl *X, NamedDecl *Y) {
 
     ASTContext &C = FuncX->getASTContext();
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {
+      // Map to the first declaration that we've already merged into this one.
+      // The TSI of redeclarations might not match (due to calling conventions
+      // being inherited onto the type but not the TSI), but the TSI type of
+      // the first declaration of the function should match across modules.
+      FD = FD->getCanonicalDecl();
       return FD->getTypeSourceInfo() ? FD->getTypeSourceInfo()->getType()
                                      : FD->getType();
     };

@@ -20,14 +20,14 @@
 ;     * all functions use base AAPCS
 ;     * floating point instructions permitted, so __aeabi_ helpers only
 ;       expected when there is no available instruction.
-; CHECK-HARD-FP-SP -mfloat-abi=hardfp (single precision instructions)
+; CHECK-HARDFP-SP -mfloat-abi=hardfp (single precision instructions)
 ;     * all non Runtime ABI helper functions use AAPCS VFP
 ;     * floating point instructions permitted, so __aeabi_ helpers only
 ;       expected when there is no available instruction.
-; CHECK-HARD-FP-DP -mfloat-abi=hardfp (double precision instructions)
-; CHECK-HARD_FP_SPONLY -mfloat-abi=hardfp (double precision but single
+; CHECK-HARDFP-DP -mfloat-abi=hardfp (double precision instructions)
+; CHECK-HARDFP-SPONLY -mfloat-abi=hardfp (double precision but single
 ;                      precision only FPU)
-;     * as CHECK-HARD-FP-SP, but we split up the double precision helper
+;     * as CHECK-HARDFP-SP, but we split up the double precision helper
 ;       functions so we can test a single precision only FPU, which has to use
 ;       helper function for all double precision operations.
 

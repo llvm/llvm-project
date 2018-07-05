@@ -118,6 +118,13 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE8_I64:
       case WebAssembly::STORE16_I64:
       case WebAssembly::STORE32_I64:
+      case WebAssembly::ATOMIC_STORE_I32:
+      case WebAssembly::ATOMIC_STORE8_I32:
+      case WebAssembly::ATOMIC_STORE16_I32:
+      case WebAssembly::ATOMIC_STORE_I64:
+      case WebAssembly::ATOMIC_STORE8_I64:
+      case WebAssembly::ATOMIC_STORE16_I64:
+      case WebAssembly::ATOMIC_STORE32_I64:
         RewriteP2Align(MI, WebAssembly::StoreP2AlignOperandNo);
         break;
       default:

@@ -728,6 +728,9 @@ enum OpenFlags : unsigned {
   /// When a child process is launched, this file should remain open in the
   /// child process.
   OF_ChildInherit = 8,
+
+  /// Force files Atime to be updated on access. Only makes a difference on windows.
+  OF_UpdateAtime = 16,
 };
 
 /// Create a uniquely named file.

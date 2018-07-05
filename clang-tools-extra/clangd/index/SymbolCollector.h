@@ -52,6 +52,8 @@ public:
     const CanonicalIncludes *Includes = nullptr;
     // Populate the Symbol.References field.
     bool CountReferences = false;
+    // Every symbol collected will be stamped with this origin.
+    SymbolOrigin Origin = SymbolOrigin::Unknown;
   };
 
   SymbolCollector(Options Opts);

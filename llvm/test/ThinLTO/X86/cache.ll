@@ -80,6 +80,27 @@
 ; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-pruning-interval 0
 ; RUN: not ls %t.cache/llvmcache-foo
 
+; Populate the cache with files with "old" access times, then check llvm-lto updates these file times
+; A negative pruning interval is used to avoid removing cache entries
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache
+; RUN: touch -a -t 197001011200 %t.cache/llvmcache-*
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-pruning-interval -1
+; RUN: ls -ltu %t.cache/* | not grep 1970-01-01
+
+; Populate the cache with files with "old" access times, then check llvm-lto2 updates these file times
+; RUN: rm -Rf %t.cache
+; RUN: llvm-lto2 run -o %t.o %t2.bc %t.bc -cache-dir %t.cache \
+; RUN:  -r=%t2.bc,_main,plx \
+; RUN:  -r=%t2.bc,_globalfunc,lx \
+; RUN:  -r=%t.bc,_globalfunc,plx
+; RUN: touch -a -t 197001011200 %t.cache/llvmcache-*
+; RUN: llvm-lto2 run -o %t.o %t2.bc %t.bc -cache-dir %t.cache \
+; RUN:  -r=%t2.bc,_main,plx \
+; RUN:  -r=%t2.bc,_globalfunc,lx \
+; RUN:  -r=%t.bc,_globalfunc,plx
+; RUN: ls -ltu %t.cache/* | not grep 1970-01-01
+
 ; Verify that specifying max size for the cache directory prunes it to this
 ; size, removing the largest files first.
 ; RUN: rm -Rf %t.cache && mkdir %t.cache

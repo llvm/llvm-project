@@ -922,6 +922,7 @@ public:
   bool isSystemPStateFieldWithImm0_1() const {
     if (!isSysReg()) return false;
     return (SysReg.PStateField == AArch64PState::PAN ||
+            SysReg.PStateField == AArch64PState::DIT ||
             SysReg.PStateField == AArch64PState::UAO);
   }
 
@@ -952,6 +953,8 @@ public:
     RegKind RK;
     switch (Class) {
     case AArch64::ZPRRegClassID:
+    case AArch64::ZPR_3bRegClassID:
+    case AArch64::ZPR_4bRegClassID:
       RK = RegKind::SVEDataVector;
       break;
     case AArch64::PPRRegClassID:
@@ -1041,14 +1044,16 @@ public:
   }
 
   template<int64_t Angle, int64_t Remainder>
-  bool isComplexRotation() const {
-    if (!isImm()) return false;
+  DiagnosticPredicate isComplexRotation() const {
+    if (!isImm()) return DiagnosticPredicateTy::NoMatch;
 
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    if (!CE) return false;
+    if (!CE) return DiagnosticPredicateTy::NoMatch;
     uint64_t Value = CE->getValue();
 
-    return (Value % Angle == Remainder && Value <= 270);
+    if (Value % Angle == Remainder && Value <= 270)
+      return DiagnosticPredicateTy::Match;
+    return DiagnosticPredicateTy::NearMatch;
   }
 
   template <unsigned RegClassID> bool isGPR64() const {
@@ -2518,6 +2523,22 @@ AArch64CC::CondCode AArch64AsmParser::parseCondCodeString(StringRef Cond) {
                     .Case("al", AArch64CC::AL)
                     .Case("nv", AArch64CC::NV)
                     .Default(AArch64CC::Invalid);
+
+  if (CC == AArch64CC::Invalid &&
+      getSTI().getFeatureBits()[AArch64::FeatureSVE])
+    CC = StringSwitch<AArch64CC::CondCode>(Cond.lower())
+                    .Case("none",  AArch64CC::EQ)
+                    .Case("any",   AArch64CC::NE)
+                    .Case("nlast", AArch64CC::HS)
+                    .Case("last",  AArch64CC::LO)
+                    .Case("first", AArch64CC::MI)
+                    .Case("nfrst", AArch64CC::PL)
+                    .Case("pmore", AArch64CC::HI)
+                    .Case("plast", AArch64CC::LS)
+                    .Case("tcont", AArch64CC::GE)
+                    .Case("tstop", AArch64CC::LT)
+                    .Default(AArch64CC::Invalid);
+
   return CC;
 }
 
@@ -3381,7 +3402,7 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
       uint64_t IntVal = RealVal.bitcastToAPInt().getZExtValue();
       if (Mnemonic != "fcmp" && Mnemonic != "fcmpe" && Mnemonic != "fcmeq" &&
           Mnemonic != "fcmge" && Mnemonic != "fcmgt" && Mnemonic != "fcmle" &&
-          Mnemonic != "fcmlt")
+          Mnemonic != "fcmlt" && Mnemonic != "fcmne")
         return TokError("unexpected floating point literal");
       else if (IntVal != 0 || isNegative)
         return TokError("expected floating-point constant #0.0");
@@ -3844,6 +3865,7 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     case RegConstraintEqualityTy::EqualsReg:
       return Error(Loc, "operand must match destination register");
     }
+    llvm_unreachable("Unknown RegConstraintEqualityTy");
   }
   case Match_MissingFeature:
     return Error(Loc,
@@ -3894,6 +3916,8 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "index must be a multiple of 16 in range [-128, 112].");
   case Match_InvalidMemoryIndexed1SImm6:
     return Error(Loc, "index must be an integer in range [-32, 31].");
+  case Match_InvalidMemoryIndexedSImm8:
+    return Error(Loc, "index must be an integer in range [-128, 127].");
   case Match_InvalidMemoryIndexedSImm9:
     return Error(Loc, "index must be an integer in range [-256, 255].");
   case Match_InvalidMemoryIndexed8SImm10:
@@ -4092,6 +4116,18 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPR64:
   case Match_InvalidZPR128:
     return Error(Loc, "invalid element width");
+  case Match_InvalidZPR_3b8:
+    return Error(Loc, "Invalid restricted vector register, expected z0.b..z7.b");
+  case Match_InvalidZPR_3b16:
+    return Error(Loc, "Invalid restricted vector register, expected z0.h..z7.h");
+  case Match_InvalidZPR_3b32:
+    return Error(Loc, "Invalid restricted vector register, expected z0.s..z7.s");
+  case Match_InvalidZPR_4b16:
+    return Error(Loc, "Invalid restricted vector register, expected z0.h..z15.h");
+  case Match_InvalidZPR_4b32:
+    return Error(Loc, "Invalid restricted vector register, expected z0.s..z15.s");
+  case Match_InvalidZPR_4b64:
+    return Error(Loc, "Invalid restricted vector register, expected z0.d..z15.d");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPredicateAnyReg:
@@ -4530,6 +4566,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryIndexed8UImm6:
   case Match_InvalidMemoryIndexedSImm6:
   case Match_InvalidMemoryIndexedSImm5:
+  case Match_InvalidMemoryIndexedSImm8:
   case Match_InvalidMemoryIndexedSImm9:
   case Match_InvalidMemoryIndexed8SImm10:
   case Match_InvalidImm0_1:
@@ -4599,6 +4636,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPR32:
   case Match_InvalidZPR64:
   case Match_InvalidZPR128:
+  case Match_InvalidZPR_3b8:
+  case Match_InvalidZPR_3b16:
+  case Match_InvalidZPR_3b32:
+  case Match_InvalidZPR_4b16:
+  case Match_InvalidZPR_4b32:
+  case Match_InvalidZPR_4b64:
   case Match_InvalidSVEPredicateAnyReg:
   case Match_InvalidSVEPattern:
   case Match_InvalidSVEPredicateBReg:

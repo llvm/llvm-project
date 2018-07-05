@@ -98,7 +98,7 @@ for.end21:
 ;;       A[i-1][j-1] = A[i - 1][j-1] + B[i][j];
 
 ; CHECK:      Name:            InterchangeNotProfitable
-; CHECK-ENXT: Function:        interchange_03
+; CHECK-NEXT: Function:        interchange_03
 define void @interchange_03(){
 entry:
   br label %for1.header
@@ -136,7 +136,7 @@ for.end19:
 ;;      A[i][j] = A[i][j]+k;
 
 ; CHECK:      Name:            InterchangeNotProfitable
-; CHECK-ENXT: Function:        interchange_04
+; CHECK-NEXT: Function:        interchange_04
 define void @interchange_04(i32 %k) {
 entry:
   br label %for.cond1.preheader

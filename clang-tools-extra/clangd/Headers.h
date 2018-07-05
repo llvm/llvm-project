@@ -45,10 +45,47 @@ struct Inclusion {
   Path Resolved;       // Resolved path of included file. Empty if not resolved.
 };
 
+// Information captured about the inclusion graph in a translation unit.
+// This includes detailed information about the direct #includes, and summary
+// information about all transitive includes.
+//
+// It should be built incrementally with collectIncludeStructureCallback().
+// When we build the preamble, we capture and store its include structure along
+// with the preamble data. When we use the preamble, we can copy its
+// IncludeStructure and use another collectIncludeStructureCallback() to fill
+// in any non-preamble inclusions.
+class IncludeStructure {
+public:
+  std::vector<Inclusion> MainFileIncludes;
+
+  // Return all transitively reachable files, and their minimum include depth.
+  // All transitive includes (absolute paths), with their minimum include depth.
+  // Root --> 0, #included file --> 1, etc.
+  // Root is clang's name for a file, which may not be absolute.
+  // Usually it should be SM.getFileEntryForID(SM.getMainFileID())->getName().
+  llvm::StringMap<unsigned> includeDepth(llvm::StringRef Root) const;
+
+  // This updates IncludeDepth(), but not MainFileIncludes.
+  void recordInclude(llvm::StringRef IncludingName,
+                     llvm::StringRef IncludedName,
+                     llvm::StringRef IncludedRealName);
+
+private:
+  // Identifying files in a way that persists from preamble build to subsequent
+  // builds is surprisingly hard. FileID is unavailable in InclusionDirective(),
+  // and RealPathName and UniqueID are not preseved in the preamble.
+  // We use the FileEntry::Name, which is stable, interned into a "file index".
+  // The paths we want to expose are the RealPathName, so store those too.
+  std::vector<std::string> RealPathNames; // In file index order.
+  unsigned fileIndex(llvm::StringRef Name);
+  llvm::StringMap<unsigned> NameToIndex; // Values are file indexes.
+  // Maps a file's index to that of the files it includes.
+  llvm::DenseMap<unsigned, SmallVector<unsigned, 8>> IncludeChildren;
+};
+
 /// Returns a PPCallback that visits all inclusions in the main file.
 std::unique_ptr<PPCallbacks>
-collectInclusionsInMainFileCallback(const SourceManager &SM,
-                                    std::function<void(Inclusion)> Callback);
+collectIncludeStructureCallback(const SourceManager &SM, IncludeStructure *Out);
 
 // Calculates insertion edit for including a new header in a file.
 class IncludeInserter {

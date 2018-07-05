@@ -16,6 +16,8 @@
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
+#include <stddef.h>
+
 using namespace __scudo;
 
 extern "C" {
@@ -23,24 +25,24 @@ INTERCEPTOR_ATTRIBUTE void free(void *ptr) {
   scudoDeallocate(ptr, 0, 0, FromMalloc);
 }
 
-INTERCEPTOR_ATTRIBUTE void *malloc(SIZE_T size) {
+INTERCEPTOR_ATTRIBUTE void *malloc(size_t size) {
   return scudoAllocate(size, 0, FromMalloc);
 }
 
-INTERCEPTOR_ATTRIBUTE void *realloc(void *ptr, SIZE_T size) {
+INTERCEPTOR_ATTRIBUTE void *realloc(void *ptr, size_t size) {
   return scudoRealloc(ptr, size);
 }
 
-INTERCEPTOR_ATTRIBUTE void *calloc(SIZE_T nmemb, SIZE_T size) {
+INTERCEPTOR_ATTRIBUTE void *calloc(size_t nmemb, size_t size) {
   return scudoCalloc(nmemb, size);
 }
 
-INTERCEPTOR_ATTRIBUTE void *valloc(SIZE_T size) {
+INTERCEPTOR_ATTRIBUTE void *valloc(size_t size) {
   return scudoValloc(size);
 }
 
 INTERCEPTOR_ATTRIBUTE
-int posix_memalign(void **memptr, SIZE_T alignment, SIZE_T size) {
+int posix_memalign(void **memptr, size_t alignment, size_t size) {
   return scudoPosixMemalign(memptr, alignment, size);
 }
 
@@ -49,28 +51,28 @@ INTERCEPTOR_ATTRIBUTE void cfree(void *ptr) ALIAS("free");
 #endif
 
 #if SANITIZER_INTERCEPT_MEMALIGN
-INTERCEPTOR_ATTRIBUTE void *memalign(SIZE_T alignment, SIZE_T size) {
+INTERCEPTOR_ATTRIBUTE void *memalign(size_t alignment, size_t size) {
   return scudoAllocate(size, alignment, FromMemalign);
 }
 
 INTERCEPTOR_ATTRIBUTE
-void *__libc_memalign(SIZE_T alignment, SIZE_T size) ALIAS("memalign");
+void *__libc_memalign(size_t alignment, size_t size) ALIAS("memalign");
 #endif
 
 #if SANITIZER_INTERCEPT_PVALLOC
-INTERCEPTOR_ATTRIBUTE void *pvalloc(SIZE_T size) {
+INTERCEPTOR_ATTRIBUTE void *pvalloc(size_t size) {
   return scudoPvalloc(size);
 }
 #endif
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
-INTERCEPTOR_ATTRIBUTE void *aligned_alloc(SIZE_T alignment, SIZE_T size) {
+INTERCEPTOR_ATTRIBUTE void *aligned_alloc(size_t alignment, size_t size) {
   return scudoAlignedAlloc(alignment, size);
 }
 #endif
 
 #if SANITIZER_INTERCEPT_MALLOC_USABLE_SIZE
-INTERCEPTOR_ATTRIBUTE SIZE_T malloc_usable_size(void *ptr) {
+INTERCEPTOR_ATTRIBUTE size_t malloc_usable_size(void *ptr) {
   return scudoMallocUsableSize(ptr);
 }
 #endif

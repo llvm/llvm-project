@@ -218,6 +218,13 @@ def PPCsrl        : SDNode<"PPCISD::SRL"       , SDTIntShiftOp>;
 def PPCsra        : SDNode<"PPCISD::SRA"       , SDTIntShiftOp>;
 def PPCshl        : SDNode<"PPCISD::SHL"       , SDTIntShiftOp>;
 
+// Move 2 i64 values into a VSX register
+def PPCbuild_fp128: SDNode<"PPCISD::BUILD_FP128",
+                           SDTypeProfile<1, 2,
+                             [SDTCisFP<0>, SDTCisSameSizeAs<1,2>,
+                              SDTCisSameAs<1,2>]>,
+                           []>;
+
 // These are target-independent nodes, but have target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_PPCCallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;

@@ -56,10 +56,7 @@ public:
 
   bool WantsRawCommandString() override { return false; }
 
-  int HandleCompletion(Args &input, int &cursor_index,
-                       int &cursor_char_position, int match_start_point,
-                       int max_return_elements, bool &word_complete,
-                       StringList &matches) override;
+  int HandleCompletion(CompletionRequest &request) override;
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override;
@@ -121,17 +118,11 @@ public:
 
   Options *GetOptions() override;
 
-  int HandleCompletion(Args &input, int &cursor_index,
-                       int &cursor_char_position, int match_start_point,
-                       int max_return_elements, bool &word_complete,
-                       StringList &matches) override;
+  int HandleCompletion(CompletionRequest &request) override;
 
-  int HandleArgumentCompletion(Args &input, int &cursor_index,
-                               int &cursor_char_position,
-                               OptionElementVector &opt_element_vector,
-                               int match_start_point, int max_return_elements,
-                               bool &word_complete,
-                               StringList &matches) override;
+  int HandleArgumentCompletion(
+      CompletionRequest &request,
+      OptionElementVector &opt_element_vector) override;
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override;

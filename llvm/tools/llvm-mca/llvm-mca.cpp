@@ -547,6 +547,9 @@ int main(int argc, char **argv) {
 
     P->run();
     Printer.printReport(TOF->os());
+
+    // Clear the InstrBuilder internal state in preparation for another round.
+    IB.clear();
   }
 
   TOF->keep();

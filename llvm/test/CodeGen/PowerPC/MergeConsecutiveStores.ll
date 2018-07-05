@@ -24,10 +24,10 @@
 
 ;; CHECK-LABEL: f:
 ;; CHECK:      lwzu
+;; CHECK:      stwu
 ;; CHECK-NEXT: lwz
 ;; CHECK-NEXT: lwz
 ;; CHECK-NEXT: lwz
-;; CHECK-NEXT: stwu
 ;; CHECK-NEXT: stw
 ;; CHECK-NEXT: stw
 ;; CHECK-NEXT: stw

@@ -30,12 +30,13 @@ static constexpr const char FunctionID[] = "foo";
 
 static std::vector<llvm::MCInst>
 generateSnippetSetupCode(const llvm::ArrayRef<unsigned> RegsToDef,
-                         const ExegesisTarget &ET, bool &IsComplete) {
+                         const ExegesisTarget &ET,
+                         const llvm::LLVMTargetMachine &TM, bool &IsComplete) {
   IsComplete = true;
   std::vector<llvm::MCInst> Result;
   for (const unsigned Reg : RegsToDef) {
     // Load a constant in the register.
-    const auto Code = ET.setRegToConstant(Reg);
+    const auto Code = ET.setRegToConstant(*TM.getMCSubtargetInfo(), Reg);
     if (Code.empty())
       IsComplete = false;
     Result.insert(Result.end(), Code.begin(), Code.end());
@@ -159,7 +160,7 @@ void assembleToStream(const ExegesisTarget &ET,
   Properties.reset(llvm::MachineFunctionProperties::Property::IsSSA);
   bool IsSnippetSetupComplete = false;
   std::vector<llvm::MCInst> SnippetWithSetup =
-      generateSnippetSetupCode(RegsToDef, ET, IsSnippetSetupComplete);
+      generateSnippetSetupCode(RegsToDef, ET, *TM, IsSnippetSetupComplete);
   if (!SnippetWithSetup.empty()) {
     SnippetWithSetup.insert(SnippetWithSetup.end(), Instructions.begin(),
                             Instructions.end());

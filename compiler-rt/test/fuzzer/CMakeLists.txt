@@ -11,6 +11,8 @@ if(COMPILER_RT_INCLUDE_TESTS)
   list(APPEND LIBFUZZER_TEST_DEPS FuzzerUnitTests)
 endif()
 
+set(EXCLUDE_FROM_ALL ON)
+
 add_custom_target(check-fuzzer)
 
 if(COMPILER_RT_INCLUDE_TESTS)

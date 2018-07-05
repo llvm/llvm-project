@@ -206,6 +206,9 @@ bool RegisterContextWindows_x64::ReadRegister(const RegisterInfo *reg_info,
   if (!CacheAllRegisterValues())
     return false;
 
+  if (reg_info == nullptr)
+    return false;
+
   switch (reg_info->kinds[eRegisterKindLLDB]) {
   case lldb_rax_x86_64:
     reg_value.SetUInt64(m_context.Rax);

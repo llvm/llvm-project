@@ -1049,6 +1049,8 @@ static DWORD nativeAccess(FileAccess Access, OpenFlags Flags) {
     Result |= GENERIC_WRITE;
   if (Flags & OF_Delete)
     Result |= DELETE;
+  if (Flags & OF_UpdateAtime)
+    Result |= FILE_WRITE_ATTRIBUTES;
   return Result;
 }
 
@@ -1104,6 +1106,19 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
       Name, Result, NativeDisp, NativeAccess, FILE_ATTRIBUTE_NORMAL, Inherit);
   if (EC)
     return errorCodeToError(EC);
+
+  if (Flags & OF_UpdateAtime) {
+    FILETIME FileTime;
+    SYSTEMTIME SystemTime;
+    GetSystemTime(&SystemTime);
+    if (SystemTimeToFileTime(&SystemTime, &FileTime) == 0 ||
+        SetFileTime(Result, NULL, &FileTime, NULL) == 0) {
+      DWORD LastError = ::GetLastError();
+      ::CloseHandle(Result);
+      return errorCodeToError(mapWindowsError(LastError));
+    }
+  }
+
   if (Flags & OF_Delete) {
     if ((EC = setDeleteDisposition(Result, true))) {
       ::CloseHandle(Result);

@@ -108,7 +108,7 @@ public:
   void wait() const { (void)wait(Deadline::infinity()); }
   LLVM_NODISCARD bool wait(Deadline D) const;
   // The name is used for tracing and debugging (e.g. to name a spawned thread).
-  void runAsync(llvm::Twine Name, UniqueFunction<void()> Action);
+  void runAsync(llvm::Twine Name, llvm::unique_function<void()> Action);
 
 private:
   mutable std::mutex Mutex;

@@ -45,14 +45,14 @@ namespace clangd {
 // Stores Preamble and associated data.
 struct PreambleData {
   PreambleData(PrecompiledPreamble Preamble, std::vector<Diag> Diags,
-               std::vector<Inclusion> Inclusions);
+               IncludeStructure Includes);
 
   tooling::CompileCommand CompileCommand;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;
   // Processes like code completions and go-to-definitions will need #include
   // information, and their compile action skips preamble range.
-  std::vector<Inclusion> Inclusions;
+  IncludeStructure Includes;
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.
@@ -99,14 +99,14 @@ public:
   /// Returns the esitmated size of the AST and the accessory structures, in
   /// bytes. Does not include the size of the preamble.
   std::size_t getUsedBytes() const;
-  const std::vector<Inclusion> &getInclusions() const;
+  const IncludeStructure &getIncludeStructure() const;
 
 private:
   ParsedAST(std::shared_ptr<const PreambleData> Preamble,
             std::unique_ptr<CompilerInstance> Clang,
             std::unique_ptr<FrontendAction> Action,
             std::vector<Decl *> LocalTopLevelDecls, std::vector<Diag> Diags,
-            std::vector<Inclusion> Inclusions);
+            IncludeStructure Includes);
 
   // In-memory preambles must outlive the AST, it is important that this member
   // goes before Clang and Action.
@@ -124,7 +124,7 @@ private:
   // Top-level decls inside the current file. Not that this does not include
   // top-level decls from the preamble.
   std::vector<Decl *> LocalTopLevelDecls;
-  std::vector<Inclusion> Inclusions;
+  IncludeStructure Includes;
 };
 
 using PreambleParsedCallback = std::function<void(

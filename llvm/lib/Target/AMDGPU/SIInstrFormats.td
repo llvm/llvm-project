@@ -319,6 +319,7 @@ class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
+  let VALU = 1;
 }
 
 class EXPCommon<dag outs, dag ins, string asm, list<dag> pattern> :

@@ -912,7 +912,7 @@ unsigned MachineOutliner::findCandidates(
     // Create an OutlinedFunction to store it and check if it'd be beneficial
     // to outline.
     TargetCostInfo TCI =
-        TII.getOutlininingCandidateInfo(CandidatesForRepeatedSeq);
+        TII.getOutliningCandidateInfo(CandidatesForRepeatedSeq);
     std::vector<unsigned> Seq;
     for (unsigned i = Leaf->SuffixIdx; i < Leaf->SuffixIdx + StringLen; i++)
       Seq.push_back(ST.Str[i]);

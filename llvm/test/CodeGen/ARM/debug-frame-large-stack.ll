@@ -35,6 +35,7 @@ define void @test2() {
 ; CHECK-ARM: sub    sp, sp, #4096
 ; CHECK-ARM: .cfi_endproc
 
+; FIXME: Misspelled CHECK-ARM-FP-ELIM
 ; CHECK-ARM-FP_ELIM-LABEL: test2:
 ; CHECK-ARM-FP_ELIM: .cfi_startproc
 ; CHECK-ARM-FP_ELIM: push    {r4, r5}

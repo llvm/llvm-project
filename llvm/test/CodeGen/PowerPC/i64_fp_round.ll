@@ -21,12 +21,11 @@ entry:
 ; CHECK: isel [[REG3:[0-9]+]], {{[0-9]+}}, 3, 1
 ; CHECK-NO-ISEL: rldicr [[REG2:[0-9]+]], {{[0-9]+}}, 0, 52
 ; CHECK-NO-ISEL: bc 12, 1, [[TRUE:.LBB[0-9]+]]
-; CHECK-NO-ISEL: ori [[REG3:[0-9]+]], 3, 0
-; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
+; CHECK-NO-ISEL: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NO-ISEL-NEXT: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: addi [[REG3]], [[REG2]], 0
+; CHECK-NO-ISEL-NEXT: addi {{[0-9]+}}, [[REG2]], 0
 ; CHECK-NO-ISEL-NEXT: [[SUCCESSOR]]
-; CHECK-NO-ISEL: std [[REG3]], -{{[0-9]+}}(1)
+; CHECK-NO-ISEL: std {{[0-9]+}}, -{{[0-9]+}}(1)
 ; CHECK: std [[REG3]], -{{[0-9]+}}(1)
 
 

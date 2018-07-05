@@ -143,6 +143,12 @@ static llvm::cl::opt<bool> EnableIndex(
                    "Clang uses an index built from symbols in opened files"),
     llvm::cl::init(true));
 
+static llvm::cl::opt<bool>
+    ShowOrigins("debug-origin",
+                llvm::cl::desc("Show origins of completion items"),
+                llvm::cl::init(clangd::CodeCompleteOptions().ShowOrigins),
+                llvm::cl::Hidden);
+
 static llvm::cl::opt<Path> YamlSymbolFile(
     "yaml-symbol-file",
     llvm::cl::desc(
@@ -261,6 +267,7 @@ int main(int argc, char *argv[]) {
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
   CCOpts.Limit = LimitResults;
   CCOpts.BundleOverloads = CompletionStyle != Detailed;
+  CCOpts.ShowOrigins = ShowOrigins;
 
   // Initialize and run ClangdLSPServer.
   ClangdLSPServer LSPServer(Out, CCOpts, CompileCommandsDirPath, Opts);

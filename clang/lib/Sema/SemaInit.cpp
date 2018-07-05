@@ -4224,9 +4224,11 @@ static OverloadingResult TryRefInitWithConversionFunction(
   OverloadCandidateSet &CandidateSet = Sequence.getFailedCandidateSet();
   CandidateSet.clear(OverloadCandidateSet::CSK_InitByUserDefinedConversion);
 
-  // Determine whether we are allowed to call explicit constructors or
-  // explicit conversion operators.
-  bool AllowExplicit = Kind.AllowExplicit();
+  // Determine whether we are allowed to call explicit conversion operators.
+  // Note that none of [over.match.copy], [over.match.conv], nor
+  // [over.match.ref] permit an explicit constructor to be chosen when
+  // initializing a reference, not even for direct-initialization.
+  bool AllowExplicitCtors = false;
   bool AllowExplicitConvs = Kind.allowExplicitConversionFunctionsInRefBinding();
 
   const RecordType *T1RecordType = nullptr;
@@ -4242,7 +4244,7 @@ static OverloadingResult TryRefInitWithConversionFunction(
         continue;
 
       if (!Info.Constructor->isInvalidDecl() &&
-          Info.Constructor->isConvertingConstructor(AllowExplicit)) {
+          Info.Constructor->isConvertingConstructor(AllowExplicitCtors)) {
         if (Info.ConstructorTmpl)
           S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
                                          /*ExplicitArgs*/ nullptr,

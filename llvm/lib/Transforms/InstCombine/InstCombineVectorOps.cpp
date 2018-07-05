@@ -1182,12 +1182,59 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
   return {};
 }
 
+static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
+  assert(Shuf.isSelect() && "Must have select-equivalent shuffle");
+
+  // Are we shuffling together some value and that same value after it has been
+  // modified by a binop with a constant?
+  Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
+  Constant *C;
+  bool Op0IsBinop;
+  if (match(Op0, m_BinOp(m_Specific(Op1), m_Constant(C))))
+    Op0IsBinop = true;
+  else if (match(Op1, m_BinOp(m_Specific(Op0), m_Constant(C))))
+    Op0IsBinop = false;
+  else
+    return nullptr;
+
+  auto *BO = cast<BinaryOperator>(Op0IsBinop ? Op0 : Op1);
+  Value *X = Op0IsBinop ? Op1 : Op0;
+  // TODO: Allow div/rem by accounting for potential UB due to undef elements.
+  if (BO->isIntDivRem())
+    return nullptr;
+
+  // The identity constant for a binop leaves a variable operand unchanged. For
+  // a vector, this is a splat of something like 0, -1, or 1.
+  // If there's no identity constant for this binop, we're done.
+  BinaryOperator::BinaryOps BOpcode = BO->getOpcode();
+  Constant *IdC = ConstantExpr::getBinOpIdentity(BOpcode, Shuf.getType());
+  if (!IdC)
+    return nullptr;
+
+  // Shuffle identity constants into the lanes that return the original value.
+  // Example: shuf (mul X, {-1,-2,-3,-4}), X, {0,5,6,3} --> mul X, {-1,1,1,-4}
+  // Example: shuf X, (add X, {-1,-2,-3,-4}), {0,1,6,7} --> add X, {0,0,-3,-4}
+  // The existing binop constant vector remains in the same operand position.
+  Constant *Mask = Shuf.getMask();
+  Constant *NewC = Op0IsBinop ? ConstantExpr::getShuffleVector(C, IdC, Mask) :
+                                ConstantExpr::getShuffleVector(IdC, C, Mask);
+
+  // shuf (bop X, C), X, M --> bop X, C'
+  // shuf X, (bop X, C), M --> bop X, C'
+  Instruction *NewBO = BinaryOperator::Create(BOpcode, X, NewC);
+  NewBO->copyIRFlags(BO);
+  return NewBO;
+}
+
 /// Try to fold shuffles that are the equivalent of a vector select.
 static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
                                       InstCombiner::BuilderTy &Builder,
                                       const DataLayout &DL) {
   if (!Shuf.isSelect())
     return nullptr;
+
+  if (Instruction *I = foldSelectShuffleWith1Binop(Shuf))
+    return I;
 
   BinaryOperator *B0, *B1;
   if (!match(Shuf.getOperand(0), m_BinOp(B0)) ||

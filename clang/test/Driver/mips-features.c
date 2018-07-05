@@ -408,3 +408,15 @@
 // RUN:        -mindirect-jump=hazard 2>&1 \
 // RUN:   | FileCheck --check-prefix=INDIRECT-BH %s
 // INDIRECT-BH: "-target-feature" "+use-indirect-jump-hazard"
+//
+// -mcrc
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -mno-crc -mcrc 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRC %s
+// CHECK-CRC: "-target-feature" "+crc"
+//
+// -mno-crc
+// RUN: %clang -target mips-unknown-linux-gnu -### -c %s \
+// RUN:     -mcrc -mno-crc 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-CRC %s
+// CHECK-NO-CRC: "-target-feature" "-crc"

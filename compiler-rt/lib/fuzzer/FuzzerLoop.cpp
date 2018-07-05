@@ -148,7 +148,7 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   if (Options.DetectLeaks && EF->__sanitizer_install_malloc_and_free_hooks)
     EF->__sanitizer_install_malloc_and_free_hooks(MallocHook, FreeHook);
   TPC.SetUseCounters(Options.UseCounters);
-  TPC.SetUseValueProfile(Options.UseValueProfile);
+  TPC.SetUseValueProfileMask(Options.UseValueProfile);
 
   if (Options.Verbosity)
     TPC.PrintModuleInfo();

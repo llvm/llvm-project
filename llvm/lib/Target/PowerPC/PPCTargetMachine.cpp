@@ -24,6 +24,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -303,7 +304,12 @@ namespace {
 class PPCPassConfig : public TargetPassConfig {
 public:
   PPCPassConfig(PPCTargetMachine &TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {}
+    : TargetPassConfig(TM, PM) {
+    // At any optimization level above -O0 we use the Machine Scheduler and not
+    // the default Post RA List Scheduler.
+    if (TM.getOptLevel() != CodeGenOpt::None)
+      substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
+  }
 
   PPCTargetMachine &getPPCTargetMachine() const {
     return getTM<PPCTargetMachine>();

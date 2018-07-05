@@ -14,11 +14,11 @@ entry:
 
 ; CHECK-LABEL: @foo
 ; CHECK: qvfrsqrte
-; CHECK: qvfmul
+; CHECK-DAG: qvfmul
 ; FIXME: We're currently loading two constants here (1.5 and -1.5), and using
 ;        an qvfmadd instead of a qvfnmsub
-; CHECK: qvfmadd
-; CHECK: qvfmadd
+; CHECK-DAG: qvfmadd
+; CHECK-DAG: qvfmadd
 ; CHECK: qvfmul
 ; CHECK: qvfmul
 ; CHECK: qvfmadd
@@ -41,11 +41,11 @@ entry:
 
 ; CHECK-LABEL: @foof
 ; CHECK: qvfrsqrtes
-; CHECK: qvfmuls
+; CHECK-DAG: qvfmuls
 ; FIXME: We're currently loading two constants here (1.5 and -1.5), and using
 ;        an qvfmadd instead of a qvfnmsubs
-; CHECK: qvfmadds
-; CHECK: qvfmadds
+; CHECK-DAG: qvfmadds
+; CHECK-DAG: qvfmadds
 ; CHECK: qvfmuls
 ; CHECK: qvfmul
 ; CHECK: blr
@@ -65,11 +65,11 @@ entry:
 
 ; CHECK-LABEL: @food
 ; CHECK: qvfrsqrte
-; CHECK: qvfmul
+; CHECK-DAG: qvfmul
 ; FIXME: We're currently loading two constants here (1.5 and -1.5), and using
 ;        an qvfmadd instead of a qvfnmsub
-; CHECK: qvfmadd
-; CHECK: qvfmadd
+; CHECK-DAG: qvfmadd
+; CHECK-DAG: qvfmadd
 ; CHECK: qvfmul
 ; CHECK: qvfmul
 ; CHECK: qvfmadd
@@ -92,11 +92,11 @@ entry:
 
 ; CHECK-LABEL: @goo
 ; CHECK: qvfrsqrtes
-; CHECK: qvfmuls
+; CHECK-DAG: qvfmuls
 ; FIXME: We're currently loading two constants here (1.5 and -1.5), and using
 ;        an qvfmadd instead of a qvfnmsubs
-; CHECK: qvfmadds
-; CHECK: qvfmadds
+; CHECK-DAG: qvfmadds
+; CHECK-DAG: qvfmadds
 ; CHECK: qvfmuls
 ; CHECK: qvfmuls
 ; CHECK: blr

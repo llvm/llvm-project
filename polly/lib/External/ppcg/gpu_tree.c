@@ -11,6 +11,7 @@
 
 #include <isl/set.h>
 #include <isl/union_set.h>
+#include <isl/space.h>
 
 #include "gpu_tree.h"
 

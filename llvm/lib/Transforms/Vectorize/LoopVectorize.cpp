@@ -2912,6 +2912,8 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
     // Create phi nodes to merge from the  backedge-taken check block.
     PHINode *BCResumeVal = PHINode::Create(
         OrigPhi->getType(), 3, "bc.resume.val", ScalarPH->getTerminator());
+    // Copy original phi DL over to the new one.
+    BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
     Value *&EndValue = IVEndValues[OrigPhi];
     if (OrigPhi == OldInduction) {
       // We know what the end value is.
