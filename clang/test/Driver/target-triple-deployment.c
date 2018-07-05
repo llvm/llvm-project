@@ -1,5 +1,5 @@
 // RUN: touch %t.o
-// RUN: %clang -target x86_64-apple-macosx -### %t.o 2> %t.log
+// RUN: %clang -target x86_64-apple-macosx10.4 -### %t.o 2> %t.log
 // RUN: %clang -target x86_64-apple-darwin9 -### %t.o 2>> %t.log
 // RUN: %clang -target x86_64-apple-macosx10.7 -### %t.o 2>> %t.log
 //

@@ -6,8 +6,8 @@
 ; CHECK: stwu 1, -32(1)
 ; CHECK: stw 31, 28(1)
 ; CHECK: mr 31, 1
-; CHECK: stw 30, 24(1)
-; CHECK: mfcr [[CR:[0-9]+]]
+; CHECK-DAG: stw 30, 24(1)
+; CHECK-DAG: mfcr [[CR:[0-9]+]]
 ; CHECK: stw [[CR]], 20(31)
 
 target datalayout = "E-m:e-p:32:32-i64:64-n32"

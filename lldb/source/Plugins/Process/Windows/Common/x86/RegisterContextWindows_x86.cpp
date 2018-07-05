@@ -176,6 +176,9 @@ bool RegisterContextWindows_x86::ReadRegister(const RegisterInfo *reg_info,
   if (!CacheAllRegisterValues())
     return false;
 
+  if (reg_info == nullptr)
+    return false;
+
   uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
   switch (reg) {
   case lldb_eax_i386:

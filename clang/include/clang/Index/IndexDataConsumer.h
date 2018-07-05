@@ -54,9 +54,6 @@ public:
                                      SymbolRoleSet Roles, SourceLocation Loc);
 
   virtual void finish() {}
-
-private:
-  virtual void _anchor();
 };
 
 } // namespace index

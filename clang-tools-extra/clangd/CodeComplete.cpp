@@ -22,6 +22,7 @@
 #include "AST.h"
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
+#include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Headers.h"
 #include "Logger.h"
@@ -40,6 +41,8 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <queue>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
@@ -265,6 +268,8 @@ struct CodeCompletionBuilder {
       : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments) {
     add(C, SemaCCS);
     if (C.SemaResult) {
+      Completion.Origin =
+          static_cast<SymbolOrigin>(Completion.Origin | SymbolOrigin::AST);
       Completion.Name = llvm::StringRef(SemaCCS->getTypedText());
       if (Completion.Scope.empty())
         if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
@@ -276,6 +281,8 @@ struct CodeCompletionBuilder {
           toCompletionItemKind(C.SemaResult->Kind, C.SemaResult->Declaration);
     }
     if (C.IndexResult) {
+      Completion.Origin =
+          static_cast<SymbolOrigin>(Completion.Origin | C.IndexResult->Origin);
       if (Completion.Scope.empty())
         Completion.Scope = C.IndexResult->Scope;
       if (Completion.Kind == CompletionItemKind::Missing)
@@ -565,7 +572,7 @@ static bool isBlacklistedMember(const NamedDecl &D) {
 // within the callback.
 struct CompletionRecorder : public CodeCompleteConsumer {
   CompletionRecorder(const CodeCompleteOptions &Opts,
-                     UniqueFunction<void()> ResultsCallback)
+                     llvm::unique_function<void()> ResultsCallback)
       : CodeCompleteConsumer(Opts.getClangCompleteOpts(),
                              /*OutputIsBinary=*/false),
         CCContext(CodeCompletionContext::CCC_Other), Opts(Opts),
@@ -656,7 +663,7 @@ private:
   CodeCompleteOptions Opts;
   std::shared_ptr<GlobalCodeCompletionAllocator> CCAllocator;
   CodeCompletionTUInfo CCTUInfo;
-  UniqueFunction<void()> ResultsCallback;
+  llvm::unique_function<void()> ResultsCallback;
 };
 
 class SignatureHelpCollector final : public CodeCompleteConsumer {
@@ -763,7 +770,6 @@ struct SemaCompleteInput {
   PathRef FileName;
   const tooling::CompileCommand &Command;
   PrecompiledPreamble const *Preamble;
-  const std::vector<Inclusion> &PreambleInclusions;
   StringRef Contents;
   Position Pos;
   IntrusiveRefCntPtr<vfs::FileSystem> VFS;
@@ -771,12 +777,11 @@ struct SemaCompleteInput {
 };
 
 // Invokes Sema code completion on a file.
-// If \p Includes is set, it will be initialized after a compiler instance has
-// been set up.
+// If \p Includes is set, it will be updated based on the compiler invocation.
 bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                       const clang::CodeCompleteOptions &Options,
                       const SemaCompleteInput &Input,
-                      std::unique_ptr<IncludeInserter> *Includes = nullptr) {
+                      IncludeStructure *Includes = nullptr) {
   trace::Span Tracer("Sema completion");
   std::vector<const char *> ArgStrs;
   for (const auto &S : Input.Command.CommandLine)
@@ -837,29 +842,9 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
         Input.FileName);
     return false;
   }
-  if (Includes) {
-    // Initialize Includes if provided.
-
-    // FIXME(ioeric): needs more consistent style support in clangd server.
-    auto Style = format::getStyle(format::DefaultFormatStyle, Input.FileName,
-                                  format::DefaultFallbackStyle, Input.Contents,
-                                  Input.VFS.get());
-    if (!Style) {
-      log("ERROR: failed to get FormatStyle for file " + Input.FileName +
-          ". Fall back to use LLVM style. Error: " +
-          llvm::toString(Style.takeError()));
-      Style = format::getLLVMStyle();
-    }
-    *Includes = llvm::make_unique<IncludeInserter>(
-        Input.FileName, Input.Contents, *Style, Input.Command.Directory,
-        Clang->getPreprocessor().getHeaderSearchInfo());
-    for (const auto &Inc : Input.PreambleInclusions)
-      Includes->get()->addExisting(Inc);
-    Clang->getPreprocessor().addPPCallbacks(collectInclusionsInMainFileCallback(
-        Clang->getSourceManager(), [Includes](Inclusion Inc) {
-          Includes->get()->addExisting(std::move(Inc));
-        }));
-  }
+  if (Includes)
+    Clang->getPreprocessor().addPPCallbacks(
+        collectIncludeStructureCallback(Clang->getSourceManager(), Includes));
   if (!Action.Execute()) {
     log("Execute() failed when running codeComplete for " + Input.FileName);
     return false;
@@ -949,24 +934,24 @@ clang::CodeCompleteOptions CodeCompleteOptions::getClangCompleteOpts() const {
 //   - TopN determines the results with the best score.
 class CodeCompleteFlow {
   PathRef FileName;
+  IncludeStructure Includes; // Complete once the compiler runs.
   const CodeCompleteOptions &Opts;
   // Sema takes ownership of Recorder. Recorder is valid until Sema cleanup.
   CompletionRecorder *Recorder = nullptr;
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
   bool Incomplete = false; // Would more be available with a higher limit?
   llvm::Optional<FuzzyMatcher> Filter;       // Initialized once Sema runs.
-  std::unique_ptr<IncludeInserter> Includes; // Initialized once compiler runs.
-  FileProximityMatcher FileProximityMatch;
+  std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
+  // Include-insertion and proximity scoring rely on the include structure.
+  // This is available after Sema has run.
+  llvm::Optional<IncludeInserter> Inserter;  // Available during runWithSema.
+  llvm::Optional<URIDistance> FileProximity; // Initialized once Sema runs.
 
 public:
   // A CodeCompleteFlow object is only useful for calling run() exactly once.
-  CodeCompleteFlow(PathRef FileName, const CodeCompleteOptions &Opts)
-      : FileName(FileName), Opts(Opts),
-        // FIXME: also use path of the main header corresponding to FileName to
-        // calculate the file proximity, which would capture include/ and src/
-        // project setup where headers and implementations are not in the same
-        // directory.
-        FileProximityMatch(ArrayRef<StringRef>({FileName})) {}
+  CodeCompleteFlow(PathRef FileName, const IncludeStructure &Includes,
+                   const CodeCompleteOptions &Opts)
+      : FileName(FileName), Includes(Includes), Opts(Opts) {}
 
   CodeCompleteResult run(const SemaCompleteInput &SemaCCInput) && {
     trace::Span Tracer("CodeCompleteFlow");
@@ -977,13 +962,51 @@ public:
     CodeCompleteResult Output;
     auto RecorderOwner = llvm::make_unique<CompletionRecorder>(Opts, [&]() {
       assert(Recorder && "Recorder is not set");
-      assert(Includes && "Includes is not set");
+      auto Style =
+          format::getStyle(format::DefaultFormatStyle, SemaCCInput.FileName,
+                           format::DefaultFallbackStyle, SemaCCInput.Contents,
+                           SemaCCInput.VFS.get());
+      if (!Style) {
+        log("Failed to get FormatStyle for file" + SemaCCInput.FileName + ": " +
+            llvm::toString(Style.takeError()) + ". Fallback is LLVM style.");
+        Style = format::getLLVMStyle();
+      }
       // If preprocessor was run, inclusions from preprocessor callback should
-      // already be added to Inclusions.
+      // already be added to Includes.
+      Inserter.emplace(
+          SemaCCInput.FileName, SemaCCInput.Contents, *Style,
+          SemaCCInput.Command.Directory,
+          Recorder->CCSema->getPreprocessor().getHeaderSearchInfo());
+      for (const auto &Inc : Includes.MainFileIncludes)
+        Inserter->addExisting(Inc);
+
+      // Most of the cost of file proximity is in initializing the FileDistance
+      // structures based on the observed includes, once per query. Conceptually
+      // that happens here (though the per-URI-scheme initialization is lazy).
+      // The per-result proximity scoring is (amortized) very cheap.
+      FileDistanceOptions ProxOpts{}; // Use defaults.
+      const auto &SM = Recorder->CCSema->getSourceManager();
+      llvm::StringMap<SourceParams> ProxSources;
+      for (auto &Entry : Includes.includeDepth(
+               SM.getFileEntryForID(SM.getMainFileID())->getName())) {
+        auto &Source = ProxSources[Entry.getKey()];
+        Source.Cost = Entry.getValue() * ProxOpts.IncludeCost;
+        // Symbols near our transitive includes are good, but only consider
+        // things in the same directory or below it. Otherwise there can be
+        // many false positives.
+        if (Entry.getValue() > 0)
+          Source.MaxUpTraversals = 1;
+      }
+      FileProximity.emplace(ProxSources, ProxOpts);
+
       Output = runWithSema();
-      Includes.reset(); // Make sure this doesn't out-live Clang.
+      Inserter.reset(); // Make sure this doesn't out-live Clang.
       SPAN_ATTACH(Tracer, "sema_completion_kind",
                   getCompletionKindString(Recorder->CCContext.getKind()));
+      log(llvm::formatv(
+          "Code complete: sema context {0}, query scopes [{1}]",
+          getCompletionKindString(Recorder->CCContext.getKind()),
+          llvm::join(QueryScopes.begin(), QueryScopes.end(), ",")));
     });
 
     Recorder = RecorderOwner.get();
@@ -1011,6 +1034,8 @@ private:
   CodeCompleteResult runWithSema() {
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
+    QueryScopes = getQueryScopes(Recorder->CCContext,
+                                 Recorder->CCSema->getSourceManager());
     // Sema provides the needed context to query the index.
     // FIXME: in addition to querying for extra/overlapping symbols, we should
     //        explicitly request symbols corresponding to Sema results.
@@ -1042,8 +1067,8 @@ private:
       Req.MaxCandidateCount = Opts.Limit;
     Req.Query = Filter->pattern();
     Req.RestrictForCodeCompletion = true;
-    Req.Scopes = getQueryScopes(Recorder->CCContext,
-                                Recorder->CCSema->getSourceManager());
+    Req.Scopes = QueryScopes;
+    // FIXME: we should send multiple weighted paths here.
     Req.ProximityPaths.push_back(FileName);
     log(llvm::formatv("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])",
                       Req.Query,
@@ -1124,23 +1149,24 @@ private:
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
-    Relevance.FileProximityMatch = &FileProximityMatch;
+    Relevance.FileProximityMatch = FileProximity.getPointer();
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))
       Relevance.NameMatch = *FuzzyScore;
     else
       return;
-    unsigned SemaResult = 0, IndexResult = 0;
+    SymbolOrigin Origin = SymbolOrigin::Unknown;
     for (const auto &Candidate : Bundle) {
       if (Candidate.IndexResult) {
         Quality.merge(*Candidate.IndexResult);
         Relevance.merge(*Candidate.IndexResult);
-        ++IndexResult;
+        Origin =
+            static_cast<SymbolOrigin>(Origin | Candidate.IndexResult->Origin);
       }
       if (Candidate.SemaResult) {
         Quality.merge(*Candidate.SemaResult);
         Relevance.merge(*Candidate.SemaResult);
-        ++SemaResult;
+        Origin = static_cast<SymbolOrigin>(Origin | SymbolOrigin::AST);
       }
     }
 
@@ -1153,15 +1179,13 @@ private:
                                ? Scores.Total / Relevance.NameMatch
                                : Scores.Quality;
 
-    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << "("
-                            << IndexResult << " index) "
-                            << "(" << SemaResult << " sema)"
-                            << " = " << Scores.Total << "\n"
+    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << " (" << Origin
+                            << ") = " << Scores.Total << "\n"
                             << Quality << Relevance << "\n");
 
-    NSema += bool(SemaResult);
-    NIndex += bool(IndexResult);
-    NBoth += SemaResult && IndexResult;
+    NSema += bool(Origin & SymbolOrigin::AST);
+    NIndex += bool(Origin & ~SymbolOrigin::AST);
+    NBoth += (Origin & SymbolOrigin::AST) && (Origin & ~SymbolOrigin::AST);
     if (Candidates.push({std::move(Bundle), Scores}))
       Incomplete = true;
   }
@@ -1174,7 +1198,7 @@ private:
                           : nullptr;
       if (!Builder)
         Builder.emplace(Recorder->CCSema->getASTContext(), Item, SemaCCS,
-                        *Includes, FileName, Opts);
+                        *Inserter, FileName, Opts);
       else
         Builder->add(Item, SemaCCS);
     }
@@ -1182,15 +1206,16 @@ private:
   }
 };
 
-CodeCompleteResult codeComplete(
-    PathRef FileName, const tooling::CompileCommand &Command,
-    PrecompiledPreamble const *Preamble,
-    const std::vector<Inclusion> &PreambleInclusions, StringRef Contents,
-    Position Pos, IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-    std::shared_ptr<PCHContainerOperations> PCHs, CodeCompleteOptions Opts) {
-  return CodeCompleteFlow(FileName, Opts)
-      .run({FileName, Command, Preamble, PreambleInclusions, Contents, Pos, VFS,
-            PCHs});
+CodeCompleteResult codeComplete(PathRef FileName,
+                                const tooling::CompileCommand &Command,
+                                PrecompiledPreamble const *Preamble,
+                                const IncludeStructure &PreambleInclusions,
+                                StringRef Contents, Position Pos,
+                                IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                                std::shared_ptr<PCHContainerOperations> PCHs,
+                                CodeCompleteOptions Opts) {
+  return CodeCompleteFlow(FileName, PreambleInclusions, Opts)
+      .run({FileName, Command, Preamble, Contents, Pos, VFS, PCHs});
 }
 
 SignatureHelp signatureHelp(PathRef FileName,
@@ -1205,11 +1230,11 @@ SignatureHelp signatureHelp(PathRef FileName,
   Options.IncludeMacros = false;
   Options.IncludeCodePatterns = false;
   Options.IncludeBriefComments = false;
-  std::vector<Inclusion> PreambleInclusions = {}; // Unused for signatureHelp
+  IncludeStructure PreambleInclusions; // Unused for signatureHelp
   semaCodeComplete(llvm::make_unique<SignatureHelpCollector>(Options, Result),
                    Options,
-                   {FileName, Command, Preamble, PreambleInclusions, Contents,
-                    Pos, std::move(VFS), std::move(PCHs)});
+                   {FileName, Command, Preamble, Contents, Pos, std::move(VFS),
+                    std::move(PCHs)});
   return Result;
 }
 
@@ -1228,7 +1253,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   LSP.label = (HeaderInsertion ? Opts.IncludeIndicator.Insert
                                : Opts.IncludeIndicator.NoInsert) +
+              (Opts.ShowOrigins ? "[" + llvm::to_string(Origin) + "]" : "") +
               RequiredQualifier + Name + Signature;
+
   LSP.kind = Kind;
   LSP.detail = BundleSize > 1 ? llvm::formatv("[{0} overloads]", BundleSize)
                               : ReturnType;
@@ -1244,7 +1271,6 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
                                              : InsertTextFormat::PlainText;
   if (HeaderInsertion)
     LSP.additionalTextEdits = {*HeaderInsertion};
-  LSP.SymbolScope = Scope;
   return LSP;
 }
 

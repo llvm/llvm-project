@@ -695,25 +695,25 @@ define i8 @sel_constants_xor_constant(i1 %cond) {
 define i8 @sel_constants_shl_constant(i1 %cond) {
 ; ISEL-LABEL: sel_constants_shl_constant:
 ; ISEL:       # %bb.0:
-; ISEL-NEXT:    lis 5, 511
 ; ISEL-NEXT:    lis 4, 2047
+; ISEL-NEXT:    lis 5, 511
 ; ISEL-NEXT:    andi. 3, 3, 1
 ; ISEL-NEXT:    ori 3, 4, 65535
-; ISEL-NEXT:    ori 12, 5, 65535
+; ISEL-NEXT:    ori 4, 5, 65535
 ; ISEL-NEXT:    sldi 3, 3, 5
-; ISEL-NEXT:    sldi 4, 12, 7
+; ISEL-NEXT:    sldi 4, 4, 7
 ; ISEL-NEXT:    isel 3, 4, 3, 1
 ; ISEL-NEXT:    blr
 ;
 ; NO_ISEL-LABEL: sel_constants_shl_constant:
 ; NO_ISEL:       # %bb.0:
-; NO_ISEL-NEXT:    lis 5, 511
 ; NO_ISEL-NEXT:    lis 4, 2047
+; NO_ISEL-NEXT:    lis 5, 511
 ; NO_ISEL-NEXT:    andi. 3, 3, 1
 ; NO_ISEL-NEXT:    ori 3, 4, 65535
-; NO_ISEL-NEXT:    ori 12, 5, 65535
+; NO_ISEL-NEXT:    ori 4, 5, 65535
 ; NO_ISEL-NEXT:    sldi 3, 3, 5
-; NO_ISEL-NEXT:    sldi 4, 12, 7
+; NO_ISEL-NEXT:    sldi 4, 4, 7
 ; NO_ISEL-NEXT:    bc 12, 1, .LBB36_1
 ; NO_ISEL-NEXT:    blr
 ; NO_ISEL-NEXT:  .LBB36_1:

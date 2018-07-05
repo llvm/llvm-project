@@ -260,18 +260,14 @@ void CommandObject::Cleanup() {
     m_api_locker.unlock();
 }
 
-int CommandObject::HandleCompletion(Args &input, int &cursor_index,
-                                    int &cursor_char_position,
-                                    int match_start_point,
-                                    int max_return_elements,
-                                    bool &word_complete, StringList &matches) {
+int CommandObject::HandleCompletion(CompletionRequest &request) {
   // Default implementation of WantsCompletion() is !WantsRawCommandString().
   // Subclasses who want raw command string but desire, for example, argument
   // completion should override WantsCompletion() to return true, instead.
   if (WantsRawCommandString() && !WantsCompletion()) {
     // FIXME: Abstract telling the completion to insert the completion
     // character.
-    matches.Clear();
+    request.GetMatches().Clear();
     return -1;
   } else {
     // Can we do anything generic with the options?
@@ -280,21 +276,23 @@ int CommandObject::HandleCompletion(Args &input, int &cursor_index,
     OptionElementVector opt_element_vector;
 
     if (cur_options != nullptr) {
-      opt_element_vector = cur_options->ParseForCompletion(input, cursor_index);
+      opt_element_vector = cur_options->ParseForCompletion(
+          request.GetParsedLine(), request.GetCursorIndex());
 
       bool handled_by_options;
+      bool word_complete = request.GetWordComplete();
       handled_by_options = cur_options->HandleOptionCompletion(
-          input, opt_element_vector, cursor_index, cursor_char_position,
-          match_start_point, max_return_elements, GetCommandInterpreter(),
-          word_complete, matches);
+          request.GetParsedLine(), opt_element_vector, request.GetCursorIndex(),
+          request.GetCursorCharPosition(), request.GetMatchStartPoint(),
+          request.GetMaxReturnElements(), GetCommandInterpreter(),
+          word_complete, request.GetMatches());
+      request.SetWordComplete(word_complete);
       if (handled_by_options)
-        return matches.GetSize();
+        return request.GetMatches().GetSize();
     }
 
     // If we got here, the last word is not an option or an option argument.
-    return HandleArgumentCompletion(
-        input, cursor_index, cursor_char_position, opt_element_vector,
-        match_start_point, max_return_elements, word_complete, matches);
+    return HandleArgumentCompletion(request, opt_element_vector);
   }
 }
 

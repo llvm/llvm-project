@@ -1497,8 +1497,6 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     case Intrinsic::x86_avx512_mask_sub_sd_round:
     case Intrinsic::x86_avx512_mask_max_sd_round:
     case Intrinsic::x86_avx512_mask_min_sd_round:
-    case Intrinsic::x86_fma_vfmadd_ss:
-    case Intrinsic::x86_fma_vfmadd_sd:
     case Intrinsic::x86_avx512_mask_vfmadd_ss:
     case Intrinsic::x86_avx512_mask_vfmadd_sd:
     case Intrinsic::x86_avx512_maskz_vfmadd_ss:

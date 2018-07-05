@@ -27,7 +27,6 @@ entry:
 ; FIXME: We don't need to do these stores/loads at all.
 ; CHECK-DAG: std 3, -24(1)
 ; CHECK-DAG: stb 4, -16(1)
-; CHECK: ori 2, 2, 0
 ; CHECK-DAG: lbz [[REG1:[0-9]+]], -16(1)
 ; CHECK-DAG: lwz [[REG2:[0-9]+]], -20(1)
 ; CHECK-DAG: sldi [[REG3:[0-9]+]], [[REG1]], 32

@@ -131,4 +131,15 @@ TEST(SemaCodeCompleteTest, VisitedNSForInvalideQualifiedId) {
   EXPECT_TRUE(VisitedNS.empty());
 }
 
+TEST(SemaCodeCompleteTest, VisitedNSWithoutQualifier) {
+  auto VisitedNS = runCodeCompleteOnCode(R"cpp(
+    namespace n1 {
+    namespace n2 {
+      void f(^) {}
+    }
+    }
+  )cpp");
+  EXPECT_THAT(VisitedNS, UnorderedElementsAre("n1", "n1::n2"));
+}
+
 } // namespace

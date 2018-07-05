@@ -27,6 +27,7 @@ SymbolSlab indexAST(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   CollectorOpts.CountReferences = false;
   if (!URISchemes.empty())
     CollectorOpts.URISchemes = URISchemes;
+  CollectorOpts.Origin = SymbolOrigin::Dynamic;
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);

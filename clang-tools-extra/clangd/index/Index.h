@@ -117,6 +117,19 @@ template <> struct DenseMapInfo<clang::clangd::SymbolID> {
 namespace clang {
 namespace clangd {
 
+// Describes the source of information about a symbol.
+// Mainly useful for debugging, e.g. understanding code completion reuslts.
+// This is a bitfield as information can be combined from several sources.
+enum SymbolOrigin : uint8_t {
+  Unknown = 0,
+  AST = 1 << 0,     // Directly from the AST (indexes should not set this).
+  Dynamic = 1 << 1, // From the dynamic index of opened files.
+  Static = 1 << 2,  // From the static, externally-built index.
+  Merge = 1 << 3,   // A non-trivial index merge was performed.
+  // Remaining bits reserved for index implementations.
+};
+raw_ostream &operator<<(raw_ostream &, SymbolOrigin);
+
 // The class presents a C++ symbol, e.g. class, function.
 //
 // WARNING: Symbols do not own much of their underlying data - typically strings
@@ -157,6 +170,8 @@ struct Symbol {
   /// Whether or not this symbol is meant to be used for the code completion.
   /// See also isIndexedForCodeCompletion().
   bool IsIndexedForCodeCompletion = false;
+  /// Where this symbol came from. Usually an index provides a constant value.
+  SymbolOrigin Origin = Unknown;
   /// A brief description of the symbol that can be appended in the completion
   /// candidate list. For example, "(X x, Y y) const" is a function signature.
   llvm::StringRef Signature;

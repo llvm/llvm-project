@@ -26,6 +26,7 @@
 
 #ifdef _WIN32
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Chrono.h"
 #include <windows.h>
 #include <winerror.h>
 #endif
@@ -1251,8 +1252,38 @@ TEST_F(FileSystemTest, OpenFileForRead) {
     ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
     ASSERT_EQ(D1, D2);
   }
-
   ::close(FileDescriptor);
+  ::close(FileDescriptor2);
+
+#ifdef _WIN32
+  // Since Windows Vista, file access time is not updated by default.
+  // This is instead updated manually by openFileForRead.
+  // https://blogs.technet.microsoft.com/filecab/2006/11/07/disabling-last-access-time-in-windows-vista-to-improve-ntfs-performance/
+  // This part of the unit test is Windows specific as the updating of
+  // access times can be disabled on Linux using /etc/fstab.
+
+  // Set access time to UNIX epoch.
+  ASSERT_NO_ERROR(sys::fs::openFileForWrite(Twine(TempPath), FileDescriptor,
+                                            fs::CD_OpenExisting));
+  TimePoint<> Epoch(std::chrono::milliseconds(0));
+  ASSERT_NO_ERROR(fs::setLastModificationAndAccessTime(FileDescriptor, Epoch));
+  ::close(FileDescriptor);
+
+  // Open the file and ensure access time is updated, when forced.
+  ASSERT_NO_ERROR(fs::openFileForRead(Twine(TempPath), FileDescriptor,
+                                      fs::OF_UpdateAtime, &ResultPath));
+
+  sys::fs::file_status Status;
+  ASSERT_NO_ERROR(sys::fs::status(FileDescriptor, Status));
+  auto FileAccessTime = Status.getLastAccessedTime();
+
+  ASSERT_NE(Epoch, FileAccessTime);
+  ::close(FileDescriptor);
+
+  // Ideally this test would include a case when ATime is not forced to update,
+  // however the expected behaviour will differ depending on the configuration
+  // of the Windows file system.
+#endif
 }
 
 static void createFileWithData(const Twine &Path, bool ShouldExistBefore,

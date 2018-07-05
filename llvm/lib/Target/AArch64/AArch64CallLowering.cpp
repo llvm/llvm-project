@@ -155,9 +155,12 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
 
   void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
-    if (VA.getLocInfo() == CCValAssign::LocInfo::AExt)
+    if (VA.getLocInfo() == CCValAssign::LocInfo::AExt) {
       Size = VA.getLocVT().getSizeInBits() / 8;
-
+      ValVReg = MIRBuilder.buildAnyExt(LLT::scalar(Size * 8), ValVReg)
+                    ->getOperand(0)
+                    .getReg();
+    }
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
         MPO, MachineMemOperand::MOStore, Size, 0);
     MIRBuilder.buildStore(ValVReg, Addr, *MMO);

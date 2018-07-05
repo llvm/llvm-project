@@ -5,6 +5,8 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
+; Loads.
+
 ; CHECK-LABEL: ldi64_a1:
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i64{{$}}
@@ -325,6 +327,9 @@ define void @sti32_a8(i32 *%p, i64 %w) {
 }
 
 ; Atomics.
+; Wasm atomics have the alignment field, but it must always have the type's
+; natural alignment.
+
 ; CHECK-LABEL: ldi64_atomic_a8:
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i64{{$}}
@@ -336,7 +341,6 @@ define i64 @ldi64_atomic_a8(i64 *%p) {
 }
 
 ; 16 is greater than the default alignment so it is ignored.
-
 ; CHECK-LABEL: ldi64_atomic_a16:
 ; CHECK-NEXT: .param i32{{$}}
 ; CHECK-NEXT: .result i64{{$}}
@@ -345,4 +349,23 @@ define i64 @ldi64_atomic_a8(i64 *%p) {
 define i64 @ldi64_atomic_a16(i64 *%p) {
   %v = load atomic i64, i64* %p seq_cst, align 16
   ret i64 %v
+}
+
+; CHECK-LABEL: sti64_atomic_a4:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: i64.atomic.store 0($0), $1{{$}}
+; CHECK-NEXT: return{{$}}
+define void @sti64_atomic_a4(i64 *%p, i64 %v) {
+ store atomic i64 %v, i64* %p seq_cst, align 8
+ ret void
+}
+
+; 16 is greater than the default alignment so it is ignored.
+; CHECK-LABEL: sti64_atomic_a8:
+; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: i64.atomic.store 0($0), $1{{$}}
+; CHECK-NEXT: return{{$}}
+define void @sti64_atomic_a8(i64 *%p, i64 %v) {
+ store atomic i64 %v, i64* %p seq_cst, align 16
+ ret void
 }

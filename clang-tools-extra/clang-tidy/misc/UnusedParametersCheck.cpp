@@ -159,8 +159,9 @@ void UnusedParametersCheck::warnOnUnusedParameter(
       MyDiag << removeParameter(Result, FD, ParamIndex);
 
   // Fix all call sites.
-  for (const auto *Call : Indexer->getFnCalls(Function))
-    MyDiag << removeArgument(Result, Call, ParamIndex);
+  for (const CallExpr *Call : Indexer->getFnCalls(Function))
+    if (ParamIndex < Call->getNumArgs()) // See PR38055 for example.
+      MyDiag << removeArgument(Result, Call, ParamIndex);
 }
 
 void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {

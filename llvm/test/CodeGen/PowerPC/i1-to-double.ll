@@ -6,9 +6,9 @@ define double @test(i1 %X) {
 
 ; CHECK-LABEL: @test
 
-; CHECK: andi. {{[0-9]+}}, 3, 1
-; CHECK-NEXT: addis 4, 4, .LCPI
+; CHECK: addis 4, 4, .LCPI
 ; CHECK-NEXT: addis 5, 5, .LCPI
+; CHECK: andi. {{[0-9]+}}, 3, 1
 ; CHECK-NEXT: bc 12, 1, [[TRUE:.LBB[0-9]+]]
 ; CHECK: ori 3, 4, 0
 ; CHECK-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]

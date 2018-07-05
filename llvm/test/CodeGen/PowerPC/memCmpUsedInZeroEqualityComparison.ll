@@ -107,9 +107,9 @@ define signext i32 @zeroEqualityTest04() {
 ; CHECK-NEXT:    beq 0, .LBB3_3
 ; CHECK-NEXT:  .LBB3_2: # %res_block
 ; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 11, 1
-; CHECK-NEXT:    li 12, -1
-; CHECK-NEXT:    isel 5, 12, 11, 0
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    isel 5, 4, 3, 0
 ; CHECK-NEXT:  .LBB3_3: # %endblock
 ; CHECK-NEXT:    extsw 3, 5
 ; CHECK-NEXT:    neg 3, 3
@@ -143,9 +143,9 @@ define signext i32 @zeroEqualityTest05() {
 ; CHECK-NEXT:    beq 0, .LBB4_3
 ; CHECK-NEXT:  .LBB4_2: # %res_block
 ; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 11, 1
-; CHECK-NEXT:    li 12, -1
-; CHECK-NEXT:    isel 5, 12, 11, 0
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    isel 5, 4, 3, 0
 ; CHECK-NEXT:  .LBB4_3: # %endblock
 ; CHECK-NEXT:    srwi 3, 5, 31
 ; CHECK-NEXT:    xori 3, 3, 1
@@ -172,8 +172,8 @@ define signext i32 @equalityFoldTwoConstants() {
 define signext i32 @equalityFoldOneConstant(i8* %X) {
 ; CHECK-LABEL: equalityFoldOneConstant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    ld 4, 0(3)
+; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    sldi 5, 5, 32
 ; CHECK-NEXT:    cmpld 4, 5
 ; CHECK-NEXT:    bne 0, .LBB6_2

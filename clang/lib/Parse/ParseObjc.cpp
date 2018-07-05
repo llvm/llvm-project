@@ -381,25 +381,23 @@ static void addContextSensitiveTypeNullability(Parser &P,
                                                SourceLocation nullabilityLoc,
                                                bool &addedToDeclSpec) {
   // Create the attribute.
-  auto getNullabilityAttr = [&]() -> AttributeList * {
-    return D.getAttributePool().create(
-             P.getNullabilityKeyword(nullability),
-             SourceRange(nullabilityLoc),
-             nullptr, SourceLocation(),
-             nullptr, 0,
-             AttributeList::AS_ContextSensitiveKeyword);
+  auto getNullabilityAttr = [&](AttributePool &Pool) -> AttributeList * {
+    return Pool.create(P.getNullabilityKeyword(nullability),
+                       SourceRange(nullabilityLoc), nullptr, SourceLocation(),
+                       nullptr, 0, AttributeList::AS_ContextSensitiveKeyword);
   };
 
   if (D.getNumTypeObjects() > 0) {
     // Add the attribute to the declarator chunk nearest the declarator.
-    auto nullabilityAttr = getNullabilityAttr();
+    auto nullabilityAttr = getNullabilityAttr(D.getAttributePool());
     DeclaratorChunk &chunk = D.getTypeObject(0);
     nullabilityAttr->setNext(chunk.getAttrListRef());
     chunk.getAttrListRef() = nullabilityAttr;
   } else if (!addedToDeclSpec) {
     // Otherwise, just put it on the declaration specifiers (if one
     // isn't there already).
-    D.getMutableDeclSpec().addAttributes(getNullabilityAttr());
+    D.getMutableDeclSpec().addAttributes(
+        getNullabilityAttr(D.getDeclSpec().getAttributePool()));
     addedToDeclSpec = true;
   }
 }

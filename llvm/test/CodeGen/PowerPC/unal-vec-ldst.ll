@@ -28,8 +28,8 @@ entry:
 ; CHECK-DAG: lvx [[REG4:[0-9]+]], 3, [[REG1]]
 ; CHECK-DAG: lvx [[REG5:[0-9]+]], 3, [[REG2]]
 ; CHECK-DAG: lvx [[REG6:[0-9]+]], 0, 3
-; CHECK-DAG: vperm 3, [[REG5]], [[REG4]], [[REG3]]
-; CHECK-DAG: vperm 2, [[REG6]], [[REG5]], [[REG3]]
+; CHECK-DAG: vperm 3, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
+; CHECK-DAG: vperm 2, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
 ; CHECK: blr
 }
 
@@ -59,8 +59,8 @@ entry:
 ; CHECK-DAG: lvx [[REG4:[0-9]+]], 3, [[REG1]]
 ; CHECK-DAG: lvx [[REG5:[0-9]+]], 3, [[REG2]]
 ; CHECK-DAG: lvx [[REG6:[0-9]+]], 0, 3
-; CHECK-DAG: vperm 3, [[REG5]], [[REG4]], [[REG3]]
-; CHECK-DAG: vperm 2, [[REG6]], [[REG5]], [[REG3]]
+; CHECK-DAG: vperm 3, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
+; CHECK-DAG: vperm 2, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
 ; CHECK: blr
 }
 
@@ -90,8 +90,8 @@ entry:
 ; CHECK-DAG: lvx [[REG4:[0-9]+]], 3, [[REG1]]
 ; CHECK-DAG: lvx [[REG5:[0-9]+]], 3, [[REG2]]
 ; CHECK-DAG: lvx [[REG6:[0-9]+]], 0, 3
-; CHECK-DAG: vperm 3, [[REG5]], [[REG4]], [[REG3]]
-; CHECK-DAG: vperm 2, [[REG6]], [[REG5]], [[REG3]]
+; CHECK-DAG: vperm 3, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
+; CHECK-DAG: vperm 2, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
 ; CHECK: blr
 }
 
@@ -143,8 +143,8 @@ entry:
 ; CHECK-DAG: lvx [[REG4:[0-9]+]], 3, [[REG1]]
 ; CHECK-DAG: lvx [[REG5:[0-9]+]], 3, [[REG2]]
 ; CHECK-DAG: lvx [[REG6:[0-9]+]], 0, 3
-; CHECK-DAG: vperm 3, [[REG5]], [[REG4]], [[REG3]]
-; CHECK-DAG: vperm 2, [[REG6]], [[REG5]], [[REG3]]
+; CHECK-DAG: vperm 3, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
+; CHECK-DAG: vperm 2, {{[0-9]+}}, {{[0-9]+}}, [[REG3]]
 ; CHECK: blr
 }
 
@@ -328,8 +328,8 @@ entry:
 ; CHECK-DAG: qvlfsx [[REG4:[0-9]+]], 3, [[REG2]]
 ; CHECK-DAG: qvlpclsx [[REG5:[0-5]+]], 0, 3
 ; CHECK-DAG: qvlfsx [[REG6:[0-9]+]], 0, 3
-; CHECK-DAG: qvfperm 2, [[REG4]], [[REG3]], [[REG5]]
-; CHECK-DAG: qvfperm 1, [[REG6]], [[REG4]], [[REG5]]
+; CHECK-DAG: qvfperm 2, {{[0-9]+}}, {{[0-9]+}}, [[REG5]]
+; CHECK-DAG: qvfperm 1, {{[0-9]+}}, {{[0-9]+}}, [[REG5]]
 ; CHECK: blr
 }
 
@@ -359,8 +359,8 @@ entry:
 ; CHECK-DAG: qvlfdx [[REG4:[0-9]+]], 3, [[REG2]]
 ; CHECK-DAG: qvlpcldx [[REG5:[0-5]+]], 0, 3
 ; CHECK-DAG: qvlfdx [[REG6:[0-9]+]], 0, 3
-; CHECK-DAG: qvfperm 2, [[REG4]], [[REG3]], [[REG5]]
-; CHECK-DAG: qvfperm 1, [[REG6]], [[REG4]], [[REG5]]
+; CHECK-DAG: qvfperm 2, {{[0-9]+}}, {{[0-9]+}}, [[REG5]]
+; CHECK-DAG: qvfperm 1, {{[0-9]+}}, {{[0-9]+}}, [[REG5]]
 ; CHECK: blr
 }
 

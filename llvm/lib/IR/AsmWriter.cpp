@@ -696,6 +696,10 @@ private:
   DenseMap<AttributeSet, unsigned> asMap;
   unsigned asNext = 0;
 
+  /// ModulePathMap - The slot map for Module paths used in the summary index.
+  StringMap<unsigned> ModulePathMap;
+  unsigned ModulePathNext = 0;
+
   /// GUIDMap - The slot map for GUIDs used in the summary index.
   DenseMap<GlobalValue::GUID, unsigned> GUIDMap;
   unsigned GUIDNext = 0;
@@ -729,6 +733,7 @@ public:
   int getGlobalSlot(const GlobalValue *V);
   int getMetadataSlot(const MDNode *N);
   int getAttributeGroupSlot(AttributeSet AS);
+  int getModulePathSlot(StringRef Path);
   int getGUIDSlot(GlobalValue::GUID GUID);
 
   /// If you'd like to deal with a function instead of just a module, use
@@ -765,8 +770,8 @@ public:
   using guid_iterator = DenseMap<GlobalValue::GUID, unsigned>::iterator;
 
   /// These functions do the actual initialization.
-  inline void initialize();
-  void initializeIndex();
+  inline void initializeIfNeeded();
+  void initializeIndexIfNeeded();
 
   // Implementation Details
 private:
@@ -782,6 +787,7 @@ private:
   /// Insert the specified AttributeSet into the slot table.
   void CreateAttributeSetSlot(AttributeSet AS);
 
+  inline void CreateModulePathSlot(StringRef Path);
   void CreateGUIDSlot(GlobalValue::GUID GUID);
 
   /// Add all of the module level global variables (and their initializers)
@@ -891,7 +897,7 @@ SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata)
 SlotTracker::SlotTracker(const ModuleSummaryIndex *Index)
     : TheModule(nullptr), ShouldInitializeAllMetadata(false), TheIndex(Index) {}
 
-inline void SlotTracker::initialize() {
+inline void SlotTracker::initializeIfNeeded() {
   if (TheModule) {
     processModule();
     TheModule = nullptr; ///< Prevent re-processing next time we're called.
@@ -901,7 +907,7 @@ inline void SlotTracker::initialize() {
     processFunction();
 }
 
-void SlotTracker::initializeIndex() {
+void SlotTracker::initializeIndexIfNeeded() {
   if (!TheIndex)
     return;
   processIndex();
@@ -1005,8 +1011,16 @@ void SlotTracker::processIndex() {
   assert(TheIndex);
 
   // The first block of slots are just the module ids, which start at 0 and are
-  // assigned consecutively. Start numbering the GUIDs after the module ids.
-  GUIDNext = TheIndex->modulePaths().size();
+  // assigned consecutively. Since the StringMap iteration order isn't
+  // guaranteed, use a std::map to order by module ID before assigning slots.
+  std::map<uint64_t, StringRef> ModuleIdToPathMap;
+  for (auto &ModPath : TheIndex->modulePaths())
+    ModuleIdToPathMap[ModPath.second.first] = ModPath.first();
+  for (auto &ModPair : ModuleIdToPathMap)
+    CreateModulePathSlot(ModPair.second);
+
+  // Start numbering the GUIDs after the module ids.
+  GUIDNext = ModulePathNext;
 
   for (auto &GlobalList : *TheIndex)
     CreateGUIDSlot(GlobalList.first);
@@ -1063,7 +1077,7 @@ void SlotTracker::purgeFunction() {
 /// getGlobalSlot - Get the slot number of a global value.
 int SlotTracker::getGlobalSlot(const GlobalValue *V) {
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   // Find the value in the module map
   ValueMap::iterator MI = mMap.find(V);
@@ -1073,7 +1087,7 @@ int SlotTracker::getGlobalSlot(const GlobalValue *V) {
 /// getMetadataSlot - Get the slot number of a MDNode.
 int SlotTracker::getMetadataSlot(const MDNode *N) {
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   // Find the MDNode in the module map
   mdn_iterator MI = mdnMap.find(N);
@@ -1085,7 +1099,7 @@ int SlotTracker::getLocalSlot(const Value *V) {
   assert(!isa<Constant>(V) && "Can't get a constant or global slot with this!");
 
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   ValueMap::iterator FI = fMap.find(V);
   return FI == fMap.end() ? -1 : (int)FI->second;
@@ -1093,16 +1107,25 @@ int SlotTracker::getLocalSlot(const Value *V) {
 
 int SlotTracker::getAttributeGroupSlot(AttributeSet AS) {
   // Check for uninitialized state and do lazy initialization.
-  initialize();
+  initializeIfNeeded();
 
   // Find the AttributeSet in the module map.
   as_iterator AI = asMap.find(AS);
   return AI == asMap.end() ? -1 : (int)AI->second;
 }
 
+int SlotTracker::getModulePathSlot(StringRef Path) {
+  // Check for uninitialized state and do lazy initialization.
+  initializeIndexIfNeeded();
+
+  // Find the Module path in the map
+  auto I = ModulePathMap.find(Path);
+  return I == ModulePathMap.end() ? -1 : (int)I->second;
+}
+
 int SlotTracker::getGUIDSlot(GlobalValue::GUID GUID) {
   // Check for uninitialized state and do lazy initialization.
-  initializeIndex();
+  initializeIndexIfNeeded();
 
   // Find the GUID in the map
   guid_iterator I = GUIDMap.find(GUID);
@@ -1167,6 +1190,11 @@ void SlotTracker::CreateAttributeSetSlot(AttributeSet AS) {
 
   unsigned DestSlot = asNext++;
   asMap[AS] = DestSlot;
+}
+
+/// Create a new slot for the specified Module
+void SlotTracker::CreateModulePathSlot(StringRef Path) {
+  ModulePathMap[Path] = ModulePathNext++;
 }
 
 /// Create a new slot for the specified GUID
@@ -2474,7 +2502,7 @@ void AssemblyWriter::writeOperandBundles(ImmutableCallSite CS) {
 }
 
 void AssemblyWriter::printModule(const Module *M) {
-  Machine.initialize();
+  Machine.initializeIfNeeded();
 
   if (ShouldPreserveUseListOrder)
     UseListOrders = predictUseListOrder(M);
@@ -2570,27 +2598,23 @@ void AssemblyWriter::printModule(const Module *M) {
 
 void AssemblyWriter::printModuleSummaryIndex() {
   assert(TheIndex);
-  Machine.initializeIndex();
+  Machine.initializeIndexIfNeeded();
 
   Out << "\n";
 
-  // Print module path entries, using the module id as the slot number. To
-  // print in order, add paths to a vector indexed by module id.
+  // Print module path entries. To print in order, add paths to a vector
+  // indexed by module slot.
   std::vector<std::pair<std::string, ModuleHash>> moduleVec;
   std::string RegularLTOModuleName = "[Regular LTO]";
   moduleVec.resize(TheIndex->modulePaths().size());
-  for (auto &ModPath : TheIndex->modulePaths()) {
-    // A module id of -1 is a special entry for a regular LTO module created
-    // during the thin link.
-    if (ModPath.second.first == -1u)
-      moduleVec[TheIndex->modulePaths().size() - 1] =
-          std::make_pair(RegularLTOModuleName, ModPath.second.second);
-    else {
-      assert(ModPath.second.first < moduleVec.size());
-      moduleVec[ModPath.second.first] =
-          std::make_pair(ModPath.first(), ModPath.second.second);
-    }
-  }
+  for (auto &ModPath : TheIndex->modulePaths())
+    moduleVec[Machine.getModulePathSlot(ModPath.first())] = std::make_pair(
+        // A module id of -1 is a special entry for a regular LTO module created
+        // during the thin link.
+        ModPath.second.first == -1u ? RegularLTOModuleName
+                                    : (std::string)ModPath.first(),
+        ModPath.second.second);
+
   unsigned i = 0;
   for (auto &ModPair : moduleVec) {
     Out << "^" << i++ << " = module: (";
@@ -2764,8 +2788,14 @@ static const char *getSummaryKindName(GlobalValueSummary::SummaryKind SK) {
 }
 
 void AssemblyWriter::printAliasSummary(const AliasSummary *AS) {
-  Out << ", aliasee: ^"
-      << Machine.getGUIDSlot(SummaryToGUIDMap[&AS->getAliasee()]);
+  Out << ", aliasee: ";
+  // The indexes emitted for distributed backends may not include the
+  // aliasee summary (only if it is being imported directly). Handle
+  // that case by just emitting "null" as the aliasee.
+  if (AS->hasAliasee())
+    Out << "^" << Machine.getGUIDSlot(SummaryToGUIDMap[&AS->getAliasee()]);
+  else
+    Out << "null";
 }
 
 void AssemblyWriter::printGlobalVarSummary(const GlobalVarSummary *GS) {
@@ -2937,7 +2967,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   GlobalValueSummary::GVFlags GVFlags = Summary.flags();
   GlobalValue::LinkageTypes LT = (GlobalValue::LinkageTypes)GVFlags.Linkage;
   Out << getSummaryKindName(Summary.getSummaryKind()) << ": ";
-  Out << "(module: ^" << TheIndex->getModuleId(Summary.modulePath())
+  Out << "(module: ^" << Machine.getModulePathSlot(Summary.modulePath())
       << ", flags: (";
   Out << "linkage: " << getLinkageName(LT);
   Out << ", notEligibleToImport: " << GVFlags.NotEligibleToImport;

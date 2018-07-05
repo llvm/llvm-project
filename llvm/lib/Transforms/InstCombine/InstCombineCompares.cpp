@@ -4485,9 +4485,6 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpWithConstant(I))
     return Res;
 
-  if (Instruction *Res = foldICmpUsingKnownBits(I))
-    return Res;
-
   // Test if the ICmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
   // any other folding. This helps out other analyses which understand
@@ -4706,6 +4703,13 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     if (match(Op1, m_Add(m_Value(X), m_ConstantInt(Cst))) && Op0 == X)
       return foldICmpAddOpConst(X, Cst, I.getSwappedPredicate());
   }
+
+  // This may be expensive in compile-time, and transforms based on known bits
+  // can make further analysis more difficult, so we use it as the last resort
+  // if we cannot do anything better.
+  if (Instruction *Res = foldICmpUsingKnownBits(I))
+    return Res;
+
   return Changed ? &I : nullptr;
 }
 

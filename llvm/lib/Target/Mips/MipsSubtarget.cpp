@@ -61,8 +61,10 @@ static cl::opt<bool>
           cl::desc("Enable gp-relative addressing of mips small data items"));
 
 bool MipsSubtarget::DspWarningPrinted = false;
-
 bool MipsSubtarget::MSAWarningPrinted = false;
+bool MipsSubtarget::VirtWarningPrinted = false;
+bool MipsSubtarget::CRCWarningPrinted = false;
+bool MipsSubtarget::GINVWarningPrinted = false;
 
 void MipsSubtarget::anchor() {}
 
@@ -172,16 +174,27 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
     }
   }
 
-  if (hasMSA() && !MSAWarningPrinted) {
-    if (hasMips64() && !hasMips64r5()) {
-      errs() << "warning: the 'msa' ASE requires MIPS64 revision 5 or "
-             << "greater\n";
-      MSAWarningPrinted = true;
-    } else if (hasMips32() && !hasMips32r5()) {
-      errs() << "warning: the 'msa' ASE requires MIPS32 revision 5 or "
-             << "greater\n";
-      MSAWarningPrinted = true;
-    }
+  StringRef ArchName = hasMips64() ? "MIPS64" : "MIPS32";
+
+  if (!hasMips32r5() && hasMSA() && !MSAWarningPrinted) {
+    errs() << "warning: the 'msa' ASE requires " << ArchName
+           << " revision 5 or greater\n";
+    MSAWarningPrinted = true;
+  }
+  if (!hasMips32r5() && hasVirt() && !VirtWarningPrinted) {
+    errs() << "warning: the 'virt' ASE requires " << ArchName
+           << " revision 5 or greater\n";
+    VirtWarningPrinted = true;
+  }
+  if (!hasMips32r6() && hasCRC() && !CRCWarningPrinted) {
+    errs() << "warning: the 'crc' ASE requires " << ArchName
+           << " revision 6 or greater\n";
+    CRCWarningPrinted = true;
+  }
+  if (!hasMips32r6() && hasGINV() && !GINVWarningPrinted) {
+    errs() << "warning: the 'ginv' ASE requires " << ArchName
+           << " revision 6 or greater\n";
+    GINVWarningPrinted = true;
   }
 
   CallLoweringInfo.reset(new MipsCallLowering(*getTargetLowering()));

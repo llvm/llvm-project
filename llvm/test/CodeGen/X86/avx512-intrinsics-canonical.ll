@@ -2507,25 +2507,17 @@ define <4 x float> @test_mm_mask3_fnmsub_round_ss(<4 x float> %__W, <4 x float> 
 ; X86-LABEL: test_mm_mask3_fnmsub_round_ss:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0,-0,-0,-0]
-; X86-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x18,0x1d,A,A,A,A]
-; X86-NEXT:    ## fixup A - offset: 5, value: LCPI119_0, kind: FK_Data_4
-; X86-NEXT:    vxorps %xmm3, %xmm1, %xmm1 ## encoding: [0xc5,0xf0,0x57,0xcb]
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vfmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbb,0xd1]
-; X86-NEXT:    ## xmm2 = (xmm0 * xmm1) - xmm2
+; X86-NEXT:    vfnmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbf,0xd1]
+; X86-NEXT:    ## xmm2 = -(xmm0 * xmm1) - xmm2
 ; X86-NEXT:    vmovaps %xmm2, %xmm0 ## encoding: [0xc5,0xf8,0x28,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: test_mm_mask3_fnmsub_round_ss:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0,-0,-0,-0]
-; X64-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x18,0x1d,A,A,A,A]
-; X64-NEXT:    ## fixup A - offset: 5, value: LCPI119_0-4, kind: reloc_riprel_4byte
-; X64-NEXT:    vxorps %xmm3, %xmm1, %xmm1 ## encoding: [0xc5,0xf0,0x57,0xcb]
 ; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vfmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbb,0xd1]
-; X64-NEXT:    ## xmm2 = (xmm0 * xmm1) - xmm2
+; X64-NEXT:    vfnmsub231ss %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0x7d,0x09,0xbf,0xd1]
+; X64-NEXT:    ## xmm2 = -(xmm0 * xmm1) - xmm2
 ; X64-NEXT:    vmovaps %xmm2, %xmm0 ## encoding: [0xc5,0xf8,0x28,0xc2]
 ; X64-NEXT:    retq ## encoding: [0xc3]
 entry:
@@ -3133,21 +3125,17 @@ define <2 x double> @test_mm_mask3_fnmsub_round_sd(<2 x double> %__W, <2 x doubl
 ; X86-LABEL: test_mm_mask3_fnmsub_round_sd:
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al ## encoding: [0x8a,0x44,0x24,0x04]
-; X86-NEXT:    vxorpd LCPI143_0, %xmm1, %xmm1 ## encoding: [0xc5,0xf1,0x57,0x0d,A,A,A,A]
-; X86-NEXT:    ## fixup A - offset: 4, value: LCPI143_0, kind: FK_Data_4
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
-; X86-NEXT:    vfmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbb,0xd1]
-; X86-NEXT:    ## xmm2 = (xmm0 * xmm1) - xmm2
+; X86-NEXT:    vfnmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbf,0xd1]
+; X86-NEXT:    ## xmm2 = -(xmm0 * xmm1) - xmm2
 ; X86-NEXT:    vmovapd %xmm2, %xmm0 ## encoding: [0xc5,0xf9,0x28,0xc2]
 ; X86-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-LABEL: test_mm_mask3_fnmsub_round_sd:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vxorpd {{.*}}(%rip), %xmm1, %xmm1 ## encoding: [0xc5,0xf1,0x57,0x0d,A,A,A,A]
-; X64-NEXT:    ## fixup A - offset: 4, value: LCPI143_0-4, kind: reloc_riprel_4byte
 ; X64-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; X64-NEXT:    vfmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbb,0xd1]
-; X64-NEXT:    ## xmm2 = (xmm0 * xmm1) - xmm2
+; X64-NEXT:    vfnmsub231sd %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0xbf,0xd1]
+; X64-NEXT:    ## xmm2 = -(xmm0 * xmm1) - xmm2
 ; X64-NEXT:    vmovapd %xmm2, %xmm0 ## encoding: [0xc5,0xf9,0x28,0xc2]
 ; X64-NEXT:    retq ## encoding: [0xc3]
 entry:

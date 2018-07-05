@@ -69,11 +69,9 @@ define <2 x i1> @icmp_shl_nsw_eq_vec(<2 x i32> %x) {
 ; icmp sgt with shl nsw with a constant compare operand and constant
 ; shift amount can always be reduced to icmp sgt alone.
 
-; Known bits analysis turns this into an equality predicate.
-
 define i1 @icmp_sgt1(i8 %x) {
 ; CHECK-LABEL: @icmp_sgt1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 %x, -64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 %x, -64
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 1
@@ -144,11 +142,10 @@ define i1 @icmp_sgt7(i8 %x) {
   ret i1 %cmp
 }
 
-; Known bits analysis turns this into an equality predicate.
 
 define i1 @icmp_sgt8(i8 %x) {
 ; CHECK-LABEL: @icmp_sgt8(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 %x, 63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 %x, 62
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 1
@@ -158,11 +155,9 @@ define i1 @icmp_sgt8(i8 %x) {
 
 ; Compares with 126 and 127 are recognized as always false.
 
-; Known bits analysis turns this into an equality predicate.
-
 define i1 @icmp_sgt9(i8 %x) {
 ; CHECK-LABEL: @icmp_sgt9(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 %x, -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 %x, -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 7
@@ -210,11 +205,9 @@ define <2 x i1> @icmp_sgt11_vec(<2 x i8> %x) {
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; Known bits analysis turns this into an equality predicate.
-
 define i1 @icmp_sle1(i8 %x) {
 ; CHECK-LABEL: @icmp_sle1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 %x, -64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 %x, -63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 1
@@ -285,11 +278,9 @@ define i1 @icmp_sle7(i8 %x) {
   ret i1 %cmp
 }
 
-; Known bits analysis turns this into an equality predicate.
-
 define i1 @icmp_sle8(i8 %x) {
 ; CHECK-LABEL: @icmp_sle8(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 %x, 63
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 %x, 63
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 1
@@ -299,11 +290,9 @@ define i1 @icmp_sle8(i8 %x) {
 
 ; Compares with 126 and 127 are recognized as always true.
 
-; Known bits analysis turns this into an equality predicate.
-
 define i1 @icmp_sle9(i8 %x) {
 ; CHECK-LABEL: @icmp_sle9(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 %x, -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 %x, 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl = shl nsw i8 %x, 7
@@ -353,4 +342,3 @@ define i1 @icmp_ne1(i8 %x) {
   %cmp = icmp ne i8 %shl, -128
   ret i1 %cmp
 }
-

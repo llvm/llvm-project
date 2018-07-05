@@ -30,7 +30,7 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; CHECK: ADJCALLSTACKDOWN 8, 0, 14, $noreg, implicit-def $sp, implicit $sp
 ; CHECK-DAG: $r0 = COPY [[BVREG]]
 ; CHECK-DAG: $r1 = COPY [[AVREG]]
-; CHECK-DxAG: $r2 = COPY [[BVREG]]
+; CHECK-DAG: $r2 = COPY [[BVREG]]
 ; CHECK-DAG: $r3 = COPY [[AVREG]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0

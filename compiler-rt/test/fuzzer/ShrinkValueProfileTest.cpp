@@ -1,7 +1,7 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 
-// Test that we can find the minimal item in the corpus (3 bytes: "FUZ").
+// Test that we can find the minimal item in the corpus (4 bytes: "FUZZ").
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
