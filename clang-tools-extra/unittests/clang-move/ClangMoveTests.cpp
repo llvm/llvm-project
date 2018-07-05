@@ -239,8 +239,10 @@ runClangMoveOnCode(const move::MoveDefinitionSpec &Spec,
   // The Key is file name, value is the new code after moving the class.
   std::map<std::string, std::string> Results;
   for (const auto &It : FileToReplacements) {
-    StringRef FilePath = It.first;
-    Results[FilePath] = Context.getRewrittenText(FileToFileID[FilePath]);
+    // The path may come out as "./foo.h", normalize to "foo.h".
+    SmallString<32> FilePath (It.first);
+    llvm::sys::path::remove_dots(FilePath);
+    Results[FilePath.str().str()] = Context.getRewrittenText(FileToFileID[FilePath]);
   }
   return Results;
 }

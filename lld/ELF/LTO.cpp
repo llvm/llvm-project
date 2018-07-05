@@ -201,9 +201,6 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 
 static void createEmptyIndex(StringRef ModulePath) {
   std::string Path = replaceThinLTOSuffix(getThinLTOOutputFile(ModulePath));
-  if (Path.empty())
-    return;
-
   std::unique_ptr<raw_fd_ostream> OS = openFile(Path + ".thinlto.bc");
   if (!OS)
     return;
