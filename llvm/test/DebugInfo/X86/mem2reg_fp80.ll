@@ -10,7 +10,7 @@ entry:
   br i1 undef, label %if.then, label %if.end, !dbg !16
 
 if.then:                                          ; preds = %entry
-; CHECK-label: if.then:
+; CHECK-LABEL: if.then:
 ; CHECK: %mul = fmul x86_fp80
 ; CHECK: call void @llvm.dbg.value(metadata x86_fp80 %mul, metadata {{.*}}, metadata !DIExpression())
   %mul = fmul x86_fp80 undef, undef, !dbg !18
@@ -18,7 +18,7 @@ if.then:                                          ; preds = %entry
   br label %if.end, !dbg !20
 
 if.end:                                           ; preds = %if.then, %entry
-; CHECK-label: if.end:
+; CHECK-LABEL: if.end:
 ; CHECK: %r.0 = phi x86_fp80
 ; CHECK: call void @llvm.dbg.value(metadata x86_fp80 %r.0, metadata {{.*}}, metadata !DIExpression())
   %out = load x86_fp80, x86_fp80* %r, align 16, !dbg !21

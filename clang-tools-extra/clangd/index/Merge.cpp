@@ -115,6 +115,9 @@ mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch) {
     } else
       S.Detail = O.Detail;
   }
+
+  S.Origin =
+      static_cast<SymbolOrigin>(S.Origin | O.Origin | SymbolOrigin::Merge);
   return S;
 }
 

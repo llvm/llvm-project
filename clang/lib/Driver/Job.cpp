@@ -318,10 +318,12 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
   SmallVector<const char*, 128> Argv;
 
   Optional<ArrayRef<StringRef>> Env;
+  std::vector<StringRef> ArgvVectorStorage;
   if (!Environment.empty()) {
     assert(Environment.back() == nullptr &&
            "Environment vector should be null-terminated by now");
-    Env = llvm::toStringRefArray(Environment.data());
+    ArgvVectorStorage = llvm::toStringRefArray(Environment.data());
+    Env = makeArrayRef(ArgvVectorStorage);
   }
 
   if (ResponseFile == nullptr) {

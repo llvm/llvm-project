@@ -200,6 +200,13 @@ static cl::alias
 PrivateHeadersShort("p", cl::desc("Alias for --private-headers"),
                     cl::aliasopt(PrivateHeaders));
 
+cl::opt<bool> llvm::FileHeaders(
+    "file-headers",
+    cl::desc("Display the contents of the overall file header"));
+
+static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
+                                  cl::aliasopt(FileHeaders));
+
 cl::opt<bool>
     llvm::PrintImmHex("print-imm-hex",
                       cl::desc("Use hex format for immediate values"));
@@ -2123,6 +2130,20 @@ static void printPrivateFileHeaders(const ObjectFile *o, bool onlyFirst) {
   report_error(o->getFileName(), "Invalid/Unsupported object file format");
 }
 
+static void printFileHeaders(const ObjectFile *o) {
+  if (!o->isELF() && !o->isCOFF())
+    report_error(o->getFileName(), "Invalid/Unsupported object file format");
+
+  Triple::ArchType AT = o->getArch();
+  outs() << "architecture: " << Triple::getArchTypeName(AT) << "\n";
+  Expected<uint64_t> StartAddrOrErr = o->getStartAddress();
+  if (!StartAddrOrErr)
+    report_error(o->getFileName(), StartAddrOrErr.takeError());
+  outs() << "start address: "
+         << format("0x%0*x", o->getBytesInAddress(), StartAddrOrErr.get())
+         << "\n";
+}
+
 static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
   StringRef ArchiveName = a != nullptr ? a->getFileName() : "";
   // Avoid other output when using a raw option.
@@ -2151,6 +2172,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
     PrintUnwindInfo(o);
   if (PrivateHeaders || FirstPrivateHeader)
     printPrivateFileHeaders(o, FirstPrivateHeader);
+  if (FileHeaders)
+    printFileHeaders(o);
   if (ExportsTrie)
     printExportsTrie(o);
   if (Rebase)
@@ -2267,6 +2290,7 @@ int main(int argc, char **argv) {
       && !SymbolTable
       && !UnwindInfo
       && !PrivateHeaders
+      && !FileHeaders
       && !FirstPrivateHeader
       && !ExportsTrie
       && !Rebase

@@ -55,6 +55,12 @@
 
 #include <numeric>
 
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
+#include <unistd.h>
+#else
+#include <io.h>
+#endif
+
 using namespace llvm;
 
 #define DEBUG_TYPE "thinlto"
@@ -391,7 +397,18 @@ public:
   ErrorOr<std::unique_ptr<MemoryBuffer>> tryLoadingBuffer() {
     if (EntryPath.empty())
       return std::error_code();
-    return MemoryBuffer::getFile(EntryPath);
+    int FD;
+    SmallString<64> ResultPath;
+    std::error_code EC = sys::fs::openFileForRead(
+        Twine(EntryPath), FD, sys::fs::OF_UpdateAtime, &ResultPath);
+    if (EC)
+      return EC;
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+        MemoryBuffer::getOpenFile(FD, EntryPath,
+                                  /*FileSize*/ -1,
+                                  /*RequiresNullTerminator*/ false);
+    close(FD);
+    return MBOrErr;
   }
 
   // Cache the Produced object file

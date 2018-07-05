@@ -9,7 +9,7 @@
 
 define i32 @test_lshr_and1(i32 %x) {
 entry:
-;CHECK-LABLE: test_lshr_and1:
+;CHECK-LABEL: test_lshr_and1:
 ;CHECK-COMMON:      movw r1, :lower16:array
 ;CHECK-COMMON-NEXT: and  r0, r0, #12
 ;CHECK-COMMON-NEXT: movt r1, :upper16:array

@@ -282,6 +282,8 @@ TEST(MergeTest, Merge) {
   DetR.Documentation = "--doc--";
   L.Detail = &DetL;
   R.Detail = &DetR;
+  L.Origin = SymbolOrigin::Dynamic;
+  R.Origin = SymbolOrigin::Static;
 
   Symbol::Details Scratch;
   Symbol M = mergeSymbol(L, R, &Scratch);
@@ -293,6 +295,8 @@ TEST(MergeTest, Merge) {
   ASSERT_TRUE(M.Detail);
   EXPECT_EQ(M.Detail->ReturnType, "DetL");
   EXPECT_EQ(M.Detail->Documentation, "--doc--");
+  EXPECT_EQ(M.Origin,
+            SymbolOrigin::Dynamic | SymbolOrigin::Static | SymbolOrigin::Merge);
 }
 
 TEST(MergeTest, PreferSymbolWithDefn) {

@@ -671,20 +671,6 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   if (Instruction *Result = commonCastTransforms(CI))
     return Result;
 
-  // Test if the trunc is the user of a select which is part of a
-  // minimum or maximum operation. If so, don't do any more simplification.
-  // Even simplifying demanded bits can break the canonical form of a
-  // min/max.
-  Value *LHS, *RHS;
-  if (SelectInst *SI = dyn_cast<SelectInst>(CI.getOperand(0)))
-    if (matchSelectPattern(SI, LHS, RHS).Flavor != SPF_UNKNOWN)
-      return nullptr;
-
-  // See if we can simplify any instructions used by the input whose sole
-  // purpose is to compute bits we don't care about.
-  if (SimplifyDemandedInstructionBits(CI))
-    return &CI;
-
   Value *Src = CI.getOperand(0);
   Type *DestTy = CI.getType(), *SrcTy = Src->getType();
 
@@ -705,6 +691,20 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     assert(Res->getType() == DestTy);
     return replaceInstUsesWith(CI, Res);
   }
+
+  // Test if the trunc is the user of a select which is part of a
+  // minimum or maximum operation. If so, don't do any more simplification.
+  // Even simplifying demanded bits can break the canonical form of a
+  // min/max.
+  Value *LHS, *RHS;
+  if (SelectInst *SI = dyn_cast<SelectInst>(CI.getOperand(0)))
+    if (matchSelectPattern(SI, LHS, RHS).Flavor != SPF_UNKNOWN)
+      return nullptr;
+
+  // See if we can simplify any instructions used by the input whose sole
+  // purpose is to compute bits we don't care about.
+  if (SimplifyDemandedInstructionBits(CI))
+    return &CI;
 
   // Canonicalize trunc x to i1 -> (icmp ne (and x, 1), 0), likewise for vector.
   if (DestTy->getScalarSizeInBits() == 1) {
@@ -1078,6 +1078,17 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
                << CI << '\n');
     Value *Res = EvaluateInDifferentType(Src, DestTy, false);
     assert(Res->getType() == DestTy);
+
+    // When DestTy is integer, try to preserve any debug values referring
+    // to the zext being replaced.
+    // TODO: This should work for vectors as well, possibly via the use
+    // of DWARF fragments.
+    if (DestTy->isIntegerTy()) {
+      insertReplacementDbgValues(
+          *Src, *Res, CI, [](DbgInfoIntrinsic &OldDII) -> DIExpression * {
+            return OldDII.getExpression();
+          });
+    }
 
     uint32_t SrcBitsKept = SrcTy->getScalarSizeInBits()-BitsToClear;
     uint32_t DestBitSize = DestTy->getScalarSizeInBits();

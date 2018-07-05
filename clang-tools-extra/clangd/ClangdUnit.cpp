@@ -88,7 +88,7 @@ public:
   CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
       : File(File), ParsedCallback(ParsedCallback) {}
 
-  std::vector<Inclusion> takeInclusions() { return std::move(Inclusions); }
+  IncludeStructure takeIncludes() { return std::move(Includes); }
 
   void AfterExecute(CompilerInstance &CI) override {
     if (!ParsedCallback)
@@ -103,15 +103,13 @@ public:
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
     assert(SourceMgr && "SourceMgr must be set at this point");
-    return collectInclusionsInMainFileCallback(
-        *SourceMgr,
-        [this](Inclusion Inc) { Inclusions.push_back(std::move(Inc)); });
+    return collectIncludeStructureCallback(*SourceMgr, &Includes);
   }
 
 private:
   PathRef File;
   PreambleParsedCallback ParsedCallback;
-  std::vector<Inclusion> Inclusions;
+  IncludeStructure Includes;
   SourceManager *SourceMgr = nullptr;
 };
 
@@ -153,15 +151,11 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
     return llvm::None;
   }
 
-  std::vector<Inclusion> Inclusions;
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
-  if (Preamble)
-    Inclusions = Preamble->Inclusions;
-
-  Clang->getPreprocessor().addPPCallbacks(collectInclusionsInMainFileCallback(
-      Clang->getSourceManager(),
-      [&Inclusions](Inclusion Inc) { Inclusions.push_back(std::move(Inc)); }));
+  auto Includes = Preamble ? Preamble->Includes : IncludeStructure{};
+  Clang->getPreprocessor().addPPCallbacks(
+      collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
 
   if (!Action->Execute())
     log("Execute() failed when building AST for " + MainInput.getFile());
@@ -179,7 +173,7 @@ ParsedAST::Build(std::unique_ptr<clang::CompilerInvocation> CI,
     Diags.insert(Diags.begin(), Preamble->Diags.begin(), Preamble->Diags.end());
   return ParsedAST(std::move(Preamble), std::move(Clang), std::move(Action),
                    std::move(ParsedDecls), std::move(Diags),
-                   std::move(Inclusions));
+                   std::move(Includes));
 }
 
 ParsedAST::ParsedAST(ParsedAST &&Other) = default;
@@ -246,25 +240,24 @@ std::size_t ParsedAST::getUsedBytes() const {
   return Total;
 }
 
-const std::vector<Inclusion> &ParsedAST::getInclusions() const {
-  return Inclusions;
+const IncludeStructure &ParsedAST::getIncludeStructure() const {
+  return Includes;
 }
 
 PreambleData::PreambleData(PrecompiledPreamble Preamble,
-                           std::vector<Diag> Diags,
-                           std::vector<Inclusion> Inclusions)
+                           std::vector<Diag> Diags, IncludeStructure Includes)
     : Preamble(std::move(Preamble)), Diags(std::move(Diags)),
-      Inclusions(std::move(Inclusions)) {}
+      Includes(std::move(Includes)) {}
 
 ParsedAST::ParsedAST(std::shared_ptr<const PreambleData> Preamble,
                      std::unique_ptr<CompilerInstance> Clang,
                      std::unique_ptr<FrontendAction> Action,
                      std::vector<Decl *> LocalTopLevelDecls,
-                     std::vector<Diag> Diags, std::vector<Inclusion> Inclusions)
+                     std::vector<Diag> Diags, IncludeStructure Includes)
     : Preamble(std::move(Preamble)), Clang(std::move(Clang)),
       Action(std::move(Action)), Diags(std::move(Diags)),
       LocalTopLevelDecls(std::move(LocalTopLevelDecls)),
-      Inclusions(std::move(Inclusions)) {
+      Includes(std::move(Includes)) {
   assert(this->Clang);
   assert(this->Action);
 }
@@ -350,7 +343,7 @@ std::shared_ptr<const PreambleData> clangd::buildPreamble(
         " for file " + Twine(FileName));
     return std::make_shared<PreambleData>(
         std::move(*BuiltPreamble), PreambleDiagnostics.take(),
-        SerializedDeclsCollector.takeInclusions());
+        SerializedDeclsCollector.takeIncludes());
   } else {
     log("Could not build a preamble for file " + Twine(FileName));
     return nullptr;

@@ -396,9 +396,9 @@ define void @store_store_release(i32* %mem1, i32 %val1, i32* %mem2, i32 %val2) {
 ; CHECK-T1-M0: str r3, [r2]
 
 ; CHECK-BAREMETAL-NOT: dmb
-; CHECK-BAREMTEAL: str r1, [r0]
+; CHECK-BAREMETAL: str r1, [r0]
 ; CHECK-BAREMETAL-NOT: dmb
-; CHECK-BAREMTEAL: str r3, [r2]
+; CHECK-BAREMETAL: str r3, [r2]
 
   ret void
 }

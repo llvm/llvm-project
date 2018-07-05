@@ -554,14 +554,14 @@ private:
 
   /// The availability of this code-completion result.
   unsigned Availability : 2;
-  
+
   /// The name of the parent context.
   StringRef ParentName;
 
   /// A brief documentation comment attached to the declaration of
   /// entity being completed by this result.
   const char *BriefComment;
-  
+
   CodeCompletionString(const Chunk *Chunks, unsigned NumChunks,
                        unsigned Priority, CXAvailabilityKind Availability,
                        const char **Annotations, unsigned NumAnnotations,
@@ -599,7 +599,7 @@ public:
 
   /// Retrieve the annotation string specified by \c AnnotationNr.
   const char *getAnnotation(unsigned AnnotationNr) const;
-  
+
   /// Retrieve the name of the parent context.
   StringRef getParentContextName() const {
     return ParentName;
@@ -608,7 +608,7 @@ public:
   const char *getBriefComment() const {
     return BriefComment;
   }
-  
+
   /// Retrieve a string representation of the code completion string,
   /// which is mainly useful for debugging.
   std::string getAsString() const;
@@ -669,7 +669,7 @@ private:
   CXAvailabilityKind Availability = CXAvailability_Available;
   StringRef ParentName;
   const char *BriefComment = nullptr;
-  
+
   /// The chunks stored in this string.
   SmallVector<Chunk, 4> Chunks;
 
@@ -728,7 +728,7 @@ public:
 
   const char *getBriefComment() const { return BriefComment; }
   void addBriefComment(StringRef Comment);
-  
+
   StringRef getParentName() const { return ParentName; }
 };
 
@@ -886,8 +886,8 @@ public:
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
         DeclaringEntity(false) {
     computeCursorKindAndAvailability();
-  }  
-  
+  }
+
   /// Retrieve the declaration stored in this result.
   const NamedDecl *getDeclaration() const {
     assert(Kind == RK_Declaration && "Not a declaration result");

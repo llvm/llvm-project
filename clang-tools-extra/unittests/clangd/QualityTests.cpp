@@ -17,9 +17,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FileDistance.h"
 #include "Quality.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -162,9 +166,22 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
   PoorNameMatch.NameMatch = 0.2f;
   EXPECT_LT(PoorNameMatch.evaluate(), Default.evaluate());
 
-  SymbolRelevanceSignals WithProximity;
-  WithProximity.SemaProximityScore = 0.2f;
-  EXPECT_GT(WithProximity.evaluate(), Default.evaluate());
+  SymbolRelevanceSignals WithSemaProximity;
+  WithSemaProximity.SemaProximityScore = 0.2f;
+  EXPECT_GT(WithSemaProximity.evaluate(), Default.evaluate());
+
+  SymbolRelevanceSignals IndexProximate;
+  IndexProximate.SymbolURI = "unittest:/foo/bar.h";
+  llvm::StringMap<SourceParams> ProxSources;
+  ProxSources.try_emplace(testPath("foo/baz.h"));
+  URIDistance Distance(ProxSources);
+  IndexProximate.FileProximityMatch = &Distance;
+  EXPECT_GT(IndexProximate.evaluate(), Default.evaluate());
+  SymbolRelevanceSignals IndexDistant = IndexProximate;
+  IndexDistant.SymbolURI = "unittest:/elsewhere/path.h";
+  EXPECT_GT(IndexProximate.evaluate(), IndexDistant.evaluate())
+      << IndexProximate << IndexDistant;
+  EXPECT_GT(IndexDistant.evaluate(), Default.evaluate());
 
   SymbolRelevanceSignals Scoped;
   Scoped.Scope = SymbolRelevanceSignals::FileScope;
@@ -185,57 +202,29 @@ TEST(QualityTests, SortText) {
   EXPECT_LT(sortText(0, "a"), sortText(0, "z"));
 }
 
-// {a,b,c} becomes /clangd-test/a/b/c
-std::string joinPaths(llvm::ArrayRef<StringRef> Parts) {
-  return testPath(
-      llvm::join(Parts.begin(), Parts.end(), llvm::sys::path::get_separator()));
-}
+TEST(QualityTests, NoBoostForClassConstructor) {
+  auto Header = TestTU::withHeaderCode(R"cpp(
+    class Foo {
+    public:
+      Foo(int);
+    };
+  )cpp");
+  auto Symbols = Header.headerSymbols();
+  auto AST = Header.build();
 
-static constexpr float ProximityBase = 0.7f;
+  const NamedDecl *Foo = &findDecl(AST, "Foo");
+  SymbolRelevanceSignals Cls;
+  Cls.merge(CodeCompletionResult(Foo, /*Priority=*/0));
 
-// Calculates a proximity score for an index symbol with declaration file
-// SymPath with the given URI scheme.
-float URIProximity(const FileProximityMatcher &Matcher, StringRef SymPath,
-                     StringRef Scheme = "file") {
-  auto U = URI::create(SymPath, Scheme);
-  EXPECT_TRUE(static_cast<bool>(U)) << llvm::toString(U.takeError());
-  return Matcher.uriProximity(U->toString());
-}
+  const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
+    return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
+           llvm::isa<CXXConstructorDecl>(&ND);
+  });
+  SymbolRelevanceSignals Ctor;
+  Ctor.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
 
-TEST(QualityTests, URIProximityScores) {
-  FileProximityMatcher Matcher(
-      /*ProximityPaths=*/{joinPaths({"a", "b", "c", "d", "x"})});
-
-  EXPECT_FLOAT_EQ(URIProximity(Matcher, joinPaths({"a", "b", "c", "d", "x"})),
-                  1);
-  EXPECT_FLOAT_EQ(URIProximity(Matcher, joinPaths({"a", "b", "c", "d", "y"})),
-                  ProximityBase);
-  EXPECT_FLOAT_EQ(URIProximity(Matcher, joinPaths({"a", "y", "z"})),
-                  std::pow(ProximityBase, 5));
-  EXPECT_FLOAT_EQ(
-      URIProximity(Matcher, joinPaths({"a", "b", "c", "d", "e", "y"})),
-      std::pow(ProximityBase, 2));
-  EXPECT_FLOAT_EQ(
-      URIProximity(Matcher, joinPaths({"a", "b", "m", "n", "o", "y"})),
-      std::pow(ProximityBase, 5));
-  EXPECT_FLOAT_EQ(
-      URIProximity(Matcher, joinPaths({"a", "t", "m", "n", "o", "y"})),
-      std::pow(ProximityBase, 6));
-  // Note the common directory is /clang-test/
-  EXPECT_FLOAT_EQ(URIProximity(Matcher, joinPaths({"m", "n", "o", "p", "y"})),
-                  std::pow(ProximityBase, 7));
-}
-
-TEST(QualityTests, URIProximityScoresWithTestURI) {
-  FileProximityMatcher Matcher(
-      /*ProximityPaths=*/{joinPaths({"b", "c", "x"})});
-  EXPECT_FLOAT_EQ(URIProximity(Matcher, joinPaths({"b", "c", "x"}), "unittest"),
-                  1);
-  EXPECT_FLOAT_EQ(URIProximity(Matcher, joinPaths({"b", "y"}), "unittest"),
-                  std::pow(ProximityBase, 2));
-  // unittest:///b/c/x vs unittest:///m/n/y. No common directory.
-  EXPECT_FLOAT_EQ(URIProximity(Matcher, joinPaths({"m", "n", "y"}), "unittest"),
-                  std::pow(ProximityBase, 4));
+  EXPECT_EQ(Cls.Scope, SymbolRelevanceSignals::GlobalScope);
+  EXPECT_EQ(Ctor.Scope, SymbolRelevanceSignals::GlobalScope);
 }
 
 } // namespace

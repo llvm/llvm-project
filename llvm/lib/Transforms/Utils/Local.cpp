@@ -1605,8 +1605,13 @@ void llvm::salvageDebugInfo(Instruction &I) {
 
   auto doSalvage = [&](DbgInfoIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
     auto *DIExpr = DII->getExpression();
-    DIExpr =
-        DIExpression::prependOpcodes(DIExpr, Ops, DIExpression::WithStackValue);
+    if (!Ops.empty()) {
+      // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
+      // are implicitly pointing out the value as a DWARF memory location
+      // description.
+      bool WithStackValue = isa<DbgValueInst>(DII);
+      DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
+    }
     DII->setOperand(0, wrapMD(I.getOperand(0)));
     DII->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');

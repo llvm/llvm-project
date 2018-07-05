@@ -819,8 +819,8 @@ private:
                             std::unique_ptr<llvm::MCParsedAsmOperand> &&Dst);
   bool VerifyAndAdjustOperands(OperandVector &OrigOperands,
                                OperandVector &FinalOperands);
-  std::unique_ptr<X86Operand> ParseOperand(StringRef Mnemonic);
-  std::unique_ptr<X86Operand> ParseATTOperand(StringRef Mnemonic);
+  std::unique_ptr<X86Operand> ParseOperand();
+  std::unique_ptr<X86Operand> ParseATTOperand();
   std::unique_ptr<X86Operand> ParseIntelOperand();
   std::unique_ptr<X86Operand> ParseIntelOffsetOfOperator();
   bool ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End);
@@ -835,8 +835,7 @@ private:
                                      InlineAsmIdentifierInfo &Info,
                                      bool IsUnevaluatedOperand, SMLoc &End);
 
-  std::unique_ptr<X86Operand> ParseMemOperand(unsigned SegReg, SMLoc StartLoc,
-                                              StringRef Mnemonic);
+  std::unique_ptr<X86Operand> ParseMemOperand(unsigned SegReg, SMLoc MemStart);
 
   bool ParseIntelMemoryOperandSize(unsigned &Size);
   std::unique_ptr<X86Operand>
@@ -1011,7 +1010,8 @@ static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
   // and then only in non-64-bit modes.
   if (X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg) &&
       (Is64BitMode || (BaseReg != X86::BX && BaseReg != X86::BP &&
-                       BaseReg != X86::SI && BaseReg != X86::DI))) {
+                       BaseReg != X86::SI && BaseReg != X86::DI)) &&
+      BaseReg != X86::DX) {
     ErrMsg = "invalid 16-bit base register";
     return true;
   }
@@ -1099,7 +1099,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
     // checked.
     // FIXME: Check AH, CH, DH, BH cannot be used in an instruction requiring a
     // REX prefix.
-    if (RegNo == X86::RIZ ||
+    if (RegNo == X86::RIZ || RegNo == X86::RIP || RegNo == X86::EIP ||
         X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo) ||
         X86II::isX86_64NonExtLowByteReg(RegNo) ||
         X86II::isX86_64ExtendedReg(RegNo))
@@ -1332,10 +1332,10 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
   return false;
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::ParseOperand(StringRef Mnemonic) {
+std::unique_ptr<X86Operand> X86AsmParser::ParseOperand() {
   if (isParsingIntelSyntax())
     return ParseIntelOperand();
-  return ParseATTOperand(Mnemonic);
+  return ParseATTOperand();
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
@@ -1932,12 +1932,12 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
                                BaseReg, IndexReg, Scale, Start, End, Size);
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand(StringRef Mnemonic) {
+std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
   MCAsmParser &Parser = getParser();
   switch (getLexer().getKind()) {
   default:
     // Parse a memory operand with no segment register.
-    return ParseMemOperand(0, Parser.getTok().getLoc(), Mnemonic);
+    return ParseMemOperand(0, Parser.getTok().getLoc());
   case AsmToken::Percent: {
     // Read the register.
     unsigned RegNo;
@@ -1963,7 +1963,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand(StringRef Mnemonic) {
       return ErrorOperand(Start, "invalid segment register");
 
     getParser().Lex(); // Eat the colon.
-    return ParseMemOperand(RegNo, Start, Mnemonic);
+    return ParseMemOperand(RegNo, Start);
   }
   case AsmToken::Dollar: {
     // $42 -> immediate.
@@ -2089,8 +2089,7 @@ bool X86AsmParser::HandleAVX512Operand(OperandVector &Operands,
 /// ParseMemOperand: segment: disp(basereg, indexreg, scale).  The '%ds:' prefix
 /// has already been parsed if present.
 std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
-                                                          SMLoc MemStart,
-                                                          StringRef Mnemonic) {
+                                                          SMLoc MemStart) {
 
   MCAsmParser &Parser = getParser();
   // We have to disambiguate a parenthesized expression "(4+5)" from the start
@@ -2245,16 +2244,8 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   // documented form in various unofficial manuals, so a lot of code uses it.
   if (BaseReg == X86::DX && IndexReg == 0 && Scale == 1 &&
       SegReg == 0 && isa<MCConstantExpr>(Disp) &&
-      cast<MCConstantExpr>(Disp)->getValue() == 0 &&
-      (Mnemonic == "outb" || Mnemonic == "outsb" ||
-       Mnemonic == "outw" || Mnemonic == "outsw" ||
-       Mnemonic == "outl" || Mnemonic == "outsl" ||
-       Mnemonic == "out" || Mnemonic == "outs" ||
-       Mnemonic == "inb" || Mnemonic == "insb" ||
-       Mnemonic == "inw" || Mnemonic == "insw" ||
-       Mnemonic == "inl" || Mnemonic == "insl" ||
-       Mnemonic == "in" || Mnemonic == "ins"))
-    return X86Operand::CreateReg(BaseReg, BaseLoc, BaseLoc);
+      cast<MCConstantExpr>(Disp)->getValue() == 0)
+    return X86Operand::CreateDXReg(BaseLoc, BaseLoc);
 
   StringRef ErrMsg;
   if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, is64BitMode(),
@@ -2517,7 +2508,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
     // Read the operands.
     while(1) {
-      if (std::unique_ptr<X86Operand> Op = ParseOperand(Name)) {
+      if (std::unique_ptr<X86Operand> Op = ParseOperand()) {
         Operands.push_back(std::move(Op));
         if (HandleAVX512Operand(Operands, *Operands.back()))
           return true;
@@ -2585,6 +2576,27 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
           getX86SubSuperRegisterOrZero(Op1.getReg(), is16BitMode() ? 16 : 32);
       Operands[1] = X86Operand::CreateReg(Reg, Loc, Loc);
     }
+  }
+
+  // This is a terrible hack to handle "out[s]?[bwl]? %al, (%dx)" ->
+  // "outb %al, %dx".  Out doesn't take a memory form, but this is a widely
+  // documented form in various unofficial manuals, so a lot of code uses it.
+  if ((Name == "outb" || Name == "outsb" || Name == "outw" || Name == "outsw" ||
+       Name == "outl" || Name == "outsl" || Name == "out" || Name == "outs") &&
+      Operands.size() == 3) {
+    X86Operand &Op = (X86Operand &)*Operands.back();
+    if (Op.isDXReg())
+      Operands.back() = X86Operand::CreateReg(X86::DX, Op.getStartLoc(),
+                                              Op.getEndLoc());
+  }
+  // Same hack for "in[s]?[bwl]? (%dx), %al" -> "inb %dx, %al".
+  if ((Name == "inb" || Name == "insb" || Name == "inw" || Name == "insw" ||
+       Name == "inl" || Name == "insl" || Name == "in" || Name == "ins") &&
+      Operands.size() == 3) {
+    X86Operand &Op = (X86Operand &)*Operands[1];
+    if (Op.isDXReg())
+      Operands[1] = X86Operand::CreateReg(X86::DX, Op.getStartLoc(),
+                                          Op.getEndLoc());
   }
 
   SmallVector<std::unique_ptr<MCParsedAsmOperand>, 2> TmpOperands;

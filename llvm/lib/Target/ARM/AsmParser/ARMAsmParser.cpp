@@ -1030,7 +1030,12 @@ public:
     if (!isImm()) return false;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
-    int64_t Value = -CE->getValue();
+    // isImm0_4095Neg is used with 32-bit immediates only.
+    // 32-bit immediates are zero extended to 64-bit when parsed,
+    // thus simple -CE->getValue() results in a big negative number,
+    // not a small positive number as intended
+    if ((CE->getValue() >> 32) > 0) return false;
+    uint32_t Value = -static_cast<uint32_t>(CE->getValue());
     return Value > 0 && Value < 4096;
   }
 
@@ -2242,7 +2247,7 @@ public:
     // The operand is actually an imm0_4095, but we have its
     // negation in the assembly source, so twiddle it here.
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
-    Inst.addOperand(MCOperand::createImm(-CE->getValue()));
+    Inst.addOperand(MCOperand::createImm(-(uint32_t)CE->getValue()));
   }
 
   void addUnsignedOffset_b8s2Operands(MCInst &Inst, unsigned N) const {

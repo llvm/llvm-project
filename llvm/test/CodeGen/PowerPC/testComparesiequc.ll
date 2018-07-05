@@ -71,10 +71,10 @@ define void @test_iequc_store(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    xor r3, r3, r4
-; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
-; CHECK-NEXT:    stb r3, 0(r12)
+; CHECK-NEXT:    stb r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp eq i8 %a, %b
@@ -87,8 +87,8 @@ entry:
 define void @test_iequc_sext_store(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: test_iequc_sext_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
+; CHECK-NEXT:    xor r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-NEXT:    srwi r3, r3, 5

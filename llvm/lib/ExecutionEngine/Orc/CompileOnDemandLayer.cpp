@@ -322,11 +322,15 @@ std::unique_ptr<Module> CompileOnDemandLayer2::extractFunctions(
   ValueToValueMapTy VMap;
 
   auto Materializer = createLambdaValueMaterializer([&](Value *V) -> Value * {
+    GlobalValue *NewGV = nullptr;
     if (auto *F = dyn_cast<Function>(V))
-      return cloneFunctionDecl(*ExtractedFunctionsModule, *F);
+      NewGV = cloneFunctionDecl(*ExtractedFunctionsModule, *F);
     else if (auto *GV = dyn_cast<GlobalVariable>(V))
-      return cloneGlobalVariableDecl(*ExtractedFunctionsModule, *GV);
-    return nullptr;
+      NewGV = cloneGlobalVariableDecl(*ExtractedFunctionsModule, *GV);
+
+    if (NewGV)
+      NewGV->setLinkage(GlobalValue::ExternalLinkage);
+    return NewGV;
   });
 
   std::vector<std::pair<Function *, Function *>> OrigToNew;

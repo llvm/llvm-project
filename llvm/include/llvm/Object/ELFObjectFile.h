@@ -373,6 +373,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
+  Expected<uint64_t> getStartAddress() const override;
 
   unsigned getPlatformFlags() const override { return EF.getHeader()->e_flags; }
 
@@ -1141,6 +1142,11 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   default:
     return Triple::UnknownArch;
   }
+}
+
+template <class ELFT>
+Expected<uint64_t> ELFObjectFile<ELFT>::getStartAddress() const {
+  return EF.getHeader()->e_entry;
 }
 
 template <class ELFT>

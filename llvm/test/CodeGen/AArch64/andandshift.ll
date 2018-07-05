@@ -4,7 +4,7 @@ target triple = "arm64--linux-gnu"
 
 ; Function Attrs: nounwind readnone
 define i32 @test1(i8 %a) {
-; CHECK-LABLE: @test1
+; CHECK-LABEL: @test1
 ; CHECK: ubfx {{w[0-9]+}}, w0, #3, #5
 entry:
   %conv = zext i8 %a to i32
@@ -14,7 +14,7 @@ entry:
 
 ; Function Attrs: nounwind readnone
 define i32 @test2(i8 %a) {
-; CHECK-LABLE: @test2
+; CHECK-LABEL: @test2
 ; CHECK: and {{w[0-9]+}}, w0, #0xff
 ; CHECK: ubfx {{w[0-9]+}}, w0, #3, #5
 entry:

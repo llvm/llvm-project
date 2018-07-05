@@ -30,6 +30,7 @@ add_llvm_target(MipsCodeGen
   MipsCCState.cpp
   MipsConstantIslandPass.cpp
   MipsDelaySlotFiller.cpp
+  MipsExpandPseudo.cpp
   MipsFastISel.cpp
   MipsInstrInfo.cpp
   MipsInstructionSelector.cpp

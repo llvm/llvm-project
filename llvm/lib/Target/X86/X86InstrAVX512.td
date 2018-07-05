@@ -4248,28 +4248,10 @@ defm : avx512_load_scalar_lowering_subreg2<"VMOVSDZ", avx512vl_f64_info,
                           (v8i1 (bitconvert (i8 (and GR8:$mask, (i8 1))))),
                           (iPTR 0))), GR8, sub_8bit>;
 
-def : Pat<(f32 (X86selects (scalar_to_vector GR8:$mask),
-                           (f32 FR32X:$src1), (f32 FR32X:$src2))),
-          (COPY_TO_REGCLASS
-            (VMOVSSZrrk (COPY_TO_REGCLASS FR32X:$src2, VR128X),
-                        (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF),
-                          GR8:$mask, sub_8bit)), VK1WM),
-            (v4f32 (IMPLICIT_DEF)), (COPY_TO_REGCLASS FR32X:$src1, VR128X)),
-            FR32X)>;
-
 def : Pat<(f32 (X86selects VK1WM:$mask, (f32 FR32X:$src1), (f32 FR32X:$src2))),
           (COPY_TO_REGCLASS (VMOVSSZrrk (COPY_TO_REGCLASS FR32X:$src2, VR128X),
            VK1WM:$mask, (v4f32 (IMPLICIT_DEF)),
            (COPY_TO_REGCLASS FR32X:$src1, VR128X)), FR32X)>;
-
-def : Pat<(f64 (X86selects (scalar_to_vector GR8:$mask),
-                           (f64 FR64X:$src1), (f64 FR64X:$src2))),
-          (COPY_TO_REGCLASS
-            (VMOVSDZrrk (COPY_TO_REGCLASS FR64X:$src2, VR128X),
-                        (COPY_TO_REGCLASS (i32 (INSERT_SUBREG (IMPLICIT_DEF),
-                          GR8:$mask, sub_8bit)), VK1WM),
-            (v2f64 (IMPLICIT_DEF)), (COPY_TO_REGCLASS FR64X:$src1, VR128X)),
-            FR64X)>;
 
 def : Pat<(f64 (X86selects VK1WM:$mask, (f64 FR64X:$src1), (f64 FR64X:$src2))),
           (COPY_TO_REGCLASS (VMOVSDZrrk (COPY_TO_REGCLASS FR64X:$src2, VR128X),

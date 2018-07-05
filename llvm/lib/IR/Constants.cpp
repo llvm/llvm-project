@@ -709,7 +709,7 @@ Constant *ConstantFP::get(Type *Ty, StringRef Str) {
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), C);
 
-  return C; 
+  return C;
 }
 
 Constant *ConstantFP::getNaN(Type *Ty, bool Negative, unsigned Type) {
@@ -762,7 +762,7 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
     else if (&V.getSemantics() == &APFloat::IEEEquad())
       Ty = Type::getFP128Ty(Context);
     else {
-      assert(&V.getSemantics() == &APFloat::PPCDoubleDouble() && 
+      assert(&V.getSemantics() == &APFloat::PPCDoubleDouble() &&
              "Unknown FP format");
       Ty = Type::getPPC_FP128Ty(Context);
     }
@@ -1015,7 +1015,7 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   // Create a ConstantAggregateZero value if all elements are zeros.
   bool isZero = true;
   bool isUndef = false;
-  
+
   if (!V.empty()) {
     isUndef = isa<UndefValue>(V[0]);
     isZero = V[0]->isNullValue();
@@ -1276,17 +1276,17 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {
   }
   case Type::X86_FP80TyID:
     return &Val2.getSemantics() == &APFloat::IEEEhalf() ||
-           &Val2.getSemantics() == &APFloat::IEEEsingle() || 
+           &Val2.getSemantics() == &APFloat::IEEEsingle() ||
            &Val2.getSemantics() == &APFloat::IEEEdouble() ||
            &Val2.getSemantics() == &APFloat::x87DoubleExtended();
   case Type::FP128TyID:
     return &Val2.getSemantics() == &APFloat::IEEEhalf() ||
-           &Val2.getSemantics() == &APFloat::IEEEsingle() || 
+           &Val2.getSemantics() == &APFloat::IEEEsingle() ||
            &Val2.getSemantics() == &APFloat::IEEEdouble() ||
            &Val2.getSemantics() == &APFloat::IEEEquad();
   case Type::PPC_FP128TyID:
     return &Val2.getSemantics() == &APFloat::IEEEhalf() ||
-           &Val2.getSemantics() == &APFloat::IEEEsingle() || 
+           &Val2.getSemantics() == &APFloat::IEEEsingle() ||
            &Val2.getSemantics() == &APFloat::IEEEdouble() ||
            &Val2.getSemantics() == &APFloat::PPCDoubleDouble();
   }
@@ -1795,8 +1795,8 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
            "Tried to create a floating-point operation on a "
            "non-floating-point type!");
     break;
-  case Instruction::UDiv: 
-  case Instruction::SDiv: 
+  case Instruction::UDiv:
+  case Instruction::SDiv:
     assert(C1->getType() == C2->getType() && "Op types should be identical!");
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create an arithmetic operation on a non-arithmetic type!");
@@ -1806,8 +1806,8 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
     assert(C1->getType()->isFPOrFPVectorTy() &&
            "Tried to create an arithmetic operation on a non-arithmetic type!");
     break;
-  case Instruction::URem: 
-  case Instruction::SRem: 
+  case Instruction::URem:
+  case Instruction::SRem:
     assert(C1->getType() == C2->getType() && "Op types should be identical!");
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create an arithmetic operation on a non-arithmetic type!");
@@ -1855,7 +1855,7 @@ Constant *ConstantExpr::getSizeOf(Type* Ty) {
   Constant *GEPIdx = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
   Constant *GEP = getGetElementPtr(
       Ty, Constant::getNullValue(PointerType::getUnqual(Ty)), GEPIdx);
-  return getPtrToInt(GEP, 
+  return getPtrToInt(GEP,
                      Type::getInt64Ty(Ty->getContext()));
 }
 
@@ -2261,6 +2261,9 @@ Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
              isExact ? PossiblyExactOperator::IsExact : 0);
 }
 
+// FIXME: Add a parameter to specify the operand number for non-commutative ops.
+// For example, the operand 1 identity constant for any shift is the null value
+// because shift-by-0 always returns operand 0.
 Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty) {
   switch (Opcode) {
   default:
@@ -2277,6 +2280,13 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty) {
 
   case Instruction::And:
     return Constant::getAllOnesValue(Ty);
+
+  // TODO: If the fadd has 'nsz', should we return +0.0?
+  case Instruction::FAdd:
+    return ConstantFP::getNegativeZero(Ty);
+
+  case Instruction::FMul:
+    return ConstantFP::get(Ty, 1.0);
   }
 }
 
@@ -2416,7 +2426,7 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
 
 void ConstantDataSequential::destroyConstantImpl() {
   // Remove the constant from the StringMap.
-  StringMap<ConstantDataSequential*> &CDSConstants = 
+  StringMap<ConstantDataSequential*> &CDSConstants =
     getType()->getContext().pImpl->CDSConstants;
 
   StringMap<ConstantDataSequential*>::iterator Slot =
@@ -2433,7 +2443,7 @@ void ConstantDataSequential::destroyConstantImpl() {
     assert((*Entry) == this && "Hash mismatch in ConstantDataSequential");
     getContext().pImpl->CDSConstants.erase(Slot);
   } else {
-    // Otherwise, there are multiple entries linked off the bucket, unlink the 
+    // Otherwise, there are multiple entries linked off the bucket, unlink the
     // node we care about but keep the bucket around.
     for (ConstantDataSequential *Node = *Entry; ;
          Entry = &Node->Next, Node = *Entry) {

@@ -141,3 +141,29 @@ class ModuleAndSectionAPIsTestCase(TestBase):
         INDENT2 = INDENT * 2
         for cu in exe_module.compile_unit_iter():
             print(cu)
+
+    @add_test_categories(['pyapi'])
+    def test_find_compile_units(self):
+        """Exercise SBModule.FindCompileUnits() API."""
+        d = {'EXE': 'b.out'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        self.find_compile_units(self.getBuildArtifact('b.out'))
+
+    def find_compile_units(self, exe):
+        """Exercise SBModule.FindCompileUnits() API."""
+        source_name_list = ["main.cpp", "b.cpp", "c.cpp"]
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        num_modules = target.GetNumModules()
+        for i in range(num_modules):
+            module = target.GetModuleAtIndex(i)
+            for source_name in source_name_list:
+                list = module.FindCompileUnits(lldb.SBFileSpec(source_name, False))
+                for sc in list:
+                    self.assertTrue(
+                        sc.GetCompileUnit().GetFileSpec().GetFilename() ==
+                        source_name)

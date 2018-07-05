@@ -910,6 +910,12 @@ Triple::ArchType COFFObjectFile::getArch() const {
   }
 }
 
+Expected<uint64_t> COFFObjectFile::getStartAddress() const {
+  if (PE32Header)
+    return PE32Header->AddressOfEntryPoint;
+  return 0;
+}
+
 iterator_range<import_directory_iterator>
 COFFObjectFile::import_directories() const {
   return make_range(import_directory_begin(), import_directory_end());

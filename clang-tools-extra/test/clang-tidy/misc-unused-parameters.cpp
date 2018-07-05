@@ -222,6 +222,21 @@ static Function<void(int, int i)> dontGetConfusedByFunctionReturnTypes() {
   return Function<void(int, int)>();
 }
 
+namespace PR38055 {
+namespace {
+struct a {
+  void b(int c) {;}
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: parameter 'c' is unused
+// CHECK-FIXES: {{^}}  void b() {;}{{$}}
+};
+template <class>
+class d {
+  a e;
+  void f() { e.b(); }
+};
+}  // namespace
+}  // namespace PR38055
+
 namespace strict_mode_off {
 // Do not warn on empty function bodies.
 void f1(int foo1) {}

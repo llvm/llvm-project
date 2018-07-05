@@ -27,6 +27,12 @@ bool MipsCallLowering::MipsHandler::assign(const CCValAssign &VA,
                                            unsigned vreg) {
   if (VA.isRegLoc()) {
     assignValueToReg(vreg, VA.getLocReg());
+  } else if (VA.isMemLoc()) {
+    unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
+    unsigned Offset = VA.getLocMemOffset();
+    MachinePointerInfo MPO;
+    unsigned StackAddr = getStackAddress(Size, Offset, MPO);
+    assignValueToAddress(vreg, StackAddr, Size, MPO);
   } else {
     return false;
   }
@@ -43,10 +49,23 @@ public:
               ArrayRef<CallLowering::ArgInfo> Args);
 
 private:
-  virtual void assignValueToReg(unsigned ValVReg, unsigned PhysReg) override;
+  void assignValueToReg(unsigned ValVReg, unsigned PhysReg) override;
+
+  unsigned getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO) override;
+
+  void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
+                            MachinePointerInfo &MPO) override;
 
   virtual void markPhysRegUsed(unsigned PhysReg) {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
+  }
+
+  void buildLoad(unsigned Val, unsigned Addr, uint64_t Size, unsigned Alignment,
+                 MachinePointerInfo &MPO) {
+    MachineMemOperand *MMO = MIRBuilder.getMF().getMachineMemOperand(
+        MPO, MachineMemOperand::MOLoad, Size, Alignment);
+    MIRBuilder.buildLoad(Val, Addr, *MMO);
   }
 };
 
@@ -57,7 +76,7 @@ public:
       : IncomingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
 private:
-  virtual void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(unsigned PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
   }
 
@@ -70,6 +89,26 @@ void IncomingValueHandler::assignValueToReg(unsigned ValVReg,
                                             unsigned PhysReg) {
   MIRBuilder.buildCopy(ValVReg, PhysReg);
   markPhysRegUsed(PhysReg);
+}
+
+unsigned IncomingValueHandler::getStackAddress(uint64_t Size, int64_t Offset,
+                                               MachinePointerInfo &MPO) {
+  MachineFrameInfo &MFI = MIRBuilder.getMF().getFrameInfo();
+
+  int FI = MFI.CreateFixedObject(Size, Offset, true);
+  MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
+
+  unsigned AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 32));
+  MIRBuilder.buildFrameIndex(AddrReg, FI);
+
+  return AddrReg;
+}
+
+void IncomingValueHandler::assignValueToAddress(unsigned ValVReg, unsigned Addr,
+                                                uint64_t Size,
+                                                MachinePointerInfo &MPO) {
+  // If the value is not extended, a simple load will suffice.
+  buildLoad(ValVReg, Addr, Size, /* Alignment */ 0, MPO);
 }
 
 bool IncomingValueHandler::handle(ArrayRef<CCValAssign> ArgLocs,
@@ -92,7 +131,13 @@ public:
               ArrayRef<CallLowering::ArgInfo> Args);
 
 private:
-  virtual void assignValueToReg(unsigned ValVReg, unsigned PhysReg) override;
+  void assignValueToReg(unsigned ValVReg, unsigned PhysReg) override;
+
+  unsigned getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO) override;
+
+  void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
+                            MachinePointerInfo &MPO) override;
 
   MachineInstrBuilder &MIB;
 };
@@ -102,6 +147,31 @@ void OutgoingValueHandler::assignValueToReg(unsigned ValVReg,
                                             unsigned PhysReg) {
   MIRBuilder.buildCopy(PhysReg, ValVReg);
   MIB.addUse(PhysReg, RegState::Implicit);
+}
+
+unsigned OutgoingValueHandler::getStackAddress(uint64_t Size, int64_t Offset,
+                                               MachinePointerInfo &MPO) {
+  LLT p0 = LLT::pointer(0, 32);
+  LLT s32 = LLT::scalar(32);
+  unsigned SPReg = MRI.createGenericVirtualRegister(p0);
+  MIRBuilder.buildCopy(SPReg, Mips::SP);
+
+  unsigned OffsetReg = MRI.createGenericVirtualRegister(s32);
+  MIRBuilder.buildConstant(OffsetReg, Offset);
+
+  unsigned AddrReg = MRI.createGenericVirtualRegister(p0);
+  MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
+
+  MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
+  return AddrReg;
+}
+
+void OutgoingValueHandler::assignValueToAddress(unsigned ValVReg, unsigned Addr,
+                                                uint64_t Size,
+                                                MachinePointerInfo &MPO) {
+  MachineMemOperand *MMO = MIRBuilder.getMF().getMachineMemOperand(
+      MPO, MachineMemOperand::MOStore, Size, /* Alignment */ 0);
+  MIRBuilder.buildStore(ValVReg, Addr, *MMO);
 }
 
 bool OutgoingValueHandler::handle(ArrayRef<CCValAssign> ArgLocs,
@@ -205,6 +275,11 @@ bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                      F.getContext());
 
+  const MipsTargetMachine &TM =
+      static_cast<const MipsTargetMachine &>(MF.getTarget());
+  const MipsABIInfo &ABI = TM.getABI();
+  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(F.getCallingConv()),
+                       1);
   CCInfo.AnalyzeFormalArguments(Ins, TLI.CCAssignFnForCall());
 
   IncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
@@ -281,6 +356,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                      F.getContext());
 
+  CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(CallConv), 1);
   const char *Call = Callee.isSymbol() ? Callee.getSymbolName() : nullptr;
   CCInfo.AnalyzeCallOperands(Outs, TLI.CCAssignFnForCall(), FuncOrigArgs, Call);
 
@@ -289,8 +365,12 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
   }
 
-  // TODO: Calculate stack offset.
-  CallSeqStart.addImm(ABI.GetCalleeAllocdArgSizeInBytes(CallConv)).addImm(0);
+  unsigned NextStackOffset = CCInfo.getNextStackOffset();
+  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+  unsigned StackAlignment = TFL->getStackAlignment();
+  NextStackOffset = alignTo(NextStackOffset, StackAlignment);
+  CallSeqStart.addImm(NextStackOffset).addImm(0);
+
   MIRBuilder.insertInstr(MIB);
 
   if (OrigRet.Reg) {
@@ -319,9 +399,7 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
-  MIRBuilder.buildInstr(Mips::ADJCALLSTACKUP)
-      .addImm(ABI.GetCalleeAllocdArgSizeInBytes(CallConv))
-      .addImm(0);
+  MIRBuilder.buildInstr(Mips::ADJCALLSTACKUP).addImm(NextStackOffset).addImm(0);
 
   return true;
 }
