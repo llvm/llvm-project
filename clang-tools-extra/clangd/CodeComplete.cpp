@@ -1142,8 +1142,7 @@ private:
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
-    // FIXME: re-enable this after working out why it eats memory.
-    // Relevance.FileProximityMatch = FileProximity.getPointer();
+    Relevance.FileProximityMatch = FileProximity.getPointer();
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))
       Relevance.NameMatch = *FuzzyScore;
