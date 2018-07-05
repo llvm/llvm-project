@@ -7164,19 +7164,13 @@ SourceLocation ASTImporter::Import(SourceLocation FromLoc) {
     return {};
 
   SourceManager &FromSM = FromContext.getSourceManager();
-  
-  // For now, map everything down to its file location, so that we
-  // don't have to import macro expansions.
-  // FIXME: Import macro expansions!
-  FromLoc = FromSM.getFileLoc(FromLoc);
+
   std::pair<FileID, unsigned> Decomposed = FromSM.getDecomposedLoc(FromLoc);
-  SourceManager &ToSM = ToContext.getSourceManager();
   FileID ToFileID = Import(Decomposed.first);
   if (ToFileID.isInvalid())
     return {};
-  SourceLocation ret = ToSM.getLocForStartOfFile(ToFileID)
-                           .getLocWithOffset(Decomposed.second);
-  return ret;
+  SourceManager &ToSM = ToContext.getSourceManager();
+  return ToSM.getComposedLoc(ToFileID, Decomposed.second);
 }
 
 SourceRange ASTImporter::Import(SourceRange FromRange) {
@@ -7184,41 +7178,56 @@ SourceRange ASTImporter::Import(SourceRange FromRange) {
 }
 
 FileID ASTImporter::Import(FileID FromID) {
-  llvm::DenseMap<FileID, FileID>::iterator Pos
-    = ImportedFileIDs.find(FromID);
+  llvm::DenseMap<FileID, FileID>::iterator Pos = ImportedFileIDs.find(FromID);
   if (Pos != ImportedFileIDs.end())
     return Pos->second;
-  
+
   SourceManager &FromSM = FromContext.getSourceManager();
   SourceManager &ToSM = ToContext.getSourceManager();
   const SrcMgr::SLocEntry &FromSLoc = FromSM.getSLocEntry(FromID);
-  assert(FromSLoc.isFile() && "Cannot handle macro expansions yet");
-  
-  // Include location of this file.
-  SourceLocation ToIncludeLoc = Import(FromSLoc.getFile().getIncludeLoc());
-  
-  // Map the FileID for to the "to" source manager.
+
+  // Map the FromID to the "to" source manager.
   FileID ToID;
-  const SrcMgr::ContentCache *Cache = FromSLoc.getFile().getContentCache();
-  if (Cache->OrigEntry && Cache->OrigEntry->getDir()) {
-    // FIXME: We probably want to use getVirtualFile(), so we don't hit the
-    // disk again
-    // FIXME: We definitely want to re-use the existing MemoryBuffer, rather
-    // than mmap the files several times.
-    const FileEntry *Entry = ToFileManager.getFile(Cache->OrigEntry->getName());
-    if (!Entry)
-      return {};
-    ToID = ToSM.createFileID(Entry, ToIncludeLoc, 
-                             FromSLoc.getFile().getFileCharacteristic());
+  if (FromSLoc.isExpansion()) {
+    const SrcMgr::ExpansionInfo &FromEx = FromSLoc.getExpansion();
+    SourceLocation ToSpLoc = Import(FromEx.getSpellingLoc());
+    SourceLocation ToExLocS = Import(FromEx.getExpansionLocStart());
+    unsigned TokenLen = FromSM.getFileIDSize(FromID);
+    SourceLocation MLoc;
+    if (FromEx.isMacroArgExpansion()) {
+      MLoc = ToSM.createMacroArgExpansionLoc(ToSpLoc, ToExLocS, TokenLen);
+    } else {
+      SourceLocation ToExLocE = Import(FromEx.getExpansionLocEnd());
+      MLoc = ToSM.createExpansionLoc(ToSpLoc, ToExLocS, ToExLocE, TokenLen,
+                                     FromEx.isExpansionTokenRange());
+    }
+    ToID = ToSM.getFileID(MLoc);
   } else {
-    // FIXME: We want to re-use the existing MemoryBuffer!
-    const llvm::MemoryBuffer *
-        FromBuf = Cache->getBuffer(FromContext.getDiagnostics(), FromSM);
-    std::unique_ptr<llvm::MemoryBuffer> ToBuf
-      = llvm::MemoryBuffer::getMemBufferCopy(FromBuf->getBuffer(),
-                                             FromBuf->getBufferIdentifier());
-    ToID = ToSM.createFileID(std::move(ToBuf),
-                             FromSLoc.getFile().getFileCharacteristic());
+    // Include location of this file.
+    SourceLocation ToIncludeLoc = Import(FromSLoc.getFile().getIncludeLoc());
+
+    const SrcMgr::ContentCache *Cache = FromSLoc.getFile().getContentCache();
+    if (Cache->OrigEntry && Cache->OrigEntry->getDir()) {
+      // FIXME: We probably want to use getVirtualFile(), so we don't hit the
+      // disk again
+      // FIXME: We definitely want to re-use the existing MemoryBuffer, rather
+      // than mmap the files several times.
+      const FileEntry *Entry =
+          ToFileManager.getFile(Cache->OrigEntry->getName());
+      if (!Entry)
+        return {};
+      ToID = ToSM.createFileID(Entry, ToIncludeLoc,
+                               FromSLoc.getFile().getFileCharacteristic());
+    } else {
+      // FIXME: We want to re-use the existing MemoryBuffer!
+      const llvm::MemoryBuffer *FromBuf =
+          Cache->getBuffer(FromContext.getDiagnostics(), FromSM);
+      std::unique_ptr<llvm::MemoryBuffer> ToBuf =
+          llvm::MemoryBuffer::getMemBufferCopy(FromBuf->getBuffer(),
+                                               FromBuf->getBufferIdentifier());
+      ToID = ToSM.createFileID(std::move(ToBuf),
+                               FromSLoc.getFile().getFileCharacteristic());
+    }
   }
 
   ImportedFileIDs[FromID] = ToID;

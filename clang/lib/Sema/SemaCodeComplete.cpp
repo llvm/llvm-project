@@ -3651,9 +3651,11 @@ struct Sema::CodeCompleteExpressionData {
 /// type we're looking for.
 void Sema::CodeCompleteExpression(Scope *S, 
                                   const CodeCompleteExpressionData &Data) {
-  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
-                        CodeCompleter->getCodeCompletionTUInfo(),
-                        CodeCompletionContext::CCC_Expression);
+  ResultBuilder Results(
+      *this, CodeCompleter->getAllocator(),
+      CodeCompleter->getCodeCompletionTUInfo(),
+      CodeCompletionContext(CodeCompletionContext::CCC_Expression,
+                            Data.PreferredType));
   if (Data.ObjCCollection)
     Results.setFilter(&ResultBuilder::IsObjCCollection);
   else if (Data.IntegralConstantExpression)
@@ -3692,10 +3694,8 @@ void Sema::CodeCompleteExpression(Scope *S,
 
   if (CodeCompleter->includeMacros())
     AddMacroResults(PP, Results, false, PreferredTypeIsPointer);
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                CodeCompletionContext(CodeCompletionContext::CCC_Expression, 
-                                      Data.PreferredType),
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompletePostfixExpression(Scope *S, ExprResult E) {
@@ -4312,17 +4312,11 @@ void Sema::CodeCompleteCase(Scope *S) {
   }
   Results.ExitScope();
 
-  //We need to make sure we're setting the right context, 
-  //so only say we include macros if the code completer says we do
-  enum CodeCompletionContext::Kind kind = CodeCompletionContext::CCC_Other;
   if (CodeCompleter->includeMacros()) {
     AddMacroResults(PP, Results, false);
-    kind = CodeCompletionContext::CCC_OtherWithMacros;
   }
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            kind,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 static bool anyNullArguments(ArrayRef<Expr *> Args) {
@@ -4725,10 +4719,9 @@ void Sema::CodeCompleteUsing(Scope *S) {
                      CodeCompleter->includeGlobals(),
                      CodeCompleter->loadExternal());
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_PotentiallyQualifiedName,
-                            Results.data(),Results.size());
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteUsingDirective(Scope *S) {
@@ -4747,9 +4740,8 @@ void Sema::CodeCompleteUsingDirective(Scope *S) {
                      CodeCompleter->includeGlobals(),
                      CodeCompleter->loadExternal());
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Namespace,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteNamespaceDecl(Scope *S)  {
@@ -4845,10 +4837,9 @@ void Sema::CodeCompleteOperatorName(Scope *S) {
   // Add any type specifiers
   AddTypeSpecifierResults(getLangOpts(), Results);
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Type,
-                            Results.data(),Results.size());
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteConstructorInitializer(
@@ -5129,9 +5120,8 @@ void Sema::CodeCompleteObjCAtDirective(Scope *S) {
   else
     AddObjCTopLevelResults(Results, false);
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 static void AddObjCExpressionResults(ResultBuilder &Results, bool NeedAt) {
@@ -5263,9 +5253,8 @@ void Sema::CodeCompleteObjCAtVisibility(Scope *S) {
   Results.EnterNewScope();
   AddObjCVisibilityResults(getLangOpts(), Results, false);
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCAtStatement(Scope *S) {
@@ -5276,9 +5265,8 @@ void Sema::CodeCompleteObjCAtStatement(Scope *S) {
   AddObjCStatementResults(Results, false);
   AddObjCExpressionResults(Results, false);
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCAtExpression(Scope *S) {
@@ -5288,9 +5276,8 @@ void Sema::CodeCompleteObjCAtExpression(Scope *S) {
   Results.EnterNewScope();
   AddObjCExpressionResults(Results, false);
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 /// Determine whether the addition of the given flag to an Objective-C
@@ -5384,9 +5371,8 @@ void Sema::CodeCompleteObjCPropertyFlags(Scope *S, ObjCDeclSpec &ODS) {
     Results.AddResult(CodeCompletionResult("null_resettable"));
   }
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 /// Describes the kind of Objective-C method that we want to find
@@ -5568,9 +5554,8 @@ void Sema::CodeCompleteObjCPropertyGetter(Scope *S) {
   AddObjCMethods(Class, true, MK_ZeroArgSelector, None, CurContext, Selectors,
                  /*AllowSameLength=*/true, Results);
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter,
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCPropertySetter(Scope *S) {
@@ -5597,9 +5582,8 @@ void Sema::CodeCompleteObjCPropertySetter(Scope *S) {
                  Selectors, /*AllowSameLength=*/true, Results);
 
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter,
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCPassingType(Scope *S, ObjCDeclSpec &DS,
@@ -5675,8 +5659,7 @@ void Sema::CodeCompleteObjCPassingType(Scope *S, ObjCDeclSpec &DS,
   if (CodeCompleter->includeMacros())
     AddMacroResults(PP, Results, false);
 
-  HandleCodeCompleteResults(this, CodeCompleter,
-                            CodeCompletionContext::CCC_Type,
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
 }
 
@@ -6348,9 +6331,8 @@ void Sema::CodeCompleteObjCSelector(Scope *S,
     Results.AddResult(Builder.TakeString());
   }
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_SelectorName,
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
 }
 
@@ -6393,10 +6375,9 @@ void Sema::CodeCompleteObjCProtocolReferences(
 
     Results.ExitScope();
   }
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_ObjCProtocolName,
-                            Results.data(),Results.size());
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCProtocolDecl(Scope *) {
@@ -6413,10 +6394,9 @@ void Sema::CodeCompleteObjCProtocolDecl(Scope *) {
 
     Results.ExitScope();
   }
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_ObjCProtocolName,
-                            Results.data(),Results.size());
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 /// Add all of the Objective-C interface declarations that we find in
@@ -6437,12 +6417,12 @@ static void AddInterfaceResults(DeclContext *Ctx, DeclContext *CurContext,
   }
 }
 
-void Sema::CodeCompleteObjCInterfaceDecl(Scope *S) { 
+void Sema::CodeCompleteObjCInterfaceDecl(Scope *S) {
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
-                        CodeCompletionContext::CCC_Other);
+                        CodeCompletionContext::CCC_ObjCInterfaceName);
   Results.EnterNewScope();
-  
+
   if (CodeCompleter->includeGlobals()) {
     // Add all classes.
     AddInterfaceResults(Context.getTranslationUnitDecl(), CurContext, false,
@@ -6451,9 +6431,8 @@ void Sema::CodeCompleteObjCInterfaceDecl(Scope *S) {
   
   Results.ExitScope();
 
-  HandleCodeCompleteResults(this, CodeCompleter,
-                            CodeCompletionContext::CCC_ObjCInterfaceName,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCSuperclass(Scope *S, IdentifierInfo *ClassName,
@@ -6477,15 +6456,14 @@ void Sema::CodeCompleteObjCSuperclass(Scope *S, IdentifierInfo *ClassName,
   
   Results.ExitScope();
 
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_ObjCInterfaceName,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
-void Sema::CodeCompleteObjCImplementationDecl(Scope *S) { 
+void Sema::CodeCompleteObjCImplementationDecl(Scope *S) {
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
-                        CodeCompletionContext::CCC_Other);
+                        CodeCompletionContext::CCC_ObjCImplementation);
   Results.EnterNewScope();
 
   if (CodeCompleter->includeGlobals()) {
@@ -6496,9 +6474,8 @@ void Sema::CodeCompleteObjCImplementationDecl(Scope *S) {
   
   Results.ExitScope();
 
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_ObjCInterfaceName,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCInterfaceCategory(Scope *S, 
@@ -6530,10 +6507,9 @@ void Sema::CodeCompleteObjCInterfaceCategory(Scope *S,
                                  nullptr),
                           CurContext, nullptr, false);
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_ObjCCategoryName,
-                            Results.data(),Results.size());  
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCImplementationCategory(Scope *S, 
@@ -6572,10 +6548,9 @@ void Sema::CodeCompleteObjCImplementationCategory(Scope *S,
     IgnoreImplemented = false;
   }
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_ObjCCategoryName,
-                            Results.data(),Results.size());  
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCPropertyDefinition(Scope *S) {
@@ -6612,10 +6587,9 @@ void Sema::CodeCompleteObjCPropertyDefinition(Scope *S) {
                       false, /*AllowNullaryMethods=*/false, CurContext, 
                       AddedProperties, Results);
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());  
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCPropertySynthesizeIvar(Scope *S, 
@@ -6705,10 +6679,9 @@ void Sema::CodeCompleteObjCPropertySynthesizeIvar(Scope *S,
   }
   
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 // Mapping from selectors to the methods that implement that selector, along
@@ -7638,10 +7611,9 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
   }
   
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteObjCMethodDeclSelector(Scope *S, 
@@ -7728,9 +7700,8 @@ void Sema::CodeCompleteObjCMethodDeclSelector(Scope *S,
     }
   }
 
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_Other,
-                            Results.data(),Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompletePreprocessorDirective(bool InConditional) {
@@ -7886,9 +7857,8 @@ void Sema::CodeCompletePreprocessorDirective(bool InConditional) {
 
   // FIXME: we don't support #assert or #unassert, so don't suggest them.
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_PreprocessorDirective,
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
                             Results.data(), Results.size());
 }
 
@@ -7945,10 +7915,9 @@ void Sema::CodeCompletePreprocessorExpression() {
   Builder.AddChunk(CodeCompletionString::CK_RightParen);
   Results.AddResult(Builder.TakeString());
   Results.ExitScope();
-  
-  HandleCodeCompleteResults(this, CodeCompleter, 
-                            CodeCompletionContext::CCC_PreprocessorExpression,
-                            Results.data(), Results.size()); 
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompletePreprocessorMacroArgument(Scope *S,
@@ -7980,9 +7949,8 @@ void Sema::CodeCompleteAvailabilityPlatformName() {
         Twine(Platform) + "ApplicationExtension")));
   }
   Results.ExitScope();
-  HandleCodeCompleteResults(this, CodeCompleter,
-                            CodeCompletionContext::CCC_Other, Results.data(),
-                            Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::GatherGlobalCodeCompletions(CodeCompletionAllocator &Allocator,

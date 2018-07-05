@@ -39,6 +39,7 @@
 # Source (1.c):
 #  int foo = 0;
 #  int bar = 1;
+#  static int zed = 3;
 # Invocation: g++ -g -S 1.c
 
 .bss
@@ -52,12 +53,16 @@ foo:
 .type  bar, @object
 .size  bar, 4
 bar:
+ .byte 0
+
+.local zed
+zed:
 
 .text
 .file 1 "1.c"
 
 .section  .debug_info,"",@progbits
-  .long  0x4b            # Compile Unit: length = 0x0000004b)
+  .long  0x5a            # Compile Unit: length = 0x0000004b)
   .value  0x4            # version = 0x0004
   .long  0               # abbr_offset = 0x0
   .byte  0x8             # addr_size = 0x08
@@ -91,6 +96,14 @@ bar:
   .uleb128 0x9           # DW_AT_external [DW_FORM_flag_present]  (true)
   .byte  0x3
   .quad  bar             # DW_AT_location [DW_FORM_exprloc]  (DW_OP_addr 0x0)
+  
+  .uleb128 0x4           # DW_TAG_variable [2]
+  .string  "zed"         # DW_AT_name [DW_FORM_string]  ("zed")
+  .byte  0x1             # DW_AT_decl_file [DW_FORM_data1]  ("1.c")
+  .byte  0x3             # DW_AT_decl_line [DW_FORM_data1]  (2)
+  .long  0x32            # DW_AT_type [DW_FORM_ref4]  (cu + 0x0032 => {0x00000032})
+  .quad  zed             # DW_AT_location [DW_FORM_exprloc]  (DW_OP_addr 0x0)
+  
   .byte  0               # END
 
 
@@ -141,5 +154,21 @@ bar:
   .uleb128 0x8
   .byte  0
   .byte  0
+  
+  .uleb128 0x4  # ID
+  .uleb128 0x34 # DW_TAG_variable, DW_CHILDREN_no
+  .byte  0
+  .uleb128 0x3  # DW_AT_name, DW_FORM_string
+  .uleb128 0x8
+  .uleb128 0x3a # DW_AT_decl_file, DW_FORM_data1
+  .uleb128 0xb
+  .uleb128 0x3b # DW_AT_decl_line, DW_FORM_data1
+  .uleb128 0xb
+  .uleb128 0x49 # DW_AT_type, DW_FORM_ref4
+  .uleb128 0x13
+  .uleb128 0x2  # DW_AT_location, DW_FORM_exprloc
+  .uleb128 0x18
+  .byte  0
   .byte  0
 
+  .byte  0

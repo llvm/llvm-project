@@ -743,15 +743,20 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = \
-                         @abs_srcdir@/../clang-tidy \
-                         @abs_srcdir@/../clang-apply-replacements \
-                         @abs_srcdir@/../clang-query \
-                         @abs_srcdir@/../clang-rename \
-                         @abs_srcdir@/../modularize \
-                         @abs_srcdir@/../pp-trace \
-                         @abs_srcdir@/../tool-template \
-                         @abs_srcdir@/doxygen-mainpage.dox
+INPUT                  =  \
+                          @abs_srcdir@/../change-namespace \
+                          @abs_srcdir@/../clang-apply-replacements \
+                          @abs_srcdir@/../clang-doc \
+                          @abs_srcdir@/../clang-move \
+                          @abs_srcdir@/../clang-query \
+                          @abs_srcdir@/../clang-reorder-fields \
+                          @abs_srcdir@/../clang-tidy \
+                          @abs_srcdir@/../clangd \
+                          @abs_srcdir@/../include-fixer \
+                          @abs_srcdir@/../modularize \
+                          @abs_srcdir@/../pp-trace \
+                          @abs_srcdir@/../tool-template \
+                          @abs_srcdir@/doxygen-mainpage.dox
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

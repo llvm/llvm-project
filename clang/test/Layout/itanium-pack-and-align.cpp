@@ -23,4 +23,4 @@ T t;
 // CHECK-NEXT:          0 |   char x
 // CHECK-NEXT:          1 |   int y
 // CHECK-NEXT:            | [sizeof=8, dsize=8, align=8,
-// CHECK-NETX:            |  nvsize=8, nvalign=8]
+// CHECK-NEXT:            |  nvsize=8, nvalign=8]

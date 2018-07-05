@@ -4,6 +4,8 @@
 // RUN: cp %S/Inputs/externalFnMap.txt %T/ctudir/
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -analyze -analyzer-checker=core,debug.ExprInspection -analyzer-config experimental-enable-naive-ctu-analysis=true -analyzer-config ctu-dir=%T/ctudir -verify %s
 
+#include "ctu-hdr.h"
+
 void clang_analyzer_eval(int);
 
 int f(int);
@@ -41,6 +43,7 @@ int chf1(int x);
 }
 
 int fun_using_anon_struct(int);
+int other_macro_diag(int);
 
 int main() {
   clang_analyzer_eval(f(3) == 2); // expected-warning{{TRUE}}
@@ -58,4 +61,8 @@ int main() {
 
   clang_analyzer_eval(chns::chf1(4) == 12); // expected-warning{{TRUE}}
   clang_analyzer_eval(fun_using_anon_struct(8) == 8); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(other_macro_diag(1) == 1); // expected-warning{{TRUE}}
+  // expected-warning@Inputs/ctu-other.cpp:75{{REACHABLE}}
+  MACRODIAG(); // expected-warning{{REACHABLE}}
 }
