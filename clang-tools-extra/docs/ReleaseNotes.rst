@@ -253,6 +253,17 @@ Improvements to clang-tidy
 
 - The 'google-runtime-member-string-references' check was removed.
 
+- New `cert-msc51-cpp
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-properly-seeded-random-generator.html>`_ check
+
+  Detects inappropriate seeding of C++ random generators and C ``srand()`` function.
+  
+- New `cert-msc32-c
+  <http://clang.llvm.org/extra/clang-tidy/checks/cert-properly-seeded-random-generator.html>`_ check
+
+  Detects inappropriate seeding of ``srand()`` function.
+
+
 Improvements to include-fixer
 -----------------------------
 
