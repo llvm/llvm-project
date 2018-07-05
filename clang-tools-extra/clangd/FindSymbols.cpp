@@ -8,12 +8,16 @@
 //===----------------------------------------------------------------------===//
 #include "FindSymbols.h"
 
-#include "Logger.h"
+#include "AST.h"
+#include "ClangdUnit.h"
 #include "FuzzyMatch.h"
-#include "SourceCode.h"
+#include "Logger.h"
 #include "Quality.h"
+#include "SourceCode.h"
 #include "index/Index.h"
+#include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
+#include "clang/Index/IndexingAction.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
@@ -170,6 +174,107 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
   for (auto &R : std::move(Top).items())
     Result.push_back(std::move(R.second));
   return Result;
+}
+
+namespace {
+/// Finds document symbols in the main file of the AST.
+class DocumentSymbolsConsumer : public index::IndexDataConsumer {
+  ASTContext &AST;
+  std::vector<SymbolInformation> Symbols;
+  // We are always list document for the same file, so cache the value.
+  llvm::Optional<URIForFile> MainFileUri;
+
+public:
+  DocumentSymbolsConsumer(ASTContext &AST) : AST(AST) {}
+  std::vector<SymbolInformation> takeSymbols() { return std::move(Symbols); }
+
+  void initialize(ASTContext &Ctx) override {
+    // Compute the absolute path of the main file which we will use for all
+    // results.
+    const SourceManager &SM = AST.getSourceManager();
+    const FileEntry *F = SM.getFileEntryForID(SM.getMainFileID());
+    if (!F)
+      return;
+    auto FilePath = getAbsoluteFilePath(F, SM);
+    if (FilePath)
+      MainFileUri = URIForFile(*FilePath);
+  }
+
+  bool shouldIncludeSymbol(const NamedDecl *ND) {
+    if (!ND || ND->isImplicit())
+      return false;
+    // Skip anonymous declarations, e.g (anonymous enum/class/struct).
+    if (ND->getDeclName().isEmpty())
+      return false;
+    return true;
+  }
+
+  bool
+  handleDeclOccurence(const Decl *, index::SymbolRoleSet Roles,
+                      ArrayRef<index::SymbolRelation> Relations,
+                      SourceLocation Loc,
+                      index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
+    assert(ASTNode.OrigD);
+    // No point in continuing the index consumer if we could not get the
+    // absolute path of the main file.
+    if (!MainFileUri)
+      return false;
+    // We only want declarations and definitions, i.e. no references.
+    if (!(Roles & static_cast<unsigned>(index::SymbolRole::Declaration) ||
+          Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
+      return true;
+    SourceLocation NameLoc = findNameLoc(ASTNode.OrigD);
+    const SourceManager &SourceMgr = AST.getSourceManager();
+    // We should be only be looking at "local" decls in the main file.
+    if (!SourceMgr.isWrittenInMainFile(NameLoc)) {
+      // Even thought we are visiting only local (non-preamble) decls,
+      // we can get here when in the presense of "extern" decls.
+      return true;
+    }
+    const NamedDecl *ND = llvm::dyn_cast<NamedDecl>(ASTNode.OrigD);
+    if (!shouldIncludeSymbol(ND))
+      return true;
+
+    SourceLocation EndLoc =
+        Lexer::getLocForEndOfToken(NameLoc, 0, SourceMgr, AST.getLangOpts());
+    Position Begin = sourceLocToPosition(SourceMgr, NameLoc);
+    Position End = sourceLocToPosition(SourceMgr, EndLoc);
+    Range R = {Begin, End};
+    Location L;
+    L.uri = *MainFileUri;
+    L.range = R;
+
+    std::string QName = printQualifiedName(*ND);
+    StringRef Scope, Name;
+    std::tie(Scope, Name) = splitQualifiedName(QName);
+    Scope.consume_back("::");
+
+    index::SymbolInfo SymInfo = index::getSymbolInfo(ND);
+    SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
+
+    SymbolInformation SI;
+    SI.name = Name;
+    SI.kind = SK;
+    SI.location = L;
+    SI.containerName = Scope;
+    Symbols.push_back(std::move(SI));
+    return true;
+  }
+};
+} // namespace
+
+llvm::Expected<std::vector<SymbolInformation>>
+getDocumentSymbols(ParsedAST &AST) {
+  DocumentSymbolsConsumer DocumentSymbolsCons(AST.getASTContext());
+
+  index::IndexingOptions IndexOpts;
+  IndexOpts.SystemSymbolFilter =
+      index::IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly;
+  IndexOpts.IndexFunctionLocals = false;
+  indexTopLevelDecls(AST.getASTContext(), AST.getLocalTopLevelDecls(),
+                     DocumentSymbolsCons, IndexOpts);
+
+  return DocumentSymbolsCons.takeSymbols();
 }
 
 } // namespace clangd

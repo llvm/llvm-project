@@ -117,5 +117,12 @@ runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit) {
   return std::move(*Result);
 }
 
+llvm::Expected<std::vector<SymbolInformation>>
+runDocumentSymbols(ClangdServer &Server, PathRef File) {
+  llvm::Optional<llvm::Expected<std::vector<SymbolInformation>>> Result;
+  Server.documentSymbols(File, capture(Result));
+  return std::move(*Result);
+}
+
 } // namespace clangd
 } // namespace clang
