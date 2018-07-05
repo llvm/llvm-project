@@ -41,6 +41,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <queue>
 
@@ -940,6 +941,7 @@ class CodeCompleteFlow {
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
   bool Incomplete = false; // Would more be available with a higher limit?
   llvm::Optional<FuzzyMatcher> Filter;       // Initialized once Sema runs.
+  std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
   // Include-insertion and proximity scoring rely on the include structure.
   // This is available after Sema has run.
   llvm::Optional<IncludeInserter> Inserter;  // Available during runWithSema.
@@ -1001,6 +1003,10 @@ public:
       Inserter.reset(); // Make sure this doesn't out-live Clang.
       SPAN_ATTACH(Tracer, "sema_completion_kind",
                   getCompletionKindString(Recorder->CCContext.getKind()));
+      log(llvm::formatv(
+          "Code complete: sema context {0}, query scopes [{1}]",
+          getCompletionKindString(Recorder->CCContext.getKind()),
+          llvm::join(QueryScopes.begin(), QueryScopes.end(), ",")));
     });
 
     Recorder = RecorderOwner.get();
@@ -1028,6 +1034,8 @@ private:
   CodeCompleteResult runWithSema() {
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
+    QueryScopes = getQueryScopes(Recorder->CCContext,
+                                 Recorder->CCSema->getSourceManager());
     // Sema provides the needed context to query the index.
     // FIXME: in addition to querying for extra/overlapping symbols, we should
     //        explicitly request symbols corresponding to Sema results.
@@ -1059,8 +1067,7 @@ private:
       Req.MaxCandidateCount = Opts.Limit;
     Req.Query = Filter->pattern();
     Req.RestrictForCodeCompletion = true;
-    Req.Scopes = getQueryScopes(Recorder->CCContext,
-                                Recorder->CCSema->getSourceManager());
+    Req.Scopes = QueryScopes;
     // FIXME: we should send multiple weighted paths here.
     Req.ProximityPaths.push_back(FileName);
     log(llvm::formatv("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])",
