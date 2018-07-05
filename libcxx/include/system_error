@@ -203,7 +203,7 @@ public:
     defined(_LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS)
     error_category() _NOEXCEPT;
 #else
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR_AFTER_CXX11 error_category() _NOEXCEPT _LIBCPP_DEFAULT
 #endif
 private:
@@ -217,13 +217,13 @@ public:
     virtual bool equivalent(const error_code& __code, int __condition) const _NOEXCEPT;
     virtual string message(int __ev) const = 0;
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     bool operator==(const error_category& __rhs) const _NOEXCEPT {return this == &__rhs;}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const error_category& __rhs) const _NOEXCEPT {return !(*this == __rhs);}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     bool operator< (const error_category& __rhs) const _NOEXCEPT {return this < &__rhs;}
 
     friend class _LIBCPP_HIDDEN __do_message;
@@ -244,21 +244,21 @@ class _LIBCPP_TYPE_VIS error_condition
     int __val_;
     const error_category* __cat_;
 public:
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     error_condition() _NOEXCEPT : __val_(0), __cat_(&generic_category()) {}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     error_condition(int __val, const error_category& __cat) _NOEXCEPT
         : __val_(__val), __cat_(&__cat) {}
 
     template <class _Ep>
-        _LIBCPP_ALWAYS_INLINE
+        _LIBCPP_INLINE_VISIBILITY
         error_condition(_Ep __e,
               typename enable_if<is_error_condition_enum<_Ep>::value>::type* = 0
                                                                      ) _NOEXCEPT
             {*this = make_error_condition(__e);}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void assign(int __val, const error_category& __cat) _NOEXCEPT
     {
         __val_ = __val;
@@ -266,7 +266,7 @@ public:
     }
 
     template <class _Ep>
-        _LIBCPP_ALWAYS_INLINE
+        _LIBCPP_INLINE_VISIBILITY
         typename enable_if
         <
             is_error_condition_enum<_Ep>::value,
@@ -275,21 +275,21 @@ public:
         operator=(_Ep __e) _NOEXCEPT
             {*this = make_error_condition(__e); return *this;}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT
     {
         __val_ = 0;
         __cat_ = &generic_category();
     }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     int value() const _NOEXCEPT {return __val_;}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     const error_category& category() const _NOEXCEPT {return *__cat_;}
     string message() const;
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
         _LIBCPP_EXPLICIT
         operator bool() const _NOEXCEPT {return __val_ != 0;}
 };
@@ -316,21 +316,21 @@ class _LIBCPP_TYPE_VIS error_code
     int __val_;
     const error_category* __cat_;
 public:
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     error_code() _NOEXCEPT : __val_(0), __cat_(&system_category()) {}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     error_code(int __val, const error_category& __cat) _NOEXCEPT
         : __val_(__val), __cat_(&__cat) {}
 
     template <class _Ep>
-        _LIBCPP_ALWAYS_INLINE
+        _LIBCPP_INLINE_VISIBILITY
         error_code(_Ep __e,
                    typename enable_if<is_error_code_enum<_Ep>::value>::type* = 0
                                                                      ) _NOEXCEPT
             {*this = make_error_code(__e);}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void assign(int __val, const error_category& __cat) _NOEXCEPT
     {
         __val_ = __val;
@@ -338,7 +338,7 @@ public:
     }
 
     template <class _Ep>
-        _LIBCPP_ALWAYS_INLINE
+        _LIBCPP_INLINE_VISIBILITY
         typename enable_if
         <
             is_error_code_enum<_Ep>::value,
@@ -347,26 +347,26 @@ public:
         operator=(_Ep __e) _NOEXCEPT
             {*this = make_error_code(__e); return *this;}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT
     {
         __val_ = 0;
         __cat_ = &system_category();
     }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     int value() const _NOEXCEPT {return __val_;}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     const error_category& category() const _NOEXCEPT {return *__cat_;}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     error_condition default_error_condition() const _NOEXCEPT
         {return __cat_->default_error_condition(__val_);}
 
     string message() const;
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
         _LIBCPP_EXPLICIT
         operator bool() const _NOEXCEPT {return __val_ != 0;}
 };
@@ -472,7 +472,7 @@ public:
     system_error(int __ev, const error_category& __ecat);
     ~system_error() _NOEXCEPT;
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     const error_code& code() const _NOEXCEPT {return __ec_;}
 
 private:
