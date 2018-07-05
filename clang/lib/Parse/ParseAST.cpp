@@ -141,6 +141,12 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
     CleanupParser(ParseOP.get());
 
   S.getPreprocessor().EnterMainSourceFile();
+  if (!S.getPreprocessor().getCurrentLexer()) {
+    // If a PCH through header is specified that does not have an include in
+    // the source, there won't be any tokens or a Lexer.
+    return;
+  }
+
   P.Initialize();
 
   Parser::DeclGroupPtrTy ADecl;

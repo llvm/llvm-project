@@ -41,10 +41,10 @@ Visibility Macros
   library and has an empty definition otherwise.
 
 **_LIBCPP_INLINE_VISIBILITY**
-  Mark a function as hidden and force inlining whenever possible.
-
-**_LIBCPP_ALWAYS_INLINE**
-  A synonym for `_LIBCPP_INLINE_VISIBILITY`
+  Mark a function as not being part of the ABI of any final linked image that
+  uses it, and also as being internal to each TU that uses that function. In
+  other words, the address of a function marked with this attribute is not
+  guaranteed to be the same across translation units.
 
 **_LIBCPP_TYPE_VIS**
   Mark a type's typeinfo, vtable and members as having default visibility.

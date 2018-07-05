@@ -14,6 +14,8 @@
 /*
     utility synopsis
 
+#include <initializer_list>
+
 namespace std
 {
 

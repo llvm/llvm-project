@@ -232,7 +232,7 @@ public:
     basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
 
 protected:
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     basic_ostream() {}  // extension, intentially does not initialize
 };
 
@@ -249,7 +249,7 @@ public:
     explicit sentry(basic_ostream<_CharT, _Traits>& __os);
     ~sentry();
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
         _LIBCPP_EXPLICIT
         operator bool() const {return __ok_;}
 };

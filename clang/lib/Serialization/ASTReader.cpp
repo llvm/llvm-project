@@ -704,6 +704,17 @@ static bool checkPreprocessorOptions(const PreprocessorOptions &PPOpts,
   // Compute the #include and #include_macros lines we need.
   for (unsigned I = 0, N = ExistingPPOpts.Includes.size(); I != N; ++I) {
     StringRef File = ExistingPPOpts.Includes[I];
+
+    if (!ExistingPPOpts.ImplicitPCHInclude.empty() &&
+        !ExistingPPOpts.PCHThroughHeader.empty()) {
+      // In case the through header is an include, we must add all the includes
+      // to the predefines so the start point can be determined.
+      SuggestedPredefines += "#include \"";
+      SuggestedPredefines += File;
+      SuggestedPredefines += "\"\n";
+      continue;
+    }
+
     if (File == ExistingPPOpts.ImplicitPCHInclude)
       continue;
 
