@@ -76,6 +76,9 @@
 # RUN:   FileCheck -check-prefix=STARTLIB %s
 # STARTLIB: trace-symbols.s.tmp1: reference to bar
 
+## Check we do not crash when trying to trace special symbol.
+# RUN: not ld.lld -trace-symbol=_end %t -o /dev/null
+
 .hidden hsymbol
 .globl	_start
 .type	_start, @function

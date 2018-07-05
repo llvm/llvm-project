@@ -77,19 +77,25 @@ class unique_function<ReturnT(ParamTs...)> {
   using MovePtrT = void (*)(void *LHSCallableAddr, void *RHSCallableAddr);
   using DestroyPtrT = void (*)(void *CallableAddr);
 
+  /// A struct to hold a single trivial callback with sufficient alignment for
+  /// our bitpacking.
+  struct alignas(8) TrivialCallback {
+    CallPtrT CallPtr;
+  };
+
   /// A struct we use to aggregate three callbacks when we need full set of
   /// operations.
-  struct NonTrivialCallbacks {
+  struct alignas(8) NonTrivialCallbacks {
     CallPtrT CallPtr;
     MovePtrT MovePtr;
     DestroyPtrT DestroyPtr;
   };
 
-  // Now we can create a pointer union between either a direct, trivial call
-  // pointer and a pointer to a static struct of the call, move, and destroy
-  // pointers. We do this to keep the footprint in this object a single pointer
-  // while supporting all the necessary type-erased operation.
-  using CallbackPointerUnionT = PointerUnion<CallPtrT, NonTrivialCallbacks *>;
+  // Create a pointer union between either a pointer to a static trivial call
+  // pointer in a struct or a pointer to a static struct of the call, move, and
+  // destroy pointers.
+  using CallbackPointerUnionT =
+      PointerUnion<TrivialCallback *, NonTrivialCallbacks *>;
 
   // The main storage buffer. This will either have a pointer to out-of-line
   // storage or an inline buffer storing the callable.
@@ -119,11 +125,11 @@ class unique_function<ReturnT(ParamTs...)> {
   bool isInlineStorage() const { return CallbackAndInlineFlag.getInt(); }
 
   bool isTrivialCallback() const {
-    return CallbackAndInlineFlag.getPointer().template is<CallPtrT>();
+    return CallbackAndInlineFlag.getPointer().template is<TrivialCallback *>();
   }
 
   CallPtrT getTrivialCallback() const {
-    return CallbackAndInlineFlag.getPointer().template get<CallPtrT>();
+    return CallbackAndInlineFlag.getPointer().template get<TrivialCallback *>()->CallPtr;
   }
 
   NonTrivialCallbacks *getNonTrivialCallbacks() const {
@@ -148,8 +154,7 @@ class unique_function<ReturnT(ParamTs...)> {
   }
 
   template <typename CallableT>
-  static ReturnT CallImpl(void *CallableAddr,
-                          AdjustedParamT<ParamTs>... Params) {
+  static ReturnT CallImpl(void *CallableAddr, AdjustedParamT<ParamTs>... Params) {
     return (*reinterpret_cast<CallableT *>(CallableAddr))(
         std::forward<ParamTs>(Params)...);
   }
@@ -243,35 +248,26 @@ public:
     // Now move into the storage.
     new (CallableAddr) CallableT(std::move(Callable));
 
-#ifndef _MSC_VER
-    // See if we can create a trivial callback.
-    //
-    // This requires two things. First, we need to put a function pointer into
-    // a `PointerIntPair` and a `PointerUnion`. We assume that function
-    // pointers on almost every platform have at least 4-byte alignment which
-    // allows this to work, but on some platforms this appears to not hold, and
-    // so we need to disable this optimization on those platforms.
-    //
-    // FIXME: Currently, Windows appears to fail the asserts that check this.
-    // We should investigate why, and if fixed removed the #ifndef above.
-    //
-    // Second, we need the callable to be trivially moved and trivially
-    // destroyed so that we don't have to store type erased callbacks for those
-    // operations.
+    // See if we can create a trivial callback. We need the callable to be
+    // trivially moved and trivially destroyed so that we don't have to store
+    // type erased callbacks for those operations.
     //
     // FIXME: We should use constexpr if here and below to avoid instantiating
     // the non-trivial static objects when unnecessary. While the linker should
     // remove them, it is still wasteful.
     if (llvm::is_trivially_move_constructible<CallableT>::value &&
         std::is_trivially_destructible<CallableT>::value) {
-      CallbackAndInlineFlag = {&CallImpl<CallableT>, IsInlineStorage};
+      // We need to create a nicely aligned object. We use a static variable
+      // for this because it is a trivial struct.
+      static TrivialCallback Callback = { &CallImpl<CallableT> };
+
+      CallbackAndInlineFlag = {&Callback, IsInlineStorage};
       return;
     }
-#endif
 
-    // Otherwise, we need to point at an object with a vtable that contains all
-    // the different type erased behaviors needed. Create a static instance of
-    // the derived type here and then use a pointer to that.
+    // Otherwise, we need to point at an object that contains all the different
+    // type erased behaviors needed. Create a static instance of the struct type
+    // here and then use a pointer to that.
     static NonTrivialCallbacks Callbacks = {
         &CallImpl<CallableT>, &MoveImpl<CallableT>, &DestroyImpl<CallableT>};
 

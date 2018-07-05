@@ -30,9 +30,13 @@
 ; RUN: not test -e %t4
 
 ; Test that LLD generates an empty index even for lazy object file that is not added to link.
-; RUN: rm -f %t1.o.thinlto.bc %t3
-; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t2.o --start-lib %t1.o --end-lib -o %t3
+; Test LLD generates empty imports file either because of thinlto-emit-imports-files option.
+; RUN: rm -f %t1.o.thinlto.bc
+; RUN: rm -f %t1.o.imports
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared %t2.o --start-lib %t1.o --end-lib \
+; RUN: --plugin-opt=thinlto-emit-imports-files -o %t3
 ; RUN: ls %t1.o.thinlto.bc
+; RUN: ls %t1.o.imports
 
 ; Ensure lld generates an error if unable to write an empty index file
 ; for lazy object file that is not added to link.

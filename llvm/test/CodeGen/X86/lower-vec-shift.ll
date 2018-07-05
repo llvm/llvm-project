@@ -255,6 +255,8 @@ define <8 x i32> @test10(<8 x i32>* %a) {
   ret <8 x i32> %ashr
 }
 
+; test11 vs test12 - show difference between v16i16 that is repeated/non-repeated at v8i16 level (for PBLENDW masks).
+
 define <16 x i16> @test11(<16 x i16> %a) {
 ; SSE-LABEL: test11:
 ; SSE:       # %bb.0:
@@ -275,5 +277,30 @@ define <16 x i16> @test11(<16 x i16> %a) {
 ; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %lshr = shl <16 x i16> %a, <i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 1, i16 1, i16 1, i16 3, i16 1>
+  ret <16 x i16> %lshr
+}
+
+define <16 x i16> @test12(<16 x i16> %a) {
+; SSE-LABEL: test12:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2,8,2,2,2,8,8,8]
+; SSE-NEXT:    pmullw %xmm2, %xmm0
+; SSE-NEXT:    pmullw %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: test12:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,8,2,2,2,8,8,8]
+; AVX1-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test12:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+  %lshr = shl <16 x i16> %a, <i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3, i16 1, i16 3, i16 1, i16 1, i16 1, i16 3, i16 3, i16 3>
   ret <16 x i16> %lshr
 }

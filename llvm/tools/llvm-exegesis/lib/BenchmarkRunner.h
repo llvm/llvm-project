@@ -54,7 +54,8 @@ struct BenchmarkConfiguration {
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
-  explicit BenchmarkRunner(const LLVMState &State, InstructionBenchmark::ModeE Mode);
+  explicit BenchmarkRunner(const LLVMState &State,
+                           InstructionBenchmark::ModeE Mode);
 
   virtual ~BenchmarkRunner();
 
@@ -69,17 +70,22 @@ protected:
   const LLVMState &State;
   const RegisterAliasingTrackerCache RATC;
 
-  llvm::Expected<SnippetPrototype> generateSelfAliasingPrototype(
-      const Instruction &Instr) const;
+  // Generates a single instruction prototype that has a self-dependency.
+  llvm::Expected<SnippetPrototype>
+  generateSelfAliasingPrototype(const Instruction &Instr) const;
+  // Generates a single instruction prototype without assignment constraints.
+  llvm::Expected<SnippetPrototype>
+  generateUnconstrainedPrototype(const Instruction &Instr,
+                                 llvm::StringRef Msg) const;
 
 private:
   // API to be implemented by subclasses.
   virtual llvm::Expected<SnippetPrototype>
-    generatePrototype(unsigned Opcode) const = 0;
+  generatePrototype(unsigned Opcode) const = 0;
 
   virtual std::vector<BenchmarkMeasure>
-    runMeasurements(const ExecutableFunction &EF,
-                    const unsigned NumRepetitions) const = 0;
+  runMeasurements(const ExecutableFunction &EF,
+                  const unsigned NumRepetitions) const = 0;
 
   // Internal helpers.
   InstructionBenchmark runOne(const BenchmarkConfiguration &Configuration,
@@ -89,7 +95,6 @@ private:
   // BenchmarkConfiguration.
   llvm::Expected<std::vector<BenchmarkConfiguration>>
   generateConfigurations(unsigned Opcode) const;
-
 
   llvm::Expected<std::string>
   writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
