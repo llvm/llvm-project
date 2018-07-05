@@ -41,6 +41,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <queue>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
@@ -266,6 +267,8 @@ struct CodeCompletionBuilder {
       : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments) {
     add(C, SemaCCS);
     if (C.SemaResult) {
+      Completion.Origin =
+          static_cast<SymbolOrigin>(Completion.Origin | SymbolOrigin::AST);
       Completion.Name = llvm::StringRef(SemaCCS->getTypedText());
       if (Completion.Scope.empty())
         if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
@@ -277,6 +280,8 @@ struct CodeCompletionBuilder {
           toCompletionItemKind(C.SemaResult->Kind, C.SemaResult->Declaration);
     }
     if (C.IndexResult) {
+      Completion.Origin =
+          static_cast<SymbolOrigin>(Completion.Origin | C.IndexResult->Origin);
       if (Completion.Scope.empty())
         Completion.Scope = C.IndexResult->Scope;
       if (Completion.Kind == CompletionItemKind::Missing)
@@ -1144,17 +1149,18 @@ private:
       Relevance.NameMatch = *FuzzyScore;
     else
       return;
-    unsigned SemaResult = 0, IndexResult = 0;
+    SymbolOrigin Origin = SymbolOrigin::Unknown;
     for (const auto &Candidate : Bundle) {
       if (Candidate.IndexResult) {
         Quality.merge(*Candidate.IndexResult);
         Relevance.merge(*Candidate.IndexResult);
-        ++IndexResult;
+        Origin =
+            static_cast<SymbolOrigin>(Origin | Candidate.IndexResult->Origin);
       }
       if (Candidate.SemaResult) {
         Quality.merge(*Candidate.SemaResult);
         Relevance.merge(*Candidate.SemaResult);
-        ++SemaResult;
+        Origin = static_cast<SymbolOrigin>(Origin | SymbolOrigin::AST);
       }
     }
 
@@ -1167,15 +1173,13 @@ private:
                                ? Scores.Total / Relevance.NameMatch
                                : Scores.Quality;
 
-    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << "("
-                            << IndexResult << " index) "
-                            << "(" << SemaResult << " sema)"
-                            << " = " << Scores.Total << "\n"
+    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << " (" << Origin
+                            << ") = " << Scores.Total << "\n"
                             << Quality << Relevance << "\n");
 
-    NSema += bool(SemaResult);
-    NIndex += bool(IndexResult);
-    NBoth += SemaResult && IndexResult;
+    NSema += bool(Origin & SymbolOrigin::AST);
+    NIndex += bool(Origin & ~SymbolOrigin::AST);
+    NBoth += (Origin & SymbolOrigin::AST) && (Origin & ~SymbolOrigin::AST);
     if (Candidates.push({std::move(Bundle), Scores}))
       Incomplete = true;
   }
@@ -1243,7 +1247,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   LSP.label = (HeaderInsertion ? Opts.IncludeIndicator.Insert
                                : Opts.IncludeIndicator.NoInsert) +
+              (Opts.ShowOrigins ? "[" + llvm::to_string(Origin) + "]" : "") +
               RequiredQualifier + Name + Signature;
+
   LSP.kind = Kind;
   LSP.detail = BundleSize > 1 ? llvm::formatv("[{0} overloads]", BundleSize)
                               : ReturnType;

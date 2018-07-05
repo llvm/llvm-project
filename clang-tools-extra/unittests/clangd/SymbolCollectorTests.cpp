@@ -985,6 +985,13 @@ TEST_F(SymbolCollectorTest, ReferencesInFriendDecl) {
                                             AllOf(QName("Y"), Refs(1))));
 }
 
+TEST_F(SymbolCollectorTest, Origin) {
+  CollectorOpts.Origin = SymbolOrigin::Static;
+  runSymbolCollector("class Foo {};", /*Main=*/"");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(
+                           Field(&Symbol::Origin, SymbolOrigin::Static)));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
