@@ -97,7 +97,7 @@ define i8 @callee_with_alloca() alwaysinline {
 }
 
 define void @caller_with_lifetime() {
-; CHECK-LABLE: @caller_with_lifetime(
+; CHECK-LABEL: @caller_with_lifetime(
 ; CHECK:  call void (...) @llvm.experimental.deoptimize.isVoid(i32 1) [ "deopt"(i8* %t.i) ]
 ; CHECK-NEXT:  ret void
 

@@ -68,10 +68,10 @@ define void @test_lleqsll_store(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    xor r3, r3, r4
-; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-NEXT:    cntlzd r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 58, 63
-; CHECK-NEXT:    std r3, 0(r12)
+; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp eq i64 %a, %b
@@ -86,10 +86,10 @@ define void @test_lleqsll_sext_store(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    xor r3, r3, r4
-; CHECK-NEXT:    ld r12, .LC0@toc@l(r5)
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-NEXT:    addic r3, r3, -1
 ; CHECK-NEXT:    subfe r3, r3, r3
-; CHECK-NEXT:    std r3, 0(r12)
+; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp eq i64 %a, %b

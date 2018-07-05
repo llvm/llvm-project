@@ -37,6 +37,7 @@ namespace llvm {
   FunctionPass *createMipsBranchExpansion();
   FunctionPass *createMipsConstantIslandPass();
   FunctionPass *createMicroMipsSizeReducePass();
+  FunctionPass *createMipsExpandPseudoPass();
 
   InstructionSelector *createMipsInstructionSelector(const MipsTargetMachine &,
                                                      MipsSubtarget &,

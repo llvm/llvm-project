@@ -11,10 +11,12 @@
 #include "URI.h"
 #include "index/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -62,7 +64,8 @@ static SymbolQualitySignals::SymbolCategory categorize(const NamedDecl &ND) {
   return Switch().Visit(&ND);
 }
 
-static SymbolQualitySignals::SymbolCategory categorize(const CodeCompletionResult &R) {
+static SymbolQualitySignals::SymbolCategory
+categorize(const CodeCompletionResult &R) {
   if (R.Declaration)
     return categorize(*R.Declaration);
   if (R.Kind == CodeCompletionResult::RK_Macro)
@@ -70,57 +73,57 @@ static SymbolQualitySignals::SymbolCategory categorize(const CodeCompletionResul
   // Everything else is a keyword or a pattern. Patterns are mostly keywords
   // too, except a few which we recognize by cursor kind.
   switch (R.CursorKind) {
-    case CXCursor_CXXMethod:
-      return SymbolQualitySignals::Function;
-    case CXCursor_ModuleImportDecl:
-      return SymbolQualitySignals::Namespace;
-    case CXCursor_MacroDefinition:
-      return SymbolQualitySignals::Macro;
-    case CXCursor_TypeRef:
-      return SymbolQualitySignals::Type;
-    case CXCursor_MemberRef:
-      return SymbolQualitySignals::Variable;
-    default:
-      return SymbolQualitySignals::Keyword;
+  case CXCursor_CXXMethod:
+    return SymbolQualitySignals::Function;
+  case CXCursor_ModuleImportDecl:
+    return SymbolQualitySignals::Namespace;
+  case CXCursor_MacroDefinition:
+    return SymbolQualitySignals::Macro;
+  case CXCursor_TypeRef:
+    return SymbolQualitySignals::Type;
+  case CXCursor_MemberRef:
+    return SymbolQualitySignals::Variable;
+  default:
+    return SymbolQualitySignals::Keyword;
   }
 }
 
 static SymbolQualitySignals::SymbolCategory
 categorize(const index::SymbolInfo &D) {
   switch (D.Kind) {
-    case index::SymbolKind::Namespace:
-    case index::SymbolKind::NamespaceAlias:
-      return SymbolQualitySignals::Namespace;
-    case index::SymbolKind::Macro:
-      return SymbolQualitySignals::Macro;
-    case index::SymbolKind::Enum:
-    case index::SymbolKind::Struct:
-    case index::SymbolKind::Class:
-    case index::SymbolKind::Protocol:
-    case index::SymbolKind::Extension:
-    case index::SymbolKind::Union:
-    case index::SymbolKind::TypeAlias:
-      return SymbolQualitySignals::Type;
-    case index::SymbolKind::Function:
-    case index::SymbolKind::ClassMethod:
-    case index::SymbolKind::InstanceMethod:
-    case index::SymbolKind::StaticMethod:
-    case index::SymbolKind::InstanceProperty:
-    case index::SymbolKind::ClassProperty:
-    case index::SymbolKind::StaticProperty:
-    case index::SymbolKind::Constructor:
-    case index::SymbolKind::Destructor:
-    case index::SymbolKind::ConversionFunction:
-      return SymbolQualitySignals::Function;
-    case index::SymbolKind::Variable:
-    case index::SymbolKind::Field:
-    case index::SymbolKind::EnumConstant:
-    case index::SymbolKind::Parameter:
-      return SymbolQualitySignals::Variable;
-    case index::SymbolKind::Using:
-    case index::SymbolKind::Module:
-    case index::SymbolKind::Unknown:
-      return SymbolQualitySignals::Unknown;
+  case index::SymbolKind::Namespace:
+  case index::SymbolKind::NamespaceAlias:
+    return SymbolQualitySignals::Namespace;
+  case index::SymbolKind::Macro:
+    return SymbolQualitySignals::Macro;
+  case index::SymbolKind::Enum:
+  case index::SymbolKind::Struct:
+  case index::SymbolKind::Class:
+  case index::SymbolKind::Protocol:
+  case index::SymbolKind::Extension:
+  case index::SymbolKind::Union:
+  case index::SymbolKind::TypeAlias:
+    return SymbolQualitySignals::Type;
+  case index::SymbolKind::Function:
+  case index::SymbolKind::ClassMethod:
+  case index::SymbolKind::InstanceMethod:
+  case index::SymbolKind::StaticMethod:
+  case index::SymbolKind::InstanceProperty:
+  case index::SymbolKind::ClassProperty:
+  case index::SymbolKind::StaticProperty:
+  case index::SymbolKind::Constructor:
+  case index::SymbolKind::Destructor:
+  case index::SymbolKind::ConversionFunction:
+    return SymbolQualitySignals::Function;
+  case index::SymbolKind::Variable:
+  case index::SymbolKind::Field:
+  case index::SymbolKind::EnumConstant:
+  case index::SymbolKind::Parameter:
+    return SymbolQualitySignals::Variable;
+  case index::SymbolKind::Using:
+  case index::SymbolKind::Module:
+  case index::SymbolKind::Unknown:
+    return SymbolQualitySignals::Unknown;
   }
   llvm_unreachable("Unknown index::SymbolKind");
 }
@@ -158,22 +161,22 @@ float SymbolQualitySignals::evaluate() const {
     Score *= 0.1f;
 
   switch (Category) {
-    case Keyword:  // Often relevant, but misses most signals.
-      Score *= 4;  // FIXME: important keywords should have specific boosts.
-      break;
-    case Type:
-    case Function:
-    case Variable:
-      Score *= 1.1f;
-      break;
-    case Namespace:
-      Score *= 0.8f;
-      break;
-    case Macro:
-      Score *= 0.2f;
-      break;
-    case Unknown:
-      break;
+  case Keyword: // Often relevant, but misses most signals.
+    Score *= 4; // FIXME: important keywords should have specific boosts.
+    break;
+  case Type:
+  case Function:
+  case Variable:
+    Score *= 1.1f;
+    break;
+  case Namespace:
+    Score *= 0.8f;
+    break;
+  case Macro:
+    Score *= 0.2f;
+    break;
+  case Unknown:
+    break;
   }
 
   return Score;
@@ -195,6 +198,9 @@ ComputeScope(const NamedDecl *D) {
   if (auto *R = dyn_cast_or_null<RecordDecl>(D))
     if (R->isInjectedClassName())
       DC = DC->getParent();
+  // Class constructor should have the same scope as the class.
+  if (isa<CXXConstructorDecl>(D))
+    DC = DC->getParent();
   bool InClass = false;
   for (; !DC->isFileContext(); DC = DC->getParent()) {
     if (DC->isFunctionOrMethod())

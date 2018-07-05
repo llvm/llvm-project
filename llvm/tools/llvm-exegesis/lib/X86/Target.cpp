@@ -126,8 +126,6 @@ protected:
 class ExegesisX86Target : public ExegesisTarget {
   void addTargetSpecificPasses(llvm::PassManagerBase &PM) const override {
     // Lowers FP pseudo-instructions, e.g. ABS_Fp32 -> ABS_F.
-    // FIXME: Enable when the exegesis assembler no longer does
-    // Properties.reset(TracksLiveness);
     PM.add(llvm::createX86FloatingPointStackifierPass());
   }
 

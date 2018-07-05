@@ -21,6 +21,9 @@
 #include "Quality.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -197,6 +200,31 @@ TEST(QualityTests, SortText) {
 
   EXPECT_LT(sortText(1, "z"), sortText(0, "a"));
   EXPECT_LT(sortText(0, "a"), sortText(0, "z"));
+}
+
+TEST(QualityTests, NoBoostForClassConstructor) {
+  auto Header = TestTU::withHeaderCode(R"cpp(
+    class Foo {
+    public:
+      Foo(int);
+    };
+  )cpp");
+  auto Symbols = Header.headerSymbols();
+  auto AST = Header.build();
+
+  const NamedDecl *Foo = &findDecl(AST, "Foo");
+  SymbolRelevanceSignals Cls;
+  Cls.merge(CodeCompletionResult(Foo, /*Priority=*/0));
+
+  const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
+    return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
+           llvm::isa<CXXConstructorDecl>(&ND);
+  });
+  SymbolRelevanceSignals Ctor;
+  Ctor.merge(CodeCompletionResult(CtorDecl, /*Priority=*/0));
+
+  EXPECT_EQ(Cls.Scope, SymbolRelevanceSignals::GlobalScope);
+  EXPECT_EQ(Ctor.Scope, SymbolRelevanceSignals::GlobalScope);
 }
 
 } // namespace

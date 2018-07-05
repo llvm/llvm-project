@@ -80,7 +80,7 @@ entry:
 define <8 x float> @test7(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vfnmadd213ps %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call <8 x float> @llvm.x86.fma.vfmsub.ps.256(<8 x float> %a, <8 x float> %b, <8 x float> %c) #2

@@ -1604,7 +1604,7 @@ public:
 
   /// Returns a \p outliner::TargetCostInfo struct containing target-specific
   /// information for a set of outlining candidates.
-  virtual outliner::TargetCostInfo getOutlininingCandidateInfo(
+  virtual outliner::TargetCostInfo getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::getOutliningCandidateInfo!");

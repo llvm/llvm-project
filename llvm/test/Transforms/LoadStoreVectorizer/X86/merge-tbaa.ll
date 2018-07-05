@@ -43,4 +43,4 @@ entry:
 !8 = !{!3, !7, i64 4}
 
 ; CHECK-DAG: [[TYPE_char:!.*]] = !{!"omnipotent char", {{.*}}, i64 0}
-; CHECK-FAG: [[TAG_char]] = !{[[TYPE_char]], [[TYPE_char]], i64 0}
+; CHECK-DAG: [[TAG_char]] = !{[[TYPE_char]], [[TYPE_char]], i64 0}

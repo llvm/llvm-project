@@ -30,7 +30,7 @@ define <2 x i64> @test_vsrd(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 define <2 x i64> @test_vsrad(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 	%tmp = ashr <2 x i64> %x, %y
 	ret <2 x i64> %tmp
-; CHECK-LABER: @test_vsrad
+; CHECK-LABEL: @test_vsrad
 ; CHECK: vsrad 2, 2, 3
 }
        

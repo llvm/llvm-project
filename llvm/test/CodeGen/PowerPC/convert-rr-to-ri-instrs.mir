@@ -2862,7 +2862,7 @@ body:             |
     %11 = LI8 280
     %12 = LDX %0, killed %11 :: (load 8 from %ir.arrayidx3, !tbaa !10)
     ; CHECK: LD 280, %0
-    ; CHECK-LATE: ld 12, 280(3)
+    ; CHECK-LATE: ld 3, 280(3)
     %13 = ADD8 killed %12, killed %7
     $x3 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $x3

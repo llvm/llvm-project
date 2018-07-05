@@ -41,6 +41,8 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <queue>
 
 // We log detailed candidate here if you run with -debug-only=codecomplete.
@@ -266,6 +268,8 @@ struct CodeCompletionBuilder {
       : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments) {
     add(C, SemaCCS);
     if (C.SemaResult) {
+      Completion.Origin =
+          static_cast<SymbolOrigin>(Completion.Origin | SymbolOrigin::AST);
       Completion.Name = llvm::StringRef(SemaCCS->getTypedText());
       if (Completion.Scope.empty())
         if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
@@ -277,6 +281,8 @@ struct CodeCompletionBuilder {
           toCompletionItemKind(C.SemaResult->Kind, C.SemaResult->Declaration);
     }
     if (C.IndexResult) {
+      Completion.Origin =
+          static_cast<SymbolOrigin>(Completion.Origin | C.IndexResult->Origin);
       if (Completion.Scope.empty())
         Completion.Scope = C.IndexResult->Scope;
       if (Completion.Kind == CompletionItemKind::Missing)
@@ -935,6 +941,7 @@ class CodeCompleteFlow {
   int NSema = 0, NIndex = 0, NBoth = 0; // Counters for logging.
   bool Incomplete = false; // Would more be available with a higher limit?
   llvm::Optional<FuzzyMatcher> Filter;       // Initialized once Sema runs.
+  std::vector<std::string> QueryScopes;      // Initialized once Sema runs.
   // Include-insertion and proximity scoring rely on the include structure.
   // This is available after Sema has run.
   llvm::Optional<IncludeInserter> Inserter;  // Available during runWithSema.
@@ -996,6 +1003,10 @@ public:
       Inserter.reset(); // Make sure this doesn't out-live Clang.
       SPAN_ATTACH(Tracer, "sema_completion_kind",
                   getCompletionKindString(Recorder->CCContext.getKind()));
+      log(llvm::formatv(
+          "Code complete: sema context {0}, query scopes [{1}]",
+          getCompletionKindString(Recorder->CCContext.getKind()),
+          llvm::join(QueryScopes.begin(), QueryScopes.end(), ",")));
     });
 
     Recorder = RecorderOwner.get();
@@ -1023,6 +1034,8 @@ private:
   CodeCompleteResult runWithSema() {
     Filter = FuzzyMatcher(
         Recorder->CCSema->getPreprocessor().getCodeCompletionFilter());
+    QueryScopes = getQueryScopes(Recorder->CCContext,
+                                 Recorder->CCSema->getSourceManager());
     // Sema provides the needed context to query the index.
     // FIXME: in addition to querying for extra/overlapping symbols, we should
     //        explicitly request symbols corresponding to Sema results.
@@ -1054,8 +1067,7 @@ private:
       Req.MaxCandidateCount = Opts.Limit;
     Req.Query = Filter->pattern();
     Req.RestrictForCodeCompletion = true;
-    Req.Scopes = getQueryScopes(Recorder->CCContext,
-                                Recorder->CCSema->getSourceManager());
+    Req.Scopes = QueryScopes;
     // FIXME: we should send multiple weighted paths here.
     Req.ProximityPaths.push_back(FileName);
     log(llvm::formatv("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])",
@@ -1137,24 +1149,24 @@ private:
     SymbolQualitySignals Quality;
     SymbolRelevanceSignals Relevance;
     Relevance.Query = SymbolRelevanceSignals::CodeComplete;
-    // FIXME: re-enable this after working out why it eats memory.
-    // Relevance.FileProximityMatch = FileProximity.getPointer();
+    Relevance.FileProximityMatch = FileProximity.getPointer();
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))
       Relevance.NameMatch = *FuzzyScore;
     else
       return;
-    unsigned SemaResult = 0, IndexResult = 0;
+    SymbolOrigin Origin = SymbolOrigin::Unknown;
     for (const auto &Candidate : Bundle) {
       if (Candidate.IndexResult) {
         Quality.merge(*Candidate.IndexResult);
         Relevance.merge(*Candidate.IndexResult);
-        ++IndexResult;
+        Origin =
+            static_cast<SymbolOrigin>(Origin | Candidate.IndexResult->Origin);
       }
       if (Candidate.SemaResult) {
         Quality.merge(*Candidate.SemaResult);
         Relevance.merge(*Candidate.SemaResult);
-        ++SemaResult;
+        Origin = static_cast<SymbolOrigin>(Origin | SymbolOrigin::AST);
       }
     }
 
@@ -1167,15 +1179,13 @@ private:
                                ? Scores.Total / Relevance.NameMatch
                                : Scores.Quality;
 
-    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << "("
-                            << IndexResult << " index) "
-                            << "(" << SemaResult << " sema)"
-                            << " = " << Scores.Total << "\n"
+    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << " (" << Origin
+                            << ") = " << Scores.Total << "\n"
                             << Quality << Relevance << "\n");
 
-    NSema += bool(SemaResult);
-    NIndex += bool(IndexResult);
-    NBoth += SemaResult && IndexResult;
+    NSema += bool(Origin & SymbolOrigin::AST);
+    NIndex += bool(Origin & ~SymbolOrigin::AST);
+    NBoth += (Origin & SymbolOrigin::AST) && (Origin & ~SymbolOrigin::AST);
     if (Candidates.push({std::move(Bundle), Scores}))
       Incomplete = true;
   }
@@ -1243,7 +1253,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
   CompletionItem LSP;
   LSP.label = (HeaderInsertion ? Opts.IncludeIndicator.Insert
                                : Opts.IncludeIndicator.NoInsert) +
+              (Opts.ShowOrigins ? "[" + llvm::to_string(Origin) + "]" : "") +
               RequiredQualifier + Name + Signature;
+
   LSP.kind = Kind;
   LSP.detail = BundleSize > 1 ? llvm::formatv("[{0} overloads]", BundleSize)
                               : ReturnType;

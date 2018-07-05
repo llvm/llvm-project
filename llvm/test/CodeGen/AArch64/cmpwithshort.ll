@@ -1,7 +1,7 @@
 ; RUN: llc < %s -O3 -mtriple=aarch64-eabi | FileCheck %s 
 
 define i16 @test_1cmp_signed_1(i16* %ptr1) {
-; CHECK-LABLE: @test_1cmp_signed_1
+; CHECK-LABEL: @test_1cmp_signed_1
 ; CHECK: ldrsh
 ; CHECK-NEXT: cmn
 entry:
@@ -16,7 +16,7 @@ if.then:
 }
 
 define i16 @test_1cmp_signed_2(i16* %ptr1) {
-; CHECK-LABLE: @test_1cmp_signed_2
+; CHECK-LABEL: @test_1cmp_signed_2
 ; CHECK: ldrsh
 ; CHECK-NEXT: cmn
 entry:
@@ -31,7 +31,7 @@ if.then:
 }
 
 define i16 @test_1cmp_unsigned_1(i16* %ptr1) {
-; CHECK-LABLE: @test_1cmp_unsigned_1
+; CHECK-LABEL: @test_1cmp_unsigned_1
 ; CHECK: ldrsh
 ; CHECK-NEXT: cmn
 entry:
