@@ -342,6 +342,11 @@ bool fromJSON(const json::Expr &Params, DocumentFormattingParams &R) {
          O.map("options", R.options);
 }
 
+bool fromJSON(const json::Expr &Params, DocumentSymbolParams &R) {
+  json::ObjectMapper O(Params);
+  return O && O.map("textDocument", R.textDocument);
+}
+
 bool fromJSON(const json::Expr &Params, Diagnostic &R) {
   json::ObjectMapper O(Params);
   if (!O || !O.map("range", R.range) || !O.map("message", R.message))

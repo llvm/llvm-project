@@ -456,6 +456,18 @@ void ClangdServer::workspaceSymbols(
                                  RootPath ? *RootPath : ""));
 }
 
+void ClangdServer::documentSymbols(
+    StringRef File, Callback<std::vector<SymbolInformation>> CB) {
+  auto Action = [](Callback<std::vector<SymbolInformation>> CB,
+                   llvm::Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::getDocumentSymbols(InpAST->AST));
+  };
+  WorkScheduler.runWithAST("documentSymbols", File,
+                           Bind(Action, std::move(CB)));
+}
+
 std::vector<std::pair<Path, std::size_t>>
 ClangdServer::getUsedBytesPerFile() const {
   return WorkScheduler.getUsedBytesPerFile();
