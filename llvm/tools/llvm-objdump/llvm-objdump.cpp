@@ -208,6 +208,14 @@ static cl::alias FileHeadersShort("f", cl::desc("Alias for --file-headers"),
                                   cl::aliasopt(FileHeaders));
 
 cl::opt<bool>
+    llvm::ArchiveHeaders("archive-headers",
+                         cl::desc("Display archive header information"));
+
+cl::alias
+ArchiveHeadersShort("a", cl::desc("Alias for --archive-headers"),
+                    cl::aliasopt(ArchiveHeaders));
+
+cl::opt<bool>
     llvm::PrintImmHex("print-imm-hex",
                       cl::desc("Use hex format for immediate values"));
 
@@ -2144,7 +2152,72 @@ static void printFileHeaders(const ObjectFile *o) {
          << "\n";
 }
 
-static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
+static void printArchiveChild(StringRef Filename, const Archive::Child &C) {
+  Expected<sys::fs::perms> ModeOrErr = C.getAccessMode();
+  if (!ModeOrErr) {
+    errs() << "ill-formed archive entry.\n";
+    consumeError(ModeOrErr.takeError());
+    return;
+  }
+  sys::fs::perms Mode = ModeOrErr.get();
+  outs() << ((Mode & sys::fs::owner_read) ? "r" : "-");
+  outs() << ((Mode & sys::fs::owner_write) ? "w" : "-");
+  outs() << ((Mode & sys::fs::owner_exe) ? "x" : "-");
+  outs() << ((Mode & sys::fs::group_read) ? "r" : "-");
+  outs() << ((Mode & sys::fs::group_write) ? "w" : "-");
+  outs() << ((Mode & sys::fs::group_exe) ? "x" : "-");
+  outs() << ((Mode & sys::fs::others_read) ? "r" : "-");
+  outs() << ((Mode & sys::fs::others_write) ? "w" : "-");
+  outs() << ((Mode & sys::fs::others_exe) ? "x" : "-");
+
+  outs() << " ";
+
+  Expected<unsigned> UIDOrErr = C.getUID();
+  if (!UIDOrErr)
+    report_error(Filename, UIDOrErr.takeError());
+  unsigned UID = UIDOrErr.get();
+  outs() << format("%d/", UID);
+
+  Expected<unsigned> GIDOrErr = C.getGID();
+  if (!GIDOrErr)
+    report_error(Filename, GIDOrErr.takeError());
+  unsigned GID = GIDOrErr.get();
+  outs() << format("%-d ", GID);
+
+  Expected<uint64_t> Size = C.getRawSize();
+  if (!Size)
+    report_error(Filename, Size.takeError());
+  outs() << format("%6" PRId64, Size.get()) << " ";
+
+  StringRef RawLastModified = C.getRawLastModified();
+  unsigned Seconds;
+  if (RawLastModified.getAsInteger(10, Seconds))
+    outs() << "(date: \"" << RawLastModified
+           << "\" contains non-decimal chars) ";
+  else {
+    // Since ctime(3) returns a 26 character string of the form:
+    // "Sun Sep 16 01:03:52 1973\n\0"
+    // just print 24 characters.
+    time_t t = Seconds;
+    outs() << format("%.24s ", ctime(&t));
+  }
+
+  StringRef Name = "";
+  Expected<StringRef> NameOrErr = C.getName();
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
+    Expected<StringRef> RawNameOrErr = C.getRawName();
+    if (!RawNameOrErr)
+      report_error(Filename, NameOrErr.takeError());
+    Name = RawNameOrErr.get();
+  } else {
+    Name = NameOrErr.get();
+  }
+  outs() << Name << "\n";
+}
+
+static void DumpObject(ObjectFile *o, const Archive *a = nullptr,
+                       const Archive::Child *c = nullptr) {
   StringRef ArchiveName = a != nullptr ? a->getFileName() : "";
   // Avoid other output when using a raw option.
   if (!RawClangAST) {
@@ -2156,6 +2229,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
     outs() << ":\tfile format " << o->getFileFormatName() << "\n\n";
   }
 
+  if (ArchiveHeaders && !MachOOpt)
+    printArchiveChild(a->getFileName(), *c);
   if (Disassemble)
     DisassembleObject(o, Relocations);
   if (Relocations && !Disassemble)
@@ -2197,7 +2272,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr) {
   }
 }
 
-static void DumpObject(const COFFImportFile *I, const Archive *A) {
+static void DumpObject(const COFFImportFile *I, const Archive *A,
+                       const Archive::Child *C = nullptr) {
   StringRef ArchiveName = A ? A->getFileName() : "";
 
   // Avoid other output when using a raw option.
@@ -2207,6 +2283,8 @@ static void DumpObject(const COFFImportFile *I, const Archive *A) {
            << ":\tfile format COFF-import-file"
            << "\n\n";
 
+  if (ArchiveHeaders && !MachOOpt)
+    printArchiveChild(A->getFileName(), *C);
   if (SymbolTable)
     printCOFFSymbolTable(I);
 }
@@ -2222,9 +2300,9 @@ static void DumpArchive(const Archive *a) {
       continue;
     }
     if (ObjectFile *o = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
-      DumpObject(o, a);
+      DumpObject(o, a, &C);
     else if (COFFImportFile *I = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
-      DumpObject(I, a);
+      DumpObject(I, a, &C);
     else
       report_error(a->getFileName(), object_error::invalid_file_type);
   }
@@ -2299,7 +2377,7 @@ int main(int argc, char **argv) {
       && !WeakBind
       && !RawClangAST
       && !(UniversalHeaders && MachOOpt)
-      && !(ArchiveHeaders && MachOOpt)
+      && !ArchiveHeaders
       && !(IndirectSymbols && MachOOpt)
       && !(DataInCode && MachOOpt)
       && !(LinkOptHints && MachOOpt)

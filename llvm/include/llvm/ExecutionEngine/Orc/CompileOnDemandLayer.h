@@ -93,14 +93,7 @@ private:
   using StubManagersMap =
       std::map<const VSO *, std::unique_ptr<IndirectStubsManager>>;
 
-  using SymbolNameToDefinitionMap =
-      IRMaterializationUnit::SymbolNameToDefinitionMap;
-
   IndirectStubsManager &getStubsManager(const VSO &V);
-
-  std::unique_ptr<Module>
-  extractFunctions(Module &M, const SymbolNameSet &SymbolNames,
-                   const SymbolNameToDefinitionMap &SymbolToDefiniton);
 
   void emitExtractedFunctionsModule(MaterializationResponsibility R,
                                     std::unique_ptr<Module> M,

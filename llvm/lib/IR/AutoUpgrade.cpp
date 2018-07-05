@@ -76,6 +76,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name=="ssse3.pabs.d.128" || // Added in 6.0
       Name.startswith("fma.vfmadd.") || // Added in 7.0
       Name.startswith("fma.vfmsub.") || // Added in 7.0
+      Name.startswith("fma.vfmaddsub.") || // Added in 7.0
       Name.startswith("fma.vfmsubadd.") || // Added in 7.0
       Name.startswith("fma.vfnmadd.") || // Added in 7.0
       Name.startswith("fma.vfnmsub.") || // Added in 7.0
@@ -2778,25 +2779,30 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (IsScalar)
         Rep = Builder.CreateInsertElement(CI->getArgOperand(0), Rep,
                                           (uint64_t)0);
-    } else if (IsX86 && Name.startswith("fma.vfmsubadd.p")) {
-      // Handle FSUBADD.
-      unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
-      unsigned EltWidth = CI->getType()->getScalarSizeInBits();
-      Intrinsic::ID IID;
-      if (VecWidth == 128 && EltWidth == 32)
-        IID = Intrinsic::x86_fma_vfmaddsub_ps;
-      else if (VecWidth == 128 && EltWidth == 64)
-        IID = Intrinsic::x86_fma_vfmaddsub_pd;
-      else if (VecWidth == 256 && EltWidth == 32)
-        IID = Intrinsic::x86_fma_vfmaddsub_ps_256;
-      else if (VecWidth == 256 && EltWidth == 64)
-        IID = Intrinsic::x86_fma_vfmaddsub_pd_256;
-      else
-        llvm_unreachable("Unexpected intrinsic");
-      Value *Arg2 = Builder.CreateFNeg(CI->getArgOperand(2));
-      Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1), Arg2 };
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
-                                                         Ops);
+    } else if (IsX86 && (Name.startswith("fma.vfmaddsub.p") ||
+                         Name.startswith("fma.vfmsubadd.p"))) {
+      bool IsSubAdd = Name[7] == 's';
+      int NumElts = CI->getType()->getVectorNumElements();
+
+
+
+      Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1),
+                       CI->getArgOperand(2) };
+
+      Function *FMA = Intrinsic::getDeclaration(CI->getModule(), Intrinsic::fma,
+                                                Ops[0]->getType());
+      Value *Odd = Builder.CreateCall(FMA, Ops);
+      Ops[2] = Builder.CreateFNeg(Ops[2]);
+      Value *Even = Builder.CreateCall(FMA, Ops);
+
+      if (IsSubAdd)
+        std::swap(Even, Odd);
+
+      SmallVector<uint32_t, 32> Idxs(NumElts);
+      for (int i = 0; i != NumElts; ++i)
+        Idxs[i] = i + (i % 2) * NumElts;
+
+      Rep = Builder.CreateShuffleVector(Even, Odd, Idxs);
     } else if (IsX86 && (Name.startswith("avx512.mask.pternlog.") ||
                          Name.startswith("avx512.maskz.pternlog."))) {
       bool ZeroMask = Name[11] == 'z';

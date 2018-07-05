@@ -85,11 +85,6 @@ def RetCC_SI_Shader : CallingConv<[
   ]>>
 ]>;
 
-// Calling convention for compute kernels
-def CC_AMDGPU_Kernel : CallingConv<[
-  CCCustom<"allocateKernArg">
-]>;
-
 def CSR_AMDGPU_VGPRs_24_255 : CalleeSavedRegs<
   (sequence "VGPR%u", 24, 255)
 >;
@@ -137,16 +132,6 @@ def RetCC_AMDGPU_Func : CallingConv<[
 ]>;
 
 def CC_AMDGPU : CallingConv<[
-  CCIf<"static_cast<const AMDGPUSubtarget&>"
-        "(State.getMachineFunction().getSubtarget()).getGeneration() >="
-          "AMDGPUSubtarget::SOUTHERN_ISLANDS && "
-        "!AMDGPU::isShader(State.getCallingConv())",
-       CCDelegateTo<CC_AMDGPU_Kernel>>,
-  CCIf<"static_cast<const AMDGPUSubtarget&>"
-        "(State.getMachineFunction().getSubtarget()).getGeneration() < "
-          "AMDGPUSubtarget::SOUTHERN_ISLANDS && "
-         "!AMDGPU::isShader(State.getCallingConv())",
-        CCDelegateTo<CC_AMDGPU_Kernel>>,
    CCIf<"static_cast<const AMDGPUSubtarget&>"
          "(State.getMachineFunction().getSubtarget()).getGeneration() >= "
            "AMDGPUSubtarget::SOUTHERN_ISLANDS",
