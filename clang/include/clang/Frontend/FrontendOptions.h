@@ -435,10 +435,6 @@ public:
   /// Auxiliary triple for CUDA compilation.
   std::string AuxTriple;
 
-  /// If non-empty, search the pch input file as if it was a header
-  /// included by this file.
-  std::string FindPchSource;
-
   /// Filename to write statistics to.
   std::string StatsFile;
 

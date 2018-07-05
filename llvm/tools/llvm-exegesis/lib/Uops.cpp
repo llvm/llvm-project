@@ -139,16 +139,10 @@ UopsBenchmarkRunner::generatePrototype(unsigned Opcode) const {
   const Instruction Instr(InstrDesc, RATC);
   const AliasingConfigurations SelfAliasing(Instr, Instr);
   if (SelfAliasing.empty()) {
-    SnippetPrototype Prototype;
-    Prototype.Explanation = "instruction is parallel, repeating a random one.";
-    Prototype.Snippet.emplace_back(Instr);
-    return std::move(Prototype);
+    return generateUnconstrainedPrototype(Instr, "instruction is parallel");
   }
   if (SelfAliasing.hasImplicitAliasing()) {
-    SnippetPrototype Prototype;
-    Prototype.Explanation = "instruction is serial, repeating a random one.";
-    Prototype.Snippet.emplace_back(Instr);
-    return std::move(Prototype);
+    return generateUnconstrainedPrototype(Instr, "instruction is serial");
   }
   const auto TiedVariables = getTiedVariables(Instr);
   if (!TiedVariables.empty()) {

@@ -853,36 +853,7 @@ bool CompilerInstance::InitializeSourceManager(
 
   // Figure out where to get and map in the main file.
   if (InputFile != "-") {
-    const FileEntry *File;
-    if (Opts.FindPchSource.empty()) {
-      File = FileMgr.getFile(InputFile, /*OpenFile=*/true);
-    } else {
-      // When building a pch file in clang-cl mode, the .h file is built as if
-      // it was included by a cc file.  Since the driver doesn't know about
-      // all include search directories, the frontend must search the input
-      // file through HeaderSearch here, as if it had been included by the
-      // cc file at Opts.FindPchSource.
-      const FileEntry *FindFile = FileMgr.getFile(Opts.FindPchSource);
-      if (!FindFile) {
-        Diags.Report(diag::err_fe_error_reading) << Opts.FindPchSource;
-        return false;
-      }
-      const DirectoryLookup *UnusedCurDir;
-      SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 16>
-          Includers;
-      Includers.push_back(std::make_pair(FindFile, FindFile->getDir()));
-      File = HS->LookupFile(InputFile, SourceLocation(), /*isAngled=*/false,
-                            /*FromDir=*/nullptr,
-                            /*CurDir=*/UnusedCurDir, Includers,
-                            /*SearchPath=*/nullptr,
-                            /*RelativePath=*/nullptr,
-                            /*RequestingModule=*/nullptr,
-                            /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
-                            /*SkipCache=*/true);
-      // Also add the header to /showIncludes output.
-      if (File)
-        DepOpts.ShowIncludesPretendHeader = File->getName();
-    }
+    const FileEntry *File = FileMgr.getFile(InputFile, /*OpenFile=*/true);
     if (!File) {
       Diags.Report(diag::err_fe_error_reading) << InputFile;
       return false;

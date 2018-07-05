@@ -244,25 +244,39 @@ int X86TTIImpl::getArithmeticInstrCost(
     }
   }
 
-  if (ISD == ISD::SDIV &&
+  if ((ISD == ISD::SDIV || ISD == ISD::UDIV || ISD == ISD::UREM) &&
       (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
        Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
-    // On X86, vector signed division by constants power-of-two are
-    // normally expanded to the sequence SRA + SRL + ADD + SRA.
-    // The OperandValue properties may not be the same as that of the previous
-    // operation; conservatively assume OP_None.
-    int Cost = 2 * getArithmeticInstrCost(Instruction::AShr, Ty, Op1Info,
-                                          Op2Info, TargetTransformInfo::OP_None,
-                                          TargetTransformInfo::OP_None);
-    Cost += getArithmeticInstrCost(Instruction::LShr, Ty, Op1Info, Op2Info,
-                                   TargetTransformInfo::OP_None,
-                                   TargetTransformInfo::OP_None);
-    Cost += getArithmeticInstrCost(Instruction::Add, Ty, Op1Info, Op2Info,
-                                   TargetTransformInfo::OP_None,
-                                   TargetTransformInfo::OP_None);
+    if (ISD == ISD::SDIV) {
+      // On X86, vector signed division by constants power-of-two are
+      // normally expanded to the sequence SRA + SRL + ADD + SRA.
+      // The OperandValue properties may not be the same as that of the previous
+      // operation; conservatively assume OP_None.
+      int Cost =
+          2 * getArithmeticInstrCost(Instruction::AShr, Ty, Op1Info, Op2Info,
+                                     TargetTransformInfo::OP_None,
+                                     TargetTransformInfo::OP_None);
+      Cost += getArithmeticInstrCost(Instruction::LShr, Ty, Op1Info, Op2Info,
+                                     TargetTransformInfo::OP_None,
+                                     TargetTransformInfo::OP_None);
+      Cost += getArithmeticInstrCost(Instruction::Add, Ty, Op1Info, Op2Info,
+                                     TargetTransformInfo::OP_None,
+                                     TargetTransformInfo::OP_None);
 
-    return Cost;
+      return Cost;
+    }
+
+    // Vector unsigned division/remainder will be simplified to shifts/masks.
+    if (ISD == ISD::UDIV)
+      return getArithmeticInstrCost(Instruction::LShr, Ty, Op1Info, Op2Info,
+                                    TargetTransformInfo::OP_None,
+                                    TargetTransformInfo::OP_None);
+
+    if (ISD == ISD::UREM)
+      return getArithmeticInstrCost(Instruction::And, Ty, Op1Info, Op2Info,
+                                    TargetTransformInfo::OP_None,
+                                    TargetTransformInfo::OP_None);
   }
 
   static const CostTblEntry AVX512BWUniformConstCostTable[] = {

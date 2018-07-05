@@ -1,5 +1,5 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision < %s | FileCheck %s
+; RUN:   -enable-ppc-quad-precision -verify-machineinstrs < %s | FileCheck %s
 
 ; Function Attrs: norecurse nounwind
 define void @qpAdd(fp128* nocapture readonly %a, fp128* nocapture %res) {
@@ -148,3 +148,148 @@ entry:
 ; CHECK: stxv
 ; CHECK: blr
 }
+
+define fp128 @qp_sin(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qp_sin:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         bl sinf128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = tail call fp128 @llvm.sin.f128(fp128 %0)
+  ret fp128 %1
+}
+declare fp128 @llvm.sin.f128(fp128 %Val)
+
+define fp128 @qp_cos(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qp_cos:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         bl cosf128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = tail call fp128 @llvm.cos.f128(fp128 %0)
+  ret fp128 %1
+}
+declare fp128 @llvm.cos.f128(fp128 %Val)
+
+define fp128 @qp_log(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qp_log:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         bl logf128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = tail call fp128 @llvm.log.f128(fp128 %0)
+  ret fp128 %1
+}
+declare fp128     @llvm.log.f128(fp128 %Val)
+
+define fp128 @qp_log10(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qp_log10:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         bl log10f128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = tail call fp128 @llvm.log10.f128(fp128 %0)
+  ret fp128 %1
+}
+declare fp128     @llvm.log10.f128(fp128 %Val)
+
+define fp128 @qp_log2(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qp_log2:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         bl log2f128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = tail call fp128 @llvm.log2.f128(fp128 %0)
+  ret fp128 %1
+}
+declare fp128     @llvm.log2.f128(fp128 %Val)
+
+define fp128 @qp_minnum(fp128* nocapture readonly %a,
+                        fp128* nocapture readonly %b) {
+; CHECK-LABEL: qp_minnum:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         lxv 35, 0(4)
+; CHECK:         bl fminf128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = load fp128, fp128* %b, align 16
+  %2 = tail call fp128 @llvm.minnum.f128(fp128 %0, fp128 %1)
+  ret fp128 %2
+}
+declare fp128     @llvm.minnum.f128(fp128 %Val0, fp128 %Val1)
+
+define fp128 @qp_maxnum(fp128* nocapture readonly %a,
+                        fp128* nocapture readonly %b) {
+; CHECK-LABEL: qp_maxnum:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         lxv 35, 0(4)
+; CHECK:         bl fmaxf128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = load fp128, fp128* %b, align 16
+  %2 = tail call fp128 @llvm.maxnum.f128(fp128 %0, fp128 %1)
+  ret fp128 %2
+}
+declare fp128     @llvm.maxnum.f128(fp128 %Val0, fp128 %Val1)
+
+define fp128 @qp_pow(fp128* nocapture readonly %a,
+                     fp128* nocapture readonly %b) {
+; CHECK-LABEL: qp_pow:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         lxv 35, 0(4)
+; CHECK:         bl powf128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = load fp128, fp128* %b, align 16
+  %2 = tail call fp128 @llvm.pow.f128(fp128 %0, fp128 %1)
+  ret fp128 %2
+}
+declare fp128 @llvm.pow.f128(fp128 %Val, fp128 %Power)
+
+define fp128 @qp_exp(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qp_exp:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         bl expf128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = tail call fp128 @llvm.exp.f128(fp128 %0)
+  ret fp128 %1
+}
+declare fp128     @llvm.exp.f128(fp128 %Val)
+
+define fp128 @qp_exp2(fp128* nocapture readonly %a) {
+; CHECK-LABEL: qp_exp2:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         bl exp2f128
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = tail call fp128 @llvm.exp2.f128(fp128 %0)
+  ret fp128 %1
+}
+declare fp128     @llvm.exp2.f128(fp128 %Val)
+
+define void @qp_powi(fp128* nocapture readonly %a, i32* nocapture readonly %b,
+                     fp128* nocapture %res) {
+; CHECK-LABEL: qp_powi:
+; CHECK:         lxv 34, 0(3)
+; CHECK:         lwz 3, 0(4)
+; CHECK:         bl __powikf2
+; CHECK:         blr
+entry:
+  %0 = load fp128, fp128* %a, align 16
+  %1 = load i32, i32* %b, align 8
+  %2 = tail call fp128 @llvm.powi.f128(fp128 %0, i32 %1)
+  store fp128 %2, fp128* %res, align 16
+  ret void
+}
+declare fp128 @llvm.powi.f128(fp128 %Val, i32 %power)

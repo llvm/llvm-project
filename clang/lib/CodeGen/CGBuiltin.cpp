@@ -10158,43 +10158,38 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // e.g. both _CMP_GT_OS & _CMP_GT_OQ are translated to FCMP_OGT.
     FCmpInst::Predicate Pred;
     switch (CC) {
-    case 0x00: Pred = FCmpInst::FCMP_OEQ; break;
-    case 0x01: Pred = FCmpInst::FCMP_OLT; break;
-    case 0x02: Pred = FCmpInst::FCMP_OLE; break;
-    case 0x03: Pred = FCmpInst::FCMP_UNO; break;
-    case 0x04: Pred = FCmpInst::FCMP_UNE; break;
-    case 0x05: Pred = FCmpInst::FCMP_UGE; break;
-    case 0x06: Pred = FCmpInst::FCMP_UGT; break;
-    case 0x07: Pred = FCmpInst::FCMP_ORD; break;
-    case 0x08: Pred = FCmpInst::FCMP_UEQ; break;
-    case 0x09: Pred = FCmpInst::FCMP_ULT; break;
-    case 0x0a: Pred = FCmpInst::FCMP_ULE; break;
-    case 0x0c: Pred = FCmpInst::FCMP_ONE; break;
-    case 0x0d: Pred = FCmpInst::FCMP_OGE; break;
-    case 0x0e: Pred = FCmpInst::FCMP_OGT; break;
-    case 0x10: Pred = FCmpInst::FCMP_OEQ; break;
-    case 0x11: Pred = FCmpInst::FCMP_OLT; break;
-    case 0x12: Pred = FCmpInst::FCMP_OLE; break;
-    case 0x13: Pred = FCmpInst::FCMP_UNO; break;
-    case 0x14: Pred = FCmpInst::FCMP_UNE; break;
-    case 0x15: Pred = FCmpInst::FCMP_UGE; break;
-    case 0x16: Pred = FCmpInst::FCMP_UGT; break;
-    case 0x17: Pred = FCmpInst::FCMP_ORD; break;
-    case 0x18: Pred = FCmpInst::FCMP_UEQ; break;
-    case 0x19: Pred = FCmpInst::FCMP_ULT; break;
-    case 0x1a: Pred = FCmpInst::FCMP_ULE; break;
-    case 0x1c: Pred = FCmpInst::FCMP_ONE; break;
-    case 0x1d: Pred = FCmpInst::FCMP_OGE; break;
-    case 0x1e: Pred = FCmpInst::FCMP_OGT; break;
-    // _CMP_TRUE_UQ, _CMP_TRUE_US produce -1,-1... vector
-    // on any input and _CMP_FALSE_OQ, _CMP_FALSE_OS produce 0, 0...
-    case 0x0b: // FALSE_OQ
-    case 0x1b: // FALSE_OS
-      return llvm::Constant::getNullValue(ConvertType(E->getType()));
-    case 0x0f: // TRUE_UQ
-    case 0x1f: // TRUE_US
-      return llvm::Constant::getAllOnesValue(ConvertType(E->getType()));
-
+    case 0x00: Pred = FCmpInst::FCMP_OEQ;   break;
+    case 0x01: Pred = FCmpInst::FCMP_OLT;   break;
+    case 0x02: Pred = FCmpInst::FCMP_OLE;   break;
+    case 0x03: Pred = FCmpInst::FCMP_UNO;   break;
+    case 0x04: Pred = FCmpInst::FCMP_UNE;   break;
+    case 0x05: Pred = FCmpInst::FCMP_UGE;   break;
+    case 0x06: Pred = FCmpInst::FCMP_UGT;   break;
+    case 0x07: Pred = FCmpInst::FCMP_ORD;   break;
+    case 0x08: Pred = FCmpInst::FCMP_UEQ;   break;
+    case 0x09: Pred = FCmpInst::FCMP_ULT;   break;
+    case 0x0a: Pred = FCmpInst::FCMP_ULE;   break;
+    case 0x0b: Pred = FCmpInst::FCMP_FALSE; break;
+    case 0x0c: Pred = FCmpInst::FCMP_ONE;   break;
+    case 0x0d: Pred = FCmpInst::FCMP_OGE;   break;
+    case 0x0e: Pred = FCmpInst::FCMP_OGT;   break;
+    case 0x0f: Pred = FCmpInst::FCMP_TRUE;  break;
+    case 0x10: Pred = FCmpInst::FCMP_OEQ;   break;
+    case 0x11: Pred = FCmpInst::FCMP_OLT;   break;
+    case 0x12: Pred = FCmpInst::FCMP_OLE;   break;
+    case 0x13: Pred = FCmpInst::FCMP_UNO;   break;
+    case 0x14: Pred = FCmpInst::FCMP_UNE;   break;
+    case 0x15: Pred = FCmpInst::FCMP_UGE;   break;
+    case 0x16: Pred = FCmpInst::FCMP_UGT;   break;
+    case 0x17: Pred = FCmpInst::FCMP_ORD;   break;
+    case 0x18: Pred = FCmpInst::FCMP_UEQ;   break;
+    case 0x19: Pred = FCmpInst::FCMP_ULT;   break;
+    case 0x1a: Pred = FCmpInst::FCMP_ULE;   break;
+    case 0x1b: Pred = FCmpInst::FCMP_FALSE; break;
+    case 0x1c: Pred = FCmpInst::FCMP_ONE;   break;
+    case 0x1d: Pred = FCmpInst::FCMP_OGE;   break;
+    case 0x1e: Pred = FCmpInst::FCMP_OGT;   break;
+    case 0x1f: Pred = FCmpInst::FCMP_TRUE;  break;
     default: llvm_unreachable("Unhandled CC");
     }
 

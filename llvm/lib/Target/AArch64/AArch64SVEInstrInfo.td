@@ -716,6 +716,16 @@ let Predicates = [HasSVE] in {
   def FCVTZS_ZPmZ_DtoD : sve_fp_2op_p_zd<0b1111110, "fcvtzs", ZPR64, ZPR64>;
   def FCVTZU_ZPmZ_DtoD : sve_fp_2op_p_zd<0b1111111, "fcvtzu", ZPR64, ZPR64>;
 
+  defm FRINTN_ZPmZ : sve_fp_2op_p_zd_HSD<0b00000, "frintn">;
+  defm FRINTP_ZPmZ : sve_fp_2op_p_zd_HSD<0b00001, "frintp">;
+  defm FRINTM_ZPmZ : sve_fp_2op_p_zd_HSD<0b00010, "frintm">;
+  defm FRINTZ_ZPmZ : sve_fp_2op_p_zd_HSD<0b00011, "frintz">;
+  defm FRINTA_ZPmZ : sve_fp_2op_p_zd_HSD<0b00100, "frinta">;
+  defm FRINTX_ZPmZ : sve_fp_2op_p_zd_HSD<0b00110, "frintx">;
+  defm FRINTI_ZPmZ : sve_fp_2op_p_zd_HSD<0b00111, "frinti">;
+  defm FRECPX_ZPmZ : sve_fp_2op_p_zd_HSD<0b01100, "frecpx">;
+  defm FSQRT_ZPmZ  : sve_fp_2op_p_zd_HSD<0b01101, "fsqrt">;
+
   // InstAliases
   def : InstAlias<"mov $Zd, $Zn",
                   (ORR_ZZZ ZPR64:$Zd, ZPR64:$Zn, ZPR64:$Zn), 1>;

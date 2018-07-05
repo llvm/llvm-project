@@ -4382,6 +4382,7 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERM2X128:
+  case X86ISD::SHUF128:
   case X86ISD::VPERMIL2:
   case X86ISD::VPERMI:
   case X86ISD::VPPERM:
@@ -5905,6 +5906,15 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeVPERM2X128Mask(NumElems, cast<ConstantSDNode>(ImmN)->getZExtValue(),
                          Mask);
+    IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    break;
+  case X86ISD::SHUF128:
+    assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
+    assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
+    ImmN = N->getOperand(N->getNumOperands()-1);
+    decodeVSHUF64x2FamilyMask(NumElems, VT.getScalarSizeInBits(),
+                              cast<ConstantSDNode>(ImmN)->getZExtValue(),
+                              Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::MOVSLDUP:
@@ -39432,6 +39442,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMILPV:
   case X86ISD::VPERM2X128:
+  case X86ISD::SHUF128:
   case X86ISD::VZEXT_MOVL:
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
   case X86ISD::FMADD_RND:
