@@ -248,13 +248,12 @@ void LinkerScript::declareSymbols() {
       declareSymbol(Cmd);
       continue;
     }
-    auto *Sec = dyn_cast<OutputSection>(Base);
-    if (!Sec)
-      continue;
+
     // If the output section directive has constraints,
     // we can't say for sure if it is going to be included or not.
     // Skip such sections for now. Improve the checks if we ever
     // need symbols from that sections to be declared early.
+    auto *Sec = cast<OutputSection>(Base);
     if (Sec->Constraint != ConstraintKind::NoConstraint)
       continue;
     for (BaseCommand *Base2 : Sec->SectionCommands)
