@@ -215,7 +215,7 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
       const WriteState &WS = *WR.getWriteState();
       dbgs() << "Found a dependent use of Register "
              << MRI.getName(WS.getRegisterID()) << " (defined by intruction #"
-             << WR.getSourceIndex() << '\n';
+             << WR.getSourceIndex() << ")\n";
     }
   });
 }
@@ -264,9 +264,14 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
 void RegisterFile::dump() const {
   for (unsigned I = 0, E = MRI.getNumRegs(); I < E; ++I) {
     const RegisterMapping &RM = RegisterMappings[I];
-    dbgs() << MRI.getName(I) << ", " << I << ", Map=" << RM.second.first
+    if (!RM.first.getWriteState())
+      continue;
+    const std::pair<unsigned, unsigned> &IndexPlusCost = RM.second;
+    dbgs() << MRI.getName(I) << ", " << I << ", PRF=" << IndexPlusCost.first
+           << ", Cost=" << IndexPlusCost.second 
            << ", ";
     RM.first.dump();
+    dbgs() << '\n';
   }
 
   for (unsigned I = 0, E = getNumRegisterFiles(); I < E; ++I) {

@@ -196,8 +196,8 @@ BenchmarkRunner::writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
   return ResultPath.str();
 }
 
-llvm::Expected<SnippetPrototype> BenchmarkRunner::generateSelfAliasingPrototype(
-    const Instruction &Instr) const {
+llvm::Expected<SnippetPrototype>
+BenchmarkRunner::generateSelfAliasingPrototype(const Instruction &Instr) const {
   const AliasingConfigurations SelfAliasing(Instr, Instr);
   if (SelfAliasing.empty()) {
     return llvm::make_error<BenchmarkFailure>("empty self aliasing");
@@ -217,4 +217,13 @@ llvm::Expected<SnippetPrototype> BenchmarkRunner::generateSelfAliasingPrototype(
   return std::move(Prototype);
 }
 
+llvm::Expected<SnippetPrototype>
+BenchmarkRunner::generateUnconstrainedPrototype(const Instruction &Instr,
+                                                llvm::StringRef Msg) const {
+  SnippetPrototype Prototype;
+  Prototype.Explanation =
+      llvm::formatv("{0}, repeating an unconstrained assignment", Msg);
+  Prototype.Snippet.emplace_back(Instr);
+  return std::move(Prototype);
+}
 } // namespace exegesis
