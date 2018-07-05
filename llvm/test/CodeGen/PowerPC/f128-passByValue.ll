@@ -218,12 +218,12 @@ entry:
 define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-LABEL: mixParam_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ld 3, 104(1)
-; CHECK-NEXT:    mtvsrwa [[REG2:[0-9]+]], 10
-; CHECK-NEXT:    stxv [[REG0:[0-9]+]], 0(9)
-; CHECK-NEXT:    stxvx [[REG1:[0-9]+]], 0, 3
-; CHECK-NEXT:    lxv [[REG0]], 0(9)
-; CHECK-NEXT:    xscvsdqp [[REG1]], [[REG2]]
+; CHECK-DAG:     ld 3, 104(1)
+; CHECK-DAG:     mtvsrwa [[REG2:[0-9]+]], 10
+; CHECK-DAG:     stxv 2, 0(9)
+; CHECK-DAG:     xscvsdqp [[REG1:[0-9]+]], [[REG2]]
+; CHECK:         stxvx 3, 0, 3
+; CHECK-NEXT:    lxv 2, 0(9)
 ; CHECK-NEXT:    xsaddqp 2, 2, [[REG1]]
 ; CHECK-NEXT:    xscvqpdp 2, 2
 ; CHECK-NEXT:    stxsd 2, 0(5)
@@ -249,10 +249,10 @@ define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %ve
 ; CHECK-NEXT:    stxv [[REG1:[0-9]+]], 0(4)
 ; CHECK-NEXT:    stxv [[REG2:[0-9]+]], 0(7)
 ; CHECK-NEXT:    lxv [[REG1]], 0(4)
-; CHECK-NEXT:    xscvsdqp [[REG2]], [[REG0]]
-; CHECK-NEXT:    xsaddqp [[REG1]], [[REG1]], [[REG2]]
-; CHECK-NEXT:    xscvqpdp [[REG1]], [[REG1]]
-; CHECK-NEXT:    stxsd [[REG1]], 0(3)
+; CHECK-NEXT:    xscvsdqp [[REG3:[0-9]+]], [[REG0]]
+; CHECK-NEXT:    xsaddqp [[REG4:[0-9]+]], [[REG1]], [[REG3]]
+; CHECK-NEXT:    xscvqpdp 2, [[REG4]]
+; CHECK-NEXT:    stxsd 2, 0(3)
 ; CHECK-NEXT:    blr
                                  fp128* nocapture %f2, i32 signext %i1, i8 zeroext %c1,
                                  <4 x i32>* nocapture %vec2) {

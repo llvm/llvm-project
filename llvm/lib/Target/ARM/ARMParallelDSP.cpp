@@ -165,9 +165,14 @@ namespace {
   };
 }
 
-template<unsigned BitWidth>
+// MaxBitwidth: the maximum supported bitwidth of the elements in the DSP
+// instructions, which is set to 16. So here we should collect all i8 and i16
+// narrow operations.
+// TODO: we currently only collect i16, and will support i8 later, so that's
+// why we check that types are equal to MaxBitWidth, and not <= MaxBitWidth.
+template<unsigned MaxBitWidth>
 static bool IsNarrowSequence(Value *V, ValueList &VL) {
-  LLVM_DEBUG(dbgs() << "Is narrow sequence: "; V->dump());
+  LLVM_DEBUG(dbgs() << "Is narrow sequence? "; V->dump());
   ConstantInt *CInt;
 
   if (match(V, m_ConstantInt(CInt))) {
@@ -180,38 +185,30 @@ static bool IsNarrowSequence(Value *V, ValueList &VL) {
    return false;
 
   Value *Val, *LHS, *RHS;
-  bool isNarrow = false;
-
   if (match(V, m_Trunc(m_Value(Val)))) {
-    if (cast<TruncInst>(I)->getDestTy()->getIntegerBitWidth() == BitWidth)
-      isNarrow = IsNarrowSequence<BitWidth>(Val, VL);
+    if (cast<TruncInst>(I)->getDestTy()->getIntegerBitWidth() == MaxBitWidth)
+      return IsNarrowSequence<MaxBitWidth>(Val, VL);
   } else if (match(V, m_Add(m_Value(LHS), m_Value(RHS)))) {
     // TODO: we need to implement sadd16/sadd8 for this, which enables to
     // also do the rewrite for smlad8.ll, but it is unsupported for now.
-    isNarrow = false;
+    LLVM_DEBUG(dbgs() << "No, unsupported Op:\t"; I->dump());
+    return false;
   } else if (match(V, m_ZExtOrSExt(m_Value(Val)))) {
-    if (cast<CastInst>(I)->getSrcTy()->getIntegerBitWidth() == BitWidth)
-      isNarrow = true;
-    else
-      LLVM_DEBUG(dbgs() << "Wrong SrcTy size of CastInst: " <<
-                 cast<CastInst>(I)->getSrcTy()->getIntegerBitWidth());
+    if (cast<CastInst>(I)->getSrcTy()->getIntegerBitWidth() != MaxBitWidth) {
+      LLVM_DEBUG(dbgs() << "No, wrong SrcTy size: " <<
+        cast<CastInst>(I)->getSrcTy()->getIntegerBitWidth() << "\n");
+      return false;
+    }
 
-    if (match(Val, m_Load(m_Value(Val)))) {
-      auto *Ld = dyn_cast<LoadInst>(I->getOperand(0));
-      LLVM_DEBUG(dbgs() << "Found narrow Load:\t"; Ld->dump());
-      VL.push_back(Ld);
-      isNarrow = true;
-    } else if (!isa<Instruction>(I->getOperand(0)))
-      VL.push_back(I->getOperand(0));
+    if (match(Val, m_Load(m_Value()))) {
+      LLVM_DEBUG(dbgs() << "Yes, found narrow Load:\t"; Val->dump());
+      VL.push_back(Val);
+      VL.push_back(I);
+      return true;
+    }
   }
-
-  if (isNarrow) {
-    LLVM_DEBUG(dbgs() << "Found narrow Op:\t"; I->dump());
-    VL.push_back(I);
-  } else
-    LLVM_DEBUG(dbgs() << "Found unsupported Op:\t"; I->dump());
-
-  return isNarrow;
+  LLVM_DEBUG(dbgs() << "No, unsupported Op:\t"; I->dump());
+  return false;
 }
 
 // Element-by-element comparison of Value lists returning true if they are

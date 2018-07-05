@@ -35,16 +35,17 @@ define void @test2() {
 ; CHECK-ARM: sub    sp, sp, #4096
 ; CHECK-ARM: .cfi_endproc
 
-; CHECK-ARM-FP-ELIM-LABEL: test2:
-; CHECK-ARM-FP-ELIM: .cfi_startproc
-; CHECK-ARM-FP-ELIM: push    {r4, r5}
-; CHECK-ARM-FP-ELIM: .cfi_def_cfa_offset 8
-; CHECK-ARM-FP-ELIM: .cfi_offset 54, -4
-; CHECK-ARM-FP-ELIM: .cfi_offset r4, -8
-; CHECK-ARM-FP-ELIM: sub    sp, sp, #72
-; CHECK-ARM-FP-ELIM: sub    sp, sp, #4096
-; CHECK-ARM-FP-ELIM: .cfi_def_cfa_offset 4176
-; CHECK-ARM-FP-ELIM: .cfi_endproc
+; FIXME: Misspelled CHECK-ARM-FP-ELIM
+; CHECK-ARM-FP_ELIM-LABEL: test2:
+; CHECK-ARM-FP_ELIM: .cfi_startproc
+; CHECK-ARM-FP_ELIM: push    {r4, r5}
+; CHECK-ARM-FP_ELIM: .cfi_def_cfa_offset 8
+; CHECK-ARM-FP_ELIM: .cfi_offset 54, -4
+; CHECK-ARM-FP_ELIM: .cfi_offset r4, -8
+; CHECK-ARM-FP_ELIM: sub    sp, sp, #72
+; CHECK-ARM-FP_ELIM: sub    sp, sp, #4096
+; CHECK-ARM-FP_ELIM: .cfi_def_cfa_offset 4176
+; CHECK-ARM-FP_ELIM: .cfi_endproc
 
 define i32 @test3() {
 	%retval = alloca i32, align 4

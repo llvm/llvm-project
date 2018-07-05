@@ -2548,9 +2548,16 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def XSCVSDQP  : X_VT5_XO5_VB5_TyVB<63, 10, 836, "xscvsdqp", vfrc, []>;
   def : Pat<(f128 (sint_to_fp i64:$src)),
             (f128 (XSCVSDQP (COPY_TO_REGCLASS $src, VFRC)))>;
+  def : Pat<(f128 (sint_to_fp (i64 (PPCmfvsr f64:$src)))),
+            (f128 (XSCVSDQP $src))>;
+  def : Pat<(f128 (sint_to_fp (i32 (PPCmfvsr f64:$src)))),
+            (f128 (XSCVSDQP (VEXTSW2Ds $src)))>;
+
   def XSCVUDQP  : X_VT5_XO5_VB5_TyVB<63,  2, 836, "xscvudqp", vfrc, []>;
   def : Pat<(f128 (uint_to_fp i64:$src)),
             (f128 (XSCVUDQP (COPY_TO_REGCLASS $src, VFRC)))>;
+  def : Pat<(f128 (uint_to_fp (i64 (PPCmfvsr f64:$src)))),
+            (f128 (XSCVUDQP $src))>;
 
   // Convert (Un)Signed Word -> QP.
   def : Pat<(f128 (sint_to_fp i32:$src)),
@@ -3220,6 +3227,11 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                 (f128 (XSCVUDQP
                         (EXTRACT_SUBREG (VEXTRACTUB Idx, $src), sub_64)))>;
     }
+
+    // Unsiged int in vsx register -> QP
+    def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
+              (f128 (XSCVUDQP
+                      (XXEXTRACTUW (SUBREG_TO_REG (i64 1), $src, sub_64), 4)))>;
   } // IsBigEndian, HasP9Vector
 
   let Predicates = [IsLittleEndian, HasP9Vector] in {
@@ -3286,6 +3298,11 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                         (EXTRACT_SUBREG
                           (VEXTRACTUB !head(!tail(Idx)), $src), sub_64)))>;
     }
+
+    // Unsiged int in vsx register -> QP
+    def : Pat<(f128 (uint_to_fp (i32 (PPCmfvsr f64:$src)))),
+              (f128 (XSCVUDQP
+                      (XXEXTRACTUW (SUBREG_TO_REG (i64 1), $src, sub_64), 8)))>;
   } // IsLittleEndian, HasP9Vector
 
   // Convert (Un)Signed DWord in memory -> QP
@@ -3386,6 +3403,17 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (f128 (XSCVDPQP (COPY_TO_REGCLASS $src, VFRC)))>;
 
 } // end HasP9Vector, AddedComplexity
+
+let AddedComplexity = 400 in {
+  let Predicates = [IsISA3_0, HasP9Vector, HasDirectMove, IsBigEndian] in {
+    def : Pat<(f128 (PPCbuild_fp128 i64:$rB, i64:$rA)),
+              (f128 (COPY_TO_REGCLASS (MTVSRDD $rB, $rA), VRRC))>;
+  }
+  let Predicates = [IsISA3_0, HasP9Vector, HasDirectMove, IsLittleEndian] in {
+    def : Pat<(f128 (PPCbuild_fp128 i64:$rA, i64:$rB)),
+              (f128 (COPY_TO_REGCLASS (MTVSRDD $rB, $rA), VRRC))>;
+  }
+}
 
 let Predicates = [HasP9Vector] in {
   let isPseudo = 1 in {

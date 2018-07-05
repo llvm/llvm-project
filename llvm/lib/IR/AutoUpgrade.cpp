@@ -74,7 +74,7 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   if (Name=="ssse3.pabs.b.128" || // Added in 6.0
       Name=="ssse3.pabs.w.128" || // Added in 6.0
       Name=="ssse3.pabs.d.128" || // Added in 6.0
-      Name.startswith("fma.vfmadd.p") || // Added in 7.0
+      Name.startswith("fma.vfmadd.") || // Added in 7.0
       Name.startswith("fma.vfmsub.") || // Added in 7.0
       Name.startswith("fma.vfmsubadd.") || // Added in 7.0
       Name.startswith("fma.vfnmadd.") || // Added in 7.0
@@ -2746,74 +2746,55 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
       }
-    } else if (IsX86 && (Name.startswith("fma.vfmadd.p") ||
-                         Name.startswith("fma.vfmsub.p") ||
-                         Name.startswith("fma.vfnmadd.p") ||
-                         Name.startswith("fma.vfnmsub.p"))) {
+    } else if (IsX86 && (Name.startswith("fma.vfmadd.") ||
+                         Name.startswith("fma.vfmsub.") ||
+                         Name.startswith("fma.vfnmadd.") ||
+                         Name.startswith("fma.vfnmsub."))) {
       bool NegMul = Name[6] == 'n';
       bool NegAcc = NegMul ? Name[8] == 's' : Name[7] == 's';
+      bool IsScalar = NegMul ? Name[12] == 's' : Name[11] == 's';
 
       Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1),
                        CI->getArgOperand(2) };
 
-      if (NegMul)
+      if (IsScalar) {
+        Ops[0] = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
+        Ops[1] = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+        Ops[2] = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+      }
+
+      if (NegMul && !IsScalar)
         Ops[0] = Builder.CreateFNeg(Ops[0]);
+      if (NegMul && IsScalar)
+        Ops[1] = Builder.CreateFNeg(Ops[1]);
       if (NegAcc)
         Ops[2] = Builder.CreateFNeg(Ops[2]);
 
       Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(),
                                                          Intrinsic::fma,
-                                                         CI->getType()), Ops);
-    } else if (IsX86 && (Name.startswith("fma.vfmsub.s") ||
-                         Name.startswith("fma.vfmsubadd.p"))) {
-      // Handle FMSUB and FSUBADD.
+                                                         Ops[0]->getType()),
+                               Ops);
+
+      if (IsScalar)
+        Rep = Builder.CreateInsertElement(CI->getArgOperand(0), Rep,
+                                          (uint64_t)0);
+    } else if (IsX86 && Name.startswith("fma.vfmsubadd.p")) {
+      // Handle FSUBADD.
       unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
       unsigned EltWidth = CI->getType()->getScalarSizeInBits();
       Intrinsic::ID IID;
-      if (Name[10] == '.' && Name[11] == 's') {
-        // Scalar FMSUB
-        if (EltWidth == 32)
-          IID = Intrinsic::x86_fma_vfmadd_ss;
-        else if (EltWidth == 64)
-          IID = Intrinsic::x86_fma_vfmadd_sd;
-        else
-          llvm_unreachable("Unexpected intrinsic");
-      } else {
-        // FMSUBADD
-        if (VecWidth == 128 && EltWidth == 32)
-          IID = Intrinsic::x86_fma_vfmaddsub_ps;
-        else if (VecWidth == 128 && EltWidth == 64)
-          IID = Intrinsic::x86_fma_vfmaddsub_pd;
-        else if (VecWidth == 256 && EltWidth == 32)
-          IID = Intrinsic::x86_fma_vfmaddsub_ps_256;
-        else if (VecWidth == 256 && EltWidth == 64)
-          IID = Intrinsic::x86_fma_vfmaddsub_pd_256;
-        else
-          llvm_unreachable("Unexpected intrinsic");
-      }
-      Value *Arg2 = Builder.CreateFNeg(CI->getArgOperand(2));
-      Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1), Arg2 };
-      Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
-                                                         Ops);
-    } else if (IsX86 && (Name.startswith("fma.vfnmadd.s") ||
-                         Name.startswith("fma.vfnmsub.s"))) {
-      Value *Arg0 = CI->getArgOperand(0);
-      Value *Arg1 = CI->getArgOperand(1);
-      Value *Arg2 = CI->getArgOperand(2);
-      unsigned EltWidth = CI->getType()->getScalarSizeInBits();
-      // Scalar FNMADD/FNMSUB
-      Arg1 = Builder.CreateFNeg(Arg1); // Arg0 is passthru so invert Arg1.
-      Intrinsic::ID IID;
-      if (EltWidth == 32)
-        IID = Intrinsic::x86_fma_vfmadd_ss;
-      else if (EltWidth == 64)
-        IID = Intrinsic::x86_fma_vfmadd_sd;
+      if (VecWidth == 128 && EltWidth == 32)
+        IID = Intrinsic::x86_fma_vfmaddsub_ps;
+      else if (VecWidth == 128 && EltWidth == 64)
+        IID = Intrinsic::x86_fma_vfmaddsub_pd;
+      else if (VecWidth == 256 && EltWidth == 32)
+        IID = Intrinsic::x86_fma_vfmaddsub_ps_256;
+      else if (VecWidth == 256 && EltWidth == 64)
+        IID = Intrinsic::x86_fma_vfmaddsub_pd_256;
       else
         llvm_unreachable("Unexpected intrinsic");
-      // Invert for FNMSUB.
-      if (Name[8] == 's')
-        Arg2 = Builder.CreateFNeg(Arg2);
-      Value *Ops[] = { Arg0, Arg1, Arg2 };
+      Value *Arg2 = Builder.CreateFNeg(CI->getArgOperand(2));
+      Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1), Arg2 };
       Rep = Builder.CreateCall(Intrinsic::getDeclaration(CI->getModule(), IID),
                                                          Ops);
     } else if (IsX86 && (Name.startswith("avx512.mask.pternlog.") ||

@@ -2072,17 +2072,8 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
 
       if (auto *FoundRecord = dyn_cast<RecordDecl>(Found)) {
         if (!SearchName) {
-          // If both unnamed structs/unions are in a record context, make sure
-          // they occur in the same location in the context records.
-          if (Optional<unsigned> Index1 =
-                  StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(
-                      D)) {
-            if (Optional<unsigned> Index2 = StructuralEquivalenceContext::
-                    findUntaggedStructOrUnionIndex(FoundRecord)) {
-              if (*Index1 != *Index2)
-                continue;
-            }
-          }
+          if (!IsStructuralMatch(D, FoundRecord, false))
+            continue;
         }
 
         PrevDecl = FoundRecord;

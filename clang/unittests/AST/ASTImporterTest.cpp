@@ -1682,6 +1682,35 @@ TEST_P(
                     .match(ToTU, classTemplateSpecializationDecl()));
 }
 
+TEST_P(ASTImporterTestBase, ObjectsWithUnnamedStructType) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct { int a; int b; } object0 = { 2, 3 };
+      struct { int x; int y; int z; } object1;
+      )",
+      Lang_CXX, "input0.cc");
+
+  auto getRecordDecl = [](VarDecl *VD) {
+    auto *ET = cast<ElaboratedType>(VD->getType().getTypePtr());
+    return cast<RecordType>(ET->getNamedType().getTypePtr())->getDecl();
+  };
+
+  auto *Obj0 =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("object0")));
+  auto *From0 = getRecordDecl(Obj0);
+  auto *Obj1 =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("object1")));
+  auto *From1 = getRecordDecl(Obj1);
+
+  auto *To0 = Import(From0, Lang_CXX);
+  auto *To1 = Import(From1, Lang_CXX);
+
+  EXPECT_TRUE(To0);
+  EXPECT_TRUE(To1);
+  EXPECT_NE(To0, To1);
+  EXPECT_NE(To0->getCanonicalDecl(), To1->getCanonicalDecl());
+}
+
 struct ImportFunctions : ASTImporterTestBase {};
 
 TEST_P(ImportFunctions,

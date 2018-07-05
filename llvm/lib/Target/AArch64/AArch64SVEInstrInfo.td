@@ -52,6 +52,11 @@ let Predicates = [HasSVE] in {
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon">;
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic">;
 
+  defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", simm8>;
+  defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", simm8>;
+  defm UMAX_ZI   : sve_int_arith_imm1<0b01, "umax", imm0_255>;
+  defm UMIN_ZI   : sve_int_arith_imm1<0b11, "umin", imm0_255>;
+
   defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb">;
   defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb">;
   defm SXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b010, "sxth">;
@@ -60,6 +65,13 @@ let Predicates = [HasSVE] in {
   defm UXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b101, "uxtw">;
   defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs">;
   defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg">;
+
+  defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax">;
+  defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax">;
+  defm SMIN_ZPmZ : sve_int_bin_pred_arit_1<0b010, "smin">;
+  defm UMIN_ZPmZ : sve_int_bin_pred_arit_1<0b011, "umin">;
+  defm SABD_ZPmZ : sve_int_bin_pred_arit_1<0b100, "sabd">;
+  defm UABD_ZPmZ : sve_int_bin_pred_arit_1<0b101, "uabd">;
 
   defm FADD_ZPmI    : sve_fp_2op_i_p_zds<0b000, "fadd", sve_fpimm_half_one>;
   defm FMUL_ZPmI    : sve_fp_2op_i_p_zds<0b010, "fmul", sve_fpimm_half_two>;

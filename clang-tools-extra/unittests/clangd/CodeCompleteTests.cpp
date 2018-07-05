@@ -59,6 +59,7 @@ MATCHER_P(InsertInclude, IncludeHeader, "") {
 }
 MATCHER(InsertInclude, "") { return bool(arg.HeaderInsertion); }
 MATCHER_P(SnippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
+MATCHER_P(Origin, OriginSet, "") { return arg.Origin == OriginSet; }
 
 // Shorthand for Contains(Named(Name)).
 Matcher<const std::vector<CodeCompletion> &> Has(std::string Name) {
@@ -137,6 +138,7 @@ Symbol sym(StringRef QName, index::SymbolKind Kind, StringRef USRFormat) {
   Sym.ID = SymbolID(USR);
   Sym.SymInfo.Kind = Kind;
   Sym.IsIndexedForCodeCompletion = true;
+  Sym.Origin = SymbolOrigin::Static;
   return Sym;
 }
 Symbol func(StringRef Name) { // Assumes the function has no args.
@@ -511,9 +513,12 @@ TEST(CompletionTest, SemaIndexMerge) {
       )cpp",
       {func("ns::both"), cls("ns::Index")});
   // We get results from both index and sema, with no duplicates.
-  EXPECT_THAT(
-      Results.Completions,
-      UnorderedElementsAre(Named("local"), Named("Index"), Named("both")));
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(
+                  AllOf(Named("local"), Origin(SymbolOrigin::AST)),
+                  AllOf(Named("Index"), Origin(SymbolOrigin::Static)),
+                  AllOf(Named("both"),
+                        Origin(SymbolOrigin::AST | SymbolOrigin::Static))));
 }
 
 TEST(CompletionTest, SemaIndexMergeWithLimit) {
@@ -1252,6 +1257,8 @@ TEST(CompletionTest, Render) {
   C.Header = "\"foo.h\"";
   C.Kind = CompletionItemKind::Method;
   C.Score.Total = 1.0;
+  C.Origin =
+      static_cast<SymbolOrigin>(SymbolOrigin::AST | SymbolOrigin::Static);
 
   CodeCompleteOptions Opts;
   Opts.IncludeIndicator.Insert = "^";
@@ -1277,6 +1284,10 @@ TEST(CompletionTest, Render) {
   R = C.render(Opts);
   EXPECT_EQ(R.label, "^Foo::x(bool) const");
   EXPECT_THAT(R.additionalTextEdits, Not(IsEmpty()));
+
+  Opts.ShowOrigins = true;
+  R = C.render(Opts);
+  EXPECT_EQ(R.label, "^[AS]Foo::x(bool) const");
 
   C.BundleSize = 2;
   R = C.render(Opts);

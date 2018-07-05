@@ -44,6 +44,16 @@ void operator>>(StringRef Str, SymbolID &ID) {
   std::copy(HexString.begin(), HexString.end(), ID.HashValue.begin());
 }
 
+raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {
+  if (O == SymbolOrigin::Unknown)
+    return OS << "unknown";
+  constexpr static char Sigils[] = "ADSM4567";
+  for (unsigned I = 0; I < sizeof(Sigils); ++I)
+    if (O & static_cast<SymbolOrigin>(1 << I))
+      OS << Sigils[I];
+  return OS;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const Symbol &S) {
   return OS << S.Scope << S.Name;
 }
