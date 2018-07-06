@@ -327,6 +327,14 @@ namespace  AArch64ISB {
   #include "AArch64GenSystemOperands.inc"
 }
 
+namespace  AArch64TSB {
+  struct TSB : SysAlias {
+    using SysAlias::SysAlias;
+  };
+  #define GET_TSB_DECL
+  #include "AArch64GenSystemOperands.inc"
+}
+
 namespace AArch64PRFM {
   struct PRFM : SysAlias {
     using SysAlias::SysAlias;

@@ -28,6 +28,57 @@
 # CHECK-NEXT:    ]
 # CHECK-NEXT:}
 ---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"test:///main.cpp"}}}
+#      CHECK:  "id": 2,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:    "result": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "containerName": "",
+# CHECK-NEXT:        "kind": 12,
+# CHECK-NEXT:        "location": {
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "uri": "file://{{.*}}/main.cpp"
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "name": "foo"
+# CHECK-NEXT:      }
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "containerName": "",
+# CHECK-NEXT:        "kind": 12,
+# CHECK-NEXT:        "location": {
+# CHECK-NEXT:          "range": {
+# CHECK-NEXT:            "end": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            },
+# CHECK-NEXT:            "start": {
+# CHECK-NEXT:              "character": {{.*}},
+# CHECK-NEXT:              "line": {{.*}}
+# CHECK-NEXT:            }
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "uri": "file://{{.*}}/main.cpp"
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "name": "main"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:}
+---
+{"jsonrpc":"2.0","id":3,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"test:///foo.cpp"}}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32602,
+# CHECK-NEXT:    "message": "trying to get AST for non-added document"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0"
+---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}

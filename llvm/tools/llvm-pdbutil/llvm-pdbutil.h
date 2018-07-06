@@ -160,6 +160,7 @@ extern llvm::cl::opt<uint32_t> DumpModi;
 extern llvm::cl::opt<bool> JustMyCode;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
+extern llvm::cl::opt<bool> DumpGSIRecords;
 extern llvm::cl::opt<bool> DumpGlobals;
 extern llvm::cl::opt<bool> DumpGlobalExtras;
 extern llvm::cl::opt<bool> DumpPublics;

@@ -53,6 +53,14 @@ namespace llvm {
 #include "AArch64GenSystemOperands.inc"
   }
 }
+
+namespace llvm {
+  namespace AArch64TSB {
+#define GET_TSB_IMPL
+#include "AArch64GenSystemOperands.inc"
+  }
+}
+
 namespace llvm {
   namespace AArch64PRFM {
 #define GET_PRFM_IMPL

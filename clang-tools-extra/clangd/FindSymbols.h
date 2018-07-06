@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
+class ParsedAST;
 namespace clangd {
 class SymbolIndex;
 
@@ -32,6 +33,11 @@ class SymbolIndex;
 llvm::Expected<std::vector<SymbolInformation>>
 getWorkspaceSymbols(llvm::StringRef Query, int Limit,
                     const SymbolIndex *const Index, llvm::StringRef HintPath);
+
+/// Retrieves the symbols contained in the "main file" section of an AST in the
+/// same order that they appear.
+llvm::Expected<std::vector<SymbolInformation>>
+getDocumentSymbols(ParsedAST &AST);
 
 } // namespace clangd
 } // namespace clang

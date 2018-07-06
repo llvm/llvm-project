@@ -458,6 +458,10 @@ cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
 cl::opt<bool> DumpPublicExtras("public-extras",
                                cl::desc("dump Publics hashes and address maps"),
                                cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<bool>
+    DumpGSIRecords("gsi-records",
+                   cl::desc("dump public / global common record stream"),
+                   cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSymbols("symbols", cl::desc("dump module symbols"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 

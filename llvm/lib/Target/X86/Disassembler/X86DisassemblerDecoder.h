@@ -563,6 +563,8 @@ struct InternalInstruction {
   bool hasAdSize;
   // Operand-size override
   bool hasOpSize;
+  // Lock prefix
+  bool hasLockPrefix;
   // The repeat prefix if any
   uint8_t repeatPrefix;
 

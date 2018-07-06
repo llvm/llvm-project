@@ -671,3 +671,12 @@ TEST(FormatVariadicTest, CopiesAndMoves) {
   EXPECT_EQ(0, R.Copied);
   EXPECT_EQ(0, R.Moved);
 }
+
+namespace adl {
+struct X {};
+raw_ostream &operator<<(raw_ostream &OS, const X &) { return OS << "X"; }
+} // namespace adl
+TEST(FormatVariadicTest, FormatStreamable) {
+  adl::X X;
+  EXPECT_EQ("X", formatv("{0}", X).str());
+}

@@ -83,7 +83,8 @@ Error GSIHashStreamBuilder::commit(BinaryStreamWriter &Writer) {
 }
 
 void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
-  std::array<std::vector<PSHashRecord>, IPHR_HASH + 1> TmpBuckets;
+  std::array<std::vector<std::pair<StringRef, PSHashRecord>>, IPHR_HASH + 1>
+      TmpBuckets;
   uint32_t SymOffset = RecordZeroOffset;
   for (const CVSymbol &Sym : Records) {
     PSHashRecord HR;
@@ -94,8 +95,7 @@ void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
     // Hash the name to figure out which bucket this goes into.
     StringRef Name = getSymbolName(Sym);
     size_t BucketIdx = hashStringV1(Name) % IPHR_HASH;
-    TmpBuckets[BucketIdx].push_back(HR); // FIXME: Does order matter?
-
+    TmpBuckets[BucketIdx].push_back(std::make_pair(Name, HR));
     SymOffset += Sym.length();
   }
 
@@ -117,8 +117,22 @@ void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
     ulittle32_t ChainStartOff =
         ulittle32_t(HashRecords.size() * SizeOfHROffsetCalc);
     HashBuckets.push_back(ChainStartOff);
-    for (const auto &HR : Bucket)
-      HashRecords.push_back(HR);
+
+    // Sort each bucket by memcmp of the symbol's name.
+    std::sort(Bucket.begin(), Bucket.end(),
+              [](const std::pair<StringRef, PSHashRecord> &Left,
+                 const std::pair<StringRef, PSHashRecord> &Right) {
+                size_t LS = Left.first.size();
+                size_t RS = Right.first.size();
+                if (LS < RS)
+                  return true;
+                if (LS > RS)
+                  return false;
+                return Left.first < Right.first;
+              });
+
+    for (const auto &Entry : Bucket)
+      HashRecords.push_back(Entry.second);
   }
 }
 

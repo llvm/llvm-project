@@ -6,9 +6,7 @@
 define i16 @foo(i16 %x)  {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[T1:%.*]] = and i16 [[X:%.*]], 255
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult i16 [[T1]], 255
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T3]], i16 [[T1]], i16 255
-; CHECK-NEXT:    ret i16 [[T4]]
+; CHECK-NEXT:    ret i16 [[T1]]
 ;
   %t1 = and i16 %x, 255
   %t2 = zext i16 %t1 to i32

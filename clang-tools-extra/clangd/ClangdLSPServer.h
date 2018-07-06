@@ -62,6 +62,7 @@ private:
   void
   onDocumentRangeFormatting(DocumentRangeFormattingParams &Params) override;
   void onDocumentFormatting(DocumentFormattingParams &Params) override;
+  void onDocumentSymbol(DocumentSymbolParams &Params) override;
   void onCodeAction(CodeActionParams &Params) override;
   void onCompletion(TextDocumentPositionParams &Params) override;
   void onSignatureHelp(TextDocumentPositionParams &Params) override;

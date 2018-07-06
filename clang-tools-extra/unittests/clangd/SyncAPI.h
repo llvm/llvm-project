@@ -43,6 +43,9 @@ std::string runDumpAST(ClangdServer &Server, PathRef File);
 llvm::Expected<std::vector<SymbolInformation>>
 runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit);
 
+llvm::Expected<std::vector<SymbolInformation>>
+runDocumentSymbols(ClangdServer &Server, PathRef File);
+
 } // namespace clangd
 } // namespace clang
 

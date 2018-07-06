@@ -447,6 +447,7 @@ namespace {
     SDNode *MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL);
     SDValue MatchLoadCombine(SDNode *N);
     SDValue ReduceLoadWidth(SDNode *N);
+    SDValue foldRedundantShiftedMasks(SDNode *N);
     SDValue ReduceLoadOpStoreWidth(SDNode *N);
     SDValue splitMergedValStore(StoreSDNode *ST);
     SDValue TransformFPLoadStorePair(SDNode *N);
@@ -4378,6 +4379,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     }
   }
 
+  if (SDValue R = foldRedundantShiftedMasks(N))
+    return R;
+
   if (Level >= AfterLegalizeTypes) {
     // Attempt to propagate the AND back up to the leaves which, if they're
     // loads, can be combined to narrow loads and the AND node can be removed.
@@ -5939,6 +5943,108 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
         return DAG.getNode(N->getOpcode(), dl, VT, N0->getOperand(0),
                            CombinedShiftNorm);
       }
+    }
+  }
+  return SDValue();
+}
+
+// fold expressions x1 and x2 alike:
+// x1 = ( and, x, 0x00FF )
+// x2 = (( shl x, 8 ) and 0xFF00 )
+// into
+// x2 = shl x1, 8 ; reuse the computation of x1
+SDValue DAGCombiner::foldRedundantShiftedMasks(SDNode *AND) {
+  if (!AND)
+    return SDValue();
+
+  const SDValue &SHIFT = AND->getOperand(0);
+  if ((SHIFT.getNumOperands() != 2) || (!SHIFT.hasOneUse()))
+    return SDValue();
+
+  const ConstantSDNode *ShiftAmount =
+      dyn_cast<ConstantSDNode>(SHIFT.getOperand(1));
+  if (!ShiftAmount)
+    return SDValue();
+
+  const ConstantSDNode *Mask = dyn_cast<ConstantSDNode>(AND->getOperand(1));
+  if (!Mask)
+    return SDValue();
+
+  SDValue MASKED = SHIFT.getOperand(0);
+  const auto &MaskedValue = dyn_cast<SDNode>(MASKED);
+  unsigned N0Opcode = SHIFT.getOpcode();
+  for (SDNode *OtherUser : MaskedValue->uses()) {
+    if ((&(*OtherUser) == ShiftAmount) || (OtherUser->getOpcode() != ISD::AND))
+      continue;
+
+    ConstantSDNode *OtherMask =
+        dyn_cast<ConstantSDNode>(OtherUser->getOperand(1));
+
+    if (!OtherMask)
+      continue;
+
+    bool CanReduce = false;
+
+    const APInt &MaskValue = Mask->getAPIntValue();
+    const APInt &ShiftValue = ShiftAmount->getAPIntValue();
+    const APInt &OtherMaskValue = OtherMask->getAPIntValue();
+
+    KnownBits MaskedValueBits;
+    DAG.computeKnownBits(MASKED, MaskedValueBits);
+    KnownBits ShiftedValueBits;
+    DAG.computeKnownBits(SHIFT, ShiftedValueBits);
+
+    const APInt EffectiveOtherMask = OtherMaskValue & ~MaskedValueBits.Zero;
+    const APInt EffectiveMask = MaskValue & ~ShiftedValueBits.Zero;
+
+    LLVM_DEBUG(
+        dbgs() << "\tValue being masked and shift-masked: "; MASKED.dump();
+        dbgs() << "\t\tValue zero bits: 0x"
+               << MaskedValueBits.Zero.toString(16, false)
+               << "\n\n\t\tApplied mask: 0x"
+               << OtherMaskValue.toString(16, false) << " : ";
+        OtherUser->dump();
+        dbgs() << "\t\tEffective mask: 0x"
+               << EffectiveOtherMask.toString(16, false)
+               << "\n\n\tShifted by: " << ShiftValue.getZExtValue() << " : ";
+        SHIFT.dump(); dbgs() << "\t\tAnd masked by: 0x"
+                             << MaskValue.toString(16, false) << " : ";
+        AND->dump(); dbgs() << "\t\tEffective mask to shifted value: 0x"
+                            << EffectiveMask.toString(16, false) << '\n';);
+
+    switch (N0Opcode) {
+    case ISD::SHL:
+      CanReduce = (EffectiveOtherMask.shl(EffectiveMask) == EffectiveMask) ||
+                  (EffectiveMask.lshr(ShiftValue) == EffectiveOtherMask);
+      break;
+    case ISD::SRA:
+      if (!MaskedValueBits.Zero.isSignBitSet()) {
+        CanReduce = (EffectiveOtherMask.ashr(ShiftValue) == EffectiveMask);
+        break;
+      } else // Same as SRL
+        N0Opcode = ISD::SRL;
+      LLVM_FALLTHROUGH
+      /* fall-through */
+    case ISD::SRL:
+      CanReduce = (EffectiveOtherMask.lshr(ShiftValue) == EffectiveMask) ||
+                  (EffectiveMask.shl(ShiftValue) == EffectiveOtherMask);
+      break;
+    case ISD::ROTR:
+      CanReduce = (EffectiveOtherMask.rotr(ShiftValue) == EffectiveMask);
+      break;
+    default:
+      return SDValue();
+    }
+    if (CanReduce) {
+      LLVM_DEBUG(dbgs() << "\tCan just shift the masked value\n");
+
+      SDValue ShiftTheAND(OtherUser, 0);
+      const SDLoc DL(SHIFT);
+      EVT VT = AND->getValueType(0);
+      SDValue NewShift =
+          DAG.getNode(N0Opcode, DL, VT, ShiftTheAND, SHIFT.getOperand(1));
+      AddToWorklist(OtherUser);
+      return NewShift;
     }
   }
   return SDValue();

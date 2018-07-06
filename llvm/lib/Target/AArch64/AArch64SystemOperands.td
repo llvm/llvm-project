@@ -143,6 +143,23 @@ class ISB<string name, bits<4> encoding> : SearchableTable{
 def : ISB<"sy", 0xf>;
 
 //===----------------------------------------------------------------------===//
+// TSB (Trace synchronization barrier) instruction options.
+//===----------------------------------------------------------------------===//
+
+class TSB<string name, bits<4> encoding> : SearchableTable{
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<4> Encoding;
+  let Encoding = encoding;
+
+  code Requires = [{ {AArch64::HasV8_4aOps} }];
+}
+
+def : TSB<"csync", 0>;
+
+//===----------------------------------------------------------------------===//
 // PRFM (prefetch) instruction options.
 //===----------------------------------------------------------------------===//
 
