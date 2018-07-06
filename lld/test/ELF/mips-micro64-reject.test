@@ -1,0 +1,23 @@
+# REQUIRES: mips
+#
+# Check that the linker rejects microMIPS64 input files.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: not ld.lld %t.o -shared -o %t.so 2>&1 | FileCheck %s
+
+# CHECK: linking microMIPS 64-bit files is unsupported: {{.*}}mips-micro64-reject.test
+
+!ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2MSB
+  Type:     ET_REL
+  Machine:  EM_MIPS
+  Flags:    [ EF_MIPS_MICROMIPS, EF_MIPS_ARCH_64 ]
+
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content:         00000000
+

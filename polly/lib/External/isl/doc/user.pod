@@ -2096,14 +2096,17 @@ or a list of affine expressions
 (See L</"Functions">), provided these affine expressions do not
 involve any NaN.
 
+	#include <isl/set.h>
+	__isl_give isl_basic_set *isl_basic_set_from_multi_aff(
+		__isl_take isl_multi_aff *ma);
+	__isl_give isl_set *isl_set_from_multi_aff(
+		__isl_take isl_multi_aff *ma);
+
+	#include <isl/map.h>
 	__isl_give isl_basic_map *isl_basic_map_from_aff(
 		__isl_take isl_aff *aff);
 	__isl_give isl_map *isl_map_from_aff(
 		__isl_take isl_aff *aff);
-	__isl_give isl_set *isl_set_from_pw_aff(
-		__isl_take isl_pw_aff *pwaff);
-	__isl_give isl_map *isl_map_from_pw_aff(
-		__isl_take isl_pw_aff *pwaff);
 	__isl_give isl_basic_map *isl_basic_map_from_aff_list(
 		__isl_take isl_space *domain_space,
 		__isl_take isl_aff_list *list);
@@ -2111,6 +2114,12 @@ involve any NaN.
 		__isl_take isl_multi_aff *maff)
 	__isl_give isl_map *isl_map_from_multi_aff(
 		__isl_take isl_multi_aff *maff)
+
+	#include <isl/aff.h>
+	__isl_give isl_set *isl_set_from_pw_aff(
+		__isl_take isl_pw_aff *pwaff);
+	__isl_give isl_map *isl_map_from_pw_aff(
+		__isl_take isl_pw_aff *pwaff);
 	__isl_give isl_set *isl_set_from_pw_multi_aff(
 		__isl_take isl_pw_multi_aff *pma);
 	__isl_give isl_map *isl_map_from_pw_multi_aff(
@@ -4341,6 +4350,11 @@ return true if the objects are not the same.
 		__isl_keep isl_union_map *umap1,
 		__isl_keep isl_union_map *umap2);
 
+	#include <isl/val.h>
+	isl_bool isl_multi_val_plain_is_equal(
+		__isl_keep isl_multi_val *mv1,
+		__isl_keep isl_multi_val *mv2);
+
 	#include <isl/aff.h>
 	isl_bool isl_aff_plain_is_equal(
 		__isl_keep isl_aff *aff1,
@@ -5381,11 +5395,29 @@ a singleton subset of the input.  Otherwise, return an empty set.
 		__isl_keep isl_aff *obj);
 	__isl_give isl_multi_val *
 	isl_union_set_min_multi_union_pw_aff(
-		__isl_keep isl_union_set *set,
+		__isl_keep isl_union_set *uset,
 		__isl_keep isl_multi_union_pw_aff *obj);
 
 Compute the minimum or maximum of the integer affine expression C<obj>
-over the points in C<set>, returning the result in C<opt>.
+over the points in C<set>.
+The result is C<NULL> in case of an error, the optimal value in case
+there is one, negative infinity or infinity if the problem is unbounded and
+NaN if the problem is empty.
+
+	#include <isl/ilp.h>
+	__isl_give isl_val *isl_union_pw_aff_min_val(
+		__isl_take isl_union_pw_aff *upa);
+	__isl_give isl_val *isl_union_pw_aff_max_val(
+		__isl_take isl_union_pw_aff *upa);
+	__isl_give isl_multi_val *
+	isl_multi_union_pw_aff_min_multi_val(
+		__isl_take isl_multi_union_pw_aff *mupa);
+	__isl_give isl_multi_val *
+	isl_multi_union_pw_aff_max_multi_val(
+		__isl_take isl_multi_union_pw_aff *mupa);
+
+Compute the minimum or maximum of the integer affine expression
+over its definition domain.
 The result is C<NULL> in case of an error, the optimal value in case
 there is one, negative infinity or infinity if the problem is unbounded and
 NaN if the problem is empty.
@@ -6904,7 +6936,7 @@ instead.
 	#include <isl/val.h>
 	__isl_give isl_multi_val *isl_multi_val_flat_range_product(
 		__isl_take isl_multi_val *mv1,
-		__isl_take isl_multi_aff *mv2);
+		__isl_take isl_multi_val *mv2);
 
 	#include <isl/aff.h>
 	__isl_give isl_multi_aff *isl_multi_aff_flat_range_product(
@@ -7813,6 +7845,11 @@ Lists can be created, copied, modified and freed using the following functions.
 	__isl_give isl_set_list *isl_set_list_drop(
 		__isl_take isl_set_list *list,
 		unsigned first, unsigned n);
+	__isl_give isl_set_list *isl_set_list_swap(
+		__isl_take isl_set_list *list,
+		unsigned pos1, unsigned pos2);
+	__isl_give isl_set_list *isl_set_list_reverse(
+		__isl_take isl_set_list *list);
 	__isl_give isl_set_list *isl_set_list_set_set(
 		__isl_take isl_set_list *list, int index,
 		__isl_take isl_set *set);
@@ -7836,11 +7873,16 @@ C<isl_set_list_alloc> creates an empty list with an initial capacity
 for C<n> elements.  C<isl_set_list_insert> and C<isl_set_list_add>
 add elements to a list, increasing its capacity as needed.
 C<isl_set_list_from_set> creates a list with a single element.
+C<isl_set_list_swap> swaps the elements at the specified locations.
+C<isl_set_list_reverse> reverses the elements in the list.
 
 Lists can be inspected using the following functions.
 
 	#include <isl/set.h>
+	int isl_set_list_size(__isl_keep isl_set_list *list);
 	int isl_set_list_n_set(__isl_keep isl_set_list *list);
+	__isl_give isl_set *isl_set_list_get_at(
+		__isl_keep isl_set_list *list, int index);
 	__isl_give isl_set *isl_set_list_get_set(
 		__isl_keep isl_set_list *list, int index);
 	isl_stat isl_set_list_foreach(__isl_keep isl_set_list *list,
@@ -7854,6 +7896,9 @@ Lists can be inspected using the following functions.
 		isl_stat (*fn)(__isl_take isl_set *el, void *user),
 		void *fn_user);
 
+C<isl_set_list_n_set> is an alternative name for C<isl_set_list_size>.
+Similarly,
+C<isl_set_list_get_set> is an alternative name for C<isl_set_list_get_at>.
 The function C<isl_set_list_foreach_scc> calls C<fn> on each of the
 strongly connected components of the graph with as vertices the elements
 of C<list> and a directed edge from vertex C<b> to vertex C<a>
