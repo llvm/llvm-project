@@ -42748,6 +42748,80 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBProcess_LoadImageUsingPaths(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBProcess *arg1 = (lldb::SBProcess *) 0 ;
+  lldb::SBFileSpec *arg2 = 0 ;
+  lldb::SBStringList *arg3 = 0 ;
+  lldb::SBFileSpec *arg4 = 0 ;
+  lldb::SBError *arg5 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  void *argp5 = 0 ;
+  int res5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  uint32_t result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:SBProcess_LoadImageUsingPaths",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBProcess, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "1"" of type '" "lldb::SBProcess *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_lldb__SBFileSpec,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "2"" of type '" "lldb::SBFileSpec const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "2"" of type '" "lldb::SBFileSpec const &""'"); 
+  }
+  arg2 = reinterpret_cast< lldb::SBFileSpec * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_lldb__SBStringList,  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "3"" of type '" "lldb::SBStringList &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "3"" of type '" "lldb::SBStringList &""'"); 
+  }
+  arg3 = reinterpret_cast< lldb::SBStringList * >(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_lldb__SBFileSpec,  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "4"" of type '" "lldb::SBFileSpec &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "4"" of type '" "lldb::SBFileSpec &""'"); 
+  }
+  arg4 = reinterpret_cast< lldb::SBFileSpec * >(argp4);
+  res5 = SWIG_ConvertPtr(obj4, &argp5, SWIGTYPE_p_lldb__SBError,  0 );
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "5"" of type '" "lldb::SBError &""'"); 
+  }
+  if (!argp5) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBProcess_LoadImageUsingPaths" "', argument " "5"" of type '" "lldb::SBError &""'"); 
+  }
+  arg5 = reinterpret_cast< lldb::SBError * >(argp5);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (uint32_t)(arg1)->LoadImageUsingPaths((lldb::SBFileSpec const &)*arg2,*arg3,*arg4,*arg5);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_unsigned_SS_int(static_cast< unsigned int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBProcess_UnloadImage(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBProcess *arg1 = (lldb::SBProcess *) 0 ;
@@ -76001,6 +76075,14 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBProcess_GetDescription", _wrap_SBProcess_GetDescription, METH_VARARGS, (char *)"SBProcess_GetDescription(SBProcess self, SBStream description) -> bool"},
 	 { (char *)"SBProcess_GetNumSupportedHardwareWatchpoints", _wrap_SBProcess_GetNumSupportedHardwareWatchpoints, METH_VARARGS, (char *)"SBProcess_GetNumSupportedHardwareWatchpoints(SBProcess self, SBError error) -> uint32_t"},
 	 { (char *)"SBProcess_LoadImage", _wrap_SBProcess_LoadImage, METH_VARARGS, (char *)"SBProcess_LoadImage(SBProcess self, SBFileSpec image_spec, SBError error) -> uint32_t"},
+	 { (char *)"SBProcess_LoadImageUsingPaths", _wrap_SBProcess_LoadImageUsingPaths, METH_VARARGS, (char *)"\n"
+		"Load the library whose filename is given by image_spec looking in all the\n"
+		"paths supplied in the paths argument.  If successful, return a token that\n"
+		"can be passed to UnloadImage and fill loaded_path with the path that was\n"
+		"successfully loaded.  On failure, return \n"
+		"lldb.LLDB_INVALID_IMAGE_TOKEN.\n"
+		"\n"
+		""},
 	 { (char *)"SBProcess_UnloadImage", _wrap_SBProcess_UnloadImage, METH_VARARGS, (char *)"SBProcess_UnloadImage(SBProcess self, uint32_t image_token) -> SBError"},
 	 { (char *)"SBProcess_SendEventData", _wrap_SBProcess_SendEventData, METH_VARARGS, (char *)"SBProcess_SendEventData(SBProcess self, char event_data) -> SBError"},
 	 { (char *)"SBProcess_GetNumExtendedBacktraceTypes", _wrap_SBProcess_GetNumExtendedBacktraceTypes, METH_VARARGS, (char *)"\n"
