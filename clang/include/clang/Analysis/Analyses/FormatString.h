@@ -257,7 +257,12 @@ private:
   const Kind K;
   QualType T;
   const char *Name = nullptr;
-  bool Ptr = false, IsSizeT = false;
+  bool Ptr = false;
+
+  /// The TypeKind identifies certain well-known types like size_t and
+  /// ptrdiff_t.
+  enum class TypeKind { DontCare, SizeT, PtrdiffT };
+  TypeKind TK = TypeKind::DontCare;
 
 public:
   ArgType(Kind K = UnknownTy, const char *N = nullptr) : K(K), Name(N) {}
@@ -267,7 +272,9 @@ public:
   static ArgType Invalid() { return ArgType(InvalidTy); }
   bool isValid() const { return K != InvalidTy; }
 
-  bool isSizeT() const { return IsSizeT; }
+  bool isSizeT() const { return TK == TypeKind::SizeT; }
+
+  bool isPtrdiffT() const { return TK == TypeKind::PtrdiffT; }
 
   /// Create an ArgType which corresponds to the type pointer to A.
   static ArgType PtrTo(const ArgType& A) {
@@ -280,7 +287,15 @@ public:
   /// Create an ArgType which corresponds to the size_t/ssize_t type.
   static ArgType makeSizeT(const ArgType &A) {
     ArgType Res = A;
-    Res.IsSizeT = true;
+    Res.TK = TypeKind::SizeT;
+    return Res;
+  }
+
+  /// Create an ArgType which corresponds to the ptrdiff_t/unsigned ptrdiff_t
+  /// type.
+  static ArgType makePtrdiffT(const ArgType &A) {
+    ArgType Res = A;
+    Res.TK = TypeKind::PtrdiffT;
     return Res;
   }
 

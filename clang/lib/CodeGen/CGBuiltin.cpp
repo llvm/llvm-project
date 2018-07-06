@@ -8660,17 +8660,13 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
     if (IsAddSub) {
       // Negate even elts in C using a mask.
       unsigned NumElts = Ty->getVectorNumElements();
-      SmallVector<Constant *, 16> NMask;
-      Constant *Zero = ConstantInt::get(CGF.Builder.getInt1Ty(), 0);
-      Constant *One = ConstantInt::get(CGF.Builder.getInt1Ty(), 1);
-      for (unsigned i = 0; i < NumElts; ++i) {
-        NMask.push_back(i % 2 == 0 ? One : Zero);
-      }
-      Value *NegMask = ConstantVector::get(NMask);
+      SmallVector<uint32_t, 16> Indices(NumElts);
+      for (unsigned i = 0; i != NumElts; ++i)
+        Indices[i] = i + (i % 2) * NumElts;
 
       Value *NegC = CGF.Builder.CreateFNeg(C);
       Value *FMSub = CGF.Builder.CreateCall(FMA, {A, B, NegC} );
-      Res = CGF.Builder.CreateSelect(NegMask, FMSub, Res);
+      Res = CGF.Builder.CreateShuffleVector(FMSub, Res, Indices);
     }
   }
 
@@ -9137,6 +9133,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Function *FMA = CGM.getIntrinsic(Intrinsic::fma, A->getType());
     Value *Res = Builder.CreateCall(FMA, {A, B, C} );
     return Builder.CreateInsertElement(Ops[0], Res, (uint64_t)0);
+  }
+  case X86::BI__builtin_ia32_vfmaddss:
+  case X86::BI__builtin_ia32_vfmaddsd: {
+    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
+    Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+    Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+    Function *FMA = CGM.getIntrinsic(Intrinsic::fma, A->getType());
+    Value *Res = Builder.CreateCall(FMA, {A, B, C} );
+    Value *Zero = Constant::getNullValue(Ops[0]->getType());
+    return Builder.CreateInsertElement(Zero, Res, (uint64_t)0);
   }
   case X86::BI__builtin_ia32_vfmaddps:
   case X86::BI__builtin_ia32_vfmaddpd:
