@@ -120,7 +120,7 @@ namespace clangd {
 // Describes the source of information about a symbol.
 // Mainly useful for debugging, e.g. understanding code completion reuslts.
 // This is a bitfield as information can be combined from several sources.
-enum SymbolOrigin : uint8_t {
+enum class SymbolOrigin : uint8_t {
   Unknown = 0,
   AST = 1 << 0,     // Directly from the AST (indexes should not set this).
   Dynamic = 1 << 1, // From the dynamic index of opened files.
@@ -128,6 +128,17 @@ enum SymbolOrigin : uint8_t {
   Merge = 1 << 3,   // A non-trivial index merge was performed.
   // Remaining bits reserved for index implementations.
 };
+inline SymbolOrigin operator|(SymbolOrigin A, SymbolOrigin B) {
+  return static_cast<SymbolOrigin>(static_cast<uint8_t>(A) |
+                                   static_cast<uint8_t>(B));
+}
+inline SymbolOrigin &operator|=(SymbolOrigin &A, SymbolOrigin B) {
+  return A = A | B;
+}
+inline SymbolOrigin operator&(SymbolOrigin A, SymbolOrigin B) {
+  return static_cast<SymbolOrigin>(static_cast<uint8_t>(A) &
+                                   static_cast<uint8_t>(B));
+}
 raw_ostream &operator<<(raw_ostream &, SymbolOrigin);
 
 // The class presents a C++ symbol, e.g. class, function.
@@ -171,7 +182,7 @@ struct Symbol {
   /// See also isIndexedForCodeCompletion().
   bool IsIndexedForCodeCompletion = false;
   /// Where this symbol came from. Usually an index provides a constant value.
-  SymbolOrigin Origin = Unknown;
+  SymbolOrigin Origin = SymbolOrigin::Unknown;
   /// A brief description of the symbol that can be appended in the completion
   /// candidate list. For example, "(X x, Y y) const" is a function signature.
   llvm::StringRef Signature;

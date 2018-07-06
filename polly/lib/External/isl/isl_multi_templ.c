@@ -27,8 +27,7 @@ isl_ctx *FN(MULTI(BASE),get_ctx)(__isl_keep MULTI(BASE) *multi)
 
 /* Return the space of "multi".
  */
-static __isl_keep isl_space *FN(MULTI(BASE),peek_space)(
-	__isl_keep MULTI(BASE) *multi)
+__isl_keep isl_space *FN(MULTI(BASE),peek_space)(__isl_keep MULTI(BASE) *multi)
 {
 	return multi ? multi->space : NULL;
 }
