@@ -820,6 +820,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::FCOS , MVT::f128, Expand);
         setOperationAction(ISD::FPOW, MVT::f128, Expand);
         setOperationAction(ISD::FPOWI, MVT::f128, Expand);
+        setOperationAction(ISD::FREM, MVT::f128, Expand);
       }
 
     }
@@ -1070,6 +1071,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLibcallName(RTLIB::FMIN_F128, "fminf128");
     setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
     setLibcallName(RTLIB::POWI_F128, "__powikf2");
+    setLibcallName(RTLIB::REM_F128, "fmodf128");
   }
 
   // With 32 condition bits, we don't need to sink (and duplicate) compares

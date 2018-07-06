@@ -8660,17 +8660,13 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
     if (IsAddSub) {
       // Negate even elts in C using a mask.
       unsigned NumElts = Ty->getVectorNumElements();
-      SmallVector<Constant *, 16> NMask;
-      Constant *Zero = ConstantInt::get(CGF.Builder.getInt1Ty(), 0);
-      Constant *One = ConstantInt::get(CGF.Builder.getInt1Ty(), 1);
-      for (unsigned i = 0; i < NumElts; ++i) {
-        NMask.push_back(i % 2 == 0 ? One : Zero);
-      }
-      Value *NegMask = ConstantVector::get(NMask);
+      SmallVector<uint32_t, 16> Indices(NumElts);
+      for (unsigned i = 0; i != NumElts; ++i)
+        Indices[i] = i + (i % 2) * NumElts;
 
       Value *NegC = CGF.Builder.CreateFNeg(C);
       Value *FMSub = CGF.Builder.CreateCall(FMA, {A, B, NegC} );
-      Res = CGF.Builder.CreateSelect(NegMask, FMSub, Res);
+      Res = CGF.Builder.CreateShuffleVector(FMSub, Res, Indices);
     }
   }
 

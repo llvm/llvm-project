@@ -840,7 +840,11 @@ public:
   ///     The process to load the image.
   ///
   /// @param[in] library_name
-  ///     The name of the library to look for.
+  ///     The name of the library to look for.  If library_name is an
+  ///     absolute path, the basename will be extracted and searched for
+  ///     along the paths.  This emulates the behavior of the loader when
+  ///     given an install name and a set (e.g. DYLD_LIBRARY_PATH provided) of
+  ///     alternate paths.
   ///
   /// @param[in] path_list
   ///     The list of paths to use to search for the library.  First
