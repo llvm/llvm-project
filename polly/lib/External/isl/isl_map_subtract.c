@@ -187,7 +187,8 @@ static isl_stat tab_add_divs(struct isl_tab *tab,
 		isl_seq_cpy(vec->el, bmap->div[i], 2 + dim);
 		isl_seq_clr(vec->el + 2 + dim, tab->bmap->n_div);
 		for (j = 0; j < i; ++j)
-			isl_int_set(vec->el[2 + dim + (*div_map)[j]],
+			isl_int_add(vec->el[2 + dim + (*div_map)[j]],
+				    vec->el[2 + dim + (*div_map)[j]],
 					bmap->div[i][2 + dim + j]);
 		for (j = 0; j < tab->bmap->n_div; ++j)
 			if (isl_seq_eq(tab->bmap->div[j],

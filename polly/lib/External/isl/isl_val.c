@@ -295,15 +295,15 @@ long isl_val_get_num_si(__isl_keep isl_val *v)
  *
  * If "v" is not a rational value, then the result is undefined.
  */
-int isl_val_get_num_isl_int(__isl_keep isl_val *v, isl_int *n)
+isl_stat isl_val_get_num_isl_int(__isl_keep isl_val *v, isl_int *n)
 {
 	if (!v)
-		return -1;
+		return isl_stat_error;
 	if (!isl_val_is_rat(v))
 		isl_die(isl_val_get_ctx(v), isl_error_invalid,
-			"expecting rational value", return -1);
+			"expecting rational value", return isl_stat_error);
 	isl_int_set(*n, v->n);
-	return 0;
+	return isl_stat_ok;
 }
 
 /* Extract the denominator of a rational value "v" as an integer.
@@ -1491,15 +1491,15 @@ int isl_val_plain_is_equal(__isl_keep isl_val *val1, __isl_keep isl_val *val2)
  * This function is only meant to be used in the generic isl_multi_*
  * functions which have to deal with base objects that have an associated
  * space.  Since an isl_val does not have any coefficients, this function
- * always return 0.
+ * always returns isl_bool_false.
  */
-int isl_val_involves_dims(__isl_keep isl_val *v, enum isl_dim_type type,
+isl_bool isl_val_involves_dims(__isl_keep isl_val *v, enum isl_dim_type type,
 	unsigned first, unsigned n)
 {
 	if (!v)
-		return -1;
+		return isl_bool_error;
 
-	return 0;
+	return isl_bool_false;
 }
 
 /* Insert "n" dimensions of type "type" at position "first".

@@ -506,7 +506,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
       swift::StaticSpellingKind::KeywordStatic;
   result_loc_info.binding_decl = swift::PatternBindingDecl::create(
       ast_context, source_loc, static_spelling_kind, source_loc, var_pattern,
-      expr, new_decl_context);
+      swift::SourceLoc(), expr, new_decl_context);
   result_loc_info.binding_decl->setImplicit();
   result_loc_info.binding_decl->setStatic(false);
 
@@ -1145,10 +1145,9 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
       named_pattern, swift::TypeLoc::withoutLoc(type));
 
   swift::PatternBindingDecl *pattern_binding =
-      swift::PatternBindingDecl::create(
-          ast_context, swift::SourceLoc(), swift::StaticSpellingKind::None,
-          var_decl->getLoc(), typed_pattern, nullptr, containing_context);
-  pattern_binding->setImplicit(true);
+      swift::PatternBindingDecl::createImplicit(
+          ast_context, swift::StaticSpellingKind::None, typed_pattern, nullptr,
+          containing_context, var_decl->getLoc());
 
   return pattern_binding;
 }

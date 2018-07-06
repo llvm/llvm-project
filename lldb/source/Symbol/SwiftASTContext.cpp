@@ -3478,6 +3478,8 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
 
       // And then in the various framework search paths.
       std::unordered_set<std::string> seen_paths;
+      std::vector<std::string> uniqued_paths;
+      
       for (const auto &framework_search_dir :
            swift_module->getASTContext().SearchPathOpts.FrameworkSearchPaths) {
         // The framework search dir as it comes from the AST context often has
@@ -3485,25 +3487,39 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
 
         std::pair<std::unordered_set<std::string>::iterator, bool>
             insert_result = seen_paths.insert(framework_search_dir.Path);
-        if (!insert_result.second)
-          continue;
+        if (insert_result.second)
+        {
+          framework_path = framework_search_dir.Path;
+          framework_path.append("/");
+          framework_path.append(library_name);
+          framework_path.append(".framework/");
+          uniqued_paths.push_back(framework_path);
+        }
+      }
+        
+      uint32_t token = LLDB_INVALID_IMAGE_TOKEN;
+      PlatformSP platform_sp = process.GetTarget().GetPlatform();
+      
+      Status error;
+      FileSpec library_spec(library_name, false);
+      FileSpec found_path;
+      
+      if (platform_sp)
+        token = platform_sp->LoadImageUsingPaths(&process, library_spec,
+                                                 uniqued_paths, error,
+                                                 &found_path);
+                                                  
+      if (token != LLDB_INVALID_IMAGE_TOKEN) {
+        if (log)
+          log->Printf("Found framework at: %s.", framework_path.c_str());
 
-        framework_path = framework_search_dir.Path;
-        framework_path.append("/");
-        framework_path.append(library_name);
-        framework_path.append(".framework/");
-        framework_path.append(library_name);
-        framework_spec.SetFile(framework_path.c_str(), false, FileSpec::Style::native);
-
-        if (LoadOneImage(process, framework_spec, load_image_error)) {
-          if (log)
-            log->Printf("Found framework at: %s.", framework_path.c_str());
-
-          return;
-        } else
-          all_dlopen_errors.Printf("Looking for \"%s\"\n,    error: %s\n",
-                                   framework_path.c_str(),
-                                   load_image_error.AsCString());
+        return;
+      } else {
+        all_dlopen_errors.Printf("Failed to find framework for \"%s\" looking"
+                                 " along paths:\n",
+                                 library_name);
+        for (const std::string &path : uniqued_paths)
+          all_dlopen_errors.Printf("  %s\n", path.c_str());
       }
 
       // Maybe we were told to add a link library that exists in the system.  I
@@ -3614,32 +3630,40 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
     return true;
   }
 
-  FileSpec library_spec;
   std::string library_path;
   std::unordered_set<std::string> seen_paths;
   Status load_image_error;
-
+  std::vector<std::string> uniqued_paths;
+  
   for (const std::string &library_search_dir : search_paths) {
     // The library search dir as it comes from the AST context often has
-    // duplicate entries, don't try to load along the same path twice.
+    // duplicate entries, so lets unique the path list before we send it
+    // down to the target.
 
     std::pair<std::unordered_set<std::string>::iterator, bool> insert_result =
         seen_paths.insert(library_search_dir);
-    if (!insert_result.second)
-      continue;
+    if (insert_result.second)
+      uniqued_paths.push_back(library_search_dir);
+  }
 
-    library_path = library_search_dir;
-    library_path.append("/");
-    library_path.append(library_fullname);
-    library_spec.SetFile(library_path.c_str(), false, FileSpec::Style::native);
-    if (LoadOneImage(process, library_spec, load_image_error)) {
+  FileSpec library_spec(library_fullname, false);
+  FileSpec found_library;
+  uint32_t token = LLDB_INVALID_IMAGE_TOKEN;
+  Status error;
+  if (platform_sp)
+    token = platform_sp->LoadImageUsingPaths(&process, library_spec, 
+                                             uniqued_paths,
+                                             error,
+                                             &found_library);
+  if (token != LLDB_INVALID_IMAGE_TOKEN) {
       if (log)
-        log->Printf("Found library at: %s.", library_path.c_str());
+        log->Printf("Found library at: %s.", found_library.GetCString());
       return true;
-    } else
-      all_dlopen_errors.Printf("Looking for \"%s\"\n,    error: %s\n",
-                               library_path.c_str(),
-                               load_image_error.AsCString());
+    } else {
+      all_dlopen_errors.Printf("Failed to find \"%s\" in paths:\n,",
+                               library_fullname.c_str());
+      for (const std::string &search_dir : uniqued_paths)
+        all_dlopen_errors.Printf("  %s\n", search_dir.c_str());
   }
 
   if (check_rpath) {
@@ -3651,11 +3675,11 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
 
     if (LoadOneImage(process, link_lib_spec, load_image_error)) {
       if (log)
-        log->Printf("Found library at: %s.", library_path.c_str());
+        log->Printf("Found library using RPATH at: %s.", library_path.c_str());
       return true;
     } else
-      all_dlopen_errors.Printf("Looking for \"%s\", error: %s\n",
-                               library_path.c_str(),
+      all_dlopen_errors.Printf("Failed to find \"%s\" on RPATH, error: %s\n",
+                               library_fullname.c_str(),
                                load_image_error.AsCString());
   }
   return false;
