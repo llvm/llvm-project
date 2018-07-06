@@ -669,7 +669,7 @@ __isl_give isl_basic_map *isl_basic_map_from_aff(__isl_take isl_aff *aff);
 __isl_give isl_basic_map *isl_basic_map_from_multi_aff(
 	__isl_take isl_multi_aff *maff);
 __isl_give isl_basic_map *isl_basic_map_from_aff_list(
-	__isl_take isl_space *domain_dim, __isl_take isl_aff_list *list);
+	__isl_take isl_space *domain_space, __isl_take isl_aff_list *list);
 
 __isl_give isl_map *isl_map_from_aff(__isl_take isl_aff *aff);
 __isl_give isl_map *isl_map_from_multi_aff(__isl_take isl_multi_aff *maff);

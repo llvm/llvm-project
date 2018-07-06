@@ -101,8 +101,6 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   case R_MIPS_HIGHEST:
   case R_MICROMIPS_HI16:
   case R_MICROMIPS_LO16:
-  case R_MICROMIPS_HIGHER:
-  case R_MICROMIPS_HIGHEST:
     // R_MIPS_HI16/R_MIPS_LO16 relocations against _gp_disp calculate
     // offset between start of function and 'gp' value which by default
     // equal to the start of .got section. In that case we consider these
@@ -124,8 +122,6 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   case R_MIPS_TLS_TPREL_LO16:
   case R_MIPS_TLS_TPREL32:
   case R_MIPS_TLS_TPREL64:
-  case R_MICROMIPS_GOT_OFST:
-  case R_MICROMIPS_SUB:
   case R_MICROMIPS_TLS_DTPREL_HI16:
   case R_MICROMIPS_TLS_DTPREL_LO16:
   case R_MICROMIPS_TLS_TPREL_HI16:
@@ -155,7 +151,6 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   case R_MIPS_GOT_DISP:
   case R_MIPS_TLS_GOTTPREL:
   case R_MICROMIPS_CALL16:
-  case R_MICROMIPS_GOT_DISP:
   case R_MICROMIPS_TLS_GOTTPREL:
     return R_MIPS_GOT_OFF;
   case R_MIPS_CALL_HI16:
@@ -168,7 +163,6 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
   case R_MICROMIPS_GOT_LO16:
     return R_MIPS_GOT_OFF32;
   case R_MIPS_GOT_PAGE:
-  case R_MICROMIPS_GOT_PAGE:
     return R_MIPS_GOT_LOCAL_PAGE;
   case R_MIPS_TLS_GD:
   case R_MICROMIPS_TLS_GD:
@@ -457,9 +451,6 @@ calculateMipsRelChain(uint8_t *Loc, RelType Type, uint64_t Val) {
     return std::make_pair(Type2, Val);
   if (Type2 == R_MIPS_SUB && (Type3 == R_MIPS_HI16 || Type3 == R_MIPS_LO16))
     return std::make_pair(Type3, -Val);
-  if (Type2 == R_MICROMIPS_SUB &&
-      (Type3 == R_MICROMIPS_HI16 || Type3 == R_MICROMIPS_LO16))
-    return std::make_pair(Type3, -Val);
   error(getErrorLocation(Loc) + "unsupported relocations combination " +
         Twine(Type));
   return std::make_pair(Type & 0xff, Val);
@@ -538,8 +529,6 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_MIPS_TLS_TPREL_LO16:
     writeValue<E>(Loc, Val, 16, 0);
     break;
-  case R_MICROMIPS_GOT_DISP:
-  case R_MICROMIPS_GOT_PAGE:
   case R_MICROMIPS_GPREL16:
   case R_MICROMIPS_TLS_GD:
   case R_MICROMIPS_TLS_LDM:
@@ -548,7 +537,6 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_MICROMIPS_CALL16:
   case R_MICROMIPS_CALL_LO16:
-  case R_MICROMIPS_GOT_OFST:
   case R_MICROMIPS_LO16:
   case R_MICROMIPS_TLS_DTPREL_LO16:
   case R_MICROMIPS_TLS_GOTTPREL:
@@ -579,12 +567,6 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   case R_MIPS_HIGHEST:
     writeValue<E>(Loc, Val + 0x800080008000, 16, 48);
-    break;
-  case R_MICROMIPS_HIGHER:
-    writeShuffleValue<E>(Loc, Val + 0x80008000, 16, 32);
-    break;
-  case R_MICROMIPS_HIGHEST:
-    writeShuffleValue<E>(Loc, Val + 0x800080008000, 16, 48);
     break;
   case R_MIPS_JALR:
   case R_MICROMIPS_JALR:
@@ -653,7 +635,7 @@ void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
 
 template <class ELFT> bool MIPS<ELFT>::usesOnlyLowPageBits(RelType Type) const {
   return Type == R_MIPS_LO16 || Type == R_MIPS_GOT_OFST ||
-         Type == R_MICROMIPS_LO16 || Type == R_MICROMIPS_GOT_OFST;
+         Type == R_MICROMIPS_LO16;
 }
 
 // Return true if the symbol is a PIC function.

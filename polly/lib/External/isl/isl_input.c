@@ -2461,6 +2461,8 @@ error:
 static struct isl_obj obj_add(__isl_keep isl_stream *s,
 	struct isl_obj obj1, struct isl_obj obj2)
 {
+	if (obj2.type == isl_obj_none || !obj2.v)
+		goto error;
 	if (obj1.type == isl_obj_set && obj2.type == isl_obj_union_set)
 		obj1 = to_union(s->ctx, obj1);
 	if (obj1.type == isl_obj_union_set && obj2.type == isl_obj_set)
@@ -2600,15 +2602,12 @@ static struct isl_obj obj_read_disjuncts(__isl_keep isl_stream *s,
 	for (;;) {
 		struct isl_obj o;
 		o = obj_read_body(s, isl_map_copy(map), v);
-		if (o.type == isl_obj_none || !o.v)
-			return o;
 		if (!obj.v)
 			obj = o;
-		else {
+		else
 			obj = obj_add(s, obj, o);
-			if (obj.type == isl_obj_none || !obj.v)
-				return obj;
-		}
+		if (obj.type == isl_obj_none || !obj.v)
+			return obj;
 		if (!isl_stream_eat_if_available(s, ';'))
 			break;
 		if (isl_stream_next_token_is(s, '}'))

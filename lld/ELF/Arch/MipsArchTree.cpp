@@ -65,11 +65,17 @@ static StringRef getNanName(bool IsNan2008) {
 static StringRef getFpName(bool IsFp64) { return IsFp64 ? "64" : "32"; }
 
 static void checkFlags(ArrayRef<FileFlags> Files) {
+  assert(!Files.empty() && "expected non-empty file list");
+
   uint32_t ABI = Files[0].Flags & (EF_MIPS_ABI | EF_MIPS_ABI2);
   bool Nan = Files[0].Flags & EF_MIPS_NAN2008;
   bool Fp = Files[0].Flags & EF_MIPS_FP64;
 
-  for (const FileFlags &F : Files.slice(1)) {
+  for (const FileFlags &F : Files) {
+    if (Config->Is64 && F.Flags & EF_MIPS_MICROMIPS)
+      error("linking microMIPS 64-bit files is unsupported: " +
+            toString(F.File));
+
     uint32_t ABI2 = F.Flags & (EF_MIPS_ABI | EF_MIPS_ABI2);
     if (ABI != ABI2)
       error("target ABI '" + getAbiName(ABI) + "' is incompatible with '" +
