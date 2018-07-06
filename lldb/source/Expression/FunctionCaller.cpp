@@ -90,8 +90,12 @@ bool FunctionCaller::WriteFunctionWrapper(
       m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
       can_interpret, eExecutionPolicyAlways));
 
-  if (!jit_error.Success())
+  if (!jit_error.Success()) {
+    diagnostic_manager.Printf(eDiagnosticSeverityError,
+                              "Error in PrepareForExecution: %s.",
+                              jit_error.AsCString());
     return false;
+  }
 
   if (m_parser->GetGenerateDebugInfo())
     m_execution_unit_sp->CreateJITModule(FunctionName());
