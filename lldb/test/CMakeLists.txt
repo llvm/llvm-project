@@ -15,7 +15,11 @@ function(add_python_test_target name test_script args comment)
     )
 endfunction()
 
-set(LLDB_TEST_DEPS lldb)
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  set(LLDB_TEST_DEPS lldb)
+else()
+  set(LLDB_TEST_DEPS lldb llvm-dsymutil)
+endif()
 
 # darwin-debug is an hard dependency for the testsuite.
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -37,7 +41,11 @@ if(TARGET lldb-mi)
 endif()
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS yaml2obj dsymutil)
+  if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    list(APPEND LLDB_TEST_DEPS yaml2obj dsymutil)
+  else()
+    list(APPEND LLDB_TEST_DEPS yaml2obj)
+  endif()
 endif()
 
 if(TARGET liblldb)
