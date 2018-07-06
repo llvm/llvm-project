@@ -23,9 +23,7 @@ class StdVectorDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @skipIfFreeBSD
-    @skipIfWindows  # libstdcpp not ported to Windows
-    @skipIfwatchOS  # libstdcpp not ported to watchos
+    @skipUnlessLibstdcxxAvailable
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
