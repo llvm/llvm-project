@@ -527,6 +527,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseCoprocRegOperand(OperandVector &);
   OperandMatchResultTy parseCoprocOptionOperand(OperandVector &);
   OperandMatchResultTy parseMemBarrierOptOperand(OperandVector &);
+  OperandMatchResultTy parseTraceSyncBarrierOptOperand(OperandVector &);
   OperandMatchResultTy parseInstSyncBarrierOptOperand(OperandVector &);
   OperandMatchResultTy parseProcIFlagsOperand(OperandVector &);
   OperandMatchResultTy parseMSRMaskOperand(OperandVector &);
@@ -646,6 +647,7 @@ class ARMOperand : public MCParsedAsmOperand {
     k_Immediate,
     k_MemBarrierOpt,
     k_InstSyncBarrierOpt,
+    k_TraceSyncBarrierOpt,
     k_Memory,
     k_PostIndexRegister,
     k_MSRMask,
@@ -694,6 +696,10 @@ class ARMOperand : public MCParsedAsmOperand {
 
   struct ISBOptOp {
     ARM_ISB::InstSyncBOpt Val;
+  };
+
+  struct TSBOptOp {
+    ARM_TSB::TraceSyncBOpt Val;
   };
 
   struct IFlagsOp {
@@ -792,6 +798,7 @@ class ARMOperand : public MCParsedAsmOperand {
     struct CoprocOptionOp CoprocOption;
     struct MBOptOp MBOpt;
     struct ISBOptOp ISBOpt;
+    struct TSBOptOp TSBOpt;
     struct ITMaskOp ITMask;
     struct IFlagsOp IFlags;
     struct MMaskOp MMask;
@@ -879,6 +886,11 @@ public:
   ARM_ISB::InstSyncBOpt getInstSyncBarrierOpt() const {
     assert(Kind == k_InstSyncBarrierOpt && "Invalid access!");
     return ISBOpt.Val;
+  }
+
+  ARM_TSB::TraceSyncBOpt getTraceSyncBarrierOpt() const {
+    assert(Kind == k_TraceSyncBarrierOpt && "Invalid access!");
+    return TSBOpt.Val;
   }
 
   ARM_PROC::IFlags getProcIFlags() const {
@@ -1157,6 +1169,7 @@ public:
   bool isToken() const override { return Kind == k_Token; }
   bool isMemBarrierOpt() const { return Kind == k_MemBarrierOpt; }
   bool isInstSyncBarrierOpt() const { return Kind == k_InstSyncBarrierOpt; }
+  bool isTraceSyncBarrierOpt() const { return Kind == k_TraceSyncBarrierOpt; }
   bool isMem() const override {
     if (Kind != k_Memory)
       return false;
@@ -2292,6 +2305,11 @@ public:
     Inst.addOperand(MCOperand::createImm(unsigned(getInstSyncBarrierOpt())));
   }
 
+  void addTraceSyncBarrierOptOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(unsigned(getTraceSyncBarrierOpt())));
+  }
+
   void addMemNoOffsetOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
@@ -3147,6 +3165,15 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<ARMOperand>
+  CreateTraceSyncBarrierOpt(ARM_TSB::TraceSyncBOpt Opt, SMLoc S) {
+    auto Op = make_unique<ARMOperand>(k_TraceSyncBarrierOpt);
+    Op->TSBOpt.Val = Opt;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
   static std::unique_ptr<ARMOperand> CreateProcIFlags(ARM_PROC::IFlags IFlags,
                                                       SMLoc S) {
     auto Op = make_unique<ARMOperand>(k_ProcIFlags);
@@ -3215,6 +3242,9 @@ void ARMOperand::print(raw_ostream &OS) const {
     break;
   case k_InstSyncBarrierOpt:
     OS << "<ARM_ISB::" << InstSyncBOptToString(getInstSyncBarrierOpt()) << ">";
+    break;
+  case k_TraceSyncBarrierOpt:
+    OS << "<ARM_TSB::" << TraceSyncBOptToString(getTraceSyncBarrierOpt()) << ">";
     break;
   case k_Memory:
     OS << "<memory "
@@ -4202,6 +4232,24 @@ ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
     return MatchOperand_ParseFail;
 
   Operands.push_back(ARMOperand::CreateMemBarrierOpt((ARM_MB::MemBOpt)Opt, S));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+ARMAsmParser::parseTraceSyncBarrierOptOperand(OperandVector &Operands) {
+  MCAsmParser &Parser = getParser();
+  SMLoc S = Parser.getTok().getLoc();
+  const AsmToken &Tok = Parser.getTok();
+
+  if (Tok.isNot(AsmToken::Identifier))
+     return MatchOperand_NoMatch;
+
+  if (!Tok.getString().equals_lower("csync"))
+    return MatchOperand_NoMatch;
+
+  Parser.Lex(); // Eat identifier token.
+
+  Operands.push_back(ARMOperand::CreateTraceSyncBarrierOpt(ARM_TSB::CSYNC, S));
   return MatchOperand_Success;
 }
 
@@ -5680,6 +5728,7 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic, StringRef FullInst,
         Mnemonic != "isb" && Mnemonic != "pld" && Mnemonic != "pli" &&
         Mnemonic != "pldw" && Mnemonic != "ldc2" && Mnemonic != "ldc2l" &&
         Mnemonic != "stc2" && Mnemonic != "stc2l" &&
+        Mnemonic != "tsb" &&
         !Mnemonic.startswith("rfe") && !Mnemonic.startswith("srs");
   } else if (isThumbOne()) {
     if (hasV6MOps())

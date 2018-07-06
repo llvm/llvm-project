@@ -136,11 +136,16 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
   unsigned Version = Unit.getOrigUnit().getVersion();
   switchToDebugInfoSection(Version);
 
+  /// The start of the unit within its section.
+  Unit.setLabelBegin(Asm->createTempSymbol("cu_begin"));
+  Asm->OutStreamer->EmitLabel(Unit.getLabelBegin());
+
   // Emit size of content not including length itself. The size has already
   // been computed in CompileUnit::computeOffsets(). Subtract 4 to that size to
   // account for the length field.
   Asm->emitInt32(Unit.getNextUnitOffset() - Unit.getStartOffset() - 4);
   Asm->emitInt16(Version);
+
   // We share one abbreviations table across all units so it's always at the
   // start of the section.
   Asm->emitInt32(0);

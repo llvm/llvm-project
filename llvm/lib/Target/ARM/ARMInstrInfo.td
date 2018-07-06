@@ -4819,6 +4819,15 @@ def instsyncb_opt : Operand<i32> {
   let DecoderMethod = "DecodeInstSyncBarrierOption";
 }
 
+def TraceSyncBarrierOptOperand : AsmOperandClass {
+  let Name = "TraceSyncBarrierOpt";
+  let ParserMethod = "parseTraceSyncBarrierOptOperand";
+}
+def tsb_opt : Operand<i32> {
+  let PrintMethod = "printTraceSyncBOption";
+  let ParserMatchClass = TraceSyncBarrierOptOperand;
+}
+
 // Memory barriers protect the atomic sequences
 let hasSideEffects = 1 in {
 def DMB : AInoP<(outs), (ins memb_opt:$opt), MiscFrm, NoItinerary,
@@ -4845,6 +4854,13 @@ def ISB : AInoP<(outs), (ins instsyncb_opt:$opt), MiscFrm, NoItinerary,
   let Inst{31-4} = 0xf57ff06;
   let Inst{3-0} = opt;
 }
+
+let hasNoSchedulingInfo = 1 in
+def TSB : AInoP<(outs), (ins tsb_opt:$opt), MiscFrm, NoItinerary,
+                "tsb", "\t$opt", []>, Requires<[IsARM, HasV8_4a]> {
+  let Inst{31-0} = 0xe320f012;
+}
+
 }
 
 let usesCustomInserter = 1, Defs = [CPSR] in {

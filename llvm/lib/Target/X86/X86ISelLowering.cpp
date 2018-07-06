@@ -26099,10 +26099,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FNMADDS3_RND:       return "X86ISD::FNMADDS3_RND";
   case X86ISD::FMSUBS3_RND:        return "X86ISD::FMSUBS3_RND";
   case X86ISD::FNMSUBS3_RND:       return "X86ISD::FNMSUBS3_RND";
-  case X86ISD::FMADD4S:            return "X86ISD::FMADD4S";
-  case X86ISD::FNMADD4S:           return "X86ISD::FNMADD4S";
-  case X86ISD::FMSUB4S:            return "X86ISD::FMSUB4S";
-  case X86ISD::FNMSUB4S:           return "X86ISD::FNMSUB4S";
   case X86ISD::VPMADD52H:          return "X86ISD::VPMADD52H";
   case X86ISD::VPMADD52L:          return "X86ISD::VPMADD52L";
   case X86ISD::VRNDSCALE:          return "X86ISD::VRNDSCALE";
@@ -37709,28 +37705,24 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
     case X86ISD::FMADDS3:      Opcode = X86ISD::FNMADDS3;     break;
     case X86ISD::FMADDS1_RND:  Opcode = X86ISD::FNMADDS1_RND; break;
     case X86ISD::FMADDS3_RND:  Opcode = X86ISD::FNMADDS3_RND; break;
-    case X86ISD::FMADD4S:      Opcode = X86ISD::FNMADD4S;     break;
     case X86ISD::FMSUB:        Opcode = X86ISD::FNMSUB;       break;
     case X86ISD::FMSUB_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
     case X86ISD::FMSUBS1:      Opcode = X86ISD::FNMSUBS1;     break;
     case X86ISD::FMSUBS3:      Opcode = X86ISD::FNMSUBS3;     break;
     case X86ISD::FMSUBS1_RND:  Opcode = X86ISD::FNMSUBS1_RND; break;
     case X86ISD::FMSUBS3_RND:  Opcode = X86ISD::FNMSUBS3_RND; break;
-    case X86ISD::FMSUB4S:      Opcode = X86ISD::FNMSUB4S;     break;
     case X86ISD::FNMADD:       Opcode = ISD::FMA;             break;
     case X86ISD::FNMADD_RND:   Opcode = X86ISD::FMADD_RND;    break;
     case X86ISD::FNMADDS1:     Opcode = X86ISD::FMADDS1;      break;
     case X86ISD::FNMADDS3:     Opcode = X86ISD::FMADDS3;      break;
     case X86ISD::FNMADDS1_RND: Opcode = X86ISD::FMADDS1_RND;  break;
     case X86ISD::FNMADDS3_RND: Opcode = X86ISD::FMADDS3_RND;  break;
-    case X86ISD::FNMADD4S:     Opcode = X86ISD::FMADD4S;      break;
     case X86ISD::FNMSUB:       Opcode = X86ISD::FMSUB;        break;
     case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FMSUB_RND;    break;
     case X86ISD::FNMSUBS1:     Opcode = X86ISD::FMSUBS1;      break;
     case X86ISD::FNMSUBS3:     Opcode = X86ISD::FMSUBS3;      break;
     case X86ISD::FNMSUBS1_RND: Opcode = X86ISD::FMSUBS1_RND;  break;
     case X86ISD::FNMSUBS3_RND: Opcode = X86ISD::FMSUBS3_RND;  break;
-    case X86ISD::FNMSUB4S:     Opcode = X86ISD::FMSUB4S;      break;
     }
   }
 
@@ -37743,28 +37735,24 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
     case X86ISD::FMADDS3:      Opcode = X86ISD::FMSUBS3;      break;
     case X86ISD::FMADDS1_RND:  Opcode = X86ISD::FMSUBS1_RND;  break;
     case X86ISD::FMADDS3_RND:  Opcode = X86ISD::FMSUBS3_RND;  break;
-    case X86ISD::FMADD4S:      Opcode = X86ISD::FMSUB4S;      break;
     case X86ISD::FMSUB:        Opcode = ISD::FMA;             break;
     case X86ISD::FMSUB_RND:    Opcode = X86ISD::FMADD_RND;    break;
     case X86ISD::FMSUBS1:      Opcode = X86ISD::FMADDS1;      break;
     case X86ISD::FMSUBS3:      Opcode = X86ISD::FMADDS3;      break;
     case X86ISD::FMSUBS1_RND:  Opcode = X86ISD::FMADDS1_RND;  break;
     case X86ISD::FMSUBS3_RND:  Opcode = X86ISD::FMADDS3_RND;  break;
-    case X86ISD::FMSUB4S:      Opcode = X86ISD::FMADD4S;      break;
     case X86ISD::FNMADD:       Opcode = X86ISD::FNMSUB;       break;
     case X86ISD::FNMADD_RND:   Opcode = X86ISD::FNMSUB_RND;   break;
     case X86ISD::FNMADDS1:     Opcode = X86ISD::FNMSUBS1;     break;
     case X86ISD::FNMADDS3:     Opcode = X86ISD::FNMSUBS3;     break;
     case X86ISD::FNMADDS1_RND: Opcode = X86ISD::FNMSUBS1_RND; break;
     case X86ISD::FNMADDS3_RND: Opcode = X86ISD::FNMSUBS3_RND; break;
-    case X86ISD::FNMADD4S:     Opcode = X86ISD::FNMSUB4S;     break;
     case X86ISD::FNMSUB:       Opcode = X86ISD::FNMADD;       break;
     case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FNMADD_RND;   break;
     case X86ISD::FNMSUBS1:     Opcode = X86ISD::FNMADDS1;     break;
     case X86ISD::FNMSUBS3:     Opcode = X86ISD::FNMADDS3;     break;
     case X86ISD::FNMSUBS1_RND: Opcode = X86ISD::FNMADDS1_RND; break;
     case X86ISD::FNMSUBS3_RND: Opcode = X86ISD::FNMADDS3_RND; break;
-    case X86ISD::FNMSUB4S:     Opcode = X86ISD::FNMADD4S;     break;
     }
   }
 
@@ -39447,28 +39435,24 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::FMADDS3_RND:
   case X86ISD::FMADDS1:
   case X86ISD::FMADDS3:
-  case X86ISD::FMADD4S:
   case X86ISD::FMSUB:
   case X86ISD::FMSUB_RND:
   case X86ISD::FMSUBS1_RND:
   case X86ISD::FMSUBS3_RND:
   case X86ISD::FMSUBS1:
   case X86ISD::FMSUBS3:
-  case X86ISD::FMSUB4S:
   case X86ISD::FNMADD:
   case X86ISD::FNMADD_RND:
   case X86ISD::FNMADDS1_RND:
   case X86ISD::FNMADDS3_RND:
   case X86ISD::FNMADDS1:
   case X86ISD::FNMADDS3:
-  case X86ISD::FNMADD4S:
   case X86ISD::FNMSUB:
   case X86ISD::FNMSUB_RND:
   case X86ISD::FNMSUBS1_RND:
   case X86ISD::FNMSUBS3_RND:
   case X86ISD::FNMSUBS1:
   case X86ISD::FNMSUBS3:
-  case X86ISD::FNMSUB4S:
   case ISD::FMA: return combineFMA(N, DAG, Subtarget);
   case X86ISD::FMADDSUB_RND:
   case X86ISD::FMSUBADD_RND:

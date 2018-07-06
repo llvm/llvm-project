@@ -918,6 +918,13 @@ public:
                                            CodeCompletionAllocator &Allocator,
                                            CodeCompletionTUInfo &CCTUInfo,
                                            bool IncludeBriefComments);
+  /// Creates a new code-completion string for the macro result. Similar to the
+  /// above overloads, except this only requires preprocessor information.
+  /// The result kind must be `RK_Macro`.
+  CodeCompletionString *
+  CreateCodeCompletionStringForMacro(Preprocessor &PP,
+                                     CodeCompletionAllocator &Allocator,
+                                     CodeCompletionTUInfo &CCTUInfo);
 
   /// Retrieve the name that should be used to order a result.
   ///

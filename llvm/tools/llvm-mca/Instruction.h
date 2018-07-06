@@ -125,6 +125,7 @@ public:
   unsigned getRegisterID() const { return RegisterID; }
 
   void addUser(ReadState *Use, int ReadAdvance);
+  unsigned getNumUsers() const { return Users.size(); }
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
 
   // On every cycle, update CyclesLeft and notify dependent users.
@@ -306,7 +307,7 @@ class Instruction {
 
 public:
   Instruction(const InstrDesc &D)
-      : Desc(D), Stage(IS_INVALID), CyclesLeft(-1) {}
+      : Desc(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES) {}
   Instruction(const Instruction &Other) = delete;
   Instruction &operator=(const Instruction &Other) = delete;
 
@@ -316,6 +317,13 @@ public:
   const VecUses &getUses() const { return Uses; }
   const InstrDesc &getDesc() const { return Desc; }
   unsigned getRCUTokenID() const { return RCUTokenID; }
+
+  unsigned getNumUsers() const {
+    unsigned NumUsers = 0;
+    for (const UniqueDef &Def : Defs)
+      NumUsers += Def->getNumUsers();
+    return NumUsers;
+  }
 
   // Transition to the dispatch stage, and assign a RCUToken to this
   // instruction. The RCUToken is used to track the completion of every
