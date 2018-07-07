@@ -1257,8 +1257,7 @@ TEST(CompletionTest, Render) {
   C.Header = "\"foo.h\"";
   C.Kind = CompletionItemKind::Method;
   C.Score.Total = 1.0;
-  C.Origin =
-      static_cast<SymbolOrigin>(SymbolOrigin::AST | SymbolOrigin::Static);
+  C.Origin = SymbolOrigin::AST | SymbolOrigin::Static;
 
   CodeCompleteOptions Opts;
   Opts.IncludeIndicator.Insert = "^";

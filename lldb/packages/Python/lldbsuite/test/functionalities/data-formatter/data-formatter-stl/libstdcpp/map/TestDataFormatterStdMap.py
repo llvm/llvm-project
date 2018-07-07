@@ -23,9 +23,7 @@ class StdMapDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @skipIfWindows  # libstdcpp not ported to Windows
-    @skipIfFreeBSD
-    @skipIfwatchOS  # libstdcpp not ported to watchos
+    @skipUnlessLibstdcxxAvailable
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
