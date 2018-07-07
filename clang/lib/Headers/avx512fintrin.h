@@ -7824,6 +7824,12 @@ _mm_mask_fmadd_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
  return __W;
 }
 
+#define _mm_fmadd_round_ss(A, B, C, R) \
+  (__m128d)__builtin_ia32_vfmaddss3_mask((__v2df)(__m128d)(A), \
+                                         (__v2df)(__m128d)(B), \
+                                         (__v2df)(__m128d)(C), (__mmask8)-1, \
+                                         (int)(R))
+
 #define _mm_mask_fmadd_round_ss(W, U, A, B, R) \
   (__m128d)__builtin_ia32_vfmaddss3_mask((__v2df)(__m128d)(W), \
                                          (__v2df)(__m128d)(A), \
@@ -7871,6 +7877,12 @@ _mm_mask_fmsub_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
  __W[0] = (__U & 1) ? __Z[0] : __W[0];
  return __W;
 }
+
+#define _mm_fmsub_round_ss(A, B, C, R) \
+  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(A), \
+                                        (__v4sf)(__m128)(B), \
+                                        -(__v4sf)(__m128)(C), (__mmask8)-1, \
+                                        (int)(R))
 
 #define _mm_mask_fmsub_round_ss(W, U, A, B, R) \
   (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(W), \
@@ -7920,6 +7932,12 @@ _mm_mask_fnmadd_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
  return __W;
 }
 
+#define _mm_fnmadd_round_ss(A, B, C, R) \
+  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(A), \
+                                        -(__v4sf)(__m128)(B), \
+                                        (__v4sf)(__m128)(C), (__mmask8)-1, \
+                                        (int)(R))
+
 #define _mm_mask_fnmadd_round_ss(W, U, A, B, R) \
   (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(W), \
                                         -(__v4sf)(__m128)(A), \
@@ -7967,6 +7985,12 @@ _mm_mask_fnmsub_ss (__m128 __W, __mmask8 __U, __m128 __A, __m128 __B)
  __W[0] = (__U & 1) ? __Z[0] : __W[0];
  return __W;
 }
+
+#define _mm_fnmsub_round_ss(A, B, C, R) \
+  (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(A), \
+                                        -(__v4sf)(__m128)(B), \
+                                        -(__v4sf)(__m128)(C), (__mmask8)-1, \
+                                        (int)(R))
 
 #define _mm_mask_fnmsub_round_ss(W, U, A, B, R) \
   (__m128)__builtin_ia32_vfmaddss3_mask((__v4sf)(__m128)(W), \
@@ -8016,6 +8040,12 @@ _mm_mask_fmadd_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
  return __W;
 }
 
+#define _mm_fmadd_round_sd(A, B, C, R) \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(A), \
+                                         (__v2df)(__m128d)(B), \
+                                         (__v2df)(__m128d)(C), (__mmask8)-1, \
+                                         (int)(R))
+
 #define _mm_mask_fmadd_round_sd(W, U, A, B, R) \
   (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \
                                          (__v2df)(__m128d)(A), \
@@ -8063,6 +8093,12 @@ _mm_mask_fmsub_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
  __W[0] = (__U & 1) ? __Z[0] : __W[0];
  return __W;
 }
+
+#define _mm_fmsub_round_sd(A, B, C, R) \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(A), \
+                                         (__v2df)(__m128d)(B), \
+                                         -(__v2df)(__m128d)(C), (__mmask8)-1, \
+                                         (int)(R))
 
 #define _mm_mask_fmsub_round_sd(W, U, A, B, R) \
   (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \
@@ -8112,6 +8148,12 @@ _mm_mask_fnmadd_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
  return __W;
 }
 
+#define _mm_fnmadd_round_sd(A, B, C, R) \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(A), \
+                                         -(__v2df)(__m128d)(B), \
+                                         (__v2df)(__m128d)(C), (__mmask8)-1, \
+                                         (int)(R))
+
 #define _mm_mask_fnmadd_round_sd(W, U, A, B, R) \
   (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \
                                          -(__v2df)(__m128d)(A), \
@@ -8159,6 +8201,12 @@ _mm_mask_fnmsub_sd (__m128d __W, __mmask8 __U, __m128d __A, __m128d __B)
  __W[0] = (__U & 1) ? __Z[0] : __W[0];
  return __W;
 }
+
+#define _mm_fnmsub_round_sd(A, B, C, R) \
+  (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(A), \
+                                         -(__v2df)(__m128d)(B), \
+                                         -(__v2df)(__m128d)(C), (__mmask8)-1, \
+                                         (int)(R))
 
 #define _mm_mask_fnmsub_round_sd(W, U, A, B, R) \
   (__m128d)__builtin_ia32_vfmaddsd3_mask((__v2df)(__m128d)(W), \

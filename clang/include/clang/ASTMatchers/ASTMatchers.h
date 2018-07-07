@@ -966,6 +966,19 @@ AST_MATCHER_P(TemplateArgument, equalsIntegralValue,
   return Node.getAsIntegral().toString(10) == Value;
 }
 
+/// Matches an Objective-C autorelease pool statement.
+///
+/// Given
+/// \code
+///   @autoreleasepool {
+///     int x = 0;
+///   }
+/// \endcode
+/// autoreleasePoolStmt(stmt()) matches the declaration of "x"
+/// inside the autorelease pool.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+       ObjCAutoreleasePoolStmt> autoreleasePoolStmt;
+
 /// Matches any value declaration.
 ///
 /// Example matches A, B, C and F

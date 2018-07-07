@@ -2191,17 +2191,7 @@ void Sema::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
 
 static bool shouldWarnUndefinedMethod(const ObjCMethodDecl *M) {
   // No point warning no definition of method which is 'unavailable'.
-  switch (M->getAvailability()) {
-  case AR_Available:
-  case AR_Deprecated:
-    return true;
-
-  // Don't warn about unavailable or not-yet-introduced methods.
-  case AR_NotYetIntroduced:
-  case AR_Unavailable:
-    return false;
-  }
-  llvm_unreachable("Invalid availability");
+  return method->getAvailability() != AR_Unavailable;
 }
 
 static void WarnUndefinedMethod(Sema &S, SourceLocation ImpLoc,

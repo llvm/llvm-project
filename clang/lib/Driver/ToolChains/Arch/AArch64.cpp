@@ -69,6 +69,9 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
 
+  if (CPU == "native")
+    CPU = llvm::sys::getHostCPUName();
+
   if (CPU == "generic") {
     Features.push_back("+neon");
   } else {

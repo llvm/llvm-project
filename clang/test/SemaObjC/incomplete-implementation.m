@@ -13,6 +13,13 @@
 - Meth {return 0;} // expected-warning {{category is implementing a method which will also be implemented by its primary class}}
 @end
 
+// rdar://40634455
+@interface MyClass
+-(void)mymeth __attribute__((availability(macos, introduced=100))); // expected-note{{here}}
+@end
+@implementation MyClass // expected-warning{{'mymeth' not found}}
+@end
+
 #pragma GCC diagnostic ignored "-Wincomplete-implementation"
 @interface I2
 - Meth; // expected-note{{method 'Meth' declared here}}
