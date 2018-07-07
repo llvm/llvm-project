@@ -26,11 +26,6 @@
 //                  MICmdBase.h / .cpp
 //                  MICmdCmd.h / .cpp
 
-#if defined(_MSC_VER)
-#define _INC_SIGNAL // Stop window's signal.h being included -
-                    // CODETAG_IOR_SIGNALS
-#endif              // _MSC_VER
-
 // Third party headers:
 #include "lldb/API/SBHostOS.h"
 #include <atomic>
