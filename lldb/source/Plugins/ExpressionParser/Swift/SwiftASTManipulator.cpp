@@ -219,7 +219,7 @@ $builtin_logger_initialize()
 
     const char *optional_extension =
         (language_flags & SwiftUserExpression::eLanguageFlagIsWeakSelf)
-            ? "Optional where Wrapped: "
+            ? "Swift.Optional where Wrapped: "
             : "";
 
     if (generic_info.class_bindings.size()) {
