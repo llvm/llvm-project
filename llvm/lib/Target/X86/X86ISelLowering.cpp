@@ -2009,7 +2009,7 @@ void X86TargetLowering::markLibCallAttributes(MachineFunction *MF, unsigned CC,
   // Mark the first N int arguments as having reg
   for (unsigned Idx = 0; Idx < Args.size(); Idx++) {
     Type *T = Args[Idx].Ty;
-    if (T->isPointerTy() || T->isIntegerTy())
+    if (T->isIntOrPtrTy())
       if (MF->getDataLayout().getTypeAllocSize(T) <= 8) {
         unsigned numRegs = 1;
         if (MF->getDataLayout().getTypeAllocSize(T) > 4)
@@ -20445,13 +20445,28 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     case INTR_TYPE_3OP:
     case INTR_TYPE_3OP_IMM8: {
+      SDValue Src1 = Op.getOperand(1);
+      SDValue Src2 = Op.getOperand(2);
       SDValue Src3 = Op.getOperand(3);
 
       if (IntrData->Type == INTR_TYPE_3OP_IMM8)
         Src3 = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, Src3);
 
+      // We specify 2 possible opcodes for intrinsics with rounding modes.
+      // First, we check if the intrinsic may have non-default rounding mode,
+      // (IntrData->Opc1 != 0), then we check the rounding mode operand.
+      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
+      if (IntrWithRoundingModeOpcode != 0) {
+        SDValue Rnd = Op.getOperand(4);
+        if (!isRoundModeCurDirection(Rnd)) {
+          return DAG.getNode(IntrWithRoundingModeOpcode,
+                             dl, Op.getValueType(),
+                             Src1, Src2, Src3, Rnd);
+        }
+      }
+
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(),
-                         Op.getOperand(1), Op.getOperand(2), Src3);
+                         Src1, Src2, Src3);
     }
     case INTR_TYPE_4OP:
       return DAG.getNode(IntrData->Opc0, dl, Op.getValueType(), Op.getOperand(1),
@@ -20636,40 +20651,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return getVectorMaskingNode(DAG.getNode(IntrData->Opc0, dl, VT,
                                               Src1, Src2, Src3),
                                   Mask, PassThru, Subtarget, DAG);
-    }
-    case INTR_TYPE_1OP_RM: {
-      // We specify 2 possible opcodes for intrinsics with rounding modes.
-      // First, we check if the intrinsic may have non-default rounding mode,
-      // (IntrData->Opc1 != 0), then we check the rounding mode operand.
-      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
-      if (IntrWithRoundingModeOpcode != 0) {
-        SDValue Rnd = Op.getOperand(2);
-        if (!isRoundModeCurDirection(Rnd)) {
-          return DAG.getNode(IntrWithRoundingModeOpcode,
-                             dl, Op.getValueType(),
-                             Op.getOperand(1), Rnd);
-        }
-      }
-      return DAG.getNode(IntrData->Opc0, dl, VT, Op.getOperand(1));
-    }
-    case INTR_TYPE_3OP_RM: {
-      SDValue Src1 = Op.getOperand(1);
-      SDValue Src2 = Op.getOperand(2);
-      SDValue Src3 = Op.getOperand(3);
-
-      // We specify 2 possible opcodes for intrinsics with rounding modes.
-      // First, we check if the intrinsic may have non-default rounding mode,
-      // (IntrData->Opc1 != 0), then we check the rounding mode operand.
-      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
-      if (IntrWithRoundingModeOpcode != 0) {
-        SDValue Rnd = Op.getOperand(4);
-        if (!isRoundModeCurDirection(Rnd)) {
-          return DAG.getNode(IntrWithRoundingModeOpcode,
-                             dl, Op.getValueType(),
-                             Src1, Src2, Src3, Rnd);
-        }
-      }
-      return DAG.getNode(IntrData->Opc0, dl, VT, Src1, Src2, Src3);
     }
     case VPERM_2OP : {
       SDValue Src1 = Op.getOperand(1);

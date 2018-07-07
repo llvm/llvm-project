@@ -15,6 +15,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_RETIRE_CONTROL_UNIT_H
 #define LLVM_TOOLS_LLVM_MCA_RETIRE_CONTROL_UNIT_H
 
+#include "HardwareUnit.h"
 #include "Instruction.h"
 #include "llvm/MC/MCSchedule.h"
 #include <vector>
@@ -32,7 +33,7 @@ namespace mca {
 /// On instruction retired, register updates are all architecturally
 /// committed, and any temporary registers originally allocated for the
 /// retired instruction are freed.
-struct RetireControlUnit {
+struct RetireControlUnit : public HardwareUnit {
   // A RUToken is created by the RCU for every instruction dispatched to the
   // schedulers.  These "tokens" are managed by the RCU in its token Queue.
   //

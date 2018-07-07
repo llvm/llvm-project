@@ -87,6 +87,10 @@ public:
   /// floating-point constant with all NaN elements.
   bool isNaN() const;
 
+  /// Return true if this is a vector constant that includes any undefined
+  /// elements.
+  bool containsUndefElement() const;
+
   /// Return true if evaluation of this constant could trap. This is true for
   /// things like constant expressions that could divide by zero.
   bool canTrap() const;

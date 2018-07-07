@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
@@ -36,7 +37,9 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-#define DEBUG_TYPE "parallel-dsp"
+#define DEBUG_TYPE "arm-parallel-dsp"
+
+STATISTIC(NumSMLAD , "Number of smlad instructions generated");
 
 namespace {
   struct ParallelMAC;
@@ -604,6 +607,7 @@ Instruction *ARMParallelDSP::CreateSMLADCall(LoadInst *VecLd0, LoadInst *VecLd1,
   Value* Args[] = { VecLd0, VecLd1, Acc };
   Function *SMLAD = Intrinsic::getDeclaration(M, Intrinsic::arm_smlad);
   CallInst *Call = Builder.CreateCall(SMLAD, Args);
+  NumSMLAD++;
   return Call;
 }
 
@@ -613,7 +617,7 @@ Pass *llvm::createARMParallelDSPPass() {
 
 char ARMParallelDSP::ID = 0;
 
-INITIALIZE_PASS_BEGIN(ARMParallelDSP, "parallel-dsp",
+INITIALIZE_PASS_BEGIN(ARMParallelDSP, "arm-parallel-dsp",
                 "Transform loops to use DSP intrinsics", false, false)
-INITIALIZE_PASS_END(ARMParallelDSP, "parallel-dsp",
+INITIALIZE_PASS_END(ARMParallelDSP, "arm-parallel-dsp",
                 "Transform loops to use DSP intrinsics", false, false)

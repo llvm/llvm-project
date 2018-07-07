@@ -557,6 +557,17 @@ let Predicates = [HasV8_3a] in {
 
 } // HasV8_3A
 
+// v8.4 Flag manipulation instructions
+let Predicates = [HasV8_4a] in {
+def CFINV : SimpleSystemI<0, (ins), "cfinv", "">, Sched<[WriteSys]> {
+  let Inst{20-5} = 0b0000001000000000;
+}
+def SETF8  : BaseFlagManipulation<0, 0, (ins GPR32:$Rn), "setf8", "{\t$Rn}">;
+def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
+def RMIF   : FlagRotate<(ins GPR64:$Rn, uimm6:$imm, imm0_15:$mask), "rmif",
+                        "{\t$Rn, $imm, $mask}">;
+} // HasV8_4a
+
 def : InstAlias<"clrex", (CLREX 0xf)>;
 def : InstAlias<"isb", (ISB 0xf)>;
 

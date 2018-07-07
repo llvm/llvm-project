@@ -75,6 +75,8 @@ bool compareFunctionSymbols(
 bool compareDataSymbols(const std::unique_ptr<llvm::pdb::PDBSymbolData> &F1,
                         const std::unique_ptr<llvm::pdb::PDBSymbolData> &F2);
 
+extern llvm::cl::list<std::string> WithName;
+
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
 extern llvm::cl::opt<bool> Globals;

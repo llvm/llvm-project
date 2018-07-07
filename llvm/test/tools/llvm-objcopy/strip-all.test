@@ -21,6 +21,12 @@
 # RUN: cmp %t2 %t-should-be-stripped
 # RUN: cmp %t %t-should-remain-the-same
 
+# RUN: rm -f %t.a
+# RUN: llvm-ar crs %t.a %t
+# RUN: llvm-objcopy --strip-all %t.a %t.a
+# RUN: llvm-ar p %t.a > %t6
+# RUN: cmp %t2 %t6
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

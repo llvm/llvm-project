@@ -82,6 +82,26 @@ Error GSIHashStreamBuilder::commit(BinaryStreamWriter &Writer) {
   return Error::success();
 }
 
+static bool isAsciiString(StringRef S) {
+  return llvm::all_of(S, [](char C) { return unsigned(C) < 0x80; });
+}
+
+// See `caseInsensitiveComparePchPchCchCch` in gsi.cpp
+static bool gsiRecordLess(StringRef S1, StringRef S2) {
+  size_t LS = S1.size();
+  size_t RS = S2.size();
+  // Shorter strings always compare less than longer strings.
+  if (LS != RS)
+    return LS < RS;
+
+  // If either string contains non ascii characters, memcmp them.
+  if (LLVM_UNLIKELY(!isAsciiString(S1) || !isAsciiString(S2)))
+    return memcmp(S1.data(), S2.data(), LS) < 0;
+
+  // Both strings are ascii, perform a case-insenstive comparison.
+  return S1.compare_lower(S2.data()) < 0;
+}
+
 void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
   std::array<std::vector<std::pair<StringRef, PSHashRecord>>, IPHR_HASH + 1>
       TmpBuckets;
@@ -118,17 +138,16 @@ void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {
         ulittle32_t(HashRecords.size() * SizeOfHROffsetCalc);
     HashBuckets.push_back(ChainStartOff);
 
-    // Sort each bucket by memcmp of the symbol's name.
+    // Sort each bucket by memcmp of the symbol's name.  It's important that
+    // we use the same sorting algorithm as is used by the reference
+    // implementation to ensure that the search for a record within a bucket
+    // can properly early-out when it detects the record won't be found.  The
+    // algorithm used here corredsponds to the function
+    // caseInsensitiveComparePchPchCchCch in the reference implementation.
     std::sort(Bucket.begin(), Bucket.end(),
               [](const std::pair<StringRef, PSHashRecord> &Left,
                  const std::pair<StringRef, PSHashRecord> &Right) {
-                size_t LS = Left.first.size();
-                size_t RS = Right.first.size();
-                if (LS < RS)
-                  return true;
-                if (LS > RS)
-                  return false;
-                return Left.first < Right.first;
+                return gsiRecordLess(Left.first, Right.first);
               });
 
     for (const auto &Entry : Bucket)

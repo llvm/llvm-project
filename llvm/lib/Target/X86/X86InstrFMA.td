@@ -317,41 +317,6 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                         FR64, f64mem, sched>,
               fma3s_int_forms<opc132, opc213, opc231, OpStr, "sd", "SD",
                               VR128, sdmem, sched>, VEX_W;
-
-  // These patterns use the 123 ordering, instead of 213, even though
-  // they match the intrinsic to the 213 version of the instruction.
-  // This is because src1 is tied to dest, and the scalar intrinsics
-  // require the pass-through values to come from the first source
-  // operand, not the second.
-  let Predicates = [HasFMA, NoAVX512] in {
-    def : Pat<(v4f32 (OpNodeIntrin VR128:$src1, VR128:$src2, VR128:$src3)),
-              (!cast<Instruction>(NAME#"213SSr_Int")
-               VR128:$src1, VR128:$src2, VR128:$src3)>;
-
-    def : Pat<(v2f64 (OpNodeIntrin VR128:$src1, VR128:$src2, VR128:$src3)),
-              (!cast<Instruction>(NAME#"213SDr_Int")
-               VR128:$src1, VR128:$src2, VR128:$src3)>;
-
-    def : Pat<(v4f32 (OpNodeIntrin VR128:$src1, VR128:$src2,
-                                   sse_load_f32:$src3)),
-              (!cast<Instruction>(NAME#"213SSm_Int")
-               VR128:$src1, VR128:$src2, sse_load_f32:$src3)>;
-
-    def : Pat<(v2f64 (OpNodeIntrin VR128:$src1, VR128:$src2,
-                                   sse_load_f64:$src3)),
-              (!cast<Instruction>(NAME#"213SDm_Int")
-               VR128:$src1, VR128:$src2, sse_load_f64:$src3)>;
-
-    def : Pat<(v4f32 (OpNodeIntrin VR128:$src1, sse_load_f32:$src3,
-                                   VR128:$src2)),
-              (!cast<Instruction>(NAME#"132SSm_Int")
-               VR128:$src1, VR128:$src2, sse_load_f32:$src3)>;
-
-    def : Pat<(v2f64 (OpNodeIntrin VR128:$src1, sse_load_f64:$src3,
-                                   VR128:$src2)),
-              (!cast<Instruction>(NAME#"132SDm_Int")
-               VR128:$src1, VR128:$src2, sse_load_f64:$src3)>;
-  }
 }
 
 defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", X86Fmadds1, X86Fmadd,
@@ -366,7 +331,7 @@ defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86Fnmsubs1, X86Fnmsub,
 
 multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
                                SDNode Move, ValueType VT, ValueType EltVT,
-                               RegisterClass RC> {
+                               RegisterClass RC, PatFrag mem_frag> {
   let Predicates = [HasFMA, NoAVX512] in {
     def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
                 (Op RC:$src2,
@@ -375,18 +340,33 @@ multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
               (!cast<Instruction>(Prefix#"213"#Suffix#"r_Int")
                VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
                (COPY_TO_REGCLASS RC:$src3, VR128))>;
+
+    def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
+                (Op RC:$src2,
+                    (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
+                    (mem_frag addr:$src3)))))),
+              (!cast<Instruction>(Prefix#"213"#Suffix#"m_Int")
+               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
+               addr:$src3)>;
+
+    def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
+                (Op (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
+                    (mem_frag addr:$src3), RC:$src2))))),
+              (!cast<Instruction>(Prefix#"132"#Suffix#"m_Int")
+               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
+               addr:$src3)>;
   }
 }
 
-defm : scalar_fma_patterns<X86Fmadd, "VFMADD", "SS", X86Movss, v4f32, f32, FR32>;
-defm : scalar_fma_patterns<X86Fmsub, "VFMSUB", "SS", X86Movss, v4f32, f32, FR32>;
-defm : scalar_fma_patterns<X86Fnmadd, "VFNMADD", "SS", X86Movss, v4f32, f32, FR32>;
-defm : scalar_fma_patterns<X86Fnmsub, "VFNMSUB", "SS", X86Movss, v4f32, f32, FR32>;
+defm : scalar_fma_patterns<X86Fmadd, "VFMADD", "SS", X86Movss, v4f32, f32, FR32, loadf32>;
+defm : scalar_fma_patterns<X86Fmsub, "VFMSUB", "SS", X86Movss, v4f32, f32, FR32, loadf32>;
+defm : scalar_fma_patterns<X86Fnmadd, "VFNMADD", "SS", X86Movss, v4f32, f32, FR32, loadf32>;
+defm : scalar_fma_patterns<X86Fnmsub, "VFNMSUB", "SS", X86Movss, v4f32, f32, FR32, loadf32>;
 
-defm : scalar_fma_patterns<X86Fmadd, "VFMADD", "SD", X86Movsd, v2f64, f64, FR64>;
-defm : scalar_fma_patterns<X86Fmsub, "VFMSUB", "SD", X86Movsd, v2f64, f64, FR64>;
-defm : scalar_fma_patterns<X86Fnmadd, "VFNMADD", "SD", X86Movsd, v2f64, f64, FR64>;
-defm : scalar_fma_patterns<X86Fnmsub, "VFNMSUB", "SD", X86Movsd, v2f64, f64, FR64>;
+defm : scalar_fma_patterns<X86Fmadd, "VFMADD", "SD", X86Movsd, v2f64, f64, FR64, loadf64>;
+defm : scalar_fma_patterns<X86Fmsub, "VFMSUB", "SD", X86Movsd, v2f64, f64, FR64, loadf64>;
+defm : scalar_fma_patterns<X86Fnmadd, "VFNMADD", "SD", X86Movsd, v2f64, f64, FR64, loadf64>;
+defm : scalar_fma_patterns<X86Fnmsub, "VFNMSUB", "SD", X86Movsd, v2f64, f64, FR64, loadf64>;
 
 //===----------------------------------------------------------------------===//
 // FMA4 - AMD 4 operand Fused Multiply-Add instructions
@@ -606,7 +586,7 @@ let ExeDomain = SSEPackedDouble in {
 }
 
 multiclass scalar_fma4_patterns<SDNode Op, string Name,
-                               SDNode Move, ValueType VT, ValueType EltVT,
+                               ValueType VT, ValueType EltVT,
                                RegisterClass RC, PatFrag mem_frag> {
   let Predicates = [HasFMA4] in {
     let AddedComplexity = 15 in
@@ -633,12 +613,12 @@ multiclass scalar_fma4_patterns<SDNode Op, string Name,
   }
 }
 
-defm : scalar_fma4_patterns<X86Fmadd, "VFMADDSS4", X86Movss, v4f32, f32, FR32, loadf32>;
-defm : scalar_fma4_patterns<X86Fmsub, "VFMSUBSS4", X86Movss, v4f32, f32, FR32, loadf32>;
-defm : scalar_fma4_patterns<X86Fnmadd, "VFNMADDSS4", X86Movss, v4f32, f32, FR32, loadf32>;
-defm : scalar_fma4_patterns<X86Fnmsub, "VFNMSUBSS4", X86Movss, v4f32, f32, FR32, loadf32>;
+defm : scalar_fma4_patterns<X86Fmadd, "VFMADDSS4", v4f32, f32, FR32, loadf32>;
+defm : scalar_fma4_patterns<X86Fmsub, "VFMSUBSS4", v4f32, f32, FR32, loadf32>;
+defm : scalar_fma4_patterns<X86Fnmadd, "VFNMADDSS4", v4f32, f32, FR32, loadf32>;
+defm : scalar_fma4_patterns<X86Fnmsub, "VFNMSUBSS4", v4f32, f32, FR32, loadf32>;
 
-defm : scalar_fma4_patterns<X86Fmadd, "VFMADDSD4", X86Movsd, v2f64, f64, FR64, loadf64>;
-defm : scalar_fma4_patterns<X86Fmsub, "VFMSUBSD4", X86Movsd, v2f64, f64, FR64, loadf64>;
-defm : scalar_fma4_patterns<X86Fnmadd, "VFNMADDSD4", X86Movsd, v2f64, f64, FR64, loadf64>;
-defm : scalar_fma4_patterns<X86Fnmsub, "VFNMSUBSD4", X86Movsd, v2f64, f64, FR64, loadf64>;
+defm : scalar_fma4_patterns<X86Fmadd, "VFMADDSD4", v2f64, f64, FR64, loadf64>;
+defm : scalar_fma4_patterns<X86Fmsub, "VFMSUBSD4", v2f64, f64, FR64, loadf64>;
+defm : scalar_fma4_patterns<X86Fnmadd, "VFNMADDSD4", v2f64, f64, FR64, loadf64>;
+defm : scalar_fma4_patterns<X86Fnmsub, "VFNMSUBSD4", v2f64, f64, FR64, loadf64>;

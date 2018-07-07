@@ -330,6 +330,7 @@ class TLBI<string name, bits<3> op1, bits<4> crn, bits<4> crm,
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
   bit NeedsReg = needsreg;
+  code Requires = [{ {} }];
 }
 
 def : TLBI<"IPAS2E1IS",    0b100, 0b1000, 0b0000, 0b001>;
@@ -365,6 +366,59 @@ def : TLBI<"VALE3",        0b110, 0b1000, 0b0111, 0b101>;
 def : TLBI<"VMALLS12E1",   0b100, 0b1000, 0b0111, 0b110, 0>;
 def : TLBI<"VAALE1",       0b000, 0b1000, 0b0111, 0b111>;
 
+// Armv8.4-A Outer Sharable TLB Maintenance instructions:
+let Requires = [{ {AArch64::HasV8_4aOps} }] in {
+//                         op1    CRn     CRm     op2
+def : TLBI<"VMALLE1OS",    0b000, 0b1000, 0b0001, 0b000, 0>;
+def : TLBI<"VAE1OS",       0b000, 0b1000, 0b0001, 0b001>;
+def : TLBI<"ASIDE1OS",     0b000, 0b1000, 0b0001, 0b010>;
+def : TLBI<"VAAE1OS",      0b000, 0b1000, 0b0001, 0b011>;
+def : TLBI<"VALE1OS",      0b000, 0b1000, 0b0001, 0b101>;
+def : TLBI<"VAALE1OS",     0b000, 0b1000, 0b0001, 0b111>;
+def : TLBI<"IPAS2E1OS",    0b100, 0b1000, 0b0100, 0b000>;
+def : TLBI<"IPAS2LE1OS",   0b100, 0b1000, 0b0100, 0b100>;
+def : TLBI<"VAE2OS",       0b100, 0b1000, 0b0001, 0b001>;
+def : TLBI<"VALE2OS",      0b100, 0b1000, 0b0001, 0b101>;
+def : TLBI<"VMALLS12E1OS", 0b100, 0b1000, 0b0001, 0b110, 0>;
+def : TLBI<"VAE3OS",       0b110, 0b1000, 0b0001, 0b001>;
+def : TLBI<"VALE3OS",      0b110, 0b1000, 0b0001, 0b101>;
+def : TLBI<"ALLE2OS",      0b100, 0b1000, 0b0001, 0b000, 0>;
+def : TLBI<"ALLE1OS",      0b100, 0b1000, 0b0001, 0b100, 0>;
+def : TLBI<"ALLE3OS",      0b110, 0b1000, 0b0001, 0b000, 0>;
+
+// Armv8.4-A TLB Range Maintenance instructions:
+//                         op1    CRn     CRm     op2
+def : TLBI<"RVAE1",        0b000, 0b1000, 0b0110, 0b001>;
+def : TLBI<"RVAAE1",       0b000, 0b1000, 0b0110, 0b011>;
+def : TLBI<"RVALE1",       0b000, 0b1000, 0b0110, 0b101>;
+def : TLBI<"RVAALE1",      0b000, 0b1000, 0b0110, 0b111>;
+def : TLBI<"RVAE1IS",      0b000, 0b1000, 0b0010, 0b001>;
+def : TLBI<"RVAAE1IS",     0b000, 0b1000, 0b0010, 0b011>;
+def : TLBI<"RVALE1IS",     0b000, 0b1000, 0b0010, 0b101>;
+def : TLBI<"RVAALE1IS",    0b000, 0b1000, 0b0010, 0b111>;
+def : TLBI<"RVAE1OS",      0b000, 0b1000, 0b0101, 0b001>;
+def : TLBI<"RVAAE1OS",     0b000, 0b1000, 0b0101, 0b011>;
+def : TLBI<"RVALE1OS",     0b000, 0b1000, 0b0101, 0b101>;
+def : TLBI<"RVAALE1OS",    0b000, 0b1000, 0b0101, 0b111>;
+def : TLBI<"RIPAS2E1IS",   0b100, 0b1000, 0b0000, 0b010>;
+def : TLBI<"RIPAS2LE1IS",  0b100, 0b1000, 0b0000, 0b110>;
+def : TLBI<"RIPAS2E1",     0b100, 0b1000, 0b0100, 0b010>;
+def : TLBI<"RIPAS2LE1",    0b100, 0b1000, 0b0100, 0b110>;
+def : TLBI<"RIPAS2E1OS",   0b100, 0b1000, 0b0100, 0b011>;
+def : TLBI<"RIPAS2LE1OS",  0b100, 0b1000, 0b0100, 0b111>;
+def : TLBI<"RVAE2",        0b100, 0b1000, 0b0110, 0b001>;
+def : TLBI<"RVALE2",       0b100, 0b1000, 0b0110, 0b101>;
+def : TLBI<"RVAE2IS",      0b100, 0b1000, 0b0010, 0b001>;
+def : TLBI<"RVALE2IS",     0b100, 0b1000, 0b0010, 0b101>;
+def : TLBI<"RVAE2OS",      0b100, 0b1000, 0b0101, 0b001>;
+def : TLBI<"RVALE2OS",     0b100, 0b1000, 0b0101, 0b101>;
+def : TLBI<"RVAE3",        0b110, 0b1000, 0b0110, 0b001>;
+def : TLBI<"RVALE3",       0b110, 0b1000, 0b0110, 0b101>;
+def : TLBI<"RVAE3IS",      0b110, 0b1000, 0b0010, 0b001>;
+def : TLBI<"RVALE3IS",     0b110, 0b1000, 0b0010, 0b101>;
+def : TLBI<"RVAE3OS",      0b110, 0b1000, 0b0101, 0b001>;
+def : TLBI<"RVALE3OS",     0b110, 0b1000, 0b0101, 0b101>;
+}
 
 //===----------------------------------------------------------------------===//
 // MRS/MSR (system register read/write) instruction options.

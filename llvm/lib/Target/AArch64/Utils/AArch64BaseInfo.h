@@ -285,6 +285,8 @@ struct SysAlias {
 struct SysAliasReg : SysAlias {
   bool NeedsReg;
   SysAliasReg(const char *N, uint16_t E, bool R) : SysAlias(N, E), NeedsReg(R) {};
+  SysAliasReg(const char *N, uint16_t E, bool R, FeatureBitset F) : SysAlias(N, E, F),
+    NeedsReg(R) {};
 };
 
 namespace AArch64AT{

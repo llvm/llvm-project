@@ -537,6 +537,16 @@ public:
   bool isImm() const override { return Kind == k_Immediate; }
   bool isMem() const override { return false; }
 
+  bool isUImm6() const {
+    if (!isImm())
+      return false;
+    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+    if (!MCE)
+      return false;
+    int64_t Val = MCE->getValue();
+    return (Val >= 0 && Val < 64);
+  }
+
   template <int Width> bool isSImm() const { return isSImmScaled<Width, 1>(); }
 
   template <int Bits, int Scale> DiagnosticPredicate isSImmScaled() const {
@@ -1497,6 +1507,12 @@ public:
       return;
     }
     Inst.addOperand(MCOperand::createImm(MCE->getValue() / Scale));
+  }
+
+  void addUImm6Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *MCE = cast<MCConstantExpr>(getImm());
+    Inst.addOperand(MCOperand::createImm(MCE->getValue()));
   }
 
   template <int Scale>
