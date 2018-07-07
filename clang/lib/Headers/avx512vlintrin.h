@@ -3582,7 +3582,7 @@ _mm256_maskz_scalef_ps (__mmask8 __U, __m256 __A, __m256 __B) {
   _mm_maskz_sqrt_ps(__mmask8 __U, __m128 __A) {
     return (__m128)__builtin_ia32_selectps_128((__mmask8)__U,
                                                (__v4sf)_mm_sqrt_ps(__A),
-                                               (__v4sf)_mm_setzero_pd());
+                                               (__v4sf)_mm_setzero_ps());
   }
 
   static __inline__ __m256 __DEFAULT_FN_ATTRS
@@ -6413,7 +6413,7 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, int __imm)
 #define _mm256_mask_shuffle_f64x2(W, U, A, B, imm) \
   (__m256d)__builtin_ia32_selectpd_256((__mmask8)(U), \
                                       (__v4df)_mm256_shuffle_f64x2((A), (B), (imm)), \
-                                      (__v4df)(__m256)(W))
+                                      (__v4df)(__m256d)(W))
 
 #define _mm256_maskz_shuffle_f64x2(U, A, B, imm) \
   (__m256d)__builtin_ia32_selectpd_256((__mmask8)(U), \
@@ -6427,7 +6427,7 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, int __imm)
 #define _mm256_mask_shuffle_i32x4(W, U, A, B, imm) \
   (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
                                       (__v8si)_mm256_shuffle_i32x4((A), (B), (imm)), \
-                                      (__v8si)(__m256)(W))
+                                      (__v8si)(__m256i)(W))
 
 #define _mm256_maskz_shuffle_i32x4(U, A, B, imm) \
   (__m256i)__builtin_ia32_selectd_256((__mmask8)(U), \
@@ -6441,7 +6441,7 @@ _mm256_maskz_srai_epi64(__mmask8 __U, __m256i __A, int __imm)
 #define _mm256_mask_shuffle_i64x2(W, U, A, B, imm) \
   (__m256i)__builtin_ia32_selectq_256((__mmask8)(U), \
                                       (__v4di)_mm256_shuffle_i64x2((A), (B), (imm)), \
-                                      (__v4di)(__m256)(W))
+                                      (__v4di)(__m256i)(W))
 
 
 #define _mm256_maskz_shuffle_i64x2(U, A, B, imm) \
@@ -7872,7 +7872,7 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
                                        (__v4df)_mm256_setzero_pd())
 
 #define _mm256_permutex_epi64(X, C) \
-  (__m256d)__builtin_ia32_permdi256((__v4di)(__m256i)(X), (int)(C))
+  (__m256i)__builtin_ia32_permdi256((__v4di)(__m256i)(X), (int)(C))
 
 #define _mm256_mask_permutex_epi64(W, U, X, C) \
   (__m256i)__builtin_ia32_selectq_256((__mmask8)(U), \

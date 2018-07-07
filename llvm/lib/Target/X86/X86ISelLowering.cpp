@@ -32639,7 +32639,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // and negative zero incorrectly.
         if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
           if (!DAG.getTarget().Options.UnsafeFPMath &&
-              !(DAG.isKnownNeverZero(LHS) || DAG.isKnownNeverZero(RHS)))
+              !(DAG.isKnownNeverZeroFloat(LHS) ||
+                DAG.isKnownNeverZeroFloat(RHS)))
             break;
           std::swap(LHS, RHS);
         }
@@ -32649,7 +32650,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a min would handle comparisons between positive
         // and negative zero incorrectly.
         if (!DAG.getTarget().Options.UnsafeFPMath &&
-            !DAG.isKnownNeverZero(LHS) && !DAG.isKnownNeverZero(RHS))
+            !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
           break;
         Opcode = X86ISD::FMIN;
         break;
@@ -32668,7 +32669,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a max would handle comparisons between positive
         // and negative zero incorrectly.
         if (!DAG.getTarget().Options.UnsafeFPMath &&
-            !DAG.isKnownNeverZero(LHS) && !DAG.isKnownNeverZero(RHS))
+            !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
           break;
         Opcode = X86ISD::FMAX;
         break;
@@ -32678,7 +32679,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // and negative zero incorrectly.
         if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
           if (!DAG.getTarget().Options.UnsafeFPMath &&
-              !(DAG.isKnownNeverZero(LHS) || DAG.isKnownNeverZero(RHS)))
+              !(DAG.isKnownNeverZeroFloat(LHS) ||
+                DAG.isKnownNeverZeroFloat(RHS)))
             break;
           std::swap(LHS, RHS);
         }
@@ -32705,7 +32707,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // and negative zero incorrectly, and swapping the operands would
         // cause it to handle NaNs incorrectly.
         if (!DAG.getTarget().Options.UnsafeFPMath &&
-            !(DAG.isKnownNeverZero(LHS) || DAG.isKnownNeverZero(RHS))) {
+            !(DAG.isKnownNeverZeroFloat(LHS) ||
+              DAG.isKnownNeverZeroFloat(RHS))) {
           if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
             break;
           std::swap(LHS, RHS);
@@ -32741,7 +32744,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // and negative zero incorrectly, and swapping the operands would
         // cause it to handle NaNs incorrectly.
         if (!DAG.getTarget().Options.UnsafeFPMath &&
-            !DAG.isKnownNeverZero(LHS) && !DAG.isKnownNeverZero(RHS)) {
+            !DAG.isKnownNeverZeroFloat(LHS) &&
+            !DAG.isKnownNeverZeroFloat(RHS)) {
           if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
             break;
           std::swap(LHS, RHS);

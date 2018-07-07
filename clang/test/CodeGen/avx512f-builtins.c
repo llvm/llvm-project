@@ -2378,14 +2378,14 @@ __m128 test_mm512_extractf32x4_ps(__m512 a)
   return _mm512_extractf32x4_ps(a, 1);
 }
 
-__m128 test_mm512_mask_extractf32x4_ps(__m128 __W, __mmask8  __U,__m512d __A){
+__m128 test_mm512_mask_extractf32x4_ps(__m128 __W, __mmask8  __U,__m512 __A){
   // CHECK-LABEL:@test_mm512_mask_extractf32x4_ps
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm512_mask_extractf32x4_ps( __W, __U, __A, 1);
 }
 
-__m128 test_mm512_maskz_extractf32x4_ps( __mmask8  __U,__m512d __A){
+__m128 test_mm512_maskz_extractf32x4_ps( __mmask8  __U,__m512 __A){
   // CHECK-LABEL:@test_mm512_maskz_extractf32x4_ps
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
@@ -5341,19 +5341,19 @@ __m128 test_mm_roundscale_ss(__m128 __A, __m128 __B) {
   return _mm_roundscale_ss(__A, __B, 3); 
 }
 
-__m128 test_mm_mask_roundscale_ss(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B){
+__m128 test_mm_mask_roundscale_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_mask_roundscale_ss
   // CHECK: @llvm.x86.avx512.mask.rndscale.ss
     return _mm_mask_roundscale_ss(__W,__U,__A,__B,3);
 }
 
-__m128 test_mm_maskz_roundscale_round_ss( __mmask8 __U, __m128d __A, __m128d __B){
+__m128 test_mm_maskz_roundscale_round_ss( __mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_maskz_roundscale_round_ss
   // CHECK: @llvm.x86.avx512.mask.rndscale.ss
     return _mm_maskz_roundscale_round_ss(__U,__A,__B,3,_MM_FROUND_CUR_DIRECTION);
 }
 
-__m128 test_mm_maskz_roundscale_ss(__mmask8 __U, __m128d __A, __m128d __B){
+__m128 test_mm_maskz_roundscale_ss(__mmask8 __U, __m128 __A, __m128 __B){
   // CHECK-LABEL: @test_mm_maskz_roundscale_ss
   // CHECK: @llvm.x86.avx512.mask.rndscale.ss
     return _mm_maskz_roundscale_ss(__U,__A,__B,3);
@@ -6077,24 +6077,24 @@ __m512 test_mm512_maskz_broadcast_f32x4(__mmask16 __M, float const* __A) {
   return _mm512_maskz_broadcast_f32x4(__M, _mm_loadu_ps(__A)); 
 }
 
-__m512d test_mm512_broadcast_f64x4(float const* __A) {
+__m512d test_mm512_broadcast_f64x4(double const* __A) {
   // CHECK-LABEL: @test_mm512_broadcast_f64x4
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-  return _mm512_broadcast_f64x4(_mm256_loadu_ps(__A)); 
+  return _mm512_broadcast_f64x4(_mm256_loadu_pd(__A)); 
 }
 
-__m512d test_mm512_mask_broadcast_f64x4(__m512d __O, __mmask8 __M, float const* __A) {
+__m512d test_mm512_mask_broadcast_f64x4(__m512d __O, __mmask8 __M, double const* __A) {
   // CHECK-LABEL: @test_mm512_mask_broadcast_f64x4
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
-  return _mm512_mask_broadcast_f64x4(__O, __M, _mm256_loadu_ps(__A)); 
+  return _mm512_mask_broadcast_f64x4(__O, __M, _mm256_loadu_pd(__A)); 
 }
 
-__m512d test_mm512_maskz_broadcast_f64x4(__mmask8 __M, float const* __A) {
+__m512d test_mm512_maskz_broadcast_f64x4(__mmask8 __M, double const* __A) {
   // CHECK-LABEL: @test_mm512_maskz_broadcast_f64x4
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
-  return _mm512_maskz_broadcast_f64x4(__M, _mm256_loadu_ps(__A)); 
+  return _mm512_maskz_broadcast_f64x4(__M, _mm256_loadu_pd(__A)); 
 }
 
 __m512i test_mm512_broadcast_i32x4(__m128i const* __A) {
@@ -8630,7 +8630,7 @@ __m512d test_mm512_castpd128_pd512(__m128d __A) {
   return _mm512_castpd128_pd512(__A); 
 }
 
-__m512d test_mm512_set1_epi8(char d)
+__m512i test_mm512_set1_epi8(char d)
 {
   // CHECK-LABEL: @test_mm512_set1_epi8
   // CHECK: insertelement <64 x i8> {{.*}}, i32 0
@@ -8645,7 +8645,7 @@ __m512d test_mm512_set1_epi8(char d)
   return _mm512_set1_epi8(d);
 }
 
-__m512d test_mm512_set1_epi16(short d)
+__m512i test_mm512_set1_epi16(short d)
 {
   // CHECK-LABEL: @test_mm512_set1_epi16
   // CHECK: insertelement <32 x i16> {{.*}}, i32 0
@@ -8702,14 +8702,14 @@ __m512i test_mm512_setr4_epi32(int e0, int e1, int e2, int e3)
   return _mm512_setr4_epi64(e0, e1, e2, e3);
 }
 
-__m512i test_mm512_setr4_pd(double e0, double e1, double e2, double e3)
+__m512d test_mm512_setr4_pd(double e0, double e1, double e2, double e3)
 {
   // CHECK-LABEL: @test_mm512_setr4_pd
   // CHECK: insertelement <8 x double> {{.*}}, i32 7
   return _mm512_setr4_pd(e0,e1,e2,e3);
 }
 
- __m512i test_mm512_setr4_ps(float e0, float e1, float e2, float e3)
+ __m512 test_mm512_setr4_ps(float e0, float e1, float e2, float e3)
 {
   // CHECK-LABEL: @test_mm512_setr4_ps
   // CHECK: insertelement <16 x float> {{.*}}, i32 15

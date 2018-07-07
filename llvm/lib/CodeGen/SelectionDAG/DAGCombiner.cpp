@@ -16126,6 +16126,9 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode* N) {
   if (SDValue NarrowBOp = narrowExtractedVectorBinOp(N, DAG))
     return NarrowBOp;
 
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 

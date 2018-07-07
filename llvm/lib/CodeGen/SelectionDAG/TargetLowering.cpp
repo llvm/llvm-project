@@ -1461,7 +1461,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Sub = Op.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
-    APInt Idx = cast<ConstantSDNode>(Op.getOperand(2))->getAPIntValue();
+    const APInt& Idx = cast<ConstantSDNode>(Op.getOperand(2))->getAPIntValue();
     if (Idx.uge(NumElts - NumSubElts))
       break;
     unsigned SubIdx = Idx.getZExtValue();
@@ -1477,6 +1477,25 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       return true;
     KnownUndef.insertBits(SubUndef, SubIdx);
     KnownZero.insertBits(SubZero, SubIdx);
+    break;
+  }
+  case ISD::EXTRACT_SUBVECTOR: {
+    if (!isa<ConstantSDNode>(Op.getOperand(1)))
+      break;
+    SDValue Src = Op.getOperand(0);
+    unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
+    const APInt& Idx = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
+    if (Idx.uge(NumSrcElts - NumElts))
+      break;
+    // Offset the demanded elts by the subvector index.
+    uint64_t SubIdx = Idx.getZExtValue();
+    APInt SrcElts = DemandedElts.zext(NumSrcElts).shl(SubIdx);
+    APInt SrcUndef, SrcZero;
+    if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
+      return true;
+    KnownUndef = SrcUndef.extractBits(NumElts, SubIdx);
+    KnownZero = SrcZero.extractBits(NumElts, SubIdx);
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {
