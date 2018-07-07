@@ -120,6 +120,7 @@ def DeprecatedDynamicExceptionSpec
 def DeprecatedImplementations :DiagGroup<"deprecated-implementations">;
 def DeprecatedIncrementBool : DiagGroup<"deprecated-increment-bool">;
 def DeprecatedRegister : DiagGroup<"deprecated-register">;
+def DeprecatedThisCapture : DiagGroup<"deprecated-this-capture">;
 def DeprecatedWritableStr : DiagGroup<"deprecated-writable-strings",
                                       [CXX11CompatDeprecatedWritableStr]>;
 // FIXME: Why is DeprecatedImplementations not in this group?
@@ -128,6 +129,7 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAttributes,
                                           DeprecatedDynamicExceptionSpec,
                                           DeprecatedIncrementBool,
                                           DeprecatedRegister,
+                                          DeprecatedThisCapture,
                                           DeprecatedWritableStr]>,
                  DiagCategory<"Deprecations">;
 
