@@ -60,6 +60,9 @@ DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
 // True if this is a nested interceptor.
 static THREADLOCAL int in_interceptor_scope;
 
+void __msan_scoped_disable_interceptor_checks() { ++in_interceptor_scope; }
+void __msan_scoped_enable_interceptor_checks() { --in_interceptor_scope; }
+
 struct InterceptorScope {
   InterceptorScope() { ++in_interceptor_scope; }
   ~InterceptorScope() { --in_interceptor_scope; }

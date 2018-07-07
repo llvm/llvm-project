@@ -1553,8 +1553,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
 
       // If the cast is not actually changing bits, and the second operand is a
       // null pointer, do the comparison with the pre-casted value.
-      if (V2->isNullValue() &&
-          (CE1->getType()->isPointerTy() || CE1->getType()->isIntegerTy())) {
+      if (V2->isNullValue() && CE1->getType()->isIntOrPtrTy()) {
         if (CE1->getOpcode() == Instruction::ZExt) isSigned = false;
         if (CE1->getOpcode() == Instruction::SExt) isSigned = true;
         return evaluateICmpRelation(CE1Op0,

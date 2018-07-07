@@ -479,6 +479,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       bool WantPthread = Args.hasArg(options::OPT_pthread) ||
                          Args.hasArg(options::OPT_pthreads);
+      bool WantAtomic = false;
 
       // FIXME: Only pass GompNeedsRT = true for platforms with libgomp that
       // require librt. Most modern Linux platforms do, but some may not.
@@ -487,12 +488,15 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                            /* GompNeedsRT= */ true))
         // OpenMP runtimes implies pthreads when using the GNU toolchain.
         // FIXME: Does this really make sense for all GNU toolchains?
-        WantPthread = true;
+        WantAtomic = WantPthread = true;
 
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
       if (WantPthread && !isAndroid)
         CmdArgs.push_back("-lpthread");
+
+      if (WantAtomic)
+        CmdArgs.push_back("-latomic");
 
       if (Args.hasArg(options::OPT_fsplit_stack))
         CmdArgs.push_back("--wrap=pthread_create");

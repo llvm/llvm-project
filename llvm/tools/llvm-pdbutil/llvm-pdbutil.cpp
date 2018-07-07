@@ -20,10 +20,13 @@
 #include "InputFile.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
+#include "PrettyClassDefinitionDumper.h"
 #include "PrettyCompilandDumper.h"
+#include "PrettyEnumDumper.h"
 #include "PrettyExternalSymbolDumper.h"
 #include "PrettyFunctionDumper.h"
 #include "PrettyTypeDumper.h"
+#include "PrettyTypedefDumper.h"
 #include "PrettyVariableDumper.h"
 #include "YAMLOutputStyle.h"
 
@@ -65,7 +68,11 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolPublicSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
@@ -160,6 +167,11 @@ cl::opt<bool> ShowInjectedSourceContent(
     "injected-source-content",
     cl::desc("When displaying an injected source, display the file content"),
     cl::cat(OtherOptions), cl::sub(PrettySubcommand));
+
+cl::list<std::string> WithName(
+    "with-name",
+    cl::desc("Display any symbol or type with the specified exact name"),
+    cl::cat(TypeCategory), cl::ZeroOrMore, cl::sub(PrettySubcommand));
 
 cl::opt<bool> Compilands("compilands", cl::desc("Display compilands"),
                          cl::cat(TypeCategory), cl::sub(PrettySubcommand));
@@ -962,6 +974,82 @@ static void dumpPretty(StringRef Path) {
   if (GlobalScope->hasPrivateSymbols())
     outs() << "HasPrivateSymbols ";
   Printer.Unindent();
+
+  if (!opts::pretty::WithName.empty()) {
+    Printer.NewLine();
+    WithColor(Printer, PDB_ColorItem::SectionHeader).get()
+        << "---SYMBOLS & TYPES BY NAME---";
+
+    for (StringRef Name : opts::pretty::WithName) {
+      auto Symbols = GlobalScope->findChildren(
+          PDB_SymType::None, Name, PDB_NameSearchFlags::NS_CaseSensitive);
+      if (!Symbols || Symbols->getChildCount() == 0) {
+        Printer.formatLine("[not found] - {0}", Name);
+        continue;
+      }
+      Printer.formatLine("[{0} occurrences] - {1}", Symbols->getChildCount(),
+                         Name);
+
+      AutoIndent Indent(Printer);
+      Printer.NewLine();
+
+      while (auto Symbol = Symbols->getNext()) {
+        switch (Symbol->getSymTag()) {
+        case PDB_SymType::Typedef: {
+          TypedefDumper TD(Printer);
+          std::unique_ptr<PDBSymbolTypeTypedef> T =
+              llvm::unique_dyn_cast<PDBSymbolTypeTypedef>(std::move(Symbol));
+          TD.start(*T);
+          break;
+        }
+        case PDB_SymType::Enum: {
+          EnumDumper ED(Printer);
+          std::unique_ptr<PDBSymbolTypeEnum> E =
+              llvm::unique_dyn_cast<PDBSymbolTypeEnum>(std::move(Symbol));
+          ED.start(*E);
+          break;
+        }
+        case PDB_SymType::UDT: {
+          ClassDefinitionDumper CD(Printer);
+          std::unique_ptr<PDBSymbolTypeUDT> C =
+              llvm::unique_dyn_cast<PDBSymbolTypeUDT>(std::move(Symbol));
+          CD.start(*C);
+          break;
+        }
+        case PDB_SymType::BaseClass:
+        case PDB_SymType::Friend: {
+          TypeDumper TD(Printer);
+          Symbol->dump(TD);
+          break;
+        }
+        case PDB_SymType::Function: {
+          FunctionDumper FD(Printer);
+          std::unique_ptr<PDBSymbolFunc> F =
+              llvm::unique_dyn_cast<PDBSymbolFunc>(std::move(Symbol));
+          FD.start(*F, FunctionDumper::PointerType::None);
+          break;
+        }
+        case PDB_SymType::Data: {
+          VariableDumper VD(Printer);
+          std::unique_ptr<PDBSymbolData> D =
+              llvm::unique_dyn_cast<PDBSymbolData>(std::move(Symbol));
+          VD.start(*D);
+          break;
+        }
+        case PDB_SymType::PublicSymbol: {
+          ExternalSymbolDumper ED(Printer);
+          std::unique_ptr<PDBSymbolPublicSymbol> PS =
+              llvm::unique_dyn_cast<PDBSymbolPublicSymbol>(std::move(Symbol));
+          ED.dump(*PS);
+          break;
+        }
+        default:
+          llvm_unreachable("Unexpected symbol tag!");
+        }
+      }
+    }
+    llvm::outs().flush();
+  }
 
   if (opts::pretty::Compilands) {
     Printer.NewLine();

@@ -1,10 +1,10 @@
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
 ;
 ; The Cortex-M0 does not support unaligned accesses:
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m0 < %s -parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m0 < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
 ;
 ; Check DSP extension:
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 -mattr=-dsp < %s -parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
+; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 -mattr=-dsp < %s -arm-parallel-dsp -S | FileCheck %s --check-prefix=CHECK-UNSUPPORTED
 ;
 ; CHECK:  %mac1{{\.}}026 = phi i32 [ [[V8:%[0-9]+]], %for.body ], [ 0, %for.body.preheader ]
 ; CHECK:  [[V4:%[0-9]+]] = bitcast i16* %arrayidx3 to i32*

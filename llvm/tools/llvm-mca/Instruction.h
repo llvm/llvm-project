@@ -28,11 +28,6 @@
 
 namespace mca {
 
-struct WriteDescriptor;
-struct ReadDescriptor;
-class WriteState;
-class ReadState;
-
 constexpr int UNKNOWN_CYCLES = -512;
 
 /// A register write descriptor.
@@ -42,7 +37,7 @@ struct WriteDescriptor {
   // a bitwise not of the OpIndex.
   int OpIndex;
   // Write latency. Number of cycles before write-back stage.
-  int Latency;
+  unsigned Latency;
   // This field is set to a value different than zero only if this
   // is an implicit definition.
   unsigned RegisterID;
@@ -80,6 +75,8 @@ struct ReadDescriptor {
 
   bool isImplicitRead() const { return OpIndex < 0; };
 };
+
+class ReadState;
 
 /// Tracks uses of a register definition (e.g. register write).
 ///
@@ -123,6 +120,7 @@ public:
   int getCyclesLeft() const { return CyclesLeft; }
   unsigned getWriteResourceID() const { return WD.SClassOrWriteResourceID; }
   unsigned getRegisterID() const { return RegisterID; }
+  unsigned getLatency() const { return WD.Latency; }
 
   void addUser(ReadState *Use, int ReadAdvance);
   unsigned getNumUsers() const { return Users.size(); }

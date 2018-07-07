@@ -4757,16 +4757,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (Triple.getArch() != llvm::Triple::aarch64) {
         D.Diag(diag::warn_drv_moutline_unsupported_opt) << Triple.getArchName();
       } else {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-enable-machine-outliner");
-
-        // The outliner shouldn't compete with linkers that dedupe linkonceodr
-        // functions in LTO. Enable that behaviour by default when compiling with
-        // LTO.
-        if (getToolChain().getDriver().isUsingLTO()) {
           CmdArgs.push_back("-mllvm");
-          CmdArgs.push_back("-enable-linkonceodr-outlining");
-        }
+          CmdArgs.push_back("-enable-machine-outliner");
       }
     } else {
       // Disable all outlining behaviour.

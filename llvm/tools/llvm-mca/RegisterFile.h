@@ -17,6 +17,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_REGISTER_FILE_H
 #define LLVM_TOOLS_LLVM_MCA_REGISTER_FILE_H
 
+#include "HardwareUnit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSchedule.h"
@@ -29,12 +30,13 @@ class WriteRef;
 
 /// Manages hardware register files, and tracks register definitions for
 /// register renaming purposes.
-class RegisterFile {
+class RegisterFile : public HardwareUnit {
   const llvm::MCRegisterInfo &MRI;
 
   // Each register file is associated with an instance of
-  // RegisterMappingTracker. A RegisterMappingTracker tracks the number of
-  // physical registers that are dynamically allocated by the simulator.
+  // RegisterMappingTracker.
+  // A RegisterMappingTracker keeps track of the number of physical registers
+  // which have been dynamically allocated by the simulator.
   struct RegisterMappingTracker {
     // The total number of physical registers that are available in this
     // register file for register renaming purpouses.  A value of zero for this

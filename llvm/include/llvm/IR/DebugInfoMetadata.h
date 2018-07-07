@@ -778,6 +778,12 @@ public:
 
   unsigned getEncoding() const { return Encoding; }
 
+  enum class Signedness { Signed, Unsigned };
+
+  /// Return the signedness of this type, or None if this type is neither
+  /// signed nor unsigned.
+  Optional<Signedness> getSignedness() const;
+
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIBasicTypeKind;
   }
@@ -1160,7 +1166,7 @@ public:
   };
 
   static Optional<DebugEmissionKind> getEmissionKind(StringRef Str);
-  static const char *EmissionKindString(DebugEmissionKind EK);
+  static const char *emissionKindString(DebugEmissionKind EK);
 
 private:
   unsigned SourceLanguage;
@@ -2206,6 +2212,14 @@ public:
   /// Determines the size of the variable's type.
   Optional<uint64_t> getSizeInBits() const;
 
+  /// Return the signedness of this variable's type, or None if this type is
+  /// neither signed nor unsigned.
+  Optional<DIBasicType::Signedness> getSignedness() const {
+    if (auto *BT = dyn_cast<DIBasicType>(getType().resolve()))
+      return BT->getSignedness();
+    return None;
+  }
+
   StringRef getFilename() const {
     if (auto *F = getFile())
       return F->getFilename();
@@ -2312,6 +2326,11 @@ public:
     ///
     /// Return the number of elements in the operand (1 + args).
     unsigned getSize() const;
+
+    /// Append the elements of this operand to \p V.
+    void appendToVector(SmallVectorImpl<uint64_t> &V) const {
+      V.append(get(), get() + getSize());
+    }
   };
 
   /// An iterator for expression operands.
@@ -2415,15 +2434,22 @@ public:
 
   /// Prepend \p DIExpr with a deref and offset operation and optionally turn it
   /// into a stack value.
-  static DIExpression *prepend(const DIExpression *DIExpr, bool DerefBefore,
+  static DIExpression *prepend(const DIExpression *Expr, bool DerefBefore,
                                int64_t Offset = 0, bool DerefAfter = false,
                                bool StackValue = false);
 
   /// Prepend \p DIExpr with the given opcodes and optionally turn it into a
   /// stack value.
-  static DIExpression *prependOpcodes(const DIExpression *DIExpr,
+  static DIExpression *prependOpcodes(const DIExpression *Expr,
                                       SmallVectorImpl<uint64_t> &Ops,
                                       bool StackValue = false);
+
+  /// Convert \p DIExpr into a stack value if it isn't one already by appending
+  /// DW_OP_deref if needed, and applying \p Ops to the resulting expression.
+  /// If \p DIExpr is a fragment, the returned expression will contain the same
+  /// fragment.
+  static DIExpression *appendToStack(const DIExpression *Expr,
+                                     ArrayRef<uint64_t> Ops);
 
   /// Create a DIExpression to describe one part of an aggregate variable that
   /// is fragmented across multiple Values. The DW_OP_LLVM_fragment operation

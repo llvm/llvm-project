@@ -1,6 +1,0 @@
-// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-dlopen-func2.c
-// CHECK-NEXT:        -:    0:Graph:instrprof-dlopen-func2.gcno
-// CHECK-NEXT:        -:    0:Data:instrprof-dlopen-func2.gcda
-// CHECK-NEXT:        -:    0:Runs:1
-// CHECK-NEXT:        -:    0:Programs:1
-// CHECK-NEXT:        3:    1:void func2(int K) { if (K) {} }

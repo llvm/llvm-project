@@ -1590,18 +1590,21 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
       }
 }
 
-void llvm::salvageDebugInfo(Instruction &I) {
+/// Wrap \p V in a ValueAsMetadata instance.
+static MetadataAsValue *wrapValueInMetadata(LLVMContext &C, Value *V) {
+  return MetadataAsValue::get(C, ValueAsMetadata::get(V));
+}
+
+bool llvm::salvageDebugInfo(Instruction &I) {
   SmallVector<DbgInfoIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, &I);
   if (DbgUsers.empty())
-    return;
+    return false;
 
   auto &M = *I.getModule();
   auto &DL = M.getDataLayout();
-
-  auto wrapMD = [&](Value *V) {
-    return MetadataAsValue::get(I.getContext(), ValueAsMetadata::get(V));
-  };
+  auto &Ctx = I.getContext();
+  auto wrapMD = [&](Value *V) { return wrapValueInMetadata(Ctx, V); };
 
   auto doSalvage = [&](DbgInfoIntrinsic *DII, SmallVectorImpl<uint64_t> &Ops) {
     auto *DIExpr = DII->getExpression();
@@ -1613,7 +1616,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
       DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
     }
     DII->setOperand(0, wrapMD(I.getOperand(0)));
-    DII->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
+    DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
   };
 
@@ -1631,7 +1634,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
     if (!CI->isNoopCast(DL))
-      return;
+      return false;
 
     // No-op casts are irrelevant for debug info.
     MetadataAsValue *CastSrc = wrapMD(I.getOperand(0));
@@ -1639,6 +1642,7 @@ void llvm::salvageDebugInfo(Instruction &I) {
       DII->setOperand(0, CastSrc);
       LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
     }
+    return true;
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     unsigned BitWidth =
         M.getDataLayout().getIndexSizeInBits(GEP->getPointerAddressSpace());
@@ -1649,11 +1653,12 @@ void llvm::salvageDebugInfo(Instruction &I) {
     if (GEP->accumulateConstantOffset(M.getDataLayout(), Offset))
       for (auto *DII : DbgUsers)
         applyOffset(DII, Offset.getSExtValue());
+    return true;
   } else if (auto *BI = dyn_cast<BinaryOperator>(&I)) {
     // Rewrite binary operations with constant integer operands.
     auto *ConstInt = dyn_cast<ConstantInt>(I.getOperand(1));
     if (!ConstInt || ConstInt->getBitWidth() > 64)
-      return;
+      return false;
 
     uint64_t Val = ConstInt->getSExtValue();
     for (auto *DII : DbgUsers) {
@@ -1693,9 +1698,10 @@ void llvm::salvageDebugInfo(Instruction &I) {
         break;
       default:
         // TODO: Salvage constants from each kind of binop we know about.
-        continue;
+        return false;
       }
     }
+    return true;
   } else if (isa<LoadInst>(&I)) {
     MetadataAsValue *AddrMD = wrapMD(I.getOperand(0));
     for (auto *DII : DbgUsers) {
@@ -1703,39 +1709,174 @@ void llvm::salvageDebugInfo(Instruction &I) {
       auto *DIExpr = DII->getExpression();
       DIExpr = DIExpression::prepend(DIExpr, DIExpression::WithDeref);
       DII->setOperand(0, AddrMD);
-      DII->setOperand(2, MetadataAsValue::get(I.getContext(), DIExpr));
+      DII->setOperand(2, MetadataAsValue::get(Ctx, DIExpr));
       LLVM_DEBUG(dbgs() << "SALVAGE:  " << *DII << '\n');
     }
+    return true;
   }
+  return false;
 }
 
-void llvm::insertReplacementDbgValues(
-    Value &From, Value &To, Instruction &InsertBefore,
-    function_ref<DIExpression *(DbgInfoIntrinsic &OldDII)> RewriteExpr) {
-  // Collect all debug users of From.
+/// A replacement for a dbg.value expression.
+using DbgValReplacement = Optional<DIExpression *>;
+
+/// Point debug users of \p From to \p To using exprs given by \p RewriteExpr,
+/// possibly moving/deleting users to prevent use-before-def. Returns true if
+/// changes are made.
+static bool rewriteDebugUsers(
+    Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
+    function_ref<DbgValReplacement(DbgInfoIntrinsic &DII)> RewriteExpr) {
+  // Find debug users of From.
   SmallVector<DbgInfoIntrinsic *, 1> Users;
   findDbgUsers(Users, &From);
   if (Users.empty())
-    return;
+    return false;
 
-  // Insert a replacement debug value for each old debug user. It's assumed
-  // that the old debug users will be erased later.
-  DIBuilder DIB(*InsertBefore.getModule());
-  for (auto *OldDII : Users)
-    if (DIExpression *Expr = RewriteExpr(*OldDII)) {
-      auto *I = DIB.insertDbgValueIntrinsic(&To, OldDII->getVariable(), Expr,
-                                            OldDII->getDebugLoc().get(),
-                                            &InsertBefore);
-      (void)I;
-      LLVM_DEBUG(dbgs() << "REPLACE:  " << *I << '\n');
+  // Prevent use-before-def of To.
+  bool Changed = false;
+  SmallPtrSet<DbgInfoIntrinsic *, 1> DeleteOrSalvage;
+  if (isa<Instruction>(&To)) {
+    bool DomPointAfterFrom = From.getNextNonDebugInstruction() == &DomPoint;
+
+    for (auto *DII : Users) {
+      // It's common to see a debug user between From and DomPoint. Move it
+      // after DomPoint to preserve the variable update without any reordering.
+      if (DomPointAfterFrom && DII->getNextNonDebugInstruction() == &DomPoint) {
+        LLVM_DEBUG(dbgs() << "MOVE:  " << *DII << '\n');
+        DII->moveAfter(&DomPoint);
+        Changed = true;
+
+      // Users which otherwise aren't dominated by the replacement value must
+      // be salvaged or deleted.
+      } else if (!DT.dominates(&DomPoint, DII)) {
+        DeleteOrSalvage.insert(DII);
+      }
     }
+  }
+
+  // Update debug users without use-before-def risk.
+  for (auto *DII : Users) {
+    if (DeleteOrSalvage.count(DII))
+      continue;
+
+    LLVMContext &Ctx = DII->getContext();
+    DbgValReplacement DVR = RewriteExpr(*DII);
+    if (!DVR)
+      continue;
+
+    DII->setOperand(0, wrapValueInMetadata(Ctx, &To));
+    DII->setOperand(2, MetadataAsValue::get(Ctx, *DVR));
+    LLVM_DEBUG(dbgs() << "REWRITE:  " << *DII << '\n');
+    Changed = true;
+  }
+
+  if (!DeleteOrSalvage.empty()) {
+    // Try to salvage the remaining debug users.
+    Changed |= salvageDebugInfo(From);
+
+    // Delete the debug users which weren't salvaged.
+    for (auto *DII : DeleteOrSalvage) {
+      if (DII->getVariableLocation() == &From) {
+        LLVM_DEBUG(dbgs() << "Erased UseBeforeDef:  " << *DII << '\n');
+        DII->eraseFromParent();
+        Changed = true;
+      }
+    }
+  }
+
+  return Changed;
 }
 
-void llvm::insertReplacementDbgValues(Value &From, Value &To,
-                                      Instruction &InsertBefore) {
-  return llvm::insertReplacementDbgValues(
-      From, To, InsertBefore,
-      [](DbgInfoIntrinsic &OldDII) { return OldDII.getExpression(); });
+/// Check if a bitcast between a value of type \p FromTy to type \p ToTy would
+/// losslessly preserve the bits and semantics of the value. This predicate is
+/// symmetric, i.e swapping \p FromTy and \p ToTy should give the same result.
+///
+/// Note that Type::canLosslesslyBitCastTo is not suitable here because it
+/// allows semantically unequivalent bitcasts, such as <2 x i64> -> <4 x i32>,
+/// and also does not allow lossless pointer <-> integer conversions.
+static bool isBitCastSemanticsPreserving(const DataLayout &DL, Type *FromTy,
+                                         Type *ToTy) {
+  // Trivially compatible types.
+  if (FromTy == ToTy)
+    return true;
+
+  // Handle compatible pointer <-> integer conversions.
+  if (FromTy->isIntOrPtrTy() && ToTy->isIntOrPtrTy()) {
+    bool SameSize = DL.getTypeSizeInBits(FromTy) == DL.getTypeSizeInBits(ToTy);
+    bool LosslessConversion = !DL.isNonIntegralPointerType(FromTy) &&
+                              !DL.isNonIntegralPointerType(ToTy);
+    return SameSize && LosslessConversion;
+  }
+
+  // TODO: This is not exhaustive.
+  return false;
+}
+
+bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
+                                 Instruction &DomPoint, DominatorTree &DT) {
+  // Exit early if From has no debug users.
+  if (!From.isUsedByMetadata())
+    return false;
+
+  assert(&From != &To && "Can't replace something with itself");
+
+  Type *FromTy = From.getType();
+  Type *ToTy = To.getType();
+
+  auto Identity = [&](DbgInfoIntrinsic &DII) -> DbgValReplacement {
+    return DII.getExpression();
+  };
+
+  // Handle no-op conversions.
+  Module &M = *From.getModule();
+  const DataLayout &DL = M.getDataLayout();
+  if (isBitCastSemanticsPreserving(DL, FromTy, ToTy))
+    return rewriteDebugUsers(From, To, DomPoint, DT, Identity);
+
+  // Handle integer-to-integer widening and narrowing.
+  // FIXME: Use DW_OP_convert when it's available everywhere.
+  if (FromTy->isIntegerTy() && ToTy->isIntegerTy()) {
+    uint64_t FromBits = FromTy->getPrimitiveSizeInBits();
+    uint64_t ToBits = ToTy->getPrimitiveSizeInBits();
+    assert(FromBits != ToBits && "Unexpected no-op conversion");
+
+    // When the width of the result grows, assume that a debugger will only
+    // access the low `FromBits` bits when inspecting the source variable.
+    if (FromBits < ToBits)
+      return rewriteDebugUsers(From, To, DomPoint, DT, Identity);
+
+    // The width of the result has shrunk. Use sign/zero extension to describe
+    // the source variable's high bits.
+    auto SignOrZeroExt = [&](DbgInfoIntrinsic &DII) -> DbgValReplacement {
+      DILocalVariable *Var = DII.getVariable();
+
+      // Without knowing signedness, sign/zero extension isn't possible.
+      auto Signedness = Var->getSignedness();
+      if (!Signedness)
+        return None;
+
+      bool Signed = *Signedness == DIBasicType::Signedness::Signed;
+
+      if (!Signed) {
+        // In the unsigned case, assume that a debugger will initialize the
+        // high bits to 0 and do a no-op conversion.
+        return Identity(DII);
+      } else {
+        // In the signed case, the high bits are given by sign extension, i.e:
+        //   (To >> (ToBits - 1)) * ((2 ^ FromBits) - 1)
+        // Calculate the high bits and OR them together with the low bits.
+        SmallVector<uint64_t, 8> Ops({dwarf::DW_OP_dup, dwarf::DW_OP_constu,
+                                      (ToBits - 1), dwarf::DW_OP_shr,
+                                      dwarf::DW_OP_lit0, dwarf::DW_OP_not,
+                                      dwarf::DW_OP_mul, dwarf::DW_OP_or});
+        return DIExpression::appendToStack(DII.getExpression(), Ops);
+      }
+    };
+    return rewriteDebugUsers(From, To, DomPoint, DT, SignOrZeroExt);
+  }
+
+  // TODO: Floating-point conversions, vectors.
+  return false;
 }
 
 unsigned llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {

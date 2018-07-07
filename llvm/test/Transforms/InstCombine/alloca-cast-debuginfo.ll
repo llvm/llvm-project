@@ -41,7 +41,10 @@ entry:
 ; CHECK: %local = alloca i64, align 8
 ; CHECK: call void @llvm.dbg.declare(metadata i64* %local, metadata !22, metadata !DIExpression())
 ; CHECK: [[simplified:%.*]] = bitcast i64* %local to i8*
-; CHECK: call void @llvm.dbg.value(metadata i8* [[simplified]], metadata !22, metadata !DIExpression())
+;
+; Another dbg.value for "local" would be redundant here.
+; CHECK-NOT: call void @llvm.dbg.value(metadata i8* [[simplified]], metadata !22, metadata !DIExpression())
+;
 ; CHECK: call void @escape(i8* [[simplified]])
 ; CHECK: ret void
 

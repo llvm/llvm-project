@@ -1,30 +1,6 @@
 RUN: mkdir -p %t.d
-RUN: cd %t.d
-
-RUN: %clang --coverage -o func.shared -fPIC -shared %S/Inputs/instrprof-dlopen-func.c
-RUN: %clang --coverage -o func2.shared -fPIC -shared %S/Inputs/instrprof-dlopen-func2.c
-RUN: %clang --coverage -o func3.shared -fPIC -shared %S/Inputs/instrprof-dlopen-func3.c
+RUN: %clang --coverage -o %t.d/func.shared -fPIC -shared %S/Inputs/instrprof-dlopen-func.c
+RUN: %clang --coverage -o %t.d/func2.shared -fPIC -shared %S/Inputs/instrprof-dlopen-func2.c
 RUN: %clang --coverage -o %t -fPIC -rpath %t.d %S/Inputs/instrprof-dlopen-dlclose-main.c
 
-# Test with two dlopened libraries.
 RUN: %run %t
-RUN: llvm-cov gcov instrprof-dlopen-dlclose-main.gcda
-RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-dlopen-dlclose-main.c.gcov %S/Inputs/instrprof-dlopen-dlclose-main.c.gcov
-RUN: llvm-cov gcov instrprof-dlopen-func.gcda
-RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-dlopen-func.c.gcov %S/Inputs/instrprof-dlopen-func.c.gcov
-RUN: llvm-cov gcov instrprof-dlopen-func2.gcda
-RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-dlopen-func2.c.gcov %S/Inputs/instrprof-dlopen-func2.c.gcov
-RUN: rm instrprof-dlopen-dlclose-main.gcda instrprof-dlopen-func.gcda instrprof-dlopen-func2.gcda
-
-# Test with three dlopened libraries.
-RUN: %clang -DUSE_LIB3 --coverage -o %t -fPIC -rpath %t.d %S/Inputs/instrprof-dlopen-dlclose-main.c
-RUN: %run %t
-RUN: llvm-cov gcov instrprof-dlopen-dlclose-main.gcda
-RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-dlopen-dlclose-main.c.gcov %S/Inputs/instrprof-dlopen-dlclose-main_three-libs.c.gcov
-RUN: llvm-cov gcov instrprof-dlopen-func.gcda
-RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-dlopen-func.c.gcov %S/Inputs/instrprof-dlopen-func.c.gcov
-RUN: llvm-cov gcov instrprof-dlopen-func2.gcda
-RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-dlopen-func2.c.gcov %S/Inputs/instrprof-dlopen-func2.c.gcov
-RUN: llvm-cov gcov instrprof-dlopen-func3.gcda
-RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-dlopen-func2.c.gcov %S/Inputs/instrprof-dlopen-func3.c.gcov
-RUN: rm instrprof-dlopen-dlclose-main.gcda instrprof-dlopen-func.gcda instrprof-dlopen-func2.gcda instrprof-dlopen-func3.gcda

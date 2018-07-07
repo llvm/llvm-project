@@ -6865,6 +6865,22 @@ multiclass avx512_scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
                (COPY_TO_REGCLASS _.FRC:$src3, VR128X))>;
 
     def : Pat<(_.VT (Move (_.VT VR128X:$src1), (_.VT (scalar_to_vector
+                (Op _.FRC:$src2,
+                    (_.EltVT (extractelt (_.VT VR128X:$src1), (iPTR 0))),
+                    (_.ScalarLdFrag addr:$src3)))))),
+              (!cast<I>(Prefix#"213"#Suffix#"Zm_Int")
+               VR128X:$src1, (COPY_TO_REGCLASS _.FRC:$src2, VR128X),
+               addr:$src3)>;
+
+    def : Pat<(_.VT (Move (_.VT VR128X:$src1), (_.VT (scalar_to_vector
+                (Op (_.EltVT (extractelt (_.VT VR128X:$src1), (iPTR 0))),
+                    (_.ScalarLdFrag addr:$src3), _.FRC:$src2))))),
+              (!cast<I>(Prefix#"132"#Suffix#"Zm_Int")
+               VR128X:$src1, (COPY_TO_REGCLASS _.FRC:$src2, VR128X),
+               addr:$src3)>;
+
+    // TODO: Add memory patterns.
+    def : Pat<(_.VT (Move (_.VT VR128X:$src1), (_.VT (scalar_to_vector
                (X86selects VK1WM:$mask,
                 (Op _.FRC:$src2,
                     (_.EltVT (extractelt (_.VT VR128X:$src1), (iPTR 0))),

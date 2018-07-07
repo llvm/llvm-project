@@ -254,6 +254,16 @@ bool Constant::isNaN() const {
   return true;
 }
 
+bool Constant::containsUndefElement() const {
+  if (!getType()->isVectorTy())
+    return false;
+  for (unsigned i = 0, e = getType()->getVectorNumElements(); i != e; ++i)
+    if (isa<UndefValue>(getAggregateElement(i)))
+      return true;
+
+  return false;
+}
+
 /// Constructor to create a '0' constant of arbitrary type.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {
@@ -2261,32 +2271,49 @@ Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
              isExact ? PossiblyExactOperator::IsExact : 0);
 }
 
-// FIXME: Add a parameter to specify the operand number for non-commutative ops.
-// For example, the operand 1 identity constant for any shift is the null value
-// because shift-by-0 always returns operand 0.
-Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty) {
-  switch (Opcode) {
-  default:
-    // Doesn't have an identity.
+Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
+                                         bool AllowRHSConstant) {
+  assert(Instruction::isBinaryOp(Opcode) && "Only binops allowed");
+
+  // Commutative opcodes: it does not matter if AllowRHSConstant is set.
+  if (Instruction::isCommutative(Opcode)) {
+    switch (Opcode) {
+      case Instruction::Add: // X + 0 = X
+      case Instruction::Or:  // X | 0 = X
+      case Instruction::Xor: // X ^ 0 = X
+        return Constant::getNullValue(Ty);
+      case Instruction::Mul: // X * 1 = X
+        return ConstantInt::get(Ty, 1);
+      case Instruction::And: // X & -1 = X
+        return Constant::getAllOnesValue(Ty);
+      case Instruction::FAdd: // X + -0.0 = X
+        // TODO: If the fadd has 'nsz', should we return +0.0?
+        return ConstantFP::getNegativeZero(Ty);
+      case Instruction::FMul: // X * 1.0 = X
+        return ConstantFP::get(Ty, 1.0);
+      default:
+        llvm_unreachable("Every commutative binop has an identity constant");
+    }
+  }
+
+  // Non-commutative opcodes: AllowRHSConstant must be set.
+  if (!AllowRHSConstant)
     return nullptr;
 
-  case Instruction::Add:
-  case Instruction::Or:
-  case Instruction::Xor:
-    return Constant::getNullValue(Ty);
-
-  case Instruction::Mul:
-    return ConstantInt::get(Ty, 1);
-
-  case Instruction::And:
-    return Constant::getAllOnesValue(Ty);
-
-  // TODO: If the fadd has 'nsz', should we return +0.0?
-  case Instruction::FAdd:
-    return ConstantFP::getNegativeZero(Ty);
-
-  case Instruction::FMul:
-    return ConstantFP::get(Ty, 1.0);
+  switch (Opcode) {
+    case Instruction::Sub:  // X - 0 = X
+    case Instruction::Shl:  // X << 0 = X
+    case Instruction::LShr: // X >>u 0 = X
+    case Instruction::AShr: // X >> 0 = X
+    case Instruction::FSub: // X - 0.0 = X
+      return Constant::getNullValue(Ty);
+    case Instruction::SDiv: // X / 1 = X
+    case Instruction::UDiv: // X /u 1 = X
+      return ConstantInt::get(Ty, 1);
+    case Instruction::FDiv: // X / 1.0 = X
+      return ConstantFP::get(Ty, 1.0);
+    default:
+      return nullptr;
   }
 }
 

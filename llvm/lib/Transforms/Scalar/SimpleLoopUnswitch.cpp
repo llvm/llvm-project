@@ -1,4 +1,4 @@
-//===- SimpleLoopUnswitch.cpp - Hoist loop-invariant control flow ---------===//
+///===- SimpleLoopUnswitch.cpp - Hoist loop-invariant control flow ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -239,6 +239,76 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
   }
 }
 
+/// Hoist the current loop up to the innermost loop containing a remaining exit.
+///
+/// Because we've removed an exit from the loop, we may have changed the set of
+/// loops reachable and need to move the current loop up the loop nest or even
+/// to an entirely separate nest.
+static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
+                                 DominatorTree &DT, LoopInfo &LI) {
+  // If the loop is already at the top level, we can't hoist it anywhere.
+  Loop *OldParentL = L.getParentLoop();
+  if (!OldParentL)
+    return;
+
+  SmallVector<BasicBlock *, 4> Exits;
+  L.getExitBlocks(Exits);
+  Loop *NewParentL = nullptr;
+  for (auto *ExitBB : Exits)
+    if (Loop *ExitL = LI.getLoopFor(ExitBB))
+      if (!NewParentL || NewParentL->contains(ExitL))
+        NewParentL = ExitL;
+
+  if (NewParentL == OldParentL)
+    return;
+
+  // The new parent loop (if different) should always contain the old one.
+  if (NewParentL)
+    assert(NewParentL->contains(OldParentL) &&
+           "Can only hoist this loop up the nest!");
+
+  // The preheader will need to move with the body of this loop. However,
+  // because it isn't in this loop we also need to update the primary loop map.
+  assert(OldParentL == LI.getLoopFor(&Preheader) &&
+         "Parent loop of this loop should contain this loop's preheader!");
+  LI.changeLoopFor(&Preheader, NewParentL);
+
+  // Remove this loop from its old parent.
+  OldParentL->removeChildLoop(&L);
+
+  // Add the loop either to the new parent or as a top-level loop.
+  if (NewParentL)
+    NewParentL->addChildLoop(&L);
+  else
+    LI.addTopLevelLoop(&L);
+
+  // Remove this loops blocks from the old parent and every other loop up the
+  // nest until reaching the new parent. Also update all of these
+  // no-longer-containing loops to reflect the nesting change.
+  for (Loop *OldContainingL = OldParentL; OldContainingL != NewParentL;
+       OldContainingL = OldContainingL->getParentLoop()) {
+    llvm::erase_if(OldContainingL->getBlocksVector(),
+                   [&](const BasicBlock *BB) {
+                     return BB == &Preheader || L.contains(BB);
+                   });
+
+    OldContainingL->getBlocksSet().erase(&Preheader);
+    for (BasicBlock *BB : L.blocks())
+      OldContainingL->getBlocksSet().erase(BB);
+
+    // Because we just hoisted a loop out of this one, we have essentially
+    // created new exit paths from it. That means we need to form LCSSA PHI
+    // nodes for values used in the no-longer-nested loop.
+    formLCSSA(*OldContainingL, DT, &LI, nullptr);
+
+    // We shouldn't need to form dedicated exits because the exit introduced
+    // here is the (just split by unswitching) preheader. As such, it is
+    // necessarily dedicated.
+    assert(OldContainingL->hasDedicatedExits() &&
+           "Unexpected predecessor of hoisted loop preheader!");
+  }
+}
+
 /// Unswitch a trivial branch if the condition is loop invariant.
 ///
 /// This routine should only be called when loop code leading to the branch has
@@ -404,6 +474,11 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // within the loop with a constant.
   for (Value *Invariant : Invariants)
     replaceLoopInvariantUses(L, Invariant, *Replacement);
+
+  // If this was full unswitching, we may have changed the nesting relationship
+  // for this loop so hoist it to its correct parent if needed.
+  if (FullUnswitch)
+    hoistLoopToNewParent(L, *NewPH, DT, LI);
 
   ++NumTrivial;
   ++NumBranches;
@@ -632,8 +707,12 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     DTUpdates.push_back({DT.Insert, OldPH, UnswitchedBB});
   }
   DT.applyUpdates(DTUpdates);
-
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+
+  // We may have changed the nesting relationship for this loop so hoist it to
+  // its correct parent if needed.
+  hoistLoopToNewParent(L, *NewPH, DT, LI);
+
   ++NumTrivial;
   ++NumSwitches;
   return true;
