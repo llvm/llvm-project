@@ -37762,11 +37762,23 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   SDValue B = N->getOperand(1);
   SDValue C = N->getOperand(2);
 
-  auto invertIfNegative = [](SDValue &V) {
+  auto invertIfNegative = [&DAG](SDValue &V) {
     if (SDValue NegVal = isFNEG(V.getNode())) {
       V = NegVal;
       return true;
     }
+    // Look through extract_vector_elts. If it comes from an FNEG, create a
+    // new extract from the FNEG input.
+    if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isa<ConstantSDNode>(V.getOperand(1)) &&
+        cast<ConstantSDNode>(V.getOperand(1))->getZExtValue() == 0) {
+      if (SDValue NegVal = isFNEG(V.getOperand(0).getNode())) {
+        V = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V), V.getValueType(),
+                        NegVal, V.getOperand(1));
+        return true;
+      }
+    }
+
     return false;
   };
 

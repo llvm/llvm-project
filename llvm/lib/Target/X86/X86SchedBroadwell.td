@@ -146,6 +146,9 @@ defm : BWWriteResPair<WritePOPCNT,         [BWPort1], 3>;
 // Integer shifts and rotates.
 defm : BWWriteResPair<WriteShift, [BWPort06],  1>;
 
+// Double shift instructions.
+defm : BWWriteResPair<WriteShiftDouble, [BWPort06],  1>;
+
 // BMI1 BEXTR, BMI2 BZHI
 defm : BWWriteResPair<WriteBEXTR, [BWPort06,BWPort15], 2, [1,1], 2>;
 defm : BWWriteResPair<WriteBZHI, [BWPort15], 1>;

@@ -144,6 +144,9 @@ defm : SKLWriteResPair<WritePOPCNT,         [SKLPort1], 3>;
 // Integer shifts and rotates.
 defm : SKLWriteResPair<WriteShift, [SKLPort06],  1>;
 
+// Double shift instructions.
+defm : SKLWriteResPair<WriteShiftDouble, [SKLPort06],  1>;
+
 // BMI1 BEXTR, BMI2 BZHI
 defm : SKLWriteResPair<WriteBEXTR, [SKLPort06,SKLPort15], 2, [1,1], 2>;
 defm : SKLWriteResPair<WriteBZHI, [SKLPort15], 1>;
