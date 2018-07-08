@@ -2991,22 +2991,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     Args.eraseArg(options::OPT__SLASH_Yu);
     YcArg = YuArg = nullptr;
   }
-  if (YcArg || YuArg) {
-    StringRef Val = YcArg ? YcArg->getValue() : YuArg->getValue();
-    bool FoundMatchingInclude = false;
-    for (const Arg *Inc : Args.filtered(options::OPT_include)) {
-      // FIXME: Do case-insensitive matching and consider / and \ as equal.
-      if (Inc->getValue() == Val)
-        FoundMatchingInclude = true;
-    }
-    if (!FoundMatchingInclude) {
-      Diag(clang::diag::warn_drv_ycyu_no_fi_arg_clang_cl)
-          << (YcArg ? YcArg : YuArg)->getSpelling();
-      Args.eraseArg(options::OPT__SLASH_Yc);
-      Args.eraseArg(options::OPT__SLASH_Yu);
-      YcArg = YuArg = nullptr;
-    }
-  }
   if (YcArg && Inputs.size() > 1) {
     Diag(clang::diag::warn_drv_yc_multiple_inputs_clang_cl);
     Args.eraseArg(options::OPT__SLASH_Yc);
@@ -3076,11 +3060,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
         llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PCHPL;
         types::getCompilationPhases(HeaderType, PCHPL);
-        Arg *PchInputArg = MakeInputArg(Args, *Opts, YcArg->getValue());
-
         // Build the pipeline for the pch file.
         Action *ClangClPch =
-            C.MakeAction<InputAction>(*PchInputArg, HeaderType);
+            C.MakeAction<InputAction>(*InputArg, HeaderType);
         for (phases::ID Phase : PCHPL)
           ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
         assert(ClangClPch);
@@ -4269,6 +4251,9 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
     // extension of .pch is assumed. "
     if (!llvm::sys::path::has_extension(Output))
       Output += ".pch";
+  } else if (Arg *YcArg = C.getArgs().getLastArg(options::OPT__SLASH_Yc)) {
+    Output = YcArg->getValue();
+    llvm::sys::path::replace_extension(Output, ".pch");
   } else {
     Output = BaseName;
     llvm::sys::path::replace_extension(Output, ".pch");

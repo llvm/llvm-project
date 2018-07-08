@@ -88,8 +88,9 @@ class LibcxxListDataFormatterTestCase(TestBase):
                     substrs=['list has 0 items',
                              '{}'])
 
-        self.runCmd("n")
-
+        self.runCmd("n") # This gets up past the printf
+        self.runCmd("n") # Now advance over the first push_back.
+        
         self.expect("frame variable numbers_list",
                     substrs=['list has 1 items',
                              '[0] = ',
@@ -187,6 +188,7 @@ class LibcxxListDataFormatterTestCase(TestBase):
                              '\"is\"',
                              '\"smart\"'])
 
+        self.runCmd("n") # This gets us past the printf
         self.runCmd("n")
 
         # check access-by-index

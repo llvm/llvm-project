@@ -14,8 +14,8 @@ define i32 @mul(i32 %x, i32 %y) {
 ; instruction.
 ; DBGINFO-LABEL: @mul(
 ; DBGINFO-NEXT:    [[C:%.*]] = mul i32 {{.*}}
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[C]]
 ; DBGINFO-NEXT:    [[D:%.*]] = and i32 {{.*}}
+; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[C]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[D]]
 
   %A = trunc i32 %x to i8

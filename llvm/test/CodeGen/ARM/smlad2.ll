@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
 ;
 ; Operands of both muls are not symmetrical (see also comments inlined below), check
 ; that the rewrite isn't triggered.
@@ -49,4 +49,3 @@ for.body:
   %exitcond = icmp ne i32 %add, %arg
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
-

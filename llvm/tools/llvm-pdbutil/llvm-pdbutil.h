@@ -75,6 +75,8 @@ bool compareFunctionSymbols(
 bool compareDataSymbols(const std::unique_ptr<llvm::pdb::PDBSymbolData> &F1,
                         const std::unique_ptr<llvm::pdb::PDBSymbolData> &F2);
 
+extern llvm::cl::list<std::string> WithName;
+
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
 extern llvm::cl::opt<bool> Globals;
@@ -160,6 +162,7 @@ extern llvm::cl::opt<uint32_t> DumpModi;
 extern llvm::cl::opt<bool> JustMyCode;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
+extern llvm::cl::opt<bool> DumpGSIRecords;
 extern llvm::cl::opt<bool> DumpGlobals;
 extern llvm::cl::opt<bool> DumpGlobalExtras;
 extern llvm::cl::opt<bool> DumpPublics;

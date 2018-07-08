@@ -1337,7 +1337,7 @@ void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
     return;
   }
 
-  if (ETy->isFloatingPointTy() || ETy->isIntegerTy() || ETy->isPointerTy()) {
+  if (ETy->isFloatingPointTy() || ETy->isIntOrPtrTy()) {
     O << " .";
     O << getPTXFundamentalTypeStr(ETy);
     O << " ";

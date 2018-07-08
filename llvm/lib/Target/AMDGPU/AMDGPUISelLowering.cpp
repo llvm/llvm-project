@@ -3939,7 +3939,8 @@ SDValue AMDGPUTargetLowering::loadInputValue(SelectionDAG &DAG,
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const MachineFunction &MF, const ImplicitParameter Param) const {
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const AMDGPUCommonSubtarget &ST =
+      AMDGPUCommonSubtarget::get(getTargetMachine(), MF.getFunction());
   unsigned ExplicitArgOffset = ST.getExplicitKernelArgOffset(MF.getFunction());
   unsigned Alignment = ST.getAlignmentForImplicitArgPtr();
   uint64_t ArgOffset = alignTo(MFI->getExplicitKernArgSize(), Alignment) +

@@ -22,21 +22,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeRegion.h"
-#include "DispatchStage.h"
+#include "Context.h"
 #include "DispatchStatistics.h"
-#include "ExecuteStage.h"
-#include "FetchStage.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
 #include "Pipeline.h"
 #include "PipelinePrinter.h"
-#include "RegisterFile.h"
 #include "RegisterFileStatistics.h"
 #include "ResourcePressureView.h"
-#include "RetireControlUnit.h"
 #include "RetireControlUnitStatistics.h"
-#include "RetireStage.h"
-#include "Scheduler.h"
 #include "SchedulerStatistics.h"
 #include "SummaryView.h"
 #include "TimelineView.h"
@@ -468,6 +462,12 @@ int main(int argc, char **argv) {
   // Create an instruction builder.
   mca::InstrBuilder IB(*STI, *MCII, *MRI, *MCIA);
 
+  // Create a context to control ownership of the pipeline hardware.
+  mca::Context MCA(*MRI, *STI);
+
+  mca::PipelineOptions PO(Width, RegisterFileSize, LoadQueueSize,
+                          StoreQueueSize, AssumeNoAlias);
+
   // Number each region in the sequence.
   unsigned RegionIdx = 0;
   for (const std::unique_ptr<mca::CodeRegion> &Region : Regions) {
@@ -502,19 +502,8 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    // Create the hardware components required for the pipeline.
-    mca::RetireControlUnit RCU(SM);
-    mca::RegisterFile PRF(SM, *MRI, RegisterFileSize);
-    mca::Scheduler HWS(SM, LoadQueueSize, StoreQueueSize, AssumeNoAlias);
-
-    // Create the pipeline and add stages to it.
-    auto P = llvm::make_unique<mca::Pipeline>(
-        Width, RegisterFileSize, LoadQueueSize, StoreQueueSize, AssumeNoAlias);
-    P->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
-    P->appendStage(llvm::make_unique<mca::DispatchStage>(
-        *STI, *MRI, RegisterFileSize, Width, RCU, PRF, HWS));
-    P->appendStage(llvm::make_unique<mca::RetireStage>(RCU, PRF));
-    P->appendStage(llvm::make_unique<mca::ExecuteStage>(RCU, HWS));
+    // Create a basic pipeline simulating an out-of-order backend.
+    auto P = MCA.createDefaultPipeline(PO, IB, S);
     mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)

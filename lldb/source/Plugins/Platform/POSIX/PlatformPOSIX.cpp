@@ -946,7 +946,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
     const char *error_str;
   };
   
-  extern void *memcpy(void *, void *, size_t size);
+  extern void *memcpy(void *, const void *, size_t size);
   extern size_t strlen(const char *);
   
 
@@ -956,23 +956,23 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
                                 __lldb_dlopen_result *result_ptr)
   {
     // This is the case where the name is the full path:
-    if (path_strings == (char *) 0x0) {
+    if (!path_strings) {
       result_ptr->image_ptr = dlopen(name, 2);
-      if (result_ptr->image_ptr != (void *) 0x0)
+      if (result_ptr->image_ptr)
         result_ptr->error_str = nullptr;
       return nullptr;
     }
     
     // This is the case where we have a list of paths:
     size_t name_len = strlen(name);
-    while (path_strings != (void *) 0x0 && path_strings[0] != '\0') {
+    while (path_strings && path_strings[0] != '\0') {
       size_t path_len = strlen(path_strings);
       memcpy((void *) buffer, (void *) path_strings, path_len);
       buffer[path_len] = '/';
       char *target_ptr = buffer+path_len+1; 
       memcpy((void *) target_ptr, (void *) name, name_len + 1);
       result_ptr->image_ptr = dlopen(buffer, 2);
-      if (result_ptr->image_ptr != (void *) 0x0) {
+      if (result_ptr->image_ptr) {
         result_ptr->error_str = nullptr;
         break;
       }

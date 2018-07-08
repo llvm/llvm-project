@@ -202,15 +202,17 @@ static bool sinkInstruction(Loop &L, Instruction &I,
                              BBsToSinkInto.end());
   llvm::sort(SortedBBsToSinkInto.begin(), SortedBBsToSinkInto.end(),
              [&](BasicBlock *A, BasicBlock *B) {
-               return *LoopBlockNumber.find(A) < *LoopBlockNumber.find(B);
+               return LoopBlockNumber.find(A)->second <
+                      LoopBlockNumber.find(B)->second;
              });
 
   BasicBlock *MoveBB = *SortedBBsToSinkInto.begin();
   // FIXME: Optimize the efficiency for cloned value replacement. The current
   //        implementation is O(SortedBBsToSinkInto.size() * I.num_uses()).
-  for (BasicBlock *N : SortedBBsToSinkInto) {
-    if (N == MoveBB)
-      continue;
+  for (BasicBlock *N : makeArrayRef(SortedBBsToSinkInto).drop_front(1)) {
+    assert(LoopBlockNumber.find(N)->second >
+               LoopBlockNumber.find(MoveBB)->second &&
+           "BBs not sorted!");
     // Clone I and replace its uses.
     Instruction *IC = I.clone();
     IC->setName(I.getName());

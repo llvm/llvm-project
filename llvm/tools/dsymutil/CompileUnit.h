@@ -247,11 +247,15 @@ public:
     ResolvedPaths[FileNum] = Path;
   }
 
+  MCSymbol *getLabelBegin() { return LabelBegin; }
+  void setLabelBegin(MCSymbol *S) { LabelBegin = S; }
+
 private:
   DWARFUnit &OrigUnit;
   unsigned ID;
   std::vector<DIEInfo> Info; ///< DIE info indexed by DIE index.
   Optional<BasicDIEUnit> NewUnit;
+  MCSymbol *LabelBegin = nullptr;
 
   uint64_t StartOffset;
   uint64_t NextUnitOffset;

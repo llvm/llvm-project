@@ -179,6 +179,7 @@ if (POLLY_BUNDLED_ISL)
   set (ISL_FILES
     isl/basis_reduction_tab.c
     isl/isl_aff.c
+    isl/isl_aff_map.c
     isl/isl_affine_hull.c
     isl/isl_arg.c
     isl/isl_ast_build.c

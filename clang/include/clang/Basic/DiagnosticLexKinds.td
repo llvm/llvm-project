@@ -404,6 +404,14 @@ def err_pp_invalid_directive : Error<"invalid preprocessing directive">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;
+def err_pp_through_header_not_found : Error<
+  "'%0' required for precompiled header not found">, DefaultFatal;
+def err_pp_through_header_not_seen : Error<
+  "#include of '%0' not seen while attempting to "
+  "%select{create|use}1 precompiled header">, DefaultFatal;
+def warn_pp_macro_def_mismatch_with_pch : Warning<
+  "definition of macro %0 does not match definition in precompiled header">,
+  InGroup<ClangClPch>;
 def err_pp_file_not_found_not_fatal : Error<
   "'%0' file not found with <angled> include; use \"quotes\" instead">;
 def err_pp_error_opening_file : Error<

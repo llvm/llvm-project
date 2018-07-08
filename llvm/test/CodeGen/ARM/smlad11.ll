@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -parallel-dsp -S | FileCheck %s
+; REQUIRES: asserts
+; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S -stats 2>&1 | FileCheck %s
 ;
 ; A more complicated chain: 4 mul operations, so we expect 2 smlad calls.
 ;
@@ -15,8 +16,9 @@
 ; CHECK:  [[V17:%[0-9]+]] = call i32 @llvm.arm.smlad(i32 [[V14]], i32 [[V16]], i32 [[V12]])
 ;
 ; And we don't want to see a 3rd smlad:
-;
 ; CHECK-NOT: call i32 @llvm.arm.smlad
+;
+; CHECK:  2 arm-parallel-dsp - Number of smlad instructions generated
 ;
 define dso_local i32 @test(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
 entry:

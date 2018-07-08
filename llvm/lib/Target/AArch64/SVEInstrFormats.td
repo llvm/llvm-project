@@ -1018,7 +1018,12 @@ class sve_fp_2op_p_zd<bits<7> opc, string asm, RegisterOperand i_zprtype,
   let Constraints = "$Zd = $_Zd";
 }
 
-
+multiclass sve_fp_2op_p_zd_HSD<bits<5> opc, string asm> {
+  def _H : sve_fp_2op_p_zd<{ 0b01, opc }, asm, ZPR16, ZPR16>;
+  def _S : sve_fp_2op_p_zd<{ 0b10, opc }, asm, ZPR32, ZPR32>;
+  def _D : sve_fp_2op_p_zd<{ 0b11, opc }, asm, ZPR64, ZPR64>;
+}
+ 
 //===----------------------------------------------------------------------===//
 // SVE Integer Arithmetic - Binary Predicated Group
 //===----------------------------------------------------------------------===//

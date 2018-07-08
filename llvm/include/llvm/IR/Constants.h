@@ -1018,10 +1018,15 @@ public:
     return getLShr(C1, C2, true);
   }
 
-  /// Return the identity for the given binary operation,
-  /// i.e. a constant C such that X op C = X and C op X = X for every X.  It
-  /// returns null if the operator doesn't have an identity.
-  static Constant *getBinOpIdentity(unsigned Opcode, Type *Ty);
+  /// Return the identity constant for a binary opcode.
+  /// The identity constant C is defined as X op C = X and C op X = X for every
+  /// X when the binary operation is commutative. If the binop is not
+  /// commutative, callers can acquire the operand 1 identity constant by
+  /// setting AllowRHSConstant to true. For example, any shift has a zero
+  /// identity constant for operand 1: X shift 0 = X.
+  /// Return nullptr if the operator does not have an identity constant.
+  static Constant *getBinOpIdentity(unsigned Opcode, Type *Ty,
+                                    bool AllowRHSConstant = false);
 
   /// Return the absorbing element for the given binary
   /// operation, i.e. a constant C such that X op C = C and C op X = C for

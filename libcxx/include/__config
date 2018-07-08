@@ -672,9 +672,11 @@ namespace std {
 
 #if defined(_LIBCPP_COMPILER_MSVC)
 #  define _LIBCPP_INLINE_VISIBILITY __forceinline
+#  define _LIBCPP_ALWAYS_INLINE     __forceinline
 #  define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __forceinline
 #else
 #  define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__always_inline__))
+#  define _LIBCPP_ALWAYS_INLINE     __attribute__ ((__always_inline__))
 #  define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__ ((__always_inline__))
 #endif
 
@@ -766,6 +768,14 @@ namespace std {
 #    define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__visibility__("hidden"), __always_inline__))
 #  else
 #    define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__always_inline__))
+#  endif
+#endif
+
+#ifndef _LIBCPP_ALWAYS_INLINE
+#  if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+#    define _LIBCPP_ALWAYS_INLINE  __attribute__ ((__visibility__("hidden"), __always_inline__))
+#  else
+#    define _LIBCPP_ALWAYS_INLINE  __attribute__ ((__always_inline__))
 #  endif
 #endif
 
@@ -879,9 +889,9 @@ template <unsigned> struct __static_assert_check {};
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) struct _LIBCPP_TYPE_VIS x { enum __lx
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x) \
      __lx __v_; \
-     _LIBCPP_INLINE_VISIBILITY x(__lx __v) : __v_(__v) {} \
-     _LIBCPP_INLINE_VISIBILITY explicit x(int __v) : __v_(static_cast<__lx>(__v)) {} \
-     _LIBCPP_INLINE_VISIBILITY operator int() const {return __v_;} \
+     _LIBCPP_ALWAYS_INLINE x(__lx __v) : __v_(__v) {} \
+     _LIBCPP_ALWAYS_INLINE explicit x(int __v) : __v_(static_cast<__lx>(__v)) {} \
+     _LIBCPP_ALWAYS_INLINE operator int() const {return __v_;} \
      };
 #else  // _LIBCPP_HAS_NO_STRONG_ENUMS
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_ENUM_VIS x

@@ -174,6 +174,12 @@ void __msan_set_death_callback(void (*callback)(void));
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_copy_shadow(void *dst, const void *src, uptr size);
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_scoped_disable_interceptor_checks();
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_scoped_enable_interceptor_checks();
 }  // extern "C"
 
 #endif  // MSAN_INTERFACE_INTERNAL_H

@@ -114,6 +114,18 @@ public:
     return TargetTriple.getOS() == Triple::AMDPAL;
   }
 
+  bool isMesa3DOS() const {
+    return TargetTriple.getOS() == Triple::Mesa3D;
+  }
+
+  bool isMesaKernel(const Function &F) const {
+    return isMesa3DOS() && !AMDGPU::isShader(F.getCallingConv());
+  }
+
+  bool isAmdCodeObjectV2(const Function &F) const {
+    return isAmdHsaOS() || isMesaKernel(F);
+  }
+
   bool has16BitInsts() const {
     return Has16BitInsts;
   }
@@ -164,6 +176,12 @@ public:
 
   unsigned getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? 8 : 4;
+  }
+
+  /// Returns the offset in bytes from the start of the input buffer
+  ///        of the first explicit kernel argument.
+  unsigned getExplicitKernelArgOffset(const Function &F) const {
+    return isAmdCodeObjectV2(F) ? 0 : 36;
   }
 
   /// \returns Maximum number of work groups per compute unit supported by the
@@ -384,10 +402,6 @@ public:
 
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
 
-  bool isMesa3DOS() const {
-    return TargetTriple.getOS() == Triple::Mesa3D;
-  }
-
   Generation getGeneration() const {
     return (Generation)Gen;
   }
@@ -603,17 +617,9 @@ public:
     return HasUnpackedD16VMem;
   }
 
-  bool isMesaKernel(const Function &F) const {
-    return isMesa3DOS() && !AMDGPU::isShader(F.getCallingConv());
-  }
-
   // Covers VS/PS/CS graphics shaders
   bool isMesaGfxShader(const Function &F) const {
     return isMesa3DOS() && AMDGPU::isShader(F.getCallingConv());
-  }
-
-  bool isAmdCodeObjectV2(const Function &F) const {
-    return isAmdHsaOS() || isMesaKernel(F);
   }
 
   bool hasMad64_32() const {
@@ -650,12 +656,6 @@ public:
 
   bool d16PreservesUnusedBits() const {
     return D16PreservesUnusedBits;
-  }
-
-  /// Returns the offset in bytes from the start of the input buffer
-  ///        of the first explicit kernel argument.
-  unsigned getExplicitKernelArgOffset(const Function &F) const {
-    return isAmdCodeObjectV2(F) ? 0 : 36;
   }
 
   /// \returns Number of bytes of arguments that are passed to a shader or
@@ -1087,10 +1087,6 @@ public:
   }
 
   bool hasFMA() const { return FMA; }
-
-  unsigned getExplicitKernelArgOffset(const MachineFunction &MF) const {
-    return 36;
-  }
 
   bool hasCFAluBug() const { return CFALUBug; }
 

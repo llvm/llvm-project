@@ -295,7 +295,7 @@ template <bool>
 class __vector_base_common
 {
 protected:
-    _LIBCPP_INLINE_VISIBILITY __vector_base_common() {}
+    _LIBCPP_ALWAYS_INLINE __vector_base_common() {}
     _LIBCPP_NORETURN void __throw_length_error() const;
     _LIBCPP_NORETURN void __throw_out_of_range() const;
 };
