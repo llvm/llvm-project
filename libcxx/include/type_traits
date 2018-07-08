@@ -21,7 +21,7 @@ namespace std
     template <class T, T v> struct integral_constant;
     typedef integral_constant<bool, true>  true_type;   // C++11
     typedef integral_constant<bool, false> false_type;  // C++11
-    
+
     template <bool B>                                   // C++14
     using bool_constant = integral_constant<bool, B>;   // C++14
     typedef bool_constant<true> true_type;              // C++14
@@ -172,7 +172,7 @@ namespace std
       using add_volatile_t    = typename add_volatile<T>::type;  // C++14
     template <class T>
       using add_cv_t          = typename add_cv<T>::type;  // C++14
-  
+
     // reference modifications:
     template <class T>
       using remove_reference_t     = typename remove_reference<T>::type;  // C++14
@@ -180,13 +180,13 @@ namespace std
       using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;  // C++14
     template <class T>
       using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;  // C++14
-  
+
     // sign modifications:
     template <class T>
       using make_signed_t   = typename make_signed<T>::type;  // C++14
     template <class T>
       using make_unsigned_t = typename make_unsigned<T>::type;  // C++14
-  
+
     // array modifications:
     template <class T>
       using remove_extent_t      = typename remove_extent<T>::type;  // C++14
@@ -223,7 +223,7 @@ namespace std
 
     template <class...>
       using void_t = void;   // C++17
-      
+
       // See C++14 20.10.4.1, primary type categories
       template <class T> inline constexpr bool is_void_v
         = is_void<T>::value;                                             // C++17
@@ -386,13 +386,13 @@ namespace std
 
       // [meta.logical], logical operator traits:
       template<class... B> struct conjunction;                           // C++17
-      template<class... B> 
+      template<class... B>
         inline constexpr bool conjunction_v = conjunction<B...>::value;  // C++17
       template<class... B> struct disjunction;                           // C++17
       template<class... B>
         inline constexpr bool disjunction_v = disjunction<B...>::value;  // C++17
       template<class B> struct negation;                                 // C++17
-      template<class B> 
+      template<class B>
         inline constexpr bool negation_v = negation<B>::value;           // C++17
 
 }
@@ -595,7 +595,7 @@ template<class _B0, class _B1>
 struct __and_<_B0, _B1> : conditional<_B0::value, _B1, _B0>::type {};
 
 template<class _B0, class _B1, class _B2, class... _Bn>
-struct __and_<_B0, _B1, _B2, _Bn...> 
+struct __and_<_B0, _B1, _B2, _Bn...>
         : conditional<_B0::value, __and_<_B1, _B2, _Bn...>, _B0>::type {};
 
 // __or_
@@ -608,11 +608,11 @@ template<class _B0, class _B1>
 struct __or_<_B0, _B1> : conditional<_B0::value, _B0, _B1>::type {};
 
 template<class _B0, class _B1, class _B2, class... _Bn>
-struct __or_<_B0, _B1, _B2, _Bn...> 
+struct __or_<_B0, _B1, _B2, _Bn...>
         : conditional<_B0::value, _B0, __or_<_B1, _B2, _Bn...> >::type {};
 
 // __not_
-template<class _Tp> 
+template<class _Tp>
 struct __not_ : conditional<_Tp::value, false_type, true_type>::type {};
 
 #endif // !defined(_LIBCPP_CXX03_LANG)
@@ -903,7 +903,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_function_v
 
 // template <class _Tp> struct            __libcpp_is_member_function_pointer             : public false_type {};
 // template <class _Tp, class _Up> struct __libcpp_is_member_function_pointer<_Tp _Up::*> : public is_function<_Tp> {};
-// 
+//
 
 template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
 struct __member_pointer_traits_imp
@@ -1184,7 +1184,7 @@ struct __is_same_uncvref : is_same<typename __uncvref<_Tp>::type,
                                    typename __uncvref<_Up>::type> {};
 
 #if _LIBCPP_STD_VER > 17
-// aligned_union - same as __uncvref
+// remove_cvref - same as __uncvref
 template <class _Tp>
 struct remove_cvref : public __uncvref<_Tp> {};
 
@@ -1211,12 +1211,12 @@ template <class _Tp> using remove_pointer_t = typename remove_pointer<_Tp>::type
 
 // add_pointer
 
-template <class _Tp, 
-        bool = __is_referenceable<_Tp>::value || 
+template <class _Tp,
+        bool = __is_referenceable<_Tp>::value ||
                 is_same<typename remove_cv<_Tp>::type, void>::value>
 struct __add_pointer_impl
     {typedef typename remove_reference<_Tp>::type* type;};
-template <class _Tp> struct __add_pointer_impl<_Tp, false> 
+template <class _Tp> struct __add_pointer_impl<_Tp, false>
     {typedef _Tp type;};
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_pointer
@@ -1630,7 +1630,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool has_virtual_destructor_v
 #if _LIBCPP_STD_VER > 14 && defined(_LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
-    : public integral_constant<bool, 
+    : public integral_constant<bool,
        __has_unique_object_representations(remove_cv_t<remove_all_extents_t<_Tp>>)> {};
 
 #if !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -2241,7 +2241,7 @@ struct __is_destructor_wellformed {
 
     template <typename _Tp1>
     static __two __test (...);
-    
+
     static const bool value = sizeof(__test<_Tp>(12)) == sizeof(char);
 };
 
@@ -2249,8 +2249,8 @@ template <class _Tp, bool>
 struct __destructible_imp;
 
 template <class _Tp>
-struct __destructible_imp<_Tp, false> 
-   : public _VSTD::integral_constant<bool, 
+struct __destructible_imp<_Tp, false>
+   : public _VSTD::integral_constant<bool,
         __is_destructor_wellformed<typename _VSTD::remove_all_extents<_Tp>::type>::value> {};
 
 template <class _Tp>
@@ -3401,7 +3401,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_default_constructible_v
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_copy_constructible
-    : public is_constructible<_Tp, 
+    : public is_constructible<_Tp,
                   typename add_lvalue_reference<typename add_const<_Tp>::type>::type> {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -4109,7 +4109,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_literal_type
                               is_reference<typename remove_all_extents<_Tp>::type>::value>
 #endif
     {};
-    
+
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_literal_type_v
@@ -4125,7 +4125,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_standard_layout
     : integral_constant<bool, is_scalar<typename remove_all_extents<_Tp>::type>::value>
 #endif
     {};
-    
+
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_standard_layout_v
@@ -4143,7 +4143,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_copyable
     : integral_constant<bool, is_scalar<typename remove_all_extents<_Tp>::type>::value>
 #endif
     {};
-    
+
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_copyable_v
@@ -4830,7 +4830,7 @@ template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, byte>::type &
   operator<<=(byte& __lhs, _Integer __shift) noexcept
   { return __lhs = __lhs << __shift; }
-  
+
 template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
   operator<< (byte  __lhs, _Integer __shift) noexcept
@@ -4845,7 +4845,7 @@ template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, byte>::type
   operator>> (byte  __lhs, _Integer __shift) noexcept
   { return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) >> __shift)); }
-  
+
 template <class _Integer>
   constexpr typename enable_if<is_integral_v<_Integer>, _Integer>::type
   to_integer(byte __b) noexcept { return static_cast<_Integer>(__b); }

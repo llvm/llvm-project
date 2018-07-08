@@ -1,6 +1,11 @@
+#ifndef _BSD_SOURCE
 #define _BSD_SOURCE
+#endif
 #define _DEFAULT_SOURCE
 #include <stdio.h>
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
 #include <inttypes.h>
 #include <omp.h>
 #include <ompt.h>
