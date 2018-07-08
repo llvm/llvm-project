@@ -138,10 +138,11 @@ def  : WriteRes<WriteLAHFSAHF, [SKXPort06]>;
 defm : SKXWriteResPair<WriteShift, [SKXPort06],  1>;
 
 // Bit counts.
-defm : SKXWriteResPair<WriteBitScan, [SKXPort1], 3>;
-defm : SKXWriteResPair<WriteLZCNT,   [SKXPort1], 3>;
-defm : SKXWriteResPair<WriteTZCNT,   [SKXPort1], 3>;
-defm : SKXWriteResPair<WritePOPCNT,  [SKXPort1], 3>;
+defm : SKXWriteResPair<WriteBSF, [SKXPort1], 3>;
+defm : SKXWriteResPair<WriteBSR, [SKXPort1], 3>;
+defm : SKXWriteResPair<WriteLZCNT,          [SKXPort1], 3>;
+defm : SKXWriteResPair<WriteTZCNT,          [SKXPort1], 3>;
+defm : SKXWriteResPair<WritePOPCNT,         [SKXPort1], 3>;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm : SKXWriteResPair<WriteBEXTR, [SKXPort06,SKXPort15], 2, [1,1], 2>;
