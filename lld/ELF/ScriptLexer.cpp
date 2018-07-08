@@ -66,8 +66,6 @@ size_t ScriptLexer::getColumnNumber() {
 
 std::string ScriptLexer::getCurrentLocation() {
   std::string Filename = getCurrentMB().getBufferIdentifier();
-  if (!Pos)
-    return Filename;
   return (Filename + ":" + Twine(getLineNumber())).str();
 }
 
@@ -283,10 +281,7 @@ static bool encloses(StringRef S, StringRef T) {
 
 MemoryBufferRef ScriptLexer::getCurrentMB() {
   // Find input buffer containing the current token.
-  assert(!MBs.empty());
-  if (!Pos)
-    return MBs[0];
-
+  assert(!MBs.empty() && Pos > 0);
   for (MemoryBufferRef MB : MBs)
     if (encloses(MB.getBuffer(), Tokens[Pos - 1]))
       return MB;
