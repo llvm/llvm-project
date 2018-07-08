@@ -691,13 +691,13 @@ __m128d test_mm512_maskz_range_round_sd(__mmask8 __U, __m128d __A, __m128d __B) 
   return _mm_maskz_range_round_sd(__U, __A, __B, 4, 8); 
 }
 
-__m128d test_mm512_range_round_ss(__m128d __A, __m128d __B) {
+__m128 test_mm512_range_round_ss(__m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm512_range_round_ss
   // CHECK: @llvm.x86.avx512.mask.range.ss
   return _mm_range_round_ss(__A, __B, 4, 8); 
 }
 
-__m128d test_mm512_mask_range_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
+__m128 test_mm512_mask_range_round_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm512_mask_range_round_ss
   // CHECK: @llvm.x86.avx512.mask.range.ss
   return _mm_mask_range_round_ss(__W, __U, __A, __B, 4, 8); 
@@ -727,13 +727,13 @@ __m128d test_mm_maskz_range_sd(__mmask8 __U, __m128d __A, __m128d __B) {
   return _mm_maskz_range_sd(__U, __A, __B, 4); 
 }
 
-__m128d test_mm_range_ss(__m128d __A, __m128d __B) {
+__m128 test_mm_range_ss(__m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_range_ss
   // CHECK: @llvm.x86.avx512.mask.range.ss
   return _mm_range_ss(__A, __B, 4); 
 }
 
-__m128d test_mm_mask_range_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
+__m128 test_mm_mask_range_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_mask_range_ss
   // CHECK: @llvm.x86.avx512.mask.range.ss
   return _mm_mask_range_ss(__W, __U, __A, __B, 4); 
@@ -1256,13 +1256,13 @@ __mmask16 test_mm512_fpclass_ps_mask(__m512 __A) {
   return _mm512_fpclass_ps_mask(__A, 4); 
 }
 
-__mmask8 test_mm_fpclass_sd_mask(__m128 __A)  { 
+__mmask8 test_mm_fpclass_sd_mask(__m128d __A)  { 
   // CHECK-LABEL: @test_mm_fpclass_sd_mask
   // CHECK: @llvm.x86.avx512.mask.fpclass.sd
  return _mm_fpclass_sd_mask (__A, 2);
 }
 
-__mmask8 test_mm_mask_fpclass_sd_mask(__mmask8 __U, __m128 __A)  {
+__mmask8 test_mm_mask_fpclass_sd_mask(__mmask8 __U, __m128d __A)  {
  // CHECK-LABEL: @test_mm_mask_fpclass_sd_mask
  // CHECK: @llvm.x86.avx512.mask.fpclass.sd
  return _mm_mask_fpclass_sd_mask (__U,  __A, 2);

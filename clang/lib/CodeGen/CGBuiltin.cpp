@@ -8517,6 +8517,21 @@ static Value *EmitX86Select(CodeGenFunction &CGF,
   return CGF.Builder.CreateSelect(Mask, Op0, Op1);
 }
 
+static Value *EmitX86ScalarSelect(CodeGenFunction &CGF,
+                                  Value *Mask, Value *Op0, Value *Op1) {
+  // If the mask is all ones just return first argument.
+  if (const auto *C = dyn_cast<Constant>(Mask))
+    if (C->isAllOnesValue())
+      return Op0;
+
+  llvm::VectorType *MaskTy =
+    llvm::VectorType::get(CGF.Builder.getInt1Ty(),
+                          Mask->getType()->getIntegerBitWidth());
+  Mask = CGF.Builder.CreateBitCast(Mask, MaskTy);
+  Mask = CGF.Builder.CreateExtractElement(Mask, (uint64_t)0);
+  return CGF.Builder.CreateSelect(Mask, Op0, Op1);
+}
+
 static Value *EmitX86MaskedCompareResult(CodeGenFunction &CGF, Value *Cmp,
                                          unsigned NumElts, Value *MaskIn) {
   if (MaskIn) {
@@ -8660,17 +8675,13 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
     if (IsAddSub) {
       // Negate even elts in C using a mask.
       unsigned NumElts = Ty->getVectorNumElements();
-      SmallVector<Constant *, 16> NMask;
-      Constant *Zero = ConstantInt::get(CGF.Builder.getInt1Ty(), 0);
-      Constant *One = ConstantInt::get(CGF.Builder.getInt1Ty(), 1);
-      for (unsigned i = 0; i < NumElts; ++i) {
-        NMask.push_back(i % 2 == 0 ? One : Zero);
-      }
-      Value *NegMask = ConstantVector::get(NMask);
+      SmallVector<uint32_t, 16> Indices(NumElts);
+      for (unsigned i = 0; i != NumElts; ++i)
+        Indices[i] = i + (i % 2) * NumElts;
 
       Value *NegC = CGF.Builder.CreateFNeg(C);
       Value *FMSub = CGF.Builder.CreateCall(FMA, {A, B, NegC} );
-      Res = CGF.Builder.CreateSelect(NegMask, FMSub, Res);
+      Res = CGF.Builder.CreateShuffleVector(FMSub, Res, Indices);
     }
   }
 
@@ -9137,6 +9148,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Function *FMA = CGM.getIntrinsic(Intrinsic::fma, A->getType());
     Value *Res = Builder.CreateCall(FMA, {A, B, C} );
     return Builder.CreateInsertElement(Ops[0], Res, (uint64_t)0);
+  }
+  case X86::BI__builtin_ia32_vfmaddss:
+  case X86::BI__builtin_ia32_vfmaddsd: {
+    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
+    Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+    Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+    Function *FMA = CGM.getIntrinsic(Intrinsic::fma, A->getType());
+    Value *Res = Builder.CreateCall(FMA, {A, B, C} );
+    Value *Zero = Constant::getNullValue(Ops[0]->getType());
+    return Builder.CreateInsertElement(Zero, Res, (uint64_t)0);
   }
   case X86::BI__builtin_ia32_vfmaddps:
   case X86::BI__builtin_ia32_vfmaddpd:
@@ -9878,12 +9899,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     }
     Value *A = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
     Function *F = CGM.getIntrinsic(Intrinsic::sqrt, A->getType());
+    A = Builder.CreateCall(F, A);
     Value *Src = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
-    int MaskSize = Ops[3]->getType()->getScalarSizeInBits();
-    llvm::Type *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(), MaskSize);
-    Value *Mask = Builder.CreateBitCast(Ops[3], MaskTy);
-    Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
-    A = Builder.CreateSelect(Mask, Builder.CreateCall(F, {A}), Src);
+    A = EmitX86ScalarSelect(*this, Ops[3], A, Src);
     return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
   }
   case X86::BI__builtin_ia32_sqrtpd256:
@@ -10018,14 +10036,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
     Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
     Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
-    Value *Mask = Ops[3];
     Value *Div = Builder.CreateFDiv(A, B);
-    llvm::VectorType *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(),
-                             cast<IntegerType>(Mask->getType())->getBitWidth());
-    Mask = Builder.CreateBitCast(Mask, MaskTy);
-    Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
-    Value *Select = Builder.CreateSelect(Mask, Div, C);
-    return Builder.CreateInsertElement(Ops[0], Select, (uint64_t)0);
+    Div = EmitX86ScalarSelect(*this, Ops[3], Div, C);
+    return Builder.CreateInsertElement(Ops[0], Div, (uint64_t)0);
   }
 
   // 3DNow!

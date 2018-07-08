@@ -151,6 +151,11 @@ Error DumpOutputStyle::dump() {
     }
   }
 
+  if (opts::dump::DumpGSIRecords) {
+    if (auto EC = dumpGSIRecords())
+      return EC;
+  }
+
   if (opts::dump::DumpGlobals) {
     if (auto EC = dumpGlobals())
       return EC;
@@ -1357,6 +1362,39 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
   return Error::success();
 }
 
+Error DumpOutputStyle::dumpGSIRecords() {
+  printHeader(P, "GSI Records");
+  AutoIndent Indent(P);
+
+  if (File.isObj()) {
+    P.formatLine("Dumping Globals is not supported for object files");
+    return Error::success();
+  }
+
+  if (!getPdb().hasPDBSymbolStream()) {
+    P.formatLine("GSI Common Symbol Stream not present");
+    return Error::success();
+  }
+
+  auto &Records = cantFail(getPdb().getPDBSymbolStream());
+  auto &Types = File.types();
+  auto &Ids = File.ids();
+
+  P.printLine("Records");
+  SymbolVisitorCallbackPipeline Pipeline;
+  SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+  MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids, Types);
+
+  Pipeline.addCallbackToPipeline(Deserializer);
+  Pipeline.addCallbackToPipeline(Dumper);
+  CVSymbolVisitor Visitor(Pipeline);
+
+  BinaryStreamRef SymStream = Records.getSymbolArray().getUnderlyingStream();
+  if (auto E = Visitor.visitSymbolStream(Records.getSymbolArray(), 0))
+    return E;
+  return Error::success();
+}
+
 Error DumpOutputStyle::dumpGlobals() {
   printHeader(P, "Global Symbols");
   AutoIndent Indent(P);
@@ -1462,6 +1500,7 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
     Pipeline.addCallbackToPipeline(Dumper);
     CVSymbolVisitor Visitor(Pipeline);
 
+
     BinaryStreamRef SymStream =
         ExpectedSyms->getSymbolArray().getUnderlyingStream();
     for (uint32_t PubSymOff : Table) {
@@ -1474,24 +1513,23 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
   }
 
   // Return early if we aren't dumping public hash table and address map info.
-  if (!HashExtras)
-    return Error::success();
+  if (HashExtras) {
+    P.formatBinary("Hash Bitmap", Table.HashBitmap, 0);
 
-  P.formatLine("Hash Entries");
-  {
-    AutoIndent Indent2(P);
-    for (const PSHashRecord &HR : Table.HashRecords)
-      P.formatLine("off = {0}, refcnt = {1}", uint32_t(HR.Off),
-                   uint32_t(HR.CRef));
-  }
+    P.formatLine("Hash Entries");
+    {
+      AutoIndent Indent2(P);
+      for (const PSHashRecord &HR : Table.HashRecords)
+        P.formatLine("off = {0}, refcnt = {1}", uint32_t(HR.Off),
+          uint32_t(HR.CRef));
+    }
 
-  // FIXME: Dump the bitmap.
-
-  P.formatLine("Hash Buckets");
-  {
-    AutoIndent Indent2(P);
-    for (uint32_t Hash : Table.HashBuckets)
-      P.formatLine("{0:x8}", Hash);
+    P.formatLine("Hash Buckets");
+    {
+      AutoIndent Indent2(P);
+      for (uint32_t Hash : Table.HashBuckets)
+        P.formatLine("{0:x8}", Hash);
+    }
   }
 
   return Error::success();

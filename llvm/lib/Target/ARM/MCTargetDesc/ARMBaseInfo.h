@@ -98,6 +98,20 @@ namespace ARM_MB {
   }
 } // namespace ARM_MB
 
+namespace ARM_TSB {
+  enum TraceSyncBOpt {
+    CSYNC = 0
+  };
+
+  inline static const char *TraceSyncBOptToString(unsigned val) {
+    switch (val) {
+    default:
+      llvm_unreachable("Unknown trace synchronization barrier operation");
+      case CSYNC: return "csync";
+    }
+  }
+} // namespace ARM_TSB
+
 namespace ARM_ISB {
   enum InstSyncBOpt {
     RESERVED_0 = 0,

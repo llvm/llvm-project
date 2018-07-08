@@ -293,3 +293,17 @@ entry:
   ret void
 }
 declare fp128 @llvm.powi.f128(fp128 %Val, i32 %power)
+
+@a = common global fp128 0xL00000000000000000000000000000000, align 16
+@b = common global fp128 0xL00000000000000000000000000000000, align 16
+
+define fp128 @qp_frem() #0 {
+entry:
+  %0 = load fp128, fp128* @a, align 16
+  %1 = load fp128, fp128* @b, align 16
+  %rem = frem fp128 %0, %1
+  ret fp128 %rem
+; CHECK-LABEL: qp_frem
+; CHECK: bl fmodf128
+; CHECK: blr
+}

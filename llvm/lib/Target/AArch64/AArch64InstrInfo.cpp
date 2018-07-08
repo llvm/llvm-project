@@ -5065,6 +5065,8 @@ AArch64InstrInfo::getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
 
   // Check if LR is available through all of the MBB. If it's not, then set
   // a flag.
+  assert(MBB.getParent()->getRegInfo().tracksLiveness() &&
+         "Suitable Machine Function for outlining must track liveness");
   LiveRegUnits LRU(getRegisterInfo());
   LRU.addLiveOuts(MBB);
 

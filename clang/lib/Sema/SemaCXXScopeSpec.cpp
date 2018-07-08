@@ -846,6 +846,9 @@ bool Sema::ActOnCXXNestedNameSpecifierDecltype(CXXScopeSpec &SS,
   assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
 
   QualType T = BuildDecltypeType(DS.getRepAsExpr(), DS.getTypeSpecTypeLoc());
+  if (T.isNull())
+    return true;
+
   if (!T->isDependentType() && !T->getAs<TagType>()) {
     Diag(DS.getTypeSpecTypeLoc(), diag::err_expected_class_or_namespace) 
       << T << getLangOpts().CPlusPlus;

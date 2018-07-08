@@ -4966,7 +4966,7 @@ _mm256_set_m128 (__m128 __hi, __m128 __lo)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_set_m128d (__m128d __hi, __m128d __lo)
 {
-  return (__m256d)_mm256_set_m128((__m128)__hi, (__m128)__lo);
+  return (__m256d) __builtin_shufflevector((__v2df)__lo, (__v2df)__hi, 0, 1, 2, 3);
 }
 
 /// Constructs a 256-bit integer vector by concatenating two 128-bit
@@ -4986,7 +4986,7 @@ _mm256_set_m128d (__m128d __hi, __m128d __lo)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_set_m128i (__m128i __hi, __m128i __lo)
 {
-  return (__m256i)_mm256_set_m128((__m128)__hi, (__m128)__lo);
+  return (__m256i) __builtin_shufflevector((__v2di)__lo, (__v2di)__hi, 0, 1, 2, 3);
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float] by
@@ -5032,7 +5032,7 @@ _mm256_setr_m128 (__m128 __lo, __m128 __hi)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_setr_m128d (__m128d __lo, __m128d __hi)
 {
-  return (__m256d)_mm256_set_m128((__m128)__hi, (__m128)__lo);
+  return (__m256d)_mm256_set_m128d(__hi, __lo);
 }
 
 /// Constructs a 256-bit integer vector by concatenating two 128-bit
@@ -5053,7 +5053,7 @@ _mm256_setr_m128d (__m128d __lo, __m128d __hi)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_setr_m128i (__m128i __lo, __m128i __hi)
 {
-  return (__m256i)_mm256_set_m128((__m128)__hi, (__m128)__lo);
+  return (__m256i)_mm256_set_m128i(__hi, __lo);
 }
 
 #undef __DEFAULT_FN_ATTRS

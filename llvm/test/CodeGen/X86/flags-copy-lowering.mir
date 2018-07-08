@@ -221,9 +221,9 @@ body:             |
   ; CHECK-NOT:     $eflags =
   ; CHECK-NOT:             = SET{{.*}}
   ; CHECK:         MOV8mr {{.*}}, killed %[[A_REG]]
-  ; CHECK-CHECK:   MOV8mr {{.*}}, killed %[[B_REG]]
-  ; CHECK-CHECK:   MOV8mr {{.*}}, killed %[[E_REG]]
-  ; CHECK-CHECK:   MOV8mr {{.*}}, killed %[[NE_REG]]
+  ; CHECK-NEXT:    MOV8mr {{.*}}, killed %[[B_REG]]
+  ; CHECK-NEXT:    MOV8mr {{.*}}, killed %[[E_REG]]
+  ; CHECK-NOT:     MOV8mr {{.*}}, killed %[[NE_REG]]
 
     RET 0
 

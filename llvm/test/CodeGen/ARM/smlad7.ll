@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
 ;
 ; Alias check: check that the rewrite isn't triggered when there's a store
 ; aliasing one of the mul load operands. Arguments are now annotated with

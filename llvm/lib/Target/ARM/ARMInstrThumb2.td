@@ -3215,6 +3215,12 @@ def t2ISB : T2I<(outs), (ins instsyncb_opt:$opt), NoItinerary,
   let Inst{31-4} = 0xf3bf8f6;
   let Inst{3-0} = opt;
 }
+
+let hasNoSchedulingInfo = 1 in
+def t2TSB : T2I<(outs), (ins tsb_opt:$opt), NoItinerary,
+                "tsb", "\t$opt", []>, Requires<[IsThumb, HasV8_4a]> {
+  let Inst{31-0} = 0xf3af8012;
+}
 }
 
 class T2I_ldrex<bits<4> opcod, dag oops, dag iops, AddrMode am, int sz,

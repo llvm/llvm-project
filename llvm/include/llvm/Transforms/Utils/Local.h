@@ -329,27 +329,27 @@ bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                               DIBuilder &Builder, int Offset = 0);
 
-/// Assuming the instruction \p I is going to be deleted, attempt to salvage any
-/// dbg.value intrinsics referring to \p I by rewriting its effect into a
-/// DIExpression.
-void salvageDebugInfo(Instruction &I);
+/// Assuming the instruction \p I is going to be deleted, attempt to salvage
+/// debug users of \p I by writing the effect of \p I in a DIExpression.
+/// Returns true if any debug users were updated.
+bool salvageDebugInfo(Instruction &I);
 
-/// Assuming the value \p From is going to be deleted, insert replacement
-/// dbg.value intrinsics for each debug user of \p From. The newly-inserted
-/// dbg.values refer to \p To instead of \p From. Each replacement dbg.value
-/// has the same location and variable as the debug user it replaces, has a
-/// DIExpression determined by the result of \p RewriteExpr applied to an old
-/// debug user of \p From, and is placed before \p InsertBefore. If
-/// \p RewriteExpr returns nullptr, no replacement for the specified debug
-/// user is emitted.
-void insertReplacementDbgValues(
-    Value &From, Value &To, Instruction &InsertBefore,
-    function_ref<DIExpression *(DbgInfoIntrinsic &OldDII)> RewriteExpr);
-
-/// An overload of insertReplacementDbgValues() for the common case where
-/// the replacement dbg.values have the same DIExpressions as the originals.
-void insertReplacementDbgValues(Value &From, Value &To,
-                                Instruction &InsertBefore);
+/// Point debug users of \p From to \p To or salvage them. Use this function
+/// only when replacing all uses of \p From with \p To, with a guarantee that
+/// \p From is going to be deleted.
+///
+/// Follow these rules to prevent use-before-def of \p To:
+///   . If \p To is a linked Instruction, set \p DomPoint to \p To.
+///   . If \p To is an unlinked Instruction, set \p DomPoint to the Instruction
+///     \p To will be inserted after.
+///   . If \p To is not an Instruction (e.g a Constant), the choice of
+///     \p DomPoint is arbitrary. Pick \p From for simplicity.
+///
+/// If a debug user cannot be preserved without reordering variable updates or
+/// introducing a use-before-def, it is either salvaged (\ref salvageDebugInfo)
+/// or deleted. Returns true if any debug users were updated.
+bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
+                           DominatorTree &DT);
 
 /// Remove all instructions from a basic block other than it's terminator
 /// and any present EH pad instructions.

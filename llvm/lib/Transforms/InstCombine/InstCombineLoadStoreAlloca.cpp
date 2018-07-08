@@ -437,7 +437,7 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
 
 // Are we allowed to form a atomic load or store of this type?
 static bool isSupportedAtomicType(Type *Ty) {
-  return Ty->isIntegerTy() || Ty->isPointerTy() || Ty->isFloatingPointTy();
+  return Ty->isIntOrPtrTy() || Ty->isFloatingPointTy();
 }
 
 /// Helper to combine a load to a new type.

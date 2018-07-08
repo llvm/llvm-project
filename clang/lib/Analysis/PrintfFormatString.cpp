@@ -472,7 +472,8 @@ ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
                    ? ArgType(Ctx.LongLongTy, "__int64")
                    : ArgType(Ctx.IntTy, "__int32");
       case LengthModifier::AsPtrDiff:
-        return ArgType(Ctx.getPointerDiffType(), "ptrdiff_t");
+        return ArgType::makePtrdiffT(
+            ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
       case LengthModifier::AsAllocate:
       case LengthModifier::AsMAllocate:
       case LengthModifier::AsWide:
@@ -505,7 +506,8 @@ ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
                    ? ArgType(Ctx.UnsignedLongLongTy, "unsigned __int64")
                    : ArgType(Ctx.UnsignedIntTy, "unsigned __int32");
       case LengthModifier::AsPtrDiff:
-        return ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t");
+        return ArgType::makePtrdiffT(
+            ArgType(Ctx.getUnsignedPointerDiffType(), "unsigned ptrdiff_t"));
       case LengthModifier::AsAllocate:
       case LengthModifier::AsMAllocate:
       case LengthModifier::AsWide:

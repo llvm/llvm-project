@@ -687,6 +687,18 @@ def skipUnlessSupportedTypeAttribute(attr):
         return None
     return skipTestIfFn(compiler_doesnt_support_struct_attribute)
 
+def skipUnlessLibstdcxxAvailable(func):
+    """Decorate the item to skip test unless libstdc++ is available on the system."""
+    def compiler_doesnt_support_libstdcxx(self):
+        compiler_path = self.getCompiler()
+        f = tempfile.NamedTemporaryFile()
+        f = tempfile.NamedTemporaryFile()
+        cmd = "echo '#include <string> | %s -x c++ -stdlib=libstdc++ -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            return "libstdcxx not available on the sytem"
+        return None
+    return skipTestIfFn(compiler_doesnt_support_libstdcxx)(func)
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 

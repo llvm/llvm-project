@@ -2822,6 +2822,7 @@ public:
   struct OpenMPVarListDataTy {
     Expr *TailExpr = nullptr;
     SourceLocation ColonLoc;
+    SourceLocation RLoc;
     CXXScopeSpec ReductionIdScopeSpec;
     DeclarationNameInfo ReductionId;
     OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;

@@ -8,8 +8,6 @@
 #
 # as -mips32 -o test.o \
 #   && ld.bfd -m elf32btsmip -r test.o -o mips-gp0-non-zero.o
-# as -mips64 -mmicromips -o test.o \
-#   && ld.bfd -m elf64btsmip -r test.o -o mips-micro-gp0-non-zero.o
 # as -mips64 -o test.o \
 #   && ld.bfd -m elf64btsmip -r test.o -o mips-n64-gp0-non-zero.o
 
@@ -44,11 +42,6 @@
 # RUN: llvm-readobj -r %S/Inputs/mips-n64-gp0-non-zero.o %t-64.r \
 # RUN:   | FileCheck --check-prefix=ADDEND64 %s
 
-# RUN: ld.lld -r -o %t-micro.r %S/Inputs/mips-micro-gp0-non-zero.o
-# RUN: llvm-readobj -mips-options %t-micro.r | FileCheck --check-prefix=GPVAL %s
-# RUN: llvm-readobj -r %S/Inputs/mips-micro-gp0-non-zero.o %t-micro.r \
-# RUN:   | FileCheck --check-prefix=ADDENDMM %s
-
 # GPVAL: GP: 0x0
 
 # ADDEND32:      Contents of section .rodata:
@@ -59,8 +52,3 @@
 # ADDEND64: .text 0xFFFFFFFFFFFF8011
 # ADDEND64: File: {{.*}}{{/|\\}}mips-non-zero-gp0.s.tmp-64.r
 # ADDEND64: .text 0x0
-
-# ADDENDMM: File: {{.*}}{{/|\\}}mips-micro-gp0-non-zero.o
-# ADDENDMM: .text 0xFFFFFFFFFFFF8012
-# ADDENDMM: File: {{.*}}{{/|\\}}mips-non-zero-gp0.s.tmp-micro.r
-# ADDENDMM: .text 0x1

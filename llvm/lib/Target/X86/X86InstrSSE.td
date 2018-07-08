@@ -314,11 +314,7 @@ let Predicates = [UseAVX] in {
   // fold opportunity reappears.
   def : Pat<(v2f64 (X86Movlpd VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, VR128:$src2)>;
-  def : Pat<(v2i64 (X86Movlpd VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4f32 (X86Movlps VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, VR128:$src2)>;
-  def : Pat<(v4i32 (X86Movlps VR128:$src1, VR128:$src2)),
             (VMOVSDrr VR128:$src1, VR128:$src2)>;
 }
 
@@ -392,11 +388,7 @@ let Predicates = [UseSSE2] in {
   // fold opportunity reappears.
   def : Pat<(v2f64 (X86Movlpd VR128:$src1, VR128:$src2)),
             (MOVSDrr VR128:$src1, VR128:$src2)>;
-  def : Pat<(v2i64 (X86Movlpd VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4f32 (X86Movlps VR128:$src1, VR128:$src2)),
-            (MOVSDrr VR128:$src1, VR128:$src2)>;
-  def : Pat<(v4i32 (X86Movlps VR128:$src1, VR128:$src2)),
             (MOVSDrr VR128:$src1, VR128:$src2)>;
 }
 

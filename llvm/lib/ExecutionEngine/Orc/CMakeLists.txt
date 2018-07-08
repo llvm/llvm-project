@@ -23,3 +23,9 @@ add_llvm_library(LLVMOrcJIT
   DEPENDS
   intrinsics_gen
   )
+
+target_link_libraries(LLVMOrcJIT
+  PRIVATE
+  LLVMBitReader
+  LLVMBitWriter
+  )

@@ -188,8 +188,15 @@ bool diagnoseMisSizedDbgValue(Module &M, DbgValueInst *DVI) {
   if (!ValueOperandSize || !DbgVarSize)
     return false;
 
-  bool HasBadSize = Ty->isIntegerTy() ? (ValueOperandSize < *DbgVarSize)
-                                      : (ValueOperandSize != *DbgVarSize);
+  bool HasBadSize = false;
+  if (Ty->isIntegerTy()) {
+    auto Signedness = DVI->getVariable()->getSignedness();
+    if (Signedness && *Signedness == DIBasicType::Signedness::Signed)
+      HasBadSize = ValueOperandSize < *DbgVarSize;
+  } else {
+    HasBadSize = ValueOperandSize != *DbgVarSize;
+  }
+
   if (HasBadSize) {
     dbg() << "ERROR: dbg.value operand has size " << ValueOperandSize
           << ", but its variable has size " << *DbgVarSize << ": ";

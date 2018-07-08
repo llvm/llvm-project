@@ -268,8 +268,7 @@ struct CodeCompletionBuilder {
       : ASTCtx(ASTCtx), ExtractDocumentation(Opts.IncludeComments) {
     add(C, SemaCCS);
     if (C.SemaResult) {
-      Completion.Origin =
-          static_cast<SymbolOrigin>(Completion.Origin | SymbolOrigin::AST);
+      Completion.Origin |= SymbolOrigin::AST;
       Completion.Name = llvm::StringRef(SemaCCS->getTypedText());
       if (Completion.Scope.empty())
         if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)
@@ -281,8 +280,7 @@ struct CodeCompletionBuilder {
           toCompletionItemKind(C.SemaResult->Kind, C.SemaResult->Declaration);
     }
     if (C.IndexResult) {
-      Completion.Origin =
-          static_cast<SymbolOrigin>(Completion.Origin | C.IndexResult->Origin);
+      Completion.Origin |= C.IndexResult->Origin;
       if (Completion.Scope.empty())
         Completion.Scope = C.IndexResult->Scope;
       if (Completion.Kind == CompletionItemKind::Missing)
@@ -1156,17 +1154,18 @@ private:
     else
       return;
     SymbolOrigin Origin = SymbolOrigin::Unknown;
+    bool FromIndex = false;
     for (const auto &Candidate : Bundle) {
       if (Candidate.IndexResult) {
         Quality.merge(*Candidate.IndexResult);
         Relevance.merge(*Candidate.IndexResult);
-        Origin =
-            static_cast<SymbolOrigin>(Origin | Candidate.IndexResult->Origin);
+        Origin |= Candidate.IndexResult->Origin;
+        FromIndex = true;
       }
       if (Candidate.SemaResult) {
         Quality.merge(*Candidate.SemaResult);
         Relevance.merge(*Candidate.SemaResult);
-        Origin = static_cast<SymbolOrigin>(Origin | SymbolOrigin::AST);
+        Origin |= SymbolOrigin::AST;
       }
     }
 
@@ -1184,8 +1183,8 @@ private:
                             << Quality << Relevance << "\n");
 
     NSema += bool(Origin & SymbolOrigin::AST);
-    NIndex += bool(Origin & ~SymbolOrigin::AST);
-    NBoth += (Origin & SymbolOrigin::AST) && (Origin & ~SymbolOrigin::AST);
+    NIndex += FromIndex;
+    NBoth += bool(Origin & SymbolOrigin::AST) && FromIndex;
     if (Candidates.push({std::move(Bundle), Scores}))
       Incomplete = true;
   }

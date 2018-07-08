@@ -7,30 +7,66 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines a check that marks a raw pointer to a C++ standard library
-// container's inner buffer released when the object is destroyed. This
-// information can be used by MallocChecker to detect use-after-free problems.
+// This file defines a check that marks a raw pointer to a C++ container's
+// inner buffer released when the object is destroyed. This information can
+// be used by MallocChecker to detect use-after-free problems.
 //
 //===----------------------------------------------------------------------===//
 
+#include "AllocationState.h"
 #include "ClangSACheckers.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "AllocationState.h"
 
 using namespace clang;
 using namespace ento;
 
+// FIXME: c_str() may be called on a string object many times, so it should
+// have a list of symbols associated with it.
+REGISTER_MAP_WITH_PROGRAMSTATE(RawPtrMap, const MemRegion *, SymbolRef)
+
 namespace {
 
-class DanglingInternalBufferChecker : public Checker<check::DeadSymbols,
-                                                     check::PostCall> {
+class DanglingInternalBufferChecker
+    : public Checker<check::DeadSymbols, check::PostCall> {
   CallDescription CStrFn;
 
 public:
+  class DanglingBufferBRVisitor : public BugReporterVisitor {
+    SymbolRef PtrToBuf;
+
+  public:
+    DanglingBufferBRVisitor(SymbolRef Sym) : PtrToBuf(Sym) {}
+
+    static void *getTag() {
+      static int Tag = 0;
+      return &Tag;
+    }
+
+    void Profile(llvm::FoldingSetNodeID &ID) const override {
+      ID.AddPointer(getTag());
+    }
+
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                   const ExplodedNode *PrevN,
+                                                   BugReporterContext &BRC,
+                                                   BugReport &BR) override;
+
+    // FIXME: Scan the map once in the visitor's constructor and do a direct
+    // lookup by region.
+    bool isSymbolTracked(ProgramStateRef State, SymbolRef Sym) {
+      RawPtrMapTy Map = State->get<RawPtrMap>();
+      for (const auto Entry : Map) {
+        if (Entry.second == Sym)
+          return true;
+      }
+      return false;
+    }
+  };
+
   DanglingInternalBufferChecker() : CStrFn("c_str") {}
 
   /// Record the connection between the symbol returned by c_str() and the
@@ -43,10 +79,6 @@ public:
 };
 
 } // end anonymous namespace
-
-// FIXME: c_str() may be called on a string object many times, so it should
-// have a list of symbols associated with it.
-REGISTER_MAP_WITH_PROGRAMSTATE(RawPtrMap, const MemRegion *, SymbolRef)
 
 void DanglingInternalBufferChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
@@ -102,6 +134,41 @@ void DanglingInternalBufferChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   }
   C.addTransition(State);
 }
+
+std::shared_ptr<PathDiagnosticPiece>
+DanglingInternalBufferChecker::DanglingBufferBRVisitor::VisitNode(
+    const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
+    BugReport &BR) {
+
+  if (!isSymbolTracked(N->getState(), PtrToBuf) ||
+      isSymbolTracked(PrevN->getState(), PtrToBuf))
+    return nullptr;
+
+  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  if (!S)
+    return nullptr;
+
+  SmallString<256> Buf;
+  llvm::raw_svector_ostream OS(Buf);
+  OS << "Pointer to dangling buffer was obtained here";
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
+                             N->getLocationContext());
+  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true,
+                                                    nullptr);
+}
+
+namespace clang {
+namespace ento {
+namespace allocation_state {
+
+std::unique_ptr<BugReporterVisitor> getDanglingBufferBRVisitor(SymbolRef Sym) {
+  return llvm::make_unique<
+      DanglingInternalBufferChecker::DanglingBufferBRVisitor>(Sym);
+}
+
+} // end namespace allocation_state
+} // end namespace ento
+} // end namespace clang
 
 void ento::registerDanglingInternalBufferChecker(CheckerManager &Mgr) {
   registerNewDeleteChecker(Mgr);

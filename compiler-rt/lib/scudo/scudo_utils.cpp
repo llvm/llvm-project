@@ -50,6 +50,9 @@ FORMAT(1, 2) void NORETURN dieWithMessage(const char *Format, ...) {
   internal_memcpy(Message, ScudoError, PrefixSize);
   VSNPrintf(Message + PrefixSize, sizeof(Message) - PrefixSize, Format, Args);
   va_end(Args);
+  LogMessageOnPrintf(Message);
+  if (common_flags()->abort_on_error)
+    SetAbortMessage(Message);
   RawWrite(Message);
   Die();
 }

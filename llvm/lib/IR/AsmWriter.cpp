@@ -1698,7 +1698,7 @@ void MDFieldPrinter::printDIFlags(StringRef Name, DINode::DIFlags Flags) {
 
 void MDFieldPrinter::printEmissionKind(StringRef Name,
                                        DICompileUnit::DebugEmissionKind EK) {
-  Out << FS << Name << ": " << DICompileUnit::EmissionKindString(EK);
+  Out << FS << Name << ": " << DICompileUnit::emissionKindString(EK);
 }
 
 template <class IntTy, class Stringifier>

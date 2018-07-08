@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_ALLOCATIONSTATE_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_ALLOCATIONSTATE_H
 
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 
 namespace clang {
@@ -19,6 +20,11 @@ namespace allocation_state {
 
 ProgramStateRef markReleased(ProgramStateRef State, SymbolRef Sym,
                              const Expr *Origin);
+
+/// This function provides an additional visitor that augments the bug report
+/// with information relevant to memory errors caused by the misuse of
+/// AF_InternalBuffer symbols.
+std::unique_ptr<BugReporterVisitor> getDanglingBufferBRVisitor(SymbolRef Sym);
 
 } // end namespace allocation_state
 

@@ -86,76 +86,31 @@ static uint64_t file_size = 0;
 static int new_file = 0;
 static int fd = -1;
 
-typedef void (*fn_ptr)();
+/*
+ * A list of functions to write out the data.
+ */
+typedef void (*writeout_fn)();
 
-typedef void* dynamic_object_id;
-// The address of this variable identifies a given dynamic object.
-static dynamic_object_id current_id;
-#define CURRENT_ID (&current_id)
-
-struct fn_node {
-  dynamic_object_id id;
-  fn_ptr fn;
-  struct fn_node* next;
+struct writeout_fn_node {
+  writeout_fn fn;
+  struct writeout_fn_node *next;
 };
 
-struct fn_list {
-  struct fn_node *head, *tail;
+static struct writeout_fn_node *writeout_fn_head = NULL;
+static struct writeout_fn_node *writeout_fn_tail = NULL;
+
+/*
+ *  A list of flush functions that our __gcov_flush() function should call.
+ */
+typedef void (*flush_fn)();
+
+struct flush_fn_node {
+  flush_fn fn;
+  struct flush_fn_node *next;
 };
 
-/*
- * A list of functions to write out the data, shared between all dynamic objects.
- */
-struct fn_list writeout_fn_list;
-
-/*
- *  A list of flush functions that our __gcov_flush() function should call, shared between all dynamic objects.
- */
-struct fn_list flush_fn_list;
-
-static void fn_list_insert(struct fn_list* list, fn_ptr fn) {
-  struct fn_node* new_node = malloc(sizeof(struct fn_node));
-  new_node->fn = fn;
-  new_node->next = NULL;
-  new_node->id = CURRENT_ID;
-
-  if (!list->head) {
-    list->head = list->tail = new_node;
-  } else {
-    list->tail->next = new_node;
-    list->tail = new_node;
-  }
-}
-
-static void fn_list_remove(struct fn_list* list) {
-  struct fn_node* curr = list->head;
-  struct fn_node* prev = NULL;
-  struct fn_node* next = NULL;
-
-  while (curr) {
-    next = curr->next;
-
-    if (curr->id == CURRENT_ID) {
-      if (curr == list->head) {
-        list->head = next;
-      }
-
-      if (curr == list->tail) {
-        list->tail = prev;
-      }
-
-      if (prev) {
-        prev->next = next;
-      }
-
-      free(curr);
-    } else {
-      prev = curr;
-    }
-
-    curr = next;
-  }
-}
+static struct flush_fn_node *flush_fn_head = NULL;
+static struct flush_fn_node *flush_fn_tail = NULL;
 
 static void resize_write_buffer(uint64_t size) {
   if (!new_file) return;
@@ -448,7 +403,6 @@ void llvm_gcda_summary_info() {
   const uint32_t obj_summary_len = 9; /* Length for gcov compatibility. */
   uint32_t i;
   uint32_t runs = 1;
-  static uint32_t run_counted = 0; // We only want to increase the run count once.
   uint32_t val = 0;
   uint64_t save_cur_pos = cur_pos;
 
@@ -475,9 +429,7 @@ void llvm_gcda_summary_info() {
 
     read_32bit_value(); /* checksum, unused */
     read_32bit_value(); /* num, unused */
-    uint32_t prev_runs = read_32bit_value();
-    /* Add previous run count to new counter, if not already counted before. */
-    runs = run_counted ? prev_runs : prev_runs + 1;
+    runs += read_32bit_value(); /* Add previous run count to new counter. */
   }
 
   cur_pos = save_cur_pos;
@@ -494,8 +446,6 @@ void llvm_gcda_summary_info() {
   /* Program summary tag */
   write_bytes("\0\0\0\xa3", 4); /* tag indicates 1 program */
   write_32bit_value(0); /* 0 length */
-
-  run_counted = 1;
 
 #ifdef DEBUG_GCDAPROFILING
   fprintf(stderr, "llvmgcda:   %u runs\n", runs);
@@ -529,34 +479,22 @@ void llvm_gcda_end_file() {
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_register_writeout_function(fn_ptr fn) {
-  fn_list_insert(&writeout_fn_list, fn);
-}
+void llvm_register_writeout_function(writeout_fn fn) {
+  struct writeout_fn_node *new_node = malloc(sizeof(struct writeout_fn_node));
+  new_node->fn = fn;
+  new_node->next = NULL;
 
-COMPILER_RT_VISIBILITY
-void llvm_writeout_files(void) {
-  struct fn_node *curr = writeout_fn_list.head;
-
-  while (curr) {
-    if (curr->id == CURRENT_ID) {
-      curr->fn();
-    }
-    curr = curr->next;
+  if (!writeout_fn_head) {
+    writeout_fn_head = writeout_fn_tail = new_node;
+  } else {
+    writeout_fn_tail->next = new_node;
+    writeout_fn_tail = new_node;
   }
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_delete_writeout_function_list(void) {
-  fn_list_remove(&writeout_fn_list);
-}
-
-COMPILER_RT_VISIBILITY
-void llvm_register_flush_function(fn_ptr fn) {
-  fn_list_insert(&flush_fn_list, fn);
-}
-
-void __gcov_flush() {
-  struct fn_node* curr = flush_fn_list.head;
+void llvm_writeout_files(void) {
+  struct writeout_fn_node *curr = writeout_fn_head;
 
   while (curr) {
     curr->fn();
@@ -565,12 +503,63 @@ void __gcov_flush() {
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_delete_flush_function_list(void) {
-  fn_list_remove(&flush_fn_list);
+void llvm_delete_writeout_function_list(void) {
+  while (writeout_fn_head) {
+    struct writeout_fn_node *node = writeout_fn_head;
+    writeout_fn_head = writeout_fn_head->next;
+    free(node);
+  }
+  
+  writeout_fn_head = writeout_fn_tail = NULL;
 }
 
 COMPILER_RT_VISIBILITY
-void llvm_gcov_init(fn_ptr wfn, fn_ptr ffn) {
+void llvm_register_flush_function(flush_fn fn) {
+  struct flush_fn_node *new_node = malloc(sizeof(struct flush_fn_node));
+  new_node->fn = fn;
+  new_node->next = NULL;
+
+  if (!flush_fn_head) {
+    flush_fn_head = flush_fn_tail = new_node;
+  } else {
+    flush_fn_tail->next = new_node;
+    flush_fn_tail = new_node;
+  }
+}
+
+// __gcov_flush is hidden. When called in a .so file,
+// it dumps profile data of the calling .so file.
+// If a main program needs to dump profile data of each linked
+// .so files, it should use dlsym to find and call llvm_gcov_flush.
+COMPILER_RT_VISIBILITY
+void __gcov_flush() {
+  struct flush_fn_node *curr = flush_fn_head;
+
+  while (curr) {
+    curr->fn();
+    curr = curr->next;
+  }
+}
+
+// llvm_gcov_flush is not hidden for a program to use dlsym to
+// find and call for any linked .so file.
+void llvm_gcov_flush() {
+  __gcov_flush();
+}
+
+COMPILER_RT_VISIBILITY
+void llvm_delete_flush_function_list(void) {
+  while (flush_fn_head) {
+    struct flush_fn_node *node = flush_fn_head;
+    flush_fn_head = flush_fn_head->next;
+    free(node);
+  }
+
+  flush_fn_head = flush_fn_tail = NULL;
+}
+
+COMPILER_RT_VISIBILITY
+void llvm_gcov_init(writeout_fn wfn, flush_fn ffn) {
   static int atexit_ran = 0;
 
   if (wfn)
