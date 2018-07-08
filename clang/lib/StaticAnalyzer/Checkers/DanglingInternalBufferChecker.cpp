@@ -24,15 +24,16 @@
 using namespace clang;
 using namespace ento;
 
-// FIXME: c_str() may be called on a string object many times, so it should
-// have a list of symbols associated with it.
+// FIXME: member functions that return a pointer to the container's internal
+// buffer may be called on the object many times, so the object's memory
+// region should have a list of pointer symbols associated with it.
 REGISTER_MAP_WITH_PROGRAMSTATE(RawPtrMap, const MemRegion *, SymbolRef)
 
 namespace {
 
 class DanglingInternalBufferChecker
     : public Checker<check::DeadSymbols, check::PostCall> {
-  CallDescription CStrFn;
+  CallDescription CStrFn, DataFn;
 
 public:
   class DanglingBufferBRVisitor : public BugReporterVisitor {
@@ -67,7 +68,7 @@ public:
     }
   };
 
-  DanglingInternalBufferChecker() : CStrFn("c_str") {}
+  DanglingInternalBufferChecker() : CStrFn("c_str"), DataFn("data") {}
 
   /// Record the connection between the symbol returned by c_str() and the
   /// corresponding string object region in the ProgramState. Mark the symbol
@@ -97,7 +98,7 @@ void DanglingInternalBufferChecker::checkPostCall(const CallEvent &Call,
 
   ProgramStateRef State = C.getState();
 
-  if (Call.isCalled(CStrFn)) {
+  if (Call.isCalled(CStrFn) || Call.isCalled(DataFn)) {
     SVal RawPtr = Call.getReturnValue();
     if (!RawPtr.isUnknown()) {
       State = State->set<RawPtrMap>(TypedR, RawPtr.getAsSymbol());

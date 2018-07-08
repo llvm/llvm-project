@@ -85,9 +85,11 @@ static const X86InstrFMA3Group Groups[] = {
   FMA3GROUP_MASKED(Name, PDZ##Suf, Attrs) \
   FMA3GROUP_MASKED(Name, PSZ##Suf, Attrs)
 
-#define FMA3GROUP_SCALAR_AVX512(Name, Suf, Attrs) \
-  FMA3GROUP_MASKED(Name, SDZ##Suf, Attrs) \
-  FMA3GROUP_MASKED(Name, SSZ##Suf, Attrs)
+#define FMA3GROUP_SCALAR_AVX512_ROUND(Name, Suf, Attrs) \
+  FMA3GROUP(Name, SDZ##Suf, Attrs) \
+  FMA3GROUP_MASKED(Name, SDZ##Suf##_Int, Attrs) \
+  FMA3GROUP(Name, SSZ##Suf, Attrs) \
+  FMA3GROUP_MASKED(Name, SSZ##Suf##_Int, Attrs)
 
 static const X86InstrFMA3Group BroadcastGroups[] = {
   FMA3GROUP_PACKED_AVX512(VFMADD, mb, 0)
@@ -100,15 +102,15 @@ static const X86InstrFMA3Group BroadcastGroups[] = {
 
 static const X86InstrFMA3Group RoundGroups[] = {
   FMA3GROUP_PACKED_AVX512_ROUND(VFMADD, rb, 0)
-  FMA3GROUP_SCALAR_AVX512(VFMADD, rb_Int, X86InstrFMA3Group::Intrinsic)
+  FMA3GROUP_SCALAR_AVX512_ROUND(VFMADD, rb, X86InstrFMA3Group::Intrinsic)
   FMA3GROUP_PACKED_AVX512_ROUND(VFMADDSUB, rb, 0)
   FMA3GROUP_PACKED_AVX512_ROUND(VFMSUB, rb, 0)
-  FMA3GROUP_SCALAR_AVX512(VFMSUB, rb_Int, X86InstrFMA3Group::Intrinsic)
+  FMA3GROUP_SCALAR_AVX512_ROUND(VFMSUB, rb, X86InstrFMA3Group::Intrinsic)
   FMA3GROUP_PACKED_AVX512_ROUND(VFMSUBADD, rb, 0)
   FMA3GROUP_PACKED_AVX512_ROUND(VFNMADD, rb, 0)
-  FMA3GROUP_SCALAR_AVX512(VFNMADD, rb_Int, X86InstrFMA3Group::Intrinsic)
+  FMA3GROUP_SCALAR_AVX512_ROUND(VFNMADD, rb, X86InstrFMA3Group::Intrinsic)
   FMA3GROUP_PACKED_AVX512_ROUND(VFNMSUB, rb, 0)
-  FMA3GROUP_SCALAR_AVX512(VFNMSUB, rb_Int, X86InstrFMA3Group::Intrinsic)
+  FMA3GROUP_SCALAR_AVX512_ROUND(VFNMSUB, rb, X86InstrFMA3Group::Intrinsic)
 };
 
 static void verifyTables() {
