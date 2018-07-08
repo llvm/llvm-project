@@ -244,11 +244,12 @@ int X86TTIImpl::getArithmeticInstrCost(
     }
   }
 
-  if ((ISD == ISD::SDIV || ISD == ISD::UDIV || ISD == ISD::UREM) &&
+  if ((ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
+       ISD == ISD::UREM) &&
       (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
        Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
-    if (ISD == ISD::SDIV) {
+    if (ISD == ISD::SDIV || ISD == ISD::SREM) {
       // On X86, vector signed division by constants power-of-two are
       // normally expanded to the sequence SRA + SRL + ADD + SRA.
       // The OperandValue properties may not be the same as that of the previous
@@ -263,6 +264,12 @@ int X86TTIImpl::getArithmeticInstrCost(
       Cost += getArithmeticInstrCost(Instruction::Add, Ty, Op1Info, Op2Info,
                                      TargetTransformInfo::OP_None,
                                      TargetTransformInfo::OP_None);
+
+      if (ISD == ISD::SREM) {
+        // For SREM: (X % C) is the equivalent of (X - (X/C)*C)
+        Cost += getArithmeticInstrCost(Instruction::Mul, Ty, Op1Info, Op2Info);
+        Cost += getArithmeticInstrCost(Instruction::Sub, Ty, Op1Info, Op2Info);
+      }
 
       return Cost;
     }
@@ -285,7 +292,9 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v64i8,   4 }, // psrlw, pand, pxor, psubb.
 
     { ISD::SDIV, MVT::v32i16,  6 }, // vpmulhw sequence
+    { ISD::SREM, MVT::v32i16,  8 }, // vpmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v32i16,  6 }, // vpmulhuw sequence
+    { ISD::UREM, MVT::v32i16,  8 }, // vpmulhuw+mul+sub sequence
   };
 
   if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
@@ -301,7 +310,9 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v8i64,   1 },
 
     { ISD::SDIV, MVT::v16i32, 15 }, // vpmuldq sequence
+    { ISD::SREM, MVT::v16i32, 17 }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v16i32, 15 }, // vpmuludq sequence
+    { ISD::UREM, MVT::v16i32, 17 }, // vpmuludq+mul+sub sequence
   };
 
   if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
@@ -319,9 +330,13 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i64,   4 }, // 2 x psrad + shuffle.
 
     { ISD::SDIV, MVT::v16i16,  6 }, // vpmulhw sequence
+    { ISD::SREM, MVT::v16i16,  8 }, // vpmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v16i16,  6 }, // vpmulhuw sequence
+    { ISD::UREM, MVT::v16i16,  8 }, // vpmulhuw+mul+sub sequence
     { ISD::SDIV, MVT::v8i32,  15 }, // vpmuldq sequence
+    { ISD::SREM, MVT::v8i32,  19 }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32,  15 }, // vpmuludq sequence
+    { ISD::UREM, MVT::v8i32,  19 }, // vpmuludq+mul+sub sequence
   };
 
   if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
@@ -341,13 +356,21 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v32i8,   8+2 }, // 2*(psrlw, pand, pxor, psubb) + split.
 
     { ISD::SDIV, MVT::v16i16, 12+2 }, // 2*pmulhw sequence + split.
+    { ISD::SREM, MVT::v16i16, 16+2 }, // 2*pmulhw+mul+sub sequence + split.
     { ISD::SDIV, MVT::v8i16,     6 }, // pmulhw sequence
+    { ISD::SREM, MVT::v8i16,     8 }, // pmulhw+mul+sub sequence
     { ISD::UDIV, MVT::v16i16, 12+2 }, // 2*pmulhuw sequence + split.
+    { ISD::UREM, MVT::v16i16, 16+2 }, // 2*pmulhuw+mul+sub sequence + split.
     { ISD::UDIV, MVT::v8i16,     6 }, // pmulhuw sequence
+    { ISD::UREM, MVT::v8i16,     8 }, // pmulhuw+mul+sub sequence
     { ISD::SDIV, MVT::v8i32,  38+2 }, // 2*pmuludq sequence + split.
+    { ISD::SREM, MVT::v8i32,  48+2 }, // 2*pmuludq+mul+sub sequence + split.
     { ISD::SDIV, MVT::v4i32,    19 }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32,    24 }, // pmuludq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32,  30+2 }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32,  40+2 }, // 2*pmuludq+mul+sub sequence + split.
     { ISD::UDIV, MVT::v4i32,    15 }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32,    20 }, // pmuludq+mul+sub sequence
   };
 
   if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
@@ -355,8 +378,12 @@ int X86TTIImpl::getArithmeticInstrCost(
     // pmuldq sequence.
     if (ISD == ISD::SDIV && LT.second == MVT::v8i32 && ST->hasAVX())
       return LT.first * 32;
+    if (ISD == ISD::SREM && LT.second == MVT::v8i32 && ST->hasAVX())
+      return LT.first * 38;
     if (ISD == ISD::SDIV && LT.second == MVT::v4i32 && ST->hasSSE41())
       return LT.first * 15;
+    if (ISD == ISD::SREM && LT.second == MVT::v4i32 && ST->hasSSE41())
+      return LT.first * 20;
 
     // XOP has faster vXi8 shifts.
     if ((ISD != ISD::SHL && ISD != ISD::SRL && ISD != ISD::SRA) ||
@@ -765,7 +792,8 @@ int X86TTIImpl::getArithmeticInstrCost(
   // anyways so try hard to prevent vectorization of division - it is
   // generally a bad idea. Assume somewhat arbitrarily that we have to be able
   // to hide "20 cycles" for each lane.
-  if ((ISD == ISD::SDIV || ISD == ISD::UDIV) && LT.second.isVector()) {
+  if (LT.second.isVector() && (ISD == ISD::SDIV || ISD == ISD::SREM ||
+                               ISD == ISD::UDIV || ISD == ISD::UREM)) {
     int ScalarCost = getArithmeticInstrCost(
         Opcode, Ty->getScalarType(), Op1Info, Op2Info,
         TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);

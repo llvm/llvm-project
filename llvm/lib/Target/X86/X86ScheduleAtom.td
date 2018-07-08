@@ -131,7 +131,8 @@ def : InstRW<[AtomWriteIMul64I], (instrs IMUL64rri8, IMUL64rri32,
                                          IMUL64rmi8, IMUL64rmi32)>;
 
 // Bit counts.
-defm : AtomWriteResPair<WriteBitScan, [AtomPort01], [AtomPort01], 16, 16, [16], [16]>;
+defm : AtomWriteResPair<WriteBSF, [AtomPort01], [AtomPort01], 16, 16, [16], [16]>;
+defm : AtomWriteResPair<WriteBSR, [AtomPort01], [AtomPort01], 16, 16, [16], [16]>;
 defm : X86WriteResPairUnsupported<WritePOPCNT>;
 defm : X86WriteResPairUnsupported<WriteLZCNT>;
 defm : X86WriteResPairUnsupported<WriteTZCNT>;

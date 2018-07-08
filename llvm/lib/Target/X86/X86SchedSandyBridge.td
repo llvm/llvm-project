@@ -142,10 +142,11 @@ def  : WriteRes<WriteLAHFSAHF, [SBPort05]>;
 def : WriteRes<WriteLEA, [SBPort01]>;
 
 // Bit counts.
-defm : SBWriteResPair<WriteBitScan, [SBPort1], 3, [1], 1, 5>;
-defm : SBWriteResPair<WriteLZCNT,   [SBPort1], 3, [1], 1, 5>;
-defm : SBWriteResPair<WriteTZCNT,   [SBPort1], 3, [1], 1, 5>;
-defm : SBWriteResPair<WritePOPCNT,  [SBPort1], 3, [1], 1, 6>;
+defm : SBWriteResPair<WriteBSF, [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteBSR, [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteLZCNT,          [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteTZCNT,          [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WritePOPCNT,         [SBPort1], 3, [1], 1, 6>;
 
 // BMI1 BEXTR, BMI2 BZHI
 // NOTE: These don't exist on Sandy Bridge. Ports are guesses.

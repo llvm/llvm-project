@@ -103,6 +103,21 @@ andq %rsi, %rdi
 andq %rsi, (%rax)
 andq (%rax), %rdi
 
+bsfw %si, %di
+bsrw %si, %di
+bsfw (%rax), %di
+bsrw (%rax), %di
+
+bsfl %esi, %edi
+bsrl %esi, %edi
+bsfl (%rax), %edi
+bsrl (%rax), %edi
+
+bsfq %rsi, %rdi
+bsrq %rsi, %rdi
+bsfq (%rax), %rdi
+bsrq (%rax), %rdi
+
 btw  %si, %di
 btcw %si, %di
 btrw %si, %di
@@ -703,6 +718,18 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.33                        andq	%rsi, %rdi
 # CHECK-NEXT:  3      7     1.00    *      *            andq	%rsi, (%rax)
 # CHECK-NEXT:  2      6     0.50    *                   andq	(%rax), %rdi
+# CHECK-NEXT:  1      3     1.00                        bsfw	%si, %di
+# CHECK-NEXT:  1      3     1.00                        bsrw	%si, %di
+# CHECK-NEXT:  2      8     1.00    *                   bsfw	(%rax), %di
+# CHECK-NEXT:  2      8     1.00    *                   bsrw	(%rax), %di
+# CHECK-NEXT:  1      3     1.00                        bsfl	%esi, %edi
+# CHECK-NEXT:  1      3     1.00                        bsrl	%esi, %edi
+# CHECK-NEXT:  2      8     1.00    *                   bsfl	(%rax), %edi
+# CHECK-NEXT:  2      8     1.00    *                   bsrl	(%rax), %edi
+# CHECK-NEXT:  1      3     1.00                        bsfq	%rsi, %rdi
+# CHECK-NEXT:  1      3     1.00                        bsrq	%rsi, %rdi
+# CHECK-NEXT:  2      8     1.00    *                   bsfq	(%rax), %rdi
+# CHECK-NEXT:  2      8     1.00    *                   bsrq	(%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                        btw	%si, %di
 # CHECK-NEXT:  1      1     0.50                        btcw	%si, %di
 # CHECK-NEXT:  1      1     0.50                        btrw	%si, %di
@@ -1168,7 +1195,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT: 160.00  -     347.33 141.33 210.00 339.33 238.00 238.00
+# CHECK-NEXT: 160.00  -     347.33 153.33 210.00 339.33 241.00 241.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -1262,6 +1289,18 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33    -      -     andq	%rsi, %rdi
 # CHECK-NEXT:  -      -     0.33   0.33   1.00   0.33   1.00   1.00   andq	%rsi, (%rax)
 # CHECK-NEXT:  -      -     0.33   0.33    -     0.33   0.50   0.50   andq	(%rax), %rdi
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     bsfw	%si, %di
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     bsrw	%si, %di
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   bsfw	(%rax), %di
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   bsrw	(%rax), %di
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     bsfl	%esi, %edi
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     bsrl	%esi, %edi
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   bsfl	(%rax), %edi
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   bsrl	(%rax), %edi
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     bsfq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     bsrq	%rsi, %rdi
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   bsfq	(%rax), %rdi
+# CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   bsrq	(%rax), %rdi
 # CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -     btw	%si, %di
 # CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -     btcw	%si, %di
 # CHECK-NEXT:  -      -     0.50    -      -     0.50    -      -     btrw	%si, %di

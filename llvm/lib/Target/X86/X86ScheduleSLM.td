@@ -117,10 +117,11 @@ def  : WriteRes<WriteLAHFSAHF, [SLM_IEC_RSV01]>;
 def : WriteRes<WriteLEA, [SLM_IEC_RSV1]>;
 
 // Bit counts.
-defm : SLMWriteResPair<WriteBitScan, [SLM_IEC_RSV01], 10, [20], 10>;
-defm : SLMWriteResPair<WriteLZCNT,   [SLM_IEC_RSV0], 3>;
-defm : SLMWriteResPair<WriteTZCNT,   [SLM_IEC_RSV0], 3>;
-defm : SLMWriteResPair<WritePOPCNT,  [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WriteBSF, [SLM_IEC_RSV01], 10, [20], 10>;
+defm : SLMWriteResPair<WriteBSR, [SLM_IEC_RSV01], 10, [20], 10>;
+defm : SLMWriteResPair<WriteLZCNT,          [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WriteTZCNT,          [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WritePOPCNT,         [SLM_IEC_RSV0], 3>;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm : X86WriteResPairUnsupported<WriteBEXTR>;

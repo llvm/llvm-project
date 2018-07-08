@@ -135,10 +135,11 @@ def  : WriteRes<WriteSETCCStore, [SKLPort06,SKLPort4,SKLPort237]> {
 def  : WriteRes<WriteLAHFSAHF, [SKLPort06]>;
 
 // Bit counts.
-defm : SKLWriteResPair<WriteBitScan, [SKLPort1], 3>;
-defm : SKLWriteResPair<WriteLZCNT,   [SKLPort1], 3>;
-defm : SKLWriteResPair<WriteTZCNT,   [SKLPort1], 3>;
-defm : SKLWriteResPair<WritePOPCNT,  [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteBSF, [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteBSR, [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteLZCNT,          [SKLPort1], 3>;
+defm : SKLWriteResPair<WriteTZCNT,          [SKLPort1], 3>;
+defm : SKLWriteResPair<WritePOPCNT,         [SKLPort1], 3>;
 
 // Integer shifts and rotates.
 defm : SKLWriteResPair<WriteShift, [SKLPort06],  1>;
