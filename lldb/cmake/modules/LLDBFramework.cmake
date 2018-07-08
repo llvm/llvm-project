@@ -22,8 +22,8 @@ if (NOT IOS)
   endif()
   add_custom_command(TARGET lldb-framework POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders $<TARGET_FILE_DIR:liblldb>/Headers
-    COMMAND ${CMAKE_COMMAND} -E create_symlink Versions/Current/Headers ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Headers
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLDB_FRAMEWORK_VERSION} ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/Current
+    COMMAND ${CMAKE_COMMAND} -E create_symlink Versions/Current/Headers ${LLDB_FRAMEWORK_DIR}/LLDB.framework/Headers
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLDB_FRAMEWORK_VERSION} ${LLDB_FRAMEWORK_DIR}/LLDB.framework/Versions/Current
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLDB_VERSION} $<TARGET_FILE_DIR:liblldb>/Resources/Clang
   )
 else()

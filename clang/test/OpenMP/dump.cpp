@@ -44,10 +44,10 @@ struct S {
 };
 
 // CHECK:      |     `-OMPParallelForDirective {{.+}} {{<line:40:9, col:80>|<col:9, col:80>}}
-// CHECK-NEXT: |       |-OMPDefaultClause {{.+}} <col:26, col:40>
-// CHECK-NEXT: |       |-OMPPrivateClause {{.+}} <col:40, col:51>
+// CHECK-NEXT: |       |-OMPDefaultClause {{.+}} <col:26, col:38>
+// CHECK-NEXT: |       |-OMPPrivateClause {{.+}} <col:40, col:49>
 // CHECK-NEXT: |       | `-DeclRefExpr {{.+}} <col:48> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
-// CHECK-NEXT: |       |-OMPSharedClause {{.+}} <col:51, col:61>
+// CHECK-NEXT: |       |-OMPSharedClause {{.+}} <col:51, col:59>
 // CHECK-NEXT: |       | `-MemberExpr {{.+}} <col:58> 'int' lvalue ->b
 // CHECK-NEXT: |       |   `-CXXThisExpr {{.+}} <col:58> 'S *' this
 // CHECK-NEXT: |       |-OMPScheduleClause {{.+}} <col:61, col:79>

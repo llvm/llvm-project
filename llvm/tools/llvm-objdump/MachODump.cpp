@@ -3229,6 +3229,8 @@ struct imageInfo_t {
 /* masks for objc_image_info.flags */
 #define OBJC_IMAGE_IS_REPLACEMENT (1 << 0)
 #define OBJC_IMAGE_SUPPORTS_GC (1 << 1)
+#define OBJC_IMAGE_IS_SIMULATED (1 << 5)
+#define OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES (1 << 6)
 
 struct message_ref64 {
   uint64_t imp; /* IMP (64-bit pointer) */
@@ -5590,6 +5592,10 @@ static void print_image_info64(SectionRef S, struct DisassembleInfo *info) {
     outs() << " OBJC_IMAGE_IS_REPLACEMENT";
   if (o.flags & OBJC_IMAGE_SUPPORTS_GC)
     outs() << " OBJC_IMAGE_SUPPORTS_GC";
+  if (o.flags & OBJC_IMAGE_IS_SIMULATED)
+    outs() << " OBJC_IMAGE_IS_SIMULATED";
+  if (o.flags & OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES)
+    outs() << " OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES";
   swift_version = (o.flags >> 8) & 0xff;
   if (swift_version != 0) {
     if (swift_version == 1)

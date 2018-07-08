@@ -3235,7 +3235,7 @@ static bool MightBeFoldableInst(Instruction *I) {
     // Don't touch identity bitcasts.
     if (I->getType() == I->getOperand(0)->getType())
       return false;
-    return I->getType()->isPointerTy() || I->getType()->isIntegerTy();
+    return I->getType()->isIntOrPtrTy();
   case Instruction::PtrToInt:
     // PtrToInt is always a noop, as we know that the int type is pointer sized.
     return true;
@@ -3723,8 +3723,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
   case Instruction::BitCast:
     // BitCast is always a noop, and we can handle it as long as it is
     // int->int or pointer->pointer (we don't want int<->fp or something).
-    if ((AddrInst->getOperand(0)->getType()->isPointerTy() ||
-         AddrInst->getOperand(0)->getType()->isIntegerTy()) &&
+    if (AddrInst->getOperand(0)->getType()->isIntOrPtrTy() &&
         // Don't touch identity bitcasts.  These were probably put here by LSR,
         // and we don't want to mess around with them.  Assume it knows what it
         // is doing.
@@ -5349,8 +5348,7 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
 //   x = phi x1', x2'
 //   y = and x, 0xff
 bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
-  if (!Load->isSimple() ||
-      !(Load->getType()->isIntegerTy() || Load->getType()->isPointerTy()))
+  if (!Load->isSimple() || !Load->getType()->isIntOrPtrTy())
     return false;
 
   // Skip loads we've already transformed.

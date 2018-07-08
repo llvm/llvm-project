@@ -3134,7 +3134,7 @@ static enum isl_change coalesce_after_aligning_divs(
 	__isl_keep isl_basic_map *bmap_i, int i, int j,
 	struct isl_coalesce_info *info)
 {
-	int known;
+	isl_bool known;
 	isl_mat *div_i, *div_j, *div;
 	int *exp1 = NULL;
 	int *exp2 = NULL;
@@ -3142,8 +3142,10 @@ static enum isl_change coalesce_after_aligning_divs(
 	enum isl_change change;
 
 	known = isl_basic_map_divs_known(bmap_i);
-	if (known < 0 || !known)
-		return known;
+	if (known < 0)
+		return isl_change_error;
+	if (!known)
+		return isl_change_none;
 
 	ctx = isl_basic_map_get_ctx(bmap_i);
 

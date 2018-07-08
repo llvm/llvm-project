@@ -298,6 +298,9 @@ static bool isREX(struct InternalInstruction *insn, uint8_t prefix) {
 static void setPrefixPresent(struct InternalInstruction *insn, uint8_t prefix) {
   uint8_t nextByte;
   switch (prefix) {
+  case 0xf0:
+    insn->hasLockPrefix = true;
+    break;
   case 0xf2:
   case 0xf3:
     if (lookAtByte(insn, &nextByte))

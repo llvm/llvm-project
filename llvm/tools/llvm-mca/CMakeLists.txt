@@ -11,11 +11,13 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-mca
   CodeRegion.cpp
+  Context.cpp
   DispatchStage.cpp
   DispatchStatistics.cpp
   ExecuteStage.cpp
   FetchStage.cpp
   HWEventListener.cpp
+  HardwareUnit.cpp
   InstrBuilder.cpp
   Instruction.cpp
   InstructionInfoView.cpp

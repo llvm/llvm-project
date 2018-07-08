@@ -23,12 +23,8 @@ class StdVBoolDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber='llvm.org/pr20548 fails to build on lab.llvm.org buildbot')
-    @skipIfWindows  # libstdcpp not ported to Windows.
     @skipIfDarwin
-    @skipIfwatchOS  # libstdcpp not ported to watchos
+    @skipUnlessLibstdcxxAvailable
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

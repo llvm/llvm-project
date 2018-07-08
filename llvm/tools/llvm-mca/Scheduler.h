@@ -16,6 +16,7 @@
 #define LLVM_TOOLS_LLVM_MCA_SCHEDULER_H
 
 #include "HWEventListener.h"
+#include "HardwareUnit.h"
 #include "Instruction.h"
 #include "LSUnit.h"
 #include "RetireControlUnit.h"
@@ -401,7 +402,7 @@ public:
 /// issued to a (one or more) pipeline(s). This event also causes an instruction
 /// state transition (i.e. from state IS_READY, to state IS_EXECUTING).
 /// An Instruction leaves the IssuedQueue when it reaches the write-back stage.
-class Scheduler {
+class Scheduler : public HardwareUnit {
   const llvm::MCSchedModel &SM;
 
   // Hardware resources that are managed by this scheduler.

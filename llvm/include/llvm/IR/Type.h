@@ -208,6 +208,9 @@ public:
     return getScalarType()->isIntegerTy(BitWidth);
   }
 
+  /// Return true if this is an integer type or a pointer type.
+  bool isIntOrPtrTy() const { return isIntegerTy() || isPointerTy(); }
+
   /// True if this is an instance of FunctionType.
   bool isFunctionTy() const { return getTypeID() == FunctionTyID; }
 

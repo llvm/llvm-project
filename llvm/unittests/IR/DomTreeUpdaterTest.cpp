@@ -295,7 +295,6 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   ASSERT_TRUE(isa<UnreachableInst>(BB3->getTerminator()));
   EXPECT_EQ(BB3->getParent(), F);
   DTU.recalculate(*F);
-
   EXPECT_FALSE(DTU.hasPendingDeletedBB());
 }
 

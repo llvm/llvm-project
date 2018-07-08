@@ -21,6 +21,69 @@
 # RUN: llvm-strip -S %t6
 # RUN: cmp %t2 %t6
 
+# RUN: rm -f %t.a
+# RUN: llvm-ar crs %t.a %t
+# RUN: llvm-objcopy --strip-debug %t.a %t.a
+# RUN: llvm-ar p %t.a > %t7
+# RUN: cmp %t2 %t7
+
+# Verify that an archive with multiple object files is handled correctly.
+# RUN: cp %t %t.duplicate
+# RUN: cp %t2 %t.duplicate.stripped
+# RUN: rm -f %t.multiple-stripped-obj.a
+# RUN: llvm-ar crs %t.multiple-stripped-obj.a %t2 %t.duplicate.stripped
+# RUN: rm -f %t.multiple-obj.a
+# RUN: llvm-ar crs %t.multiple-obj.a %t %t.duplicate
+# RUN: llvm-objcopy --strip-debug %t.multiple-obj.a %t.multiple-obj.stripped.a
+# RUN: llvm-ar p %t.multiple-stripped-obj.a > %t.multiple-stripped-obj.a.dump
+# RUN: llvm-ar p %t.multiple-obj.stripped.a > %t.multiple-obj.stripped.a.dump
+# RUN: cmp %t.multiple-stripped-obj.a.dump %t.multiple-obj.stripped.a.dump
+
+# We can not use %t inside the patterns passed to FileCheck,
+# thus we have to use "recognizable" file names.
+# RUN: cp %t %t1.o
+# RUN: cp %s %t2.txt
+# RUN: cp %t %t3.o
+# RUN: rm -f %t.non-object.a
+# RUN: llvm-ar cr %t.non-object.a %t1.o %t2.txt %t3.o
+# RUN: llvm-ar t %t.non-object.a | FileCheck %s --check-prefix=NON-OBJECT-ARCHIVE-MEMBERS
+
+# NON-OBJECT-ARCHIVE-MEMBERS: 1.o
+# NON-OBJECT-ARCHIVE-MEMBERS-NEXT: 2.txt
+# NON-OBJECT-ARCHIVE-MEMBERS-NEXT: 3.o
+
+# RUN: cp %t.non-object.a %t.non-object.copy.a
+# RUN: not llvm-objcopy --strip-debug %t.non-object.a %t2.non-object.a 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+
+# BAD-FORMAT: The file was not recognized as a valid object file
+
+# Verify that %t.non-object.a has not been modified.
+# RUN: cmp %t.non-object.a %t.non-object.copy.a
+
+# RUN: rm -f %t.thin.a
+# Copy %t to %t.thin.archive.member to avoid changing %t directly.
+# RUN: cp %t %t.thin.archive.member
+# RUN: llvm-ar crsT %t.thin.a %t.thin.archive.member
+# RUN: llvm-objcopy --strip-debug %t.thin.a %t2.thin.a
+# RUN: cat %t.thin.a | FileCheck %s --check-prefix=VERIFY-THIN-ARCHIVE
+# RUN: cat %t2.thin.a | FileCheck %s --check-prefix=VERIFY-THIN-ARCHIVE
+ 
+# VERIFY-THIN-ARCHIVE: !<thin>
+
+# Verify that the member of a thin archive was properly modified.
+# RUN: cmp %t2 %t.thin.archive.member
+
+# RUN: rm -f %t.non-object.thin.a
+# RUN: llvm-ar crsT %t.non-object.thin.a %t1.o %t2.txt %t3.o
+# RUN: cp %t.non-object.thin.a %t.non-object.thin.copy.a
+# RUN: not llvm-objcopy --strip-debug %t.non-object.thin.a %t.non-object.thin.a 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+
+# Verify that in the case of error thin archive and its memebers are not getting modified.
+# RUN: cmp %t.non-object.thin.a %t.non-object.thin.copy.a
+# RUN: cmp %t %t1.o
+# RUN: cmp %s %t2.txt
+# RUN: cmp %t %t3.o
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

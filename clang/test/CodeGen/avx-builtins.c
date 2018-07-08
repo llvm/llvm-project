@@ -1570,13 +1570,13 @@ __m256 test_mm256_set_m128(__m128 A, __m128 B) {
 
 __m256d test_mm256_set_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_set_m128d
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128d(A, B);
 }
 
 __m256i test_mm256_set_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_set_m128i
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_set_m128i(A, B);
 }
 
@@ -1796,13 +1796,13 @@ __m256 test_mm256_setr_m128(__m128 A, __m128 B) {
 
 __m256d test_mm256_setr_m128d(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm256_setr_m128d
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128d(A, B);
 }
 
 __m256i test_mm256_setr_m128i(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm256_setr_m128i
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm256_setr_m128i(A, B);
 }
 
@@ -1990,7 +1990,7 @@ int test_mm256_testc_ps(__m256 A, __m256 B) {
   return _mm256_testc_ps(A, B);
 }
 
-int test_mm256_testc_si256(__m256 A, __m256 B) {
+int test_mm256_testc_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testc_si256
   // CHECK: call i32 @llvm.x86.avx.ptestc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testc_si256(A, B);
@@ -2020,7 +2020,7 @@ int test_mm256_testnzc_ps(__m256 A, __m256 B) {
   return _mm256_testnzc_ps(A, B);
 }
 
-int test_mm256_testnzc_si256(__m256 A, __m256 B) {
+int test_mm256_testnzc_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testnzc_si256
   // CHECK: call i32 @llvm.x86.avx.ptestnzc.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testnzc_si256(A, B);
@@ -2050,7 +2050,7 @@ int test_mm256_testz_ps(__m256 A, __m256 B) {
   return _mm256_testz_ps(A, B);
 }
 
-int test_mm256_testz_si256(__m256 A, __m256 B) {
+int test_mm256_testz_si256(__m256i A, __m256i B) {
   // CHECK-LABEL: test_mm256_testz_si256
   // CHECK: call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_testz_si256(A, B);

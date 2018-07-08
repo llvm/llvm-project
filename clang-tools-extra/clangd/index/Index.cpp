@@ -49,7 +49,7 @@ raw_ostream &operator<<(raw_ostream &OS, SymbolOrigin O) {
     return OS << "unknown";
   constexpr static char Sigils[] = "ADSM4567";
   for (unsigned I = 0; I < sizeof(Sigils); ++I)
-    if (O & static_cast<SymbolOrigin>(1 << I))
+    if (static_cast<uint8_t>(O) & 1u << I)
       OS << Sigils[I];
   return OS;
 }

@@ -64,6 +64,7 @@ AM_CFLAGS = @WARNING_FLAGS@
 libisl_la_SOURCES = \
 	$(MP_SRC) \
 	isl_aff.c \
+	isl_aff_map.c \
 	isl_aff_private.h \
 	isl_affine_hull.c \
 	isl_arg.c \

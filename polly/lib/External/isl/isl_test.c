@@ -3602,6 +3602,44 @@ static int test_lift(isl_ctx *ctx)
 	return 0;
 }
 
+/* Check that isl_set_is_subset is not confused by identical
+ * integer divisions.
+ * The call to isl_set_normalize ensures that the equality constraints
+ * a = b = 0 are discovered, turning e0 and e1 into identical
+ * integer divisions.  Any further simplification would remove
+ * the duplicate integer divisions.
+ */
+static isl_stat test_subset_duplicate_integer_divisions(isl_ctx *ctx)
+{
+	const char *str;
+	isl_bool is_subset;
+	isl_set *set1, *set2;
+
+	str = "{ [a, b, c, d] : "
+	    "exists (e0 = floor((a + d)/4), e1 = floor((d)/4), "
+		    "e2 = floor((-a - d + 4 *floor((a + d)/4))/10), "
+		    "e3 = floor((-d + 4*floor((d)/4))/10): "
+		"10e2 = -a - 2c - d + 4e0 and 10e3 = -2c - d + 4e1 and "
+		"b >= 0 and a <= 0 and b <= a) }";
+	set1 = isl_set_read_from_str(ctx, str);
+	set2 = isl_set_read_from_str(ctx, str);
+	set2 = isl_set_normalize(set2);
+
+	is_subset = isl_set_is_subset(set1, set2);
+
+	isl_set_free(set1);
+	isl_set_free(set2);
+
+	if (is_subset < 0)
+		return isl_stat_error;
+	if (!is_subset)
+		isl_die(ctx, isl_error_unknown,
+			"set is not considered to be a subset of itself",
+			return isl_stat_error);
+
+	return isl_stat_ok;
+}
+
 struct {
 	const char *set1;
 	const char *set2;
@@ -3645,6 +3683,9 @@ static int test_subset(isl_ctx *ctx)
 	int i;
 	isl_set *set1, *set2;
 	int subset;
+
+	if (test_subset_duplicate_integer_divisions(ctx) < 0)
+		return -1;
 
 	for (i = 0; i < ARRAY_SIZE(subset_tests); ++i) {
 		set1 = isl_set_read_from_str(ctx, subset_tests[i].set1);
@@ -3723,7 +3764,7 @@ static int test_subtract(isl_ctx *ctx)
  * does not increase the number of constraints.  In particular,
  * the empty basic set should maintain its canonical representation.
  */
-static int test_intersect(isl_ctx *ctx)
+static int test_intersect_1(isl_ctx *ctx)
 {
 	int n1, n2;
 	isl_basic_set *bset1, *bset2;
@@ -3740,6 +3781,35 @@ static int test_intersect(isl_ctx *ctx)
 		isl_die(ctx, isl_error_unknown,
 			"number of constraints of empty set changed",
 			return -1);
+
+	return 0;
+}
+
+/* Check that intersecting a set with itself does not cause
+ * an explosion in the number of disjuncts.
+ */
+static isl_stat test_intersect_2(isl_ctx *ctx)
+{
+	int i;
+	isl_set *set;
+
+	set = isl_set_read_from_str(ctx, "{ [x,y] : x >= 0 or y >= 0 }");
+	for (i = 0; i < 100; ++i)
+		set = isl_set_intersect(set, isl_set_copy(set));
+	isl_set_free(set);
+	if (!set)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Perform some intersection tests.
+ */
+static int test_intersect(isl_ctx *ctx)
+{
+	if (test_intersect_1(ctx) < 0)
+		return -1;
+	if (test_intersect_2(ctx) < 0)
+		return -1;
 
 	return 0;
 }

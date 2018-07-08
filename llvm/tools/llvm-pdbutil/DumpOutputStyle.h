@@ -88,6 +88,7 @@ private:
   Error dumpModuleFiles();
   Error dumpModuleSymsForPdb();
   Error dumpModuleSymsForObj();
+  Error dumpGSIRecords();
   Error dumpGlobals();
   Error dumpPublics();
   Error dumpSymbolsFromGSI(const GSIHashTable &Table, bool HashExtras);

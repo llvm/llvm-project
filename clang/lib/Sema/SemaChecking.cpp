@@ -6894,10 +6894,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     QualType CastTy;
     std::tie(CastTy, CastTyName) = shouldNotPrintDirectly(S.Context, IntendedTy, E);
     if (!CastTy.isNull()) {
-      // %zi/%zu are OK to use for NSInteger/NSUInteger of type int
+      // %zi/%zu and %td/%tu are OK to use for NSInteger/NSUInteger of type int
       // (long in ASTContext). Only complain to pedants.
       if ((CastTyName == "NSInteger" || CastTyName == "NSUInteger") &&
-          AT.isSizeT() && AT.matchesType(S.Context, CastTy))
+          (AT.isSizeT() || AT.isPtrdiffT()) &&
+          AT.matchesType(S.Context, CastTy))
         Pedantic = true;
       IntendedTy = CastTy;
       ShouldNotPrintDirectly = true;

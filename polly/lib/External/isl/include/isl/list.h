@@ -38,10 +38,18 @@ __isl_give isl_##EL##_list *isl_##EL##_list_insert(			\
 	__isl_take struct isl_##EL *el);				\
 __isl_give isl_##EL##_list *isl_##EL##_list_drop(			\
 	__isl_take isl_##EL##_list *list, unsigned first, unsigned n);	\
+__isl_give isl_##EL##_list *isl_##EL##_list_swap(			\
+	__isl_take isl_##EL##_list *list, unsigned pos1,		\
+	unsigned pos2);							\
+__isl_give isl_##EL##_list *isl_##EL##_list_reverse(			\
+	__isl_take isl_##EL##_list *list);				\
 __isl_give isl_##EL##_list *isl_##EL##_list_concat(			\
 	__isl_take isl_##EL##_list *list1,				\
 	__isl_take isl_##EL##_list *list2);				\
+int isl_##EL##_list_size(__isl_keep isl_##EL##_list *list);		\
 int isl_##EL##_list_n_##EL(__isl_keep isl_##EL##_list *list);		\
+__isl_give isl_##EL *isl_##EL##_list_get_at(				\
+	__isl_keep isl_##EL##_list *list, int index);			\
 __isl_give struct isl_##EL *isl_##EL##_list_get_##EL(			\
 	__isl_keep isl_##EL##_list *list, int index);			\
 __isl_give struct isl_##EL##_list *isl_##EL##_list_set_##EL(		\

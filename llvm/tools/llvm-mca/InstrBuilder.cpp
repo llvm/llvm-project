@@ -196,7 +196,8 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
       const MCWriteLatencyEntry &WLE =
           *STI.getWriteLatencyEntry(&SCDesc, CurrentDef);
       // Conservatively default to MaxLatency.
-      Write.Latency = WLE.Cycles == -1 ? ID.MaxLatency : WLE.Cycles;
+      Write.Latency = WLE.Cycles < 0 ? ID.MaxLatency
+                                     : static_cast<unsigned>(WLE.Cycles);
       Write.SClassOrWriteResourceID = WLE.WriteResourceID;
     } else {
       // Assign a default latency for this write.
@@ -225,7 +226,8 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
       const MCWriteLatencyEntry &WLE =
           *STI.getWriteLatencyEntry(&SCDesc, Index);
       // Conservatively default to MaxLatency.
-      Write.Latency = WLE.Cycles == -1 ? ID.MaxLatency : WLE.Cycles;
+      Write.Latency = WLE.Cycles < 0 ? ID.MaxLatency
+                                     : static_cast<unsigned>(WLE.Cycles);
       Write.SClassOrWriteResourceID = WLE.WriteResourceID;
     } else {
       // Assign a default latency for this write.

@@ -142,6 +142,8 @@ public:
   /// If a target does not need this information, then this should not be
   /// called.
   void initLRU(const TargetRegisterInfo &TRI) {
+    assert(MBB->getParent()->getRegInfo().tracksLiveness() &&
+           "Candidate's Machine Function must track liveness");
     LRU.init(TRI);
     LRU.addLiveOuts(*MBB);
 

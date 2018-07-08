@@ -20,6 +20,8 @@ def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
                                  AssemblerPredicate<"HasV8_2aOps", "armv8.2a">;
 def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
                                  AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
+def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
+                                 AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicate<"FeatureFPARMv8", "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
@@ -449,6 +451,12 @@ def DSB   : CRmSystemI<barrier_op, 0b100, "dsb",
 
 def ISB   : CRmSystemI<barrier_op, 0b110, "isb",
                        [(int_aarch64_isb (i32 imm32_0_15:$CRm))]>;
+
+def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
+  let CRm        = 0b0010;
+  let Inst{12}   = 0;
+  let Predicates = [HasV8_4a];
+}
 }
 
 // ARMv8.2 Dot Product
@@ -548,6 +556,17 @@ let Predicates = [HasV8_3a] in {
   }
 
 } // HasV8_3A
+
+// v8.4 Flag manipulation instructions
+let Predicates = [HasV8_4a] in {
+def CFINV : SimpleSystemI<0, (ins), "cfinv", "">, Sched<[WriteSys]> {
+  let Inst{20-5} = 0b0000001000000000;
+}
+def SETF8  : BaseFlagManipulation<0, 0, (ins GPR32:$Rn), "setf8", "{\t$Rn}">;
+def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
+def RMIF   : FlagRotate<(ins GPR64:$Rn, uimm6:$imm, imm0_15:$mask), "rmif",
+                        "{\t$Rn, $imm, $mask}">;
+} // HasV8_4a
 
 def : InstAlias<"clrex", (CLREX 0xf)>;
 def : InstAlias<"isb", (ISB 0xf)>;
