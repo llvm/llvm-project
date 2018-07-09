@@ -83,6 +83,12 @@
 class kmp_stats_list;
 #endif
 
+#if KMP_USE_HIER_SCHED
+// Only include hierarchical scheduling if affinity is supported
+#undef KMP_USE_HIER_SCHED
+#define KMP_USE_HIER_SCHED KMP_AFFINITY_SUPPORTED
+#endif
+
 #if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED
 #include "hwloc.h"
 #ifndef HWLOC_OBJ_NUMANODE
@@ -254,6 +260,12 @@ extern "C" {
 #define SKIP_DIGITS(_x)                                                        \
   {                                                                            \
     while (*(_x) >= '0' && *(_x) <= '9')                                       \
+      (_x)++;                                                                  \
+  }
+#define SKIP_TOKEN(_x)                                                         \
+  {                                                                            \
+    while ((*(_x) >= '0' && *(_x) <= '9') || (*(_x) >= 'a' && *(_x) <= 'z') || \
+           (*(_x) >= 'A' && *(_x) <= 'Z') || *(_x) == '_')                     \
       (_x)++;                                                                  \
   }
 #define SKIP_TO(_x, _c)                                                        \
@@ -1508,6 +1520,30 @@ struct shared_table {
 
 /* ------------------------------------------------------------------------ */
 
+#if KMP_USE_HIER_SCHED
+// Shared barrier data that exists inside a single unit of the scheduling
+// hierarchy
+typedef struct kmp_hier_private_bdata_t {
+  kmp_int32 num_active;
+  kmp_uint64 index;
+  kmp_uint64 wait_val[2];
+} kmp_hier_private_bdata_t;
+#endif
+
+typedef struct kmp_sched_flags {
+  unsigned ordered : 1;
+  unsigned nomerge : 1;
+  unsigned contains_last : 1;
+#if KMP_USE_HIER_SCHED
+  unsigned use_hier : 1;
+  unsigned unused : 28;
+#else
+  unsigned unused : 29;
+#endif
+} kmp_sched_flags_t;
+
+KMP_BUILD_ASSERT(sizeof(kmp_sched_flags_t) == 4);
+
 #if KMP_STATIC_STEAL_ENABLED
 typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   kmp_int32 count;
@@ -1625,14 +1661,17 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info {
     dispatch_private_info64_t p64;
   } u;
   enum sched_type schedule; /* scheduling algorithm */
-  kmp_int32 ordered; /* ordered clause specified */
+  kmp_sched_flags_t flags; /* flags (e.g., ordered, nomerge, etc.) */
   kmp_int32 ordered_bumped;
   // To retain the structure size after making ordered_iteration scalar
   kmp_int32 ordered_dummy[KMP_MAX_ORDERED - 3];
   // Stack of buffers for nest of serial regions
   struct dispatch_private_info *next;
-  kmp_int32 nomerge; /* don't merge iters if serialized */
   kmp_int32 type_size; /* the size of types in private_info */
+#if KMP_USE_HIER_SCHED
+  kmp_int32 hier_id;
+  void *parent; /* hierarchical scheduling parent pointer */
+#endif
   enum cons_type pushed_ws;
 } dispatch_private_info_t;
 
@@ -1666,6 +1705,9 @@ typedef struct dispatch_shared_info {
   volatile kmp_int32 doacross_buf_idx; // teamwise index
   volatile kmp_uint32 *doacross_flags; // shared array of iteration flags (0/1)
   kmp_int32 doacross_num_done; // count finished threads
+#endif
+#if KMP_USE_HIER_SCHED
+  void *hier;
 #endif
 #if KMP_USE_HWLOC
   // When linking with libhwloc, the ORDERED EPCC test slows down on big
@@ -2481,6 +2523,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   kmp_uint8 th_active_in_pool; // included in count of #active threads in pool
   int th_active; // ! sleeping; 32 bits for TCR/TCW
   struct cons_header *th_cons; // used for consistency check
+#if KMP_USE_HIER_SCHED
+  // used for hierarchical scheduling
+  kmp_hier_private_bdata_t *th_hier_bar_data;
+#endif
 
   /* Add the syncronizing data which is cache aligned and padded. */
   KMP_ALIGN_CACHE kmp_balign_t th_bar[bs_last_barrier];

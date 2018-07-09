@@ -24,6 +24,10 @@
 #include "kmp_str.h"
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
+#include "kmp_dispatch.h"
+#if KMP_USE_HIER_SCHED
+#include "kmp_dispatch_hier.h"
+#endif
 
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
@@ -3072,6 +3076,9 @@ static void __kmp_free_team_arrays(kmp_team_t *team) {
       team->t.t_dispatch[i].th_disp_buffer = NULL;
     }
   }
+#if KMP_USE_HIER_SCHED
+  __kmp_dispatch_free_hierarchies(team);
+#endif
   __kmp_free(team->t.t_threads);
   __kmp_free(team->t.t_disp_buffer);
   __kmp_free(team->t.t_dispatch);
@@ -3390,7 +3397,8 @@ void __kmp_print_structure(void) {
                                      root->r.r_uber_thread);
         __kmp_printf("    Active?:      %2d\n", root->r.r_active);
         __kmp_printf("    Nested?:      %2d\n", root->r.r_nested);
-        __kmp_printf("    In Parallel:  %2d\n", KMP_ATOMIC_LD_RLX(&root->r.r_in_parallel));
+        __kmp_printf("    In Parallel:  %2d\n",
+                     KMP_ATOMIC_LD_RLX(&root->r.r_in_parallel));
         __kmp_printf("\n");
         __kmp_print_structure_team_accum(list, root->r.r_root_team);
         __kmp_print_structure_team_accum(list, root->r.r_hot_team);
@@ -5855,6 +5863,13 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
   }
 #endif /* KMP_AFFINITY_SUPPORTED */
 
+#if KMP_USE_HIER_SCHED
+  if (thread->th.th_hier_bar_data != NULL) {
+    __kmp_free(thread->th.th_hier_bar_data);
+    thread->th.th_hier_bar_data = NULL;
+  }
+#endif
+
   __kmp_reap_team(thread->th.th_serial_team);
   thread->th.th_serial_team = NULL;
   __kmp_free(thread);
@@ -7369,6 +7384,10 @@ void __kmp_cleanup(void) {
   __kmp_nested_proc_bind.used = 0;
 
   __kmp_i18n_catclose();
+
+#if KMP_USE_HIER_SCHED
+  __kmp_hier_scheds.deallocate();
+#endif
 
 #if KMP_STATS_ENABLED
   __kmp_stats_fini();

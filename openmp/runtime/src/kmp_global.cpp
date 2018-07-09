@@ -13,6 +13,9 @@
 
 #include "kmp.h"
 #include "kmp_affinity.h"
+#if KMP_USE_HIER_SCHED
+#include "kmp_dispatch_hier.h"
+#endif
 
 kmp_key_t __kmp_gtid_threadprivate_key;
 
@@ -148,6 +151,12 @@ enum sched_type __kmp_guided =
     kmp_sch_guided_iterative_chunked; /* default guided scheduling method */
 enum sched_type __kmp_auto =
     kmp_sch_guided_analytical_chunked; /* default auto scheduling method */
+#if KMP_USE_HIER_SCHED
+int __kmp_dispatch_hand_threading = 0;
+int __kmp_hier_max_units[kmp_hier_layer_e::LAYER_LAST + 1];
+int __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_LAST + 1];
+kmp_hier_sched_env_t __kmp_hier_scheds = {0, 0, NULL, NULL, NULL};
+#endif
 int __kmp_dflt_blocktime = KMP_DEFAULT_BLOCKTIME;
 #if KMP_USE_MONITOR
 int __kmp_monitor_wakeups = KMP_MIN_MONITOR_WAKEUPS;

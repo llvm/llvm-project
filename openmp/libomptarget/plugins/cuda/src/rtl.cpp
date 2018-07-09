@@ -92,7 +92,7 @@ std::list<KernelTy> KernelsList;
 
 /// Class containing all the device information.
 class RTLDeviceInfoTy {
-  std::vector<FuncOrGblEntryTy> FuncGblEntries;
+  std::vector<std::list<FuncOrGblEntryTy>> FuncGblEntries;
 
 public:
   int NumberOfDevices;
@@ -122,7 +122,7 @@ public:
   void addOffloadEntry(int32_t device_id, __tgt_offload_entry entry) {
     assert(device_id < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id];
+    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
 
     E.Entries.push_back(entry);
   }
@@ -131,7 +131,7 @@ public:
   bool findOffloadEntry(int32_t device_id, void *addr) {
     assert(device_id < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id];
+    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
 
     for (auto &it : E.Entries) {
       if (it.addr == addr)
@@ -145,7 +145,7 @@ public:
   __tgt_target_table *getOffloadEntriesTable(int32_t device_id) {
     assert(device_id < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id];
+    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
 
     int32_t size = E.Entries.size();
 
@@ -167,7 +167,8 @@ public:
   void clearOffloadEntriesTable(int32_t device_id) {
     assert(device_id < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id];
+    FuncGblEntries[device_id].emplace_back();
+    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
     E.Entries.clear();
     E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
   }

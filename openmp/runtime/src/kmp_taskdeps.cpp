@@ -40,7 +40,8 @@ static void __kmp_init_node(kmp_depnode_t *node) {
   // task once dependences have been processed
   node->dn.successors = NULL;
   __kmp_init_lock(&node->dn.lock);
-  KMP_ATOMIC_ST_RLX(&node->dn.nrefs, 1); // init creates the first reference to the node
+  KMP_ATOMIC_ST_RLX(&node->dn.nrefs,
+                    1); // init creates the first reference to the node
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
   node->dn.id = KMP_ATOMIC_INC(&kmp_node_id_seed);
 #endif
