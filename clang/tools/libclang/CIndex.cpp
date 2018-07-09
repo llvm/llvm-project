@@ -3879,6 +3879,19 @@ static const ExprEvalResult* evaluateExpr(Expr *expr, CXCursor C) {
 }
 
 CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
+  if (clang_getCursorKind(C) == CXCursor_CompoundStmt) {
+    const CompoundStmt *compoundStmt = cast<CompoundStmt>(getCursorStmt(C));
+    Expr *expr = nullptr;
+    for (auto *bodyIterator : compoundStmt->body()) {
+      if ((expr = dyn_cast<Expr>(bodyIterator))) {
+        break;
+      }
+    }
+    if (expr)
+      return const_cast<CXEvalResult>(
+          reinterpret_cast<const void *>(evaluateExpr(expr, C)));
+  }
+
   const Decl *D = getCursorDecl(C);
   if (D) {
     const Expr *expr = nullptr;
@@ -3891,19 +3904,6 @@ CXEvalResult clang_Cursor_Evaluate(CXCursor C) {
       return const_cast<CXEvalResult>(reinterpret_cast<const void *>(
           evaluateExpr(const_cast<Expr *>(expr), C)));
     return nullptr;
-  }
-
-  const CompoundStmt *compoundStmt = dyn_cast_or_null<CompoundStmt>(getCursorStmt(C));
-  if (compoundStmt) {
-    Expr *expr = nullptr;
-    for (auto *bodyIterator : compoundStmt->body()) {
-      if ((expr = dyn_cast<Expr>(bodyIterator))) {
-        break;
-      }
-    }
-    if (expr)
-      return const_cast<CXEvalResult>(
-          reinterpret_cast<const void *>(evaluateExpr(expr, C)));
   }
   return nullptr;
 }
