@@ -717,6 +717,24 @@ private:
 };
 } // namespace
 
+static void addRelativeReloc(InputSectionBase *IS, uint64_t OffsetInSec,
+                             Symbol *Sym, int64_t Addend, RelExpr Expr,
+                             RelType Type) {
+  // Add a relative relocation. If RelrDyn section is enabled, and the
+  // relocation offset is guaranteed to be even, add the relocation to
+  // the RelrDyn section, otherwise add it to the RelaDyn section.
+  // RelrDyn sections don't support odd offsets. Also, RelrDyn sections
+  // don't store the addend values, so we must write it to the relocated
+  // address.
+  if (InX::RelrDyn && IS->Alignment >= 2 && OffsetInSec % 2 == 0) {
+    IS->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
+    InX::RelrDyn->Relocs.push_back({IS, OffsetInSec});
+    return;
+  }
+  InX::RelaDyn->addReloc(Target->RelativeRel, IS, OffsetInSec, Sym, Addend,
+                         Expr, Type);
+}
+
 template <class ELFT, class GotPltSection>
 static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
                         RelocationBaseSection *Rel, RelType Type, Symbol &Sym) {
@@ -748,14 +766,12 @@ template <class ELFT> static void addGotEntry(Symbol &Sym) {
 
   // Otherwise, we emit a dynamic relocation to .rel[a].dyn so that
   // the GOT slot will be fixed at load-time.
-  RelType Type;
-  if (Sym.isTls())
-    Type = Target->TlsGotRel;
-  else if (!Sym.IsPreemptible && Config->Pic && !isAbsolute(Sym))
-    Type = Target->RelativeRel;
-  else
-    Type = Target->GotRel;
-  InX::RelaDyn->addReloc(Type, InX::Got, Off, &Sym, 0,
+  if (!Sym.isTls() && !Sym.IsPreemptible && Config->Pic && !isAbsolute(Sym)) {
+    addRelativeReloc(InX::Got, Off, &Sym, 0, R_ABS, Target->GotRel);
+    return;
+  }
+  InX::RelaDyn->addReloc(Sym.isTls() ? Target->TlsGotRel : Target->GotRel,
+                         InX::Got, Off, &Sym, 0,
                          Sym.IsPreemptible ? R_ADDEND : R_ABS, Target->GotRel);
 }
 
@@ -806,8 +822,7 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
     bool IsPreemptibleValue = Sym.IsPreemptible && Expr != R_GOT;
 
     if (!IsPreemptibleValue) {
-      InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, &Sym, Addend,
-                             Expr, Type);
+      addRelativeReloc(&Sec, Offset, &Sym, Addend, Expr, Type);
       return;
     } else if (RelType Rel = Target->getDynRel(Type)) {
       InX::RelaDyn->addReloc(Rel, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);
