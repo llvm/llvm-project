@@ -120,16 +120,17 @@
         U, A, B, I)
 
 /* Default attributes for simple form (no masking). */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("gfni")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("gfni"), __min_vector_width__(128)))
 
 /* Default attributes for YMM unmasked form. */
-#define __DEFAULT_FN_ATTRS_Y __attribute__((__always_inline__, __nodebug__, __target__("avx,gfni")))
+#define __DEFAULT_FN_ATTRS_Y __attribute__((__always_inline__, __nodebug__, __target__("avx,gfni"), __min_vector_width__(256)))
 
 /* Default attributes for ZMM forms. */
-#define __DEFAULT_FN_ATTRS_Z __attribute__((__always_inline__, __nodebug__, __target__("avx512bw,gfni")))
+#define __DEFAULT_FN_ATTRS_Z __attribute__((__always_inline__, __nodebug__, __target__("avx512bw,gfni"), __min_vector_width__(512)))
 
 /* Default attributes for VLX forms. */
-#define __DEFAULT_FN_ATTRS_VL __attribute__((__always_inline__, __nodebug__, __target__("avx512bw,avx512vl,gfni")))
+#define __DEFAULT_FN_ATTRS_VL128 __attribute__((__always_inline__, __nodebug__, __target__("avx512bw,avx512vl,gfni"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS_VL256 __attribute__((__always_inline__, __nodebug__, __target__("avx512bw,avx512vl,gfni"), __min_vector_width__(256)))
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_gf2p8mul_epi8(__m128i __A, __m128i __B)
@@ -138,7 +139,7 @@ _mm_gf2p8mul_epi8(__m128i __A, __m128i __B)
               (__v16qi) __B);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS_VL
+static __inline__ __m128i __DEFAULT_FN_ATTRS_VL128
 _mm_mask_gf2p8mul_epi8(__m128i __S, __mmask16 __U, __m128i __A, __m128i __B)
 {
   return (__m128i) __builtin_ia32_selectb_128(__U,
@@ -146,7 +147,7 @@ _mm_mask_gf2p8mul_epi8(__m128i __S, __mmask16 __U, __m128i __A, __m128i __B)
               (__v16qi) __S);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS_VL
+static __inline__ __m128i __DEFAULT_FN_ATTRS_VL128
 _mm_maskz_gf2p8mul_epi8(__mmask16 __U, __m128i __A, __m128i __B)
 {
   return _mm_mask_gf2p8mul_epi8((__m128i)_mm_setzero_si128(),
@@ -160,7 +161,7 @@ _mm256_gf2p8mul_epi8(__m256i __A, __m256i __B)
               (__v32qi) __B);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS_VL
+static __inline__ __m256i __DEFAULT_FN_ATTRS_VL256
 _mm256_mask_gf2p8mul_epi8(__m256i __S, __mmask32 __U, __m256i __A, __m256i __B)
 {
   return (__m256i) __builtin_ia32_selectb_256(__U,
@@ -168,7 +169,7 @@ _mm256_mask_gf2p8mul_epi8(__m256i __S, __mmask32 __U, __m256i __A, __m256i __B)
               (__v32qi) __S);
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS_VL
+static __inline__ __m256i __DEFAULT_FN_ATTRS_VL256
 _mm256_maskz_gf2p8mul_epi8(__mmask32 __U, __m256i __A, __m256i __B)
 {
   return _mm256_mask_gf2p8mul_epi8((__m256i)_mm256_setzero_si256(),
@@ -200,7 +201,8 @@ _mm512_maskz_gf2p8mul_epi8(__mmask64 __U, __m512i __A, __m512i __B)
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_Y
 #undef __DEFAULT_FN_ATTRS_Z
-#undef __DEFAULT_FN_ATTRS_VL
+#undef __DEFAULT_FN_ATTRS_VL128
+#undef __DEFAULT_FN_ATTRS_VL256
 
 #endif /* __GFNIINTRIN_H */
 

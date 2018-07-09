@@ -68,7 +68,7 @@ static void extractAliases(MaterializationResponsibility &R, Module &M,
     }
   }
 
-  R.delegate(symbolAliases(std::move(Aliases)));
+  R.replace(symbolAliases(std::move(Aliases)));
 }
 
 static std::unique_ptr<Module>
@@ -199,7 +199,7 @@ private:
                  DelegatedSymbolToDefinition.size() &&
              "SymbolFlags and SymbolToDefinition should have the same number "
              "of entries");
-      R.delegate(llvm::make_unique<ExtractingIRMaterializationUnit>(
+      R.replace(llvm::make_unique<ExtractingIRMaterializationUnit>(
           std::move(M), std::move(DelegatedSymbolFlags),
           std::move(DelegatedSymbolToDefinition), Parent, BackingResolver));
     }

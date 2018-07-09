@@ -228,6 +228,20 @@ unsigned IRTranslator::getMemOpAlignment(const Instruction &I) {
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     Alignment = LI->getAlignment();
     ValTy = LI->getType();
+  } else if (const AtomicCmpXchgInst *AI = dyn_cast<AtomicCmpXchgInst>(&I)) {
+    // TODO(PR27168): This instruction has no alignment attribute, but unlike
+    // the default alignment for load/store, the default here is to assume
+    // it has NATURAL alignment, not DataLayout-specified alignment.
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    Alignment = DL.getTypeStoreSize(AI->getCompareOperand()->getType());
+    ValTy = AI->getCompareOperand()->getType();
+  } else if (const AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(&I)) {
+    // TODO(PR27168): This instruction has no alignment attribute, but unlike
+    // the default alignment for load/store, the default here is to assume
+    // it has NATURAL alignment, not DataLayout-specified alignment.
+    const DataLayout &DL = AI->getModule()->getDataLayout();
+    Alignment = DL.getTypeStoreSize(AI->getValOperand()->getType());
+    ValTy = AI->getType();
   } else {
     OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
     R << "unable to translate memop: " << ore::NV("Opcode", &I);
@@ -1282,6 +1296,100 @@ bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   PendingPHIs.emplace_back(&PI, std::move(Insts));
+  return true;
+}
+
+bool IRTranslator::translateAtomicCmpXchg(const User &U,
+                                          MachineIRBuilder &MIRBuilder) {
+  const AtomicCmpXchgInst &I = cast<AtomicCmpXchgInst>(U);
+
+  if (I.isWeak())
+    return false;
+
+  auto Flags = I.isVolatile() ? MachineMemOperand::MOVolatile
+                              : MachineMemOperand::MONone;
+  Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+
+  Type *ResType = I.getType();
+  Type *ValType = ResType->Type::getStructElementType(0);
+
+  auto Res = getOrCreateVRegs(I);
+  unsigned OldValRes = Res[0];
+  unsigned SuccessRes = Res[1];
+  unsigned Addr = getOrCreateVReg(*I.getPointerOperand());
+  unsigned Cmp = getOrCreateVReg(*I.getCompareOperand());
+  unsigned NewVal = getOrCreateVReg(*I.getNewValOperand());
+
+  MIRBuilder.buildAtomicCmpXchgWithSuccess(
+      OldValRes, SuccessRes, Addr, Cmp, NewVal,
+      *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
+                                Flags, DL->getTypeStoreSize(ValType),
+                                getMemOpAlignment(I), AAMDNodes(), nullptr,
+                                I.getSyncScopeID(), I.getSuccessOrdering(),
+                                I.getFailureOrdering()));
+  return true;
+}
+
+bool IRTranslator::translateAtomicRMW(const User &U,
+                                      MachineIRBuilder &MIRBuilder) {
+  const AtomicRMWInst &I = cast<AtomicRMWInst>(U);
+
+  auto Flags = I.isVolatile() ? MachineMemOperand::MOVolatile
+                              : MachineMemOperand::MONone;
+  Flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+
+  Type *ResType = I.getType();
+
+  unsigned Res = getOrCreateVReg(I);
+  unsigned Addr = getOrCreateVReg(*I.getPointerOperand());
+  unsigned Val = getOrCreateVReg(*I.getValOperand());
+
+  unsigned Opcode = 0;
+  switch (I.getOperation()) {
+  default:
+    llvm_unreachable("Unknown atomicrmw op");
+    return false;
+  case AtomicRMWInst::Xchg:
+    Opcode = TargetOpcode::G_ATOMICRMW_XCHG;
+    break;
+  case AtomicRMWInst::Add:
+    Opcode = TargetOpcode::G_ATOMICRMW_ADD;
+    break;
+  case AtomicRMWInst::Sub:
+    Opcode = TargetOpcode::G_ATOMICRMW_SUB;
+    break;
+  case AtomicRMWInst::And:
+    Opcode = TargetOpcode::G_ATOMICRMW_AND;
+    break;
+  case AtomicRMWInst::Nand:
+    Opcode = TargetOpcode::G_ATOMICRMW_NAND;
+    break;
+  case AtomicRMWInst::Or:
+    Opcode = TargetOpcode::G_ATOMICRMW_OR;
+    break;
+  case AtomicRMWInst::Xor:
+    Opcode = TargetOpcode::G_ATOMICRMW_XOR;
+    break;
+  case AtomicRMWInst::Max:
+    Opcode = TargetOpcode::G_ATOMICRMW_MAX;
+    break;
+  case AtomicRMWInst::Min:
+    Opcode = TargetOpcode::G_ATOMICRMW_MIN;
+    break;
+  case AtomicRMWInst::UMax:
+    Opcode = TargetOpcode::G_ATOMICRMW_UMAX;
+    break;
+  case AtomicRMWInst::UMin:
+    Opcode = TargetOpcode::G_ATOMICRMW_UMIN;
+    break;
+  }
+
+  MIRBuilder.buildAtomicRMW(
+      Opcode, Res, Addr, Val,
+      *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
+                                Flags, DL->getTypeStoreSize(ResType),
+                                getMemOpAlignment(I), AAMDNodes(), nullptr,
+                                I.getSyncScopeID(), I.getOrdering()));
   return true;
 }
 

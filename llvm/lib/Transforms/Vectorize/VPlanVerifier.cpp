@@ -48,6 +48,12 @@ static void verifyBlocksInRegion(const VPRegionBlock *Region) {
     // Check block's parent.
     assert(VPB->getParent() == Region && "VPBlockBase has wrong parent");
 
+    // Check block's condition bit.
+    if (VPB->getNumSuccessors() > 1)
+      assert(VPB->getCondBit() && "Missing condition bit!");
+    else
+      assert(!VPB->getCondBit() && "Unexpected condition bit!");
+
     // Check block's successors.
     const auto &Successors = VPB->getSuccessors();
     // There must be only one instance of a successor in block's successor list.

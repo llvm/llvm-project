@@ -63,7 +63,22 @@ struct S {
 #pragma omp declare simd inbranch
 void foo();
 
-// CHECK:      `-FunctionDecl {{.+}} <line:64:1, col:10> col:6 foo 'void ()'
+// CHECK:        |-FunctionDecl {{.+}} <line:64:1, col:10> col:6 foo 'void ()'
 // CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:63:9, col:34> Implicit BS_Inbranch
 // CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:62:9, col:25> Implicit BS_Undefined
 
+#pragma omp declare target
+int bar() {
+  int f;
+  return f;
+}
+#pragma omp end declare target
+
+// CHECK:       `-FunctionDecl {{.+}} <line:71:1, line:74:1> line:71:5 bar 'int ()'
+// CHECK-NEXT:  |-CompoundStmt {{.+}} <col:11, line:74:1>
+// CHECK-NEXT:  | |-DeclStmt {{.+}} <line:72:3, col:8>
+// CHECK-NEXT:  | | `-VarDecl {{.+}} <col:3, col:7> col:7 used f 'int'
+// CHECK-NEXT:  | `-ReturnStmt {{.+}} <line:73:3, col:10>
+// CHECK-NEXT:  |   `-ImplicitCastExpr {{.+}} <col:10> 'int' <LValueToRValue>
+// CHECK-NEXT:  |     `-DeclRefExpr {{.+}} <col:10> 'int' lvalue Var {{.+}} 'f' 'int'
+// CHECK-NEXT:  `-OMPDeclareTargetDeclAttr {{.+}} <<invalid sloc>> Implicit MT_To

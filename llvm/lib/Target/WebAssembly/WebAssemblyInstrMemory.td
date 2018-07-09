@@ -75,8 +75,8 @@ defm LOAD_F64 : WebAssemblyLoad<F64, "f64.load", 0x2b>;
 } // Defs = [ARGUMENTS]
 
 // Select loads with no constant offset.
-class LoadPatNoOffset<ValueType ty, PatFrag node, NI inst> :
-  Pat<(ty (node I32:$addr)), (inst 0, 0, $addr)>;
+class LoadPatNoOffset<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind I32:$addr)), (inst 0, 0, I32:$addr)>;
 
 def : LoadPatNoOffset<i32, load, LOAD_I32>;
 def : LoadPatNoOffset<i64, load, LOAD_I64>;
@@ -87,9 +87,8 @@ def : LoadPatNoOffset<f64, load, LOAD_F64>;
 // Select loads with a constant offset.
 
 // Pattern with address + immediate offset
-class LoadPatImmOff<ValueType ty, PatFrag loadkind, PatFrag operand, NI inst> :
-  Pat<(ty (loadkind (operand I32:$addr, imm:$off))),
-      (inst 0, imm:$off, $addr)>;
+class LoadPatImmOff<ValueType ty, PatFrag kind, PatFrag operand, NI inst> :
+  Pat<(ty (kind (operand I32:$addr, imm:$off))), (inst 0, imm:$off, I32:$addr)>;
 
 def : LoadPatImmOff<i32, load, regPlusImm, LOAD_I32>;
 def : LoadPatImmOff<i64, load, regPlusImm, LOAD_I64>;
@@ -100,18 +99,18 @@ def : LoadPatImmOff<i64, load, or_is_add, LOAD_I64>;
 def : LoadPatImmOff<f32, load, or_is_add, LOAD_F32>;
 def : LoadPatImmOff<f64, load, or_is_add, LOAD_F64>;
 
-class LoadPatGlobalAddr<ValueType ty, PatFrag loadkind, NI inst> :
-  Pat<(ty (loadkind (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off)))),
-      (inst 0, tglobaladdr:$off, $addr)>;
+class LoadPatGlobalAddr<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off)))),
+      (inst 0, tglobaladdr:$off, I32:$addr)>;
 
 def : LoadPatGlobalAddr<i32, load, LOAD_I32>;
 def : LoadPatGlobalAddr<i64, load, LOAD_I64>;
 def : LoadPatGlobalAddr<f32, load, LOAD_F32>;
 def : LoadPatGlobalAddr<f64, load, LOAD_F64>;
 
-class LoadPatExternalSym<ValueType ty, PatFrag loadkind, NI inst> :
-  Pat<(ty (loadkind (add I32:$addr, (WebAssemblywrapper texternalsym:$off)))),
-      (inst 0, texternalsym:$off, $addr)>;
+class LoadPatExternalSym<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (add I32:$addr, (WebAssemblywrapper texternalsym:$off)))),
+      (inst 0, texternalsym:$off, I32:$addr)>;
 def : LoadPatExternalSym<i32, load, LOAD_I32>;
 def : LoadPatExternalSym<i64, load, LOAD_I64>;
 def : LoadPatExternalSym<f32, load, LOAD_F32>;
@@ -119,16 +118,16 @@ def : LoadPatExternalSym<f64, load, LOAD_F64>;
 
 
 // Select loads with just a constant offset.
-class LoadPatOffsetOnly<ValueType ty, PatFrag loadkind, NI inst> :
-  Pat<(ty (loadkind imm:$off)), (inst 0, imm:$off, (CONST_I32 0))>;
+class LoadPatOffsetOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind imm:$off)), (inst 0, imm:$off, (CONST_I32 0))>;
 
 def : LoadPatOffsetOnly<i32, load, LOAD_I32>;
 def : LoadPatOffsetOnly<i64, load, LOAD_I64>;
 def : LoadPatOffsetOnly<f32, load, LOAD_F32>;
 def : LoadPatOffsetOnly<f64, load, LOAD_F64>;
 
-class LoadPatGlobalAddrOffOnly<ValueType ty, PatFrag loadkind, NI inst> :
-  Pat<(ty (loadkind (WebAssemblywrapper tglobaladdr:$off))),
+class LoadPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off))),
       (inst 0, tglobaladdr:$off, (CONST_I32 0))>;
 
 def : LoadPatGlobalAddrOffOnly<i32, load, LOAD_I32>;
@@ -136,8 +135,8 @@ def : LoadPatGlobalAddrOffOnly<i64, load, LOAD_I64>;
 def : LoadPatGlobalAddrOffOnly<f32, load, LOAD_F32>;
 def : LoadPatGlobalAddrOffOnly<f64, load, LOAD_F64>;
 
-class LoadPatExternSymOffOnly<ValueType ty, PatFrag loadkind, NI inst> :
-  Pat<(ty (loadkind (WebAssemblywrapper texternalsym:$off))),
+class LoadPatExternSymOffOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(ty (kind (WebAssemblywrapper texternalsym:$off))),
       (inst 0, texternalsym:$off, (CONST_I32 0))>;
 def : LoadPatExternSymOffOnly<i32, load, LOAD_I32>;
 def : LoadPatExternSymOffOnly<i64, load, LOAD_I64>;
@@ -326,7 +325,7 @@ defm STORE_F64  : WebAssemblyStore<F64, "f64.store", 0x39>;
 
 // Select stores with no constant offset.
 class StorePatNoOffset<ValueType ty, PatFrag node, NI inst> :
-  Pat<(node ty:$val, I32:$addr), (inst 0, 0, $addr, $val)>;
+  Pat<(node ty:$val, I32:$addr), (inst 0, 0, I32:$addr, ty:$val)>;
 
 def : StorePatNoOffset<i32, store, STORE_I32>;
 def : StorePatNoOffset<i64, store, STORE_I64>;
@@ -334,9 +333,9 @@ def : StorePatNoOffset<f32, store, STORE_F32>;
 def : StorePatNoOffset<f64, store, STORE_F64>;
 
 // Select stores with a constant offset.
-class StorePatImmOff<ValueType ty, PatFrag storekind, PatFrag operand, NI inst> :
-  Pat<(storekind ty:$val, (operand I32:$addr, imm:$off)),
-      (inst 0, imm:$off, $addr, ty:$val)>;
+class StorePatImmOff<ValueType ty, PatFrag kind, PatFrag operand, NI inst> :
+  Pat<(kind ty:$val, (operand I32:$addr, imm:$off)),
+      (inst 0, imm:$off, I32:$addr, ty:$val)>;
 
 def : StorePatImmOff<i32, store, regPlusImm, STORE_I32>;
 def : StorePatImmOff<i64, store, regPlusImm, STORE_I64>;
@@ -347,18 +346,17 @@ def : StorePatImmOff<i64, store, or_is_add, STORE_I64>;
 def : StorePatImmOff<f32, store, or_is_add, STORE_F32>;
 def : StorePatImmOff<f64, store, or_is_add, STORE_F64>;
 
-class StorePatGlobalAddr<ValueType ty, PatFrag storekind, NI inst> :
-  Pat<(storekind ty:$val, (regPlusGA I32:$addr,
-                                     (WebAssemblywrapper tglobaladdr:$off))),
+class StorePatGlobalAddr<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(kind ty:$val,
+            (regPlusGA I32:$addr, (WebAssemblywrapper tglobaladdr:$off))),
       (inst 0, tglobaladdr:$off, I32:$addr, ty:$val)>;
 def : StorePatGlobalAddr<i32, store, STORE_I32>;
 def : StorePatGlobalAddr<i64, store, STORE_I64>;
 def : StorePatGlobalAddr<f32, store, STORE_F32>;
 def : StorePatGlobalAddr<f64, store, STORE_F64>;
 
-class StorePatExternalSym<ValueType ty, PatFrag storekind, NI inst> :
-  Pat<(storekind ty:$val, (add I32:$addr,
-                               (WebAssemblywrapper texternalsym:$off))),
+class StorePatExternalSym<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(kind ty:$val, (add I32:$addr, (WebAssemblywrapper texternalsym:$off))),
       (inst 0, texternalsym:$off, I32:$addr, ty:$val)>;
 def : StorePatExternalSym<i32, store, STORE_I32>;
 def : StorePatExternalSym<i64, store, STORE_I64>;
@@ -366,24 +364,23 @@ def : StorePatExternalSym<f32, store, STORE_F32>;
 def : StorePatExternalSym<f64, store, STORE_F64>;
 
 // Select stores with just a constant offset.
-class StorePatOffsetOnly<ValueType ty, PatFrag storekind, NI inst> :
-  Pat<(storekind ty:$val, imm:$off),
-      (inst 0, imm:$off, (CONST_I32 0), ty:$val)>;
+class StorePatOffsetOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(kind ty:$val, imm:$off), (inst 0, imm:$off, (CONST_I32 0), ty:$val)>;
 def : StorePatOffsetOnly<i32, store, STORE_I32>;
 def : StorePatOffsetOnly<i64, store, STORE_I64>;
 def : StorePatOffsetOnly<f32, store, STORE_F32>;
 def : StorePatOffsetOnly<f64, store, STORE_F64>;
 
-class StorePatGlobalAddrOffOnly<ValueType ty, PatFrag storekind, NI inst> :
-  Pat<(storekind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+class StorePatGlobalAddrOffOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
       (inst 0, tglobaladdr:$off, (CONST_I32 0), ty:$val)>;
 def : StorePatGlobalAddrOffOnly<i32, store, STORE_I32>;
 def : StorePatGlobalAddrOffOnly<i64, store, STORE_I64>;
 def : StorePatGlobalAddrOffOnly<f32, store, STORE_F32>;
 def : StorePatGlobalAddrOffOnly<f64, store, STORE_F64>;
 
-class StorePatExternSymOffOnly<ValueType ty, PatFrag storekind, NI inst> :
-  Pat<(storekind ty:$val, (WebAssemblywrapper texternalsym:$off)),
+class StorePatExternSymOffOnly<ValueType ty, PatFrag kind, NI inst> :
+  Pat<(kind ty:$val, (WebAssemblywrapper texternalsym:$off)),
       (inst 0, texternalsym:$off, (CONST_I32 0), ty:$val)>;
 def : StorePatExternSymOffOnly<i32, store, STORE_I32>;
 def : StorePatExternSymOffOnly<i64, store, STORE_I64>;

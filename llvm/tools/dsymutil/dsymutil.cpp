@@ -66,6 +66,11 @@ static opt<std::string> OsoPrependPath(
     desc("Specify a directory to prepend to the paths of object files."),
     value_desc("path"), cat(DsymCategory));
 
+static opt<bool> Assembly(
+    "S",
+    desc("Output textual assembly instead of a binary dSYM companion file."),
+    init(false), cat(DsymCategory), cl::Hidden);
+
 static opt<bool> DumpStab(
     "symtab",
     desc("Dumps the symbol table found in executable or object file(s) and\n"
@@ -321,6 +326,9 @@ static Expected<LinkOptions> getOptions() {
   Options.Update = Update;
   Options.NoTimestamp = NoTimestamp;
   Options.PrependPath = OsoPrependPath;
+
+  if (Assembly)
+    Options.FileType = OutputFileType::Assembly;
 
   if (Options.Update && std::find(InputFiles.begin(), InputFiles.end(), "-") !=
                             InputFiles.end()) {

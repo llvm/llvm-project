@@ -98,6 +98,8 @@ public:
 
   void MacroUndefined(const Token &MacroNameTok, const MacroDefinition &MD,
                       const MacroDirective *Undef) override {
+    if (!MD.getMacroInfo())  // Ignore noop #undef.
+      return;
     IndexCtx->handleMacroUndefined(*MacroNameTok.getIdentifierInfo(),
                                    MacroNameTok.getLocation(),
                                    *MD.getMacroInfo());

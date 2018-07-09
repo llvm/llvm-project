@@ -654,7 +654,7 @@ define <2 x i32> @shl_splat_constant0(<2 x i32> %x) {
 
 define <2 x i32> @shl_splat_constant1(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_splat_constant1(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 0>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -676,7 +676,7 @@ define <2 x i32> @ashr_splat_constant0(<2 x i32> %x) {
 
 define <2 x i32> @ashr_splat_constant1(<2 x i32> %x) {
 ; CHECK-LABEL: @ashr_splat_constant1(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 5, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 5, i32 0>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -698,7 +698,7 @@ define <2 x i32> @lshr_splat_constant0(<2 x i32> %x) {
 
 define <2 x i32> @lshr_splat_constant1(<2 x i32> %x) {
 ; CHECK-LABEL: @lshr_splat_constant1(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 0>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;

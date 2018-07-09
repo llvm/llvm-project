@@ -3654,6 +3654,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   // can move this up to the beginning of the function.
   checkTargetFeatures(E, FD);
 
+  if (unsigned VectorWidth = getContext().BuiltinInfo.getRequiredVectorWidth(BuiltinID))
+    LargestVectorWidth = std::max(LargestVectorWidth, VectorWidth);
+
   // See if we have a target specific intrinsic.
   const char *Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;

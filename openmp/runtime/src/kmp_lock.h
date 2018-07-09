@@ -121,7 +121,7 @@ extern void __kmp_validate_locks(void);
 
 struct kmp_base_tas_lock {
   // KMP_LOCK_FREE(tas) => unlocked; locked: (gtid+1) of owning thread
-  volatile kmp_int32 poll;
+  std::atomic<kmp_int32> poll;
   kmp_int32 depth_locked; // depth locked, for nested locks only
 };
 
@@ -139,7 +139,7 @@ typedef union kmp_tas_lock kmp_tas_lock_t;
 //    kmp_tas_lock_t xlock = KMP_TAS_LOCK_INITIALIZER( xlock );
 #define KMP_TAS_LOCK_INITIALIZER(lock)                                         \
   {                                                                            \
-    { KMP_LOCK_FREE(tas), 0 }                                                  \
+    { ATOMIC_VAR_INIT(KMP_LOCK_FREE(tas)), 0 }                                 \
   }
 
 extern int __kmp_acquire_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid);
@@ -446,17 +446,17 @@ struct kmp_base_drdpa_lock {
   volatile union kmp_drdpa_lock
       *initialized; // points to the lock union if in initialized state
   ident_t const *location; // Source code location of omp_init_lock().
-  volatile struct kmp_lock_poll { kmp_uint64 poll; } * volatile polls;
-  volatile kmp_uint64 mask; // is 2**num_polls-1 for mod op
+  std::atomic<std::atomic<kmp_uint64> *> polls;
+  std::atomic<kmp_uint64> mask; // is 2**num_polls-1 for mod op
   kmp_uint64 cleanup_ticket; // thread with cleanup ticket
-  volatile struct kmp_lock_poll *old_polls; // will deallocate old_polls
+  std::atomic<kmp_uint64> *old_polls; // will deallocate old_polls
   kmp_uint32 num_polls; // must be power of 2
 
   // next_ticket it needs to exist in a separate cache line, as it is
   // invalidated every time a thread takes a new ticket.
   KMP_ALIGN_CACHE
 
-  volatile kmp_uint64 next_ticket;
+  std::atomic<kmp_uint64> next_ticket;
 
   // now_serving is used to store our ticket value while we hold the lock. It
   // has a slightly different meaning in the DRDPA ticket locks (where it is
@@ -518,6 +518,8 @@ extern void __kmp_destroy_nested_drdpa_lock(kmp_drdpa_lock_t *lck);
 typedef kmp_ticket_lock_t kmp_bootstrap_lock_t;
 
 #define KMP_BOOTSTRAP_LOCK_INITIALIZER(lock) KMP_TICKET_LOCK_INITIALIZER((lock))
+#define KMP_BOOTSTRAP_LOCK_INIT(lock)                                          \
+  kmp_bootstrap_lock_t lock = KMP_TICKET_LOCK_INITIALIZER(lock)
 
 static inline int __kmp_acquire_bootstrap_lock(kmp_bootstrap_lock_t *lck) {
   return __kmp_acquire_ticket_lock(lck, KMP_GTID_DNE);
@@ -548,6 +550,8 @@ static inline void __kmp_destroy_bootstrap_lock(kmp_bootstrap_lock_t *lck) {
 // that explicit lock kind (and get rid of this section).
 
 typedef kmp_ticket_lock_t kmp_lock_t;
+
+#define KMP_LOCK_INIT(lock) kmp_lock_t lock = KMP_TICKET_LOCK_INITIALIZER(lock)
 
 static inline int __kmp_acquire_lock(kmp_lock_t *lck, kmp_int32 gtid) {
   return __kmp_acquire_ticket_lock(lck, gtid);
@@ -644,8 +648,8 @@ extern int (*__kmp_acquire_user_lock_with_checks_)(kmp_user_lock_p lck,
         KMP_FATAL(LockIsAlreadyOwned, func);                                   \
       }                                                                        \
     }                                                                          \
-    if ((lck->tas.lk.poll != 0) ||                                             \
-        (!KMP_COMPARE_AND_STORE_ACQ32(&(lck->tas.lk.poll), 0, gtid + 1))) {    \
+    if (lck->tas.lk.poll != 0 ||                                               \
+        !__kmp_compare_and_store_acq(&lck->tas.lk.poll, 0, gtid + 1)) {        \
       kmp_uint32 spins;                                                        \
       KMP_FSYNC_PREPARE(lck);                                                  \
       KMP_INIT_YIELD(spins);                                                   \
@@ -655,9 +659,8 @@ extern int (*__kmp_acquire_user_lock_with_checks_)(kmp_user_lock_p lck,
       } else {                                                                 \
         KMP_YIELD_SPIN(spins);                                                 \
       }                                                                        \
-      while (                                                                  \
-          (lck->tas.lk.poll != 0) ||                                           \
-          (!KMP_COMPARE_AND_STORE_ACQ32(&(lck->tas.lk.poll), 0, gtid + 1))) {  \
+      while (lck->tas.lk.poll != 0 ||                                          \
+             !__kmp_compare_and_store_acq(&lck->tas.lk.poll, 0, gtid + 1)) {   \
         if (TCR_4(__kmp_nth) >                                                 \
             (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc)) {             \
           KMP_YIELD(TRUE);                                                     \
@@ -699,7 +702,7 @@ static inline int __kmp_test_user_lock_with_checks(kmp_user_lock_p lck,
       }
     }
     return ((lck->tas.lk.poll == 0) &&
-            KMP_COMPARE_AND_STORE_ACQ32(&(lck->tas.lk.poll), 0, gtid + 1));
+            __kmp_compare_and_store_acq(&lck->tas.lk.poll, 0, gtid + 1));
   } else {
     KMP_DEBUG_ASSERT(__kmp_test_user_lock_with_checks_ != NULL);
     return (*__kmp_test_user_lock_with_checks_)(lck, gtid);
@@ -764,7 +767,7 @@ extern int (*__kmp_acquire_nested_user_lock_with_checks_)(kmp_user_lock_p lck,
       *depth = KMP_LOCK_ACQUIRED_NEXT;                                         \
     } else {                                                                   \
       if ((lck->tas.lk.poll != 0) ||                                           \
-          (!KMP_COMPARE_AND_STORE_ACQ32(&(lck->tas.lk.poll), 0, gtid + 1))) {  \
+          !__kmp_compare_and_store_acq(&lck->tas.lk.poll, 0, gtid + 1)) {      \
         kmp_uint32 spins;                                                      \
         KMP_FSYNC_PREPARE(lck);                                                \
         KMP_INIT_YIELD(spins);                                                 \
@@ -775,8 +778,7 @@ extern int (*__kmp_acquire_nested_user_lock_with_checks_)(kmp_user_lock_p lck,
           KMP_YIELD_SPIN(spins);                                               \
         }                                                                      \
         while ((lck->tas.lk.poll != 0) ||                                      \
-               (!KMP_COMPARE_AND_STORE_ACQ32(&(lck->tas.lk.poll), 0,           \
-                                             gtid + 1))) {                     \
+               !__kmp_compare_and_store_acq(&lck->tas.lk.poll, 0, gtid + 1)) { \
           if (TCR_4(__kmp_nth) >                                               \
               (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc)) {           \
             KMP_YIELD(TRUE);                                                   \
@@ -824,7 +826,7 @@ static inline int __kmp_test_nested_user_lock_with_checks(kmp_user_lock_p lck,
       return ++lck->tas.lk.depth_locked; /* same owner, depth increased */
     }
     retval = ((lck->tas.lk.poll == 0) &&
-              KMP_COMPARE_AND_STORE_ACQ32(&(lck->tas.lk.poll), 0, gtid + 1));
+              __kmp_compare_and_store_acq(&lck->tas.lk.poll, 0, gtid + 1));
     if (retval) {
       KMP_MB();
       lck->tas.lk.depth_locked = 1;

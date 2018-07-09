@@ -17,6 +17,11 @@
 namespace llvm {
 namespace dsymutil {
 
+enum class OutputFileType {
+  Object,
+  Assembly,
+};
+
 struct LinkOptions {
   /// Verbosity
   bool Verbose = false;
@@ -38,6 +43,9 @@ struct LinkOptions {
 
   /// Number of threads.
   unsigned Threads = 1;
+
+  // Output file type.
+  OutputFileType FileType = OutputFileType::Object;
 
   /// -oso-prepend-path
   std::string PrependPath;

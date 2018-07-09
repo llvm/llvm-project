@@ -3617,9 +3617,12 @@ SDValue PPCDAGToDAGISel::SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     }
   } else if (LHS.getValueType() == MVT::f32) {
     Opc = PPC::FCMPUS;
-  } else {
-    assert(LHS.getValueType() == MVT::f64 && "Unknown vt!");
+  } else if (LHS.getValueType() == MVT::f64) {
     Opc = PPCSubTarget->hasVSX() ? PPC::XSCMPUDP : PPC::FCMPUD;
+  } else {
+    assert(LHS.getValueType() == MVT::f128 && "Unknown vt!");
+    assert(PPCSubTarget->hasVSX() && "__float128 requires VSX");
+    Opc = PPC::XSCMPUQP;
   }
   return SDValue(CurDAG->getMachineNode(Opc, dl, MVT::i32, LHS, RHS), 0);
 }
@@ -4564,6 +4567,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         SelectCCOp = PPC::SELECT_CC_VSFRC;
       else
         SelectCCOp = PPC::SELECT_CC_F8;
+    else if (N->getValueType(0) == MVT::f128)
+      SelectCCOp = PPC::SELECT_CC_F16;
     else if (PPCSubTarget->hasQPX() && N->getValueType(0) == MVT::v4f64)
       SelectCCOp = PPC::SELECT_CC_QFRC;
     else if (PPCSubTarget->hasQPX() && N->getValueType(0) == MVT::v4f32)

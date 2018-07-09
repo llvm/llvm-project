@@ -607,6 +607,20 @@ getBuildId(opt::InputArgList &Args) {
   return {BuildIdKind::None, {}};
 }
 
+static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &Args) {
+  StringRef S = Args.getLastArgValue(OPT_pack_dyn_relocs, "none");
+  if (S == "android")
+    return {true, false};
+  if (S == "relr")
+    return {false, true};
+  if (S == "android+relr")
+    return {true, true};
+
+  if (S != "none")
+    error("unknown -pack-dyn-relocs format: " + S);
+  return {false, false};
+}
+
 static void readCallGraph(MemoryBufferRef MB) {
   // Build a map from symbol name to section
   DenseMap<StringRef, const Symbol *> SymbolNameToSymbol;
@@ -794,6 +808,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Undefined = args::getStrings(Args, OPT_undefined);
   Config->UndefinedVersion =
       Args.hasFlag(OPT_undefined_version, OPT_no_undefined_version, true);
+  Config->UseAndroidRelrTags = Args.hasFlag(
+      OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);
   Config->UnresolvedSymbols = getUnresolvedSymbolPolicy(Args);
   Config->WarnBackrefs =
       Args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);
@@ -871,13 +887,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   std::tie(Config->BuildId, Config->BuildIdVector) = getBuildId(Args);
 
-  if (auto *Arg = Args.getLastArg(OPT_pack_dyn_relocs)) {
-    StringRef S = Arg->getValue();
-    if (S == "android")
-      Config->AndroidPackDynRelocs = true;
-    else if (S != "none")
-      error("unknown -pack-dyn-relocs format: " + S);
-  }
+  std::tie(Config->AndroidPackDynRelocs, Config->RelrPackDynRelocs) =
+      getPackDynRelocs(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_symbol_ordering_file))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))

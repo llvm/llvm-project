@@ -212,19 +212,26 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
   }
 }
 
-/// Integer division/remainder require special handling to avoid undefined
+/// Some binary operators require special handling to avoid poison and undefined
 /// behavior. If a constant vector has undef elements, replace those undefs with
-/// '1' because that's always safe to execute.
-static inline Constant *getSafeVectorConstantForIntDivRem(Constant *In) {
-  assert(In->getType()->isVectorTy() && "Not expecting scalars here");
-  assert(In->getType()->getVectorElementType()->isIntegerTy() &&
-         "Not expecting FP opcodes/operands/constants here");
+/// identity constants because those are always safe to execute. If no identity
+/// constant exists, replace undef with '1' or '1.0'.
+static inline Constant *getSafeVectorConstantForBinop(
+      BinaryOperator::BinaryOps Opcode, Constant *In) {
+  Type *Ty = In->getType();
+  assert(Ty->isVectorTy() && "Not expecting scalars here");
 
-  unsigned NumElts = In->getType()->getVectorNumElements();
+  Type *EltTy = Ty->getVectorElementType();
+  Constant *IdentityC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, true);
+  if (!IdentityC)
+    IdentityC = EltTy->isIntegerTy() ? ConstantInt::get(EltTy, 1):
+                                       ConstantFP::get(EltTy, 1.0);
+
+  unsigned NumElts = Ty->getVectorNumElements();
   SmallVector<Constant *, 16> Out(NumElts);
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *C = In->getAggregateElement(i);
-    Out[i] = isa<UndefValue>(C) ? ConstantInt::get(C->getType(), 1) : C;
+    Out[i] = isa<UndefValue>(C) ? IdentityC : C;
   }
   return ConstantVector::get(Out);
 }

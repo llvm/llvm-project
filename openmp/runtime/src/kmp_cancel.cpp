@@ -51,8 +51,8 @@ kmp_int32 __kmpc_cancel(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
       {
         kmp_team_t *this_team = this_thr->th.th_team;
         KMP_DEBUG_ASSERT(this_team);
-        kmp_int32 old = KMP_COMPARE_AND_STORE_RET32(
-            &(this_team->t.t_cancel_request), cancel_noreq, cncl_kind);
+        kmp_int32 old = cancel_noreq;
+        this_team->t.t_cancel_request.compare_exchange_strong(old, cncl_kind);
         if (old == cancel_noreq || old == cncl_kind) {
 // we do not have a cancellation request in this team or we do have
 // one that matches the current request -> cancel
@@ -89,8 +89,8 @@ kmp_int32 __kmpc_cancel(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
 
         taskgroup = task->td_taskgroup;
         if (taskgroup) {
-          kmp_int32 old = KMP_COMPARE_AND_STORE_RET32(
-              &(taskgroup->cancel_request), cancel_noreq, cncl_kind);
+          kmp_int32 old = cancel_noreq;
+          taskgroup->cancel_request.compare_exchange_strong(old, cncl_kind);
           if (old == cancel_noreq || old == cncl_kind) {
 // we do not have a cancellation request in this taskgroup or we do
 // have one that matches the current request -> cancel
@@ -257,7 +257,7 @@ kmp_int32 __kmpc_cancel_barrier(ident_t *loc, kmp_int32 gtid) {
   if (__kmp_omp_cancellation) {
     // depending on which construct to cancel, check the flag and
     // reset the flag
-    switch (this_team->t.t_cancel_request) {
+    switch (KMP_ATOMIC_LD_RLX(&(this_team->t.t_cancel_request))) {
     case cancel_parallel:
       ret = 1;
       // ensure that threads have checked the flag, when

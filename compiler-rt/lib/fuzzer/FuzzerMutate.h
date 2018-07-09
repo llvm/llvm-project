@@ -86,8 +86,11 @@ public:
 
   Random &GetRand() { return Rand; }
 
-private:
+  void PrintMutationStats();
 
+  void RecordUsefulMutations();
+
+private:
   struct Mutator {
     size_t (MutationDispatcher::*Fn)(uint8_t *Data, size_t Size, size_t Max);
     const char *Name;
@@ -128,8 +131,8 @@ private:
   // entries that led to successful discoveries in the past mutations.
   Dictionary PersistentAutoDictionary;
 
-  Vector<Mutator> CurrentMutatorSequence;
   Vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
+  Vector<size_t> CurrentMutatorIdxSequence;
 
   static const size_t kCmpDictionaryEntriesDequeSize = 16;
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
@@ -143,6 +146,11 @@ private:
 
   Vector<Mutator> Mutators;
   Vector<Mutator> DefaultMutators;
+
+  // A total count of each mutation used in the fuzzing process.
+  Vector<uint64_t> TotalMutations;
+  // The number of each mutation that resulted in new coverage.
+  Vector<uint64_t> UsefulMutations;
 };
 
 }  // namespace fuzzer
