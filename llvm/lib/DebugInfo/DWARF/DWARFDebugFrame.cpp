@@ -399,7 +399,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
 
       // Parse the augmentation data for EH CIEs
       StringRef AugmentationData("");
-      uint32_t FDEPointerEncoding = DW_EH_PE_omit;
+      uint32_t FDEPointerEncoding = DW_EH_PE_absptr;
       uint32_t LSDAPointerEncoding = DW_EH_PE_omit;
       Optional<uint64_t> Personality;
       Optional<uint32_t> PersonalityEncoding;

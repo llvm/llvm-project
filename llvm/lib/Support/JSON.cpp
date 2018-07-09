@@ -104,7 +104,8 @@ void Value::copyFrom(const Value &M) {
   switch (Type) {
   case T_Null:
   case T_Boolean:
-  case T_Number:
+  case T_Double:
+  case T_Integer:
     memcpy(Union.buffer, M.Union.buffer, sizeof(Union.buffer));
     break;
   case T_StringRef:
@@ -127,7 +128,8 @@ void Value::moveFrom(const Value &&M) {
   switch (Type) {
   case T_Null:
   case T_Boolean:
-  case T_Number:
+  case T_Double:
+  case T_Integer:
     memcpy(Union.buffer, M.Union.buffer, sizeof(Union.buffer));
     break;
   case T_StringRef:
@@ -152,7 +154,8 @@ void Value::destroy() {
   switch (Type) {
   case T_Null:
   case T_Boolean:
-  case T_Number:
+  case T_Double:
+  case T_Integer:
     break;
   case T_StringRef:
     as<StringRef>().~StringRef();
@@ -217,7 +220,7 @@ private:
   }
 
   // On invalid syntax, parseX() functions return false and set Err.
-  bool parseNumber(char First, double &Out);
+  bool parseNumber(char First, Value &Out);
   bool parseString(std::string &Out);
   bool parseUnicode(std::string &Out);
   bool parseError(const char *Msg); // always returns false
@@ -317,25 +320,28 @@ bool Parser::parseValue(Value &Out) {
     }
   }
   default:
-    if (isNumber(C)) {
-      double Num;
-      if (parseNumber(C, Num)) {
-        Out = Num;
-        return true;
-      } else {
-        return false;
-      }
-    }
+    if (isNumber(C))
+      return parseNumber(C, Out);
     return parseError("Invalid JSON value");
   }
 }
 
-bool Parser::parseNumber(char First, double &Out) {
+bool Parser::parseNumber(char First, Value &Out) {
+  // Read the number into a string. (Must be null-terminated for strto*).
   SmallString<24> S;
   S.push_back(First);
   while (isNumber(peek()))
     S.push_back(next());
   char *End;
+  // Try first to parse as integer, and if so preserve full 64 bits.
+  // strtoll returns long long >= 64 bits, so check it's in range too.
+  auto I = std::strtoll(S.c_str(), &End, 10);
+  if (End == S.end() && I >= std::numeric_limits<int64_t>::min() &&
+      I <= std::numeric_limits<int64_t>::max()) {
+    Out = int64_t(I);
+    return true;
+  }
+  // If it's not an integer
   Out = std::strtod(S.c_str(), &End);
   return End == S.end() || parseError("Invalid JSON value (number?)");
 }
@@ -558,8 +564,12 @@ void llvm::json::Value::print(raw_ostream &OS, const Indenter &I) const {
   case T_Boolean:
     OS << (as<bool>() ? "true" : "false");
     break;
-  case T_Number:
-    OS << format("%g", as<double>());
+  case T_Double:
+    OS << format("%.*g", std::numeric_limits<double>::max_digits10,
+                 as<double>());
+    break;
+  case T_Integer:
+    OS << as<int64_t>();
     break;
   case T_StringRef:
     quote(OS, as<StringRef>());

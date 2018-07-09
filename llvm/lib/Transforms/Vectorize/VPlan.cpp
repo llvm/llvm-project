@@ -457,6 +457,18 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
   bumpIndent(1);
   for (const VPRecipeBase &Recipe : *BasicBlock)
     Recipe.print(OS, Indent);
+
+  // Dump the condition bit.
+  const VPValue *CBV = BasicBlock->getCondBit();
+  if (CBV) {
+    OS << " +\n" << Indent << " \"CondBit: ";
+    if (const VPInstruction *CBI = dyn_cast<VPInstruction>(CBV)) {
+      CBI->printAsOperand(OS);
+      OS << " (" << DOT::EscapeString(CBI->getParent()->getName()) << ")\\l\"";
+    } else
+      CBV->printAsOperand(OS);
+  }
+
   bumpIndent(-2);
   OS << "\n" << Indent << "]\n";
   dumpEdges(BasicBlock);

@@ -1294,6 +1294,14 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
         addInt(IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels);
     }
   }
+  if (InX::RelrDyn && !InX::RelrDyn->Relocs.empty()) {
+    addInSec(Config->UseAndroidRelrTags ? DT_ANDROID_RELR : DT_RELR,
+             InX::RelrDyn);
+    addSize(Config->UseAndroidRelrTags ? DT_ANDROID_RELRSZ : DT_RELRSZ,
+            InX::RelrDyn->getParent());
+    addInt(Config->UseAndroidRelrTags ? DT_ANDROID_RELRENT : DT_RELRENT,
+           sizeof(Elf_Relr));
+  }
   // .rel[a].plt section usually consists of two parts, containing plt and
   // iplt relocations. It is possible to have only iplt relocations in the
   // output. In that case RelaPlt is empty and have zero offset, the same offset
@@ -1465,6 +1473,11 @@ void RelocationBaseSection::finalizeContents() {
   // Set required output section properties.
   getParent()->Link = Link;
 }
+
+RelrBaseSection::RelrBaseSection()
+    : SyntheticSection(SHF_ALLOC,
+                       Config->UseAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR,
+                       Config->Wordsize, ".relr.dyn") {}
 
 template <class ELFT>
 static void encodeDynamicReloc(typename ELFT::Rela *P,
@@ -1692,6 +1705,97 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
   // turn can affect the sizes of the LEB-encoded integers stored in this
   // section.
   return RelocData.size() != OldSize;
+}
+
+template <class ELFT> RelrSection<ELFT>::RelrSection() {
+  this->Entsize = Config->Wordsize;
+}
+
+template <class ELFT> bool RelrSection<ELFT>::updateAllocSize() {
+  // This function computes the contents of an SHT_RELR packed relocation
+  // section.
+  //
+  // Proposal for adding SHT_RELR sections to generic-abi is here:
+  //   https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
+  //
+  // The encoded sequence of Elf64_Relr entries in a SHT_RELR section looks
+  // like [ AAAAAAAA BBBBBBB1 BBBBBBB1 ... AAAAAAAA BBBBBB1 ... ]
+  //
+  // i.e. start with an address, followed by any number of bitmaps. The address
+  // entry encodes 1 relocation. The subsequent bitmap entries encode up to 63
+  // relocations each, at subsequent offsets following the last address entry.
+  //
+  // The bitmap entries must have 1 in the least significant bit. The assumption
+  // here is that an address cannot have 1 in lsb. Odd addresses are not
+  // supported.
+  //
+  // Excluding the least significant bit in the bitmap, each non-zero bit in
+  // the bitmap represents a relocation to be applied to a corresponding machine
+  // word that follows the base address word. The second least significant bit
+  // represents the machine word immediately following the initial address, and
+  // each bit that follows represents the next word, in linear order. As such,
+  // a single bitmap can encode up to 31 relocations in a 32-bit object, and
+  // 63 relocations in a 64-bit object.
+  //
+  // This encoding has a couple of interesting properties:
+  // 1. Looking at any entry, it is clear whether it's an address or a bitmap:
+  //    even means address, odd means bitmap.
+  // 2. Just a simple list of addresses is a valid encoding.
+
+  size_t OldSize = RelrRelocs.size();
+  RelrRelocs.clear();
+
+  // Number of bits to use for the relocation offsets bitmap.
+  // These many relative relocations can be encoded in a single entry.
+  const size_t NBits = 8 * Config->Wordsize - 1;
+
+  // Get offsets for all relative relocations and sort them.
+  std::vector<uint64_t> Offsets;
+  for (const RelativeReloc &Rel : Relocs) {
+    Offsets.push_back(Rel.getOffset());
+  }
+  std::sort(Offsets.begin(), Offsets.end());
+
+  uint64_t Base = 0;
+  typename std::vector<uint64_t>::iterator Curr = Offsets.begin();
+  while (Curr != Offsets.end()) {
+    uint64_t Current = *Curr;
+    assert(Current % 2 == 0);
+
+    uint64_t Bits = 0;
+    typename std::vector<uint64_t>::iterator Next = Curr;
+    if (Base > 0 && Base <= Current) {
+      while (Next != Offsets.end()) {
+        uint64_t Delta = *Next - Base;
+        // If Next is too far out, it cannot be folded into Curr.
+        if (Delta >= NBits * Config->Wordsize)
+          break;
+        // If Next is not a multiple of wordsize away, it cannot
+        // be folded into Curr.
+        if (Delta % Config->Wordsize != 0)
+          break;
+        // Next can be folded into Curr, add it to the bitmap.
+        Bits |= 1ULL << (Delta / Config->Wordsize);
+        ++Next;
+      }
+    }
+
+    if (Bits == 0) {
+      RelrRelocs.push_back(Elf_Relr(Current));
+      // This is not a continuation entry, only one offset was
+      // consumed. Set base offset for subsequent bitmap entries.
+      Base = Current + Config->Wordsize;
+      ++Curr;
+    } else {
+      RelrRelocs.push_back(Elf_Relr((Bits << 1) | 1));
+      // This is a continuation entry encoding multiple offsets
+      // in a bitmap. Advance base offset by NBits words.
+      Base += NBits * Config->Wordsize;
+      Curr = Next;
+    }
+  }
+
+  return RelrRelocs.size() != OldSize;
 }
 
 SymbolTableBaseSection::SymbolTableBaseSection(StringTableSection &StrTabSec)
@@ -2893,6 +2997,7 @@ MipsRldMapSection *InX::MipsRldMap;
 PltSection *InX::Plt;
 PltSection *InX::Iplt;
 RelocationBaseSection *InX::RelaDyn;
+RelrBaseSection *InX::RelrDyn;
 RelocationBaseSection *InX::RelaPlt;
 RelocationBaseSection *InX::RelaIplt;
 StringTableSection *InX::ShStrTab;
@@ -2953,6 +3058,11 @@ template class elf::AndroidPackedRelocationSection<ELF32LE>;
 template class elf::AndroidPackedRelocationSection<ELF32BE>;
 template class elf::AndroidPackedRelocationSection<ELF64LE>;
 template class elf::AndroidPackedRelocationSection<ELF64BE>;
+
+template class elf::RelrSection<ELF32LE>;
+template class elf::RelrSection<ELF32BE>;
+template class elf::RelrSection<ELF64LE>;
+template class elf::RelrSection<ELF64BE>;
 
 template class elf::SymbolTableSection<ELF32LE>;
 template class elf::SymbolTableSection<ELF32BE>;

@@ -4786,6 +4786,20 @@ bool X86TargetLowering::hasAndNot(SDValue Y) const {
   return Subtarget.hasSSE2();
 }
 
+bool X86TargetLowering::preferShiftsToClearExtremeBits(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  // For vectors, we don't have a preference, but we probably want a mask.
+  if (VT.isVector())
+    return false;
+
+  // 64-bit shifts on 32-bit targets produce really bad bloated code.
+  if (VT == MVT::i64 && !Subtarget.is64Bit())
+    return false;
+
+  return true;
+}
+
 MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {
   MVT VT = MVT::getIntegerVT(NumBits);
   if (isTypeLegal(VT))
@@ -37765,7 +37779,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 
   auto invertIfNegative = [&DAG](SDValue &V) {
     if (SDValue NegVal = isFNEG(V.getNode())) {
-      V = NegVal;
+      V = DAG.getBitcast(V.getValueType(), NegVal);
       return true;
     }
     // Look through extract_vector_elts. If it comes from an FNEG, create a
@@ -37774,6 +37788,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
         isa<ConstantSDNode>(V.getOperand(1)) &&
         cast<ConstantSDNode>(V.getOperand(1))->getZExtValue() == 0) {
       if (SDValue NegVal = isFNEG(V.getOperand(0).getNode())) {
+        NegVal = DAG.getBitcast(V.getOperand(0).getValueType(), NegVal);
         V = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V), V.getValueType(),
                         NegVal, V.getOperand(1));
         return true;

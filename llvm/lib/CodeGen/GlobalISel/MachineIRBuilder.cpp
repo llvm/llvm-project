@@ -669,6 +669,33 @@ MachineIRBuilderBase::buildExtractVectorElement(unsigned Res, unsigned Val,
       .addUse(Idx);
 }
 
+MachineInstrBuilder MachineIRBuilderBase::buildAtomicCmpXchgWithSuccess(
+    unsigned OldValRes, unsigned SuccessRes, unsigned Addr, unsigned CmpVal,
+    unsigned NewVal, MachineMemOperand &MMO) {
+#ifndef NDEBUG
+  LLT OldValResTy = getMRI()->getType(OldValRes);
+  LLT SuccessResTy = getMRI()->getType(SuccessRes);
+  LLT AddrTy = getMRI()->getType(Addr);
+  LLT CmpValTy = getMRI()->getType(CmpVal);
+  LLT NewValTy = getMRI()->getType(NewVal);
+  assert(OldValResTy.isScalar() && "invalid operand type");
+  assert(SuccessResTy.isScalar() && "invalid operand type");
+  assert(AddrTy.isPointer() && "invalid operand type");
+  assert(CmpValTy.isValid() && "invalid operand type");
+  assert(NewValTy.isValid() && "invalid operand type");
+  assert(OldValResTy == CmpValTy && "type mismatch");
+  assert(OldValResTy == NewValTy && "type mismatch");
+#endif
+
+  return buildInstr(TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS)
+      .addDef(OldValRes)
+      .addDef(SuccessRes)
+      .addUse(Addr)
+      .addUse(CmpVal)
+      .addUse(NewVal)
+      .addMemOperand(&MMO);
+}
+
 MachineInstrBuilder
 MachineIRBuilderBase::buildAtomicCmpXchg(unsigned OldValRes, unsigned Addr,
                                          unsigned CmpVal, unsigned NewVal,
@@ -694,6 +721,94 @@ MachineIRBuilderBase::buildAtomicCmpXchg(unsigned OldValRes, unsigned Addr,
       .addMemOperand(&MMO);
 }
 
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMW(unsigned Opcode, unsigned OldValRes,
+                                     unsigned Addr, unsigned Val,
+                                     MachineMemOperand &MMO) {
+#ifndef NDEBUG
+  LLT OldValResTy = getMRI()->getType(OldValRes);
+  LLT AddrTy = getMRI()->getType(Addr);
+  LLT ValTy = getMRI()->getType(Val);
+  assert(OldValResTy.isScalar() && "invalid operand type");
+  assert(AddrTy.isPointer() && "invalid operand type");
+  assert(ValTy.isValid() && "invalid operand type");
+  assert(OldValResTy == ValTy && "type mismatch");
+#endif
+
+  return buildInstr(Opcode)
+      .addDef(OldValRes)
+      .addUse(Addr)
+      .addUse(Val)
+      .addMemOperand(&MMO);
+}
+
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWXchg(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_XCHG, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWAdd(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_ADD, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWSub(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_SUB, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWAnd(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_AND, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWNand(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_NAND, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWOr(unsigned OldValRes, unsigned Addr,
+                                       unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_OR, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWXor(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_XOR, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWMax(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_MAX, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWMin(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_MIN, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWUmax(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_UMAX, OldValRes, Addr, Val,
+                        MMO);
+}
+MachineInstrBuilder
+MachineIRBuilderBase::buildAtomicRMWUmin(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO) {
+  return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_UMIN, OldValRes, Addr, Val,
+                        MMO);
+}
+
 void MachineIRBuilderBase::validateTruncExt(unsigned Dst, unsigned Src,
                                             bool IsExtend) {
 #ifndef NDEBUG
@@ -701,7 +816,7 @@ void MachineIRBuilderBase::validateTruncExt(unsigned Dst, unsigned Src,
   LLT DstTy = getMRI()->getType(Dst);
 
   if (DstTy.isVector()) {
-    assert(SrcTy.isVector() && "mismatched cast between vecot and non-vector");
+    assert(SrcTy.isVector() && "mismatched cast between vector and non-vector");
     assert(SrcTy.getNumElements() == DstTy.getNumElements() &&
            "different number of elements in a trunc/ext");
   } else

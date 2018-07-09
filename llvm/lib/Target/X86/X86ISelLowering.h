@@ -828,6 +828,8 @@ namespace llvm {
 
     bool hasAndNot(SDValue Y) const override;
 
+    bool preferShiftsToClearExtremeBits(SDValue Y) const override;
+
     bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
       return VT.isScalarInteger();
     }

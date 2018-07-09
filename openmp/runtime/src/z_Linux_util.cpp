@@ -1434,7 +1434,7 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
 
   KF_TRACE(5, ("__kmp_suspend_template: T#%d set sleep bit for spin(%p)==%x,"
                " was %x\n",
-               th_gtid, flag->get(), *(flag->get()), old_spin));
+               th_gtid, flag->get(), flag->load(), old_spin));
 
   if (flag->done_check_val(old_spin)) {
     old_spin = flag->unset_sleeping();
@@ -1462,7 +1462,7 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
         th->th.th_active = FALSE;
         if (th->th.th_active_in_pool) {
           th->th.th_active_in_pool = FALSE;
-          KMP_TEST_THEN_DEC32(&__kmp_thread_pool_active_nth);
+          KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
           KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
         }
         deactivated = TRUE;
@@ -1518,7 +1518,7 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
     if (deactivated) {
       th->th.th_active = TRUE;
       if (TCR_4(th->th.th_in_pool)) {
-        KMP_TEST_THEN_INC32(&__kmp_thread_pool_active_nth);
+        KMP_ATOMIC_INC(&__kmp_thread_pool_active_nth);
         th->th.th_active_in_pool = TRUE;
       }
     }
@@ -1591,7 +1591,7 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
       KF_TRACE(5, ("__kmp_resume_template: T#%d exiting, thread T#%d already "
                    "awake: flag(%p): "
                    "%u => %u\n",
-                   gtid, target_gtid, flag->get(), old_spin, *flag->get()));
+                   gtid, target_gtid, flag->get(), old_spin, flag->load()));
       status = pthread_mutex_unlock(&th->th.th_suspend_mx.m_mutex);
       KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
       return;
@@ -1599,7 +1599,7 @@ static inline void __kmp_resume_template(int target_gtid, C *flag) {
     KF_TRACE(5, ("__kmp_resume_template: T#%d about to wakeup T#%d, reset "
                  "sleep bit for flag's loc(%p): "
                  "%u => %u\n",
-                 gtid, target_gtid, flag->get(), old_spin, *flag->get()));
+                 gtid, target_gtid, flag->get(), old_spin, flag->load()));
   }
   TCW_PTR(th->th.th_sleep_loc, NULL);
 

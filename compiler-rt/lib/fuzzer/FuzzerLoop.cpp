@@ -355,6 +355,8 @@ void Fuzzer::PrintFinalStats() {
     TPC.DumpCoverage();
   if (Options.PrintCorpusStats)
     Corpus.PrintStats();
+  if (Options.PrintMutationStats)
+    MD.PrintMutationStats();
   if (!Options.PrintFinalStats)
     return;
   size_t ExecPerSec = execPerSec();

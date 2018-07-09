@@ -4856,6 +4856,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   // Perform various simplifications.
   switch (Opcode) {
   case ISD::FMA: {
+    assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
+    assert(N1.getValueType() == VT && N2.getValueType() == VT &&
+           N3.getValueType() == VT && "FMA types must match!");
     ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
     ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
     ConstantFPSDNode *N3CFP = dyn_cast<ConstantFPSDNode>(N3);

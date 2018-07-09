@@ -2942,6 +2942,25 @@ static void handleTargetAttr(Sema &S, Decl *D, const AttributeList &AL) {
   D->addAttr(NewAttr);
 }
 
+static void handleMinVectorWidthAttr(Sema &S, Decl *D, const AttributeList &AL) {
+  Expr *E = AL.getArgAsExpr(0);
+  uint32_t VecWidth;
+  if (!checkUInt32Argument(S, AL, E, VecWidth)) {
+    AL.setInvalid();
+    return;
+  }
+
+  MinVectorWidthAttr *Existing = D->getAttr<MinVectorWidthAttr>();
+  if (Existing && Existing->getVectorWidth() != VecWidth) {
+    S.Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL.getName();
+    return;
+  }
+
+  D->addAttr(::new (S.Context)
+             MinVectorWidthAttr(AL.getRange(), S.Context, VecWidth,
+                                AL.getAttributeSpellingListIndex()));
+}
+
 static void handleCleanupAttr(Sema &S, Decl *D, const AttributeList &AL) {
   Expr *E = AL.getArgAsExpr(0);
   SourceLocation Loc = E->getExprLoc();
@@ -6129,6 +6148,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     break;
   case AttributeList::AT_Target:
     handleTargetAttr(S, D, AL);
+    break;
+  case AttributeList::AT_MinVectorWidth:
+    handleMinVectorWidthAttr(S, D, AL);
     break;
   case AttributeList::AT_Unavailable:
     handleAttrWithMessage<UnavailableAttr>(S, D, AL);

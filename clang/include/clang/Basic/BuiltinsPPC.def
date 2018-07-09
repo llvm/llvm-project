@@ -423,6 +423,15 @@ BUILTIN(__builtin_vsx_extractuword, "V2ULLiV16UcIi", "")
 BUILTIN(__builtin_vsx_xxpermdi, "v.", "t")
 BUILTIN(__builtin_vsx_xxsldwi, "v.", "t")
 
+// Float 128 built-ins
+BUILTIN(__builtin_sqrtf128_round_to_odd, "LLdLLd", "")
+BUILTIN(__builtin_addf128_round_to_odd, "LLdLLdLLd", "")
+BUILTIN(__builtin_subf128_round_to_odd, "LLdLLdLLd", "")
+BUILTIN(__builtin_mulf128_round_to_odd, "LLdLLdLLd", "")
+BUILTIN(__builtin_divf128_round_to_odd, "LLdLLdLLd", "")
+BUILTIN(__builtin_fmaf128_round_to_odd, "LLdLLdLLdLLd", "")
+BUILTIN(__builtin_truncf128_round_to_odd, "dLLd", "")
+
 // HTM builtins
 BUILTIN(__builtin_tbegin, "UiUIi", "")
 BUILTIN(__builtin_tend, "UiUIi", "")

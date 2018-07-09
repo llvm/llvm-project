@@ -438,6 +438,7 @@ template <class ELFT> class DynamicSection final : public SyntheticSection {
   typedef typename ELFT::Dyn Elf_Dyn;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
+  typedef typename ELFT::Relr Elf_Relr;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Sym Elf_Sym;
 
@@ -515,6 +516,39 @@ public:
 
 private:
   SmallVector<char, 0> RelocData;
+};
+
+struct RelativeReloc {
+  uint64_t getOffset() const { return InputSec->getVA(OffsetInSec); }
+
+  const InputSectionBase *InputSec;
+  uint64_t OffsetInSec;
+};
+
+class RelrBaseSection : public SyntheticSection {
+public:
+  RelrBaseSection();
+  std::vector<RelativeReloc> Relocs;
+};
+
+// RelrSection is used to encode offsets for relative relocations.
+// Proposal for adding SHT_RELR sections to generic-abi is here:
+//   https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
+// For more details, see the comment in RelrSection::updateAllocSize().
+template <class ELFT> class RelrSection final : public RelrBaseSection {
+  typedef typename ELFT::Relr Elf_Relr;
+
+public:
+  RelrSection();
+
+  bool updateAllocSize() override;
+  size_t getSize() const override { return RelrRelocs.size() * this->Entsize; }
+  void writeTo(uint8_t *Buf) override {
+    memcpy(Buf, RelrRelocs.data(), getSize());
+  }
+
+private:
+  std::vector<Elf_Relr> RelrRelocs;
 };
 
 struct SymbolTableEntry {
@@ -958,6 +992,7 @@ struct InX {
   static PltSection *Plt;
   static PltSection *Iplt;
   static RelocationBaseSection *RelaDyn;
+  static RelrBaseSection *RelrDyn;
   static RelocationBaseSection *RelaPlt;
   static RelocationBaseSection *RelaIplt;
   static StringTableSection *ShStrTab;

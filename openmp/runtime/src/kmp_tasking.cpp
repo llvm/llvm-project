@@ -264,7 +264,7 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   if (taskdata->td_flags.tiedness == TASK_UNTIED) {
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
-    kmp_int32 counter = 1 + KMP_TEST_THEN_INC32(&taskdata->td_untied_count);
+    kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
     KA_TRACE(
         20,
         ("__kmp_push_task: T#%d untied_count (%d) incremented for task %p\n",
@@ -528,7 +528,7 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
   if (taskdata->td_flags.tiedness == TASK_UNTIED) {
     // untied task needs to increment counter so that the task structure is not
     // freed prematurely
-    kmp_int32 counter = 1 + KMP_TEST_THEN_INC32(&taskdata->td_untied_count);
+    kmp_int32 counter = 1 + KMP_ATOMIC_INC(&taskdata->td_untied_count);
     KA_TRACE(20, ("__kmpc_omp_task_begin_if0: T#%d untied_count (%d) "
                   "incremented for task %p\n",
                   gtid, counter, taskdata));
@@ -625,9 +625,9 @@ static void __kmp_free_task(kmp_int32 gtid, kmp_taskdata_t *taskdata,
   KMP_DEBUG_ASSERT(taskdata->td_flags.executing == 0);
   KMP_DEBUG_ASSERT(taskdata->td_flags.complete == 1);
   KMP_DEBUG_ASSERT(taskdata->td_flags.freed == 0);
-  KMP_DEBUG_ASSERT(TCR_4(taskdata->td_allocated_child_tasks) == 0 ||
+  KMP_DEBUG_ASSERT(taskdata->td_allocated_child_tasks == 0 ||
                    taskdata->td_flags.task_serial == 1);
-  KMP_DEBUG_ASSERT(TCR_4(taskdata->td_incomplete_child_tasks) == 0);
+  KMP_DEBUG_ASSERT(taskdata->td_incomplete_child_tasks == 0);
 
   taskdata->td_flags.freed = 1;
   ANNOTATE_HAPPENS_BEFORE(taskdata);
@@ -662,8 +662,7 @@ static void __kmp_free_task_and_ancestors(kmp_int32 gtid,
 #endif
   KMP_DEBUG_ASSERT(taskdata->td_flags.tasktype == TASK_EXPLICIT);
 
-  kmp_int32 children =
-      KMP_TEST_THEN_DEC32(&taskdata->td_allocated_child_tasks) - 1;
+  kmp_int32 children = KMP_ATOMIC_DEC(&taskdata->td_allocated_child_tasks) - 1;
   KMP_DEBUG_ASSERT(children >= 0);
 
   // Now, go up the ancestor tree to see if any ancestors can now be freed.
@@ -685,7 +684,7 @@ static void __kmp_free_task_and_ancestors(kmp_int32 gtid,
       return;
 
     // Predecrement simulated by "- 1" calculation
-    children = KMP_TEST_THEN_DEC32(&taskdata->td_allocated_child_tasks) - 1;
+    children = KMP_ATOMIC_DEC(&taskdata->td_allocated_child_tasks) - 1;
     KMP_DEBUG_ASSERT(children >= 0);
   }
 
@@ -724,7 +723,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   if (taskdata->td_flags.tiedness == TASK_UNTIED) {
     // untied task needs to check the counter so that the task structure is not
     // freed prematurely
-    kmp_int32 counter = KMP_TEST_THEN_DEC32(&taskdata->td_untied_count) - 1;
+    kmp_int32 counter = KMP_ATOMIC_DEC(&taskdata->td_untied_count) - 1;
     KA_TRACE(
         20,
         ("__kmp_task_finish: T#%d untied_count (%d) decremented for task %p\n",
@@ -756,12 +755,11 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
     // Predecrement simulated by "- 1" calculation
     children =
-        KMP_TEST_THEN_DEC32(&taskdata->td_parent->td_incomplete_child_tasks) -
-        1;
+        KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
     KMP_DEBUG_ASSERT(children >= 0);
 #if OMP_40_ENABLED
     if (taskdata->td_taskgroup)
-      KMP_TEST_THEN_DEC32((kmp_int32 *)(&taskdata->td_taskgroup->count));
+      KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
 #if OMP_45_ENABLED
   }
   // if we found proxy tasks there could exist a dependency chain
@@ -945,9 +943,9 @@ void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
   task->td_last_tied = task;
 
   if (set_curr_task) { // only do this init first time thread is created
-    task->td_incomplete_child_tasks = 0;
+    KMP_ATOMIC_ST_REL(&task->td_incomplete_child_tasks, 0);
     // Not used: don't need to deallocate implicit task
-    task->td_allocated_child_tasks = 0;
+    KMP_ATOMIC_ST_REL(&task->td_allocated_child_tasks, 0);
 #if OMP_40_ENABLED
     task->td_taskgroup = NULL; // An implicit task does not have taskgroup
     task->td_dephash = NULL;
@@ -1130,7 +1128,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   taskdata->td_alloc_thread = thread;
   taskdata->td_parent = parent_task;
   taskdata->td_level = parent_task->td_level + 1; // increment nesting level
-  taskdata->td_untied_count = 0;
+  KMP_ATOMIC_ST_RLX(&taskdata->td_untied_count, 0);
   taskdata->td_ident = loc_ref;
   taskdata->td_taskwait_ident = NULL;
   taskdata->td_taskwait_counter = 0;
@@ -1176,9 +1174,9 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
 
   taskdata->td_flags.native = flags->native;
 
-  taskdata->td_incomplete_child_tasks = 0;
-  taskdata->td_allocated_child_tasks = 1; // start at one because counts current
-// task and children
+  KMP_ATOMIC_ST_RLX(&taskdata->td_incomplete_child_tasks, 0);
+  // start at one because counts current task and children
+  KMP_ATOMIC_ST_RLX(&taskdata->td_allocated_child_tasks, 1);
 #if OMP_40_ENABLED
   taskdata->td_taskgroup =
       parent_task->td_taskgroup; // task inherits taskgroup from the parent task
@@ -1199,15 +1197,15 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser))
 #endif
   {
-    KMP_TEST_THEN_INC32(&parent_task->td_incomplete_child_tasks);
+    KMP_ATOMIC_INC(&parent_task->td_incomplete_child_tasks);
 #if OMP_40_ENABLED
     if (parent_task->td_taskgroup)
-      KMP_TEST_THEN_INC32((kmp_int32 *)(&parent_task->td_taskgroup->count));
+      KMP_ATOMIC_INC(&parent_task->td_taskgroup->count);
 #endif
     // Only need to keep track of allocated child tasks for explicit tasks since
     // implicit not deallocated
     if (taskdata->td_parent->td_flags.tasktype == TASK_EXPLICIT) {
-      KMP_TEST_THEN_INC32(&taskdata->td_parent->td_allocated_child_tasks);
+      KMP_ATOMIC_INC(&taskdata->td_parent->td_allocated_child_tasks);
     }
   }
 
@@ -1648,10 +1646,10 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
                               thread->th.th_task_team->tt.tt_found_proxy_tasks);
 #endif
     if (must_wait) {
-      kmp_flag_32 flag(
-          RCAST(volatile kmp_uint32 *, &taskdata->td_incomplete_child_tasks),
-          0U);
-      while (TCR_4(taskdata->td_incomplete_child_tasks) != 0) {
+      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *,
+                             &(taskdata->td_incomplete_child_tasks)),
+                       0U);
+      while (KMP_ATOMIC_LD_ACQ(&taskdata->td_incomplete_child_tasks) != 0) {
         flag.execute_tasks(thread, gtid, FALSE,
                            &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
                            __kmp_task_stealing_constraint);
@@ -1982,8 +1980,8 @@ void __kmpc_taskgroup(ident_t *loc, int gtid) {
   kmp_taskgroup_t *tg_new =
       (kmp_taskgroup_t *)__kmp_thread_malloc(thread, sizeof(kmp_taskgroup_t));
   KA_TRACE(10, ("__kmpc_taskgroup: T#%d loc=%p group=%p\n", gtid, loc, tg_new));
-  tg_new->count = 0;
-  tg_new->cancel_request = cancel_noreq;
+  KMP_ATOMIC_ST_RLX(&tg_new->count, 0);
+  KMP_ATOMIC_ST_RLX(&tg_new->cancel_request, cancel_noreq);
   tg_new->parent = taskdata->td_taskgroup;
 // TODO: change to OMP_50_ENABLED, need to change build tools for this to work
 #if OMP_45_ENABLED
@@ -2066,8 +2064,9 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
     if (!taskdata->td_flags.team_serial)
 #endif
     {
-      kmp_flag_32 flag(RCAST(kmp_uint32 *, &taskgroup->count), 0U);
-      while (TCR_4(taskgroup->count) != 0) {
+      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *, &(taskgroup->count)),
+                       0U);
+      while (KMP_ATOMIC_LD_ACQ(&taskgroup->count) != 0) {
         flag.execute_tasks(thread, gtid, FALSE,
                            &thread_finished USE_ITT_BUILD_ARG(itt_sync_obj),
                            __kmp_task_stealing_constraint);
@@ -2205,7 +2204,7 @@ static kmp_task_t *__kmp_remove_my_task(kmp_info_t *thread, kmp_int32 gtid,
 // task_team thread_data before calling this routine.
 static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
                                     kmp_task_team_t *task_team,
-                                    volatile kmp_int32 *unfinished_threads,
+                                    std::atomic<kmp_int32> *unfinished_threads,
                                     int *thread_finished,
                                     kmp_int32 is_constrained) {
   kmp_task_t *task;
@@ -2343,7 +2342,7 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
     // master victim) might be prematurely released from the barrier!!!
     kmp_int32 count;
 
-    count = KMP_TEST_THEN_INC32(unfinished_threads);
+    count = KMP_ATOMIC_INC(unfinished_threads);
 
     KA_TRACE(
         20,
@@ -2386,7 +2385,7 @@ static inline int __kmp_execute_tasks_template(
   kmp_task_t *task;
   kmp_info_t *other_thread;
   kmp_taskdata_t *current_task = thread->th.th_current_task;
-  volatile kmp_int32 *unfinished_threads;
+  std::atomic<kmp_int32> *unfinished_threads;
   kmp_int32 nthreads, victim_tid = -2, use_own_tasks = 1, new_victim = 0,
                       tid = thread->th.th_info.ds.ds_tid;
 
@@ -2411,7 +2410,7 @@ static inline int __kmp_execute_tasks_template(
 #else
   KMP_DEBUG_ASSERT(nthreads > 1);
 #endif
-  KMP_DEBUG_ASSERT(TCR_4(*unfinished_threads) >= 0);
+  KMP_DEBUG_ASSERT(*unfinished_threads >= 0);
 
   while (1) { // Outer loop keeps trying to find tasks in case of single thread
     // getting tasks from target constructs
@@ -2541,7 +2540,8 @@ static inline int __kmp_execute_tasks_template(
 #if OMP_45_ENABLED
     // The work queue may be empty but there might be proxy tasks still
     // executing
-    if (final_spin && TCR_4(current_task->td_incomplete_child_tasks) == 0)
+    if (final_spin &&
+        KMP_ATOMIC_LD_ACQ(&current_task->td_incomplete_child_tasks) == 0)
 #else
     if (final_spin)
 #endif
@@ -2552,7 +2552,7 @@ static inline int __kmp_execute_tasks_template(
       if (!*thread_finished) {
         kmp_int32 count;
 
-        count = KMP_TEST_THEN_DEC32(unfinished_threads) - 1;
+        count = KMP_ATOMIC_DEC(unfinished_threads) - 1;
         KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d dec "
                       "unfinished_threads to %d task_team=%p\n",
                       gtid, count, task_team));
@@ -2979,13 +2979,13 @@ static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
 #endif
   task_team->tt.tt_nproc = nthreads = team->t.t_nproc;
 
-  TCW_4(task_team->tt.tt_unfinished_threads, nthreads);
+  KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads, nthreads);
   TCW_4(task_team->tt.tt_active, TRUE);
 
   KA_TRACE(20, ("__kmp_allocate_task_team: T#%d exiting; task_team = %p "
                 "unfinished_threads init'd to %d\n",
                 (thread ? __kmp_gtid_from_thread(thread) : -1), task_team,
-                task_team->tt.tt_unfinished_threads));
+                KMP_ATOMIC_LD_RLX(&task_team->tt.tt_unfinished_threads)));
   return task_team;
 }
 
@@ -3143,7 +3143,8 @@ void __kmp_task_team_setup(kmp_info_t *this_thr, kmp_team_t *team, int always) {
 #if OMP_45_ENABLED
         TCW_4(task_team->tt.tt_found_proxy_tasks, FALSE);
 #endif
-        TCW_4(task_team->tt.tt_unfinished_threads, team->t.t_nproc);
+        KMP_ATOMIC_ST_REL(&task_team->tt.tt_unfinished_threads,
+                          team->t.t_nproc);
         TCW_4(task_team->tt.tt_active, TRUE);
       }
       // if team size has changed, the first thread to enable tasking will
@@ -3200,9 +3201,9 @@ void __kmp_task_team_wait(
       // Worker threads may have dropped through to release phase, but could
       // still be executing tasks. Wait here for tasks to complete. To avoid
       // memory contention, only master thread checks termination condition.
-      kmp_flag_32 flag(
-          RCAST(volatile kmp_uint32 *, &task_team->tt.tt_unfinished_threads),
-          0U);
+      kmp_flag_32 flag(RCAST(std::atomic<kmp_uint32> *,
+                             &task_team->tt.tt_unfinished_threads),
+                       0U);
       flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
     }
     // Deactivate the old task team, so that the worker threads will stop
@@ -3233,21 +3234,21 @@ void __kmp_task_team_wait(
 // barrier. It is a full barrier itself, which unfortunately turns regular
 // barriers into double barriers and join barriers into 1 1/2 barriers.
 void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread, int gtid) {
-  volatile kmp_uint32 *spin = RCAST(
-      volatile kmp_uint32 *,
+  std::atomic<kmp_uint32> *spin = RCAST(
+      std::atomic<kmp_uint32> *,
       &team->t.t_task_team[thread->th.th_task_state]->tt.tt_unfinished_threads);
   int flag = FALSE;
   KMP_DEBUG_ASSERT(__kmp_tasking_mode == tskm_extra_barrier);
 
 #if USE_ITT_BUILD
-  KMP_FSYNC_SPIN_INIT(spin, (kmp_uint32 *)NULL);
+  KMP_FSYNC_SPIN_INIT(spin, NULL);
 #endif /* USE_ITT_BUILD */
   kmp_flag_32 spin_flag(spin, 0U);
   while (!spin_flag.execute_tasks(thread, gtid, TRUE,
                                   &flag USE_ITT_BUILD_ARG(NULL), 0)) {
 #if USE_ITT_BUILD
     // TODO: What about itt_sync_obj??
-    KMP_FSYNC_SPIN_PREPARE(CCAST(kmp_uint32 *, spin));
+    KMP_FSYNC_SPIN_PREPARE(RCAST(void *, spin));
 #endif /* USE_ITT_BUILD */
 
     if (TCR_4(__kmp_global.g.g_done)) {
@@ -3258,7 +3259,7 @@ void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread, int gtid) {
     KMP_YIELD(TRUE); // GH: We always yield here
   }
 #if USE_ITT_BUILD
-  KMP_FSYNC_SPIN_ACQUIRED(CCAST(kmp_uint32 *, spin));
+  KMP_FSYNC_SPIN_ACQUIRED(RCAST(void *, spin));
 #endif /* USE_ITT_BUILD */
 }
 
@@ -3370,11 +3371,11 @@ static void __kmp_first_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
   taskdata->td_flags.complete = 1; // mark the task as completed
 
   if (taskdata->td_taskgroup)
-    KMP_TEST_THEN_DEC32(&taskdata->td_taskgroup->count);
+    KMP_ATOMIC_DEC(&taskdata->td_taskgroup->count);
 
   // Create an imaginary children for this task so the bottom half cannot
   // release the task before we have completed the second top half
-  TCI_4(taskdata->td_incomplete_child_tasks);
+  KMP_ATOMIC_INC(&taskdata->td_incomplete_child_tasks);
 }
 
 static void __kmp_second_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
@@ -3382,11 +3383,11 @@ static void __kmp_second_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
 
   // Predecrement simulated by "- 1" calculation
   children =
-      KMP_TEST_THEN_DEC32(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
+      KMP_ATOMIC_DEC(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
   KMP_DEBUG_ASSERT(children >= 0);
 
   // Remove the imaginary children
-  TCD_4(taskdata->td_incomplete_child_tasks);
+  KMP_ATOMIC_DEC(&taskdata->td_incomplete_child_tasks);
 }
 
 static void __kmp_bottom_half_finish_proxy(kmp_int32 gtid, kmp_task_t *ptask) {
@@ -3399,7 +3400,7 @@ static void __kmp_bottom_half_finish_proxy(kmp_int32 gtid, kmp_task_t *ptask) {
 
   // We need to wait to make sure the top half is finished
   // Spinning here should be ok as this should happen quickly
-  while (TCR_4(taskdata->td_incomplete_child_tasks) > 0)
+  while (KMP_ATOMIC_LD_ACQ(&taskdata->td_incomplete_child_tasks) > 0)
     ;
 
   __kmp_release_deps(gtid, taskdata);
@@ -3534,13 +3535,13 @@ kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src) {
   // Only need to keep track of child task counts if team parallel and tasking
   // not serialized
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
-    KMP_TEST_THEN_INC32(&parent_task->td_incomplete_child_tasks);
+    KMP_ATOMIC_INC(&parent_task->td_incomplete_child_tasks);
     if (parent_task->td_taskgroup)
-      KMP_TEST_THEN_INC32(&parent_task->td_taskgroup->count);
+      KMP_ATOMIC_INC(&parent_task->td_taskgroup->count);
     // Only need to keep track of allocated child tasks for explicit tasks since
     // implicit not deallocated
     if (taskdata->td_parent->td_flags.tasktype == TASK_EXPLICIT)
-      KMP_TEST_THEN_INC32(&taskdata->td_parent->td_allocated_child_tasks);
+      KMP_ATOMIC_INC(&taskdata->td_parent->td_allocated_child_tasks);
   }
 
   KA_TRACE(20,

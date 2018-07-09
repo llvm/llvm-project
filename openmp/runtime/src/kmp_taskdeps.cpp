@@ -32,7 +32,7 @@
 // TODO: Any ITT support needed?
 
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
-static kmp_int32 kmp_node_id_seed = 0;
+static std::atomic<kmp_int32> kmp_node_id_seed = ATOMIC_VAR_INIT(0);
 #endif
 
 static void __kmp_init_node(kmp_depnode_t *node) {
@@ -40,14 +40,15 @@ static void __kmp_init_node(kmp_depnode_t *node) {
   // task once dependences have been processed
   node->dn.successors = NULL;
   __kmp_init_lock(&node->dn.lock);
-  node->dn.nrefs = 1; // init creates the first reference to the node
+  KMP_ATOMIC_ST_RLX(&node->dn.nrefs,
+                    1); // init creates the first reference to the node
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
-  node->dn.id = KMP_TEST_THEN_INC32(&kmp_node_id_seed);
+  node->dn.id = KMP_ATOMIC_INC(&kmp_node_id_seed);
 #endif
 }
 
 static inline kmp_depnode_t *__kmp_node_ref(kmp_depnode_t *node) {
-  KMP_TEST_THEN_INC32(CCAST(kmp_int32 *, &node->dn.nrefs));
+  KMP_ATOMIC_INC(&node->dn.nrefs);
   return node;
 }
 
@@ -55,7 +56,7 @@ static inline void __kmp_node_deref(kmp_info_t *thread, kmp_depnode_t *node) {
   if (!node)
     return;
 
-  kmp_int32 n = KMP_TEST_THEN_DEC32(CCAST(kmp_int32 *, &node->dn.nrefs)) - 1;
+  kmp_int32 n = KMP_ATOMIC_DEC(&node->dn.nrefs) - 1;
   if (n == 0) {
     KMP_ASSERT(node->dn.nrefs == 0);
 #if USE_FAST_MEMORY
@@ -375,9 +376,7 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
   // any outstandig dependences (some tasks may have finished while we processed
   // the dependences)
   npredecessors =
-      KMP_TEST_THEN_ADD32(CCAST(kmp_int32 *, &node->dn.npredecessors),
-                          npredecessors) +
-      npredecessors;
+      node->dn.npredecessors.fetch_add(npredecessors) + npredecessors;
 
   KA_TRACE(20, ("__kmp_check_deps: T#%d found %d predecessors for task %p \n",
                 gtid, npredecessors, taskdata));
@@ -413,9 +412,8 @@ void __kmp_release_deps(kmp_int32 gtid, kmp_taskdata_t *task) {
   kmp_depnode_list_t *next;
   for (kmp_depnode_list_t *p = node->dn.successors; p; p = next) {
     kmp_depnode_t *successor = p->node;
-    kmp_int32 npredecessors =
-        KMP_TEST_THEN_DEC32(CCAST(kmp_int32 *, &successor->dn.npredecessors)) -
-        1;
+    kmp_int32 npredecessors = KMP_ATOMIC_DEC(&successor->dn.npredecessors) - 1;
+
     // successor task can be NULL for wait_depends or because deps are still
     // being processed
     if (npredecessors == 0) {
@@ -648,7 +646,7 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
     return;
   }
 
-  kmp_depnode_t node;
+  kmp_depnode_t node = {0};
   __kmp_init_node(&node);
 
   if (!__kmp_check_deps(gtid, &node, NULL, current_task->td_dephash,
@@ -661,12 +659,10 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
   }
 
   int thread_finished = FALSE;
-  kmp_flag_32 flag((volatile kmp_uint32 *)&(node.dn.npredecessors), 0U);
+  kmp_flag_32 flag((std::atomic<kmp_uint32> *)&node.dn.npredecessors, 0U);
   while (node.dn.npredecessors > 0) {
-    flag.execute_tasks(thread, gtid, FALSE, &thread_finished,
-#if USE_ITT_BUILD
-                       NULL,
-#endif
+    flag.execute_tasks(thread, gtid, FALSE,
+                       &thread_finished USE_ITT_BUILD_ARG(NULL),
                        __kmp_task_stealing_constraint);
   }
 

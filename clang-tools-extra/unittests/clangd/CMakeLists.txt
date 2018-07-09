@@ -23,7 +23,6 @@ add_extra_unittest(ClangdTests
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
   IndexTests.cpp
-  JSONExprTests.cpp
   QualityTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp

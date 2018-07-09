@@ -1216,6 +1216,9 @@ let usesCustomInserter = 1,    // Expanded after instruction selection.
   def SELECT_CC_F8  : Pseudo<(outs f8rc:$dst), (ins crrc:$cond, f8rc:$T, f8rc:$F,
                               i32imm:$BROPC), "#SELECT_CC_F8",
                               []>;
+  def SELECT_CC_F16  : Pseudo<(outs vrrc:$dst), (ins crrc:$cond, vrrc:$T, vrrc:$F,
+                              i32imm:$BROPC), "#SELECT_CC_F16",
+                              []>;
   def SELECT_CC_VRRC: Pseudo<(outs vrrc:$dst), (ins crrc:$cond, vrrc:$T, vrrc:$F,
                               i32imm:$BROPC), "#SELECT_CC_VRRC",
                               []>;
@@ -1234,6 +1237,9 @@ let usesCustomInserter = 1,    // Expanded after instruction selection.
   def SELECT_F8  : Pseudo<(outs f8rc:$dst), (ins crbitrc:$cond,
                           f8rc:$T, f8rc:$F), "#SELECT_F8",
                           [(set f64:$dst, (select i1:$cond, f64:$T, f64:$F))]>;
+  def SELECT_F16  : Pseudo<(outs vrrc:$dst), (ins crbitrc:$cond,
+                          vrrc:$T, vrrc:$F), "#SELECT_F16",
+                          [(set f128:$dst, (select i1:$cond, f128:$T, f128:$F))]>;
   def SELECT_VRRC: Pseudo<(outs vrrc:$dst), (ins crbitrc:$cond,
                           vrrc:$T, vrrc:$F), "#SELECT_VRRC",
                           [(set v4i32:$dst,
@@ -3622,6 +3628,37 @@ defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETNE)),
 defm : CRNotPat<(i1 (setcc f64:$s1, f64:$s2, SETO)),
                 (EXTRACT_SUBREG (FCMPUD $s1, $s2), sub_un)>;
 
+// SETCC for f128.
+def : Pat<(i1 (setcc f128:$s1, f128:$s2, SETOLT)),
+          (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_lt)>;
+def : Pat<(i1 (setcc f128:$s1, f128:$s2, SETLT)),
+          (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_lt)>;
+def : Pat<(i1 (setcc f128:$s1, f128:$s2, SETOGT)),
+          (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_gt)>;
+def : Pat<(i1 (setcc f128:$s1, f128:$s2, SETGT)),
+          (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_gt)>;
+def : Pat<(i1 (setcc f128:$s1, f128:$s2, SETOEQ)),
+          (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_eq)>;
+def : Pat<(i1 (setcc f128:$s1, f128:$s2, SETEQ)),
+          (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_eq)>;
+def : Pat<(i1 (setcc f128:$s1, f128:$s2, SETUO)),
+          (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_un)>;
+
+defm : CRNotPat<(i1 (setcc f128:$s1, f128:$s2, SETUGE)),
+                (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_lt)>;
+defm : CRNotPat<(i1 (setcc f128:$s1, f128:$s2, SETGE)),
+                (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_lt)>;
+defm : CRNotPat<(i1 (setcc f128:$s1, f128:$s2, SETULE)),
+                (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_gt)>;
+defm : CRNotPat<(i1 (setcc f128:$s1, f128:$s2, SETLE)),
+                (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_gt)>;
+defm : CRNotPat<(i1 (setcc f128:$s1, f128:$s2, SETUNE)),
+                (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_eq)>;
+defm : CRNotPat<(i1 (setcc f128:$s1, f128:$s2, SETNE)),
+                (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_eq)>;
+defm : CRNotPat<(i1 (setcc f128:$s1, f128:$s2, SETO)),
+                (EXTRACT_SUBREG (XSCMPUQP $s1, $s2), sub_un)>;
+
 // match select on i1 variables:
 def : Pat<(i1 (select i1:$cond, i1:$tval, i1:$fval)),
           (CROR (CRAND        $cond , $tval),
@@ -3745,6 +3782,27 @@ def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETUGT)),
           (SELECT_F8 (CRANDC $lhs, $rhs), $tval, $fval)>;
 def : Pat<(f64 (selectcc i1:$lhs, i1:$rhs, f64:$tval, f64:$fval, SETNE)),
           (SELECT_F8 (CRXOR $lhs, $rhs), $tval, $fval)>;
+
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETLT)),
+          (SELECT_F16 (CRANDC $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETULT)),
+          (SELECT_F16 (CRANDC $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETLE)),
+          (SELECT_F16 (CRORC  $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETULE)),
+          (SELECT_F16 (CRORC  $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETEQ)),
+          (SELECT_F16 (CREQV $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETGE)),
+         (SELECT_F16 (CRORC  $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETUGE)),
+          (SELECT_F16 (CRORC  $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETGT)),
+          (SELECT_F16 (CRANDC $rhs, $lhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETUGT)),
+          (SELECT_F16 (CRANDC $lhs, $rhs), $tval, $fval)>;
+def : Pat<(f128 (selectcc i1:$lhs, i1:$rhs, f128:$tval, f128:$fval, SETNE)),
+          (SELECT_F16 (CRXOR $lhs, $rhs), $tval, $fval)>;
 
 def : Pat<(v4i32 (selectcc i1:$lhs, i1:$rhs, v4i32:$tval, v4i32:$fval, SETLT)),
           (SELECT_VRRC (CRANDC $lhs, $rhs), $tval, $fval)>;

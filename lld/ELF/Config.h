@@ -113,7 +113,7 @@ struct Configuration {
                   uint64_t>
       CallGraphProfile;
   bool AllowMultipleDefinition;
-  bool AndroidPackDynRelocs = false;
+  bool AndroidPackDynRelocs;
   bool ARMHasBlx = false;
   bool ARMHasMovtMovw = false;
   bool ARMJ1J2BranchEncoding = false;
@@ -153,6 +153,7 @@ struct Configuration {
   bool PrintGcSections;
   bool PrintIcfSections;
   bool Relocatable;
+  bool RelrPackDynRelocs;
   bool SaveTemps;
   bool SingleRoRx;
   bool Shared;
@@ -163,6 +164,7 @@ struct Configuration {
   bool ThinLTOEmitImportsFiles;
   bool ThinLTOIndexOnly;
   bool UndefinedVersion;
+  bool UseAndroidRelrTags = false;
   bool WarnBackrefs;
   bool WarnCommon;
   bool WarnMissingEntry;

@@ -1554,29 +1554,22 @@ void CGOpenMPRuntimeNVPTX::emitNumTeamsClause(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntimeNVPTX::emitParallelOutlinedFunction(
     const OMPExecutableDirective &D, const VarDecl *ThreadIDVar,
     OpenMPDirectiveKind InnermostKind, const RegionCodeGenTy &CodeGen) {
-  SourceLocation Loc = D.getLocStart();
-
   // Emit target region as a standalone region.
   class NVPTXPrePostActionTy : public PrePostActionTy {
-    SourceLocation &Loc;
     bool &IsInParallelRegion;
     bool PrevIsInParallelRegion;
 
   public:
-    NVPTXPrePostActionTy(SourceLocation &Loc, bool &IsInParallelRegion)
-        : Loc(Loc), IsInParallelRegion(IsInParallelRegion) {}
+    NVPTXPrePostActionTy(bool &IsInParallelRegion)
+        : IsInParallelRegion(IsInParallelRegion) {}
     void Enter(CodeGenFunction &CGF) override {
-      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
-          .emitGenericVarsProlog(CGF, Loc);
       PrevIsInParallelRegion = IsInParallelRegion;
       IsInParallelRegion = true;
     }
     void Exit(CodeGenFunction &CGF) override {
       IsInParallelRegion = PrevIsInParallelRegion;
-      static_cast<CGOpenMPRuntimeNVPTX &>(CGF.CGM.getOpenMPRuntime())
-          .emitGenericVarsEpilog(CGF);
     }
-  } Action(Loc, IsInParallelRegion);
+  } Action(IsInParallelRegion);
   CodeGen.setAction(Action);
   bool PrevIsInTargetMasterThreadRegion = IsInTargetMasterThreadRegion;
   IsInTargetMasterThreadRegion = false;

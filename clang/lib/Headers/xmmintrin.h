@@ -40,8 +40,8 @@ typedef unsigned int __v4su __attribute__((__vector_size__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse")))
-#define __DEFAULT_FN_ATTRS_MMX __attribute__((__always_inline__, __nodebug__, __target__("mmx,sse")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS_MMX __attribute__((__always_inline__, __nodebug__, __target__("mmx,sse"), __min_vector_width__(64)))
 
 /// Adds the 32-bit float values in the low-order bits of the operands.
 ///

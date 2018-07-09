@@ -1882,3 +1882,268 @@ define i1 @return_i1_zext() {
 ; CHECK: RET_ReallyLR implicit $w0
   ret i1 true
 }
+
+; Try one cmpxchg
+define i32 @test_atomic_cmpxchg_1(i32* %addr) {
+; CHECK-LABEL: name: test_atomic_cmpxchg_1
+; CHECK:       bb.1.entry:
+; CHECK-NEXT:  successors: %bb.{{[^)]+}}
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[OLDVAL:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+; CHECK-NEXT:    [[NEWVAL:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+; CHECK:       bb.2.repeat:
+; CHECK-NEXT:    successors: %bb.3({{[^)]+}}), %bb.2({{[^)]+}})
+; CHECK:         [[OLDVALRES:%[0-9]+]]:_(s32), [[SUCCESS:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[ADDR]](p0), [[OLDVAL]], [[NEWVAL]] :: (load store monotonic monotonic 4 on %ir.addr)
+; CHECK-NEXT:    G_BRCOND [[SUCCESS]](s1), %bb.3
+; CHECK-NEXT:    G_BR %bb.2
+; CHECK:       bb.3.done:
+entry:
+  br label %repeat
+repeat:
+  %val_success = cmpxchg i32* %addr, i32 0, i32 1 monotonic monotonic
+  %value_loaded = extractvalue { i32, i1 } %val_success, 0
+  %success = extractvalue { i32, i1 } %val_success, 1
+  br i1 %success, label %done, label %repeat
+done:
+  ret i32 %value_loaded
+}
+
+; Try one cmpxchg with a small type and high atomic ordering.
+define i16 @test_atomic_cmpxchg_2(i16* %addr) {
+; CHECK-LABEL: name: test_atomic_cmpxchg_2
+; CHECK:       bb.1.entry:
+; CHECK-NEXT:  successors: %bb.2({{[^)]+}})
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[OLDVAL:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
+; CHECK-NEXT:    [[NEWVAL:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+; CHECK:       bb.2.repeat:
+; CHECK-NEXT:    successors: %bb.3({{[^)]+}}), %bb.2({{[^)]+}})
+; CHECK:         [[OLDVALRES:%[0-9]+]]:_(s16), [[SUCCESS:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[ADDR]](p0), [[OLDVAL]], [[NEWVAL]] :: (load store seq_cst seq_cst 2 on %ir.addr)
+; CHECK-NEXT:    G_BRCOND [[SUCCESS]](s1), %bb.3
+; CHECK-NEXT:    G_BR %bb.2
+; CHECK:       bb.3.done:
+entry:
+  br label %repeat
+repeat:
+  %val_success = cmpxchg i16* %addr, i16 0, i16 1 seq_cst seq_cst
+  %value_loaded = extractvalue { i16, i1 } %val_success, 0
+  %success = extractvalue { i16, i1 } %val_success, 1
+  br i1 %success, label %done, label %repeat
+done:
+  ret i16 %value_loaded
+}
+
+; Try one cmpxchg where the success order and failure order differ.
+define i64 @test_atomic_cmpxchg_3(i64* %addr) {
+; CHECK-LABEL: name: test_atomic_cmpxchg_3
+; CHECK:       bb.1.entry:
+; CHECK-NEXT:  successors: %bb.2({{[^)]+}})
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[OLDVAL:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+; CHECK-NEXT:    [[NEWVAL:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+; CHECK:       bb.2.repeat:
+; CHECK-NEXT:    successors: %bb.3({{[^)]+}}), %bb.2({{[^)]+}})
+; CHECK:         [[OLDVALRES:%[0-9]+]]:_(s64), [[SUCCESS:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[ADDR]](p0), [[OLDVAL]], [[NEWVAL]] :: (load store seq_cst acquire 8 on %ir.addr)
+; CHECK-NEXT:    G_BRCOND [[SUCCESS]](s1), %bb.3
+; CHECK-NEXT:    G_BR %bb.2
+; CHECK:       bb.3.done:
+entry:
+  br label %repeat
+repeat:
+  %val_success = cmpxchg i64* %addr, i64 0, i64 1 seq_cst acquire
+  %value_loaded = extractvalue { i64, i1 } %val_success, 0
+  %success = extractvalue { i64, i1 } %val_success, 1
+  br i1 %success, label %done, label %repeat
+done:
+  ret i64 %value_loaded
+}
+
+; Try a monotonic atomicrmw xchg
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_xchg(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_xchg
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_XCHG [[ADDR]](p0), [[VAL]] :: (load store monotonic 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw xchg i256* %addr, i256 1 monotonic
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an acquire atomicrmw add
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_add(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_add
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_ADD [[ADDR]](p0), [[VAL]] :: (load store acquire 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw add i256* %addr, i256 1 acquire
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try a release atomicrmw sub
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_sub(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_sub
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_SUB [[ADDR]](p0), [[VAL]] :: (load store release 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw sub i256* %addr, i256 1 release
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an acq_rel atomicrmw and
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_and(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_and
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_AND [[ADDR]](p0), [[VAL]] :: (load store acq_rel 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw and i256* %addr, i256 1 acq_rel
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an seq_cst atomicrmw nand
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_nand(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_nand
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_NAND [[ADDR]](p0), [[VAL]] :: (load store seq_cst 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw nand i256* %addr, i256 1 seq_cst
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an seq_cst atomicrmw or
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_or(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_or
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_OR [[ADDR]](p0), [[VAL]] :: (load store seq_cst 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw or i256* %addr, i256 1 seq_cst
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an seq_cst atomicrmw xor
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_xor(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_xor
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_XOR [[ADDR]](p0), [[VAL]] :: (load store seq_cst 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw xor i256* %addr, i256 1 seq_cst
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an seq_cst atomicrmw min
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_min(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_min
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_MIN [[ADDR]](p0), [[VAL]] :: (load store seq_cst 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw min i256* %addr, i256 1 seq_cst
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an seq_cst atomicrmw max
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_max(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_max
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_MAX [[ADDR]](p0), [[VAL]] :: (load store seq_cst 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw max i256* %addr, i256 1 seq_cst
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an seq_cst atomicrmw unsigned min
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_umin(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_umin
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_UMIN [[ADDR]](p0), [[VAL]] :: (load store seq_cst 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw umin i256* %addr, i256 1 seq_cst
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}
+
+; Try an seq_cst atomicrmw unsigned max
+; AArch64 will expand some atomicrmw's at the LLVM-IR level so we use a wide type to avoid this.
+define i32 @test_atomicrmw_umax(i256* %addr) {
+; CHECK-LABEL: name: test_atomicrmw_umax
+; CHECK:       bb.1 (%ir-block.{{[0-9]+}}):
+; CHECK-NEXT:  liveins: $x0
+; CHECK:         [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK-NEXT:    [[VAL:%[0-9]+]]:_(s256) = G_CONSTANT i256 1
+; CHECK-NEXT:    [[OLDVALRES:%[0-9]+]]:_(s256) = G_ATOMICRMW_UMAX [[ADDR]](p0), [[VAL]] :: (load store seq_cst 32 on %ir.addr)
+; CHECK-NEXT:    [[RES:%[0-9]+]]:_(s32) = G_TRUNC [[OLDVALRES]]
+  %oldval = atomicrmw umax i256* %addr, i256 1 seq_cst
+  ; FIXME: We currently can't lower 'ret i256' and it's not the purpose of this
+  ;        test so work around it by truncating to i32 for now.
+  %oldval.trunc = trunc i256 %oldval to i32
+  ret i32 %oldval.trunc
+}

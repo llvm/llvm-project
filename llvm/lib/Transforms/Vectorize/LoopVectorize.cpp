@@ -6843,7 +6843,7 @@ VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
-  VPBlockUtils::insertTwoBlocksAfter(Pred, Exit, Entry);
+  VPBlockUtils::insertTwoBlocksAfter(Pred, Exit, BlockInMask, Entry);
   VPBlockUtils::connectBlocks(Pred, Exit);
 
   return Region;
