@@ -536,9 +536,17 @@ let Predicates = [HasSVE] in {
 
   defm ZIP1_ZZZ : sve_int_perm_bin_perm_zz<0b000, "zip1">;
   defm ZIP2_ZZZ : sve_int_perm_bin_perm_zz<0b001, "zip2">;
+  defm UZP1_ZZZ : sve_int_perm_bin_perm_zz<0b010, "uzp1">;
+  defm UZP2_ZZZ : sve_int_perm_bin_perm_zz<0b011, "uzp2">;
+  defm TRN1_ZZZ : sve_int_perm_bin_perm_zz<0b100, "trn1">;
+  defm TRN2_ZZZ : sve_int_perm_bin_perm_zz<0b101, "trn2">;
 
   defm ZIP1_PPP : sve_int_perm_bin_perm_pp<0b000, "zip1">;
   defm ZIP2_PPP : sve_int_perm_bin_perm_pp<0b001, "zip2">;
+  defm UZP1_PPP : sve_int_perm_bin_perm_pp<0b010, "uzp1">;
+  defm UZP2_PPP : sve_int_perm_bin_perm_pp<0b011, "uzp2">;
+  defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1">;
+  defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2">;
 
   def RDVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdvl">;
   def ADDVL_XXI : sve_int_arith_vl<0b0, "addvl">;

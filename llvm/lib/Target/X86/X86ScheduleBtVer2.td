@@ -200,6 +200,8 @@ defm : X86WriteResPairUnsupported<WriteBZHI>;
 
 defm : JWriteResIntPair<WriteShift, [JALU01], 1>;
 
+defm : JWriteResIntPair<WriteShiftDouble, [JALU01], 1>;
+
 def JWriteSHLDrri : SchedWriteRes<[JALU01]> {
   let Latency = 3;
   let ResourceCycles = [6];

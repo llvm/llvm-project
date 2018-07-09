@@ -142,6 +142,8 @@ def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
 
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;
+// Double shift instructions.
+defm WriteShiftDouble : X86SchedWritePair;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm WriteBEXTR : X86SchedWritePair;
