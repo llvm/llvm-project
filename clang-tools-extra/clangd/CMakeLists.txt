@@ -23,7 +23,6 @@ add_clang_library(clangDaemon
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   Headers.cpp
-  JSONExpr.cpp
   JSONRPCDispatcher.cpp
   Logger.cpp
   Protocol.cpp
