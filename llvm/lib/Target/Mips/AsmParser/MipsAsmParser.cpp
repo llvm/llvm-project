@@ -257,9 +257,9 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandCondBranches(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                           const MCSubtargetInfo *STI);
 
-  bool expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                 const MCSubtargetInfo *STI, const bool IsMips64,
-                 const bool Signed);
+  bool expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                    const MCSubtargetInfo *STI, const bool IsMips64,
+                    const bool Signed);
 
   bool expandTrunc(MCInst &Inst, bool IsDouble, bool Is64FPU, SMLoc IDLoc,
                    MCStreamer &Out, const MCSubtargetInfo *STI);
@@ -2431,20 +2431,28 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     return expandCondBranches(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::SDivMacro:
   case Mips::SDivIMacro:
-    return expandDiv(Inst, IDLoc, Out, STI, false, true) ? MER_Fail
-                                                         : MER_Success;
+  case Mips::SRemMacro:
+  case Mips::SRemIMacro:
+    return expandDivRem(Inst, IDLoc, Out, STI, false, true) ? MER_Fail
+                                                            : MER_Success;
   case Mips::DSDivMacro:
   case Mips::DSDivIMacro:
-    return expandDiv(Inst, IDLoc, Out, STI, true, true) ? MER_Fail
-                                                        : MER_Success;
+  case Mips::DSRemMacro:
+  case Mips::DSRemIMacro:
+    return expandDivRem(Inst, IDLoc, Out, STI, true, true) ? MER_Fail
+                                                           : MER_Success;
   case Mips::UDivMacro:
   case Mips::UDivIMacro:
-    return expandDiv(Inst, IDLoc, Out, STI, false, false) ? MER_Fail
-                                                          : MER_Success;
+  case Mips::URemMacro:
+  case Mips::URemIMacro:
+    return expandDivRem(Inst, IDLoc, Out, STI, false, false) ? MER_Fail
+                                                             : MER_Success;
   case Mips::DUDivMacro:
   case Mips::DUDivIMacro:
-    return expandDiv(Inst, IDLoc, Out, STI, true, false) ? MER_Fail
-                                                         : MER_Success;
+  case Mips::DURemMacro:
+  case Mips::DURemIMacro:
+    return expandDivRem(Inst, IDLoc, Out, STI, true, false) ? MER_Fail
+                                                            : MER_Success;
   case Mips::PseudoTRUNC_W_S:
     return expandTrunc(Inst, false, false, IDLoc, Out, STI) ? MER_Fail
                                                             : MER_Success;
@@ -3927,9 +3935,9 @@ bool MipsAsmParser::expandCondBranches(MCInst &Inst, SMLoc IDLoc,
 // The destination register can only be $zero when expanding (S)DivIMacro or
 // D(S)DivMacro.
 
-bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                              const MCSubtargetInfo *STI, const bool IsMips64,
-                              const bool Signed) {
+bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                 const MCSubtargetInfo *STI, const bool IsMips64,
+                                 const bool Signed) {
   MipsTargetStreamer &TOut = getTargetStreamer();
 
   warnIfNoMacro(IDLoc);
@@ -3969,6 +3977,17 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   bool UseTraps = useTraps();
 
+  unsigned Opcode = Inst.getOpcode();
+  bool isDiv = Opcode == Mips::SDivMacro || Opcode == Mips::SDivIMacro ||
+               Opcode == Mips::UDivMacro || Opcode == Mips::UDivIMacro ||
+               Opcode == Mips::DSDivMacro || Opcode == Mips::DSDivIMacro ||
+               Opcode == Mips::DUDivMacro || Opcode == Mips::DUDivIMacro;
+
+  bool isRem = Opcode == Mips::SRemMacro || Opcode == Mips::SRemIMacro ||
+               Opcode == Mips::URemMacro || Opcode == Mips::URemIMacro ||
+               Opcode == Mips::DSRemMacro || Opcode == Mips::DSRemIMacro ||
+               Opcode == Mips::DURemMacro || Opcode == Mips::DURemIMacro;
+
   if (RtOp.isImm()) {
     unsigned ATReg = getATReg(IDLoc);
     if (!ATReg)
@@ -3982,10 +4001,13 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       return false;
     }
 
-    if (ImmValue == 1) {
+    if (isRem && (ImmValue == 1 || (Signed && (ImmValue == -1)))) {
+      TOut.emitRRR(Mips::OR, RdReg, ZeroReg, ZeroReg, IDLoc, STI);
+      return false;
+    } else if (isDiv && ImmValue == 1) {
       TOut.emitRRR(Mips::OR, RdReg, RsReg, Mips::ZERO, IDLoc, STI);
       return false;
-    } else if (Signed && ImmValue == -1) {
+    } else if (isDiv && Signed && ImmValue == -1) {
       TOut.emitRRR(SubOp, RdReg, ZeroReg, RsReg, IDLoc, STI);
       return false;
     } else {
@@ -3993,22 +4015,29 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                         false, Inst.getLoc(), Out, STI))
         return true;
       TOut.emitRR(DivOp, RsReg, ATReg, IDLoc, STI);
-      TOut.emitR(Mips::MFLO, RdReg, IDLoc, STI);
+      TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
       return false;
     }
     return true;
   }
 
-  // If the macro expansion of (d)div(u) would always trap or break, insert
-  // the trap/break and exit. This gives a different result to GAS. GAS has
-  // an inconsistency/missed optimization in that not all cases are handled
-  // equivalently. As the observed behaviour is the same, we're ok.
+  // If the macro expansion of (d)div(u) or (d)rem(u) would always trap or
+  // break, insert the trap/break and exit. This gives a different result to
+  // GAS. GAS has an inconsistency/missed optimization in that not all cases
+  // are handled equivalently. As the observed behaviour is the same, we're ok.
   if (RtReg == Mips::ZERO || RtReg == Mips::ZERO_64) {
     if (UseTraps) {
       TOut.emitRRI(Mips::TEQ, ZeroReg, ZeroReg, 0x7, IDLoc, STI);
       return false;
     }
     TOut.emitII(Mips::BREAK, 0x7, 0, IDLoc, STI);
+    return false;
+  }
+
+  // (d)rem(u) $0, $X, $Y is a special case. Like div $zero, $X, $Y, it does
+  // not expand to macro sequence.
+  if (isRem && (RdReg == Mips::ZERO || RdReg == Mips::ZERO_64)) {
+    TOut.emitRR(DivOp, RsReg, RtReg, IDLoc, STI);
     return false;
   }
 
@@ -4035,7 +4064,7 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     if (!UseTraps)
       TOut.getStreamer().EmitLabel(BrTarget);
 
-    TOut.emitR(Mips::MFLO, RdReg, IDLoc, STI);
+    TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
     return false;
   }
 
@@ -4058,7 +4087,7 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
 
   if (IsMips64) {
     TOut.emitRRI(Mips::ADDiu, ATReg, ZeroReg, 1, IDLoc, STI);
-    TOut.emitRRI(Mips::DSLL32, ATReg, ATReg, 0x1f, IDLoc, STI);
+    TOut.emitDSLL(ATReg, ATReg, 63, IDLoc, STI);
   } else {
     TOut.emitRI(Mips::LUi, ATReg, (uint16_t)0x8000, IDLoc, STI);
   }
@@ -4068,12 +4097,12 @@ bool MipsAsmParser::expandDiv(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   else {
     // Branch to the mflo instruction.
     TOut.emitRRX(Mips::BNE, RsReg, ATReg, LabelOpEnd, IDLoc, STI);
-    TOut.emitRRI(Mips::SLL, ZeroReg, ZeroReg, 0, IDLoc, STI);
+    TOut.emitNop(IDLoc, STI);
     TOut.emitII(Mips::BREAK, 0x6, 0, IDLoc, STI);
   }
 
   TOut.getStreamer().EmitLabel(BrTargetEnd);
-  TOut.emitR(Mips::MFLO, RdReg, IDLoc, STI);
+  TOut.emitR(isDiv ? Mips::MFLO : Mips::MFHI, RdReg, IDLoc, STI);
   return false;
 }
 

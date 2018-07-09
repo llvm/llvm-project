@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IndexingContext.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
@@ -290,6 +291,7 @@ static bool shouldReportOccurrenceForSystemDeclOnlyMode(
       case SymbolRole::Dynamic:
       case SymbolRole::AddressOf:
       case SymbolRole::Implicit:
+      case SymbolRole::Undefinition:
       case SymbolRole::RelationReceivedBy:
       case SymbolRole::RelationCalledBy:
       case SymbolRole::RelationContainedBy:
@@ -405,4 +407,25 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
 
   IndexDataConsumer::ASTNodeInfo Node{OrigE, OrigD, Parent, ContainerDC};
   return DataConsumer.handleDeclOccurence(D, Roles, FinalRelations, Loc, Node);
+}
+
+void IndexingContext::handleMacroDefined(const IdentifierInfo &Name,
+                                         SourceLocation Loc,
+                                         const MacroInfo &MI) {
+  SymbolRoleSet Roles = (unsigned)SymbolRole::Definition;
+  DataConsumer.handleMacroOccurence(&Name, &MI, Roles, Loc);
+}
+
+void IndexingContext::handleMacroUndefined(const IdentifierInfo &Name,
+                                           SourceLocation Loc,
+                                           const MacroInfo &MI) {
+  SymbolRoleSet Roles = (unsigned)SymbolRole::Undefinition;
+  DataConsumer.handleMacroOccurence(&Name, &MI, Roles, Loc);
+}
+
+void IndexingContext::handleMacroReference(const IdentifierInfo &Name,
+                                           SourceLocation Loc,
+                                           const MacroInfo &MI) {
+  SymbolRoleSet Roles = (unsigned)SymbolRole::Reference;
+  DataConsumer.handleMacroOccurence(&Name, &MI, Roles, Loc);
 }

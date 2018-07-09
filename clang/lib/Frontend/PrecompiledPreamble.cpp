@@ -63,6 +63,16 @@ createVFSOverlayForPreamblePCH(StringRef PCHFilename,
   return Overlay;
 }
 
+class PreambleDependencyCollector : public DependencyCollector {
+public:
+  // We want to collect all dependencies for correctness. Avoiding the real
+  // system dependencies (e.g. stl from /usr/lib) would probably be a good idea,
+  // but there is no way to distinguish between those and the ones that can be
+  // spuriously added by '-isystem' (e.g. to suppress warnings from those
+  // headers).
+  bool needSystemDependencies() override { return true; }
+};
+
 /// Keeps a track of files to be deleted in destructor.
 class TemporaryFiles {
 public:
@@ -311,7 +321,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   Clang->setSourceManager(
       new SourceManager(Diagnostics, Clang->getFileManager()));
 
-  auto PreambleDepCollector = std::make_shared<DependencyCollector>();
+  auto PreambleDepCollector = std::make_shared<PreambleDependencyCollector>();
   Clang->addDependencyCollector(PreambleDepCollector);
 
   // Remap the main source file to the preamble buffer.

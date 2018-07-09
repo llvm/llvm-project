@@ -17,8 +17,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
 
@@ -155,10 +155,12 @@ static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
   ID.MaxLatency = Latency < 0 ? 100U : static_cast<unsigned>(Latency);
 }
 
-static void populateWrites(InstrDesc &ID, const MCInst &MCI,
-                           const MCInstrDesc &MCDesc,
-                           const MCSchedClassDesc &SCDesc,
-                           const MCSubtargetInfo &STI) {
+void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
+                                  unsigned SchedClassID) {
+  const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
+  const MCSchedModel &SM = STI.getSchedModel();
+  const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
+
   // These are for now the (strong) assumptions made by this algorithm:
   //  * The number of explicit and implicit register definitions in a MCInst
   //    matches the number of explicit and implicit definitions according to
@@ -196,8 +198,8 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
       const MCWriteLatencyEntry &WLE =
           *STI.getWriteLatencyEntry(&SCDesc, CurrentDef);
       // Conservatively default to MaxLatency.
-      Write.Latency = WLE.Cycles < 0 ? ID.MaxLatency
-                                     : static_cast<unsigned>(WLE.Cycles);
+      Write.Latency =
+          WLE.Cycles < 0 ? ID.MaxLatency : static_cast<unsigned>(WLE.Cycles);
       Write.SClassOrWriteResourceID = WLE.WriteResourceID;
     } else {
       // Assign a default latency for this write.
@@ -226,8 +228,8 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
       const MCWriteLatencyEntry &WLE =
           *STI.getWriteLatencyEntry(&SCDesc, Index);
       // Conservatively default to MaxLatency.
-      Write.Latency = WLE.Cycles < 0 ? ID.MaxLatency
-                                     : static_cast<unsigned>(WLE.Cycles);
+      Write.Latency =
+          WLE.Cycles < 0 ? ID.MaxLatency : static_cast<unsigned>(WLE.Cycles);
       Write.SClassOrWriteResourceID = WLE.WriteResourceID;
     } else {
       // Assign a default latency for this write.
@@ -262,14 +264,13 @@ static void populateWrites(InstrDesc &ID, const MCInst &MCI,
   }
 }
 
-static void populateReads(InstrDesc &ID, const MCInst &MCI,
-                          const MCInstrDesc &MCDesc,
-                          const MCSchedClassDesc &SCDesc,
-                          const MCSubtargetInfo &STI) {
-  unsigned SchedClassID = MCDesc.getSchedClass();
-  unsigned i = 0;
+void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
+                                 unsigned SchedClassID) {
+  const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
   unsigned NumExplicitDefs = MCDesc.getNumDefs();
+
   // Skip explicit definitions.
+  unsigned i = 0;
   for (; i < MCI.getNumOperands() && NumExplicitDefs; ++i) {
     const MCOperand &Op = MCI.getOperand(i);
     if (Op.isReg())
@@ -314,8 +315,8 @@ const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
-  unsigned short Opcode = MCI.getOpcode();
   // Obtain the instruction descriptor from the opcode.
+  unsigned short Opcode = MCI.getOpcode();
   const MCInstrDesc &MCDesc = MCII.get(Opcode);
   const MCSchedModel &SM = STI.getSchedModel();
 
@@ -332,10 +333,23 @@ const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
       llvm::report_fatal_error("unable to resolve this variant class.");
   }
 
+  // Check if this instruction is supported. Otherwise, report a fatal error.
+  const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
+  if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
+    std::string ToString;
+    llvm::raw_string_ostream OS(ToString);
+    WithColor::error() << "found an unsupported instruction in the input"
+                       << " assembly sequence.\n";
+    MCIP.printInst(&MCI, OS, "", STI);
+    OS.flush();
+
+    WithColor::note() << "instruction: " << ToString << '\n';
+    llvm::report_fatal_error(
+        "Don't know how to analyze unsupported instructions.");
+  }
+
   // Create a new empty descriptor.
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
-
-  const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
   ID->NumMicroOps = SCDesc.NumMicroOps;
 
   if (MCDesc.isCall()) {
@@ -357,8 +371,8 @@ const InstrDesc &InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
   computeMaxLatency(*ID, MCDesc, SCDesc, STI);
-  populateWrites(*ID, MCI, MCDesc, SCDesc, STI);
-  populateReads(*ID, MCI, MCDesc, SCDesc, STI);
+  populateWrites(*ID, MCI, SchedClassID);
+  populateReads(*ID, MCI, SchedClassID);
 
   LLVM_DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
   LLVM_DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
@@ -428,8 +442,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   // Initialize writes.
   unsigned WriteIndex = 0;
   for (const WriteDescriptor &WD : D.Writes) {
-    unsigned RegID =
-        WD.isImplicitWrite() ? WD.RegisterID : MCI.getOperand(WD.OpIndex).getReg();
+    unsigned RegID = WD.isImplicitWrite() ? WD.RegisterID
+                                          : MCI.getOperand(WD.OpIndex).getReg();
     // Check if this is a optional definition that references NoReg.
     if (WD.IsOptionalDef && !RegID) {
       ++WriteIndex;

@@ -89,7 +89,7 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
 namespace {
 /// Base class for writing out Accelerator tables. It holds the common
 /// functionality for the two Accelerator table types.
-class AccelTableEmitter {
+class AccelTableWriter {
 protected:
   AsmPrinter *const Asm;          ///< Destination.
   const AccelTableBase &Contents; ///< Data to emit.
@@ -106,13 +106,13 @@ protected:
   void emitOffsets(const MCSymbol *Base) const;
 
 public:
-  AccelTableEmitter(AsmPrinter *Asm, const AccelTableBase &Contents,
-                    bool SkipIdenticalHashes)
+  AccelTableWriter(AsmPrinter *Asm, const AccelTableBase &Contents,
+                   bool SkipIdenticalHashes)
       : Asm(Asm), Contents(Contents), SkipIdenticalHashes(SkipIdenticalHashes) {
   }
 };
 
-class AppleAccelTableEmitter : public AccelTableEmitter {
+class AppleAccelTableWriter : public AccelTableWriter {
   using Atom = AppleAccelTableData::Atom;
 
   /// The fixed header of an Apple Accelerator Table.
@@ -165,9 +165,9 @@ class AppleAccelTableEmitter : public AccelTableEmitter {
   void emitData() const;
 
 public:
-  AppleAccelTableEmitter(AsmPrinter *Asm, const AccelTableBase &Contents,
-                         ArrayRef<Atom> Atoms, const MCSymbol *SecBegin)
-      : AccelTableEmitter(Asm, Contents, true),
+  AppleAccelTableWriter(AsmPrinter *Asm, const AccelTableBase &Contents,
+                        ArrayRef<Atom> Atoms, const MCSymbol *SecBegin)
+      : AccelTableWriter(Asm, Contents, true),
         Header(Contents.getBucketCount(), Contents.getUniqueHashCount(),
                8 + (Atoms.size() * 4)),
         HeaderData(Atoms), SecBegin(SecBegin) {}
@@ -182,7 +182,7 @@ public:
 
 /// Class responsible for emitting a DWARF v5 Accelerator Table. The only public
 /// function is emit(), which performs the actual emission.
-class Dwarf5AccelTableEmitter : public AccelTableEmitter {
+class Dwarf5AccelTableWriter : public AccelTableWriter {
   struct Header {
     uint32_t UnitLength = 0;
     uint16_t Version = 5;
@@ -200,7 +200,7 @@ class Dwarf5AccelTableEmitter : public AccelTableEmitter {
         : CompUnitCount(CompUnitCount), BucketCount(BucketCount),
           NameCount(NameCount) {}
 
-    void emit(const Dwarf5AccelTableEmitter &Ctx) const;
+    void emit(const Dwarf5AccelTableWriter &Ctx) const;
   };
   struct AttributeEncoding {
     dwarf::Index Index;
@@ -209,8 +209,7 @@ class Dwarf5AccelTableEmitter : public AccelTableEmitter {
 
   Header Header;
   DenseMap<uint32_t, SmallVector<AttributeEncoding, 2>> Abbreviations;
-  const DwarfDebug &DD;
-  ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits;
+  std::unique_ptr<AccelTableWriterInfo> WriterInfo;
   MCSymbol *ContributionStart = Asm->createTempSymbol("names_start");
   MCSymbol *ContributionEnd = Asm->createTempSymbol("names_end");
   MCSymbol *AbbrevStart = Asm->createTempSymbol("names_abbrev_start");
@@ -230,15 +229,49 @@ class Dwarf5AccelTableEmitter : public AccelTableEmitter {
   void emitData() const;
 
 public:
-  Dwarf5AccelTableEmitter(
-      AsmPrinter *Asm, const AccelTableBase &Contents, const DwarfDebug &DD,
-      ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits);
+  Dwarf5AccelTableWriter(AsmPrinter *Asm, const AccelTableBase &Contents,
+                          std::unique_ptr<AccelTableWriterInfo> WriterInfo);
 
   void emit() const;
 };
+
+/// Default emitter info used by DwarfDebug.
+class DefaultAccelTableWriterInfo final : public AccelTableWriterInfo {
+private:
+  const DwarfDebug &DD;
+  ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits;
+
+public:
+  DefaultAccelTableWriterInfo(const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits);
+  MCSymbol *getLabelForCU(unsigned Idx) const override;
+  unsigned getNumberOfCUs() const override;
+  unsigned getUnqiueIDForUnitDie(const DIE *UnitDie) const override;
+};
 } // namespace
 
-void AccelTableEmitter::emitHashes() const {
+DefaultAccelTableWriterInfo::DefaultAccelTableWriterInfo(
+    const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits)
+    : DD(DD), CompUnits(CompUnits) {}
+
+MCSymbol *DefaultAccelTableWriterInfo::getLabelForCU(unsigned Idx) const {
+  assert(Idx < CompUnits.size());
+  const auto &CU = CompUnits[Idx];
+  assert(Idx == CU->getUniqueID());
+  const DwarfCompileUnit *MainCU =
+      DD.useSplitDwarf() ? CU->getSkeleton() : CU.get();
+  return MainCU->getLabelBegin();
+}
+
+unsigned DefaultAccelTableWriterInfo::getNumberOfCUs() const {
+  return CompUnits.size();
+}
+
+unsigned
+DefaultAccelTableWriterInfo::getUnqiueIDForUnitDie(const DIE *UnitDie) const {
+  return DD.lookupCU(UnitDie)->getUniqueID();
+}
+
+void AccelTableWriter::emitHashes() const {
   uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
   unsigned BucketIdx = 0;
   for (auto &Bucket : Contents.getBuckets()) {
@@ -254,7 +287,7 @@ void AccelTableEmitter::emitHashes() const {
   }
 }
 
-void AccelTableEmitter::emitOffsets(const MCSymbol *Base) const {
+void AccelTableWriter::emitOffsets(const MCSymbol *Base) const {
   const auto &Buckets = Contents.getBuckets();
   uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
@@ -269,7 +302,7 @@ void AccelTableEmitter::emitOffsets(const MCSymbol *Base) const {
   }
 }
 
-void AppleAccelTableEmitter::Header::emit(AsmPrinter *Asm) const {
+void AppleAccelTableWriter::Header::emit(AsmPrinter *Asm) const {
   Asm->OutStreamer->AddComment("Header Magic");
   Asm->emitInt32(Magic);
   Asm->OutStreamer->AddComment("Header Version");
@@ -284,7 +317,7 @@ void AppleAccelTableEmitter::Header::emit(AsmPrinter *Asm) const {
   Asm->emitInt32(HeaderDataLength);
 }
 
-void AppleAccelTableEmitter::HeaderData::emit(AsmPrinter *Asm) const {
+void AppleAccelTableWriter::HeaderData::emit(AsmPrinter *Asm) const {
   Asm->OutStreamer->AddComment("HeaderData Die Offset Base");
   Asm->emitInt32(DieOffsetBase);
   Asm->OutStreamer->AddComment("HeaderData Atom Count");
@@ -298,7 +331,7 @@ void AppleAccelTableEmitter::HeaderData::emit(AsmPrinter *Asm) const {
   }
 }
 
-void AppleAccelTableEmitter::emitBuckets() const {
+void AppleAccelTableWriter::emitBuckets() const {
   const auto &Buckets = Contents.getBuckets();
   unsigned index = 0;
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
@@ -319,7 +352,7 @@ void AppleAccelTableEmitter::emitBuckets() const {
   }
 }
 
-void AppleAccelTableEmitter::emitData() const {
+void AppleAccelTableWriter::emitData() const {
   const auto &Buckets = Contents.getBuckets();
   for (size_t i = 0, e = Buckets.size(); i < e; ++i) {
     uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
@@ -345,7 +378,7 @@ void AppleAccelTableEmitter::emitData() const {
   }
 }
 
-void AppleAccelTableEmitter::emit() const {
+void AppleAccelTableWriter::emit() const {
   Header.emit(Asm);
   HeaderData.emit(Asm);
   emitBuckets();
@@ -354,8 +387,8 @@ void AppleAccelTableEmitter::emit() const {
   emitData();
 }
 
-void Dwarf5AccelTableEmitter::Header::emit(
-    const Dwarf5AccelTableEmitter &Ctx) const {
+void Dwarf5AccelTableWriter::Header::emit(
+    const Dwarf5AccelTableWriter &Ctx) const {
   assert(CompUnitCount > 0 && "Index must have at least one CU.");
 
   AsmPrinter *Asm = Ctx.Asm;
@@ -386,7 +419,7 @@ void Dwarf5AccelTableEmitter::Header::emit(
   Asm->OutStreamer->EmitBytes({AugmentationString, AugmentationStringSize});
 }
 
-DenseSet<uint32_t> Dwarf5AccelTableEmitter::getUniqueTags() const {
+DenseSet<uint32_t> Dwarf5AccelTableWriter::getUniqueTags() const {
   DenseSet<uint32_t> UniqueTags;
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
@@ -400,11 +433,11 @@ DenseSet<uint32_t> Dwarf5AccelTableEmitter::getUniqueTags() const {
   return UniqueTags;
 }
 
-SmallVector<Dwarf5AccelTableEmitter::AttributeEncoding, 2>
-Dwarf5AccelTableEmitter::getUniformAttributes() const {
+SmallVector<Dwarf5AccelTableWriter::AttributeEncoding, 2>
+Dwarf5AccelTableWriter::getUniformAttributes() const {
   SmallVector<AttributeEncoding, 2> UA;
-  if (CompUnits.size() > 1) {
-    size_t LargestCUIndex = CompUnits.size() - 1;
+  if (WriterInfo->getNumberOfCUs() > 1) {
+    size_t LargestCUIndex = WriterInfo->getNumberOfCUs() - 1;
     dwarf::Form Form = DIEInteger::BestForm(/*IsSigned*/ false, LargestCUIndex);
     UA.push_back({dwarf::DW_IDX_compile_unit, Form});
   }
@@ -412,17 +445,15 @@ Dwarf5AccelTableEmitter::getUniformAttributes() const {
   return UA;
 }
 
-void Dwarf5AccelTableEmitter::emitCUList() const {
-  for (const auto &CU : enumerate(CompUnits)) {
-    assert(CU.index() == CU.value()->getUniqueID());
-    Asm->OutStreamer->AddComment("Compilation unit " + Twine(CU.index()));
-    const DwarfCompileUnit *MainCU =
-        DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
-    Asm->emitDwarfSymbolReference(MainCU->getLabelBegin());
+void Dwarf5AccelTableWriter::emitCUList() const {
+  for (unsigned Idx = 0, CUs = WriterInfo->getNumberOfCUs(); Idx < CUs;
+       ++Idx) {
+    Asm->OutStreamer->AddComment("Compilation unit " + Twine(Idx));
+    Asm->emitDwarfSymbolReference(WriterInfo->getLabelForCU(Idx));
   }
 }
 
-void Dwarf5AccelTableEmitter::emitBuckets() const {
+void Dwarf5AccelTableWriter::emitBuckets() const {
   uint32_t Index = 1;
   for (const auto &Bucket : enumerate(Contents.getBuckets())) {
     Asm->OutStreamer->AddComment("Bucket " + Twine(Bucket.index()));
@@ -431,7 +462,7 @@ void Dwarf5AccelTableEmitter::emitBuckets() const {
   }
 }
 
-void Dwarf5AccelTableEmitter::emitStringOffsets() const {
+void Dwarf5AccelTableWriter::emitStringOffsets() const {
   for (const auto &Bucket : enumerate(Contents.getBuckets())) {
     for (auto *Hash : Bucket.value()) {
       DwarfStringPoolEntryRef String = Hash->Name;
@@ -442,7 +473,7 @@ void Dwarf5AccelTableEmitter::emitStringOffsets() const {
   }
 }
 
-void Dwarf5AccelTableEmitter::emitAbbrevs() const {
+void Dwarf5AccelTableWriter::emitAbbrevs() const {
   Asm->OutStreamer->EmitLabel(AbbrevStart);
   for (const auto &Abbrev : Abbreviations) {
     Asm->OutStreamer->AddComment("Abbrev code");
@@ -462,7 +493,7 @@ void Dwarf5AccelTableEmitter::emitAbbrevs() const {
   Asm->OutStreamer->EmitLabel(AbbrevEnd);
 }
 
-void Dwarf5AccelTableEmitter::emitEntry(
+void Dwarf5AccelTableWriter::emitEntry(
     const DWARF5AccelTableData &Entry) const {
   auto AbbrevIt = Abbreviations.find(Entry.getDie().getTag());
   assert(AbbrevIt != Abbreviations.end() &&
@@ -474,7 +505,7 @@ void Dwarf5AccelTableEmitter::emitEntry(
     switch (AttrEnc.Index) {
     case dwarf::DW_IDX_compile_unit: {
       const DIE *CUDie = Entry.getDie().getUnitDie();
-      DIEInteger ID(DD.lookupCU(CUDie)->getUniqueID());
+      DIEInteger ID(WriterInfo->getUnqiueIDForUnitDie(CUDie));
       ID.EmitValue(Asm, AttrEnc.Form);
       break;
     }
@@ -488,7 +519,7 @@ void Dwarf5AccelTableEmitter::emitEntry(
   }
 }
 
-void Dwarf5AccelTableEmitter::emitData() const {
+void Dwarf5AccelTableWriter::emitData() const {
   Asm->OutStreamer->EmitLabel(EntryPool);
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
@@ -502,13 +533,13 @@ void Dwarf5AccelTableEmitter::emitData() const {
   }
 }
 
-Dwarf5AccelTableEmitter::Dwarf5AccelTableEmitter(
-    AsmPrinter *Asm, const AccelTableBase &Contents, const DwarfDebug &DD,
-    ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits)
-    : AccelTableEmitter(Asm, Contents, false),
-      Header(CompUnits.size(), Contents.getBucketCount(),
+Dwarf5AccelTableWriter::Dwarf5AccelTableWriter(
+    AsmPrinter *Asm, const AccelTableBase &Contents,
+    std::unique_ptr<AccelTableWriterInfo> WriterInfo)
+    : AccelTableWriter(Asm, Contents, false),
+      Header(WriterInfo->getNumberOfCUs(), Contents.getBucketCount(),
              Contents.getUniqueNameCount()),
-      DD(DD), CompUnits(CompUnits) {
+      WriterInfo(std::move(WriterInfo)) {
   DenseSet<uint32_t> UniqueTags = getUniqueTags();
   SmallVector<AttributeEncoding, 2> UniformAttributes = getUniformAttributes();
 
@@ -517,7 +548,7 @@ Dwarf5AccelTableEmitter::Dwarf5AccelTableEmitter(
     Abbreviations.try_emplace(Tag, UniformAttributes);
 }
 
-void Dwarf5AccelTableEmitter::emit() const {
+void Dwarf5AccelTableWriter::emit() const {
   Header.emit(*this);
   emitCUList();
   emitBuckets();
@@ -534,14 +565,21 @@ void llvm::emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
                                    StringRef Prefix, const MCSymbol *SecBegin,
                                    ArrayRef<AppleAccelTableData::Atom> Atoms) {
   Contents.finalize(Asm, Prefix);
-  AppleAccelTableEmitter(Asm, Contents, Atoms, SecBegin).emit();
+  AppleAccelTableWriter(Asm, Contents, Atoms, SecBegin).emit();
 }
 
 void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
     const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
+  auto WriterInfo = llvm::make_unique<DefaultAccelTableWriterInfo>(DD, CUs);
+  emitDWARF5AccelTable(Asm, Contents, std::move(WriterInfo));
+}
+
+void llvm::emitDWARF5AccelTable(
+    AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
+    std::unique_ptr<AccelTableWriterInfo> WriterInfo) {
   Contents.finalize(Asm, "names");
-  Dwarf5AccelTableEmitter(Asm, Contents, DD, CUs).emit();
+  Dwarf5AccelTableWriter(Asm, Contents, std::move(WriterInfo)).emit();
 }
 
 void AppleAccelTableOffsetData::emit(AsmPrinter *Asm) const {
@@ -592,7 +630,7 @@ const SmallVector<AppleAccelTableData::Atom, 4>
 #endif
 
 #ifndef NDEBUG
-void AppleAccelTableEmitter::Header::print(raw_ostream &OS) const {
+void AppleAccelTableWriter::Header::print(raw_ostream &OS) const {
   OS << "Magic: " << format("0x%x", Magic) << "\n"
      << "Version: " << Version << "\n"
      << "Hash Function: " << HashFunction << "\n"
@@ -605,13 +643,13 @@ void AppleAccelTableData::Atom::print(raw_ostream &OS) const {
      << "Form: " << dwarf::FormEncodingString(Form) << "\n";
 }
 
-void AppleAccelTableEmitter::HeaderData::print(raw_ostream &OS) const {
+void AppleAccelTableWriter::HeaderData::print(raw_ostream &OS) const {
   OS << "DIE Offset Base: " << DieOffsetBase << "\n";
   for (auto Atom : Atoms)
     Atom.print(OS);
 }
 
-void AppleAccelTableEmitter::print(raw_ostream &OS) const {
+void AppleAccelTableWriter::print(raw_ostream &OS) const {
   Header.print(OS);
   HeaderData.print(OS);
   Contents.print(OS);

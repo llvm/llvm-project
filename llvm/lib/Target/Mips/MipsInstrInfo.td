@@ -2950,6 +2950,36 @@ def : MipsInstAlias<"divu $rd, $imm", (UDivIMacro GPR32Opnd:$rd, GPR32Opnd:$rd,
                                                   simm32:$imm), 0>,
       ISA_MIPS1_NOT_32R6_64R6;
 
+def SRemMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                  (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                                  "rem\t$rd, $rs, $rt">,
+                ISA_MIPS1_NOT_32R6_64R6;
+def SRemIMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                   (ins GPR32Opnd:$rs, simm32_relaxed:$imm),
+                                   "rem\t$rd, $rs, $imm">,
+                 ISA_MIPS1_NOT_32R6_64R6;
+def URemMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                  (ins GPR32Opnd:$rs, GPR32Opnd:$rt),
+                                  "remu\t$rd, $rs, $rt">,
+                ISA_MIPS1_NOT_32R6_64R6;
+def URemIMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
+                                   (ins GPR32Opnd:$rs, simm32_relaxed:$imm),
+                                   "remu\t$rd, $rs, $imm">,
+                 ISA_MIPS1_NOT_32R6_64R6;
+
+def : MipsInstAlias<"rem $rt, $rs", (SRemMacro GPR32Opnd:$rt, GPR32Opnd:$rt,
+                                               GPR32Opnd:$rs), 0>,
+      ISA_MIPS1_NOT_32R6_64R6;
+def : MipsInstAlias<"rem $rd, $imm", (SRemIMacro GPR32Opnd:$rd, GPR32Opnd:$rd,
+                                      simm32_relaxed:$imm), 0>,
+      ISA_MIPS1_NOT_32R6_64R6;
+def : MipsInstAlias<"remu $rt, $rs", (URemMacro GPR32Opnd:$rt, GPR32Opnd:$rt,
+                                                GPR32Opnd:$rs), 0>,
+      ISA_MIPS1_NOT_32R6_64R6;
+def : MipsInstAlias<"remu $rd, $imm", (URemIMacro GPR32Opnd:$rd, GPR32Opnd:$rd,
+                                       simm32_relaxed:$imm), 0>,
+      ISA_MIPS1_NOT_32R6_64R6;
+
 def Ulh : MipsAsmPseudoInst<(outs GPR32Opnd:$rt), (ins mem:$addr),
                             "ulh\t$rt, $addr">; //, ISA_MIPS1_NOT_32R6_64R6;
 

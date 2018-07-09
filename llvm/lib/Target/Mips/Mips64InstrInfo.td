@@ -1032,6 +1032,38 @@ let AdditionalPredicates = [NotInMicroMips] in {
                                                       GPR64Opnd:$rd,
                                                       imm64:$imm), 0>,
         ISA_MIPS3_NOT_32R6_64R6;
+  def DSRemMacro : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                     (ins GPR64Opnd:$rs, GPR64Opnd:$rt),
+                                     "drem\t$rd, $rs, $rt">,
+                   ISA_MIPS3_NOT_32R6_64R6;
+  def DSRemIMacro : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                      (ins GPR64Opnd:$rs, simm32_relaxed:$imm),
+                                      "drem\t$rd, $rs, $imm">,
+                    ISA_MIPS3_NOT_32R6_64R6;
+  def DURemMacro : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                     (ins GPR64Opnd:$rs, GPR64Opnd:$rt),
+                                     "dremu\t$rd, $rs, $rt">,
+                   ISA_MIPS3_NOT_32R6_64R6;
+  def DURemIMacro : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                      (ins GPR64Opnd:$rs, simm32_relaxed:$imm),
+                                      "dremu\t$rd, $rs, $imm">,
+                    ISA_MIPS3_NOT_32R6_64R6;
+  def : MipsInstAlias<"drem $rt, $rs", (DSRemMacro GPR64Opnd:$rt,
+                                                   GPR64Opnd:$rt,
+                                                   GPR64Opnd:$rs), 0>,
+        ISA_MIPS3_NOT_32R6_64R6;
+  def : MipsInstAlias<"drem $rd, $imm", (DSRemIMacro GPR64Opnd:$rd,
+                                                     GPR64Opnd:$rd,
+                                                     simm32_relaxed:$imm), 0>,
+        ISA_MIPS3_NOT_32R6_64R6;
+  def : MipsInstAlias<"dremu $rt, $rs", (DURemMacro GPR64Opnd:$rt,
+                                                    GPR64Opnd:$rt,
+                                                    GPR64Opnd:$rs), 0>,
+        ISA_MIPS3_NOT_32R6_64R6;
+  def : MipsInstAlias<"dremu $rd, $imm", (DURemIMacro GPR64Opnd:$rd,
+                                                      GPR64Opnd:$rd,
+                                                      simm32_relaxed:$imm), 0>,
+        ISA_MIPS3_NOT_32R6_64R6;
 }
 
 def NORImm64 : NORIMM_DESC_BASE<GPR64Opnd, imm64>, GPR_64;

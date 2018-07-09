@@ -1062,17 +1062,17 @@ foreach RegWidth = [32, 64] in {
   def ZPR#RegWidth#ExtSXTW16           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 16>;
   def ZPR#RegWidth#ExtSXTW32           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 32>;
   def ZPR#RegWidth#ExtSXTW64           : ZPRExtendRegisterOperand<0b1, 0b0, "SXTW", RegWidth, 64>;
-}
 
-// LSL(8|16|32|64)
-def ZPR64AsmOpndExtLSL8      : ZPRExtendAsmOperand<"LSL", 64, 8>;
-def ZPR64AsmOpndExtLSL16     : ZPRExtendAsmOperand<"LSL", 64, 16>;
-def ZPR64AsmOpndExtLSL32     : ZPRExtendAsmOperand<"LSL", 64, 32>;
-def ZPR64AsmOpndExtLSL64     : ZPRExtendAsmOperand<"LSL", 64, 64>;
-def ZPR64ExtLSL8             : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 8>;
-def ZPR64ExtLSL16            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 16>;
-def ZPR64ExtLSL32            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 32>;
-def ZPR64ExtLSL64            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", 64, 64>;
+  // LSL(8|16|32|64)
+  def ZPR#RegWidth#AsmOpndExtLSL8      : ZPRExtendAsmOperand<"LSL", RegWidth, 8>;
+  def ZPR#RegWidth#AsmOpndExtLSL16     : ZPRExtendAsmOperand<"LSL", RegWidth, 16>;
+  def ZPR#RegWidth#AsmOpndExtLSL32     : ZPRExtendAsmOperand<"LSL", RegWidth, 32>;
+  def ZPR#RegWidth#AsmOpndExtLSL64     : ZPRExtendAsmOperand<"LSL", RegWidth, 64>;
+  def ZPR#RegWidth#ExtLSL8             : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", RegWidth, 8>;
+  def ZPR#RegWidth#ExtLSL16            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", RegWidth, 16>;
+  def ZPR#RegWidth#ExtLSL32            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", RegWidth, 32>;
+  def ZPR#RegWidth#ExtLSL64            : ZPRExtendRegisterOperand<0b0, 0b1, "LSL", RegWidth, 64>;
+}
 
 class GPR64ShiftExtendAsmOperand <string AsmOperandName, int Scale, string RegClass> : AsmOperandClass {
   let Name = AsmOperandName # Scale;

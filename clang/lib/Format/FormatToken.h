@@ -243,9 +243,15 @@ struct FormatToken {
   /// e.g. because several of them are block-type.
   unsigned LongestObjCSelectorName = 0;
 
-  /// How many parts ObjC selector have (i.e. how many parameters method
-  /// has).
+  /// If this is the first ObjC selector name in an ObjC method
+  /// definition or call, this contains the number of parts that the whole
+  /// selector consist of.
   unsigned ObjCSelectorNameParts = 0;
+
+  /// The 0-based index of the parameter/argument. For ObjC it is set
+  /// for the selector name token.
+  /// For now calculated only for ObjC.
+  unsigned ParameterIndex = 0;
 
   /// Stores the number of required fake parentheses and the
   /// corresponding operator precedence.

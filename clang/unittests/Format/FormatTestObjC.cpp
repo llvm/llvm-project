@@ -678,6 +678,18 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
   verifyFormat("[(id)foo bar:(id) ? baz : quux];");
   verifyFormat("4 > 4 ? (id)a : (id)baz;");
 
+  unsigned PreviousColumnLimit = Style.ColumnLimit;
+  Style.ColumnLimit = 50;
+  // Instead of:
+  // bool a =
+  //     ([object a:42] == 0 || [object a:42
+  //                                    b:42] == 0);
+  verifyFormat("bool a = ([object a:42] == 0 ||\n"
+               "          [object a:42 b:42] == 0);");
+  Style.ColumnLimit = PreviousColumnLimit;
+  verifyFormat("bool a = ([aaaaaaaa aaaaa] == aaaaaaaaaaaaaaaaa ||\n"
+               "          [aaaaaaaa aaaaa] == aaaaaaaaaaaaaaaaaaaa);");
+
   // This tests that the formatter doesn't break after "backing" but before ":",
   // which would be at 80 columns.
   verifyFormat(
@@ -754,11 +766,10 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "[self aaaaaaaaaaaaa:aaaaaaaaaaaaaaa, aaaaaaaaaaaaaaa, aaaaaaaaaaaaaaa,\n"
       "                    aaaaaaaaaaaaaaa, aaaaaaaaaaaaaaa, aaaaaaaaaaaaaaa,\n"
       "                    aaaaaaaaaaaaaaa, aaaaaaaaaaaaaaa];");
+
   verifyFormat("[self // break\n"
                "      a:a\n"
                "    aaa:aaa];");
-  verifyFormat("bool a = ([aaaaaaaa aaaaa] == aaaaaaaaaaaaaaaaa ||\n"
-               "          [aaaaaaaa aaaaa] == aaaaaaaaaaaaaaaaaaaa);");
 
   // Formats pair-parameters.
   verifyFormat("[I drawRectOn:surface ofSize:aa:bbb atOrigin:cc:dd];");
@@ -802,6 +813,54 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
   // Space between cast rparen and selector name component.
   verifyFormat("[((Foo *)foo) bar];");
   verifyFormat("[((Foo *)foo) bar:1 blech:2];");
+
+  Style.ColumnLimit = 20;
+  verifyFormat("aaaaa = [a aa:aa\n"
+               "           aa:aa];");
+  verifyFormat("aaaaaa = [aa aa:aa\n"
+               "             aa:aa];");
+
+  // Message receiver taking multiple lines.
+  // Non-corner case.
+  verifyFormat("[[object block:^{\n"
+               "  return 42;\n"
+               "}] a:42 b:42];");
+  // Arguments just fit into one line.
+  verifyFormat("[[object block:^{\n"
+               "  return 42;\n"
+               "}] aaaaaaa:42 b:42];");
+  // Arguments just over a column limit.
+  verifyFormat("[[object block:^{\n"
+               "  return 42;\n"
+               "}] aaaaaaa:42\n"
+               "        bb:42];");
+  // Arguments just fit into one line.
+  Style.ColumnLimit = 23;
+  verifyFormat("[[obj a:42\n"
+               "      b:42\n"
+               "      c:42\n"
+               "      d:42] e:42 f:42];");
+
+  // Arguments do not fit into one line with a receiver.
+  Style.ColumnLimit = 20;
+  verifyFormat("[[obj a:42] a:42\n"
+               "            b:42];");
+  verifyFormat("[[obj a:42] a:42\n"
+               "            b:42\n"
+               "            c:42];");
+  verifyFormat("[[obj aaaaaa:42\n"
+               "           b:42]\n"
+               "    cc:42\n"
+               "     d:42];");
+
+  // Avoid breaking receiver expression.
+  Style.ColumnLimit = 30;
+  verifyFormat("fooooooo =\n"
+               "    [[obj fooo] aaa:42\n"
+               "                aaa:42];");
+  verifyFormat("[[[obj foo] bar] aa:42\n"
+               "                 bb:42\n"
+               "                 cc:42];");
 
   Style.ColumnLimit = 70;
   verifyFormat(

@@ -11,6 +11,7 @@
 #define LLVM_CLANG_INDEX_INDEXSYMBOL_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/DataTypes.h"
 
@@ -93,28 +94,31 @@ static const unsigned SymbolPropertyBitNum = 8;
 /// Low 9 bits of clang-c/include/Index.h CXSymbolRole mirrors this enum.
 enum class SymbolRole : uint32_t {
   Declaration = 1 << 0,
-  Definition  = 1 << 1,
-  Reference   = 1 << 2,
-  Read        = 1 << 3,
-  Write       = 1 << 4,
-  Call        = 1 << 5,
-  Dynamic     = 1 << 6,
-  AddressOf   = 1 << 7,
-  Implicit    = 1 << 8,
+  Definition = 1 << 1,
+  Reference = 1 << 2,
+  Read = 1 << 3,
+  Write = 1 << 4,
+  Call = 1 << 5,
+  Dynamic = 1 << 6,
+  AddressOf = 1 << 7,
+  Implicit = 1 << 8,
+  // FIXME: this is not mirrored in CXSymbolRole.
+  // Note that macro occurrences aren't currently supported in libclang.
+  Undefinition = 1 << 9, // macro #undef
 
   // Relation roles.
-  RelationChildOf     = 1 << 9,
-  RelationBaseOf      = 1 << 10,
-  RelationOverrideOf  = 1 << 11,
-  RelationReceivedBy  = 1 << 12,
-  RelationCalledBy    = 1 << 13,
-  RelationExtendedBy  = 1 << 14,
-  RelationAccessorOf  = 1 << 15,
-  RelationContainedBy = 1 << 16,
-  RelationIBTypeOf    = 1 << 17,
-  RelationSpecializationOf = 1 << 18,
+  RelationChildOf = 1 << 10,
+  RelationBaseOf = 1 << 11,
+  RelationOverrideOf = 1 << 12,
+  RelationReceivedBy = 1 << 13,
+  RelationCalledBy = 1 << 14,
+  RelationExtendedBy = 1 << 15,
+  RelationAccessorOf = 1 << 16,
+  RelationContainedBy = 1 << 17,
+  RelationIBTypeOf = 1 << 18,
+  RelationSpecializationOf = 1 << 19,
 };
-static const unsigned SymbolRoleBitNum = 19;
+static const unsigned SymbolRoleBitNum = 20;
 typedef unsigned SymbolRoleSet;
 
 /// Represents a relation to another symbol for a symbol occurrence.
@@ -134,6 +138,8 @@ struct SymbolInfo {
 };
 
 SymbolInfo getSymbolInfo(const Decl *D);
+
+SymbolInfo getSymbolInfoForMacro(const MacroInfo &MI);
 
 bool isFunctionLocalSymbol(const Decl *D);
 
