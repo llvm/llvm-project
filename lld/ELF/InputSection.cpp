@@ -483,6 +483,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_INVALID:
     return 0;
   case R_ABS:
+  case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
     return Sym.getVA(A);
   case R_ADDEND:
@@ -516,6 +517,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_HINT:
   case R_NONE:
   case R_TLSDESC_CALL:
+  case R_TLSLD_HINT:
     llvm_unreachable("cannot relocate hint relocs");
   case R_MIPS_GOTREL:
     return Sym.getVA(A) - InX::MipsGot->getGp(File);
@@ -767,6 +769,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
       Target->relaxTlsIeToLe(BufLoc, Type, TargetVA);
       break;
     case R_RELAX_TLS_LD_TO_LE:
+    case R_RELAX_TLS_LD_TO_LE_ABS:
       Target->relaxTlsLdToLe(BufLoc, Type, TargetVA);
       break;
     case R_RELAX_TLS_GD_TO_LE:

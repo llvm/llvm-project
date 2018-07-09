@@ -46,26 +46,51 @@ enum flag_type {
 /*!
  * Base class for wait/release volatile flag
  */
+template <typename P> class kmp_flag_native {
+  volatile P *loc;
+  flag_type t;
+
+public:
+  typedef P flag_t;
+  kmp_flag_native(volatile P *p, flag_type ft) : loc(p), t(ft) {}
+  volatile P *get() { return loc; }
+  void set(volatile P *new_loc) { loc = new_loc; }
+  flag_type get_type() { return t; }
+  P load() { return *loc; }
+  void store(P val) { *loc = val; }
+};
+
+/*!
+ * Base class for wait/release atomic flag
+ */
 template <typename P> class kmp_flag {
-  volatile P
+  std::atomic<P>
       *loc; /**< Pointer to the flag storage that is modified by another thread
              */
   flag_type t; /**< "Type" of the flag in loc */
 public:
   typedef P flag_t;
-  kmp_flag(volatile P *p, flag_type ft) : loc(p), t(ft) {}
+  kmp_flag(std::atomic<P> *p, flag_type ft) : loc(p), t(ft) {}
   /*!
    * @result the pointer to the actual flag
    */
-  volatile P *get() { return loc; }
+  std::atomic<P> *get() { return loc; }
   /*!
    * @param new_loc in   set loc to point at new_loc
    */
-  void set(volatile P *new_loc) { loc = new_loc; }
+  void set(std::atomic<P> *new_loc) { loc = new_loc; }
   /*!
    * @result the flag_type
    */
   flag_type get_type() { return t; }
+  /*!
+   * @result flag value
+   */
+  P load() { return loc->load(std::memory_order_acquire); }
+  /*!
+   * @param val the new flag value to be stored
+   */
+  void store(P val) { loc->store(val, std::memory_order_release); }
   // Derived classes must provide the following:
   /*
   kmp_info_t * get_waiter(kmp_uint32 i);
@@ -134,7 +159,7 @@ static inline void
 __kmp_wait_template(kmp_info_t *this_thr, C *flag,
                     int final_spin USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   // NOTE: We may not belong to a team at this point.
-  volatile typename C::flag_t *spin = flag->get();
+  volatile void *spin = flag->get();
   kmp_uint32 spins;
   kmp_uint32 hibernate;
   int th_gtid;
@@ -147,7 +172,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag,
 
   KMP_FSYNC_SPIN_INIT(spin, NULL);
   if (flag->done_check()) {
-    KMP_FSYNC_SPIN_ACQUIRED(CCAST(typename C::flag_t *, spin));
+    KMP_FSYNC_SPIN_ACQUIRED(spin);
     return;
   }
   th_gtid = this_thr->th.th_info.ds.ds_gtid;
@@ -318,7 +343,7 @@ final_spin=FALSE)
       } // if
     } // if
 
-    KMP_FSYNC_SPIN_PREPARE(CCAST(typename C::flag_t *, spin));
+    KMP_FSYNC_SPIN_PREPARE(spin);
     if (TCR_4(__kmp_global.g.g_done)) {
       if (__kmp_global.g.g_abort)
         __kmp_abort_thread();
@@ -340,7 +365,7 @@ final_spin=FALSE)
     in_pool = !!TCR_4(this_thr->th.th_in_pool);
     if (in_pool != !!this_thr->th.th_active_in_pool) {
       if (in_pool) { // Recently transferred from team to pool
-        KMP_TEST_THEN_INC32(&__kmp_thread_pool_active_nth);
+        KMP_ATOMIC_INC(&__kmp_thread_pool_active_nth);
         this_thr->th.th_active_in_pool = TRUE;
         /* Here, we cannot assert that:
            KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) <=
@@ -350,7 +375,7 @@ final_spin=FALSE)
            inc/dec'd asynchronously by the workers. The two can get out of sync
            for brief periods of time.  */
       } else { // Recently transferred from pool to team
-        KMP_TEST_THEN_DEC32(&__kmp_thread_pool_active_nth);
+        KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
         KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
         this_thr->th.th_active_in_pool = FALSE;
       }
@@ -425,7 +450,7 @@ final_spin=FALSE)
   }
 #endif
 
-  KMP_FSYNC_SPIN_ACQUIRED(CCAST(typename C::flag_t *, spin));
+  KMP_FSYNC_SPIN_ACQUIRED(spin);
 }
 
 /* Release any threads specified as waiting on the flag by releasing the flag
@@ -438,12 +463,12 @@ template <class C> static inline void __kmp_release_template(C *flag) {
 #endif
   KF_TRACE(20, ("__kmp_release: T#%d releasing flag(%x)\n", gtid, flag->get()));
   KMP_DEBUG_ASSERT(flag->get());
-  KMP_FSYNC_RELEASING(CCAST(typename C::flag_t *, flag->get()));
+  KMP_FSYNC_RELEASING(flag->get());
 
   flag->internal_release();
 
   KF_TRACE(100, ("__kmp_release: T#%d set new spin=%d\n", gtid, flag->get(),
-                 *(flag->get())));
+                 flag->load()));
 
   if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) {
     // Only need to check sleep stuff if infinite block time not set.
@@ -497,7 +522,9 @@ template <> struct flag_traits<kmp_uint64> {
   }
 };
 
-template <typename FlagType> class kmp_basic_flag : public kmp_flag<FlagType> {
+// Basic flag that does not use C11 Atomics
+template <typename FlagType>
+class kmp_basic_flag_native : public kmp_flag_native<FlagType> {
   typedef flag_traits<FlagType> traits_type;
   FlagType checker; /**< Value to compare flag to to check if flag has been
                        released. */
@@ -506,14 +533,14 @@ template <typename FlagType> class kmp_basic_flag : public kmp_flag<FlagType> {
   kmp_uint32
       num_waiting_threads; /**< Number of threads sleeping on this thread. */
 public:
-  kmp_basic_flag(volatile FlagType *p)
-      : kmp_flag<FlagType>(p, traits_type::t), num_waiting_threads(0) {}
-  kmp_basic_flag(volatile FlagType *p, kmp_info_t *thr)
-      : kmp_flag<FlagType>(p, traits_type::t), num_waiting_threads(1) {
+  kmp_basic_flag_native(volatile FlagType *p)
+      : kmp_flag_native<FlagType>(p, traits_type::t), num_waiting_threads(0) {}
+  kmp_basic_flag_native(volatile FlagType *p, kmp_info_t *thr)
+      : kmp_flag_native<FlagType>(p, traits_type::t), num_waiting_threads(1) {
     waiting_threads[0] = thr;
   }
-  kmp_basic_flag(volatile FlagType *p, FlagType c)
-      : kmp_flag<FlagType>(p, traits_type::t), checker(c),
+  kmp_basic_flag_native(volatile FlagType *p, FlagType c)
+      : kmp_flag_native<FlagType>(p, traits_type::t), checker(c),
         num_waiting_threads(0) {}
   /*!
    * param i in   index into waiting_threads
@@ -594,12 +621,105 @@ public:
   enum barrier_type get_bt() { return bs_last_barrier; }
 };
 
+template <typename FlagType> class kmp_basic_flag : public kmp_flag<FlagType> {
+  typedef flag_traits<FlagType> traits_type;
+  FlagType checker; /**< Value to compare flag to to check if flag has been
+                       released. */
+  kmp_info_t
+      *waiting_threads[1]; /**< Array of threads sleeping on this thread. */
+  kmp_uint32
+      num_waiting_threads; /**< Number of threads sleeping on this thread. */
+public:
+  kmp_basic_flag(std::atomic<FlagType> *p)
+      : kmp_flag<FlagType>(p, traits_type::t), num_waiting_threads(0) {}
+  kmp_basic_flag(std::atomic<FlagType> *p, kmp_info_t *thr)
+      : kmp_flag<FlagType>(p, traits_type::t), num_waiting_threads(1) {
+    waiting_threads[0] = thr;
+  }
+  kmp_basic_flag(std::atomic<FlagType> *p, FlagType c)
+      : kmp_flag<FlagType>(p, traits_type::t), checker(c),
+        num_waiting_threads(0) {}
+  /*!
+   * param i in   index into waiting_threads
+   * @result the thread that is waiting at index i
+   */
+  kmp_info_t *get_waiter(kmp_uint32 i) {
+    KMP_DEBUG_ASSERT(i < num_waiting_threads);
+    return waiting_threads[i];
+  }
+  /*!
+   * @result num_waiting_threads
+   */
+  kmp_uint32 get_num_waiters() { return num_waiting_threads; }
+  /*!
+   * @param thr in   the thread which is now waiting
+   *
+   * Insert a waiting thread at index 0.
+   */
+  void set_waiter(kmp_info_t *thr) {
+    waiting_threads[0] = thr;
+    num_waiting_threads = 1;
+  }
+  /*!
+   * @result true if the flag object has been released.
+   */
+  bool done_check() { return this->load() == checker; }
+  /*!
+   * @param old_loc in   old value of flag
+   * @result true if the flag's old value indicates it was released.
+   */
+  bool done_check_val(FlagType old_loc) { return old_loc == checker; }
+  /*!
+   * @result true if the flag object is not yet released.
+   * Used in __kmp_wait_template like:
+   * @code
+   * while (flag.notdone_check()) { pause(); }
+   * @endcode
+   */
+  bool notdone_check() { return this->load() != checker; }
+  /*!
+   * @result Actual flag value before release was applied.
+   * Trigger all waiting threads to run by modifying flag to release state.
+   */
+  void internal_release() { KMP_ATOMIC_ADD(this->get(), 4); }
+  /*!
+   * @result Actual flag value before sleep bit(s) set.
+   * Notes that there is at least one thread sleeping on the flag by setting
+   * sleep bit(s).
+   */
+  FlagType set_sleeping() {
+    return KMP_ATOMIC_OR(this->get(), KMP_BARRIER_SLEEP_STATE);
+  }
+  /*!
+   * @result Actual flag value before sleep bit(s) cleared.
+   * Notes that there are no longer threads sleeping on the flag by clearing
+   * sleep bit(s).
+   */
+  FlagType unset_sleeping() {
+    return KMP_ATOMIC_AND(this->get(), ~KMP_BARRIER_SLEEP_STATE);
+  }
+  /*!
+   * @param old_loc in   old value of flag
+   * Test whether there are threads sleeping on the flag's old value in old_loc.
+   */
+  bool is_sleeping_val(FlagType old_loc) {
+    return old_loc & KMP_BARRIER_SLEEP_STATE;
+  }
+  /*!
+   * Test whether there are threads sleeping on the flag.
+   */
+  bool is_sleeping() { return is_sleeping_val(this->load()); }
+  bool is_any_sleeping() { return is_sleeping_val(this->load()); }
+  kmp_uint8 *get_stolen() { return NULL; }
+  enum barrier_type get_bt() { return bs_last_barrier; }
+};
+
 class kmp_flag_32 : public kmp_basic_flag<kmp_uint32> {
 public:
-  kmp_flag_32(volatile kmp_uint32 *p) : kmp_basic_flag<kmp_uint32>(p) {}
-  kmp_flag_32(volatile kmp_uint32 *p, kmp_info_t *thr)
+  kmp_flag_32(std::atomic<kmp_uint32> *p) : kmp_basic_flag<kmp_uint32>(p) {}
+  kmp_flag_32(std::atomic<kmp_uint32> *p, kmp_info_t *thr)
       : kmp_basic_flag<kmp_uint32>(p, thr) {}
-  kmp_flag_32(volatile kmp_uint32 *p, kmp_uint32 c)
+  kmp_flag_32(std::atomic<kmp_uint32> *p, kmp_uint32 c)
       : kmp_basic_flag<kmp_uint32>(p, c) {}
   void suspend(int th_gtid) { __kmp_suspend_32(th_gtid, this); }
   void resume(int th_gtid) { __kmp_resume_32(th_gtid, this); }
@@ -619,13 +739,13 @@ public:
   flag_type get_ptr_type() { return flag32; }
 };
 
-class kmp_flag_64 : public kmp_basic_flag<kmp_uint64> {
+class kmp_flag_64 : public kmp_basic_flag_native<kmp_uint64> {
 public:
-  kmp_flag_64(volatile kmp_uint64 *p) : kmp_basic_flag<kmp_uint64>(p) {}
+  kmp_flag_64(volatile kmp_uint64 *p) : kmp_basic_flag_native<kmp_uint64>(p) {}
   kmp_flag_64(volatile kmp_uint64 *p, kmp_info_t *thr)
-      : kmp_basic_flag<kmp_uint64>(p, thr) {}
+      : kmp_basic_flag_native<kmp_uint64>(p, thr) {}
   kmp_flag_64(volatile kmp_uint64 *p, kmp_uint64 c)
-      : kmp_basic_flag<kmp_uint64>(p, c) {}
+      : kmp_basic_flag_native<kmp_uint64>(p, c) {}
   void suspend(int th_gtid) { __kmp_suspend_64(th_gtid, this); }
   void resume(int th_gtid) { __kmp_resume_64(th_gtid, this); }
   int execute_tasks(kmp_info_t *this_thr, kmp_int32 gtid, int final_spin,
@@ -645,7 +765,7 @@ public:
 };
 
 // Hierarchical 64-bit on-core barrier instantiation
-class kmp_flag_oncore : public kmp_flag<kmp_uint64> {
+class kmp_flag_oncore : public kmp_flag_native<kmp_uint64> {
   kmp_uint64 checker;
   kmp_info_t *waiting_threads[1];
   kmp_uint32 num_waiting_threads;
@@ -665,27 +785,17 @@ class kmp_flag_oncore : public kmp_flag<kmp_uint64> {
 
 public:
   kmp_flag_oncore(volatile kmp_uint64 *p)
-      : kmp_flag<kmp_uint64>(p, flag_oncore), num_waiting_threads(0),
+      : kmp_flag_native<kmp_uint64>(p, flag_oncore), num_waiting_threads(0),
         flag_switch(false) {}
   kmp_flag_oncore(volatile kmp_uint64 *p, kmp_uint32 idx)
-      : kmp_flag<kmp_uint64>(p, flag_oncore), num_waiting_threads(0),
+      : kmp_flag_native<kmp_uint64>(p, flag_oncore), num_waiting_threads(0),
         offset(idx), flag_switch(false) {}
   kmp_flag_oncore(volatile kmp_uint64 *p, kmp_uint64 c, kmp_uint32 idx,
-                  enum barrier_type bar_t, kmp_info_t *thr
-#if USE_ITT_BUILD
-                  ,
-                  void *itt
-#endif
-                  )
-      : kmp_flag<kmp_uint64>(p, flag_oncore), checker(c),
+                  enum barrier_type bar_t,
+                  kmp_info_t *thr USE_ITT_BUILD_ARG(void *itt))
+      : kmp_flag_native<kmp_uint64>(p, flag_oncore), checker(c),
         num_waiting_threads(0), offset(idx), flag_switch(false), bt(bar_t),
-        this_thr(thr)
-#if USE_ITT_BUILD
-        ,
-        itt_sync_obj(itt)
-#endif
-  {
-  }
+        this_thr(thr) USE_ITT_BUILD_ARG(itt_sync_obj(itt)) {}
   kmp_info_t *get_waiter(kmp_uint32 i) {
     KMP_DEBUG_ASSERT(i < num_waiting_threads);
     return waiting_threads[i];
@@ -709,16 +819,12 @@ public:
       this_thr->th.th_bar[bt].bb.wait_flag = KMP_BARRIER_SWITCHING;
       kmp_flag_64 flag(&this_thr->th.th_bar[bt].bb.b_go,
                        (kmp_uint64)KMP_BARRIER_STATE_BUMP);
-      __kmp_wait_64(this_thr, &flag, TRUE
-#if USE_ITT_BUILD
-                    ,
-                    itt_sync_obj
-#endif
-                    );
+      __kmp_wait_64(this_thr, &flag, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
     }
     return false;
   }
   void internal_release() {
+    // Other threads can write their own bytes simultaneously.
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME) {
       byteref(get(), offset) = 1;
     } else {

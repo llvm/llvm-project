@@ -17,6 +17,9 @@
 #include "kmp_io.h"
 #include "kmp_str.h"
 #include "kmp_wrapper_getpid.h"
+#if KMP_USE_HIER_SCHED
+#include "kmp_dispatch_hier.h"
+#endif
 
 // Store the real or imagined machine hierarchy here
 static hierarchy_info machine_hierarchy;
@@ -1894,6 +1897,76 @@ static int __kmp_affinity_cmp_ProcCpuInfo_phys_id(const void *a,
   }
   return 0;
 }
+
+#if KMP_USE_HIER_SCHED
+// Set the array sizes for the hierarchy layers
+static void __kmp_dispatch_set_hierarchy_values() {
+  // Set the maximum number of L1's to number of cores
+  // Set the maximum number of L2's to to either number of cores / 2 for
+  // Intel(R) Xeon Phi(TM) coprocessor formally codenamed Knights Landing
+  // Or the number of cores for Intel(R) Xeon(R) processors
+  // Set the maximum number of NUMA nodes and L3's to number of packages
+  __kmp_hier_max_units[kmp_hier_layer_e::LAYER_THREAD + 1] =
+      nPackages * nCoresPerPkg * __kmp_nThreadsPerCore;
+  __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L1 + 1] = __kmp_ncores;
+#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+  if (__kmp_mic_type >= mic3)
+    __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L2 + 1] = __kmp_ncores / 2;
+  else
+#endif // KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+    __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L2 + 1] = __kmp_ncores;
+  __kmp_hier_max_units[kmp_hier_layer_e::LAYER_L3 + 1] = nPackages;
+  __kmp_hier_max_units[kmp_hier_layer_e::LAYER_NUMA + 1] = nPackages;
+  __kmp_hier_max_units[kmp_hier_layer_e::LAYER_LOOP + 1] = 1;
+  // Set the number of threads per unit
+  // Number of hardware threads per L1/L2/L3/NUMA/LOOP
+  __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_THREAD + 1] = 1;
+  __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L1 + 1] =
+      __kmp_nThreadsPerCore;
+#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+  if (__kmp_mic_type >= mic3)
+    __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L2 + 1] =
+        2 * __kmp_nThreadsPerCore;
+  else
+#endif // KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+    __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L2 + 1] =
+        __kmp_nThreadsPerCore;
+  __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_L3 + 1] =
+      nCoresPerPkg * __kmp_nThreadsPerCore;
+  __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_NUMA + 1] =
+      nCoresPerPkg * __kmp_nThreadsPerCore;
+  __kmp_hier_threads_per[kmp_hier_layer_e::LAYER_LOOP + 1] =
+      nPackages * nCoresPerPkg * __kmp_nThreadsPerCore;
+}
+
+// Return the index into the hierarchy for this tid and layer type (L1, L2, etc)
+// i.e., this thread's L1 or this thread's L2, etc.
+int __kmp_dispatch_get_index(int tid, kmp_hier_layer_e type) {
+  int index = type + 1;
+  int num_hw_threads = __kmp_hier_max_units[kmp_hier_layer_e::LAYER_THREAD + 1];
+  KMP_DEBUG_ASSERT(type != kmp_hier_layer_e::LAYER_LAST);
+  if (type == kmp_hier_layer_e::LAYER_THREAD)
+    return tid;
+  else if (type == kmp_hier_layer_e::LAYER_LOOP)
+    return 0;
+  KMP_DEBUG_ASSERT(__kmp_hier_max_units[index] != 0);
+  if (tid >= num_hw_threads)
+    tid = tid % num_hw_threads;
+  return (tid / __kmp_hier_threads_per[index]) % __kmp_hier_max_units[index];
+}
+
+// Return the number of t1's per t2
+int __kmp_dispatch_get_t1_per_t2(kmp_hier_layer_e t1, kmp_hier_layer_e t2) {
+  int i1 = t1 + 1;
+  int i2 = t2 + 1;
+  KMP_DEBUG_ASSERT(i1 <= i2);
+  KMP_DEBUG_ASSERT(t1 != kmp_hier_layer_e::LAYER_LAST);
+  KMP_DEBUG_ASSERT(t2 != kmp_hier_layer_e::LAYER_LAST);
+  KMP_DEBUG_ASSERT(__kmp_hier_threads_per[i1] != 0);
+  // (nthreads/t2) / (nthreads/t1) = t1 / t2
+  return __kmp_hier_threads_per[i2] / __kmp_hier_threads_per[i1];
+}
+#endif // KMP_USE_HIER_SCHED
 
 // Parse /proc/cpuinfo (or an alternate file in the same format) to obtain the
 // affinity map.
@@ -3953,12 +4026,22 @@ static AddrUnsPair *address2os = NULL;
 static int *procarr = NULL;
 static int __kmp_aff_depth = 0;
 
+#if KMP_USE_HIER_SCHED
+#define KMP_EXIT_AFF_NONE                                                      \
+  KMP_ASSERT(__kmp_affinity_type == affinity_none);                            \
+  KMP_ASSERT(address2os == NULL);                                              \
+  __kmp_apply_thread_places(NULL, 0);                                          \
+  __kmp_create_affinity_none_places();                                         \
+  __kmp_dispatch_set_hierarchy_values();                                       \
+  return;
+#else
 #define KMP_EXIT_AFF_NONE                                                      \
   KMP_ASSERT(__kmp_affinity_type == affinity_none);                            \
   KMP_ASSERT(address2os == NULL);                                              \
   __kmp_apply_thread_places(NULL, 0);                                          \
   __kmp_create_affinity_none_places();                                         \
   return;
+#endif
 
 // Create a one element mask array (set of places) which only contains the
 // initial process's affinity mask
@@ -4299,6 +4382,10 @@ static void __kmp_aux_affinity_initialize(void) {
     KMP_ASSERT(depth > 0);
     KMP_ASSERT(address2os != NULL);
   }
+
+#if KMP_USE_HIER_SCHED
+  __kmp_dispatch_set_hierarchy_values();
+#endif
 
   if (address2os == NULL) {
     if (KMP_AFFINITY_CAPABLE() &&

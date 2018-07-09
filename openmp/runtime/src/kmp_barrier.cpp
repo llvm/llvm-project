@@ -956,14 +956,12 @@ static void __kmp_hierarchical_barrier_gather(
   // All subordinates are gathered; now release parent if not master thread
 
   if (!KMP_MASTER_TID(tid)) { // worker threads release parent in hierarchy
-    KA_TRACE(
-        20,
-        ("__kmp_hierarchical_barrier_gather: T#%d(%d:%d) releasing T#%d(%d:%d) "
-         "arrived(%p): %llu => %llu\n",
-         gtid, team->t.t_id, tid,
-         __kmp_gtid_from_tid(thr_bar->parent_tid, team), team->t.t_id,
-         thr_bar->parent_tid, &thr_bar->b_arrived, thr_bar->b_arrived,
-         thr_bar->b_arrived + KMP_BARRIER_STATE_BUMP));
+    KA_TRACE(20, ("__kmp_hierarchical_barrier_gather: T#%d(%d:%d) releasing"
+                  " T#%d(%d:%d) arrived(%p): %llu => %llu\n",
+                  gtid, team->t.t_id, tid,
+                  __kmp_gtid_from_tid(thr_bar->parent_tid, team), team->t.t_id,
+                  thr_bar->parent_tid, &thr_bar->b_arrived, thr_bar->b_arrived,
+                  thr_bar->b_arrived + KMP_BARRIER_STATE_BUMP));
     /* Mark arrival to parent: After performing this write, a worker thread may
        not assume that the team is valid any more - it could be deallocated by
        the master thread at any time. */
@@ -973,8 +971,8 @@ static void __kmp_hierarchical_barrier_gather(
       ANNOTATE_BARRIER_BEGIN(this_thr);
       kmp_flag_64 flag(&thr_bar->b_arrived, other_threads[thr_bar->parent_tid]);
       flag.release();
-    } else { // Leaf does special release on the "offset" bits of parent's
-      // b_arrived flag
+    } else {
+      // Leaf does special release on "offset" bits of parent's b_arrived flag
       thr_bar->b_arrived = team->t.t_bar[bt].b_arrived + KMP_BARRIER_STATE_BUMP;
       kmp_flag_oncore flag(&thr_bar->parent_bar->b_arrived, thr_bar->offset);
       flag.set_waiter(other_threads[thr_bar->parent_tid]);
@@ -1353,10 +1351,10 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
 #endif
 
 #if OMP_40_ENABLED
+      kmp_int32 cancel_request = KMP_ATOMIC_LD_RLX(&team->t.t_cancel_request);
       // Reset cancellation flag for worksharing constructs
-      if (team->t.t_cancel_request == cancel_loop ||
-          team->t.t_cancel_request == cancel_sections) {
-        team->t.t_cancel_request = cancel_noreq;
+      if (cancel_request == cancel_loop || cancel_request == cancel_sections) {
+        KMP_ATOMIC_ST_RLX(&team->t.t_cancel_request, cancel_noreq);
       }
 #endif
 #if USE_ITT_BUILD

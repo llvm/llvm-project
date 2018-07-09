@@ -16,6 +16,7 @@
 
 #include "kmp_config.h"
 #include <stdlib.h>
+#include <atomic>
 
 #define KMP_FTN_PLAIN 1
 #define KMP_FTN_APPEND 2
@@ -904,6 +905,45 @@ enum kmp_warnings_level {
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus
+
+// Macros for C++11 atomic functions
+#define KMP_ATOMIC_LD(p, order) (p)->load(std::memory_order_##order)
+#define KMP_ATOMIC_OP(op, p, v, order) (p)->op(v, std::memory_order_##order)
+
+// For non-default load/store
+#define KMP_ATOMIC_LD_ACQ(p) KMP_ATOMIC_LD(p, acquire)
+#define KMP_ATOMIC_LD_RLX(p) KMP_ATOMIC_LD(p, relaxed)
+#define KMP_ATOMIC_ST_REL(p, v) KMP_ATOMIC_OP(store, p, v, release)
+#define KMP_ATOMIC_ST_RLX(p, v) KMP_ATOMIC_OP(store, p, v, relaxed)
+
+// For non-default fetch_<op>
+#define KMP_ATOMIC_ADD(p, v) KMP_ATOMIC_OP(fetch_add, p, v, acq_rel)
+#define KMP_ATOMIC_SUB(p, v) KMP_ATOMIC_OP(fetch_sub, p, v, acq_rel)
+#define KMP_ATOMIC_AND(p, v) KMP_ATOMIC_OP(fetch_and, p, v, acq_rel)
+#define KMP_ATOMIC_OR(p, v) KMP_ATOMIC_OP(fetch_or, p, v, acq_rel)
+#define KMP_ATOMIC_INC(p) KMP_ATOMIC_OP(fetch_add, p, 1, acq_rel)
+#define KMP_ATOMIC_DEC(p) KMP_ATOMIC_OP(fetch_sub, p, 1, acq_rel)
+#define KMP_ATOMIC_ADD_RLX(p, v) KMP_ATOMIC_OP(fetch_add, p, v, relaxed)
+#define KMP_ATOMIC_INC_RLX(p) KMP_ATOMIC_OP(fetch_add, p, 1, relaxed)
+
+// Callers of the following functions cannot see the side effect on "expected".
+template <typename T>
+bool __kmp_atomic_compare_store(std::atomic<T> *p, T expected, T desired) {
+  return p->compare_exchange_strong(
+      expected, desired, std::memory_order_acq_rel, std::memory_order_relaxed);
+}
+
+template <typename T>
+bool __kmp_atomic_compare_store_acq(std::atomic<T> *p, T expected, T desired) {
+  return p->compare_exchange_strong(
+      expected, desired, std::memory_order_acquire, std::memory_order_relaxed);
+}
+
+template <typename T>
+bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
+  return p->compare_exchange_strong(
+      expected, desired, std::memory_order_release, std::memory_order_relaxed);
+}
 
 #endif /* KMP_OS_H */
 // Safe C API
