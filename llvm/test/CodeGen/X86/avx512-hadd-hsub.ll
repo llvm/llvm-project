@@ -225,16 +225,16 @@ define <4 x double> @fadd_noundef_high(<8 x double> %x225, <8 x double> %x227) {
 define <8 x i32> @hadd_16_3_sv(<16 x i32> %x225, <16 x i32> %x227) {
 ; KNL-LABEL: hadd_16_3_sv:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vshufps {{.*#+}} zmm2 = zmm0[0,2],zmm1[0,2],zmm0[4,6],zmm1[4,6],zmm0[8,10],zmm1[8,10],zmm0[12,14],zmm1[12,14]
-; KNL-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[1,3],zmm1[1,3],zmm0[5,7],zmm1[5,7],zmm0[9,11],zmm1[9,11],zmm0[13,15],zmm1[13,15]
+; KNL-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
+; KNL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
 ; KNL-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: hadd_16_3_sv:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufps {{.*#+}} zmm2 = zmm0[0,2],zmm1[0,2],zmm0[4,6],zmm1[4,6],zmm0[8,10],zmm1[8,10],zmm0[12,14],zmm1[12,14]
-; SKX-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[1,3],zmm1[1,3],zmm0[5,7],zmm1[5,7],zmm0[9,11],zmm1[9,11],zmm0[13,15],zmm1[13,15]
+; SKX-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
+; SKX-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
 ; SKX-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; SKX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; SKX-NEXT:    retq

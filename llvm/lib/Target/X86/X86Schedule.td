@@ -128,7 +128,8 @@ defm WriteIDiv16 : X86SchedWritePair;
 defm WriteIDiv32 : X86SchedWritePair;
 defm WriteIDiv64 : X86SchedWritePair;
 
-defm WriteBitScan : X86SchedWritePair; // Bit scan forward/reverse.
+defm WriteBSF : X86SchedWritePair; // Bit scan forward.
+defm WriteBSR : X86SchedWritePair; // Bit scan reverse.
 defm WritePOPCNT : X86SchedWritePair; // Bit population count.
 defm WriteLZCNT : X86SchedWritePair; // Leading zero count.
 defm WriteTZCNT : X86SchedWritePair; // Trailing zero count.
@@ -141,6 +142,8 @@ def  WriteLAHFSAHF : SchedWrite; // Load/Store flags in AH.
 
 // Integer shifts and rotates.
 defm WriteShift : X86SchedWritePair;
+// Double shift instructions.
+defm WriteShiftDouble : X86SchedWritePair;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm WriteBEXTR : X86SchedWritePair;

@@ -81,7 +81,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
       CXXStructorImplicitParamDecl(nullptr),
       CXXStructorImplicitParamValue(nullptr), OutermostConditional(nullptr),
       CurLexicalScope(nullptr), TerminateLandingPad(nullptr),
-      TerminateHandler(nullptr), TrapBB(nullptr),
+      TerminateHandler(nullptr), TrapBB(nullptr), LargestVectorWidth(0),
       ShouldEmitLifetimeMarkers(
           shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), CGM.getLangOpts())) {
   if (!suppressNewContext)
@@ -445,6 +445,11 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
         cast<llvm::AllocaInst>(NormalCleanupDest.getPointer()), DT);
     NormalCleanupDest = Address::invalid();
   }
+
+  // Add the required-vector-width attribute.
+  if (LargestVectorWidth != 0)
+    CurFn->addFnAttr("min-legal-vector-width",
+                     llvm::utostr(LargestVectorWidth));
 }
 
 /// ShouldInstrumentFunction - Return true if the current function should be
@@ -1186,6 +1191,12 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   // Emit a location at the end of the prologue.
   if (CGDebugInfo *DI = getDebugInfo())
     DI->EmitLocation(Builder, StartLoc);
+
+  // TODO: Do we need to handle this in two places like we do with
+  // target-features/target-cpu?
+  if (CurFuncDecl)
+    if (const auto *VecWidth = CurFuncDecl->getAttr<MinVectorWidthAttr>())
+      LargestVectorWidth = VecWidth->getVectorWidth();
 }
 
 void CodeGenFunction::EmitFunctionBody(FunctionArgList &Args,

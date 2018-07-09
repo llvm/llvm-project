@@ -292,9 +292,8 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
   //
   //   - During dematerialization, $0 is ignored.
 
-  bool is_lvalue = (last_expr->getValueKind() == VK_LValue ||
-                    last_expr->getValueKind() == VK_XValue) &&
-                   (last_expr->getObjectKind() == OK_Ordinary);
+  bool is_lvalue = last_expr->getValueKind() == VK_LValue &&
+                   last_expr->getObjectKind() == OK_Ordinary;
 
   QualType expr_qual_type = last_expr->getType();
   const clang::Type *expr_type = expr_qual_type.getTypePtr();

@@ -98,6 +98,7 @@ defm : SLMWriteResPair<WriteADC,    [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteIMul,   [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64, [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteShift,  [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShiftDouble,  [SLM_IEC_RSV0],  1>;
 defm : SLMWriteResPair<WriteJump,   [SLM_IEC_RSV1],  1>;
 defm : SLMWriteResPair<WriteCRC32,  [SLM_IEC_RSV1],  3>;
 
@@ -117,10 +118,11 @@ def  : WriteRes<WriteLAHFSAHF, [SLM_IEC_RSV01]>;
 def : WriteRes<WriteLEA, [SLM_IEC_RSV1]>;
 
 // Bit counts.
-defm : SLMWriteResPair<WriteBitScan, [SLM_IEC_RSV01], 10, [20], 10>;
-defm : SLMWriteResPair<WriteLZCNT,   [SLM_IEC_RSV0], 3>;
-defm : SLMWriteResPair<WriteTZCNT,   [SLM_IEC_RSV0], 3>;
-defm : SLMWriteResPair<WritePOPCNT,  [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WriteBSF, [SLM_IEC_RSV01], 10, [20], 10>;
+defm : SLMWriteResPair<WriteBSR, [SLM_IEC_RSV01], 10, [20], 10>;
+defm : SLMWriteResPair<WriteLZCNT,          [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WriteTZCNT,          [SLM_IEC_RSV0], 3>;
+defm : SLMWriteResPair<WritePOPCNT,         [SLM_IEC_RSV0], 3>;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm : X86WriteResPairUnsupported<WriteBEXTR>;

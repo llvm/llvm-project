@@ -339,6 +339,9 @@ private:
   /// List of successor blocks.
   SmallVector<VPBlockBase *, 1> Successors;
 
+  /// Successor selector, null for zero or single successor blocks.
+  VPValue *CondBit = nullptr;
+
   /// Add \p Successor as the last successor to this block.
   void appendSuccessor(VPBlockBase *Successor) {
     assert(Successor && "Cannot add nullptr successor!");
@@ -470,6 +473,13 @@ public:
     return getEnclosingBlockWithPredecessors()->getSinglePredecessor();
   }
 
+  /// \return the condition bit selecting the successor.
+  VPValue *getCondBit() { return CondBit; }
+
+  const VPValue *getCondBit() const { return CondBit; }
+
+  void setCondBit(VPValue *CV) { CondBit = CV; }
+
   /// Set a given VPBlockBase \p Successor as the single successor of this
   /// VPBlockBase. This VPBlockBase is not added as predecessor of \p Successor.
   /// This VPBlockBase must have no successors.
@@ -479,11 +489,14 @@ public:
   }
 
   /// Set two given VPBlockBases \p IfTrue and \p IfFalse to be the two
-  /// successors of this VPBlockBase. This VPBlockBase is not added as
-  /// predecessor of \p IfTrue or \p IfFalse. This VPBlockBase must have no
-  /// successors.
-  void setTwoSuccessors(VPBlockBase *IfTrue, VPBlockBase *IfFalse) {
+  /// successors of this VPBlockBase. \p Condition is set as the successor
+  /// selector. This VPBlockBase is not added as predecessor of \p IfTrue or \p
+  /// IfFalse. This VPBlockBase must have no successors.
+  void setTwoSuccessors(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
+                        VPValue *Condition) {
     assert(Successors.empty() && "Setting two successors when others exist.");
+    assert(Condition && "Setting two successors without condition!");
+    CondBit = Condition;
     appendSuccessor(IfTrue);
     appendSuccessor(IfFalse);
   }
@@ -1265,9 +1278,10 @@ public:
   VPBlockUtils() = delete;
 
   /// Insert disconnected VPBlockBase \p NewBlock after \p BlockPtr. Add \p
-  /// NewBlock as successor of \p BlockPtr and \p Block as predecessor of \p
-  /// NewBlock, and propagate \p BlockPtr parent to \p NewBlock. \p NewBlock
-  /// must have neither successors nor predecessors.
+  /// NewBlock as successor of \p BlockPtr and \p BlockPtr as predecessor of \p
+  /// NewBlock, and propagate \p BlockPtr parent to \p NewBlock. If \p BlockPtr
+  /// has more than one successor, its conditional bit is propagated to \p
+  /// NewBlock. \p NewBlock must have neither successors nor predecessors.
   static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
     assert(NewBlock->getSuccessors().empty() &&
            "Can't insert new block with successors.");
@@ -1282,16 +1296,16 @@ public:
   /// Insert disconnected VPBlockBases \p IfTrue and \p IfFalse after \p
   /// BlockPtr. Add \p IfTrue and \p IfFalse as succesors of \p BlockPtr and \p
   /// BlockPtr as predecessor of \p IfTrue and \p IfFalse. Propagate \p BlockPtr
-  /// parent to \p IfTrue and \p IfFalse. \p BlockPtr must have no successors
-  /// and \p IfTrue and \p IfFalse must have neither successors nor
-  /// predecessors.
+  /// parent to \p IfTrue and \p IfFalse. \p Condition is set as the successor
+  /// selector. \p BlockPtr must have no successors and \p IfTrue and \p IfFalse
+  /// must have neither successors nor predecessors.
   static void insertTwoBlocksAfter(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
-                                   VPBlockBase *BlockPtr) {
+                                   VPValue *Condition, VPBlockBase *BlockPtr) {
     assert(IfTrue->getSuccessors().empty() &&
            "Can't insert IfTrue with successors.");
     assert(IfFalse->getSuccessors().empty() &&
            "Can't insert IfFalse with successors.");
-    BlockPtr->setTwoSuccessors(IfTrue, IfFalse);
+    BlockPtr->setTwoSuccessors(IfTrue, IfFalse, Condition);
     IfTrue->setPredecessors({BlockPtr});
     IfFalse->setPredecessors({BlockPtr});
     IfTrue->setParent(BlockPtr->getParent());

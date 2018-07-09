@@ -45,8 +45,8 @@ typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
 typedef signed char __v16qs __attribute__((__vector_size__(16)));
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
-#define __DEFAULT_FN_ATTRS_MMX __attribute__((__always_inline__, __nodebug__, __target__("mmx,sse2")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse2"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS_MMX __attribute__((__always_inline__, __nodebug__, __target__("mmx,sse2"), __min_vector_width__(64)))
 
 /// Adds lower double-precision values in both operands and returns the
 ///    sum in the lower 64 bits of the result. The upper 64 bits of the result
@@ -4093,7 +4093,7 @@ _mm_stream_si128(__m128i *__p, __m128i __a)
 ///    A pointer to the 32-bit memory location used to store the value.
 /// \param __a
 ///    A 32-bit integer containing the value to be stored.
-static __inline__ void __DEFAULT_FN_ATTRS
+static __inline__ void __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
 _mm_stream_si32(int *__p, int __a)
 {
   __builtin_ia32_movnti(__p, __a);
@@ -4113,7 +4113,7 @@ _mm_stream_si32(int *__p, int __a)
 ///    A pointer to the 64-bit memory location used to store the value.
 /// \param __a
 ///    A 64-bit integer containing the value to be stored.
-static __inline__ void __DEFAULT_FN_ATTRS
+static __inline__ void __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
 _mm_stream_si64(long long *__p, long long __a)
 {
   __builtin_ia32_movnti64(__p, __a);

@@ -58,6 +58,10 @@ MutationDispatcher::MutationDispatcher(Random &Rand,
   if (EF->LLVMFuzzerCustomCrossOver)
     Mutators.push_back(
         {&MutationDispatcher::Mutate_CustomCrossOver, "CustomCrossOver"});
+
+  // Initialize mutation statistic counters.
+  TotalMutations.resize(Mutators.size(), 0);
+  UsefulMutations.resize(Mutators.size(), 0);
 }
 
 static char RandCh(Random &Rand) {
@@ -261,9 +265,9 @@ size_t MutationDispatcher::Mutate_AddWordFromTORC(
     DE = MakeDictionaryEntryFromCMP(X.A, X.B, Data, Size);
   } break;
   case 3: if (Options.UseMemmem) {
-    auto X = TPC.MMT.Get(Rand.Rand());
-    DE = DictionaryEntry(X);
-  } break;
+      auto X = TPC.MMT.Get(Rand.Rand());
+      DE = DictionaryEntry(X);
+    } break;
   default:
     assert(0);
   }
@@ -431,18 +435,18 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
   auto &U = MutateInPlaceHere;
   size_t NewSize = 0;
   switch(Rand(3)) {
-    case 0:
-      NewSize = CrossOver(Data, Size, O.data(), O.size(), U.data(), U.size());
-      break;
-    case 1:
-      NewSize = InsertPartOf(O.data(), O.size(), U.data(), U.size(), MaxSize);
-      if (!NewSize)
-        NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
-      break;
-    case 2:
+  case 0:
+    NewSize = CrossOver(Data, Size, O.data(), O.size(), U.data(), U.size());
+    break;
+  case 1:
+    NewSize = InsertPartOf(O.data(), O.size(), U.data(), U.size(), MaxSize);
+    if (!NewSize)
       NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
-      break;
-    default: assert(0);
+    break;
+  case 2:
+    NewSize = CopyPartOf(O.data(), O.size(), U.data(), U.size());
+    break;
+  default: assert(0);
   }
   assert(NewSize > 0 && "CrossOver returned empty unit");
   assert(NewSize <= MaxSize && "CrossOver returned overisized unit");
@@ -451,7 +455,7 @@ size_t MutationDispatcher::Mutate_CrossOver(uint8_t *Data, size_t Size,
 }
 
 void MutationDispatcher::StartMutationSequence() {
-  CurrentMutatorSequence.clear();
+  CurrentMutatorIdxSequence.clear();
   CurrentDictionaryEntrySequence.clear();
 }
 
@@ -465,6 +469,7 @@ void MutationDispatcher::RecordSuccessfulMutationSequence() {
     if (!PersistentAutoDictionary.ContainsWord(DE->GetW()))
       PersistentAutoDictionary.push_back({DE->GetW(), 1});
   }
+  RecordUsefulMutations();
 }
 
 void MutationDispatcher::PrintRecommendedDictionary() {
@@ -484,9 +489,9 @@ void MutationDispatcher::PrintRecommendedDictionary() {
 }
 
 void MutationDispatcher::PrintMutationSequence() {
-  Printf("MS: %zd ", CurrentMutatorSequence.size());
-  for (auto M : CurrentMutatorSequence)
-    Printf("%s-", M.Name);
+  Printf("MS: %zd ", CurrentMutatorIdxSequence.size());
+  for (auto M : CurrentMutatorIdxSequence)
+    Printf("%s-", Mutators[M].Name);
   if (!CurrentDictionaryEntrySequence.empty()) {
     Printf(" DE: ");
     for (auto DE : CurrentDictionaryEntrySequence) {
@@ -514,12 +519,14 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
   // in which case they will return 0.
   // Try several times before returning un-mutated data.
   for (int Iter = 0; Iter < 100; Iter++) {
-    auto M = Mutators[Rand(Mutators.size())];
+    size_t MutatorIdx = Rand(Mutators.size());
+    auto M = Mutators[MutatorIdx];
     size_t NewSize = (this->*(M.Fn))(Data, Size, MaxSize);
     if (NewSize && NewSize <= MaxSize) {
       if (Options.OnlyASCII)
         ToASCII(Data, NewSize);
-      CurrentMutatorSequence.push_back(M);
+      CurrentMutatorIdxSequence.push_back(MutatorIdx);
+      TotalMutations[MutatorIdx]++;
       return NewSize;
     }
   }
@@ -530,6 +537,25 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
 void MutationDispatcher::AddWordToManualDictionary(const Word &W) {
   ManualDictionary.push_back(
       {W, std::numeric_limits<size_t>::max()});
+}
+
+void MutationDispatcher::RecordUsefulMutations() {
+  for (const size_t M : CurrentMutatorIdxSequence)
+    UsefulMutations[M]++;
+}
+
+void MutationDispatcher::PrintMutationStats() {
+  Printf("\nstat::mutation_usefulness:      ");
+  for (size_t i = 0; i < Mutators.size(); i++) {
+    double UsefulPercentage =
+        TotalMutations[i]
+            ? (100.0 * UsefulMutations[i]) / TotalMutations[i]
+            : 0;
+    Printf("%.3f", UsefulPercentage);
+    if (i < Mutators.size() - 1)
+      Printf(",");
+  }
+  Printf("\n");
 }
 
 }  // namespace fuzzer

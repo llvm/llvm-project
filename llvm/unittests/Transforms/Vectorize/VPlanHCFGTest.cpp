@@ -61,10 +61,11 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = doBuildPlan(LoopHeader);
 
-  VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
+  VPBasicBlock *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   EXPECT_EQ(0u, Entry->getNumPredecessors());
   EXPECT_EQ(1u, Entry->getNumSuccessors());
+  EXPECT_EQ(nullptr, Entry->getCondBit());
 
   VPBasicBlock *VecBB = Entry->getSingleSuccessor()->getEntryBasicBlock();
   EXPECT_EQ(7u, VecBB->size());
@@ -105,6 +106,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(Instruction::ICmp, ICmp->getOpcode());
   EXPECT_EQ(2u, ICmp->getNumOperands());
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
+  EXPECT_EQ(VecBB->getCondBit(), ICmp);
 
   LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;

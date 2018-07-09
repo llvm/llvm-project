@@ -32,7 +32,7 @@ typedef unsigned int __mmask32;
 typedef unsigned long long __mmask64;
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512bw")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512bw"), __min_vector_width__(512)))
 
 /* Integer compare */
 

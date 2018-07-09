@@ -83,6 +83,12 @@
 class kmp_stats_list;
 #endif
 
+#if KMP_USE_HIER_SCHED
+// Only include hierarchical scheduling if affinity is supported
+#undef KMP_USE_HIER_SCHED
+#define KMP_USE_HIER_SCHED KMP_AFFINITY_SUPPORTED
+#endif
+
 #if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED
 #include "hwloc.h"
 #ifndef HWLOC_OBJ_NUMANODE
@@ -254,6 +260,12 @@ extern "C" {
 #define SKIP_DIGITS(_x)                                                        \
   {                                                                            \
     while (*(_x) >= '0' && *(_x) <= '9')                                       \
+      (_x)++;                                                                  \
+  }
+#define SKIP_TOKEN(_x)                                                         \
+  {                                                                            \
+    while ((*(_x) >= '0' && *(_x) <= '9') || (*(_x) >= 'a' && *(_x) <= 'z') || \
+           (*(_x) >= 'A' && *(_x) <= 'Z') || *(_x) == '_')                     \
       (_x)++;                                                                  \
   }
 #define SKIP_TO(_x, _c)                                                        \
@@ -940,7 +952,7 @@ extern int __kmp_hws_abs_flag; // absolute or per-item number requested
 // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
 extern kmp_uint64 __kmp_ticks_per_msec;
 #if KMP_COMPILER_ICC
-#define KMP_NOW() _rdtsc()
+#define KMP_NOW() ((kmp_uint64)_rdtsc())
 #else
 #define KMP_NOW() __kmp_hardware_timestamp()
 #endif
@@ -1508,6 +1520,30 @@ struct shared_table {
 
 /* ------------------------------------------------------------------------ */
 
+#if KMP_USE_HIER_SCHED
+// Shared barrier data that exists inside a single unit of the scheduling
+// hierarchy
+typedef struct kmp_hier_private_bdata_t {
+  kmp_int32 num_active;
+  kmp_uint64 index;
+  kmp_uint64 wait_val[2];
+} kmp_hier_private_bdata_t;
+#endif
+
+typedef struct kmp_sched_flags {
+  unsigned ordered : 1;
+  unsigned nomerge : 1;
+  unsigned contains_last : 1;
+#if KMP_USE_HIER_SCHED
+  unsigned use_hier : 1;
+  unsigned unused : 28;
+#else
+  unsigned unused : 29;
+#endif
+} kmp_sched_flags_t;
+
+KMP_BUILD_ASSERT(sizeof(kmp_sched_flags_t) == 4);
+
 #if KMP_STATIC_STEAL_ENABLED
 typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   kmp_int32 count;
@@ -1625,14 +1661,17 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info {
     dispatch_private_info64_t p64;
   } u;
   enum sched_type schedule; /* scheduling algorithm */
-  kmp_int32 ordered; /* ordered clause specified */
+  kmp_sched_flags_t flags; /* flags (e.g., ordered, nomerge, etc.) */
   kmp_int32 ordered_bumped;
   // To retain the structure size after making ordered_iteration scalar
   kmp_int32 ordered_dummy[KMP_MAX_ORDERED - 3];
   // Stack of buffers for nest of serial regions
   struct dispatch_private_info *next;
-  kmp_int32 nomerge; /* don't merge iters if serialized */
   kmp_int32 type_size; /* the size of types in private_info */
+#if KMP_USE_HIER_SCHED
+  kmp_int32 hier_id;
+  void *parent; /* hierarchical scheduling parent pointer */
+#endif
   enum cons_type pushed_ws;
 } dispatch_private_info_t;
 
@@ -1666,6 +1705,9 @@ typedef struct dispatch_shared_info {
   volatile kmp_int32 doacross_buf_idx; // teamwise index
   volatile kmp_uint32 *doacross_flags; // shared array of iteration flags (0/1)
   kmp_int32 doacross_num_done; // count finished threads
+#endif
+#if KMP_USE_HIER_SCHED
+  void *hier;
 #endif
 #if KMP_USE_HWLOC
   // When linking with libhwloc, the ORDERED EPCC test slows down on big
@@ -2109,8 +2151,9 @@ typedef struct kmp_task { /* GEH: Shouldn't this be aligned somehow? */
 
 #if OMP_40_ENABLED
 typedef struct kmp_taskgroup {
-  kmp_int32 count; // number of allocated and not yet complete tasks
-  kmp_int32 cancel_request; // request for cancellation of this taskgroup
+  std::atomic<kmp_int32> count; // number of allocated and incomplete tasks
+  std::atomic<kmp_int32>
+      cancel_request; // request for cancellation of this taskgroup
   struct kmp_taskgroup *parent; // parent taskgroup
 // TODO: change to OMP_50_ENABLED, need to change build tools for this to work
 #if OMP_45_ENABLED
@@ -2149,8 +2192,8 @@ typedef struct kmp_base_depnode {
   kmp_uint32 id;
 #endif
 
-  volatile kmp_int32 npredecessors;
-  volatile kmp_int32 nrefs;
+  std::atomic<kmp_int32> npredecessors;
+  std::atomic<kmp_int32> nrefs;
 } kmp_base_depnode_t;
 
 union KMP_ALIGN_CACHE kmp_depnode {
@@ -2242,7 +2285,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
   /* Currently not used except for perhaps IDB */
   kmp_taskdata_t *td_parent; /* parent task                             */
   kmp_int32 td_level; /* task nesting level                      */
-  kmp_int32 td_untied_count; /* untied task active parts counter        */
+  std::atomic<kmp_int32> td_untied_count; // untied task active parts counter
   ident_t *td_ident; /* task identifier                         */
   // Taskwait data.
   ident_t *td_taskwait_ident;
@@ -2250,10 +2293,10 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
   kmp_int32 td_taskwait_thread; /* gtid + 1 of thread encountered taskwait */
   KMP_ALIGN_CACHE kmp_internal_control_t
       td_icvs; /* Internal control variables for the task */
-  KMP_ALIGN_CACHE volatile kmp_int32
+  KMP_ALIGN_CACHE std::atomic<kmp_int32>
       td_allocated_child_tasks; /* Child tasks (+ current task) not yet
                                    deallocated */
-  volatile kmp_int32
+  std::atomic<kmp_int32>
       td_incomplete_child_tasks; /* Child tasks not yet complete */
 #if OMP_40_ENABLED
   kmp_taskgroup_t
@@ -2338,7 +2381,7 @@ typedef struct kmp_base_task_team {
   kmp_int32 tt_untied_task_encountered;
 
   KMP_ALIGN_CACHE
-  volatile kmp_int32 tt_unfinished_threads; /* #threads still active      */
+  std::atomic<kmp_int32> tt_unfinished_threads; /* #threads still active */
 
   KMP_ALIGN_CACHE
   volatile kmp_uint32
@@ -2480,6 +2523,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   kmp_uint8 th_active_in_pool; // included in count of #active threads in pool
   int th_active; // ! sleeping; 32 bits for TCR/TCW
   struct cons_header *th_cons; // used for consistency check
+#if KMP_USE_HIER_SCHED
+  // used for hierarchical scheduling
+  kmp_hier_private_bdata_t *th_hier_bar_data;
+#endif
 
   /* Add the syncronizing data which is cache aligned and padded. */
   KMP_ALIGN_CACHE kmp_balign_t th_bar[bs_last_barrier];
@@ -2561,7 +2608,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   // ---------------------------------------------------------------------------
   KMP_ALIGN_CACHE kmp_ordered_team_t t_ordered;
   kmp_balign_team_t t_bar[bs_last_barrier];
-  volatile int t_construct; // count of single directive encountered by team
+  std::atomic<int> t_construct; // count of single directive encountered by team
   char pad[sizeof(kmp_lock_t)]; // padding to maintain performance on big iron
 
   // Master only
@@ -2636,12 +2683,14 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
 // for SERIALIZED teams nested 2 or more levels deep
 #if OMP_40_ENABLED
   // typed flag to store request state of cancellation
-  kmp_int32 t_cancel_request;
+  std::atomic<kmp_int32> t_cancel_request;
 #endif
   int t_master_active; // save on fork, restore on join
   kmp_taskq_t t_taskq; // this team's task queue
   void *t_copypriv_data; // team specific pointer to copyprivate data array
-  kmp_uint32 t_copyin_counter;
+#if KMP_OS_WINDOWS
+  std::atomic<kmp_uint32> t_copyin_counter;
+#endif
 #if USE_ITT_BUILD
   void *t_stack_id; // team specific stack stitching id (for ittnotify)
 #endif /* USE_ITT_BUILD */
@@ -2685,7 +2734,8 @@ typedef struct kmp_base_root {
   volatile int r_active; /* TRUE if some region in a nest has > 1 thread */
   // GEH: This is misnamed, should be r_in_parallel
   volatile int r_nested; // TODO: GEH - This is unused, just remove it entirely.
-  int r_in_parallel; /* keeps a count of active parallel regions per root */
+  // keeps a count of active parallel regions per root
+  std::atomic<int> r_in_parallel;
   // GEH: This is misnamed, should be r_active_levels
   kmp_team_t *r_root_team;
   kmp_team_t *r_hot_team;
@@ -2742,8 +2792,8 @@ extern int __kmp_debug_buf_atomic; /* TRUE means use atomic update of buffer
                                       entry pointer */
 
 extern char *__kmp_debug_buffer; /* Debug buffer itself */
-extern int __kmp_debug_count; /* Counter for number of lines printed in buffer
-                                 so far */
+extern std::atomic<int> __kmp_debug_count; /* Counter for number of lines
+                                              printed in buffer so far */
 extern int __kmp_debug_buf_warn_chars; /* Keep track of char increase
                                           recommended in warnings */
 /* end rotating debug buffer */
@@ -3000,7 +3050,7 @@ extern volatile int __kmp_nth;
    threads, and those in the thread pool */
 extern volatile int __kmp_all_nth;
 extern int __kmp_thread_pool_nth;
-extern volatile int __kmp_thread_pool_active_nth;
+extern std::atomic<int> __kmp_thread_pool_active_nth;
 
 extern kmp_root_t **__kmp_root; /* root of thread hierarchy */
 /* end data protected by fork/join lock */
@@ -3009,14 +3059,14 @@ extern kmp_root_t **__kmp_root; /* root of thread hierarchy */
 extern kmp_global_t __kmp_global; /* global status */
 
 extern kmp_info_t __kmp_monitor;
-extern volatile kmp_uint32 __kmp_team_counter; // For Debugging Support Library
-extern volatile kmp_uint32 __kmp_task_counter; // For Debugging Support Library
+// For Debugging Support Library
+extern std::atomic<kmp_uint32> __kmp_team_counter;
+// For Debugging Support Library
+extern std::atomic<kmp_uint32> __kmp_task_counter;
 
 #if USE_DEBUGGER
-
 #define _KMP_GEN_ID(counter)                                                   \
-  (__kmp_debugging ? KMP_TEST_THEN_INC32((volatile kmp_int32 *)&counter) + 1   \
-                   : ~0)
+  (__kmp_debugging ? KMP_ATOMIC_INC(&counter) + 1 : ~0)
 #else
 #define _KMP_GEN_ID(counter) (~0)
 #endif /* USE_DEBUGGER */

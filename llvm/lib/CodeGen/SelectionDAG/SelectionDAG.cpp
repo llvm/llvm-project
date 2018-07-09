@@ -3611,10 +3611,20 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op) const {
   return false;
 }
 
-bool SelectionDAG::isKnownNeverZero(SDValue Op) const {
+bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
+  assert(Op.getValueType().isFloatingPoint() &&
+         "Floating point type expected");
+
   // If the value is a constant, we can obviously see if it is a zero or not.
+  // TODO: Add BuildVector support.
   if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Op))
     return !C->isZero();
+  return false;
+}
+
+bool SelectionDAG::isKnownNeverZero(SDValue Op) const {
+  assert(!Op.getValueType().isFloatingPoint() &&
+         "Floating point types unsupported - use isKnownNeverZeroFloat");
 
   // TODO: Recognize more cases here.
   switch (Op.getOpcode()) {
@@ -4846,6 +4856,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   // Perform various simplifications.
   switch (Opcode) {
   case ISD::FMA: {
+    assert(VT.isFloatingPoint() && "This operator only applies to FP types!");
+    assert(N1.getValueType() == VT && N2.getValueType() == VT &&
+           N3.getValueType() == VT && "FMA types must match!");
     ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
     ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
     ConstantFPSDNode *N3CFP = dyn_cast<ConstantFPSDNode>(N3);

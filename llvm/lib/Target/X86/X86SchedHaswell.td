@@ -124,6 +124,7 @@ defm : HWWriteResPair<WriteIMul,   [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul64, [HWPort1],   3>;
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 defm : HWWriteResPair<WriteShift,  [HWPort06],  1>;
+defm : HWWriteResPair<WriteShiftDouble,  [HWPort06],  1>;
 defm : HWWriteResPair<WriteJump,   [HWPort06],  1>;
 defm : HWWriteResPair<WriteCRC32,  [HWPort1],   3>;
 
@@ -143,10 +144,11 @@ def  : WriteRes<WriteLAHFSAHF, [HWPort06]>;
 def : WriteRes<WriteLEA, [HWPort15]>;
 
 // Bit counts.
-defm : HWWriteResPair<WriteBitScan, [HWPort1], 3>;
-defm : HWWriteResPair<WriteLZCNT,   [HWPort1], 3>;
-defm : HWWriteResPair<WriteTZCNT,   [HWPort1], 3>;
-defm : HWWriteResPair<WritePOPCNT,  [HWPort1], 3>;
+defm : HWWriteResPair<WriteBSF, [HWPort1], 3>;
+defm : HWWriteResPair<WriteBSR, [HWPort1], 3>;
+defm : HWWriteResPair<WriteLZCNT,          [HWPort1], 3>;
+defm : HWWriteResPair<WriteTZCNT,          [HWPort1], 3>;
+defm : HWWriteResPair<WritePOPCNT,         [HWPort1], 3>;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm : HWWriteResPair<WriteBEXTR, [HWPort06,HWPort15], 2, [1,1], 2>;

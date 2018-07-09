@@ -349,6 +349,11 @@ template <class ELFT> static void createSyntheticSections() {
     Add(InX::RelaDyn);
   }
 
+  if (Config->RelrPackDynRelocs) {
+    InX::RelrDyn = make<RelrSection<ELFT>>();
+    Add(InX::RelrDyn);
+  }
+
   // Add .got. MIPS' .got is so different from the other archs,
   // it has its own class.
   if (Config->EMachine == EM_MIPS) {
@@ -1646,12 +1651,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic(
-      {InX::DynSymTab,   InX::Bss,          InX::BssRelRo, InX::GnuHashTab,
-       InX::HashTab,     InX::SymTab,       InX::ShStrTab, InX::StrTab,
-       In<ELFT>::VerDef, InX::DynStrTab,    InX::Got,      InX::MipsGot,
-       InX::IgotPlt,     InX::GotPlt,       InX::RelaDyn,  InX::RelaIplt,
-       InX::RelaPlt,     InX::Plt,          InX::Iplt,     InX::EhFrameHdr,
-       In<ELFT>::VerSym, In<ELFT>::VerNeed, InX::Dynamic},
+      {InX::DynSymTab,   InX::Bss,         InX::BssRelRo,     InX::GnuHashTab,
+       InX::HashTab,     InX::SymTab,      InX::ShStrTab,     InX::StrTab,
+       In<ELFT>::VerDef, InX::DynStrTab,   InX::Got,          InX::MipsGot,
+       InX::IgotPlt,     InX::GotPlt,      InX::RelaDyn,      InX::RelrDyn,
+       InX::RelaIplt,    InX::RelaPlt,     InX::Plt,          InX::Iplt,
+       InX::EhFrameHdr,  In<ELFT>::VerSym, In<ELFT>::VerNeed, InX::Dynamic},
       [](SyntheticSection *SS) { SS->finalizeContents(); });
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
@@ -1666,7 +1671,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // for jump instructions that is the linker's responsibility for creating
   // range extension thunks for. As the generation of the content may also
   // alter InputSection addresses we must converge to a fixed point.
-  if (Target->NeedsThunks || Config->AndroidPackDynRelocs) {
+  if (Target->NeedsThunks || Config->AndroidPackDynRelocs ||
+      Config->RelrPackDynRelocs) {
     ThunkCreator TC;
     AArch64Err843419Patcher A64P;
     bool Changed;
@@ -1683,6 +1689,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       if (InX::MipsGot)
         InX::MipsGot->updateAllocSize();
       Changed |= InX::RelaDyn->updateAllocSize();
+      if (InX::RelrDyn)
+        Changed |= InX::RelrDyn->updateAllocSize();
     } while (Changed);
   }
 

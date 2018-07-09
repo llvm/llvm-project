@@ -188,13 +188,17 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (isRelExprOneOf<R_TLSLD_GOT, R_TLSLD_GOT_FROM_END, R_TLSLD_PC>(Expr)) {
+  if (isRelExprOneOf<R_TLSLD_GOT, R_TLSLD_GOT_FROM_END, R_TLSLD_PC,
+                     R_TLSLD_HINT>(Expr)) {
     // Local-Dynamic relocs can be relaxed to Local-Exec.
     if (!Config->Shared) {
       C.Relocations.push_back(
-          {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Sym});
-      return 2;
+          {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
+           Offset, Addend, &Sym});
+      return Target->TlsGdRelaxSkip;
     }
+    if (Expr == R_TLSLD_HINT)
+      return 1;
     if (InX::Got->addTlsIndex())
       InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::Got,
                              InX::Got->getTlsIndexOff(), nullptr);
@@ -203,9 +207,10 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (isRelExprOneOf<R_ABS, R_TLSLD_GOT_FROM_END, R_TLSLD_PC>(Expr) &&
-      !Config->Shared) {
-    C.Relocations.push_back({R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Sym});
+  if (Expr == R_ABS && !Config->Shared) {
+    C.Relocations.push_back(
+        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
+         Offset, Addend, &Sym});
     return 1;
   }
 
@@ -357,8 +362,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
           R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
           R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
           R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOT_FROM_END,
-          R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT>(
-          E))
+          R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT,
+          R_TLSLD_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -712,6 +717,24 @@ private:
 };
 } // namespace
 
+static void addRelativeReloc(InputSectionBase *IS, uint64_t OffsetInSec,
+                             Symbol *Sym, int64_t Addend, RelExpr Expr,
+                             RelType Type) {
+  // Add a relative relocation. If RelrDyn section is enabled, and the
+  // relocation offset is guaranteed to be even, add the relocation to
+  // the RelrDyn section, otherwise add it to the RelaDyn section.
+  // RelrDyn sections don't support odd offsets. Also, RelrDyn sections
+  // don't store the addend values, so we must write it to the relocated
+  // address.
+  if (InX::RelrDyn && IS->Alignment >= 2 && OffsetInSec % 2 == 0) {
+    IS->Relocations.push_back({Expr, Type, OffsetInSec, Addend, Sym});
+    InX::RelrDyn->Relocs.push_back({IS, OffsetInSec});
+    return;
+  }
+  InX::RelaDyn->addReloc(Target->RelativeRel, IS, OffsetInSec, Sym, Addend,
+                         Expr, Type);
+}
+
 template <class ELFT, class GotPltSection>
 static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
                         RelocationBaseSection *Rel, RelType Type, Symbol &Sym) {
@@ -743,14 +766,12 @@ template <class ELFT> static void addGotEntry(Symbol &Sym) {
 
   // Otherwise, we emit a dynamic relocation to .rel[a].dyn so that
   // the GOT slot will be fixed at load-time.
-  RelType Type;
-  if (Sym.isTls())
-    Type = Target->TlsGotRel;
-  else if (!Sym.IsPreemptible && Config->Pic && !isAbsolute(Sym))
-    Type = Target->RelativeRel;
-  else
-    Type = Target->GotRel;
-  InX::RelaDyn->addReloc(Type, InX::Got, Off, &Sym, 0,
+  if (!Sym.isTls() && !Sym.IsPreemptible && Config->Pic && !isAbsolute(Sym)) {
+    addRelativeReloc(InX::Got, Off, &Sym, 0, R_ABS, Target->GotRel);
+    return;
+  }
+  InX::RelaDyn->addReloc(Sym.isTls() ? Target->TlsGotRel : Target->GotRel,
+                         InX::Got, Off, &Sym, 0,
                          Sym.IsPreemptible ? R_ADDEND : R_ABS, Target->GotRel);
 }
 
@@ -801,8 +822,7 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
     bool IsPreemptibleValue = Sym.IsPreemptible && Expr != R_GOT;
 
     if (!IsPreemptibleValue) {
-      InX::RelaDyn->addReloc(Target->RelativeRel, &Sec, Offset, &Sym, Addend,
-                             Expr, Type);
+      addRelativeReloc(&Sec, Offset, &Sym, Addend, Expr, Type);
       return;
     } else if (RelType Rel = Target->getDynRel(Type)) {
       InX::RelaDyn->addReloc(Rel, &Sec, Offset, &Sym, Addend, R_ADDEND, Type);

@@ -242,10 +242,8 @@ defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
   defm MOVSS : sse12_move_rm<FR32, f32mem, loadf32, "movss",
                              SSEPackedSingle>, XS;
-
-  let AddedComplexity = 20 in
-    defm MOVSD : sse12_move_rm<FR64, f64mem, loadf64, "movsd",
-                               SSEPackedDouble>, XD;
+  defm MOVSD : sse12_move_rm<FR64, f64mem, loadf64, "movsd",
+                             SSEPackedDouble>, XD;
 }
 
 // Patterns
@@ -354,13 +352,6 @@ let Predicates = [UseSSE1] in {
 }
 
 let Predicates = [UseSSE2] in {
-  let Predicates = [NoSSE41], AddedComplexity = 15 in {
-  // Move scalar to XMM zero-extended, zeroing a VR128 then do a
-  // MOVSD to the lower bits.
-  def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector FR64:$src)))),
-            (MOVSDrr (v2f64 (V_SET0)), (COPY_TO_REGCLASS FR64:$src, VR128))>;
-  }
-
   let AddedComplexity = 20 in {
   // MOVSDrm already zeros the high parts of the register.
   def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (loadf64 addr:$src))))),
@@ -713,9 +704,7 @@ multiclass sse12_mov_hilo_packed<bits<8>opc, SDNode psnode, SDNode pdnode,
                                     "\t{$src2, $dst|$dst, $src2}">;
 }
 
-let AddedComplexity = 20 in {
-  defm MOVL : sse12_mov_hilo_packed<0x12, X86Movlps, X86Movlpd, "movlp">;
-}
+defm MOVL : sse12_mov_hilo_packed<0x12, X86Movlps, X86Movlpd, "movlp">;
 
 let SchedRW = [WriteFStore] in {
 let Predicates = [UseAVX] in {
@@ -798,9 +787,7 @@ let Predicates = [UseSSE2] in {
 // SSE 1 & 2 - Move Hi packed FP Instructions
 //===----------------------------------------------------------------------===//
 
-let AddedComplexity = 20 in {
-  defm MOVH : sse12_mov_hilo_packed<0x16, X86Movlhps, X86Unpckl, "movhp">;
-}
+defm MOVH : sse12_mov_hilo_packed<0x16, X86Movlhps, X86Unpckl, "movhp">;
 
 let SchedRW = [WriteFStore] in {
 // v2f64 extract element 1 is always custom lowered to unpack high to low
@@ -891,7 +878,7 @@ let Predicates = [UseSSE2] in {
 // SSE 1 & 2 - Move Low to High and High to Low packed FP Instructions
 //===----------------------------------------------------------------------===//
 
-let AddedComplexity = 20, Predicates = [UseAVX] in {
+let Predicates = [UseAVX] in {
   def VMOVLHPSrr : VPSI<0x16, MRMSrcReg, (outs VR128:$dst),
                                        (ins VR128:$src1, VR128:$src2),
                       "movlhps\t{$src2, $src1, $dst|$dst, $src1, $src2}",
@@ -906,7 +893,7 @@ let AddedComplexity = 20, Predicates = [UseAVX] in {
                       VEX_4V, Sched<[SchedWriteFShuffle.XMM]>, VEX_WIG,
                       NotMemoryFoldable;
 }
-let Constraints = "$src1 = $dst", AddedComplexity = 20 in {
+let Constraints = "$src1 = $dst" in {
   def MOVLHPSrr : PSI<0x16, MRMSrcReg, (outs VR128:$dst),
                                        (ins VR128:$src1, VR128:$src2),
                       "movlhps\t{$src2, $dst|$dst, $src2}",
@@ -4247,8 +4234,6 @@ let Predicates = [UseAVX] in {
               (VMOVDI2PDIrm addr:$src)>;
     def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
               (VMOVDI2PDIrm addr:$src)>;
-    def : Pat<(v4i32 (X86vzmovl (bc_v4i32 (loadv4f32 addr:$src)))),
-              (VMOVDI2PDIrm addr:$src)>;
     def : Pat<(v4i32 (X86vzmovl (bc_v4i32 (loadv2i64 addr:$src)))),
               (VMOVDI2PDIrm addr:$src)>;
     def : Pat<(v4i32 (X86vzload addr:$src)),
@@ -4277,8 +4262,6 @@ let Predicates = [UseSSE2] in {
     def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (zextloadi64i32 addr:$src))))),
               (MOVDI2PDIrm addr:$src)>;
     def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
-              (MOVDI2PDIrm addr:$src)>;
-    def : Pat<(v4i32 (X86vzmovl (bc_v4i32 (loadv4f32 addr:$src)))),
               (MOVDI2PDIrm addr:$src)>;
     def : Pat<(v4i32 (X86vzmovl (bc_v4i32 (loadv2i64 addr:$src)))),
               (MOVDI2PDIrm addr:$src)>;
@@ -4360,8 +4343,6 @@ let Predicates = [UseAVX], AddedComplexity = 20 in {
             (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
             (VMOVQI2PQIrm addr:$src)>;
-  def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4f32 addr:$src)))),
-            (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)),
             (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v4i64 (X86vzmovl (insert_subvector undef,
@@ -4375,8 +4356,6 @@ let Predicates = [UseSSE2], AddedComplexity = 20 in {
   def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (loadi64 addr:$src))))),
             (MOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
-            (MOVQI2PQIrm addr:$src)>;
-  def : Pat<(v2i64 (X86vzmovl (bc_v2i64 (loadv4f32 addr:$src)))),
             (MOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)), (MOVQI2PQIrm addr:$src)>;
 }
@@ -6519,8 +6498,6 @@ let Predicates = [UseAVX] in {
             (VBLENDPSrri (v4f32 (V_SET0)), VR128:$src, (i8 1))>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
             (VPBLENDWrri (v4i32 (V_SET0)), VR128:$src, (i8 3))>;
-  def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector FR64:$src)))),
-            (VMOVSDrr (v2f64 (V_SET0)), (COPY_TO_REGCLASS FR64:$src, VR128))>;
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),

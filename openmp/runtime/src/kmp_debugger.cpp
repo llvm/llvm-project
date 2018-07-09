@@ -68,7 +68,9 @@ kmp_omp_struct_info_t __kmp_omp_debug_struct_info = {
     addr_and_size_of(__kmp_threads),
     addr_and_size_of(__kmp_root),
     addr_and_size_of(__kmp_threads_capacity),
+#if KMP_USE_MONITOR
     addr_and_size_of(__kmp_monitor),
+#endif
 #if !KMP_USE_DYNAMIC_LOCK
     addr_and_size_of(__kmp_user_lock_table),
 #endif

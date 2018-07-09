@@ -992,6 +992,32 @@ TEST_F(SymbolCollectorTest, Origin) {
                            Field(&Symbol::Origin, SymbolOrigin::Static)));
 }
 
+TEST_F(SymbolCollectorTest, CollectMacros) {
+  CollectorOpts.CollectIncludePath = true;
+  Annotations Header(R"(
+    #define X 1
+    #define $mac[[MAC]](x) int x
+    #define $used[[USED]](y) float y;
+
+    MAC(p);
+  )");
+  const std::string Main = R"(
+    #define MAIN 1  // not indexed
+    USED(t);
+  )";
+  CollectorOpts.CountReferences = true;
+  CollectorOpts.CollectMacro = true;
+  runSymbolCollector(Header.code(), Main);
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          QName("p"),
+          AllOf(QName("X"), DeclURI(TestHeaderURI),
+                IncludeHeader(TestHeaderURI)),
+          AllOf(Labeled("MAC(x)"), Refs(0), DeclRange(Header.range("mac"))),
+          AllOf(Labeled("USED(y)"), Refs(1), DeclRange(Header.range("used")))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

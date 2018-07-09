@@ -2329,7 +2329,7 @@ public:
 
     /// Append the elements of this operand to \p V.
     void appendToVector(SmallVectorImpl<uint64_t> &V) const {
-      V.append(getSize(), *get());
+      V.append(get(), get() + getSize());
     }
   };
 

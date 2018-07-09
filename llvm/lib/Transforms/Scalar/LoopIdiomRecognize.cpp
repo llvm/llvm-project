@@ -188,8 +188,9 @@ private:
                                PHINode *CntPhi, Value *Var);
   bool recognizeAndInsertCTLZ();
   void transformLoopToCountable(BasicBlock *PreCondBB, Instruction *CntInst,
-                                PHINode *CntPhi, Value *Var, const DebugLoc &DL,
-                                bool ZeroCheck, bool IsCntPhiUsedOutsideLoop);
+                                PHINode *CntPhi, Value *Var, Instruction *DefX,
+                                const DebugLoc &DL, bool ZeroCheck,
+                                bool IsCntPhiUsedOutsideLoop);
 
   /// @}
 };
@@ -1316,8 +1317,8 @@ static bool detectCTLZIdiom(Loop *CurLoop, PHINode *&PhiX,
     return false;
 
   // step 2: detect instructions corresponding to "x.next = x >> 1"
-  // TODO: Support loops that use LShr.
-  if (!DefX || DefX->getOpcode() != Instruction::AShr)
+  if (!DefX || (DefX->getOpcode() != Instruction::AShr &&
+                DefX->getOpcode() != Instruction::LShr))
     return false;
   ConstantInt *Shft = dyn_cast<ConstantInt>(DefX->getOperand(1));
   if (!Shft || !Shft->isOne())
@@ -1401,8 +1402,7 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
 
   // Make sure the initial value can't be negative otherwise the ashr in the
   // loop might never reach zero which would make the loop infinite.
-  // TODO: Support loops that use lshr and wouldn't need this check.
-  if (!isKnownNonNegative(InitX, *DL))
+  if (DefX->getOpcode() == Instruction::AShr && !isKnownNonNegative(InitX, *DL))
     return false;
 
   // If we check X != 0 before entering the loop we don't need a zero
@@ -1433,8 +1433,9 @@ bool LoopIdiomRecognize::recognizeAndInsertCTLZ() {
           TargetTransformInfo::TCC_Basic)
     return false;
 
-  transformLoopToCountable(PH, CntInst, CntPhi, InitX, DefX->getDebugLoc(),
-                           ZeroCheck, IsCntPhiUsedOutsideLoop);
+  transformLoopToCountable(PH, CntInst, CntPhi, InitX, DefX,
+                           DefX->getDebugLoc(), ZeroCheck,
+                           IsCntPhiUsedOutsideLoop);
   return true;
 }
 
@@ -1547,7 +1548,8 @@ static CallInst *createCTLZIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
 /// If CntInst and DefX are not used in LOOP_BODY they will be removed.
 void LoopIdiomRecognize::transformLoopToCountable(
     BasicBlock *Preheader, Instruction *CntInst, PHINode *CntPhi, Value *InitX,
-    const DebugLoc &DL, bool ZeroCheck, bool IsCntPhiUsedOutsideLoop) {
+    Instruction *DefX, const DebugLoc &DL, bool ZeroCheck,
+    bool IsCntPhiUsedOutsideLoop) {
   BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());
 
   // Step 1: Insert the CTLZ instruction at the end of the preheader block
@@ -1558,10 +1560,16 @@ void LoopIdiomRecognize::transformLoopToCountable(
   Builder.SetCurrentDebugLocation(DL);
   Value *CTLZ, *Count, *CountPrev, *NewCount, *InitXNext;
 
-  if (IsCntPhiUsedOutsideLoop)
-    InitXNext = Builder.CreateAShr(InitX,
-                                   ConstantInt::get(InitX->getType(), 1));
-  else
+  if (IsCntPhiUsedOutsideLoop) {
+    if (DefX->getOpcode() == Instruction::AShr)
+      InitXNext =
+          Builder.CreateAShr(InitX, ConstantInt::get(InitX->getType(), 1));
+    else if (DefX->getOpcode() == Instruction::LShr)
+      InitXNext =
+          Builder.CreateLShr(InitX, ConstantInt::get(InitX->getType(), 1));
+    else
+      llvm_unreachable("Unexpected opcode!");      
+  } else
     InitXNext = InitX;
   CTLZ = createCTLZIntrinsic(Builder, InitXNext, DL, ZeroCheck);
   Count = Builder.CreateSub(

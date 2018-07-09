@@ -27,7 +27,7 @@
 #include <pmmintrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse4a")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("sse4a"), __min_vector_width__(128)))
 
 /// Extracts the specified bits from the lower 64 bits of the 128-bit
 ///    integer vector operand at the index \a idx and of the length \a len.

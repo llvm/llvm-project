@@ -819,24 +819,23 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, bool DerefBefore,
 DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
                                            SmallVectorImpl<uint64_t> &Ops,
                                            bool StackValue) {
+  assert(Expr && "Can't prepend ops to this expression");
+
   // If there are no ops to prepend, do not even add the DW_OP_stack_value.
   if (Ops.empty())
     StackValue = false;
-  if (Expr)
-    for (auto Op : Expr->expr_ops()) {
-      // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
-      if (StackValue) {
-        if (Op.getOp() == dwarf::DW_OP_stack_value)
-          StackValue = false;
-        else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
-          Ops.push_back(dwarf::DW_OP_stack_value);
-          StackValue = false;
-        }
+  for (auto Op : Expr->expr_ops()) {
+    // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
+    if (StackValue) {
+      if (Op.getOp() == dwarf::DW_OP_stack_value)
+        StackValue = false;
+      else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+        Ops.push_back(dwarf::DW_OP_stack_value);
+        StackValue = false;
       }
-      Ops.push_back(Op.getOp());
-      for (unsigned I = 0; I < Op.getNumArgs(); ++I)
-        Ops.push_back(Op.getArg(I));
     }
+    Op.appendToVector(Ops);
+  }
   if (StackValue)
     Ops.push_back(dwarf::DW_OP_stack_value);
   return DIExpression::get(Expr->getContext(), Ops);
@@ -905,9 +904,7 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
         continue;
       }
       }
-      Ops.push_back(Op.getOp());
-      for (unsigned I = 0; I < Op.getNumArgs(); ++I)
-        Ops.push_back(Op.getArg(I));
+      Op.appendToVector(Ops);
     }
   }
   Ops.push_back(dwarf::DW_OP_LLVM_fragment);

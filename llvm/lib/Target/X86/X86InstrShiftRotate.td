@@ -650,7 +650,7 @@ def ROR64m1  : RI<0xD1, MRM1m, (outs), (ins i64mem:$dst),
 // Double shift instructions (generalizations of rotate)
 //===----------------------------------------------------------------------===//
 
-let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
+let Constraints = "$src1 = $dst", SchedRW = [WriteShiftDouble] in {
 
 let Uses = [CL] in {
 def SHLD16rrCL : I<0xA5, MRMDestReg, (outs GR16:$dst),
@@ -731,7 +731,7 @@ def SHRD64rri8 : RIi8<0xAC, MRMDestReg,
 }
 } // Constraints = "$src = $dst", SchedRW
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
+let SchedRW = [WriteShiftDoubleLd, WriteRMW] in {
 let Uses = [CL] in {
 def SHLD16mrCL : I<0xA5, MRMDestMem, (outs), (ins i16mem:$dst, GR16:$src2),
                    "shld{w}\t{%cl, $src2, $dst|$dst, $src2, cl}",

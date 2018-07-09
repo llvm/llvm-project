@@ -1687,5 +1687,17 @@ TEST(ObjCStmtMatcher, ExceptionStmts) {
     objcFinallyStmt()));
 }
 
+TEST(ObjCAutoreleaseMatcher, AutoreleasePool) {
+  std::string ObjCString =
+    "void f() {"
+    "@autoreleasepool {"
+    "  int x = 1;"
+    "}"
+    "}";
+  EXPECT_TRUE(matchesObjC(ObjCString, autoreleasePoolStmt()));
+  std::string ObjCStringNoPool = "void f() { int x = 1; }";
+  EXPECT_FALSE(matchesObjC(ObjCStringNoPool, autoreleasePoolStmt()));
+}
+
 } // namespace ast_matchers
 } // namespace clang

@@ -3654,6 +3654,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   // can move this up to the beginning of the function.
   checkTargetFeatures(E, FD);
 
+  if (unsigned VectorWidth = getContext().BuiltinInfo.getRequiredVectorWidth(BuiltinID))
+    LargestVectorWidth = std::max(LargestVectorWidth, VectorWidth);
+
   // See if we have a target specific intrinsic.
   const char *Name = getContext().BuiltinInfo.getName(BuiltinID);
   Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
@@ -8517,6 +8520,21 @@ static Value *EmitX86Select(CodeGenFunction &CGF,
   return CGF.Builder.CreateSelect(Mask, Op0, Op1);
 }
 
+static Value *EmitX86ScalarSelect(CodeGenFunction &CGF,
+                                  Value *Mask, Value *Op0, Value *Op1) {
+  // If the mask is all ones just return first argument.
+  if (const auto *C = dyn_cast<Constant>(Mask))
+    if (C->isAllOnesValue())
+      return Op0;
+
+  llvm::VectorType *MaskTy =
+    llvm::VectorType::get(CGF.Builder.getInt1Ty(),
+                          Mask->getType()->getIntegerBitWidth());
+  Mask = CGF.Builder.CreateBitCast(Mask, MaskTy);
+  Mask = CGF.Builder.CreateExtractElement(Mask, (uint64_t)0);
+  return CGF.Builder.CreateSelect(Mask, Op0, Op1);
+}
+
 static Value *EmitX86MaskedCompareResult(CodeGenFunction &CGF, Value *Cmp,
                                          unsigned NumElts, Value *MaskIn) {
   if (MaskIn) {
@@ -8701,6 +8719,47 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
     return EmitX86Select(CGF, Ops[3], Res, MaskFalseVal);
 
   return Res;
+}
+
+static Value *
+EmitScalarFMAExpr(CodeGenFunction &CGF, MutableArrayRef<Value *> Ops,
+                  Value *Upper, bool ZeroMask = false, unsigned PTIdx = 0,
+                  bool NegAcc = false) {
+  unsigned Rnd = 4;
+  if (Ops.size() > 4)
+    Rnd = cast<llvm::ConstantInt>(Ops[4])->getZExtValue();
+
+  if (NegAcc)
+    Ops[2] = CGF.Builder.CreateFNeg(Ops[2]);
+
+  Ops[0] = CGF.Builder.CreateExtractElement(Ops[0], (uint64_t)0);
+  Ops[1] = CGF.Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+  Ops[2] = CGF.Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+  Value *Res;
+  if (Rnd != 4) {
+    Intrinsic::ID IID = Ops[0]->getType()->getPrimitiveSizeInBits() == 32 ?
+                        Intrinsic::x86_avx512_vfmadd_f32 :
+                        Intrinsic::x86_avx512_vfmadd_f64;
+    Res = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IID),
+                                 {Ops[0], Ops[1], Ops[2], Ops[4]});
+  } else {
+    Function *FMA = CGF.CGM.getIntrinsic(Intrinsic::fma, Ops[0]->getType());
+    Res = CGF.Builder.CreateCall(FMA, Ops.slice(0, 3));
+  }
+  // If we have more than 3 arguments, we need to do masking.
+  if (Ops.size() > 3) {
+    Value *PassThru = ZeroMask ? Constant::getNullValue(Res->getType())
+                               : Ops[PTIdx];
+
+    // If we negated the accumulator and the its the PassThru value we need to
+    // bypass the negate. Conveniently Upper should be the same thing in this
+    // case.
+    if (NegAcc && PTIdx == 2)
+      PassThru = CGF.Builder.CreateExtractElement(Upper, (uint64_t)0);
+
+    Res = EmitX86ScalarSelect(CGF, Ops[3], Res, PassThru);
+  }
+  return CGF.Builder.CreateInsertElement(Upper, Res, (uint64_t)0);
 }
 
 static Value *EmitX86Muldq(CodeGenFunction &CGF, bool IsSigned,
@@ -9126,24 +9185,24 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitX86ConvertToMask(*this, Ops[0]);
 
   case X86::BI__builtin_ia32_vfmaddss3:
-  case X86::BI__builtin_ia32_vfmaddsd3: {
-    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
-    Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
-    Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
-    Function *FMA = CGM.getIntrinsic(Intrinsic::fma, A->getType());
-    Value *Res = Builder.CreateCall(FMA, {A, B, C} );
-    return Builder.CreateInsertElement(Ops[0], Res, (uint64_t)0);
-  }
+  case X86::BI__builtin_ia32_vfmaddsd3:
+  case X86::BI__builtin_ia32_vfmaddss3_mask:
+  case X86::BI__builtin_ia32_vfmaddsd3_mask:
+    return EmitScalarFMAExpr(*this, Ops, Ops[0]);
   case X86::BI__builtin_ia32_vfmaddss:
-  case X86::BI__builtin_ia32_vfmaddsd: {
-    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
-    Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
-    Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
-    Function *FMA = CGM.getIntrinsic(Intrinsic::fma, A->getType());
-    Value *Res = Builder.CreateCall(FMA, {A, B, C} );
-    Value *Zero = Constant::getNullValue(Ops[0]->getType());
-    return Builder.CreateInsertElement(Zero, Res, (uint64_t)0);
-  }
+  case X86::BI__builtin_ia32_vfmaddsd:
+    return EmitScalarFMAExpr(*this, Ops,
+                             Constant::getNullValue(Ops[0]->getType()));
+  case X86::BI__builtin_ia32_vfmaddss3_maskz:
+  case X86::BI__builtin_ia32_vfmaddsd3_maskz:
+    return EmitScalarFMAExpr(*this, Ops, Ops[0], /*ZeroMask*/true);
+  case X86::BI__builtin_ia32_vfmaddss3_mask3:
+  case X86::BI__builtin_ia32_vfmaddsd3_mask3:
+    return EmitScalarFMAExpr(*this, Ops, Ops[2], /*ZeroMask*/false, 2);
+  case X86::BI__builtin_ia32_vfmsubss3_mask3:
+  case X86::BI__builtin_ia32_vfmsubsd3_mask3:
+    return EmitScalarFMAExpr(*this, Ops, Ops[2], /*ZeroMask*/false, 2,
+                             /*NegAcc*/true);
   case X86::BI__builtin_ia32_vfmaddps:
   case X86::BI__builtin_ia32_vfmaddpd:
   case X86::BI__builtin_ia32_vfmaddps256:
@@ -9884,12 +9943,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     }
     Value *A = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
     Function *F = CGM.getIntrinsic(Intrinsic::sqrt, A->getType());
+    A = Builder.CreateCall(F, A);
     Value *Src = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
-    int MaskSize = Ops[3]->getType()->getScalarSizeInBits();
-    llvm::Type *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(), MaskSize);
-    Value *Mask = Builder.CreateBitCast(Ops[3], MaskTy);
-    Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
-    A = Builder.CreateSelect(Mask, Builder.CreateCall(F, {A}), Src);
+    A = EmitX86ScalarSelect(*this, Ops[3], A, Src);
     return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
   }
   case X86::BI__builtin_ia32_sqrtpd256:
@@ -10024,14 +10080,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
     Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
     Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
-    Value *Mask = Ops[3];
     Value *Div = Builder.CreateFDiv(A, B);
-    llvm::VectorType *MaskTy = llvm::VectorType::get(Builder.getInt1Ty(),
-                             cast<IntegerType>(Mask->getType())->getBitWidth());
-    Mask = Builder.CreateBitCast(Mask, MaskTy);
-    Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
-    Value *Select = Builder.CreateSelect(Mask, Div, C);
-    return Builder.CreateInsertElement(Ops[0], Select, (uint64_t)0);
+    Div = EmitX86ScalarSelect(*this, Ops[3], Div, C);
+    return Builder.CreateInsertElement(Ops[0], Div, (uint64_t)0);
   }
 
   // 3DNow!

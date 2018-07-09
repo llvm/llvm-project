@@ -98,8 +98,8 @@ static bool gsiRecordLess(StringRef S1, StringRef S2) {
   if (LLVM_UNLIKELY(!isAsciiString(S1) || !isAsciiString(S2)))
     return memcmp(S1.data(), S2.data(), LS) < 0;
 
-  // Both strings are ascii, use memicmp.
-  return memicmp(S1.data(), S2.data(), LS) < 0;
+  // Both strings are ascii, perform a case-insenstive comparison.
+  return S1.compare_lower(S2.data()) < 0;
 }
 
 void GSIHashStreamBuilder::finalizeBuckets(uint32_t RecordZeroOffset) {

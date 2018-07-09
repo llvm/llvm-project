@@ -1,6 +1,6 @@
 // RUN: clang-import-test -dump-ast -import %S/Inputs/S.cpp -expression %s | FileCheck %s
 // CHECK: FunctionDecl
-// CHECK-SAME: S.cpp:1:1, col:13
+// CHECK-SAME: S.cpp:1:1, col:38
 // CHECK-NEXT: ConstAttr
 // CHECK-SAME: col:32
 

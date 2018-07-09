@@ -35,6 +35,7 @@ namespace clangd {
 
 using ::testing::ElementsAre;
 using ::testing::Eq;
+using ::testing::Field;
 using ::testing::Gt;
 using ::testing::IsEmpty;
 using ::testing::Pair;
@@ -925,6 +926,41 @@ void f() {}
   auto Changed = tooling::applyAllReplacements(Code, *Replaces);
   EXPECT_TRUE(static_cast<bool>(Changed));
   EXPECT_EQ(Expected, *Changed);
+}
+
+TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  auto SourcePath = testPath("source/foo.cpp");
+  auto HeaderPath = testPath("headers/foo.h");
+  FS.Files[HeaderPath] = "struct X { int bar; };";
+  Annotations Code(R"cpp(
+    #include "foo.h"
+
+    int main() {
+      X().ba^
+    })cpp");
+  CDB.ExtraClangFlags.push_back("-xc++");
+  CDB.ExtraClangFlags.push_back("-isystem" + testPath("headers"));
+
+  runAddDocument(Server, SourcePath, Code.code());
+  auto Completions = cantFail(runCodeComplete(Server, SourcePath, Code.point(),
+                                              clangd::CodeCompleteOptions()))
+                         .Completions;
+  EXPECT_THAT(Completions, ElementsAre(Field(&CodeCompletion::Name, "bar")));
+  // Update the header and rerun addDocument to make sure we get the updated
+  // files.
+  FS.Files[HeaderPath] = "struct X { int bar; int baz; };";
+  runAddDocument(Server, SourcePath, Code.code());
+  Completions = cantFail(runCodeComplete(Server, SourcePath, Code.point(),
+                                         clangd::CodeCompleteOptions()))
+                    .Completions;
+  // We want to make sure we see the updated version.
+  EXPECT_THAT(Completions, ElementsAre(Field(&CodeCompletion::Name, "bar"),
+                                       Field(&CodeCompletion::Name, "baz")));
 }
 
 } // namespace

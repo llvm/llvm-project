@@ -1548,6 +1548,17 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
       // Handle 'this' capture.
       if (From.isThisCapture()) {
+        // Capturing 'this' implicitly with a default of '[=]' is deprecated,
+        // because it results in a reference capture. Don't warn prior to
+        // C++2a; there's nothing that can be done about it before then.
+        if (getLangOpts().CPlusPlus2a && IsImplicit &&
+            CaptureDefault == LCD_ByCopy) {
+          Diag(From.getLocation(), diag::warn_deprecated_this_capture);
+          Diag(CaptureDefaultLoc, diag::note_deprecated_this_capture)
+              << FixItHint::CreateInsertion(
+                     getLocForEndOfToken(CaptureDefaultLoc), ", this");
+        }
+
         Captures.push_back(
             LambdaCapture(From.getLocation(), IsImplicit,
                           From.isCopyCapture() ? LCK_StarThis : LCK_This));

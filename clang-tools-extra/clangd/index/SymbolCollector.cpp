@@ -183,22 +183,19 @@ getIncludeHeader(llvm::StringRef QName, const SourceManager &SM,
   return toURI(SM, Header, Opts);
 }
 
-// Return the symbol location of the given declaration `D`.
-//
-// For symbols defined inside macros:
-//   * use expansion location, if the symbol is formed via macro concatenation.
-//   * use spelling location, otherwise.
-llvm::Optional<SymbolLocation> getSymbolLocation(
-    const NamedDecl &D, SourceManager &SM, const SymbolCollector::Options &Opts,
-    const clang::LangOptions &LangOpts, std::string &FileURIStorage) {
-  SourceLocation NameLoc = findNameLoc(&D);
-  auto U = toURI(SM, SM.getFilename(NameLoc), Opts);
+// Return the symbol location of the token at \p Loc.
+llvm::Optional<SymbolLocation>
+getTokenLocation(SourceLocation TokLoc, const SourceManager &SM,
+                 const SymbolCollector::Options &Opts,
+                 const clang::LangOptions &LangOpts,
+                 std::string &FileURIStorage) {
+  auto U = toURI(SM, SM.getFilename(TokLoc), Opts);
   if (!U)
     return llvm::None;
   FileURIStorage = std::move(*U);
   SymbolLocation Result;
   Result.FileURI = FileURIStorage;
-  auto TokenLength = clang::Lexer::MeasureTokenLength(NameLoc, SM, LangOpts);
+  auto TokenLength = clang::Lexer::MeasureTokenLength(TokLoc, SM, LangOpts);
 
   auto CreatePosition = [&SM](SourceLocation Loc) {
     auto LSPLoc = sourceLocToPosition(SM, Loc);
@@ -208,8 +205,8 @@ llvm::Optional<SymbolLocation> getSymbolLocation(
     return Pos;
   };
 
-  Result.Start = CreatePosition(NameLoc);
-  auto EndLoc = NameLoc.getLocWithOffset(TokenLength);
+  Result.Start = CreatePosition(TokLoc);
+  auto EndLoc = TokLoc.getLocWithOffset(TokenLength);
   Result.End = CreatePosition(EndLoc);
 
   return std::move(Result);
@@ -345,18 +342,104 @@ bool SymbolCollector::handleDeclOccurence(
   return true;
 }
 
+bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
+                                           const MacroInfo *MI,
+                                           index::SymbolRoleSet Roles,
+                                           SourceLocation Loc) {
+  if (!Opts.CollectMacro)
+    return true;
+  assert(PP.get());
+
+  const auto &SM = PP->getSourceManager();
+  if (SM.isInMainFile(SM.getExpansionLoc(MI->getDefinitionLoc())))
+    return true;
+  // Header guards are not interesting in index. Builtin macros don't have
+  // useful locations and are not needed for code completions.
+  if (MI->isUsedForHeaderGuard() || MI->isBuiltinMacro())
+    return true;
+
+  // Mark the macro as referenced if this is a reference coming from the main
+  // file. The macro may not be an interesting symbol, but it's cheaper to check
+  // at the end.
+  if (Opts.CountReferences &&
+      (Roles & static_cast<unsigned>(index::SymbolRole::Reference)) &&
+      SM.getFileID(SM.getSpellingLoc(Loc)) == SM.getMainFileID())
+    ReferencedMacros.insert(Name);
+  // Don't continue indexing if this is a mere reference.
+  // FIXME: remove macro with ID if it is undefined.
+  if (!(Roles & static_cast<unsigned>(index::SymbolRole::Declaration) ||
+        Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
+    return true;
+
+  llvm::SmallString<128> USR;
+  if (index::generateUSRForMacro(Name->getName(), MI->getDefinitionLoc(), SM,
+                                 USR))
+    return true;
+  SymbolID ID(USR);
+
+  // Only collect one instance in case there are multiple.
+  if (Symbols.find(ID) != nullptr)
+    return true;
+
+  Symbol S;
+  S.ID = std::move(ID);
+  S.Name = Name->getName();
+  S.IsIndexedForCodeCompletion = true;
+  S.SymInfo = index::getSymbolInfoForMacro(*MI);
+  std::string FileURI;
+  if (auto DeclLoc = getTokenLocation(MI->getDefinitionLoc(), SM, Opts,
+                                      PP->getLangOpts(), FileURI))
+    S.CanonicalDeclaration = *DeclLoc;
+
+  CodeCompletionResult SymbolCompletion(Name);
+  const auto *CCS = SymbolCompletion.CreateCodeCompletionStringForMacro(
+      *PP, *CompletionAllocator, *CompletionTUInfo);
+  std::string Signature;
+  std::string SnippetSuffix;
+  getSignature(*CCS, &Signature, &SnippetSuffix);
+
+  std::string Include;
+  if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
+    if (auto Header =
+            getIncludeHeader(Name->getName(), SM,
+                             SM.getExpansionLoc(MI->getDefinitionLoc()), Opts))
+      Include = std::move(*Header);
+  }
+  S.Signature = Signature;
+  S.CompletionSnippetSuffix = SnippetSuffix;
+  Symbol::Details Detail;
+  Detail.IncludeHeader = Include;
+  S.Detail = &Detail;
+  Symbols.insert(S);
+  return true;
+}
+
 void SymbolCollector::finish() {
-  // At the end of the TU, add 1 to the refcount of the ReferencedDecls.
-  for (const auto *ND : ReferencedDecls) {
+  // At the end of the TU, add 1 to the refcount of all referenced symbols.
+  auto IncRef = [this](const SymbolID &ID) {
+    if (const auto *S = Symbols.find(ID)) {
+      Symbol Inc = *S;
+      ++Inc.References;
+      Symbols.insert(Inc);
+    }
+  };
+  for (const NamedDecl *ND : ReferencedDecls) {
     llvm::SmallString<128> USR;
     if (!index::generateUSRForDecl(ND, USR))
-      if (const auto *S = Symbols.find(SymbolID(USR))) {
-        Symbol Inc = *S;
-        ++Inc.References;
-        Symbols.insert(Inc);
-      }
+      IncRef(SymbolID(USR));
+  }
+  if (Opts.CollectMacro) {
+    assert(PP);
+    for (const IdentifierInfo *II : ReferencedMacros) {
+      llvm::SmallString<128> USR;
+      if (const auto *MI = PP->getMacroDefinition(II).getMacroInfo())
+        if (!index::generateUSRForMacro(II->getName(), MI->getDefinitionLoc(),
+                                        PP->getSourceManager(), USR))
+          IncRef(SymbolID(USR));
+    }
   }
   ReferencedDecls.clear();
+  ReferencedMacros.clear();
 }
 
 const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
@@ -374,8 +457,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   S.IsIndexedForCodeCompletion = isIndexedForCodeCompletion(ND, Ctx);
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
-  if (auto DeclLoc =
-          getSymbolLocation(ND, SM, Opts, ASTCtx->getLangOpts(), FileURI))
+  if (auto DeclLoc = getTokenLocation(findNameLoc(&ND), SM, Opts,
+                                      ASTCtx->getLangOpts(), FileURI))
     S.CanonicalDeclaration = *DeclLoc;
 
   // Add completion info.
@@ -425,8 +508,9 @@ void SymbolCollector::addDefinition(const NamedDecl &ND,
   // in clang::index. We should only see one definition.
   Symbol S = DeclSym;
   std::string FileURI;
-  if (auto DefLoc = getSymbolLocation(ND, ND.getASTContext().getSourceManager(),
-                                      Opts, ASTCtx->getLangOpts(), FileURI))
+  if (auto DefLoc = getTokenLocation(findNameLoc(&ND),
+                                     ND.getASTContext().getSourceManager(),
+                                     Opts, ASTCtx->getLangOpts(), FileURI))
     S.Definition = *DefLoc;
   Symbols.insert(S);
 }

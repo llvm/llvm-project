@@ -24,6 +24,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -323,6 +324,9 @@ std::shared_ptr<const PreambleData> clangd::buildPreamble(
   // the preamble and make it smaller.
   assert(!CI.getFrontendOpts().SkipFunctionBodies);
   CI.getFrontendOpts().SkipFunctionBodies = true;
+  // We don't want to write comment locations into PCH. They are racy and slow
+  // to read back. We rely on dynamic index for the comments instead.
+  CI.getPreprocessorOpts().WriteCommentListToPCH = false;
 
   CppFilePreambleCallbacks SerializedDeclsCollector(FileName, PreambleCallback);
   if (Inputs.FS->setCurrentWorkingDirectory(Inputs.CompileCommand.Directory)) {

@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
 // CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[PTR]])
 
 // CHECK: define internal void [[PARALLEL]](
-// CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 4, i16 0)
+// CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(
 
-// CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[PTR]])
+// CHECK-NOT: call void @__kmpc_data_sharing_pop_stack(
 
 #endif

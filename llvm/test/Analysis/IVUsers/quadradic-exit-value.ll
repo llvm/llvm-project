@@ -70,7 +70,7 @@ exit:
 ; sure they aren't marked as post-inc users.
 ;
 ; CHECK-LABEL: IV Users for loop %test2.loop
-; CHECK-NO-LCSSA: %sub.cond.us = ((-1 * %sub.us)<nuw><nsw> + {0,+,1}<nuw><nsw><%test2.loop>) (post-inc with loop %test2.loop) in    %sext.us = mul i32 %mul.us, %sub.cond.us
+; CHECK-NO-LCSSA: %sub.cond.us = ((-1 * %sub.us)<nsw> + {0,+,1}<nuw><nsw><%test2.loop>) (post-inc with loop %test2.loop) in    %sext.us = mul i32 %mul.us, %sub.cond.us
 define i32 @test2() {
 entry:
   br label %test2.loop
