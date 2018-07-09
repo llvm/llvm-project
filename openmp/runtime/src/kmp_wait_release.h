@@ -172,7 +172,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag,
 
   KMP_FSYNC_SPIN_INIT(spin, NULL);
   if (flag->done_check()) {
-    KMP_FSYNC_SPIN_ACQUIRED(spin);
+    KMP_FSYNC_SPIN_ACQUIRED(CCAST(void *, spin));
     return;
   }
   th_gtid = this_thr->th.th_info.ds.ds_gtid;
@@ -343,7 +343,7 @@ final_spin=FALSE)
       } // if
     } // if
 
-    KMP_FSYNC_SPIN_PREPARE(spin);
+    KMP_FSYNC_SPIN_PREPARE(CCAST(void *, spin));
     if (TCR_4(__kmp_global.g.g_done)) {
       if (__kmp_global.g.g_abort)
         __kmp_abort_thread();
@@ -450,7 +450,7 @@ final_spin=FALSE)
   }
 #endif
 
-  KMP_FSYNC_SPIN_ACQUIRED(spin);
+  KMP_FSYNC_SPIN_ACQUIRED(CCAST(void *, spin));
 }
 
 /* Release any threads specified as waiting on the flag by releasing the flag
