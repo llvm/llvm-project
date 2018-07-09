@@ -59,8 +59,6 @@ struct E
 template <typename T>
 struct X { T t; };
 
-struct Incomplete;
-
 int main()
 {
     test_is_assignable<int&, int&> ();
