@@ -9,6 +9,7 @@
 
 #include "CompileUnit.h"
 #include "DebugMap.h"
+#include "LinkUtils.h"
 #include "NonRelocatableStringpool.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -36,15 +37,15 @@
 namespace llvm {
 namespace dsymutil {
 
-struct LinkOptions;
-
 /// The Dwarf streaming logic.
 ///
 /// All interactions with the MC layer that is used to build the debug
 /// information binary representation are handled in this class.
 class DwarfStreamer {
 public:
-  DwarfStreamer(raw_fd_ostream &OutFile) : OutFile(OutFile) {}
+  DwarfStreamer(raw_fd_ostream &OutFile, LinkOptions Options)
+      : OutFile(OutFile), Options(std::move(Options)) {}
+
   bool init(Triple TheTriple);
 
   /// Dump the file to the disk.
@@ -103,7 +104,7 @@ public:
                             unsigned AdddressSize);
 
   /// Copy over the debug sections that are not modified when updating.
-  void copyInvariantDebugSection(const object::ObjectFile &Obj, LinkOptions &);
+  void copyInvariantDebugSection(const object::ObjectFile &Obj);
 
   uint32_t getLineSectionSize() const { return LineSectionSize; }
 
@@ -144,6 +145,7 @@ private:
   MCAsmBackend *MAB; // Owned by MCStreamer
   std::unique_ptr<MCInstrInfo> MII;
   std::unique_ptr<MCSubtargetInfo> MSTI;
+  MCInstPrinter *MIP; // Owned by AsmPrinter
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
@@ -152,6 +154,8 @@ private:
 
   /// The file we stream the linked Dwarf to.
   raw_fd_ostream &OutFile;
+
+  LinkOptions Options;
 
   uint32_t RangesSectionSize;
   uint32_t LocSectionSize;

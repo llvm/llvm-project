@@ -930,9 +930,10 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
 #define KMP_ACQUIRE_TAS_LOCK(lock, gtid)                                       \
   {                                                                            \
     kmp_tas_lock_t *l = (kmp_tas_lock_t *)lock;                                \
-    if (l->lk.poll != KMP_LOCK_FREE(tas) ||                                    \
-        !KMP_COMPARE_AND_STORE_ACQ32(&(l->lk.poll), KMP_LOCK_FREE(tas),        \
-                                     KMP_LOCK_BUSY(gtid + 1, tas))) {          \
+    kmp_int32 tas_free = KMP_LOCK_FREE(tas);                                   \
+    kmp_int32 tas_busy = KMP_LOCK_BUSY(gtid + 1, tas);                         \
+    if (KMP_ATOMIC_LD_RLX(&l->lk.poll) != tas_free ||                          \
+        !__kmp_atomic_compare_store_acq(&l->lk.poll, tas_free, tas_busy)) {    \
       kmp_uint32 spins;                                                        \
       KMP_FSYNC_PREPARE(l);                                                    \
       KMP_INIT_YIELD(spins);                                                   \
@@ -943,9 +944,9 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
         KMP_YIELD_SPIN(spins);                                                 \
       }                                                                        \
       kmp_backoff_t backoff = __kmp_spin_backoff_params;                       \
-      while (l->lk.poll != KMP_LOCK_FREE(tas) ||                               \
-             !KMP_COMPARE_AND_STORE_ACQ32(&(l->lk.poll), KMP_LOCK_FREE(tas),   \
-                                          KMP_LOCK_BUSY(gtid + 1, tas))) {     \
+      while (                                                                  \
+          KMP_ATOMIC_LD_RLX(&l->lk.poll) != tas_free ||                        \
+          !__kmp_atomic_compare_store_acq(&l->lk.poll, tas_free, tas_busy)) {  \
         __kmp_spin_backoff(&backoff);                                          \
         if (TCR_4(__kmp_nth) >                                                 \
             (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc)) {             \
@@ -962,17 +963,15 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
 #define KMP_TEST_TAS_LOCK(lock, gtid, rc)                                      \
   {                                                                            \
     kmp_tas_lock_t *l = (kmp_tas_lock_t *)lock;                                \
-    rc = l->lk.poll == KMP_LOCK_FREE(tas) &&                                   \
-         KMP_COMPARE_AND_STORE_ACQ32(&(l->lk.poll), KMP_LOCK_FREE(tas),        \
-                                     KMP_LOCK_BUSY(gtid + 1, tas));            \
+    kmp_int32 tas_free = KMP_LOCK_FREE(tas);                                   \
+    kmp_int32 tas_busy = KMP_LOCK_BUSY(gtid + 1, tas);                         \
+    rc = KMP_ATOMIC_LD_RLX(&l->lk.poll) == tas_free &&                         \
+         __kmp_atomic_compare_store_acq(&l->lk.poll, tas_free, tas_busy);      \
   }
 
 // Fast-path release tas lock
 #define KMP_RELEASE_TAS_LOCK(lock, gtid)                                       \
-  {                                                                            \
-    TCW_4(((kmp_tas_lock_t *)lock)->lk.poll, KMP_LOCK_FREE(tas));              \
-    KMP_MB();                                                                  \
-  }
+  { KMP_ATOMIC_ST_REL(&((kmp_tas_lock_t *)lock)->lk.poll, KMP_LOCK_FREE(tas)); }
 
 #if KMP_USE_FUTEX
 

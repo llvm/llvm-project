@@ -2831,6 +2831,13 @@ Error BitcodeReader::parseComdatRecord(ArrayRef<uint64_t> Record) {
   return Error::success();
 }
 
+static void inferDSOLocal(GlobalValue *GV) {
+  // infer dso_local from linkage and visibility if it is not encoded.
+  if (GV->hasLocalLinkage() ||
+      (!GV->hasDefaultVisibility() && !GV->hasExternalWeakLinkage()))
+    GV->setDSOLocal(true);
+}
+
 Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   // v1: [pointer type, isconst, initid, linkage, alignment, section,
   // visibility, threadlocal, unnamed_addr, externally_initialized,
@@ -2923,6 +2930,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   if (Record.size() > 13) {
     NewGV->setDSOLocal(getDecodedDSOLocal(Record[13]));
   }
+  inferDSOLocal(NewGV);
 
   return Error::success();
 }
@@ -3007,6 +3015,7 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   if (Record.size() > 15) {
     Func->setDSOLocal(getDecodedDSOLocal(Record[15]));
   }
+  inferDSOLocal(Func);
 
   ValueList.push_back(Func);
 
@@ -3083,6 +3092,8 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
   }
   if (OpNum != Record.size())
     NewGA->setDSOLocal(getDecodedDSOLocal(Record[OpNum++]));
+  inferDSOLocal(NewGA);
+
   ValueList.push_back(NewGA);
   IndirectSymbolInits.push_back(std::make_pair(NewGA, Val));
   return Error::success();

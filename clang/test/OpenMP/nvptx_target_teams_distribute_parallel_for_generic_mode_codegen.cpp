@@ -34,20 +34,33 @@ int main(int argc, char **argv) {
 
 // CHECK: call void @__kmpc_spmd_kernel_deinit()
 
-// CHECK: define internal void [[PARALLEL]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} %{{.+}}, i32* dereferenceable{{.*}})
-// CHECK: [[RES:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 8, i16 0)
-// CHECK: [[GLOBALS:%.+]] = bitcast i8* [[RES]] to [[GLOBAL_TY:%.+]]*
-// CHECK: [[I:%.+]] = getelementptr inbounds [[GLOBAL_TY]], [[GLOBAL_TY]]* [[GLOBALS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-// CHECK: [[ARGC_VAL:%.+]] = load i32, i32* %
-// CHECK: [[ARGC:%.+]] = getelementptr inbounds [[GLOBAL_TY]], [[GLOBAL_TY]]* [[GLOBALS]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-// CHECK: store i32 [[ARGC_VAL]], i32* [[ARGC]],
+// CHECK: define internal void [[PARALLEL]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} %{{.+}}, i{{64|32}} [[ARGC:%.+]], i32* dereferenceable{{.*}})
+// CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: [[ARGC_ADDR:%.+]] = alloca i{{32|64}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: [[I:%.+]] = alloca i32,
+// CHECK-32: store i32 [[ARGC]], i32* [[ARGC_ADDR]],
+// CHECK-64: store i{{64|32}} [[ARGC]], i{{64|32}}* [[ARGC_ADDR]],
+// CHECK-64: [[ARGC:%.+]] = bitcast i64* [[ARGC_ADDR]] to i32*
 
 // CHECK: call void @__kmpc_for_static_init_4(
 // CHECK: call i32 [[FOO:@.+foo.+]](i32* [[I]])
 // CHECK: call i32 [[FOO]](i32* %{{.+}})
-// CHECK: call i32 [[FOO]](i32* [[ARGC]])
+// CHECK-32: call i32 [[FOO]](i32* [[ARGC_ADDR]])
+// CHECK-64: call i32 [[FOO]](i32* [[ARGC]])
 // CHECK: call void @__kmpc_for_static_fini(
 
-// CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[RES]])
+// CHECK-NOT: call void @__kmpc_data_sharing_pop_stack(
 
 #endif

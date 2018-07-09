@@ -208,7 +208,7 @@ bool DwarfLinker::createStreamer(const Triple &TheTriple,
   if (Options.NoOutput)
     return true;
 
-  Streamer = llvm::make_unique<DwarfStreamer>(OutFile);
+  Streamer = llvm::make_unique<DwarfStreamer>(OutFile, Options);
   return Streamer->init(TheTriple);
 }
 
@@ -2411,7 +2411,7 @@ bool DwarfLinker::link(const DebugMap &Map) {
       if (LLVM_UNLIKELY(Options.Update)) {
         for (auto &CurrentUnit : LinkContext.CompileUnits)
           CurrentUnit->markEverythingAsKept();
-        Streamer->copyInvariantDebugSection(*LinkContext.ObjectFile, Options);
+        Streamer->copyInvariantDebugSection(*LinkContext.ObjectFile);
       } else {
         for (auto &CurrentUnit : LinkContext.CompileUnits)
           lookForDIEsToKeep(LinkContext.RelocMgr, LinkContext.Ranges,

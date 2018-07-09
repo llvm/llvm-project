@@ -8,29 +8,30 @@
 //===----------------------------------------------------------------------===//
 
 #include "JSONRPCDispatcher.h"
-#include "JSONExpr.h"
 #include "ProtocolHandlers.h"
 #include "Trace.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include <istream>
 
+using namespace llvm;
 using namespace clang;
 using namespace clangd;
 
 namespace {
-static Key<json::Expr> RequestID;
+static Key<json::Value> RequestID;
 static Key<JSONOutput *> RequestOut;
 
 // When tracing, we trace a request and attach the repsonse in reply().
 // Because the Span isn't available, we find the current request using Context.
 class RequestSpan {
-  RequestSpan(json::obj *Args) : Args(Args) {}
+  RequestSpan(llvm::json::Object *Args) : Args(Args) {}
   std::mutex Mu;
-  json::obj *Args;
+  llvm::json::Object *Args;
   static Key<std::unique_ptr<RequestSpan>> RSKey;
 
 public:
@@ -41,7 +42,7 @@ public:
   }
 
   // If there's an enclosing request and the tracer is interested, calls \p F
-  // with a json::obj where request info can be added.
+  // with a json::Object where request info can be added.
   template <typename Func> static void attach(Func &&F) {
     auto *RequestArgs = Context::current().get(RSKey);
     if (!RequestArgs || !*RequestArgs || !(*RequestArgs)->Args)
@@ -53,7 +54,7 @@ public:
 Key<std::unique_ptr<RequestSpan>> RequestSpan::RSKey;
 } // namespace
 
-void JSONOutput::writeMessage(const json::Expr &Message) {
+void JSONOutput::writeMessage(const json::Value &Message) {
   std::string S;
   llvm::raw_string_ostream OS(S);
   if (Pretty)
@@ -86,16 +87,16 @@ void JSONOutput::mirrorInput(const Twine &Message) {
   InputMirror->flush();
 }
 
-void clangd::reply(json::Expr &&Result) {
+void clangd::reply(json::Value &&Result) {
   auto ID = Context::current().get(RequestID);
   if (!ID) {
     log("Attempted to reply to a notification!");
     return;
   }
-  RequestSpan::attach([&](json::obj &Args) { Args["Reply"] = Result; });
+  RequestSpan::attach([&](json::Object &Args) { Args["Reply"] = Result; });
   Context::current()
       .getExisting(RequestOut)
-      ->writeMessage(json::obj{
+      ->writeMessage(json::Object{
           {"jsonrpc", "2.0"},
           {"id", *ID},
           {"result", std::move(Result)},
@@ -104,32 +105,32 @@ void clangd::reply(json::Expr &&Result) {
 
 void clangd::replyError(ErrorCode code, const llvm::StringRef &Message) {
   log("Error " + Twine(static_cast<int>(code)) + ": " + Message);
-  RequestSpan::attach([&](json::obj &Args) {
-    Args["Error"] =
-        json::obj{{"code", static_cast<int>(code)}, {"message", Message.str()}};
+  RequestSpan::attach([&](json::Object &Args) {
+    Args["Error"] = json::Object{{"code", static_cast<int>(code)},
+                                 {"message", Message.str()}};
   });
 
   if (auto ID = Context::current().get(RequestID)) {
     Context::current()
         .getExisting(RequestOut)
-        ->writeMessage(json::obj{
+        ->writeMessage(json::Object{
             {"jsonrpc", "2.0"},
             {"id", *ID},
-            {"error",
-             json::obj{{"code", static_cast<int>(code)}, {"message", Message}}},
+            {"error", json::Object{{"code", static_cast<int>(code)},
+                                   {"message", Message}}},
         });
   }
 }
 
-void clangd::call(StringRef Method, json::Expr &&Params) {
+void clangd::call(StringRef Method, json::Value &&Params) {
   // FIXME: Generate/Increment IDs for every request so that we can get proper
   // replies once we need to.
-  RequestSpan::attach([&](json::obj &Args) {
-    Args["Call"] = json::obj{{"method", Method.str()}, {"params", Params}};
+  RequestSpan::attach([&](json::Object &Args) {
+    Args["Call"] = json::Object{{"method", Method.str()}, {"params", Params}};
   });
   Context::current()
       .getExisting(RequestOut)
-      ->writeMessage(json::obj{
+      ->writeMessage(json::Object{
           {"jsonrpc", "2.0"},
           {"id", 1},
           {"method", Method},
@@ -142,13 +143,14 @@ void JSONRPCDispatcher::registerHandler(StringRef Method, Handler H) {
   Handlers[Method] = std::move(H);
 }
 
-bool JSONRPCDispatcher::call(const json::Expr &Message, JSONOutput &Out) const {
+bool JSONRPCDispatcher::call(const json::Value &Message,
+                             JSONOutput &Out) const {
   // Message must be an object with "jsonrpc":"2.0".
-  auto *Object = Message.asObject();
+  auto *Object = Message.getAsObject();
   if (!Object || Object->getString("jsonrpc") != Optional<StringRef>("2.0"))
     return false;
   // ID may be any JSON value. If absent, this is a notification.
-  llvm::Optional<json::Expr> ID;
+  llvm::Optional<json::Value> ID;
   if (auto *I = Object->get("id"))
     ID = std::move(*I);
   // Method must be given.
@@ -156,7 +158,7 @@ bool JSONRPCDispatcher::call(const json::Expr &Message, JSONOutput &Out) const {
   if (!Method)
     return false;
   // Params should be given, use null if not.
-  json::Expr Params = nullptr;
+  json::Value Params = nullptr;
   if (auto *P = Object->get("params"))
     Params = std::move(*P);
 

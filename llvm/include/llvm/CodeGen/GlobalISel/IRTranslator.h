@@ -399,6 +399,9 @@ private:
 
   bool translateShuffleVector(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateAtomicCmpXchg(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateAtomicRMW(const User &U, MachineIRBuilder &MIRBuilder);
+
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
   bool translateResume(const User &U, MachineIRBuilder &MIRBuilder) {
@@ -414,12 +417,6 @@ private:
     return false;
   }
   bool translateFence(const User &U, MachineIRBuilder &MIRBuilder) {
-    return false;
-  }
-  bool translateAtomicCmpXchg(const User &U, MachineIRBuilder &MIRBuilder) {
-    return false;
-  }
-  bool translateAtomicRMW(const User &U, MachineIRBuilder &MIRBuilder) {
     return false;
   }
   bool translateAddrSpaceCast(const User &U, MachineIRBuilder &MIRBuilder) {

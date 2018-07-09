@@ -423,6 +423,7 @@ AffHWSubsetNoHWLOC           "KMP_HW_SUBSET ignored: unsupported item requested 
 AffHWSubsetManyNodes         "KMP_HW_SUBSET ignored: too many NUMA Nodes requested."
 AffHWSubsetManyTiles         "KMP_HW_SUBSET ignored: too many L2 Caches requested."
 AffHWSubsetManyProcs         "KMP_HW_SUBSET ignored: too many Procs requested."
+HierSchedInvalid             "Hierarchy ignored: unsupported level: %1$s."
 
 
 # --------------------------------------------------------------------------------------------------

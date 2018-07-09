@@ -102,6 +102,8 @@ class ArrayRefPrinter:
   def __init__(self, val):
     self.val = val
 
+    __next__ = next
+
   def children(self):
     data = self.val['Data']
     return self._iterator(data, data + self.val['Length'])
@@ -197,6 +199,8 @@ class DenseMapPrinter:
       else:
         self.first = False
       return 'x', v
+
+    __next__ = next
 
   def __init__(self, val):
     self.val = val

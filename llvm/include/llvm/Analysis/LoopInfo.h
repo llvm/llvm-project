@@ -261,6 +261,20 @@ public:
   /// Otherwise return null.
   BlockT *getExitBlock() const;
 
+  /// Return true if no exit block for the loop has a predecessor that is
+  /// outside the loop.
+  bool hasDedicatedExits() const;
+
+  /// Return all unique successor blocks of this loop.
+  /// These are the blocks _outside of the current loop_ which are branched to.
+  /// This assumes that loop exits are in canonical form, i.e. all exits are
+  /// dedicated exits.
+  void getUniqueExitBlocks(SmallVectorImpl<BlockT *> &ExitBlocks) const;
+
+  /// If getUniqueExitBlocks would return exactly one block, return that block.
+  /// Otherwise return null.
+  BlockT *getUniqueExitBlock() const;
+
   /// Edge type.
   typedef std::pair<const BlockT *, const BlockT *> Edge;
 
@@ -552,20 +566,6 @@ public:
   /// from being unrolled more than is directed by a pragma if the loop
   /// unrolling pass is run more than once (which it generally is).
   void setLoopAlreadyUnrolled();
-
-  /// Return true if no exit block for the loop has a predecessor that is
-  /// outside the loop.
-  bool hasDedicatedExits() const;
-
-  /// Return all unique successor blocks of this loop.
-  /// These are the blocks _outside of the current loop_ which are branched to.
-  /// This assumes that loop exits are in canonical form, i.e. all exits are
-  /// dedicated exits.
-  void getUniqueExitBlocks(SmallVectorImpl<BasicBlock *> &ExitBlocks) const;
-
-  /// If getUniqueExitBlocks would return exactly one block, return that block.
-  /// Otherwise return null.
-  BasicBlock *getUniqueExitBlock() const;
 
   void dump() const;
   void dumpVerbose() const;

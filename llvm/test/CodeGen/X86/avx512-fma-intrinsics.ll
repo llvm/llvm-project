@@ -1148,5 +1148,33 @@ define <16 x float>@test_int_x86_avx512_mask_vfnmadd_ps_512(<16 x float> %x0, <1
   ret <16 x float> %4
 }
 
+; This test case used to crash due to combineFMA not bitcasting results of isFNEG.
+define <4 x float> @foo() {
+; X86-LABEL: foo:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    vmovss (%eax), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x00]
+; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vfmsub213ss %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x38,0xab,0xc0]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: foo:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    vmovss (%rax), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x00]
+; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vfmsub213ss %xmm0, %xmm0, %xmm0 # encoding: [0x62,0xf2,0x7d,0x38,0xab,0xc0]
+; X64-NEXT:    retq # encoding: [0xc3]
+entry:
+  %0 = load <4 x float>, <4 x float>* undef, align 16
+  %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %0
+  %1 = extractelement <4 x float> %sub, i64 0
+  %2 = call float @llvm.x86.avx512.vfmadd.f32(float undef, float undef, float %1, i32 9)
+  %3 = select i1 extractelement (<8 x i1> bitcast (<1 x i8> <i8 1> to <8 x i1>), i64 0), float %2, float undef
+  %4 = insertelement <4 x float> undef, float %3, i64 0
+  ret <4 x float> %4
+}
+
+; Function Attrs: nounwind readnone
+declare float @llvm.x86.avx512.vfmadd.f32(float, float, float, i32)
+
 declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>)
 declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>)

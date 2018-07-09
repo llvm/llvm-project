@@ -309,12 +309,29 @@ void MaterializationResponsibility::failMaterialization() {
   SymbolFlags.clear();
 }
 
-void MaterializationResponsibility::delegate(
+void MaterializationResponsibility::replace(
     std::unique_ptr<MaterializationUnit> MU) {
   for (auto &KV : MU->getSymbols())
     SymbolFlags.erase(KV.first);
 
   V.replace(std::move(MU));
+}
+
+MaterializationResponsibility
+MaterializationResponsibility::delegate(const SymbolNameSet &Symbols) {
+  SymbolFlagsMap DelegatedFlags;
+
+  for (auto &Name : Symbols) {
+    auto I = SymbolFlags.find(Name);
+    assert(I != SymbolFlags.end() &&
+           "Symbol is not tracked by this MaterializationResponsibility "
+           "instance");
+
+    DelegatedFlags[Name] = std::move(I->second);
+    SymbolFlags.erase(I);
+  }
+
+  return MaterializationResponsibility(V, std::move(DelegatedFlags));
 }
 
 void MaterializationResponsibility::addDependencies(

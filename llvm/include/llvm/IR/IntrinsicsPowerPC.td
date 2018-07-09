@@ -61,6 +61,29 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_bpermd : GCCBuiltin<"__builtin_bpermd">,
                        Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty],
                                  [IntrNoMem]>;
+
+  def int_ppc_truncf128_round_to_odd
+      : GCCBuiltin<"__builtin_truncf128_round_to_odd">,
+        Intrinsic <[llvm_double_ty], [llvm_f128_ty], [IntrNoMem]>;
+  def int_ppc_sqrtf128_round_to_odd
+      : GCCBuiltin<"__builtin_sqrtf128_round_to_odd">,
+        Intrinsic <[llvm_f128_ty], [llvm_f128_ty], [IntrNoMem]>;
+  def int_ppc_addf128_round_to_odd
+      : GCCBuiltin<"__builtin_addf128_round_to_odd">,
+        Intrinsic <[llvm_f128_ty], [llvm_f128_ty,llvm_f128_ty], [IntrNoMem]>;
+  def int_ppc_subf128_round_to_odd
+      : GCCBuiltin<"__builtin_subf128_round_to_odd">,
+        Intrinsic <[llvm_f128_ty], [llvm_f128_ty,llvm_f128_ty], [IntrNoMem]>;
+  def int_ppc_mulf128_round_to_odd
+      : GCCBuiltin<"__builtin_mulf128_round_to_odd">,
+        Intrinsic <[llvm_f128_ty], [llvm_f128_ty,llvm_f128_ty], [IntrNoMem]>;
+  def int_ppc_divf128_round_to_odd
+      : GCCBuiltin<"__builtin_divf128_round_to_odd">,
+        Intrinsic <[llvm_f128_ty], [llvm_f128_ty,llvm_f128_ty], [IntrNoMem]>;
+  def int_ppc_fmaf128_round_to_odd
+      : GCCBuiltin<"__builtin_fmaf128_round_to_odd">,
+        Intrinsic <[llvm_f128_ty], [llvm_f128_ty,llvm_f128_ty,llvm_f128_ty], [IntrNoMem]>;
+
 }
 
 

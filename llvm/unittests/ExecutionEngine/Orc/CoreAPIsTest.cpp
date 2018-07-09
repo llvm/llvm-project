@@ -834,7 +834,7 @@ TEST(CoreAPIsTest, TestLookupWithThreadedMaterialization) {
 #endif
 }
 
-TEST(CoreAPIsTest, TestGetRequestedSymbolsAndDelegate) {
+TEST(CoreAPIsTest, TestGetRequestedSymbolsAndReplace) {
   ExecutionSession ES;
   auto Foo = ES.getSymbolStringPool().intern("foo");
   auto Bar = ES.getSymbolStringPool().intern("bar");
@@ -862,7 +862,7 @@ TEST(CoreAPIsTest, TestGetRequestedSymbolsAndDelegate) {
               BarMaterialized = true;
             });
 
-        R.delegate(std::move(NewMU));
+        R.replace(std::move(NewMU));
 
         R.resolve(SymbolMap({{Foo, FooSym}}));
         R.finalize();
@@ -888,6 +888,40 @@ TEST(CoreAPIsTest, TestGetRequestedSymbolsAndDelegate) {
   EXPECT_EQ(BarSymResult.getAddress(), BarSym.getAddress())
       << "Address mismatch for Bar";
   EXPECT_TRUE(BarMaterialized) << "Bar should be materialized now";
+}
+
+TEST(CoreAPIsTest, TestMaterializationResponsibilityDelegation) {
+  ExecutionSession ES;
+
+  auto Foo = ES.getSymbolStringPool().intern("Foo");
+  auto Bar = ES.getSymbolStringPool().intern("Bar");
+
+  JITEvaluatedSymbol FooSym(0xdeadbeef, JITSymbolFlags::Exported);
+  JITEvaluatedSymbol BarSym(0xcafef00d, JITSymbolFlags::Exported);
+
+  auto MU = llvm::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
+      [&](MaterializationResponsibility R) {
+        auto R2 = R.delegate({Bar});
+
+        R.resolve({{Foo, FooSym}});
+        R.finalize();
+        R2.resolve({{Bar, BarSym}});
+        R2.finalize();
+      });
+
+  auto &V = ES.createVSO("V");
+  cantFail(V.define(MU));
+
+  auto Result = lookup({&V}, {Foo, Bar});
+
+  EXPECT_TRUE(!!Result) << "Result should be a success value";
+  EXPECT_EQ(Result->count(Foo), 1U) << "\"Foo\" entry missing";
+  EXPECT_EQ(Result->count(Bar), 1U) << "\"Bar\" entry missing";
+  EXPECT_EQ((*Result)[Foo].getAddress(), FooSym.getAddress())
+      << "Address mismatch for \"Foo\"";
+  EXPECT_EQ((*Result)[Bar].getAddress(), BarSym.getAddress())
+      << "Address mismatch for \"Bar\"";
 }
 
 TEST(CoreAPIsTest, TestMaterializeWeakSymbol) {

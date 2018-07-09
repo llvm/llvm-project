@@ -31,7 +31,8 @@
 #include <fma4intrin.h>
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("xop")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("xop"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS256 __attribute__((__always_inline__, __nodebug__, __target__("xop"), __min_vector_width__(256)))
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_maccs_epi16(__m128i __A, __m128i __B, __m128i __C)
@@ -201,7 +202,7 @@ _mm_cmov_si128(__m128i __A, __m128i __B, __m128i __C)
   return (__m128i)(((__v2du)__A & (__v2du)__C) | ((__v2du)__B & ~(__v2du)__C));
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS
+static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmov_si256(__m256i __A, __m256i __B, __m256i __C)
 {
   return (__m256i)(((__v4du)__A & (__v4du)__C) | ((__v4du)__B & ~(__v4du)__C));
@@ -765,18 +766,19 @@ _mm_frcz_pd(__m128d __A)
   return (__m128d)__builtin_ia32_vfrczpd((__v2df)__A);
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS
+static __inline__ __m256 __DEFAULT_FN_ATTRS256
 _mm256_frcz_ps(__m256 __A)
 {
   return (__m256)__builtin_ia32_vfrczps256((__v8sf)__A);
 }
 
-static __inline__ __m256d __DEFAULT_FN_ATTRS
+static __inline__ __m256d __DEFAULT_FN_ATTRS256
 _mm256_frcz_pd(__m256d __A)
 {
   return (__m256d)__builtin_ia32_vfrczpd256((__v4df)__A);
 }
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS256
 
 #endif /* __XOPINTRIN_H */

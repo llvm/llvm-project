@@ -15,6 +15,7 @@
 
 using namespace clang;
 using namespace clang::clangd;
+using namespace llvm;
 
 namespace {
 
@@ -27,7 +28,7 @@ struct HandlerRegisterer {
   void operator()(StringRef Method, void (ProtocolCallbacks::*Handler)(Param)) {
     // Capture pointers by value, as the lambda will outlive this object.
     auto *Callbacks = this->Callbacks;
-    Dispatcher.registerHandler(Method, [=](const json::Expr &RawParams) {
+    Dispatcher.registerHandler(Method, [=](const json::Value &RawParams) {
       typename std::remove_reference<Param>::type P;
       if (fromJSON(RawParams, P)) {
         (Callbacks->*Handler)(P);

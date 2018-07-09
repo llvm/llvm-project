@@ -74,7 +74,9 @@ typedef struct {
   addr_and_size_t threads; // Pointer to __kmp_threads.
   addr_and_size_t roots; // Pointer to __kmp_root.
   addr_and_size_t capacity; // Pointer to __kmp_threads_capacity.
+#if KMP_USE_MONITOR
   addr_and_size_t monitor; // Pointer to __kmp_monitor.
+#endif
 #if !KMP_USE_DYNAMIC_LOCK
   addr_and_size_t lock_table; // Pointer to __kmp_lock_table.
 #endif

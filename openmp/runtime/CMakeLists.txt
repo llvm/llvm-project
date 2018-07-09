@@ -331,6 +331,10 @@ if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))
   libomp_error_say("Hwloc requested but not available")
 endif()
 
+# Hierarchical scheduling support
+set(LIBOMP_USE_HIER_SCHED FALSE CACHE BOOL
+  "Hierarchical scheduling support?")
+
 # Setting final library name
 set(LIBOMP_DEFAULT_LIB_NAME libomp)
 if(${PROFILE_LIBRARY})

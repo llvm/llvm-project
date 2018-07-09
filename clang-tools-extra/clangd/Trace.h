@@ -20,8 +20,8 @@
 
 #include "Context.h"
 #include "Function.h"
-#include "JSONExpr.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -39,7 +39,7 @@ public:
   /// Usually implementations will store an object in the returned context
   /// whose destructor records the end of the event.
   /// The args are *Args, only complete when the event ends.
-  virtual Context beginSpan(llvm::StringRef Name, json::obj *Args) = 0;
+  virtual Context beginSpan(llvm::StringRef Name, llvm::json::Object *Args) = 0;
   // Called when a Span is destroyed (it may still be active on other threads).
   // beginSpan() and endSpan() will always form a proper stack on each thread.
   // The Context returned by beginSpan is active, but Args is not ready.
@@ -48,7 +48,7 @@ public:
   virtual void endSpan(){};
 
   /// Called for instant events.
-  virtual void instant(llvm::StringRef Name, json::obj &&Args) = 0;
+  virtual void instant(llvm::StringRef Name, llvm::json::Object &&Args) = 0;
 };
 
 /// Sets up a global EventTracer that consumes events produced by Span and
@@ -87,7 +87,7 @@ public:
 
   /// Mutable metadata, if this span is interested.
   /// Prefer to use SPAN_ATTACH rather than accessing this directly.
-  json::obj *const Args;
+  llvm::json::Object *const Args;
 
 private:
   WithContext RestoreCtx;
