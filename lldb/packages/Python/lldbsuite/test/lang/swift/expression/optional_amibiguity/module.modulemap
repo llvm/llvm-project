@@ -1,4 +1,0 @@
-module Optional {
-       export *
-       header "Optional.h"
-}
