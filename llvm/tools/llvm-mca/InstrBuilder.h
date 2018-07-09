@@ -17,6 +17,7 @@
 
 #include "Instruction.h"
 #include "Support.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -41,6 +42,7 @@ class InstrBuilder {
   const llvm::MCInstrInfo &MCII;
   const llvm::MCRegisterInfo &MRI;
   const llvm::MCInstrAnalysis &MCIA;
+  llvm::MCInstPrinter &MCIP;
   llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
 
   llvm::DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
@@ -51,11 +53,16 @@ class InstrBuilder {
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 
+  void populateWrites(InstrDesc &ID, const llvm::MCInst &MCI,
+                      unsigned SchedClassID);
+  void populateReads(InstrDesc &ID, const llvm::MCInst &MCI,
+                     unsigned SchedClassID);
+
 public:
   InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii,
                const llvm::MCRegisterInfo &mri,
-               const llvm::MCInstrAnalysis &mcia)
-      : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia),
+               const llvm::MCInstrAnalysis &mcia, llvm::MCInstPrinter &mcip)
+      : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), MCIP(mcip),
         ProcResourceMasks(STI.getSchedModel().getNumProcResourceKinds()) {
     computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
   }

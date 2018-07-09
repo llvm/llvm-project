@@ -98,6 +98,7 @@ defm : SLMWriteResPair<WriteADC,    [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteIMul,   [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteIMul64, [SLM_IEC_RSV1],  3>;
 defm : SLMWriteResPair<WriteShift,  [SLM_IEC_RSV0],  1>;
+defm : SLMWriteResPair<WriteShiftDouble,  [SLM_IEC_RSV0],  1>;
 defm : SLMWriteResPair<WriteJump,   [SLM_IEC_RSV1],  1>;
 defm : SLMWriteResPair<WriteCRC32,  [SLM_IEC_RSV1],  3>;
 

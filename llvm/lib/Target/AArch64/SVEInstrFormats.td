@@ -571,6 +571,39 @@ multiclass sve_int_perm_dup_i<string asm> {
                   (!cast<Instruction>(NAME # _Q) ZPR128:$Zd, FPR128asZPR:$Qn, 0), 2>;
 }
 
+class sve_int_perm_tbl<bits<2> sz8_64, string asm, ZPRRegOp zprty,
+                       RegisterOperand VecList>
+: I<(outs zprty:$Zd), (ins VecList:$Zn, zprty:$Zm),
+  asm, "\t$Zd, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b001100;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_perm_tbl<string asm> {
+  def _B : sve_int_perm_tbl<0b00, asm, ZPR8, Z_b>;
+  def _H : sve_int_perm_tbl<0b01, asm, ZPR16, Z_h>;
+  def _S : sve_int_perm_tbl<0b10, asm, ZPR32, Z_s>;
+  def _D : sve_int_perm_tbl<0b11, asm, ZPR64, Z_d>;
+
+  def : InstAlias<asm # "\t$Zd, $Zn, $Zm",
+                 (!cast<Instruction>(NAME # _B) ZPR8:$Zd, ZPR8:$Zn, ZPR8:$Zm), 0>;
+  def : InstAlias<asm # "\t$Zd, $Zn, $Zm",
+                 (!cast<Instruction>(NAME # _H) ZPR16:$Zd, ZPR16:$Zn, ZPR16:$Zm), 0>;
+  def : InstAlias<asm # "\t$Zd, $Zn, $Zm",
+                 (!cast<Instruction>(NAME # _S) ZPR32:$Zd, ZPR32:$Zn, ZPR32:$Zm), 0>;
+  def : InstAlias<asm # "\t$Zd, $Zn, $Zm",
+                 (!cast<Instruction>(NAME # _D) ZPR64:$Zd, ZPR64:$Zn, ZPR64:$Zm), 0>;
+}
 
 //===----------------------------------------------------------------------===//
 // SVE Vector Select Group
@@ -2988,4 +3021,56 @@ multiclass sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty> {
 
   def : InstAlias<asm # "\t$prfop, $Pg, [$Zn]",
                   (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
+}
+
+
+//===----------------------------------------------------------------------===//
+// SVE Compute Vector Address Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_bin_cons_misc_0_a<bits<2> opc, bits<2> msz, string asm,
+                                ZPRRegOp zprty, RegisterOperand zprext>
+: I<(outs zprty:$Zd), (ins zprty:$Zn, zprext:$Zm),
+  asm, "\t$Zd, [$Zn, $Zm]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = opc;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-12} = 0b1010;
+  let Inst{11-10} = msz;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_uxtw<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR64, ZPR64ExtUXTW8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR64, ZPR64ExtUXTW16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR64, ZPR64ExtUXTW32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR64, ZPR64ExtUXTW64>;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_sxtw<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR64, ZPR64ExtSXTW8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR64, ZPR64ExtSXTW16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR64, ZPR64ExtSXTW32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR64, ZPR64ExtSXTW64>;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_32_lsl<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR32, ZPR32ExtLSL8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR32, ZPR32ExtLSL16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR32, ZPR32ExtLSL32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR32, ZPR32ExtLSL64>;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_64_lsl<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR64, ZPR64ExtLSL8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR64, ZPR64ExtLSL16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR64, ZPR64ExtLSL32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR64, ZPR64ExtLSL64>;
 }

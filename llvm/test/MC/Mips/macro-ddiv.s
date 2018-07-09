@@ -16,7 +16,7 @@
 # CHECK-NOTRAP: dsll32 $1, $1, 31         # encoding: [0x00,0x01,0x0f,0xfc]
 # CHECK-NOTRAP: bne $25, $1, .Ltmp1       # encoding: [0x17,0x21,A,A]
 # CHECK-NOTRAP:                           # fixup A - offset: 0, value: .Ltmp1-4, kind: fixup_Mips_PC16
-# CHECK-NOTRAP: sll $zero, $zero, 0       # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NOTRAP: nop                       # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-NOTRAP: break 6                   # encoding: [0x00,0x06,0x00,0x0d]
 # CHECK-NOTRAP: .Ltmp1
 # CHECK-NOTRAP: mflo $25                  # encoding: [0x00,0x00,0xc8,0x12]
@@ -45,7 +45,7 @@
 # CHECK-NOTRAP: dsll32 $1, $1, 31         # encoding: [0x00,0x01,0x0f,0xfc]
 # CHECK-NOTRAP: bne $24, $1, .Ltmp3       # encoding: [0x17,0x01,A,A]
 # CHECK-NOTRAP:                           # fixup A - offset: 0, value: .Ltmp3-4, kind: fixup_Mips_PC16
-# CHECK-NOTRAP: sll $zero, $zero, 0       # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NOTRAP: nop                       # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-NOTRAP: break 6                   # encoding: [0x00,0x06,0x00,0x0d]
 # CHECK-NOTRAP: .Ltmp3
 # CHECK-NOTRAP: mflo $24                  # encoding: [0x00,0x00,0xc0,0x12]
@@ -211,7 +211,7 @@
 # CHECK-NOTRAP: dsll32 $1, $1, 31         # encoding: [0x00,0x01,0x0f,0xfc]
 # CHECK-NOTRAP: bne $5, $1, .Ltmp7        # encoding: [0x14,0xa1,A,A]
 # CHECK-NOTRAP:                           # fixup A - offset: 0, value: .Ltmp7-4, kind: fixup_Mips_PC16
-# CHECK-NOTRAP: sll $zero, $zero, 0       # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NOTRAP: nop                       # encoding: [0x00,0x00,0x00,0x00]
 # CHECK-NOTRAP: break  6                  # encoding: [0x00,0x06,0x00,0x0d]
 # CHECK-NOTRAP: .Ltmp7:
 # CHECK-NOTRAP: mflo $4                   # encoding: [0x00,0x00,0x20,0x12]

@@ -242,10 +242,8 @@ defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
   defm MOVSS : sse12_move_rm<FR32, f32mem, loadf32, "movss",
                              SSEPackedSingle>, XS;
-
-  let AddedComplexity = 20 in
-    defm MOVSD : sse12_move_rm<FR64, f64mem, loadf64, "movsd",
-                               SSEPackedDouble>, XD;
+  defm MOVSD : sse12_move_rm<FR64, f64mem, loadf64, "movsd",
+                             SSEPackedDouble>, XD;
 }
 
 // Patterns

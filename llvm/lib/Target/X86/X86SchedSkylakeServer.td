@@ -137,6 +137,9 @@ def  : WriteRes<WriteLAHFSAHF, [SKXPort06]>;
 // Integer shifts and rotates.
 defm : SKXWriteResPair<WriteShift, [SKXPort06],  1>;
 
+// Double shift instructions.
+defm : SKXWriteResPair<WriteShiftDouble, [SKXPort06],  1>;
+
 // Bit counts.
 defm : SKXWriteResPair<WriteBSF, [SKXPort1], 3>;
 defm : SKXWriteResPair<WriteBSR, [SKXPort1], 3>;
