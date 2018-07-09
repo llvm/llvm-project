@@ -19,6 +19,7 @@ namespace clang {
 namespace clangd {
 
 using ::testing::_;
+using ::testing::Each;
 using ::testing::AnyOf;
 using ::testing::Pair;
 using ::testing::Pointee;
@@ -297,6 +298,41 @@ TEST_F(TUSchedulerTests, EvictedAST) {
   // evicted.
   EXPECT_THAT(S.getFilesWithCachedAST(),
               UnorderedElementsAre(Foo, AnyOf(Bar, Baz)));
+}
+
+TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
+  // Testing strategy: we update the file and schedule a few preamble reads at
+  // the same time. All reads should get the same non-null preamble.
+  TUScheduler S(
+      /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
+      PreambleParsedCallback(),
+      /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+      ASTRetentionPolicy());
+  auto Foo = testPath("foo.cpp");
+  auto NonEmptyPreamble = R"cpp(
+    #define FOO 1
+    #define BAR 2
+
+    int main() {}
+  )cpp";
+  constexpr int ReadsToSchedule = 10;
+  std::mutex PreamblesMut;
+  std::vector<const void *> Preambles(ReadsToSchedule, nullptr);
+  S.update(Foo, getInputs(Foo, NonEmptyPreamble), WantDiagnostics::Auto,
+           [](std::vector<Diag>) {});
+  for (int I = 0; I < ReadsToSchedule; ++I) {
+    S.runWithPreamble(
+        "test", Foo,
+        [I, &PreamblesMut, &Preambles](llvm::Expected<InputsAndPreamble> IP) {
+          std::lock_guard<std::mutex> Lock(PreamblesMut);
+          Preambles[I] = cantFail(std::move(IP)).Preamble;
+        });
+  }
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  // Check all actions got the same non-null preamble.
+  std::lock_guard<std::mutex> Lock(PreamblesMut);
+  ASSERT_NE(Preambles[0], nullptr);
+  ASSERT_THAT(Preambles, Each(Preambles[0]));
 }
 
 } // namespace clangd
