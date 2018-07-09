@@ -19,6 +19,8 @@ class TestOptionalAmbiguity(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
     def test_sample_rename_this(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.swift")
