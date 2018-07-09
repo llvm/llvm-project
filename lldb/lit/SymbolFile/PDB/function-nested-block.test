@@ -4,4 +4,4 @@ RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe
 RUN: lldb-test symbols -find=function -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck %s
 
 CHECK: Found 1 functions:
-CHECK: name = "{{.*}}", mangled = "_main"
+CHECK: name = "{{.*}}", mangled = "{{_?}}main"

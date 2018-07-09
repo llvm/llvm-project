@@ -719,7 +719,7 @@ void __kmp_threadprivate_resize_cache(int newCapacity) {
       // compilers use new method.)
       (void)KMP_COMPARE_AND_STORE_PTR(tp_cache_addr->compiler_cache, old_cache,
                                       my_cache);
-      //TCW_PTR(*(tp_cache_addr->compiler_cache), my_cache);
+      // TCW_PTR(*(tp_cache_addr->compiler_cache), my_cache);
 
       // If the store doesn't happen here, the compiler's old behavior will
       // inevitably call __kmpc_threadprivate_cache with a new location for the

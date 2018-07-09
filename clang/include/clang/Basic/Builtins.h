@@ -206,6 +206,8 @@ public:
     return getRecord(ID).Features;
   }
 
+  unsigned getRequiredVectorWidth(unsigned ID) const;
+
   /// Return true if builtin ID belongs to AuxTarget.
   bool isAuxBuiltinID(unsigned ID) const {
     return ID >= (Builtin::FirstTSBuiltin + TSRecords.size());

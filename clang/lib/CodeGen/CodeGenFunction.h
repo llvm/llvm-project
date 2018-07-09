@@ -1463,6 +1463,10 @@ private:
   /// Terminate funclets keyed by parent funclet pad.
   llvm::MapVector<llvm::Value *, llvm::BasicBlock *> TerminateFunclets;
 
+  /// Largest vector width used in ths function. Will be used to create a
+  /// function attribute.
+  unsigned LargestVectorWidth;
+
   /// True if we need emit the life-time markers.
   const bool ShouldEmitLifetimeMarkers;
 

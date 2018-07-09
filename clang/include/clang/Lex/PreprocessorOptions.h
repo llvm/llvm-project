@@ -95,6 +95,11 @@ public:
   /// processing the rest of the file.
   bool GeneratePreamble = false;
 
+  /// Whether to write comment locations into the PCH when building it.
+  /// Reading the comments from the PCH can be a performance hit even if the
+  /// clients don't use them.
+  bool WriteCommentListToPCH = true;
+
   /// The implicit PTH input included at the start of the translation unit, or
   /// empty.
   std::string ImplicitPTHInclude;

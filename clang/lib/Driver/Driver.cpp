@@ -1293,12 +1293,13 @@ void Driver::generateCompilationDiagnostics(
       TempFiles[0], VFS,
       C.getArgs().getLastArgValue(options::OPT_index_store_path));
 
-  std::string Script = CrashInfo.Filename.rsplit('.').first.str() + ".sh";
+  llvm::SmallString<128> Script(CrashInfo.Filename);
+  llvm::sys::path::replace_extension(Script, "sh");
   std::error_code EC;
   llvm::raw_fd_ostream ScriptOS(Script, EC, llvm::sys::fs::CD_CreateNew);
   if (EC) {
     Diag(clang::diag::note_drv_command_failed_diag_msg)
-        << "Error generating run script: " + Script + " " + EC.message();
+        << "Error generating run script: " << Script << " " << EC.message();
   } else {
     ScriptOS << "# Crash reproducer for " << getClangFullVersion() << "\n"
              << "# Driver args: ";
@@ -1310,7 +1311,7 @@ void Driver::generateCompilationDiagnostics(
       ScriptOS << "\n# Additional information: " << AdditionalInformation
                << "\n";
     if (Report)
-      Report->TemporaryFiles.push_back(Script);
+      Report->TemporaryFiles.push_back(Script.str());
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 
@@ -4020,8 +4021,22 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       CCGenDiagnostics) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
     std::pair<StringRef, StringRef> Split = Name.split('.');
-    std::string TmpName = GetTemporaryPath(
-        Split.first, types::getTypeTempSuffix(JA.getType(), IsCLMode()));
+    SmallString<128> TmpName;
+    const char *Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
+    Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_dir);
+    if (CCGenDiagnostics && A) {
+      SmallString<128> CrashDirectory(A->getValue());
+      llvm::sys::path::append(CrashDirectory, Split.first);
+      const char *Middle = Suffix ? "-%%%%%%." : "-%%%%%%";
+      std::error_code EC =
+          llvm::sys::fs::createUniqueFile(CrashDirectory + Middle + Suffix, TmpName);
+      if (EC) {
+        Diag(clang::diag::err_unable_to_make_temp) << EC.message();
+        return "";
+      }
+    } else {
+      TmpName = GetTemporaryPath(Split.first, Suffix);
+    }
     return C.addTempFile(C.getArgs().MakeArgString(TmpName));
   }
 

@@ -36,8 +36,6 @@ The following versions are used:
 
 For both cases the whole compilation was performed five times. The compile times in seconds are shown in the following table.
 
-+----------------------------+
-|       Compile Time         |
 +--------------+-------------+
 |Polly Disabled|Polly Enabled|
 +==============+=============+

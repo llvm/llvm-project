@@ -29,7 +29,7 @@
 #define __WMMINTRIN_AES_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("aes")))
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("aes"), __min_vector_width__(128)))
 
 /// Performs a single round of AES encryption using the Equivalent
 ///    Inverse Cipher, transforming the state value from the first source

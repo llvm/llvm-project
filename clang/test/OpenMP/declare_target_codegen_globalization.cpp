@@ -24,12 +24,11 @@ int maini1() {
 
 // parallel region
 // CHECK: define {{.*}}void @{{.*}}(i32* noalias {{.*}}, i32* noalias {{.*}}, i32* dereferenceable{{.*}})
-// CHECK: [[RES:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i64 4, i16 0)
-// CHECK: [[GLOBALS:%.+]] = bitcast i8* [[RES]] to [[GLOBAL_ST:%struct[.].*]]*
-// CHECK: [[B_ADDR:%.+]] = getelementptr inbounds [[GLOBAL_ST]], [[GLOBAL_ST]]* [[GLOBALS]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
+// CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(
+// CHECK: [[B_ADDR:%.+]] = alloca i32,
 // CHECK: call {{.*}}[[FOO:@.*foo.*]](i32* dereferenceable{{.*}} [[B_ADDR]])
 // CHECK: call {{.*}}[[BAR:@.*bar.*]]()
-// CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[RES]])
+// CHECK-NOT: call void @__kmpc_data_sharing_pop_stack(
 // CHECK: ret void
 
 // CHECK: define {{.*}}[[FOO]](i32* dereferenceable{{.*}})

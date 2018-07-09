@@ -10,6 +10,7 @@
 #include "JSONAggregation.h"
 #include "indexstore/IndexStoreCXX.h"
 #include "clang/DirectoryWatcher/DirectoryWatcher.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -22,6 +23,7 @@
 #include "clang/Index/IndexUnitReader.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Index/CodegenNameGenerator.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -123,6 +125,7 @@ namespace {
 class PrintIndexDataConsumer : public IndexDataConsumer {
   raw_ostream &OS;
   std::unique_ptr<CodegenNameGenerator> CGNameGen;
+  std::shared_ptr<Preprocessor> PP;
 
 public:
   PrintIndexDataConsumer(raw_ostream &OS) : OS(OS) {
@@ -130,6 +133,10 @@ public:
 
   void initialize(ASTContext &Ctx) override {
     CGNameGen.reset(new CodegenNameGenerator(Ctx));
+  }
+
+  void setPreprocessor(std::shared_ptr<Preprocessor> PP) override {
+    this->PP = std::move(PP);
   }
 
   bool handleDeclOccurence(const Decl *D, SymbolRoleSet Roles,
@@ -189,6 +196,37 @@ public:
     printSymbolRoles(Roles, OS);
     OS << " |\n";
 
+    return true;
+  }
+
+  bool handleMacroOccurence(const IdentifierInfo *Name, const MacroInfo *MI,
+                            SymbolRoleSet Roles, SourceLocation Loc) override {
+    assert(PP);
+    SourceManager &SM = PP->getSourceManager();
+
+    Loc = SM.getFileLoc(Loc);
+    FileID FID = SM.getFileID(Loc);
+    unsigned Line = SM.getLineNumber(FID, SM.getFileOffset(Loc));
+    unsigned Col = SM.getColumnNumber(FID, SM.getFileOffset(Loc));
+    OS << Line << ':' << Col << " | ";
+
+    printSymbolInfo(getSymbolInfoForMacro(*MI), OS);
+    OS << " | ";
+
+    OS << Name->getName();
+    OS << " | ";
+
+    SmallString<256> USRBuf;
+    if (generateUSRForMacro(Name->getName(), MI->getDefinitionLoc(), SM,
+                            USRBuf)) {
+      OS << "<no-usr>";
+    } else {
+      OS << USRBuf;
+    }
+    OS << " | ";
+
+    printSymbolRoles(Roles, OS);
+    OS << " |\n";
     return true;
   }
 };
