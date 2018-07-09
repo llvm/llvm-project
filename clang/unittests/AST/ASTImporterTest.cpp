@@ -1620,7 +1620,7 @@ TEST_P(ASTImporterTestBase, ImportSourceLocs) {
                       FromSM);
 }
 
-TEST_P(ASTImporterTestBase, DISABLED_ImportNestedMacro) {
+TEST_P(ASTImporterTestBase, ImportNestedMacro) {
   Decl *FromTU = getTuDecl(
       R"(
       #define FUNC_INT void declToImport

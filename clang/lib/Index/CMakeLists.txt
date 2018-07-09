@@ -23,6 +23,7 @@ add_clang_library(clangIndex
   clangBasic
   clangFormat
   clangFrontend
+  clangLex
   clangRewrite
   clangSerialization
   clangToolingCore

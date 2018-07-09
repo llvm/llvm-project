@@ -30,6 +30,7 @@ add_llvm_unittest(SupportTests
   FormatVariadicTest.cpp
   GlobPatternTest.cpp
   Host.cpp
+  JSONTest.cpp
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp

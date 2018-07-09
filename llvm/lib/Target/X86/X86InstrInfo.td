@@ -1371,52 +1371,52 @@ let Defs = [EFLAGS] in {
 def BSF16rr  : I<0xBC, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                  "bsf{w}\t{$src, $dst|$dst, $src}",
                  [(set GR16:$dst, EFLAGS, (X86bsf GR16:$src))]>,
-                  PS, OpSize16, Sched<[WriteBitScan]>;
+                  PS, OpSize16, Sched<[WriteBSF]>;
 def BSF16rm  : I<0xBC, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                  "bsf{w}\t{$src, $dst|$dst, $src}",
                  [(set GR16:$dst, EFLAGS, (X86bsf (loadi16 addr:$src)))]>,
-                 PS, OpSize16, Sched<[WriteBitScanLd]>;
+                 PS, OpSize16, Sched<[WriteBSFLd]>;
 def BSF32rr  : I<0xBC, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                  "bsf{l}\t{$src, $dst|$dst, $src}",
                  [(set GR32:$dst, EFLAGS, (X86bsf GR32:$src))]>,
-                 PS, OpSize32, Sched<[WriteBitScan]>;
+                 PS, OpSize32, Sched<[WriteBSF]>;
 def BSF32rm  : I<0xBC, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
                  "bsf{l}\t{$src, $dst|$dst, $src}",
                  [(set GR32:$dst, EFLAGS, (X86bsf (loadi32 addr:$src)))]>,
-                 PS, OpSize32, Sched<[WriteBitScanLd]>;
+                 PS, OpSize32, Sched<[WriteBSFLd]>;
 def BSF64rr  : RI<0xBC, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                   "bsf{q}\t{$src, $dst|$dst, $src}",
                   [(set GR64:$dst, EFLAGS, (X86bsf GR64:$src))]>,
-                  PS, Sched<[WriteBitScan]>;
+                  PS, Sched<[WriteBSF]>;
 def BSF64rm  : RI<0xBC, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                   "bsf{q}\t{$src, $dst|$dst, $src}",
                   [(set GR64:$dst, EFLAGS, (X86bsf (loadi64 addr:$src)))]>,
-                  PS, Sched<[WriteBitScanLd]>;
+                  PS, Sched<[WriteBSFLd]>;
 
 def BSR16rr  : I<0xBD, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src),
                  "bsr{w}\t{$src, $dst|$dst, $src}",
                  [(set GR16:$dst, EFLAGS, (X86bsr GR16:$src))]>,
-                 PS, OpSize16, Sched<[WriteBitScan]>;
+                 PS, OpSize16, Sched<[WriteBSR]>;
 def BSR16rm  : I<0xBD, MRMSrcMem, (outs GR16:$dst), (ins i16mem:$src),
                  "bsr{w}\t{$src, $dst|$dst, $src}",
                  [(set GR16:$dst, EFLAGS, (X86bsr (loadi16 addr:$src)))]>,
-                 PS, OpSize16, Sched<[WriteBitScanLd]>;
+                 PS, OpSize16, Sched<[WriteBSRLd]>;
 def BSR32rr  : I<0xBD, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src),
                  "bsr{l}\t{$src, $dst|$dst, $src}",
                  [(set GR32:$dst, EFLAGS, (X86bsr GR32:$src))]>,
-                 PS, OpSize32, Sched<[WriteBitScan]>;
+                 PS, OpSize32, Sched<[WriteBSR]>;
 def BSR32rm  : I<0xBD, MRMSrcMem, (outs GR32:$dst), (ins i32mem:$src),
                  "bsr{l}\t{$src, $dst|$dst, $src}",
                  [(set GR32:$dst, EFLAGS, (X86bsr (loadi32 addr:$src)))]>,
-                 PS, OpSize32, Sched<[WriteBitScanLd]>;
+                 PS, OpSize32, Sched<[WriteBSRLd]>;
 def BSR64rr  : RI<0xBD, MRMSrcReg, (outs GR64:$dst), (ins GR64:$src),
                   "bsr{q}\t{$src, $dst|$dst, $src}",
                   [(set GR64:$dst, EFLAGS, (X86bsr GR64:$src))]>,
-                  PS, Sched<[WriteBitScan]>;
+                  PS, Sched<[WriteBSR]>;
 def BSR64rm  : RI<0xBD, MRMSrcMem, (outs GR64:$dst), (ins i64mem:$src),
                   "bsr{q}\t{$src, $dst|$dst, $src}",
                   [(set GR64:$dst, EFLAGS, (X86bsr (loadi64 addr:$src)))]>,
-                  PS, Sched<[WriteBitScanLd]>;
+                  PS, Sched<[WriteBSRLd]>;
 } // Defs = [EFLAGS]
 
 let SchedRW = [WriteMicrocoded] in {

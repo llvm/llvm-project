@@ -78,6 +78,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -3252,6 +3253,9 @@ void ASTWriter::WriteFileDeclIDsMap() {
 
 void ASTWriter::WriteComments() {
   Stream.EnterSubblock(COMMENTS_BLOCK_ID, 3);
+  auto _ = llvm::make_scope_exit([this] { Stream.ExitBlock(); });
+  if (!PP->getPreprocessorOpts().WriteCommentListToPCH)
+    return;
   ArrayRef<RawComment *> RawComments = Context->Comments.getComments();
   RecordData Record;
   for (const auto *I : RawComments) {
@@ -3262,7 +3266,6 @@ void ASTWriter::WriteComments() {
     Record.push_back(I->isAlmostTrailingComment());
     Stream.EmitRecord(COMMENTS_RAW_COMMENT, Record);
   }
-  Stream.ExitBlock();
 }
 
 //===----------------------------------------------------------------------===//

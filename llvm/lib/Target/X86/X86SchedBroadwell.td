@@ -137,13 +137,17 @@ def  : WriteRes<WriteSETCCStore, [BWPort06,BWPort4,BWPort237]> {
 def  : WriteRes<WriteLAHFSAHF, [BWPort06]>;
 
 // Bit counts.
-defm : BWWriteResPair<WriteBitScan, [BWPort1], 3>;
-defm : BWWriteResPair<WriteLZCNT,   [BWPort1], 3>;
-defm : BWWriteResPair<WriteTZCNT,   [BWPort1], 3>;
-defm : BWWriteResPair<WritePOPCNT,  [BWPort1], 3>;
+defm : BWWriteResPair<WriteBSF, [BWPort1], 3>;
+defm : BWWriteResPair<WriteBSR, [BWPort1], 3>;
+defm : BWWriteResPair<WriteLZCNT,          [BWPort1], 3>;
+defm : BWWriteResPair<WriteTZCNT,          [BWPort1], 3>;
+defm : BWWriteResPair<WritePOPCNT,         [BWPort1], 3>;
 
 // Integer shifts and rotates.
 defm : BWWriteResPair<WriteShift, [BWPort06],  1>;
+
+// Double shift instructions.
+defm : BWWriteResPair<WriteShiftDouble, [BWPort06],  1>;
 
 // BMI1 BEXTR, BMI2 BZHI
 defm : BWWriteResPair<WriteBEXTR, [BWPort06,BWPort15], 2, [1,1], 2>;

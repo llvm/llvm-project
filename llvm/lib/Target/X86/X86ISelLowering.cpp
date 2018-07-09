@@ -11312,22 +11312,23 @@ static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
         Mask[1] == SM_SentinelUndef ? DAG.getUNDEF(MVT::v2f64) : V1,
         DAG.getConstant(SHUFPDMask, DL, MVT::i8));
   }
-  assert(Mask[0] >= 0 && Mask[0] < 2 && "Non-canonicalized blend!");
-  assert(Mask[1] >= 2 && "Non-canonicalized blend!");
+  assert(Mask[0] >= 0 && "No undef lanes in multi-input v2 shuffles!");
+  assert(Mask[1] >= 0 && "No undef lanes in multi-input v2 shuffles!");
+  assert(Mask[0] < 2 && "We sort V1 to be the first input.");
+  assert(Mask[1] >= 2 && "We sort V2 to be the second input.");
 
-  // If we have a single input, insert that into V1 if we can do so cheaply.
-  if ((Mask[0] >= 2) + (Mask[1] >= 2) == 1) {
-    if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-            DL, MVT::v2f64, V1, V2, Mask, Zeroable, Subtarget, DAG))
-      return Insertion;
-    // Try inverting the insertion since for v2 masks it is easy to do and we
-    // can't reliably sort the mask one way or the other.
-    int InverseMask[2] = {Mask[0] < 0 ? -1 : (Mask[0] ^ 2),
-                          Mask[1] < 0 ? -1 : (Mask[1] ^ 2)};
-    if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
-            DL, MVT::v2f64, V2, V1, InverseMask, Zeroable, Subtarget, DAG))
-      return Insertion;
-  }
+  // When loading a scalar and then shuffling it into a vector we can often do
+  // the insertion cheaply.
+  if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
+          DL, MVT::v2f64, V1, V2, Mask, Zeroable, Subtarget, DAG))
+    return Insertion;
+  // Try inverting the insertion since for v2 masks it is easy to do and we
+  // can't reliably sort the mask one way or the other.
+  int InverseMask[2] = {Mask[0] < 0 ? -1 : (Mask[0] ^ 2),
+                        Mask[1] < 0 ? -1 : (Mask[1] ^ 2)};
+  if (SDValue Insertion = lowerVectorShuffleAsElementInsertion(
+          DL, MVT::v2f64, V2, V1, InverseMask, Zeroable, Subtarget, DAG))
+    return Insertion;
 
   // Try to use one of the special instruction patterns to handle two common
   // blend patterns if a zero-blend above didn't work.
@@ -23306,7 +23307,8 @@ static SDValue convertShiftLeftToScale(SDValue Amt, const SDLoc &dl,
                                        SelectionDAG &DAG) {
   MVT VT = Amt.getSimpleValueType();
   if (!(VT == MVT::v8i16 || VT == MVT::v4i32 ||
-        (Subtarget.hasInt256() && VT == MVT::v16i16)))
+        (Subtarget.hasInt256() && VT == MVT::v16i16) ||
+        (!Subtarget.hasAVX512() && VT == MVT::v16i8)))
     return SDValue();
 
   if (ISD::isBuildVectorOfConstantSDNodes(Amt.getNode())) {
@@ -37761,11 +37763,23 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   SDValue B = N->getOperand(1);
   SDValue C = N->getOperand(2);
 
-  auto invertIfNegative = [](SDValue &V) {
+  auto invertIfNegative = [&DAG](SDValue &V) {
     if (SDValue NegVal = isFNEG(V.getNode())) {
       V = NegVal;
       return true;
     }
+    // Look through extract_vector_elts. If it comes from an FNEG, create a
+    // new extract from the FNEG input.
+    if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isa<ConstantSDNode>(V.getOperand(1)) &&
+        cast<ConstantSDNode>(V.getOperand(1))->getZExtValue() == 0) {
+      if (SDValue NegVal = isFNEG(V.getOperand(0).getNode())) {
+        V = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V), V.getValueType(),
+                        NegVal, V.getOperand(1));
+        return true;
+      }
+    }
+
     return false;
   };
 

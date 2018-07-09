@@ -101,6 +101,9 @@ public:
   /// - validate that the preamble is still valid, and only use it in this case
   /// - accept that preamble contents may be outdated, and try to avoid reading
   ///   source code from headers.
+  /// If there's no preamble yet (because the file was just opened), we'll wait
+  /// for it to build. The preamble may still be null if it fails to build or is
+  /// empty.
   /// If an error occurs during processing, it is forwarded to the \p Action
   /// callback.
   void runWithPreamble(llvm::StringRef Name, PathRef File,

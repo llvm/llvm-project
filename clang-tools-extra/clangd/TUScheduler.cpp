@@ -176,6 +176,12 @@ public:
   bool blockUntilIdle(Deadline Timeout) const;
 
   std::shared_ptr<const PreambleData> getPossiblyStalePreamble() const;
+  /// Wait for the first build of preamble to finish. Preamble itself can be
+  /// accessed via getPossibleStalePreamble(). Note that this function will
+  /// return after an unsuccessful build of the preamble too, i.e. result of
+  /// getPossiblyStalePreamble() can be null even after this function returns.
+  void waitForFirstPreamble() const;
+
   std::size_t getUsedBytes() const;
   bool isASTCached() const;
 
@@ -226,6 +232,8 @@ private:
   /// Guards members used by both TUScheduler and the worker thread.
   mutable std::mutex Mutex;
   std::shared_ptr<const PreambleData> LastBuiltPreamble; /* GUARDED_BY(Mutex) */
+  /// Becomes ready when the first preamble build finishes.
+  Notification PreambleWasBuilt;
   /// Set to true to signal run() to finish processing.
   bool Done;                    /* GUARDED_BY(Mutex) */
   std::deque<Request> Requests; /* GUARDED_BY(Mutex) */
@@ -329,6 +337,9 @@ void ASTWorker::update(
         buildCompilerInvocation(Inputs);
     if (!Invocation) {
       log("Could not build CompilerInvocation for file " + FileName);
+      // Make sure anyone waiting for the preamble gets notified it could not
+      // be built.
+      PreambleWasBuilt.notify();
       return;
     }
 
@@ -340,6 +351,8 @@ void ASTWorker::update(
       if (NewPreamble)
         LastBuiltPreamble = NewPreamble;
     }
+    PreambleWasBuilt.notify();
+
     // Build the AST for diagnostics.
     llvm::Optional<ParsedAST> AST =
         buildAST(FileName, std::move(Invocation), Inputs, NewPreamble, PCHs);
@@ -390,6 +403,10 @@ std::shared_ptr<const PreambleData>
 ASTWorker::getPossiblyStalePreamble() const {
   std::lock_guard<std::mutex> Lock(Mutex);
   return LastBuiltPreamble;
+}
+
+void ASTWorker::waitForFirstPreamble() const {
+  PreambleWasBuilt.wait();
 }
 
 std::size_t ASTWorker::getUsedBytes() const {
@@ -655,6 +672,11 @@ void TUScheduler::runWithPreamble(
                              std::string Contents,
                              tooling::CompileCommand Command, Context Ctx,
                              decltype(Action) Action) mutable {
+    // We don't want to be running preamble actions before the preamble was
+    // built for the first time. This avoids extra work of processing the
+    // preamble headers in parallel multiple times.
+    Worker->waitForFirstPreamble();
+
     std::lock_guard<Semaphore> BarrierLock(Barrier);
     WithContext Guard(std::move(Ctx));
     trace::Span Tracer(Name);

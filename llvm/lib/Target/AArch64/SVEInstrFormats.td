@@ -2989,3 +2989,55 @@ multiclass sve_mem_64b_prfm_vi<bits<2> msz, string asm, Operand imm_ty> {
   def : InstAlias<asm # "\t$prfop, $Pg, [$Zn]",
                   (!cast<Instruction>(NAME) sve_prfop:$prfop, PPR3bAny:$Pg, ZPR64:$Zn, 0), 1>;
 }
+
+
+//===----------------------------------------------------------------------===//
+// SVE Compute Vector Address Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_bin_cons_misc_0_a<bits<2> opc, bits<2> msz, string asm,
+                                ZPRRegOp zprty, RegisterOperand zprext>
+: I<(outs zprty:$Zd), (ins zprty:$Zn, zprext:$Zm),
+  asm, "\t$Zd, [$Zn, $Zm]",
+  "",
+  []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = opc;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-12} = 0b1010;
+  let Inst{11-10} = msz;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_uxtw<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR64, ZPR64ExtUXTW8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR64, ZPR64ExtUXTW16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR64, ZPR64ExtUXTW32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR64, ZPR64ExtUXTW64>;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_sxtw<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR64, ZPR64ExtSXTW8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR64, ZPR64ExtSXTW16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR64, ZPR64ExtSXTW32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR64, ZPR64ExtSXTW64>;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_32_lsl<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR32, ZPR32ExtLSL8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR32, ZPR32ExtLSL16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR32, ZPR32ExtLSL32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR32, ZPR32ExtLSL64>;
+}
+
+multiclass sve_int_bin_cons_misc_0_a_64_lsl<bits<2> opc, string asm> {
+  def _0 : sve_int_bin_cons_misc_0_a<opc, 0b00, asm, ZPR64, ZPR64ExtLSL8>;
+  def _1 : sve_int_bin_cons_misc_0_a<opc, 0b01, asm, ZPR64, ZPR64ExtLSL16>;
+  def _2 : sve_int_bin_cons_misc_0_a<opc, 0b10, asm, ZPR64, ZPR64ExtLSL32>;
+  def _3 : sve_int_bin_cons_misc_0_a<opc, 0b11, asm, ZPR64, ZPR64ExtLSL64>;
+}

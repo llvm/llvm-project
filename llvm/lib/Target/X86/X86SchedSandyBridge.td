@@ -123,6 +123,7 @@ defm : SBWriteResPair<WriteIDiv64, [SBPort0, SBDivider], 25, [1, 10]>;
 def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
 
 defm : SBWriteResPair<WriteShift, [SBPort05],  1>;
+defm : SBWriteResPair<WriteShiftDouble, [SBPort05],  1>;
 defm : SBWriteResPair<WriteJump,  [SBPort5],   1>;
 defm : SBWriteResPair<WriteCRC32, [SBPort1],   3, [1], 1, 5>;
 
@@ -142,10 +143,11 @@ def  : WriteRes<WriteLAHFSAHF, [SBPort05]>;
 def : WriteRes<WriteLEA, [SBPort01]>;
 
 // Bit counts.
-defm : SBWriteResPair<WriteBitScan, [SBPort1], 3, [1], 1, 5>;
-defm : SBWriteResPair<WriteLZCNT,   [SBPort1], 3, [1], 1, 5>;
-defm : SBWriteResPair<WriteTZCNT,   [SBPort1], 3, [1], 1, 5>;
-defm : SBWriteResPair<WritePOPCNT,  [SBPort1], 3, [1], 1, 6>;
+defm : SBWriteResPair<WriteBSF, [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteBSR, [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteLZCNT,          [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WriteTZCNT,          [SBPort1], 3, [1], 1, 5>;
+defm : SBWriteResPair<WritePOPCNT,         [SBPort1], 3, [1], 1, 6>;
 
 // BMI1 BEXTR, BMI2 BZHI
 // NOTE: These don't exist on Sandy Bridge. Ports are guesses.

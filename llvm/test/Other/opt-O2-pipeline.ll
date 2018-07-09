@@ -80,7 +80,6 @@
 ; CHECK-NEXT:         Lazy Block Frequency Analysis
 ; CHECK-NEXT:         Optimization Remark Emitter
 ; CHECK-NEXT:         PGOMemOPSize
-; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Natural Loop Information
