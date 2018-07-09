@@ -188,13 +188,17 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (isRelExprOneOf<R_TLSLD_GOT, R_TLSLD_GOT_FROM_END, R_TLSLD_PC>(Expr)) {
+  if (isRelExprOneOf<R_TLSLD_GOT, R_TLSLD_GOT_FROM_END, R_TLSLD_PC,
+                     R_TLSLD_HINT>(Expr)) {
     // Local-Dynamic relocs can be relaxed to Local-Exec.
     if (!Config->Shared) {
       C.Relocations.push_back(
-          {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Sym});
-      return 2;
+          {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
+           Offset, Addend, &Sym});
+      return Target->TlsGdRelaxSkip;
     }
+    if (Expr == R_TLSLD_HINT)
+      return 1;
     if (InX::Got->addTlsIndex())
       InX::RelaDyn->addReloc(Target->TlsModuleIndexRel, InX::Got,
                              InX::Got->getTlsIndexOff(), nullptr);
@@ -203,9 +207,10 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
-  if (isRelExprOneOf<R_ABS, R_TLSLD_GOT_FROM_END, R_TLSLD_PC>(Expr) &&
-      !Config->Shared) {
-    C.Relocations.push_back({R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Sym});
+  if (Expr == R_ABS && !Config->Shared) {
+    C.Relocations.push_back(
+        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
+         Offset, Addend, &Sym});
     return 1;
   }
 
@@ -357,8 +362,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
           R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
           R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
           R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT, R_TLSGD_GOT_FROM_END,
-          R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT>(
-          E))
+          R_TLSGD_PC, R_PPC_CALL_PLT, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT,
+          R_TLSLD_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if

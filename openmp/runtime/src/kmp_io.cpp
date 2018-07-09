@@ -152,9 +152,7 @@ void __kmp_vprintf(enum kmp_io __kmp_io, char const *format, va_list ap) {
 
   if (__kmp_debug_buf && __kmp_debug_buffer != NULL) {
 
-    int dc = (__kmp_debug_buf_atomic ? KMP_TEST_THEN_INC32(&__kmp_debug_count)
-                                     : __kmp_debug_count++) %
-             __kmp_debug_buf_lines;
+    int dc = __kmp_debug_count++ % __kmp_debug_buf_lines;
     char *db = &__kmp_debug_buffer[dc * __kmp_debug_buf_chars];
     int chars = 0;
 

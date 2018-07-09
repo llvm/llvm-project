@@ -57,8 +57,8 @@ int __kmp_init_counter = 0;
 int __kmp_root_counter = 0;
 int __kmp_version = 0;
 
-volatile kmp_uint32 __kmp_team_counter = 0;
-volatile kmp_uint32 __kmp_task_counter = 0;
+std::atomic<kmp_uint32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
+std::atomic<kmp_uint32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
 
 unsigned int __kmp_init_wait =
     KMP_DEFAULT_INIT_WAIT; /* initial number of spin-tests   */
@@ -335,8 +335,8 @@ int __kmp_debug_buf_atomic =
     FALSE; /* TRUE means use atomic update of buffer entry pointer */
 
 char *__kmp_debug_buffer = NULL; /* Debug buffer itself */
-int __kmp_debug_count =
-    0; /* Counter for number of lines printed in buffer so far */
+std::atomic<int> __kmp_debug_count =
+    ATOMIC_VAR_INIT(0); /* number of lines printed in buffer so far */
 int __kmp_debug_buf_warn_chars =
     0; /* Keep track of char increase recommended in warnings */
 /* end rotating debug buffer */
@@ -402,7 +402,7 @@ volatile kmp_info_t *__kmp_thread_pool = NULL;
 volatile kmp_team_t *__kmp_team_pool = NULL;
 
 KMP_ALIGN_CACHE
-volatile int __kmp_thread_pool_active_nth = 0;
+std::atomic<int> __kmp_thread_pool_active_nth = ATOMIC_VAR_INIT(0);
 
 /* -------------------------------------------------
  * GLOBAL/ROOT STATE */
@@ -418,47 +418,47 @@ kmp_global_t __kmp_global = {{0}};
  * false sharing if the alignment is not large enough for these locks */
 KMP_ALIGN_CACHE_INTERNODE
 
-kmp_bootstrap_lock_t __kmp_initz_lock = KMP_BOOTSTRAP_LOCK_INITIALIZER(
-    __kmp_initz_lock); /* Control initializations */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_initz_lock); /* Control initializations */
 KMP_ALIGN_CACHE_INTERNODE
-kmp_bootstrap_lock_t __kmp_forkjoin_lock; /* control fork/join access */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_forkjoin_lock); /* control fork/join access */
 KMP_ALIGN_CACHE_INTERNODE
-kmp_bootstrap_lock_t __kmp_exit_lock; /* exit() is not always thread-safe */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_exit_lock); /* exit() is not always thread-safe */
 #if KMP_USE_MONITOR
+/* control monitor thread creation */
 KMP_ALIGN_CACHE_INTERNODE
-kmp_bootstrap_lock_t __kmp_monitor_lock; /* control monitor thread creation */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_monitor_lock);
 #endif
 /* used for the hack to allow threadprivate cache and __kmp_threads expansion
    to co-exist */
 KMP_ALIGN_CACHE_INTERNODE
-kmp_bootstrap_lock_t __kmp_tp_cached_lock;
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN_CACHE_INTERNODE
-kmp_lock_t __kmp_global_lock; /* Control OS/global access */
+KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
 KMP_ALIGN_CACHE_INTERNODE
 kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
 KMP_ALIGN_CACHE_INTERNODE
-kmp_lock_t __kmp_debug_lock; /* Control I/O access for KMP_DEBUG */
+KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #else
 KMP_ALIGN_CACHE
 
-kmp_bootstrap_lock_t __kmp_initz_lock = KMP_BOOTSTRAP_LOCK_INITIALIZER(
-    __kmp_initz_lock); /* Control initializations */
-kmp_bootstrap_lock_t __kmp_forkjoin_lock; /* control fork/join access */
-kmp_bootstrap_lock_t __kmp_exit_lock; /* exit() is not always thread-safe */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_initz_lock); /* Control initializations */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_forkjoin_lock); /* control fork/join access */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_exit_lock); /* exit() is not always thread-safe */
 #if KMP_USE_MONITOR
-kmp_bootstrap_lock_t __kmp_monitor_lock; /* control monitor thread creation */
+/* control monitor thread creation */
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_monitor_lock);
 #endif
 /* used for the hack to allow threadprivate cache and __kmp_threads expansion
    to co-exist */
-kmp_bootstrap_lock_t __kmp_tp_cached_lock;
+KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN(128)
-kmp_lock_t __kmp_global_lock; /* Control OS/global access */
+KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
 KMP_ALIGN(128)
 kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
 KMP_ALIGN(128)
-kmp_lock_t __kmp_debug_lock; /* Control I/O access for KMP_DEBUG */
+KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #endif
 
 /* ----------------------------------------------- */

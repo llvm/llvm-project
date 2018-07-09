@@ -63,7 +63,9 @@ char const __kmp_version_lock[] =
 
 /* ------------------------------------------------------------------------ */
 
+#if KMP_USE_MONITOR
 kmp_info_t __kmp_monitor;
+#endif
 
 /* Forward declarations */
 
@@ -754,8 +756,8 @@ int __kmp_enter_single(int gtid, ident_t *id_ref, int push_ws) {
        single block */
     /* TODO: Should this be acquire or release? */
     if (team->t.t_construct == old_this) {
-      status = KMP_COMPARE_AND_STORE_ACQ32(&team->t.t_construct, old_this,
-                                           th->th.th_local.this_construct);
+      status = __kmp_atomic_compare_store_acq(&team->t.t_construct, old_this,
+                                              th->th.th_local.this_construct);
     }
 #if USE_ITT_BUILD
     if (__itt_metadata_add_ptr && __kmp_forkjoin_frames_mode == 3 &&
@@ -1599,7 +1601,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 
       parent_team->t.t_pkfn = microtask;
       parent_team->t.t_invoke = invoker;
-      KMP_TEST_THEN_INC32((kmp_int32 *)&root->r.r_in_parallel);
+      KMP_ATOMIC_INC(&root->r.r_in_parallel);
       parent_team->t.t_active_level++;
       parent_team->t.t_level++;
 
@@ -1956,7 +1958,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 #endif /* OMP_40_ENABLED */
     {
       /* Increment our nested depth level */
-      KMP_TEST_THEN_INC32((kmp_int32 *)&root->r.r_in_parallel);
+      KMP_ATOMIC_INC(&root->r.r_in_parallel);
     }
 
     // See if we need to make a copy of the ICVs.
@@ -2433,7 +2435,7 @@ void __kmp_join_call(ident_t *loc, int gtid
     /* Decrement our nested depth level */
     team->t.t_level--;
     team->t.t_active_level--;
-    KMP_TEST_THEN_DEC32((kmp_int32 *)&root->r.r_in_parallel);
+    KMP_ATOMIC_DEC(&root->r.r_in_parallel);
 
     /* Restore number of threads in the team if needed */
     if (master_th->th.th_team_nproc < master_th->th.th_teams_size.nth) {
@@ -2491,7 +2493,7 @@ void __kmp_join_call(ident_t *loc, int gtid
 #endif /* OMP_40_ENABLED */
   {
     /* Decrement our nested depth level */
-    KMP_TEST_THEN_DEC32((kmp_int32 *)&root->r.r_in_parallel);
+    KMP_ATOMIC_DEC(&root->r.r_in_parallel);
   }
   KMP_DEBUG_ASSERT(root->r.r_in_parallel >= 0);
 
@@ -3388,7 +3390,7 @@ void __kmp_print_structure(void) {
                                      root->r.r_uber_thread);
         __kmp_printf("    Active?:      %2d\n", root->r.r_active);
         __kmp_printf("    Nested?:      %2d\n", root->r.r_nested);
-        __kmp_printf("    In Parallel:  %2d\n", root->r.r_in_parallel);
+        __kmp_printf("    In Parallel:  %2d\n", KMP_ATOMIC_LD_RLX(&root->r.r_in_parallel));
         __kmp_printf("\n");
         __kmp_print_structure_team_accum(list, root->r.r_root_team);
         __kmp_print_structure_team_accum(list, root->r.r_hot_team);
@@ -4448,7 +4450,9 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
 #ifdef KMP_DEBUG
   team->t.t_copypriv_data = NULL; /* not necessary, but nice for debugging */
 #endif
+#if KMP_OS_WINDOWS
   team->t.t_copyin_counter = 0; /* for barrier-free copyin implementation */
+#endif
 
   team->t.t_control_stack_top = NULL;
 
@@ -5346,7 +5350,9 @@ void __kmp_free_team(kmp_root_t *root,
   /* team is done working */
   TCW_SYNC_PTR(team->t.t_pkfn,
                NULL); // Important for Debugging Support Library.
+#if KMP_OS_WINDOWS
   team->t.t_copyin_counter = 0; // init counter for possible reuse
+#endif
   // Do not reset pointer to parent team to NULL for hot teams.
 
   /* if we are non-hot team, release our threads */
@@ -5783,8 +5789,8 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
     // so there are no harmful side effects.
     if (thread->th.th_active_in_pool) {
       thread->th.th_active_in_pool = FALSE;
-      KMP_TEST_THEN_DEC32(&__kmp_thread_pool_active_nth);
-      KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
+      KMP_ATOMIC_DEC(&__kmp_thread_pool_active_nth);
+      KMP_DEBUG_ASSERT(__kmp_thread_pool_active_nth >= 0);
     }
 
     // Decrement # of [worker] threads in the pool.
@@ -7240,7 +7246,7 @@ static int __kmp_load_balance_nproc(kmp_root_t *root, int set_nproc) {
   // executing thread (to become the master) are available to add to the new
   // team, but are currently contributing to the system load, and must be
   // accounted for.
-  pool_active = TCR_4(__kmp_thread_pool_active_nth);
+  pool_active = __kmp_thread_pool_active_nth;
   hot_team_active = __kmp_active_hot_team_nproc(root);
   team_curr_active = pool_active + hot_team_active + 1;
 
