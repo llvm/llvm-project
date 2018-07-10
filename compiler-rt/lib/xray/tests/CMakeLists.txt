@@ -68,7 +68,11 @@ function(get_xray_lib_for_arch arch lib)
 endfunction()
 
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
-set(XRAY_UNITTEST_LINK_FLAGS ${CMAKE_THREAD_LIBS_INIT})
+set(XRAY_UNITTEST_LINK_FLAGS
+  ${CMAKE_THREAD_LIBS_INIT}
+  -fxray-instrument
+  -lstdc++  # TODO: Detect the correct standard library used!
+  )
 if (NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBM -lm XRAY_UNITTEST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt XRAY_UNITTEST_LINK_FLAGS)
@@ -94,7 +98,7 @@ macro(add_xray_unittest testname)
         RUNTIME "${XRAY_RUNTIME_LIBS}"
         DEPS gtest xray
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
-        LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS} -lstdc++)
+        LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS})
       set_target_properties(XRayUnitTests
         PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
