@@ -9832,6 +9832,13 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return EmitX86Select(*this, Ops[0], Ops[1], Ops[2]);
+  case X86::BI__builtin_ia32_selectss_128:
+  case X86::BI__builtin_ia32_selectsd_128: {
+    Value *A = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+    Value *B = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+    A = EmitX86ScalarSelect(*this, Ops[0], A, B);
+    return Builder.CreateInsertElement(Ops[1], A, (uint64_t)0);
+  }
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpb256_mask:
   case X86::BI__builtin_ia32_cmpb512_mask:

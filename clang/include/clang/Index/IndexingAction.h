@@ -39,6 +39,7 @@ struct IndexingOptions {
   SystemSymbolFilterKind SystemSymbolFilter
     = SystemSymbolFilterKind::DeclarationsOnly;
   bool IndexFunctionLocals = false;
+  bool IndexImplicitInstantiation = false;
 };
 
 /// Creates a frontend action that indexes all symbols (macros and AST decls).

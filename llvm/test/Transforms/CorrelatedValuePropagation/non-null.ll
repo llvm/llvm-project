@@ -10,6 +10,16 @@ bb:
   ret void
 }
 
+define void @test1_no_null_opt(i8* %ptr) #0 {
+; CHECK: test1_no_null_opt
+  %A = load i8, i8* %ptr
+  br label %bb
+bb:
+  icmp ne i8* %ptr, null
+; CHECK: icmp ne i8* %ptr, null
+  ret void
+}
+
 define void @test2(i8* %ptr) {
 ; CHECK: test2
   store i8 0, i8* %ptr
@@ -20,7 +30,28 @@ bb:
   ret void
 }
 
+define void @test2_no_null_opt(i8* %ptr) #0 {
+; CHECK: test2_no_null_opt
+  store i8 0, i8* %ptr
+  br label %bb
+bb:
+  icmp ne i8* %ptr, null
+; CHECK: icmp ne i8* %ptr, null
+  ret void
+}
+
 define void @test3() {
+; CHECK: test3
+  %ptr = alloca i8
+  br label %bb
+bb:
+  icmp ne i8* %ptr, null
+; CHECK-NOT: icmp
+  ret void
+}
+
+;; OK to remove icmp here since ptr is coming from alloca.
+define void @test3_no_null_opt() #0 {
 ; CHECK: test3
   %ptr = alloca i8
   br label %bb
@@ -42,6 +73,18 @@ bb:
   ret void
 }
 
+define void @test4_no_null_opt(i8* %dest, i8* %src) #0 {
+; CHECK: test4_no_null_opt
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i1 false)
+  br label %bb
+bb:
+  icmp ne i8* %dest, null
+  icmp ne i8* %src, null
+; CHECK: icmp ne i8* %dest, null
+; CHECK: icmp ne i8* %src, null
+  ret void
+}
+
 declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 define void @test5(i8* %dest, i8* %src) {
 ; CHECK: test5
@@ -54,6 +97,18 @@ bb:
   ret void
 }
 
+define void @test5_no_null_opt(i8* %dest, i8* %src) #0 {
+; CHECK: test5_no_null_opt
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 1, i1 false)
+  br label %bb
+bb:
+  icmp ne i8* %dest, null
+  icmp ne i8* %src, null
+; CHECK: icmp ne i8* %dest, null
+; CHECK: icmp ne i8* %src, null
+  ret void
+}
+
 declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)
 define void @test6(i8* %dest) {
 ; CHECK: test6
@@ -62,6 +117,16 @@ define void @test6(i8* %dest) {
 bb:
   icmp ne i8* %dest, null
 ; CHECK-NOT: icmp
+  ret void
+}
+
+define void @test6_no_null_opt(i8* %dest) #0 {
+; CHECK: test6_no_null_opt
+  call void @llvm.memset.p0i8.i32(i8* %dest, i8 255, i32 1, i1 false)
+  br label %bb
+bb:
+  icmp ne i8* %dest, null
+; CHECK: icmp ne i8* %dest, null
   ret void
 }
 
@@ -161,3 +226,5 @@ merge:
   ; CHECK: call void @test12_helper(i8* nonnull %merged_arg)
   ret void
 }
+
+attributes #0 = { "null-pointer-is-valid"="true" }

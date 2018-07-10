@@ -720,13 +720,11 @@ define <4 x i32> @urem_urem(<4 x i32> %v0) {
   ret <4 x i32> %t3
 }
 
-; TODO: This could be folded by using a safe constant.
+; This is folded by using a safe constant.
 
 define <4 x i32> @urem_urem_undef_mask_elt(<4 x i32> %v0) {
 ; CHECK-LABEL: @urem_urem_undef_mask_elt(
-; CHECK-NEXT:    [[T1:%.*]] = urem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = urem <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
+; CHECK-NEXT:    [[T3:%.*]] = urem <4 x i32> <i32 1, i32 2, i32 7, i32 0>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = urem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0
@@ -746,13 +744,11 @@ define <4 x i32> @srem_srem(<4 x i32> %v0) {
   ret <4 x i32> %t3
 }
 
-; TODO: This could be folded by using a safe constant.
+; This is folded by using a safe constant.
 
 define <4 x i32> @srem_srem_undef_mask_elt(<4 x i32> %v0) {
 ; CHECK-LABEL: @srem_srem_undef_mask_elt(
-; CHECK-NEXT:    [[T1:%.*]] = srem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = srem <4 x i32> <i32 5, i32 6, i32 7, i32 8>, [[V0]]
-; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i32> [[T1]], <4 x i32> [[T2]], <4 x i32> <i32 0, i32 undef, i32 6, i32 3>
+; CHECK-NEXT:    [[T3:%.*]] = srem <4 x i32> <i32 1, i32 0, i32 7, i32 4>, [[V0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t1 = srem <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %v0

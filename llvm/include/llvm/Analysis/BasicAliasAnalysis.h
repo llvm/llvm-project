@@ -55,26 +55,27 @@ class BasicAAResult : public AAResultBase<BasicAAResult> {
   friend AAResultBase<BasicAAResult>;
 
   const DataLayout &DL;
+  const Function &F;
   const TargetLibraryInfo &TLI;
   AssumptionCache &AC;
   DominatorTree *DT;
   LoopInfo *LI;
 
 public:
-  BasicAAResult(const DataLayout &DL, const TargetLibraryInfo &TLI,
-                AssumptionCache &AC, DominatorTree *DT = nullptr,
-                LoopInfo *LI = nullptr)
-      : AAResultBase(), DL(DL), TLI(TLI), AC(AC), DT(DT), LI(LI) {}
+  BasicAAResult(const DataLayout &DL, const Function &F,
+                const TargetLibraryInfo &TLI, AssumptionCache &AC,
+                DominatorTree *DT = nullptr, LoopInfo *LI = nullptr)
+      : AAResultBase(), DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), LI(LI) {}
 
   BasicAAResult(const BasicAAResult &Arg)
-      : AAResultBase(Arg), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT),
-        LI(Arg.LI) {}
-  BasicAAResult(BasicAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI), AC(Arg.AC),
+      : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
         DT(Arg.DT), LI(Arg.LI) {}
+  BasicAAResult(BasicAAResult &&Arg)
+      : AAResultBase(std::move(Arg)), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
+        AC(Arg.AC), DT(Arg.DT), LI(Arg.LI) {}
 
   /// Handle invalidation events in the new pass manager.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
+  bool invalidate(Function &Fn, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB);
@@ -94,7 +95,7 @@ public:
 
   /// Returns the behavior when calling the given function. For use when the
   /// call site is not known.
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
+  FunctionModRefBehavior getModRefBehavior(const Function *Fn);
 
 private:
   // A linear transformation of a Value; this class represents ZExt(SExt(V,

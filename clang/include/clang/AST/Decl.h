@@ -4260,7 +4260,7 @@ template<typename decl_type>
 void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
   // Note: This routine is implemented here because we need both NamedDecl
   // and Redeclarable to be defined.
-  assert(RedeclLink.NextIsLatest() &&
+  assert(RedeclLink.isFirst() &&
          "setPreviousDecl on a decl already in a redeclaration chain");
 
   if (PrevDecl) {
@@ -4268,7 +4268,7 @@ void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
     // redeclaration, or we can build invalid chains. If the most recent
     // redeclaration is invalid, it won't be PrevDecl, but we want it anyway.
     First = PrevDecl->getFirstDecl();
-    assert(First->RedeclLink.NextIsLatest() && "Expected first");
+    assert(First->RedeclLink.isFirst() && "Expected first");
     decl_type *MostRecent = First->getNextRedeclaration();
     RedeclLink = PreviousDeclLink(cast<decl_type>(MostRecent));
 

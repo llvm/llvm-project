@@ -271,7 +271,7 @@ define i32 @test23() {
 
 ; 1 is an arbitrary non-zero address space.
 ; CHECK-LABEL: @test24(
-; CHECK: ret i32 0
+; CHECK: llvm.objectsize
 define i32 @test24() {
   %1 = call i32 @llvm.objectsize.i32.p1i8(i8 addrspace(1)* null, i1 false,
                                           i1 false)
@@ -279,7 +279,7 @@ define i32 @test24() {
 }
 
 ; CHECK-LABEL: @test25(
-; CHECK: ret i32 0
+; CHECK: llvm.objectsize
 define i32 @test25() {
   %1 = call i32 @llvm.objectsize.i32.p1i8(i8 addrspace(1)* null, i1 true,
                                           i1 false)
@@ -287,7 +287,7 @@ define i32 @test25() {
 }
 
 ; CHECK-LABEL: @test26(
-; CHECK: ret i32 0
+; CHECK: llvm.objectsize
 define i32 @test26() {
   %1 = call i32 @llvm.objectsize.i32.p1i8(i8 addrspace(1)* null, i1 false,
                                           i1 true)
@@ -295,7 +295,7 @@ define i32 @test26() {
 }
 
 ; CHECK-LABEL: @test27(
-; CHECK: ret i32 0
+; CHECK: llvm.objectsize
 define i32 @test27() {
   %1 = call i32 @llvm.objectsize.i32.p1i8(i8 addrspace(1)* null, i1 true,
                                           i1 true)

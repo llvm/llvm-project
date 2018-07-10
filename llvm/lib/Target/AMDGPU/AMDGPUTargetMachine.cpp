@@ -117,12 +117,11 @@ static cl::opt<bool, true> LateCFGStructurize(
   cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
   cl::Hidden);
 
-static cl::opt<bool, true> EnableAMDGPUFunctionCalls(
+static cl::opt<bool> EnableAMDGPUFunctionCalls(
   "amdgpu-function-calls",
+  cl::Hidden,
   cl::desc("Enable AMDGPU function call support"),
-  cl::location(AMDGPUTargetMachine::EnableFunctionCalls),
-  cl::init(false),
-  cl::Hidden);
+  cl::init(false));
 
 // Enable lib calls simplifications
 static cl::opt<bool> EnableLibCallSimplify(
@@ -312,10 +311,9 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
   initAsmInfo();
 }
 
-bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
-bool AMDGPUTargetMachine::EnableFunctionCalls = false;
-
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
+
+bool AMDGPUTargetMachine::EnableLateStructurizeCFG = false;
 
 StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
   Attribute GPUAttr = F.getFnAttribute("target-cpu");

@@ -1589,7 +1589,8 @@ double getValueAsDouble(ConstantFP *Op) {
 
 Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
                                  ArrayRef<Constant *> Operands,
-                                 const TargetLibraryInfo *TLI) {
+                                 const TargetLibraryInfo *TLI,
+                                 ImmutableCallSite CS) {
   if (Operands.size() == 1) {
     if (isa<UndefValue>(Operands[0])) {
       // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN
@@ -1603,7 +1604,8 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
     }
 
     if (isa<ConstantPointerNull>(Operands[0]) &&
-        Operands[0]->getType()->getPointerAddressSpace() == 0) {
+        !NullPointerIsDefined(
+            CS.getCaller(), Operands[0]->getType()->getPointerAddressSpace())) {
       // launder(null) == null == strip(null) iff in addrspace 0
       if (IntrinsicID == Intrinsic::launder_invariant_group ||
           IntrinsicID == Intrinsic::strip_invariant_group)
@@ -2007,7 +2009,8 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
 Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
                                  VectorType *VTy, ArrayRef<Constant *> Operands,
                                  const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI) {
+                                 const TargetLibraryInfo *TLI,
+                                 ImmutableCallSite CS) {
   SmallVector<Constant *, 4> Result(VTy->getNumElements());
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = VTy->getElementType();
@@ -2070,7 +2073,7 @@ Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
     }
 
     // Use the regular scalar folding to simplify this column.
-    Constant *Folded = ConstantFoldScalarCall(Name, IntrinsicID, Ty, Lane, TLI);
+    Constant *Folded = ConstantFoldScalarCall(Name, IntrinsicID, Ty, Lane, TLI, CS);
     if (!Folded)
       return nullptr;
     Result[I] = Folded;
@@ -2095,9 +2098,9 @@ llvm::ConstantFoldCall(ImmutableCallSite CS, Function *F,
 
   if (auto *VTy = dyn_cast<VectorType>(Ty))
     return ConstantFoldVectorCall(Name, F->getIntrinsicID(), VTy, Operands,
-                                  F->getParent()->getDataLayout(), TLI);
+                                  F->getParent()->getDataLayout(), TLI, CS);
 
-  return ConstantFoldScalarCall(Name, F->getIntrinsicID(), Ty, Operands, TLI);
+  return ConstantFoldScalarCall(Name, F->getIntrinsicID(), Ty, Operands, TLI, CS);
 }
 
 bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {

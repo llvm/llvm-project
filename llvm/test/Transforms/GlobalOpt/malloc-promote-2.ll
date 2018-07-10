@@ -17,3 +17,11 @@ define void @t() {
 }
 
 declare noalias i8* @malloc(i64)
+
+define void @foo(i64 %Size) nounwind noinline #0 {
+entry:
+        %0 = load i32*, i32** @G, align 4
+        ret void
+}
+
+attributes #0 = { "null-pointer-is-valid"="true" }

@@ -1133,8 +1133,12 @@ void SCCPSolver::visitLoadInst(LoadInst &I) {
   Constant *Ptr = PtrVal.getConstant();
 
   // load null is undefined.
-  if (isa<ConstantPointerNull>(Ptr) && I.getPointerAddressSpace() == 0)
-    return;
+  if (isa<ConstantPointerNull>(Ptr)) {
+    if (NullPointerIsDefined(I.getFunction(), I.getPointerAddressSpace()))
+      return (void)markOverdefined(IV, &I);
+    else
+      return;
+  }
 
   // Transform load (constant global) into the value loaded.
   if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {

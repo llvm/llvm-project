@@ -214,24 +214,55 @@ IntrinsicIDToOverflowCheckFlavor(unsigned ID) {
 
 /// Some binary operators require special handling to avoid poison and undefined
 /// behavior. If a constant vector has undef elements, replace those undefs with
-/// identity constants because those are always safe to execute. If no identity
-/// constant exists, replace undef with '1' or '1.0'.
+/// identity constants if possible because those are always safe to execute.
+/// If no identity constant exists, replace undef with some other safe constant.
 static inline Constant *getSafeVectorConstantForBinop(
-      BinaryOperator::BinaryOps Opcode, Constant *In) {
-  Type *Ty = In->getType();
-  assert(Ty->isVectorTy() && "Not expecting scalars here");
+      BinaryOperator::BinaryOps Opcode, Constant *In, bool IsRHSConstant) {
+  assert(In->getType()->isVectorTy() && "Not expecting scalars here");
 
-  Type *EltTy = Ty->getVectorElementType();
-  Constant *IdentityC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, true);
-  if (!IdentityC)
-    IdentityC = EltTy->isIntegerTy() ? ConstantInt::get(EltTy, 1):
-                                       ConstantFP::get(EltTy, 1.0);
-
-  unsigned NumElts = Ty->getVectorNumElements();
+  Type *EltTy = In->getType()->getVectorElementType();
+  auto *SafeC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, IsRHSConstant);
+  if (!SafeC) {
+    // TODO: Should this be available as a constant utility function? It is
+    // similar to getBinOpAbsorber().
+    if (IsRHSConstant) {
+      switch (Opcode) {
+      case Instruction::SRem: // X % 1 = 0
+      case Instruction::URem: // X %u 1 = 0
+        SafeC = ConstantInt::get(EltTy, 1);
+        break;
+      case Instruction::FRem: // X % 1.0 (doesn't simplify, but it is safe)
+        SafeC = ConstantFP::get(EltTy, 1.0);
+        break;
+      default:
+        llvm_unreachable("Only rem opcodes have no identity constant for RHS");
+      }
+    } else {
+      switch (Opcode) {
+      case Instruction::Shl:  // 0 << X = 0
+      case Instruction::LShr: // 0 >>u X = 0
+      case Instruction::AShr: // 0 >> X = 0
+      case Instruction::SDiv: // 0 / X = 0
+      case Instruction::UDiv: // 0 /u X = 0
+      case Instruction::SRem: // 0 % X = 0
+      case Instruction::URem: // 0 %u X = 0
+      case Instruction::Sub:  // 0 - X (doesn't simplify, but it is safe)
+      case Instruction::FSub: // 0.0 - X (doesn't simplify, but it is safe)
+      case Instruction::FDiv: // 0.0 / X (doesn't simplify, but it is safe)
+      case Instruction::FRem: // 0.0 % X = 0
+        SafeC = Constant::getNullValue(EltTy);
+        break;
+      default:
+        llvm_unreachable("Expected to find identity constant for opcode");
+      }
+    }
+  }
+  assert(SafeC && "Must have safe constant for binop");
+  unsigned NumElts = In->getType()->getVectorNumElements();
   SmallVector<Constant *, 16> Out(NumElts);
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *C = In->getAggregateElement(i);
-    Out[i] = isa<UndefValue>(C) ? IdentityC : C;
+    Out[i] = isa<UndefValue>(C) ? SafeC : C;
   }
   return ConstantVector::get(Out);
 }

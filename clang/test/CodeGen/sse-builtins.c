@@ -450,7 +450,8 @@ __m128 test_mm_min_ss(__m128 A, __m128 B) {
 
 __m128 test_mm_move_ss(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_move_ss
-  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_move_ss(A, B);
 }
 

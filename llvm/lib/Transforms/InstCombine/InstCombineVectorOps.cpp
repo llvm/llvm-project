@@ -1293,14 +1293,8 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   Value *V;
   if (X == Y) {
     // The new binop constant must not have any potential for extra poison/UB.
-    if (MightCreatePoisonOrUB) {
-      // TODO: Use getBinOpAbsorber for LHS replacement constants?
-      if (!ConstantsAreOp1)
-        return nullptr;
-
-      // Replace undef elements with identity constants.
-      NewC = getSafeVectorConstantForBinop(BOpc, NewC);
-    }
+    if (MightCreatePoisonOrUB)
+      NewC = getSafeVectorConstantForBinop(BOpc, NewC, ConstantsAreOp1);
 
     // Remove a binop and the shuffle by rearranging the constant:
     // shuffle (op V, C0), (op V, C1), M --> op V, C'
