@@ -758,8 +758,14 @@ void ThinLTOCodeGenerator::emitImports(StringRef ModulePath,
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
                            ExportLists);
 
+  std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
+  llvm::gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
+                                         ImportLists[ModulePath],
+                                         ModuleToSummariesForIndex);
+
   std::error_code EC;
-  if ((EC = EmitImportsFiles(ModulePath, OutputName, ImportLists[ModulePath])))
+  if ((EC =
+           EmitImportsFiles(ModulePath, OutputName, ModuleToSummariesForIndex)))
     report_fatal_error(Twine("Failed to open ") + OutputName +
                        " to save imports lists\n");
 }

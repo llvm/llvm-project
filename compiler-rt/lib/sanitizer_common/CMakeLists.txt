@@ -90,9 +90,12 @@ set(SANITIZER_SYMBOLIZER_SOURCES
 # included in sanitizer_common source files, but we need to depend on
 # headers when building our custom unit tests.
 set(SANITIZER_HEADERS
+  sancov_flags.h
+  sancov_flags.inc
   sanitizer_addrhashmap.h
   sanitizer_allocator.h
   sanitizer_allocator_bytemap.h
+  sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
   sanitizer_allocator_interface.h
   sanitizer_allocator_internal.h
@@ -103,16 +106,24 @@ set(SANITIZER_HEADERS
   sanitizer_allocator_secondary.h
   sanitizer_allocator_size_class_map.h
   sanitizer_allocator_stats.h
+  sanitizer_asm.h
   sanitizer_atomic.h
   sanitizer_atomic_clang.h
+  sanitizer_atomic_clang_mips.h
+  sanitizer_atomic_clang_other.h
+  sanitizer_atomic_clang_x86.h
   sanitizer_atomic_msvc.h
   sanitizer_bitvector.h
   sanitizer_bvgraph.h
   sanitizer_common.h
   sanitizer_common_interceptors.inc
-  sanitizer_common_interceptors_ioctl.inc
   sanitizer_common_interceptors_format.inc
+  sanitizer_common_interceptors_ioctl.inc
+  sanitizer_common_interface.inc
+  sanitizer_common_interface_posix.inc
   sanitizer_common_syscalls.inc
+  sanitizer_coverage_interface.inc
+  sanitizer_dbghelp.h
   sanitizer_deadlock_detector.h
   sanitizer_deadlock_detector_interface.h
   sanitizer_errno.h
@@ -121,7 +132,9 @@ set(SANITIZER_HEADERS
   sanitizer_flag_parser.h
   sanitizer_flags.h
   sanitizer_flags.inc
+  sanitizer_freebsd.h
   sanitizer_fuchsia.h
+  sanitizer_getauxval.h
   sanitizer_interceptors_ioctl_netbsd.inc
   sanitizer_interface_internal.h
   sanitizer_internal_defs.h
@@ -131,12 +144,14 @@ set(SANITIZER_HEADERS
   sanitizer_linux.h
   sanitizer_list.h
   sanitizer_mac.h
+  sanitizer_malloc_mac.inc
   sanitizer_mutex.h
   sanitizer_persistent_allocator.h
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
   sanitizer_platform_limits_netbsd.h
+  sanitizer_platform_limits_openbsd.h
   sanitizer_platform_limits_posix.h
   sanitizer_platform_limits_solaris.h
   sanitizer_posix.h
@@ -144,6 +159,7 @@ set(SANITIZER_HEADERS
   sanitizer_quarantine.h
   sanitizer_report_decorator.h
   sanitizer_rtems.h
+  sanitizer_signal_interceptors.inc
   sanitizer_stackdepot.h
   sanitizer_stackdepotbase.h
   sanitizer_stacktrace.h
@@ -157,12 +173,17 @@ set(SANITIZER_HEADERS
   sanitizer_symbolizer_mac.h
   sanitizer_symbolizer_rtems.h
   sanitizer_syscall_generic.inc
-  sanitizer_syscall_linux_x86_64.inc
   sanitizer_syscall_linux_aarch64.inc
+  sanitizer_syscall_linux_arm.inc
+  sanitizer_syscall_linux_x86_64.inc
   sanitizer_syscalls_netbsd.inc
   sanitizer_thread_registry.h
+  sanitizer_tls_get_addr.h
   sanitizer_vector.h
-  sanitizer_win.h)
+  sanitizer_win.h
+  sanitizer_win_defs.h
+  sanitizer_win_dll_thunk.h
+  sanitizer_win_weak_interception.h)
 
 include_directories(..)
 
@@ -201,36 +222,42 @@ add_compiler_rt_object_libraries(RTSanitizerCommon
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 add_compiler_rt_object_libraries(RTSanitizerCommonNoTermination
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_SOURCES_NOTERMINATION}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 add_compiler_rt_object_libraries(RTSanitizerCommonNoLibc
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_NOLIBC_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 add_compiler_rt_object_libraries(RTSanitizerCommonLibc
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_LIBCDEP_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 add_compiler_rt_object_libraries(RTSanitizerCommonCoverage
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_COVERAGE_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 add_compiler_rt_object_libraries(RTSanitizerCommonSymbolizer
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_SYMBOLIZER_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 
@@ -240,18 +267,21 @@ add_compiler_rt_object_libraries(RTSanitizerCommonNoHooks
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_NO_WEAK_HOOKS_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 add_compiler_rt_object_libraries(RTSanitizerCommonLibcNoHooks
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_LIBCDEP_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_NO_WEAK_HOOKS_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 add_compiler_rt_object_libraries(RTSanitizerCommonSymbolizerNoHooks
   ${OS_OPTION}
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   SOURCES ${SANITIZER_SYMBOLIZER_SOURCES}
+  ADDITIONAL_HEADERS ${SANITIZER_HEADERS}
   CFLAGS ${SANITIZER_NO_WEAK_HOOKS_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 

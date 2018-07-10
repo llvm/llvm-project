@@ -2120,9 +2120,12 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
       ConstantInt *LHSOffsetCI = dyn_cast<ConstantInt>(LHSOffset);
       ConstantInt *RHSOffsetCI = dyn_cast<ConstantInt>(RHSOffset);
       uint64_t LHSSize, RHSSize;
+      ObjectSizeOpts Opts;
+      Opts.NullIsUnknownSize =
+          NullPointerIsDefined(cast<AllocaInst>(LHS)->getFunction());
       if (LHSOffsetCI && RHSOffsetCI &&
-          getObjectSize(LHS, LHSSize, DL, TLI) &&
-          getObjectSize(RHS, RHSSize, DL, TLI)) {
+          getObjectSize(LHS, LHSSize, DL, TLI, Opts) &&
+          getObjectSize(RHS, RHSSize, DL, TLI, Opts)) {
         const APInt &LHSOffsetValue = LHSOffsetCI->getValue();
         const APInt &RHSOffsetValue = RHSOffsetCI->getValue();
         if (!LHSOffsetValue.isNegative() &&

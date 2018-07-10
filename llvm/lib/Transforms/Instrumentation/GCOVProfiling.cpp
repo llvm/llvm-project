@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
@@ -85,7 +86,7 @@ public:
     ReversedVersion[3] = Options.Version[0];
     ReversedVersion[4] = '\0';
   }
-  bool runOnModule(Module &M);
+  bool runOnModule(Module &M, const TargetLibraryInfo &TLI);
 
 private:
   // Create the .gcno files for the Module based on DebugInfo.
@@ -131,6 +132,7 @@ private:
   SmallVector<uint32_t, 4> FileChecksums;
 
   Module *M;
+  const TargetLibraryInfo *TLI;
   LLVMContext *Ctx;
   SmallVector<std::unique_ptr<GCOVFunction>, 16> Funcs;
 };
@@ -146,7 +148,14 @@ public:
   }
   StringRef getPassName() const override { return "GCOV Profiler"; }
 
-  bool runOnModule(Module &M) override { return Profiler.runOnModule(M); }
+  bool runOnModule(Module &M) override { 
+    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    return Profiler.runOnModule(M, TLI);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+  }
 
 private:
   GCOVProfiler Profiler;
@@ -154,8 +163,13 @@ private:
 }
 
 char GCOVProfilerLegacyPass::ID = 0;
-INITIALIZE_PASS(GCOVProfilerLegacyPass, "insert-gcov-profiling",
-                "Insert instrumentation for GCOV profiling", false, false)
+INITIALIZE_PASS_BEGIN(
+    GCOVProfilerLegacyPass, "insert-gcov-profiling",
+    "Insert instrumentation for GCOV profiling", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(
+    GCOVProfilerLegacyPass, "insert-gcov-profiling",
+    "Insert instrumentation for GCOV profiling", false, false)
 
 ModulePass *llvm::createGCOVProfilerPass(const GCOVOptions &Options) {
   return new GCOVProfilerLegacyPass(Options);
@@ -462,8 +476,9 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   return CurPath.str();
 }
 
-bool GCOVProfiler::runOnModule(Module &M) {
+bool GCOVProfiler::runOnModule(Module &M, const TargetLibraryInfo &TLI) {
   this->M = &M;
+  this->TLI = &TLI;
   Ctx = &M.getContext();
 
   if (Options.EmitNotes) emitProfileNotes();
@@ -476,7 +491,8 @@ PreservedAnalyses GCOVProfilerPass::run(Module &M,
 
   GCOVProfiler Profiler(GCOVOpts);
 
-  if (!Profiler.runOnModule(M))
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(M);
+  if (!Profiler.runOnModule(M, TLI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
@@ -808,7 +824,12 @@ Constant *GCOVProfiler::getStartFileFunc() {
     Type::getInt32Ty(*Ctx),    // uint32_t checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
-  return M->getOrInsertFunction("llvm_gcda_start_file", FTy);
+  auto *Res = M->getOrInsertFunction("llvm_gcda_start_file", FTy);
+  if (Function *FunRes = dyn_cast<Function>(Res))
+    if (auto AK = TLI->getExtAttrForI32Param(false))
+      FunRes->addParamAttr(2, AK);
+  return Res;
+
 }
 
 Constant *GCOVProfiler::getIncrementIndirectCounterFunc() {
@@ -831,7 +852,15 @@ Constant *GCOVProfiler::getEmitFunctionFunc() {
     Type::getInt32Ty(*Ctx),    // uint32_t cfg_checksum
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
-  return M->getOrInsertFunction("llvm_gcda_emit_function", FTy);
+  auto *Res = M->getOrInsertFunction("llvm_gcda_emit_function", FTy);
+  if (Function *FunRes = dyn_cast<Function>(Res))
+    if (auto AK = TLI->getExtAttrForI32Param(false)) {
+      FunRes->addParamAttr(0, AK);
+      FunRes->addParamAttr(2, AK);
+      FunRes->addParamAttr(3, AK);
+      FunRes->addParamAttr(4, AK);
+    }
+  return Res;
 }
 
 Constant *GCOVProfiler::getEmitArcsFunc() {
@@ -840,7 +869,11 @@ Constant *GCOVProfiler::getEmitArcsFunc() {
     Type::getInt64PtrTy(*Ctx),  // uint64_t *counters
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
-  return M->getOrInsertFunction("llvm_gcda_emit_arcs", FTy);
+  auto *Res = M->getOrInsertFunction("llvm_gcda_emit_arcs", FTy);
+  if (Function *FunRes = dyn_cast<Function>(Res))
+    if (auto AK = TLI->getExtAttrForI32Param(false))
+      FunRes->addParamAttr(0, AK);
+  return Res;
 }
 
 Constant *GCOVProfiler::getSummaryInfoFunc() {
@@ -1025,11 +1058,13 @@ Function *GCOVProfiler::insertCounterWriteout(
   auto *FileInfoPtr =
       Builder.CreateInBoundsGEP(FileInfoArrayGV, {Builder.getInt32(0), IV});
   auto *StartFileCallArgsPtr = Builder.CreateStructGEP(FileInfoPtr, 0);
-  Builder.CreateCall(
+  auto *StartFileCall = Builder.CreateCall(
       StartFile,
       {Builder.CreateLoad(Builder.CreateStructGEP(StartFileCallArgsPtr, 0)),
        Builder.CreateLoad(Builder.CreateStructGEP(StartFileCallArgsPtr, 1)),
        Builder.CreateLoad(Builder.CreateStructGEP(StartFileCallArgsPtr, 2))});
+  if (auto AK = TLI->getExtAttrForI32Param(false))
+    StartFileCall->addParamAttr(2, AK);
   auto *NumCounters =
       Builder.CreateLoad(Builder.CreateStructGEP(FileInfoPtr, 1));
   auto *EmitFunctionCallArgsArray =
@@ -1045,7 +1080,7 @@ Function *GCOVProfiler::insertCounterWriteout(
   JV->addIncoming(Builder.getInt32(0), FileLoopHeader);
   auto *EmitFunctionCallArgsPtr =
       Builder.CreateInBoundsGEP(EmitFunctionCallArgsArray, {JV});
-  Builder.CreateCall(
+  auto *EmitFunctionCall = Builder.CreateCall(
       EmitFunction,
       {Builder.CreateLoad(Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 0)),
        Builder.CreateLoad(Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 1)),
@@ -1053,12 +1088,20 @@ Function *GCOVProfiler::insertCounterWriteout(
        Builder.CreateLoad(Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 3)),
        Builder.CreateLoad(
            Builder.CreateStructGEP(EmitFunctionCallArgsPtr, 4))});
+  if (auto AK = TLI->getExtAttrForI32Param(false)) {
+    EmitFunctionCall->addParamAttr(0, AK);
+    EmitFunctionCall->addParamAttr(2, AK);
+    EmitFunctionCall->addParamAttr(3, AK);
+    EmitFunctionCall->addParamAttr(4, AK);
+  }
   auto *EmitArcsCallArgsPtr =
       Builder.CreateInBoundsGEP(EmitArcsCallArgsArray, {JV});
-  Builder.CreateCall(
+  auto *EmitArcsCall = Builder.CreateCall(
       EmitArcs,
       {Builder.CreateLoad(Builder.CreateStructGEP(EmitArcsCallArgsPtr, 0)),
        Builder.CreateLoad(Builder.CreateStructGEP(EmitArcsCallArgsPtr, 1))});
+  if (auto AK = TLI->getExtAttrForI32Param(false))
+    EmitArcsCall->addParamAttr(0, AK);
   auto *NextJV = Builder.CreateAdd(JV, Builder.getInt32(1));
   auto *CounterLoopCond = Builder.CreateICmpSLT(NextJV, NumCounters);
   Builder.CreateCondBr(CounterLoopCond, CounterLoopHeader, FileLoopLatch);

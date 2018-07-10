@@ -209,7 +209,8 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
 
   Header Header;
   DenseMap<uint32_t, SmallVector<AttributeEncoding, 2>> Abbreviations;
-  std::unique_ptr<AccelTableWriterInfo> WriterInfo;
+  const DwarfDebug &DD;
+  ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits;
   MCSymbol *ContributionStart = Asm->createTempSymbol("names_start");
   MCSymbol *ContributionEnd = Asm->createTempSymbol("names_end");
   MCSymbol *AbbrevStart = Asm->createTempSymbol("names_abbrev_start");
@@ -230,46 +231,12 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
 
 public:
   Dwarf5AccelTableWriter(AsmPrinter *Asm, const AccelTableBase &Contents,
-                          std::unique_ptr<AccelTableWriterInfo> WriterInfo);
+                         const DwarfDebug &DD,
+                         ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits);
 
   void emit() const;
 };
-
-/// Default emitter info used by DwarfDebug.
-class DefaultAccelTableWriterInfo final : public AccelTableWriterInfo {
-private:
-  const DwarfDebug &DD;
-  ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits;
-
-public:
-  DefaultAccelTableWriterInfo(const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits);
-  MCSymbol *getLabelForCU(unsigned Idx) const override;
-  unsigned getNumberOfCUs() const override;
-  unsigned getUnqiueIDForUnitDie(const DIE *UnitDie) const override;
-};
 } // namespace
-
-DefaultAccelTableWriterInfo::DefaultAccelTableWriterInfo(
-    const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits)
-    : DD(DD), CompUnits(CompUnits) {}
-
-MCSymbol *DefaultAccelTableWriterInfo::getLabelForCU(unsigned Idx) const {
-  assert(Idx < CompUnits.size());
-  const auto &CU = CompUnits[Idx];
-  assert(Idx == CU->getUniqueID());
-  const DwarfCompileUnit *MainCU =
-      DD.useSplitDwarf() ? CU->getSkeleton() : CU.get();
-  return MainCU->getLabelBegin();
-}
-
-unsigned DefaultAccelTableWriterInfo::getNumberOfCUs() const {
-  return CompUnits.size();
-}
-
-unsigned
-DefaultAccelTableWriterInfo::getUnqiueIDForUnitDie(const DIE *UnitDie) const {
-  return DD.lookupCU(UnitDie)->getUniqueID();
-}
 
 void AccelTableWriter::emitHashes() const {
   uint64_t PrevHash = std::numeric_limits<uint64_t>::max();
@@ -436,8 +403,8 @@ DenseSet<uint32_t> Dwarf5AccelTableWriter::getUniqueTags() const {
 SmallVector<Dwarf5AccelTableWriter::AttributeEncoding, 2>
 Dwarf5AccelTableWriter::getUniformAttributes() const {
   SmallVector<AttributeEncoding, 2> UA;
-  if (WriterInfo->getNumberOfCUs() > 1) {
-    size_t LargestCUIndex = WriterInfo->getNumberOfCUs() - 1;
+  if (CompUnits.size() > 1) {
+    size_t LargestCUIndex = CompUnits.size() - 1;
     dwarf::Form Form = DIEInteger::BestForm(/*IsSigned*/ false, LargestCUIndex);
     UA.push_back({dwarf::DW_IDX_compile_unit, Form});
   }
@@ -446,10 +413,12 @@ Dwarf5AccelTableWriter::getUniformAttributes() const {
 }
 
 void Dwarf5AccelTableWriter::emitCUList() const {
-  for (unsigned Idx = 0, CUs = WriterInfo->getNumberOfCUs(); Idx < CUs;
-       ++Idx) {
-    Asm->OutStreamer->AddComment("Compilation unit " + Twine(Idx));
-    Asm->emitDwarfSymbolReference(WriterInfo->getLabelForCU(Idx));
+  for (const auto &CU : enumerate(CompUnits)) {
+    assert(CU.index() == CU.value()->getUniqueID());
+    Asm->OutStreamer->AddComment("Compilation unit " + Twine(CU.index()));
+    const DwarfCompileUnit *MainCU =
+        DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
+    Asm->emitDwarfSymbolReference(MainCU->getLabelBegin());
   }
 }
 
@@ -505,7 +474,7 @@ void Dwarf5AccelTableWriter::emitEntry(
     switch (AttrEnc.Index) {
     case dwarf::DW_IDX_compile_unit: {
       const DIE *CUDie = Entry.getDie().getUnitDie();
-      DIEInteger ID(WriterInfo->getUnqiueIDForUnitDie(CUDie));
+      DIEInteger ID(DD.lookupCU(CUDie)->getUniqueID());
       ID.EmitValue(Asm, AttrEnc.Form);
       break;
     }
@@ -534,12 +503,12 @@ void Dwarf5AccelTableWriter::emitData() const {
 }
 
 Dwarf5AccelTableWriter::Dwarf5AccelTableWriter(
-    AsmPrinter *Asm, const AccelTableBase &Contents,
-    std::unique_ptr<AccelTableWriterInfo> WriterInfo)
+    AsmPrinter *Asm, const AccelTableBase &Contents, const DwarfDebug &DD,
+    ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits)
     : AccelTableWriter(Asm, Contents, false),
-      Header(WriterInfo->getNumberOfCUs(), Contents.getBucketCount(),
+      Header(CompUnits.size(), Contents.getBucketCount(),
              Contents.getUniqueNameCount()),
-      WriterInfo(std::move(WriterInfo)) {
+      DD(DD), CompUnits(CompUnits) {
   DenseSet<uint32_t> UniqueTags = getUniqueTags();
   SmallVector<AttributeEncoding, 2> UniformAttributes = getUniformAttributes();
 
@@ -571,15 +540,8 @@ void llvm::emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
 void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
     const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
-  auto WriterInfo = llvm::make_unique<DefaultAccelTableWriterInfo>(DD, CUs);
-  emitDWARF5AccelTable(Asm, Contents, std::move(WriterInfo));
-}
-
-void llvm::emitDWARF5AccelTable(
-    AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
-    std::unique_ptr<AccelTableWriterInfo> WriterInfo) {
   Contents.finalize(Asm, "names");
-  Dwarf5AccelTableWriter(Asm, Contents, std::move(WriterInfo)).emit();
+  Dwarf5AccelTableWriter(Asm, Contents, DD, CUs).emit();
 }
 
 void AppleAccelTableOffsetData::emit(AsmPrinter *Asm) const {

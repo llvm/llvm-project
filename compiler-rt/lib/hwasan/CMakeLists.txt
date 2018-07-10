@@ -15,6 +15,18 @@ set(HWASAN_RTL_SOURCES
 set(HWASAN_RTL_CXX_SOURCES
   hwasan_new_delete.cc)
 
+set(HWASAN_RTL_HEADERS
+  hwasan.h
+  hwasan_allocator.h
+  hwasan_dynamic_shadow.h
+  hwasan_flags.h
+  hwasan_flags.inc
+  hwasan_interface_internal.h
+  hwasan_mapping.h
+  hwasan_poisoning.h
+  hwasan_report.h
+  hwasan_thread.h)
+
 
 set(HWASAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF HWASAN_RTL_CFLAGS)
@@ -56,13 +68,19 @@ add_compiler_rt_component(hwasan)
 
 add_compiler_rt_object_libraries(RTHwasan
   ARCHS ${HWASAN_SUPPORTED_ARCH}
-  SOURCES ${HWASAN_RTL_SOURCES} CFLAGS ${HWASAN_RTL_CFLAGS})
+  SOURCES ${HWASAN_RTL_SOURCES}
+  ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
+  CFLAGS ${HWASAN_RTL_CFLAGS})
 add_compiler_rt_object_libraries(RTHwasan_cxx
   ARCHS ${HWASAN_SUPPORTED_ARCH}
-  SOURCES ${HWASAN_RTL_CXX_SOURCES} CFLAGS ${HWASAN_RTL_CFLAGS})
+  SOURCES ${HWASAN_RTL_CXX_SOURCES}
+  ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
+  CFLAGS ${HWASAN_RTL_CFLAGS})
 add_compiler_rt_object_libraries(RTHwasan_dynamic
   ARCHS ${HWASAN_SUPPORTED_ARCH}
+  # FIXME: Typo? Probably should be HWASAN_RTL_CXX_SOURCES
   SOURCES ${HWASAN_RTL_SOURCES} ${TSAN_RTL_CXX_SOURCES}
+  ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
   CFLAGS ${HWASAN_DYNAMIC_CFLAGS})
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc "")

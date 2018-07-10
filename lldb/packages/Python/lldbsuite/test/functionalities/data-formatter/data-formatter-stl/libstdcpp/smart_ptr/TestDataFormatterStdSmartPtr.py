@@ -15,8 +15,7 @@ from lldbsuite.test import lldbutil
 class StdSmartPtrDataFormatterTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwin  # doesn't compile on Darwin
-    @skipUnlessLibstdcxxAvailable
+    @add_test_categories(["libstdcxx"])
     def test_with_run_command(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)

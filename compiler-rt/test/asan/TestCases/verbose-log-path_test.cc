@@ -1,12 +1,13 @@
-// RUN: %clangxx_asan %s -o %T/verbose-log-path_test-binary
+// RUN: rm -rf %t-dir && mkdir -p %t-dir
+// RUN: %clangxx_asan %s -o %t-dir/verbose-log-path_test-binary
 
 // The glob below requires bash.
 // REQUIRES: shell
 
 // Good log_path.
-// RUN: rm -f %T/asan.log.*
-// RUN: %env_asan_opts=log_path=%T/asan.log:log_exe_name=1 not %run %T/verbose-log-path_test-binary 2> %t.out
-// RUN: FileCheck %s --check-prefix=CHECK-ERROR < %T/asan.log.verbose-log-path_test-binary.*
+// RUN: rm -f %t-dir/asan.log.*
+// RUN: %env_asan_opts=log_path=%t-dir/asan.log:log_exe_name=1 not %run %t-dir/verbose-log-path_test-binary 2> %t.out
+// RUN: FileCheck %s --check-prefix=CHECK-ERROR < %t-dir/asan.log.verbose-log-path_test-binary.*
 
 // FIXME: only FreeBSD, NetBSD and Linux have verbose log paths now.
 // XFAIL: win32,android

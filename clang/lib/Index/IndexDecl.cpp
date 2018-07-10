@@ -726,7 +726,7 @@ bool IndexingContext::indexDecl(const Decl *D) {
   if (D->isImplicit() && shouldIgnoreIfImplicit(D))
     return true;
 
-  if (isTemplateImplicitInstantiation(D))
+  if (isTemplateImplicitInstantiation(D) && !shouldIndexImplicitInstantiation())
     return true;
 
   IndexingDeclVisitor Visitor(*this);

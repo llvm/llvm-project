@@ -17,7 +17,8 @@
 namespace benchmark {
 namespace internal {
 
-double Finish(Counter const& c, double cpu_time, double num_threads) {
+double Finish(Counter const& c, int64_t iterations, double cpu_time,
+              double num_threads) {
   double v = c.value;
   if (c.flags & Counter::kIsRate) {
     v /= cpu_time;
@@ -25,25 +26,31 @@ double Finish(Counter const& c, double cpu_time, double num_threads) {
   if (c.flags & Counter::kAvgThreads) {
     v /= num_threads;
   }
+  if (c.flags & Counter::kIsIterationInvariant) {
+    v *= iterations;
+  }
+  if (c.flags & Counter::kAvgIterations) {
+    v /= iterations;
+  }
   return v;
 }
 
-void Finish(UserCounters *l, double cpu_time, double num_threads) {
-  for (auto &c : *l) {
-    c.second.value = Finish(c.second, cpu_time, num_threads);
+void Finish(UserCounters* l, int64_t iterations, double cpu_time, double num_threads) {
+  for (auto& c : *l) {
+    c.second.value = Finish(c.second, iterations, cpu_time, num_threads);
   }
 }
 
-void Increment(UserCounters *l, UserCounters const& r) {
+void Increment(UserCounters* l, UserCounters const& r) {
   // add counters present in both or just in *l
-  for (auto &c : *l) {
+  for (auto& c : *l) {
     auto it = r.find(c.first);
     if (it != r.end()) {
       c.second.value = c.second + it->second;
     }
   }
   // add counters present in r, but not in *l
-  for (auto const &tc : r) {
+  for (auto const& tc : r) {
     auto it = l->find(tc.first);
     if (it == l->end()) {
       (*l)[tc.first] = tc.second;
@@ -64,5 +71,5 @@ bool SameNames(UserCounters const& l, UserCounters const& r) {
   return true;
 }
 
-} // end namespace internal
-} // end namespace benchmark
+}  // end namespace internal
+}  // end namespace benchmark

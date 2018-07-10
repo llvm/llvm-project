@@ -781,6 +781,12 @@ public:
   /// Returns true if we should emit debug info for profiling.
   bool isDebugInfoForProfiling() const;
 
+  /// Check if null pointer dereferencing is considered undefined behavior for
+  /// the function.
+  /// Return value: false => null pointer dereference is undefined.
+  /// Return value: true =>  null pointer dereference is not undefined.
+  bool nullPointerIsDefined() const;
+
 private:
   void allocHungoffUselist();
   template<int Idx> void setHungoffOperand(Constant *C);
@@ -792,6 +798,13 @@ private:
   }
   void setValueSubclassDataBit(unsigned Bit, bool On);
 };
+
+/// Check whether null pointer dereferencing is considered undefined behavior
+/// for a given function or an address space.
+/// Null pointer access in non-zero address space is not considered undefined.
+/// Return value: false => null pointer dereference is undefined.
+/// Return value: true =>  null pointer dereference is not undefined.
+bool NullPointerIsDefined(const Function *F, unsigned AS = 0);
 
 template <>
 struct OperandTraits<Function> : public HungoffOperandTraits<3> {};

@@ -1741,7 +1741,8 @@ def fsplit_dwarf_inlining: Flag <["-"], "fsplit-dwarf-inlining">, Group<f_Group>
 def fno_split_dwarf_inlining: Flag<["-"], "fno-split-dwarf-inlining">, Group<f_Group>,
   Flags<[CC1Option]>;
 def fdebug_prefix_map_EQ
-  : Joined<["-"], "fdebug-prefix-map=">, Group<f_Group>, Flags<[CC1Option]>,
+  : Joined<["-"], "fdebug-prefix-map=">, Group<f_Group>,
+    Flags<[CC1Option,CC1AsOption]>,
     HelpText<"remap file source paths in debug info">;
 def g_Flag : Flag<["-"], "g">, Group<g_Group>,
   HelpText<"Generate source-level debug information">;

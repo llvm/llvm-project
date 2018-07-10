@@ -1900,7 +1900,8 @@ _mm_setzero_pd(void)
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_move_sd(__m128d __a, __m128d __b)
 {
-  return __extension__ (__m128d){ __b[0], __a[1] };
+  __a[0] = __b[0];
+  return __a;
 }
 
 /// Stores the lower 64 bits of a 128-bit vector of [2 x double] to a

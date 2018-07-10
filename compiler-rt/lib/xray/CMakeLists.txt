@@ -60,6 +60,31 @@ set(powerpc64le_SOURCES
     xray_trampoline_powerpc64.cc
     xray_trampoline_powerpc64_asm.S)
 
+set(XRAY_IMPL_HEADERS
+  xray_allocator.h
+  xray_basic_flags.h
+  xray_basic_flags.inc
+  xray_basic_logging.h
+  xray_buffer_queue.h
+  xray_defs.h
+  xray_fdr_flags.h
+  xray_fdr_flags.inc
+  xray_fdr_log_records.h
+  xray_fdr_logging.h
+  xray_flags.h
+  xray_flags.inc
+  xray_function_call_trie.h
+  xray_interface_internal.h
+  xray_powerpc64.inc
+  xray_profile_collector.h
+  xray_profiling_flags.h
+  xray_profiling_flags.inc
+  xray_recursion_guard.h
+  xray_segmented_array.h
+  xray_tsc.h
+  xray_utils.h
+  xray_x86_64.inc)
+
 # Now put it all together...
 include_directories(..)
 include_directories(../../include)
@@ -96,6 +121,7 @@ if (APPLE)
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${x86_64_SOURCES}
+    ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     DEPS ${XRAY_DEPS})
@@ -103,6 +129,7 @@ if (APPLE)
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${XRAY_FDR_MODE_SOURCES}
+    ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     DEPS ${XRAY_DEPS})
@@ -110,6 +137,7 @@ if (APPLE)
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${XRAY_BASIC_MODE_SOURCES}
+    ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     DEPS ${XRAY_DEPS})
@@ -117,6 +145,7 @@ if (APPLE)
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
     SOURCES ${XRAY_PROFILING_MODE_SOURCES}
+    ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}
     DEPS ${XRAY_DEPS})
@@ -171,22 +200,30 @@ else() # not Apple
     endif()
     add_compiler_rt_object_libraries(RTXray
       ARCHS ${arch}
-      SOURCES ${XRAY_SOURCES} ${${arch}_SOURCES} CFLAGS ${XRAY_CFLAGS}
+      SOURCES ${XRAY_SOURCES} ${${arch}_SOURCES}
+      ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+      CFLAGS ${XRAY_CFLAGS}
       DEFS ${XRAY_COMMON_DEFINITIONS}
       DEPS ${XRAY_DEPS})
     add_compiler_rt_object_libraries(RTXrayFDR
       ARCHS ${arch}
-      SOURCES ${XRAY_FDR_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
+      SOURCES ${XRAY_FDR_MODE_SOURCES}
+      ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+      CFLAGS ${XRAY_CFLAGS}
       DEFS ${XRAY_COMMON_DEFINITIONS}
       DEPS ${XRAY_DEPS})
     add_compiler_rt_object_libraries(RTXrayBASIC
       ARCHS ${arch}
-      SOURCES ${XRAY_BASIC_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
+      SOURCES ${XRAY_BASIC_MODE_SOURCES}
+      ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+      CFLAGS ${XRAY_CFLAGS}
       DEFS ${XRAY_COMMON_DEFINITIONS}
       DEPS ${XRAY_DEPS})
     add_compiler_rt_object_libraries(RTXrayPROFILING
       ARCHS ${arch}
-      SOURCES ${XRAY_PROFILING_MODE_SOURCES} CFLAGS ${XRAY_CFLAGS}
+      SOURCES ${XRAY_PROFILING_MODE_SOURCES}
+      ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
+      CFLAGS ${XRAY_CFLAGS}
       DEFS ${XRAY_COMMON_DEFINITIONS}
       DEPS ${XRAY_DEPS})
 

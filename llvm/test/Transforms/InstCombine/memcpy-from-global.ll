@@ -67,6 +67,26 @@ define void @test2() {
   ret void
 }
 
+define void @test2_no_null_opt() #0 {
+  %A = alloca %T
+  %B = alloca %T
+  %a = bitcast %T* %A to i8*
+  %b = bitcast %T* %B to i8*
+
+; CHECK-LABEL: @test2_no_null_opt(
+
+; %A alloca is deleted
+; CHECK-NEXT: alloca [124 x i8]
+; CHECK-NEXT: getelementptr inbounds [124 x i8], [124 x i8]*
+
+; use @G instead of %A
+; CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %{{.*}}, i8* align 16 getelementptr inbounds (%T, %T* @G, i64 0, i32 0)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 bitcast (%T* @G to i8*), i64 124, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %b, i8* align 4 %a, i64 124, i1 false)
+  call void @bar(i8* %b)
+  ret void
+}
+
 define void @test2_addrspacecast() {
   %A = alloca %T
   %B = alloca %T
@@ -235,3 +255,5 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i32 0, i32 0), i8* %arraydecay, i64 3, i1 false)
   ret void
 }
+
+attributes #0 = { "null-pointer-is-valid"="true" }

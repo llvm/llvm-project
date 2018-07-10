@@ -54,6 +54,30 @@
 
 namespace llvm {
 namespace json {
+
+// === String encodings ===
+//
+// JSON strings are character sequences (not byte sequences like std::string).
+// We need to know the encoding, and for simplicity only support UTF-8.
+//
+//   - When parsing, invalid UTF-8 is a syntax error like any other
+//
+//   - When creating Values from strings, callers must ensure they are UTF-8.
+//        with asserts on, invalid UTF-8 will crash the program
+//        with asserts off, we'll substitute the replacement character (U+FFFD)
+//     Callers can use json::isUTF8() and json::fixUTF8() for validation.
+//
+//   - When retrieving strings from Values (e.g. asString()), the result will
+//     always be valid UTF-8.
+
+/// Returns true if \p S is valid UTF-8, which is required for use as JSON.
+/// If it returns false, \p Offset is set to a byte offset near the first error.
+bool isUTF8(llvm::StringRef S, size_t *ErrOffset = nullptr);
+/// Replaces invalid UTF-8 sequences in \p S with the replacement character
+/// (U+FFFD). The returned string is valid UTF-8.
+/// This is much slower than isUTF8, so test that first.
+std::string fixUTF8(llvm::StringRef S);
+
 class Array;
 class ObjectKey;
 class Value;
@@ -273,16 +297,26 @@ public:
   Value(json::Object &&Properties) : Type(T_Object) {
     create<json::Object>(std::move(Properties));
   }
-  // Strings: types with value semantics.
-  Value(std::string &&V) : Type(T_String) { create<std::string>(std::move(V)); }
-  Value(const std::string &V) : Type(T_String) { create<std::string>(V); }
-  Value(const llvm::SmallVectorImpl<char> &V) : Type(T_String) {
-    create<std::string>(V.begin(), V.end());
+  // Strings: types with value semantics. Must be valid UTF-8.
+  Value(std::string V) : Type(T_String) {
+    if (LLVM_UNLIKELY(!isUTF8(V))) {
+      assert(false && "Invalid UTF-8 in value used as JSON");
+      V = fixUTF8(std::move(V));
+    }
+    create<std::string>(std::move(V));
   }
+  Value(const llvm::SmallVectorImpl<char> &V)
+      : Value(std::string(V.begin(), V.end())){};
   Value(const llvm::formatv_object_base &V) : Value(V.str()){};
-  // Strings: types with reference semantics.
-  Value(llvm::StringRef V) : Type(T_StringRef) { create<llvm::StringRef>(V); }
-  Value(const char *V) : Type(T_StringRef) { create<llvm::StringRef>(V); }
+  // Strings: types with reference semantics. Must be valid UTF-8.
+  Value(StringRef V) : Type(T_StringRef) {
+    create<llvm::StringRef>(V);
+    if (LLVM_UNLIKELY(!isUTF8(V))) {
+      assert(false && "Invalid UTF-8 in value used as JSON");
+      *this = Value(fixUTF8(V));
+    }
+  }
+  Value(const char *V) : Value(StringRef(V)) {}
   Value(std::nullptr_t) : Type(T_Null) {}
   // Boolean (disallow implicit conversions).
   // (The last template parameter is a dummy to keep templates distinct.)
@@ -449,13 +483,23 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Value &);
 /// ObjectKey is a used to capture keys in Object. Like Value but:
 ///   - only strings are allowed
 ///   - it's optimized for the string literal case (Owned == nullptr)
+/// Like Value, strings must be UTF-8. See isUTF8 documentation for details.
 class ObjectKey {
 public:
-  ObjectKey(const char *S) : Data(S) {}
-  ObjectKey(llvm::StringRef S) : Data(S) {}
-  ObjectKey(std::string &&V)
-      : Owned(new std::string(std::move(V))), Data(*Owned) {}
-  ObjectKey(const std::string &V) : Owned(new std::string(V)), Data(*Owned) {}
+  ObjectKey(const char *S) : ObjectKey(StringRef(S)) {}
+  ObjectKey(std::string S) : Owned(new std::string(std::move(S))) {
+    if (LLVM_UNLIKELY(!isUTF8(*Owned))) {
+      assert(false && "Invalid UTF-8 in value used as JSON");
+      *Owned = fixUTF8(std::move(*Owned));
+    }
+    Data = *Owned;
+  }
+  ObjectKey(llvm::StringRef S) : Data(S) {
+    if (LLVM_UNLIKELY(!isUTF8(Data))) {
+      assert(false && "Invalid UTF-8 in value used as JSON");
+      *this = ObjectKey(fixUTF8(S));
+    }
+  }
   ObjectKey(const llvm::SmallVectorImpl<char> &V)
       : ObjectKey(std::string(V.begin(), V.end())) {}
   ObjectKey(const llvm::formatv_object_base &V) : ObjectKey(V.str()) {}

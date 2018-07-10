@@ -47,6 +47,27 @@ lpad:
   unreachable
 }
 
+; CHECK-LABEL: @f2_no_null_opt(
+define i8* @f2_no_null_opt() nounwind uwtable ssp #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+entry:
+; CHECK: invoke noalias i8* null()
+  %call = invoke noalias i8* null()
+          to label %invoke.cont unwind label %lpad
+
+; CHECK: invoke.cont:
+; CHECK: ret i8* %call
+invoke.cont:
+  ret i8* %call
+
+lpad:
+  %0 = landingpad { i8*, i32 }
+          filter [0 x i8*] zeroinitializer
+  %1 = extractvalue { i8*, i32 } %0, 0
+  tail call void @__cxa_call_unexpected(i8* %1) noreturn nounwind
+; CHECK: unreachable
+  unreachable
+}
+
 ; CHECK-LABEL: @f3(
 define i32 @f3() nounwind uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-NEXT: entry
@@ -137,3 +158,5 @@ lpad:
           cleanup
   ret void
 }
+
+attributes #0 = { "null-pointer-is-valid"="true" }

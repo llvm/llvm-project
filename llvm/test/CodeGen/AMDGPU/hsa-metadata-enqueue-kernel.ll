@@ -32,7 +32,7 @@
 ; CHECK-NEXT:       ValueType:     I64
 ; CHECK-NOT:        ValueKind:     HiddenDefaultQueue
 ; CHECK-NOT:        ValueKind:     HiddenCompletionAction
-define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a)
+define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 {
   ret void
@@ -77,13 +77,14 @@ define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenCompletionAction
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #0
+define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #1
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 {
   ret void
 }
 
-attributes #0 = { "calls-enqueue-kernel" }
+attributes #0 = { "amdgpu-implicitarg-num-bytes"="48" }
+attributes #1 = { "calls-enqueue-kernel" "amdgpu-implicitarg-num-bytes"="48" }
 
 !1 = !{i32 0}
 !2 = !{!"none"}
@@ -92,6 +93,5 @@ attributes #0 = { "calls-enqueue-kernel" }
 
 !opencl.ocl.version = !{!90}
 !90 = !{i32 2, i32 0}
-
 
 ; PARSER: AMDGPU HSA Metadata Parser Test: PASS

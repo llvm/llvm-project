@@ -1,6 +1,6 @@
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard -DSHARED %s -shared -o %dynamiclib -fPIC %ld_flags_rpath_so
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s %ld_flags_rpath_exe -o %t
-// RUN: rm -rf %T/coverage && mkdir -p %T/coverage && cd %T/coverage
+// RUN: rm -rf %t-dir && mkdir -p %t-dir && cd %t-dir
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t 2>&1         | FileCheck %s --check-prefix=CHECK-main
 // RUN: %sancov print coverage.*sancov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV1
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t foo 2>&1     | FileCheck %s --check-prefix=CHECK-foo
@@ -14,7 +14,7 @@
 // RUN: %sancov print merged-cov 2>&1 | FileCheck %s --check-prefix=CHECK-SANCOV2
 // RUN: %env_asan_opts=coverage=1:verbosity=1 not %run %t foo bar 4    2>&1 | FileCheck %s --check-prefix=CHECK-report
 // RUN: %env_asan_opts=coverage=1:verbosity=1 not %run %t foo bar 4 5  2>&1 | FileCheck %s --check-prefix=CHECK-segv
-// RUN: cd .. && rm -r %T/coverage
+// RUN: cd .. && rm -rf %t-dir
 //
 // https://code.google.com/p/address-sanitizer/issues/detail?id=263
 // XFAIL: android

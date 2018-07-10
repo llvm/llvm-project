@@ -3141,6 +3141,68 @@ entry:
   ret <2 x i64> %tmp4
 }
 
+define <2 x i64> @test_mm_cvtepi32_epi8(<2 x i64> %__A) {
+; CHECK-LABEL: test_mm_cvtepi32_epi8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <2 x i64> %__A to <4 x i32>
+  %conv.i = trunc <4 x i32> %0 to <4 x i8>
+  %shuf.i = shufflevector <4 x i8> %conv.i, <4 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %1 = bitcast <16 x i8> %shuf.i to <2 x i64>
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @test_mm_cvtepi32_epi16(<2 x i64> %__A) {
+; CHECK-LABEL: test_mm_cvtepi32_epi16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <2 x i64> %__A to <4 x i32>
+  %conv.i = trunc <4 x i32> %0 to <4 x i16>
+  %shuf.i = shufflevector <4 x i16> %conv.i, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %1 = bitcast <8 x i16> %shuf.i to <2 x i64>
+  ret <2 x i64> %1
+}
+
+define <2 x i64> @test_mm_cvtepi64_epi8(<2 x i64> %__A) {
+; CHECK-LABEL: test_mm_cvtepi64_epi8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,8],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %conv.i = trunc <2 x i64> %__A to <2 x i8>
+  %shuf.i = shufflevector <2 x i8> %conv.i, <2 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %0 = bitcast <16 x i8> %shuf.i to <2 x i64>
+  ret <2 x i64> %0
+}
+
+define <2 x i64> @test_mm_cvtepi64_epi16(<2 x i64> %__A) {
+; CHECK-LABEL: test_mm_cvtepi64_epi16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %conv.i = trunc <2 x i64> %__A to <2 x i16>
+  %shuf.i = shufflevector <2 x i16> %conv.i, <2 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+  %0 = bitcast <8 x i16> %shuf.i to <2 x i64>
+  ret <2 x i64> %0
+}
+
+define <2 x i64> @test_mm_cvtepi64_epi32(<2 x i64> %__A) {
+; CHECK-LABEL: test_mm_cvtepi64_epi32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,2],zero,zero
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %conv.i = trunc <2 x i64> %__A to <2 x i32>
+  %shuf.i = shufflevector <2 x i32> %conv.i, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %0 = bitcast <4 x i32> %shuf.i to <2 x i64>
+  ret <2 x i64> %0
+}
+
 define <2 x i64> @test_mm256_cvtepi32_epi16(<4 x i64> %__A) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_mm256_cvtepi32_epi16:
 ; CHECK:       # %bb.0: # %entry
@@ -3258,6 +3320,46 @@ entry:
   %1 = select <4 x i1> %extract.i, <4 x i32> %conv.i.i, <4 x i32> zeroinitializer
   %2 = bitcast <4 x i32> %1 to <2 x i64>
   ret <2 x i64> %2
+}
+
+define <2 x i64> @test_mm256_cvtepi64_epi8(<4 x i64> %__A) {
+; CHECK-LABEL: test_mm256_cvtepi64_epi8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpmovqb %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %conv.i = trunc <4 x i64> %__A to <4 x i8>
+  %shuf.i = shufflevector <4 x i8> %conv.i, <4 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+  %0 = bitcast <16 x i8> %shuf.i to <2 x i64>
+  ret <2 x i64> %0
+}
+
+define <2 x i64> @test_mm256_cvtepi64_epi16(<4 x i64> %__A) {
+; CHECK-LABEL: test_mm256_cvtepi64_epi16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpmovqw %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %conv.i = trunc <4 x i64> %__A to <4 x i16>
+  %shuf.i = shufflevector <4 x i16> %conv.i, <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %0 = bitcast <8 x i16> %shuf.i to <2 x i64>
+  ret <2 x i64> %0
+}
+
+define <2 x i64> @test_mm256_cvtepi32_epi8(<4 x i64> %__A) {
+; CHECK-LABEL: test_mm256_cvtepi32_epi8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpmovdb %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+entry:
+  %0 = bitcast <4 x i64> %__A to <8 x i32>
+  %conv.i = trunc <8 x i32> %0 to <8 x i8>
+  %shuf.i = shufflevector <8 x i8> %conv.i, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %1 = bitcast <16 x i8> %shuf.i to <2 x i64>
+  ret <2 x i64> %1
 }
 
 define <2 x i64> @test_mm_ternarylogic_epi32(<2 x i64> %__A, <2 x i64> %__B, <2 x i64> %__C) {

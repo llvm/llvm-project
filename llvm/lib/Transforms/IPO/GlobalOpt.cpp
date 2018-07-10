@@ -636,7 +636,13 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
 /// reprocessing them.
 static bool AllUsesOfValueWillTrapIfNull(const Value *V,
                                         SmallPtrSetImpl<const PHINode*> &PHIs) {
-  for (const User *U : V->users())
+  for (const User *U : V->users()) {
+    if (const Instruction *I = dyn_cast<Instruction>(U)) {
+      // If null pointer is considered valid, then all uses are non-trapping.
+      // Non address-space 0 globals have already been pruned by the caller.
+      if (NullPointerIsDefined(I->getFunction()))
+        return false;
+    }
     if (isa<LoadInst>(U)) {
       // Will trap.
     } else if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
@@ -670,7 +676,7 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       //cerr << "NONTRAPPING USE: " << *U;
       return false;
     }
-
+  }
   return true;
 }
 
@@ -697,6 +703,10 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
   bool Changed = false;
   for (auto UI = V->user_begin(), E = V->user_end(); UI != E; ) {
     Instruction *I = cast<Instruction>(*UI++);
+    // Uses are non-trapping if null pointer is considered valid.
+    // Non address-space 0 globals are already pruned by the caller.
+    if (NullPointerIsDefined(I->getFunction()))
+      return false;
     if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
       LI->setOperand(0, NewV);
       Changed = true;
@@ -1584,7 +1594,10 @@ static bool optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
   // users of the loaded value (often calls and loads) that would trap if the
   // value was null.
   if (GV->getInitializer()->getType()->isPointerTy() &&
-      GV->getInitializer()->isNullValue()) {
+      GV->getInitializer()->isNullValue() &&
+      !NullPointerIsDefined(
+          nullptr /* F */,
+          GV->getInitializer()->getType()->getPointerAddressSpace())) {
     if (Constant *SOVC = dyn_cast<Constant>(StoredOnceVal)) {
       if (GV->getInitializer()->getType() != SOVC->getType())
         SOVC = ConstantExpr::getBitCast(SOVC, GV->getInitializer()->getType());

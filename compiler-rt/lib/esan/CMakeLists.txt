@@ -18,6 +18,18 @@ set(ESAN_SOURCES
   working_set.cpp
   working_set_posix.cpp)
 
+set(ESAN_HEADERS
+  cache_frag.h
+  esan.h
+  esan_circular_buffer.h
+  esan_flags.h
+  esan_flags.inc
+  esan_hashtable.h
+  esan_interface_internal.h
+  esan_shadow.h
+  esan_sideline.h
+  working_set.h)
+
 foreach (arch ${ESAN_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.esan
     STATIC
@@ -27,6 +39,7 @@ foreach (arch ${ESAN_SUPPORTED_ARCH})
             $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+    ADDITIONAL_HEADERS ${ESAN_HEADERS}
     CFLAGS ${ESAN_RTL_CFLAGS})
   add_sanitizer_rt_symbols(clang_rt.esan
     ARCHS ${arch}

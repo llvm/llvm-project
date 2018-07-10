@@ -66,6 +66,14 @@ let Predicates = [HasSVE] in {
   defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs">;
   defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg">;
 
+  defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls">;
+  defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz">;
+  defm CNT_ZPmZ  : sve_int_un_pred_arit_1<   0b010, "cnt">;
+  defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot">;
+  defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not">;
+  defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs">;
+  defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg">;
+
   defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax">;
   defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax">;
   defm SMIN_ZPmZ : sve_int_bin_pred_arit_1<0b010, "smin">;

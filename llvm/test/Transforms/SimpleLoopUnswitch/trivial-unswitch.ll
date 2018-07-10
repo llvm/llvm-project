@@ -1,6 +1,7 @@
 ; RUN: opt -passes='loop(unswitch),verify<loops>' -S < %s | FileCheck %s
 
 declare void @some_func() noreturn
+declare void @sink(i32)
 
 declare i1 @cond()
 declare i32 @cond.i32()
@@ -136,10 +137,9 @@ loop_begin:
   ]
 ; CHECK:       loop_begin:
 ; CHECK-NEXT:    load
-; CHECK-NEXT:    switch i32 %cond2, label %[[UNREACHABLE:.*]] [
+; CHECK-NEXT:    switch i32 %cond2, label %loop2 [
 ; CHECK-NEXT:      i32 0, label %loop0
 ; CHECK-NEXT:      i32 1, label %loop1
-; CHECK-NEXT:      i32 2, label %loop2
 ; CHECK-NEXT:    ]
 
 loop0:
@@ -182,9 +182,6 @@ loop_exit3:
   ret i32 0
 ; CHECK:       loop_exit3:
 ; CHECK-NEXT:    ret
-;
-; CHECK:       [[UNREACHABLE]]:
-; CHECK-NEXT:    unreachable
 }
 
 ; This test contains a trivially unswitchable branch with an LCSSA phi node in
@@ -1159,4 +1156,89 @@ exit:
   ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
+}
+
+define void @test_unswitch_to_common_succ_with_phis(i32* %var, i32 %cond) {
+; CHECK-LABEL: @test_unswitch_to_common_succ_with_phis(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 %cond, label %loopexit1 [
+; CHECK-NEXT:      i32 13, label %loopexit2
+; CHECK-NEXT:      i32 0, label %entry.split
+; CHECK-NEXT:      i32 1, label %entry.split
+; CHECK-NEXT:    ]
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %header
+
+header:
+  %var_val = load i32, i32* %var
+  switch i32 %cond, label %loopexit1 [
+    i32 0, label %latch
+    i32 1, label %latch
+    i32 13, label %loopexit2
+  ]
+; CHECK:       header:
+; CHECK-NEXT:    load
+; CHECK-NEXT:    br label %latch
+
+latch:
+  ; No-op PHI node to exercise weird PHI update scenarios.
+  %phi = phi i32 [ %var_val, %header ], [ %var_val, %header ]
+  call void @sink(i32 %phi)
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %[[PHI:.*]] = phi i32 [ %var_val, %header ]
+; CHECK-NEXT:    call void @sink(i32 %[[PHI]])
+; CHECK-NEXT:    br label %header
+
+loopexit1:
+  ret void
+; CHECK:       loopexit1:
+; CHECK-NEXT:    ret
+
+loopexit2:
+  ret void
+; CHECK:       loopexit2:
+; CHECK-NEXT:    ret
+}
+
+define void @test_unswitch_to_default_common_succ_with_phis(i32* %var, i32 %cond) {
+; CHECK-LABEL: @test_unswitch_to_default_common_succ_with_phis(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 %cond, label %entry.split [
+; CHECK-NEXT:      i32 13, label %loopexit
+; CHECK-NEXT:    ]
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %header
+
+header:
+  %var_val = load i32, i32* %var
+  switch i32 %cond, label %latch [
+    i32 0, label %latch
+    i32 1, label %latch
+    i32 13, label %loopexit
+  ]
+; CHECK:       header:
+; CHECK-NEXT:    load
+; CHECK-NEXT:    br label %latch
+
+latch:
+  ; No-op PHI node to exercise weird PHI update scenarios.
+  %phi = phi i32 [ %var_val, %header ], [ %var_val, %header ], [ %var_val, %header ]
+  call void @sink(i32 %phi)
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %[[PHI:.*]] = phi i32 [ %var_val, %header ]
+; CHECK-NEXT:    call void @sink(i32 %[[PHI]])
+; CHECK-NEXT:    br label %header
+
+loopexit:
+  ret void
+; CHECK:       loopexit:
+; CHECK-NEXT:    ret
 }

@@ -107,6 +107,48 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::ATOMIC_LOAD8_U_I64:
       case WebAssembly::ATOMIC_LOAD16_U_I64:
       case WebAssembly::ATOMIC_LOAD32_U_I64:
+      case WebAssembly::ATOMIC_RMW8_U_ADD_I32:
+      case WebAssembly::ATOMIC_RMW8_U_ADD_I64:
+      case WebAssembly::ATOMIC_RMW8_U_SUB_I32:
+      case WebAssembly::ATOMIC_RMW8_U_SUB_I64:
+      case WebAssembly::ATOMIC_RMW8_U_AND_I32:
+      case WebAssembly::ATOMIC_RMW8_U_AND_I64:
+      case WebAssembly::ATOMIC_RMW8_U_OR_I32:
+      case WebAssembly::ATOMIC_RMW8_U_OR_I64:
+      case WebAssembly::ATOMIC_RMW8_U_XOR_I32:
+      case WebAssembly::ATOMIC_RMW8_U_XOR_I64:
+      case WebAssembly::ATOMIC_RMW8_U_XCHG_I32:
+      case WebAssembly::ATOMIC_RMW8_U_XCHG_I64:
+      case WebAssembly::ATOMIC_RMW16_U_ADD_I32:
+      case WebAssembly::ATOMIC_RMW16_U_ADD_I64:
+      case WebAssembly::ATOMIC_RMW16_U_SUB_I32:
+      case WebAssembly::ATOMIC_RMW16_U_SUB_I64:
+      case WebAssembly::ATOMIC_RMW16_U_AND_I32:
+      case WebAssembly::ATOMIC_RMW16_U_AND_I64:
+      case WebAssembly::ATOMIC_RMW16_U_OR_I32:
+      case WebAssembly::ATOMIC_RMW16_U_OR_I64:
+      case WebAssembly::ATOMIC_RMW16_U_XOR_I32:
+      case WebAssembly::ATOMIC_RMW16_U_XOR_I64:
+      case WebAssembly::ATOMIC_RMW16_U_XCHG_I32:
+      case WebAssembly::ATOMIC_RMW16_U_XCHG_I64:
+      case WebAssembly::ATOMIC_RMW_ADD_I32:
+      case WebAssembly::ATOMIC_RMW32_U_ADD_I64:
+      case WebAssembly::ATOMIC_RMW_SUB_I32:
+      case WebAssembly::ATOMIC_RMW32_U_SUB_I64:
+      case WebAssembly::ATOMIC_RMW_AND_I32:
+      case WebAssembly::ATOMIC_RMW32_U_AND_I64:
+      case WebAssembly::ATOMIC_RMW_OR_I32:
+      case WebAssembly::ATOMIC_RMW32_U_OR_I64:
+      case WebAssembly::ATOMIC_RMW_XOR_I32:
+      case WebAssembly::ATOMIC_RMW32_U_XOR_I64:
+      case WebAssembly::ATOMIC_RMW_XCHG_I32:
+      case WebAssembly::ATOMIC_RMW32_U_XCHG_I64:
+      case WebAssembly::ATOMIC_RMW_ADD_I64:
+      case WebAssembly::ATOMIC_RMW_SUB_I64:
+      case WebAssembly::ATOMIC_RMW_AND_I64:
+      case WebAssembly::ATOMIC_RMW_OR_I64:
+      case WebAssembly::ATOMIC_RMW_XOR_I64:
+      case WebAssembly::ATOMIC_RMW_XCHG_I64:
         RewriteP2Align(MI, WebAssembly::LoadP2AlignOperandNo);
         break;
       case WebAssembly::STORE_I32:

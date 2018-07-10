@@ -23,7 +23,7 @@ class StdIteratorDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @skipUnlessLibstdcxxAvailable
+    @add_test_categories(["libstdcxx"])
     def test_with_run_command(self):
         """Test that libstdcpp iterators format properly."""
         self.build()

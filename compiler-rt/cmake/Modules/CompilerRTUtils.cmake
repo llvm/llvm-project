@@ -344,3 +344,39 @@ function(get_compiler_rt_output_dir arch output_dir)
     set(${output_dir} ${COMPILER_RT_LIBRARY_OUTPUT_DIR} PARENT_SCOPE)
   endif()
 endfunction()
+
+# compiler_rt_process_sources(
+#   <OUTPUT_VAR>
+#   <SOURCE_FILE> ...
+#  [ADDITIONAL_HEADERS <header> ...]
+# )
+#
+# Process the provided sources and write the list of new sources
+# into `<OUTPUT_VAR>`.
+#
+# ADDITIONAL_HEADERS     - Adds the supplied header to list of sources for IDEs.
+#
+# This function is very similar to `llvm_process_sources()` but exists here
+# because we need to support standalone builds of compiler-rt.
+function(compiler_rt_process_sources OUTPUT_VAR)
+  cmake_parse_arguments(
+    ARG
+    ""
+    ""
+    "ADDITIONAL_HEADERS"
+    ${ARGN}
+  )
+  set(sources ${ARG_UNPARSED_ARGUMENTS})
+  set(headers "")
+  if (XCODE OR MSVC_IDE OR CMAKE_EXTRA_GENERATOR)
+    # For IDEs we need to tell CMake about header files.
+    # Otherwise they won't show up in UI.
+    set(headers ${ARG_ADDITIONAL_HEADERS})
+    list(LENGTH headers headers_length)
+    if (${headers_length} GREATER 0)
+      set_source_files_properties(${headers}
+        PROPERTIES HEADER_FILE_ONLY ON)
+    endif()
+  endif()
+  set("${OUTPUT_VAR}" ${sources} ${headers} PARENT_SCOPE)
+endfunction()

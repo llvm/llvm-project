@@ -60,9 +60,7 @@ public:
 
   bool shouldIndexFunctionLocalSymbols() const;
 
-  bool shouldIndexImplicitTemplateInsts() const {
-    return false;
-  }
+  bool shouldIndexImplicitInstantiation() const;
 
   static bool isTemplateImplicitInstantiation(const Decl *D);
 

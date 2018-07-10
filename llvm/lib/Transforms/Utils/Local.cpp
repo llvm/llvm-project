@@ -2050,7 +2050,9 @@ static bool markAliveBlocks(Function &F,
 
       if (auto *CI = dyn_cast<CallInst>(&I)) {
         Value *Callee = CI->getCalledValue();
-        if (isa<ConstantPointerNull>(Callee) || isa<UndefValue>(Callee)) {
+        if ((isa<ConstantPointerNull>(Callee) &&
+             !NullPointerIsDefined(CI->getFunction())) ||
+            isa<UndefValue>(Callee)) {
           changeToUnreachable(CI, /*UseLLVMTrap=*/false, false, DDT);
           Changed = true;
           break;
@@ -2079,7 +2081,8 @@ static bool markAliveBlocks(Function &F,
 
         if (isa<UndefValue>(Ptr) ||
             (isa<ConstantPointerNull>(Ptr) &&
-             SI->getPointerAddressSpace() == 0)) {
+             !NullPointerIsDefined(SI->getFunction(),
+                                   SI->getPointerAddressSpace()))) {
           changeToUnreachable(SI, true, false, DDT);
           Changed = true;
           break;
@@ -2091,7 +2094,9 @@ static bool markAliveBlocks(Function &F,
     if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
       // Turn invokes that call 'nounwind' functions into ordinary calls.
       Value *Callee = II->getCalledValue();
-      if (isa<ConstantPointerNull>(Callee) || isa<UndefValue>(Callee)) {
+      if ((isa<ConstantPointerNull>(Callee) &&
+           !NullPointerIsDefined(BB->getParent())) ||
+          isa<UndefValue>(Callee)) {
         changeToUnreachable(II, true, false, DDT);
         Changed = true;
       } else if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {

@@ -22,8 +22,29 @@ set(LIBFUZZER_SOURCES
   FuzzerUtilFuchsia.cpp
   FuzzerUtilLinux.cpp
   FuzzerUtilPosix.cpp
-  FuzzerUtilWindows.cpp
-  )
+  FuzzerUtilWindows.cpp)
+
+set(LIBFUZZER_HEADERS
+  FuzzerCommand.h
+  FuzzerCorpus.h
+  FuzzerDataFlowTrace.h
+  FuzzerDefs.h
+  FuzzerDictionary.h
+  FuzzerExtFunctions.def
+  FuzzerExtFunctions.h
+  FuzzerFlags.def
+  FuzzerIO.h
+  FuzzerInterface.h
+  FuzzerInternal.h
+  FuzzerMerge.h
+  FuzzerMutate.h
+  FuzzerOptions.h
+  FuzzerRandom.h
+  FuzzerSHA1.h
+  FuzzerShmem.h
+  FuzzerTracePC.h
+  FuzzerUtil.h
+  FuzzerValueBitMap.h)
 
 CHECK_CXX_SOURCE_COMPILES("
   static thread_local int blah;
@@ -58,6 +79,7 @@ add_compiler_rt_object_libraries(RTfuzzer
   OS ${FUZZER_SUPPORTED_OS}
   ARCHS ${FUZZER_SUPPORTED_ARCH}
   SOURCES ${LIBFUZZER_SOURCES}
+  ADDITIONAL_HEADERS ${LIBFUZZER_HEADERS}
   CFLAGS ${LIBFUZZER_CFLAGS}
   DEPS ${LIBFUZZER_DEPS})
 

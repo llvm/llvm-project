@@ -1769,7 +1769,12 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
 /// Currently this routine does not support vector GEPs.
 static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
                               const Query &Q) {
-  if (!GEP->isInBounds() || GEP->getPointerAddressSpace() != 0)
+  const Function *F = nullptr;
+  if (const Instruction *I = dyn_cast<Instruction>(GEP))
+    F = I->getFunction();
+
+  if (!GEP->isInBounds() ||
+      NullPointerIsDefined(F, GEP->getPointerAddressSpace()))
     return false;
 
   // FIXME: Support vector-GEPs.

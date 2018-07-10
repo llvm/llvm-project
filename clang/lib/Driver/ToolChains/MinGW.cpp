@@ -83,7 +83,7 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
   for (auto Lib : Args.getAllArgValues(options::OPT_l))
-    if (StringRef(Lib).startswith("msvcr") || Lib == "ucrtbase")
+    if (StringRef(Lib).startswith("msvcr") || StringRef(Lib).startswith("ucrt"))
       return;
   CmdArgs.push_back("-lmsvcrt");
 }
@@ -201,6 +201,14 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-Bdynamic");
   }
 
+  bool HasWindowsApp = false;
+  for (auto Lib : Args.getAllArgValues(options::OPT_l)) {
+    if (Lib == "windowsapp") {
+      HasWindowsApp = true;
+      break;
+    }
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib)) {
     if (!Args.hasArg(options::OPT_nodefaultlibs)) {
       if (Args.hasArg(options::OPT_static))
@@ -223,15 +231,19 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (Args.hasArg(options::OPT_pthread))
         CmdArgs.push_back("-lpthread");
 
-      // add system libraries
-      if (Args.hasArg(options::OPT_mwindows)) {
-        CmdArgs.push_back("-lgdi32");
-        CmdArgs.push_back("-lcomdlg32");
+      if (!HasWindowsApp) {
+        // Add system libraries. If linking to libwindowsapp.a, that import
+        // library replaces all these and we shouldn't accidentally try to
+        // link to the normal desktop mode dlls.
+        if (Args.hasArg(options::OPT_mwindows)) {
+          CmdArgs.push_back("-lgdi32");
+          CmdArgs.push_back("-lcomdlg32");
+        }
+        CmdArgs.push_back("-ladvapi32");
+        CmdArgs.push_back("-lshell32");
+        CmdArgs.push_back("-luser32");
+        CmdArgs.push_back("-lkernel32");
       }
-      CmdArgs.push_back("-ladvapi32");
-      CmdArgs.push_back("-lshell32");
-      CmdArgs.push_back("-luser32");
-      CmdArgs.push_back("-lkernel32");
 
       if (Args.hasArg(options::OPT_static))
         CmdArgs.push_back("--end-group");
