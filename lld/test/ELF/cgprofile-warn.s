@@ -25,5 +25,5 @@ A:
     retq
 
 # CHECK: unable to order absolute symbol: B
-# CHECK: call graph file: no such symbol: adena
+# CHECK: {{.*}}.call_graph: no such symbol: adena
 # CHECK: unable to order undefined symbol: poppy
