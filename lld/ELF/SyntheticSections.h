@@ -688,7 +688,7 @@ class GdbIndexSection final : public SyntheticSection {
 public:
   GdbIndexSection(std::vector<GdbIndexChunk> &&Chunks);
   void writeTo(uint8_t *Buf) override;
-  size_t getSize() const override;
+  size_t getSize() const override { return TotalSize; }
   bool empty() const override;
 
 private:
@@ -709,12 +709,13 @@ private:
   // object and used to build different areas of gdb index.
   std::vector<GdbIndexChunk> Chunks;
 
-  static constexpr uint32_t CuListOffset = 24;
-  uint32_t CuTypesOffset;
-  uint32_t SymtabOffset;
-  uint32_t ConstantPoolOffset;
-  uint32_t StringPoolOffset;
-  uint32_t StringPoolSize;
+  uint64_t CuListOffset = 24;
+  uint64_t CuTypesOffset;
+  uint64_t SymtabOffset;
+  uint64_t ConstantPoolOffset;
+  uint64_t CuVectorsPoolSize = 0;
+  uint64_t StringPoolSize;
+  uint64_t TotalSize;
 
   std::vector<size_t> CuVectorOffsets;
 };

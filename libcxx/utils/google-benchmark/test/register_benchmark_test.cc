@@ -29,6 +29,7 @@ struct TestCase {
   typedef benchmark::BenchmarkReporter::Run Run;
 
   void CheckRun(Run const& run) const {
+    // clang-format off
     CHECK(name == run.benchmark_name) << "expected " << name << " got "
                                       << run.benchmark_name;
     if (label) {
@@ -37,6 +38,7 @@ struct TestCase {
     } else {
       CHECK(run.report_label == "");
     }
+    // clang-format on
   }
 };
 
