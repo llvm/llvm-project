@@ -66,6 +66,13 @@ static size_t ArgvToArgc(const char **argv) {
   return count;
 }
 
+// Trims all whitespace that can separate command line arguments from the left
+// side of the string.
+static llvm::StringRef ltrimForArgs(llvm::StringRef str) {
+  static const char *k_space_separators = " \t";
+  return str.ltrim(k_space_separators);
+}
+
 // A helper function for SetCommandString. Parses a single argument from the
 // command string, processing quotes and backslashes in a shell-like manner.
 // The function returns a tuple consisting of the parsed argument, the quote
@@ -237,15 +244,14 @@ void Args::SetCommandString(llvm::StringRef command) {
   Clear();
   m_argv.clear();
 
-  static const char *k_space_separators = " \t";
-  command = command.ltrim(k_space_separators);
+  command = ltrimForArgs(command);
   std::string arg;
   char quote;
   while (!command.empty()) {
     std::tie(arg, quote, command) = ParseSingleArgument(command);
     m_entries.emplace_back(arg, quote);
     m_argv.push_back(m_entries.back().data());
-    command = command.ltrim(k_space_separators);
+    command = ltrimForArgs(command);
   }
   m_argv.push_back(nullptr);
 }
@@ -735,4 +741,68 @@ std::string Args::EscapeLLDBCommandArgument(const std::string &arg,
     res.push_back(c);
   }
   return res;
+}
+
+OptionsWithRaw::OptionsWithRaw(llvm::StringRef arg_string) {
+  SetFromString(arg_string);
+}
+
+void OptionsWithRaw::SetFromString(llvm::StringRef arg_string) {
+  const llvm::StringRef original_args = arg_string;
+
+  arg_string = ltrimForArgs(arg_string);
+  std::string arg;
+  char quote;
+
+  // If the string doesn't start with a dash, we just have no options and just
+  // a raw part.
+  if (!arg_string.startswith("-")) {
+    m_suffix = original_args;
+    return;
+  }
+
+  bool found_suffix = false;
+
+  while (!arg_string.empty()) {
+    // The length of the prefix before parsing.
+    std::size_t prev_prefix_length = original_args.size() - arg_string.size();
+
+    // Parse the next argument from the remaining string.
+    std::tie(arg, quote, arg_string) = ParseSingleArgument(arg_string);
+
+    // If we get an unquoted '--' argument, then we reached the suffix part
+    // of the command.
+    Args::ArgEntry entry(arg, quote);
+    if (!entry.IsQuoted() && arg == "--") {
+      // The remaining line is the raw suffix, and the line we parsed so far
+      // needs to be interpreted as arguments.
+      m_has_args = true;
+      m_suffix = arg_string;
+      found_suffix = true;
+
+      // The length of the prefix after parsing.
+      std::size_t prefix_length = original_args.size() - arg_string.size();
+
+      // Take the string we know contains all the arguments and actually parse
+      // it as proper arguments.
+      llvm::StringRef prefix = original_args.take_front(prev_prefix_length);
+      m_args = Args(prefix);
+      m_arg_string = prefix;
+
+      // We also record the part of the string that contains the arguments plus
+      // the delimiter.
+      m_arg_string_with_delimiter = original_args.take_front(prefix_length);
+
+      // As the rest of the string became the raw suffix, we are done here.
+      break;
+    }
+
+    arg_string = ltrimForArgs(arg_string);
+  }
+
+  // If we didn't find a suffix delimiter, the whole string is the raw suffix.
+  if (!found_suffix) {
+    found_suffix = true;
+    m_suffix = original_args;
+  }
 }

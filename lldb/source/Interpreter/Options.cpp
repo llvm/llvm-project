@@ -1334,7 +1334,7 @@ OptionElementVector Options::ParseForCompletion(const Args &args,
   const Args::ArgEntry &cursor = args[cursor_index];
   if ((static_cast<int32_t>(dash_dash_pos) == -1 ||
        cursor_index < dash_dash_pos) &&
-      cursor.quote == '\0' && cursor.ref == "-") {
+      !cursor.IsQuoted() && cursor.ref == "-") {
     option_element_vector.push_back(
         OptionArgElement(OptionArgElement::eBareDash, cursor_index,
                          OptionArgElement::eBareDash));

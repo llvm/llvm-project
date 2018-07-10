@@ -337,6 +337,10 @@ public:
                        CommandReturnObject &result) = 0;
 
 protected:
+  bool ParseOptionsAndNotify(Args &args, CommandReturnObject &result,
+                             OptionGroupOptions &group_options,
+                             ExecutionContext &exe_ctx);
+
   virtual const char *GetInvalidTargetDescription() {
     return "invalid target, create a target using the 'target create' command";
   }

@@ -48,6 +48,11 @@ public:
     llvm::StringRef ref;
     char quote;
     const char *c_str() const { return ptr.get(); }
+
+    //------------------------------------------------------------------
+    /// Returns true if this argument was quoted in any way.
+    //------------------------------------------------------------------
+    bool IsQuoted() const { return quote != '\0'; }
   };
 
   //------------------------------------------------------------------
@@ -356,6 +361,106 @@ public:
 private:
   std::vector<ArgEntry> m_entries;
   std::vector<char *> m_argv;
+};
+
+//----------------------------------------------------------------------
+/// @class OptionsWithRaw Args.h "lldb/Utility/Args.h"
+/// A pair of an option list with a 'raw' string as a suffix.
+///
+/// This class works similar to Args, but handles the case where we have a
+/// trailing string that shouldn't be interpreted as a list of arguments but
+/// preserved as is. It is also only useful for handling command line options
+/// (e.g. '-foo bar -i0') that start with a dash.
+///
+/// The leading option list is optional. If the first non-space character
+/// in the string starts with a dash, and the string contains an argument
+/// that is an unquoted double dash (' -- '), then everything up to the double
+/// dash is parsed as a list of arguments. Everything after the double dash
+/// is interpreted as the raw suffix string. Note that the space behind the
+/// double dash is not part of the raw suffix.
+///
+/// All strings not matching the above format as considered to be just a raw
+/// string without any options.
+///
+/// @see Args
+//----------------------------------------------------------------------
+class OptionsWithRaw {
+public:
+  //------------------------------------------------------------------
+  /// Parse the given string as a list of optional arguments with a raw suffix.
+  ///
+  /// See the class description for a description of the input format.
+  ///
+  /// @param[in] argument_string
+  ///     The string that should be parsed.
+  //------------------------------------------------------------------
+  explicit OptionsWithRaw(llvm::StringRef argument_string);
+
+  //------------------------------------------------------------------
+  /// Returns true if there are any arguments before the raw suffix.
+  //------------------------------------------------------------------
+  bool HasArgs() const { return m_has_args; }
+
+  //------------------------------------------------------------------
+  /// Returns the list of arguments.
+  ///
+  /// You can only call this method if HasArgs returns true.
+  //------------------------------------------------------------------
+  Args &GetArgs() {
+    assert(m_has_args);
+    return m_args;
+  }
+
+  //------------------------------------------------------------------
+  /// Returns the list of arguments.
+  ///
+  /// You can only call this method if HasArgs returns true.
+  //------------------------------------------------------------------
+  const Args &GetArgs() const {
+    assert(m_has_args);
+    return m_args;
+  }
+
+  //------------------------------------------------------------------
+  /// Returns the part of the input string that was used for parsing the
+  /// argument list. This string also includes the double dash that is used
+  /// for separating the argument list from the suffix.
+  ///
+  /// You can only call this method if HasArgs returns true.
+  //------------------------------------------------------------------
+  llvm::StringRef GetArgStringWithDelimiter() const {
+    assert(m_has_args);
+    return m_arg_string_with_delimiter;
+  }
+
+  //------------------------------------------------------------------
+  /// Returns the part of the input string that was used for parsing the
+  /// argument list.
+  ///
+  /// You can only call this method if HasArgs returns true.
+  //------------------------------------------------------------------
+  llvm::StringRef GetArgString() const {
+    assert(m_has_args);
+    return m_arg_string;
+  }
+
+  //------------------------------------------------------------------
+  /// Returns the raw suffix part of the parsed string.
+  //------------------------------------------------------------------
+  const std::string &GetRawPart() const { return m_suffix; }
+
+private:
+  void SetFromString(llvm::StringRef arg_string);
+
+  /// Keeps track if we have parsed and stored any arguments.
+  bool m_has_args = false;
+  Args m_args;
+  llvm::StringRef m_arg_string;
+  llvm::StringRef m_arg_string_with_delimiter;
+
+  // FIXME: This should be a StringRef, but some of the calling code expect a
+  // C string here so only a real std::string is possible.
+  std::string m_suffix;
 };
 
 } // namespace lldb_private

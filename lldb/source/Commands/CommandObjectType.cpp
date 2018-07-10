@@ -2874,42 +2874,13 @@ public:
     auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
     m_option_group.NotifyOptionParsingStarting(&exe_ctx);
 
-    const char *name_of_type = nullptr;
+    OptionsWithRaw args(raw_command_line);
+    const char *name_of_type = args.GetRawPart().c_str();
 
-    if (raw_command_line[0] == '-') {
-      // We have some options and these options MUST end with --.
-      const char *end_options = nullptr;
-      const char *s = raw_command_line;
-      while (s && s[0]) {
-        end_options = ::strstr(s, "--");
-        if (end_options) {
-          end_options += 2; // Get past the "--"
-          if (::isspace(end_options[0])) {
-            name_of_type = end_options;
-            while (::isspace(*name_of_type))
-              ++name_of_type;
-            break;
-          }
-        }
-        s = end_options;
-      }
-
-      if (end_options) {
-        Args args(
-            llvm::StringRef(raw_command_line, end_options - raw_command_line));
-        if (!ParseOptions(args, result))
-          return false;
-
-        Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
-        if (error.Fail()) {
-          result.AppendError(error.AsCString());
-          result.SetStatus(eReturnStatusFailed);
-          return false;
-        }
-      }
-    }
-    if (nullptr == name_of_type)
-      name_of_type = raw_command_line;
+    if (args.HasArgs())
+      if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group,
+                                 exe_ctx))
+        return false;
 
     // TargetSP
     // target_sp(GetCommandInterpreter().GetDebugger().GetSelectedTarget());
