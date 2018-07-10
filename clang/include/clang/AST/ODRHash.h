@@ -54,8 +54,9 @@ public:
   void AddCXXRecordDecl(const CXXRecordDecl *Record);
 
   // Use this for ODR checking functions between modules.  This method compares
-  // more information than the AddDecl class.
-  void AddFunctionDecl(const FunctionDecl *Function);
+  // more information than the AddDecl class.  SkipBody will process the
+  // hash as if the function has no body.
+  void AddFunctionDecl(const FunctionDecl *Function, bool SkipBody = false);
 
   // Process SubDecls of the main Decl.  This method calls the DeclVisitor
   // while AddDecl does not.

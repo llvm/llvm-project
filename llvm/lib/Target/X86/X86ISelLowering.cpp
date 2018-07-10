@@ -4975,6 +4975,11 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
   return true;
 }
 
+static bool canWidenShuffleElements(ArrayRef<int> Mask) {
+  SmallVector<int, 32> WidenedMask;
+  return canWidenShuffleElements(Mask, WidenedMask);
+}
+
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -8951,6 +8956,12 @@ static bool isRepeatedShuffleMask(unsigned LaneSizeInBits, MVT VT,
 static bool
 is128BitLaneRepeatedShuffleMask(MVT VT, ArrayRef<int> Mask,
                                 SmallVectorImpl<int> &RepeatedMask) {
+  return isRepeatedShuffleMask(128, VT, Mask, RepeatedMask);
+}
+
+static bool
+is128BitLaneRepeatedShuffleMask(MVT VT, ArrayRef<int> Mask) {
+  SmallVector<int, 32> RepeatedMask;
   return isRepeatedShuffleMask(128, VT, Mask, RepeatedMask);
 }
 
@@ -23438,12 +23449,6 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     return R;
   }
 
-  // If possible, lower this packed shift into a vector multiply instead of
-  // expanding it into a sequence of scalar shifts.
-  if (Op.getOpcode() == ISD::SHL)
-    if (SDValue Scale = convertShiftLeftToScale(Amt, dl, Subtarget, DAG))
-      return DAG.getNode(ISD::MUL, dl, VT, R, Scale);
-
   // If possible, lower this shift as a sequence of two shifts by
   // constant plus a BLENDing shuffle instead of scalarizing it.
   // Example:
@@ -23454,7 +23459,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   //
   // The advantage is that the two shifts from the example would be
   // lowered as X86ISD::VSRLI nodes in parallel before blending.
-  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32)) {
+  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
+                      (VT == MVT::v16i16 && Subtarget.hasInt256()))) {
     SDValue Amt1, Amt2;
     unsigned NumElts = VT.getVectorNumElements();
     SmallVector<int, 8> ShuffleMask;
@@ -23477,8 +23483,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       break;
     }
 
+    // Only perform this blend if we can perform it without loading a mask.
     if (ShuffleMask.size() == NumElts && Amt1 && Amt2 &&
-        isa<ConstantSDNode>(Amt1) && isa<ConstantSDNode>(Amt2)) {
+        isa<ConstantSDNode>(Amt1) && isa<ConstantSDNode>(Amt2) &&
+        (VT != MVT::v16i16 ||
+         is128BitLaneRepeatedShuffleMask(VT, ShuffleMask)) &&
+        (VT == MVT::v4i32 || Subtarget.hasSSE41() ||
+         Op.getOpcode() != ISD::SHL || canWidenShuffleElements(ShuffleMask))) {
       SDValue Splat1 =
           DAG.getConstant(cast<ConstantSDNode>(Amt1)->getAPIntValue(), dl, VT);
       SDValue Shift1 = DAG.getNode(Op->getOpcode(), dl, VT, R, Splat1);
@@ -23488,6 +23499,12 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getVectorShuffle(VT, dl, Shift1, Shift2, ShuffleMask);
     }
   }
+
+  // If possible, lower this packed shift into a vector multiply instead of
+  // expanding it into a sequence of scalar shifts.
+  if (Op.getOpcode() == ISD::SHL)
+    if (SDValue Scale = convertShiftLeftToScale(Amt, dl, Subtarget, DAG))
+      return DAG.getNode(ISD::MUL, dl, VT, R, Scale);
 
   // v4i32 Non Uniform Shifts.
   // If the shift amount is constant we can shift each lane using the SSE2

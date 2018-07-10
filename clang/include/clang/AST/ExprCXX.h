@@ -619,6 +619,7 @@ public:
     return SubExpr->getLocEnd();
   }
 
+  /// Retrieve the source range of the expression.
   SourceRange getSourceRange() const LLVM_READONLY {
     return SubExpr->getSourceRange();
   }

@@ -76,9 +76,7 @@ define void @test2(i32 %n, i32 %m, i32 %cond) {
 ; backedge-taken counts.
 ; SCEV-LABEL: Determining loop execution counts for: @test2
 ; SCEV: Loop %inner_loop_begin: backedge-taken count is (-1 + (1 smax %m))<nsw>
-; FIXME: The following backedge taken count should be known but isn't apparently
-; just because of a switch in the outer loop.
-; SCEV: Loop %outer_loop_begin: Unpredictable backedge-taken count.
+; SCEV: Loop %outer_loop_begin: backedge-taken count is (-1 + (1 smax %n))<nsw>
 ;
 ; CHECK-LABEL: define void @test2(
 entry:

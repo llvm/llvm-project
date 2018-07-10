@@ -2446,16 +2446,18 @@ GdbIndexSection::GdbIndexSection(std::vector<GdbIndexChunk> &&C)
   SymtabOffset = CuTypesOffset + getAddressAreaSize(Chunks) * 20;
   ConstantPoolOffset = SymtabOffset + GdbSymtab.size() * 8;
 
-  size_t Off = 0;
   for (ArrayRef<uint32_t> Vec : CuVectors) {
-    CuVectorOffsets.push_back(Off);
-    Off += (Vec.size() + 1) * 4;
+    CuVectorOffsets.push_back(CuVectorsPoolSize);
+    CuVectorsPoolSize += (Vec.size() + 1) * 4;
   }
-  StringPoolOffset = ConstantPoolOffset + Off;
-}
 
-size_t GdbIndexSection::getSize() const {
-  return StringPoolOffset + StringPoolSize;
+  uint64_t PoolSize = CuVectorsPoolSize + StringPoolSize;
+  TotalSize = ConstantPoolOffset + PoolSize;
+
+  // Length fields in the .gdb_index section are only 4 byte long,
+  // so the section cannot contain very large contents.
+  if (ConstantPoolOffset > UINT32_MAX || PoolSize > UINT32_MAX)
+    error(".gdb_index section too large");
 }
 
 void GdbIndexSection::writeTo(uint8_t *Buf) {
@@ -2491,7 +2493,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   // Write the symbol table.
   for (GdbSymbol *Sym : GdbSymtab) {
     if (Sym) {
-      write32le(Buf, Sym->NameOffset + StringPoolOffset - ConstantPoolOffset);
+      write32le(Buf, CuVectorsPoolSize + Sym->NameOffset);
       write32le(Buf + 4, CuVectorOffsets[Sym->CuVectorIndex]);
     }
     Buf += 8;

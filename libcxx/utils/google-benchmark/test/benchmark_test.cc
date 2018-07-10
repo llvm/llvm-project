@@ -40,8 +40,8 @@ double CalculatePi(int depth) {
   return (pi - 1.0) * 4;
 }
 
-std::set<int> ConstructRandomSet(int size) {
-  std::set<int> s;
+std::set<int64_t> ConstructRandomSet(int64_t size) {
+  std::set<int64_t> s;
   for (int i = 0; i < size; ++i) s.insert(s.end(), i);
   return s;
 }
@@ -64,7 +64,7 @@ BENCHMARK(BM_Factorial)->UseRealTime();
 
 static void BM_CalculatePiRange(benchmark::State& state) {
   double pi = 0.0;
-  for (auto _ : state) pi = CalculatePi(state.range(0));
+  for (auto _ : state) pi = CalculatePi(static_cast<int>(state.range(0)));
   std::stringstream ss;
   ss << pi;
   state.SetLabel(ss.str());
@@ -74,7 +74,7 @@ BENCHMARK_RANGE(BM_CalculatePiRange, 1, 1024 * 1024);
 static void BM_CalculatePi(benchmark::State& state) {
   static const int depth = 1024;
   for (auto _ : state) {
-    benchmark::DoNotOptimize(CalculatePi(depth));
+    benchmark::DoNotOptimize(CalculatePi(static_cast<int>(depth)));
   }
 }
 BENCHMARK(BM_CalculatePi)->Threads(8);
@@ -82,7 +82,7 @@ BENCHMARK(BM_CalculatePi)->ThreadRange(1, 32);
 BENCHMARK(BM_CalculatePi)->ThreadPerCpu();
 
 static void BM_SetInsert(benchmark::State& state) {
-  std::set<int> data;
+  std::set<int64_t> data;
   for (auto _ : state) {
     state.PauseTiming();
     data = ConstructRandomSet(state.range(0));
@@ -103,9 +103,9 @@ static void BM_Sequential(benchmark::State& state) {
   ValueType v = 42;
   for (auto _ : state) {
     Container c;
-    for (int i = state.range(0); --i;) c.push_back(v);
+    for (int64_t i = state.range(0); --i;) c.push_back(v);
   }
-  const size_t items_processed = state.iterations() * state.range(0);
+  const int64_t items_processed = state.iterations() * state.range(0);
   state.SetItemsProcessed(items_processed);
   state.SetBytesProcessed(items_processed * sizeof(v));
 }
@@ -118,8 +118,9 @@ BENCHMARK_TEMPLATE(BM_Sequential, std::vector<int>, int)->Arg(512);
 #endif
 
 static void BM_StringCompare(benchmark::State& state) {
-  std::string s1(state.range(0), '-');
-  std::string s2(state.range(0), '-');
+  size_t len = static_cast<size_t>(state.range(0));
+  std::string s1(len, '-');
+  std::string s2(len, '-');
   for (auto _ : state) benchmark::DoNotOptimize(s1.compare(s2));
 }
 BENCHMARK(BM_StringCompare)->Range(1, 1 << 20);
@@ -154,13 +155,13 @@ static void BM_LongTest(benchmark::State& state) {
 BENCHMARK(BM_LongTest)->Range(1 << 16, 1 << 28);
 
 static void BM_ParallelMemset(benchmark::State& state) {
-  int size = state.range(0) / static_cast<int>(sizeof(int));
-  int thread_size = size / state.threads;
+  int64_t size = state.range(0) / static_cast<int64_t>(sizeof(int));
+  int thread_size = static_cast<int>(size) / state.threads;
   int from = thread_size * state.thread_index;
   int to = from + thread_size;
 
   if (state.thread_index == 0) {
-    test_vector = new std::vector<int>(size);
+    test_vector = new std::vector<int>(static_cast<size_t>(size));
   }
 
   for (auto _ : state) {
@@ -178,8 +179,8 @@ static void BM_ParallelMemset(benchmark::State& state) {
 BENCHMARK(BM_ParallelMemset)->Arg(10 << 20)->ThreadRange(1, 4);
 
 static void BM_ManualTiming(benchmark::State& state) {
-  size_t slept_for = 0;
-  int microseconds = state.range(0);
+  int64_t slept_for = 0;
+  int64_t microseconds = state.range(0);
   std::chrono::duration<double, std::micro> sleep_duration{
       static_cast<double>(microseconds)};
 

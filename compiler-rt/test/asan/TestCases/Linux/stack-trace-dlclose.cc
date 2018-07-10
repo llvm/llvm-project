@@ -1,8 +1,10 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // XFAIL: android
 //
-// RUN: %clangxx_asan -DSHARED %s -shared -o %T/stack_trace_dlclose.so -fPIC
-// RUN: %clangxx_asan -DSO_DIR=\"%T\" %s %libdl -o %t
+// RUN: rm -rf %t-dir
+// RUN: mkdir -p %t-dir
+// RUN: %clangxx_asan -DSHARED %s -shared -o %t-dir/stack_trace_dlclose.so -fPIC
+// RUN: %clangxx_asan -DSO_DIR=\"%t-dir\" %s %libdl -o %t
 // RUN: %env_asan_opts=exitcode=0 %run %t 2>&1 | FileCheck %s
 // REQUIRES: stable-runtime
 

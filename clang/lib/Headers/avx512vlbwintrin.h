@@ -1496,10 +1496,10 @@ _mm256_maskz_cvtusepi16_epi8 (__mmask16 __M, __m256i __A) {
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvtepi16_epi8 (__m128i __A) {
-
-  return (__m128i) __builtin_ia32_pmovwb128_mask ((__v8hi) __A,
-               (__v16qi) _mm_setzero_si128(),
-               (__mmask8) -1);
+  return (__m128i)__builtin_shufflevector(
+      __builtin_convertvector((__v8hi)__A, __v8qi),
+      (__v8qi){0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+      12, 13, 14, 15);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128

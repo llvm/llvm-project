@@ -4,15 +4,15 @@
 #include <cassert>
 #include <memory>
 
-template<typename T>
+template <typename T>
 class MyFixture : public ::benchmark::Fixture {
-public:
+ public:
   MyFixture() : data(0) {}
 
   T data;
 };
 
-BENCHMARK_TEMPLATE_F(MyFixture, Foo, int)(benchmark::State &st) {
+BENCHMARK_TEMPLATE_F(MyFixture, Foo, int)(benchmark::State& st) {
   for (auto _ : st) {
     data += 1;
   }

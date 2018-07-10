@@ -2504,6 +2504,10 @@ public:
   /// stored on first call, then the stored value returned on the other calls.
   unsigned getODRHash();
 
+  /// Returns cached ODRHash of the function.  This must have been previously
+  /// computed and stored.
+  unsigned getODRHash() const;
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) {

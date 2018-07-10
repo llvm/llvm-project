@@ -1,12 +1,12 @@
 // RUN: %clangxx_scudo %s -o %t
-// RUN: rm -rf %T/random_shuffle_tmp_dir
-// RUN: mkdir %T/random_shuffle_tmp_dir
-// RUN: %run %t 100 > %T/random_shuffle_tmp_dir/out1
-// RUN: %run %t 100 > %T/random_shuffle_tmp_dir/out2
-// RUN: %run %t 10000 > %T/random_shuffle_tmp_dir/out1
-// RUN: %run %t 10000 > %T/random_shuffle_tmp_dir/out2
-// RUN: not diff %T/random_shuffle_tmp_dir/out?
-// RUN: rm -rf %T/random_shuffle_tmp_dir
+// RUN: rm -rf %t-dir/random_shuffle_tmp_dir
+// RUN: mkdir %t-dir/random_shuffle_tmp_dir
+// RUN: %run %t 100 > %t-dir/random_shuffle_tmp_dir/out1
+// RUN: %run %t 100 > %t-dir/random_shuffle_tmp_dir/out2
+// RUN: %run %t 10000 > %t-dir/random_shuffle_tmp_dir/out1
+// RUN: %run %t 10000 > %t-dir/random_shuffle_tmp_dir/out2
+// RUN: not diff %t-dir/random_shuffle_tmp_dir/out?
+// RUN: rm -rf %t-dir/random_shuffle_tmp_dir
 
 // Tests that the allocator shuffles the chunks before returning to the user.
 

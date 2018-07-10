@@ -16,8 +16,8 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "xray_profiling_flags.h"
-#include <pthread.h>
 #include <memory>
+#include <pthread.h>
 #include <utility>
 
 namespace __xray {
@@ -55,7 +55,8 @@ void post(const FunctionCallTrie &T, tid_t TId) {
     GlobalAllocators = reinterpret_cast<FunctionCallTrie::Allocators *>(
         InternalAlloc(sizeof(FunctionCallTrie::Allocators)));
     new (GlobalAllocators) FunctionCallTrie::Allocators();
-    *GlobalAllocators = FunctionCallTrie::InitAllocators();
+    *GlobalAllocators = FunctionCallTrie::InitAllocatorsCustom(
+        profilingFlags()->global_allocator_max);
   });
   DCHECK_NE(GlobalAllocators, nullptr);
 
@@ -83,12 +84,11 @@ void post(const FunctionCallTrie &T, tid_t TId) {
     //    and is decoupled from the lifetime management required by the managed
     //    allocator we have in XRay.
     //
-    Item->Trie = reinterpret_cast<FunctionCallTrie *>(
-        InternalAlloc(sizeof(FunctionCallTrie)));
+    Item->Trie = reinterpret_cast<FunctionCallTrie *>(InternalAlloc(
+        sizeof(FunctionCallTrie), nullptr, alignof(FunctionCallTrie)));
     DCHECK_NE(Item->Trie, nullptr);
     new (Item->Trie) FunctionCallTrie(*GlobalAllocators);
   }
-  DCHECK_NE(Item, nullptr);
 
   T.deepCopyInto(*Item->Trie);
 }
