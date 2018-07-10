@@ -123,7 +123,7 @@ protected:
 
   std::unique_ptr<IndexASTConsumer>
   createIndexASTConsumer(CompilerInstance &CI) {
-    IndexCtx.setSysrootPath(CI.getHeaderSearchOpts().Sysroot);
+    IndexCtx->setSysrootPath(CI.getHeaderSearchOpts().Sysroot);
     return llvm::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
                                                IndexCtx);
   }
@@ -500,21 +500,22 @@ class IndexRecordActionBase {
 protected:
   RecordingOptions RecordOpts;
   IndexDataRecorder Recorder;
-  IndexingContext IndexCtx;
+  std::shared_ptr<IndexingContext> IndexCtx;
   SourceFilesIndexDependencyCollector DepCollector;
 
   IndexRecordActionBase(IndexingOptions IndexOpts, RecordingOptions recordOpts)
-      : RecordOpts(std::move(recordOpts)), IndexCtx(IndexOpts, Recorder),
-        DepCollector(IndexCtx, RecordOpts) {}
+      : RecordOpts(std::move(recordOpts)),
+        IndexCtx(new IndexingContext(IndexOpts, Recorder)),
+        DepCollector(*IndexCtx, RecordOpts) {}
 
   std::unique_ptr<IndexASTConsumer>
   createIndexASTConsumer(CompilerInstance &CI) {
-    IndexCtx.setSysrootPath(CI.getHeaderSearchOpts().Sysroot);
-    Recorder.init(&IndexCtx, CI);
+    IndexCtx->setSysrootPath(CI.getHeaderSearchOpts().Sysroot);
+    Recorder.init(IndexCtx.get(), CI);
 
     Preprocessor &PP = CI.getPreprocessor();
     DepCollector.setSourceManager(&CI.getSourceManager());
-    DepCollector.setSysrootPath(IndexCtx.getSysrootPath());
+    DepCollector.setSysrootPath(IndexCtx->getSysrootPath());
     DepCollector.attachToPreprocessor(PP);
 
     return llvm::make_unique<IndexASTConsumer>(CI.getPreprocessorPtr(),
@@ -644,8 +645,8 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
                               /*AllowSearch=*/false);
   }
 
-  writeUnitData(CI, Recorder, DepCollector, IndexCtx.getIndexOpts(), RecordOpts,
-                OutputFile, RootFile, UnitMod, IndexCtx.getSysrootPath());
+  writeUnitData(CI, Recorder, DepCollector, IndexCtx->getIndexOpts(), RecordOpts,
+                OutputFile, RootFile, UnitMod, IndexCtx->getSysrootPath());
 }
 
 /// Checks if the unit file exists for module file, if it doesn't it generates
