@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ForRangeCopyCheck.h"
-#include "../utils/DeclRefExprUtils.h"
+#include "../utils/ExprMutationAnalyzer.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/TypeTraits.h"
 
@@ -79,8 +79,8 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
       utils::type_traits::isExpensiveToCopy(LoopVar.getType(), Context);
   if (LoopVar.getType().isConstQualified() || !Expensive || !*Expensive)
     return false;
-  if (!utils::decl_ref_expr::isOnlyUsedAsConst(LoopVar, *ForRange.getBody(),
-                                               Context))
+  if (utils::ExprMutationAnalyzer(ForRange.getBody(), &Context)
+          .isMutated(&LoopVar))
     return false;
   diag(LoopVar.getLocation(),
        "loop variable is copied but only used as const reference; consider "
