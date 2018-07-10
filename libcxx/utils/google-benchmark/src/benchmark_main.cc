@@ -1,4 +1,4 @@
-// Copyright 2015 Google Inc. All rights reserved.
+// Copyright 2018 Google Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,4 @@
 
 #include "benchmark/benchmark.h"
 
-namespace benchmark {
-
-// these counter-related functions are hidden to reduce API surface.
-namespace internal {
-void Finish(UserCounters* l, int64_t iterations, double time, double num_threads);
-void Increment(UserCounters* l, UserCounters const& r);
-bool SameNames(UserCounters const& l, UserCounters const& r);
-}  // end namespace internal
-
-}  // end namespace benchmark
+BENCHMARK_MAIN();

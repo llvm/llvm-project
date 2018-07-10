@@ -45,7 +45,7 @@ bool ParseInt32(const std::string& src_text, const char* str, int32_t* value) {
       // LONG_MAX or LONG_MIN when the input overflows.)
       result != long_value
       // The parsed value overflows as an Int32.
-      ) {
+  ) {
     std::cerr << src_text << " is expected to be a 32-bit integer, "
               << "but actually has value \"" << str << "\", "
               << "which overflows.\n";
