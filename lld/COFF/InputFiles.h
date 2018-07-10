@@ -207,8 +207,8 @@ public:
 
   static std::vector<ImportFile *> Instances;
 
-  DefinedImportData *ImpSym = nullptr;
-  DefinedImportThunk *ThunkSym = nullptr;
+  Symbol *ImpSym = nullptr;
+  Symbol *ThunkSym = nullptr;
   std::string DLLName;
 
 private:

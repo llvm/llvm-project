@@ -1579,6 +1579,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (!Config->Relocatable)
     forEachRelSec(scanRelocations<ELFT>);
 
+  // Apply changes caused by relocations to wrapped symbols
+  Symtab->applySymbolWrapReloc();
+
   if (InX::Plt && !InX::Plt->empty())
     InX::Plt->addSymbols();
   if (InX::Iplt && !InX::Iplt->empty())

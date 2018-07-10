@@ -48,8 +48,14 @@ class TestSwiftStepping(lldbtest.TestBase):
             "settings set "
             "target.process.thread.step-avoid-libraries {}".format(lib_name))
 
+    def correct_stop_reason(self, thread):
+        # We are always just stepping, so that should be the thread stop reason:
+        stop_reason = thread.GetStopReason()
+        self.assertEqual(stop_reason, lldb.eStopReasonPlanComplete)
+
     def hit_correct_line(self, thread, pattern, fail_if_wrong=True):
         # print "Check if we got to: ", pattern
+        self.correct_stop_reason(thread)
         target_line = lldbtest.line_number(self.main_source, pattern)
         self.assertTrue(
             target_line != 0,
@@ -65,10 +71,17 @@ class TestSwiftStepping(lldbtest.TestBase):
 
     def hit_correct_function(self, thread, pattern):
         # print "Check if we got to: ", pattern
+        self.correct_stop_reason(thread)
         name = thread.frames[0].GetFunctionName()
+        line_entry = thread.frames[0].GetLineEntry()
+        desc = lldb.SBStream()
+        if line_entry.IsValid():
+            line_entry.GetDescription(desc)
+        else:
+            desc.Print(name)
         self.assertTrue(
             pattern in name,
-            "Got to '%s' not the expected function '%s'." % (name, pattern))
+            "Got to '%s' not the expected function '%s'." % (desc.GetData(), pattern))
 
     def do_test(self):
         """Tests that we can step reliably in swift code."""
