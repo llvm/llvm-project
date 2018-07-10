@@ -61,7 +61,7 @@ capture_event_profiling_info(clk_event_t e, clk_profiling_info n, __global void 
     __global AmdEvent *ev = __builtin_astype(e, __global AmdEvent *);
 
     // Set the pointer now in case we're racing with the scheduler
-    atomic_store_explicit((__global atomic_uint *)&ev->capture_info, (ulong)p, memory_order_relaxed, memory_scope_device);
+    atomic_store_explicit((__global atomic_ulong *)&ev->capture_info, (ulong)p, memory_order_relaxed, memory_scope_device);
 
     uint state = atomic_load_explicit((__global atomic_uint *)&ev->state, memory_order_acquire, memory_scope_device);
     if (state == CL_COMPLETE) {
