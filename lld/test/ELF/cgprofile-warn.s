@@ -5,7 +5,8 @@
 # RUN: echo "A B 100" > %t.call_graph
 # RUN: echo "A C 40" >> %t.call_graph
 # RUN: echo "B C 30" >> %t.call_graph
-# RUN: echo "adena A 30" >> %t.call_graph
+# RUN: echo "adena1 A 30" >> %t.call_graph
+# RUN: echo "A adena2 30" >> %t.call_graph
 # RUN: echo "poppy A 30" >> %t.call_graph
 # RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o /dev/null \
 # RUN:   -noinhibit-exec -icf=all 2>&1 | FileCheck %s
@@ -25,5 +26,6 @@ A:
     retq
 
 # CHECK: unable to order absolute symbol: B
-# CHECK: {{.*}}.call_graph: no such symbol: adena
+# CHECK: {{.*}}.call_graph: no such symbol: adena1
+# CHECK: {{.*}}.call_graph: no such symbol: adena2
 # CHECK: unable to order undefined symbol: poppy
