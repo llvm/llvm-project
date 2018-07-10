@@ -149,7 +149,12 @@ public:
   /// materializers to break up work based on run-time information (e.g.
   /// by introspecting which symbols have actually been looked up and
   /// materializing only those).
-  void delegate(std::unique_ptr<MaterializationUnit> MU);
+  void replace(std::unique_ptr<MaterializationUnit> MU);
+
+  /// Delegates responsibility for the given symbols to the returned
+  /// materialization responsibility. Useful for breaking up work between
+  /// threads, or different kinds of materialization processes.
+  MaterializationResponsibility delegate(const SymbolNameSet &Symbols);
 
   /// Add dependencies for the symbols in this dylib.
   void addDependencies(const SymbolDependenceMap &Dependencies);

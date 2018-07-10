@@ -310,9 +310,13 @@ static Value *getStoredPointerOperand(Instruction *I) {
 }
 
 static uint64_t getPointerSize(const Value *V, const DataLayout &DL,
-                               const TargetLibraryInfo &TLI) {
+                               const TargetLibraryInfo &TLI,
+                               const Function *F) {
   uint64_t Size;
-  if (getObjectSize(V, Size, DL, &TLI))
+  ObjectSizeOpts Opts;
+  Opts.NullIsUnknownSize = NullPointerIsDefined(F);
+
+  if (getObjectSize(V, Size, DL, &TLI, Opts))
     return Size;
   return MemoryLocation::UnknownSize;
 }
@@ -343,7 +347,8 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
                                    int64_t &EarlierOff, int64_t &LaterOff,
                                    Instruction *DepWrite,
                                    InstOverlapIntervalsTy &IOL,
-                                   AliasAnalysis &AA) {
+                                   AliasAnalysis &AA,
+                                   const Function *F) {
   // If we don't know the sizes of either access, then we can't do a comparison.
   if (Later.Size == MemoryLocation::UnknownSize ||
       Earlier.Size == MemoryLocation::UnknownSize)
@@ -372,7 +377,7 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
     return OW_Unknown;
 
   // If the "Later" store is to a recognizable object, get its size.
-  uint64_t ObjectSize = getPointerSize(UO2, DL, TLI);
+  uint64_t ObjectSize = getPointerSize(UO2, DL, TLI, F);
   if (ObjectSize != MemoryLocation::UnknownSize)
     if (ObjectSize == Later.Size && ObjectSize >= Earlier.Size)
       return OW_Complete;
@@ -710,7 +715,8 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
 static void removeAccessedObjects(const MemoryLocation &LoadedLoc,
                                   SmallSetVector<Value *, 16> &DeadStackObjects,
                                   const DataLayout &DL, AliasAnalysis *AA,
-                                  const TargetLibraryInfo *TLI) {
+                                  const TargetLibraryInfo *TLI,
+                                  const Function *F) {
   const Value *UnderlyingPointer = GetUnderlyingObject(LoadedLoc.Ptr, DL);
 
   // A constant can't be in the dead pointer set.
@@ -727,7 +733,7 @@ static void removeAccessedObjects(const MemoryLocation &LoadedLoc,
   // Remove objects that could alias LoadedLoc.
   DeadStackObjects.remove_if([&](Value *I) {
     // See if the loaded location could alias the stack location.
-    MemoryLocation StackLoc(I, getPointerSize(I, DL, *TLI));
+    MemoryLocation StackLoc(I, getPointerSize(I, DL, *TLI, F));
     return !AA->isNoAlias(StackLoc, LoadedLoc);
   });
 }
@@ -841,7 +847,8 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
       // the call is live.
       DeadStackObjects.remove_if([&](Value *I) {
         // See if the call site touches the value.
-        return isRefSet(AA->getModRefInfo(CS, I, getPointerSize(I, DL, *TLI)));
+        return isRefSet(AA->getModRefInfo(CS, I, getPointerSize(I, DL, *TLI,
+                                                                BB.getParent())));
       });
 
       // If all of the allocas were clobbered by the call then we're not going
@@ -880,7 +887,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
     // Remove any allocas from the DeadPointer set that are loaded, as this
     // makes any stores above the access live.
-    removeAccessedObjects(LoadedLoc, DeadStackObjects, DL, AA, TLI);
+    removeAccessedObjects(LoadedLoc, DeadStackObjects, DL, AA, TLI, BB.getParent());
 
     // If all of the allocas were clobbered by the access then we're not going
     // to find anything else to process.
@@ -1176,7 +1183,8 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
           !isPossibleSelfRead(Inst, Loc, DepWrite, *TLI, *AA)) {
         int64_t InstWriteOffset, DepWriteOffset;
         OverwriteResult OR = isOverwrite(Loc, DepLoc, DL, *TLI, DepWriteOffset,
-                                         InstWriteOffset, DepWrite, IOL, *AA);
+                                         InstWriteOffset, DepWrite, IOL, *AA,
+                                         BB.getParent());
         if (OR == OW_Complete) {
           LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *DepWrite
                             << "\n  KILLER: " << *Inst << '\n');

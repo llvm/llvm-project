@@ -810,6 +810,21 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         for (MVT FPT : MVT::fp_valuetypes())
           setLoadExtAction(ISD::EXTLOAD, MVT::f128, FPT, Expand);
         setOperationAction(ISD::FMA, MVT::f128, Legal);
+        setCondCodeAction(ISD::SETULT, MVT::f128, Expand);
+        setCondCodeAction(ISD::SETUGT, MVT::f128, Expand);
+        setCondCodeAction(ISD::SETUEQ, MVT::f128, Expand);
+        setCondCodeAction(ISD::SETOGE, MVT::f128, Expand);
+        setCondCodeAction(ISD::SETOLE, MVT::f128, Expand);
+        setCondCodeAction(ISD::SETONE, MVT::f128, Expand);
+
+        setOperationAction(ISD::FTRUNC, MVT::f128, Legal);
+        setOperationAction(ISD::FRINT, MVT::f128, Legal);
+        setOperationAction(ISD::FFLOOR, MVT::f128, Legal);
+        setOperationAction(ISD::FCEIL, MVT::f128, Legal);
+        setOperationAction(ISD::FNEARBYINT, MVT::f128, Legal);
+        setOperationAction(ISD::FROUND, MVT::f128, Legal);
+
+        setOperationAction(ISD::SELECT, MVT::f128, Expand);
         setOperationAction(ISD::FP_ROUND, MVT::f64, Legal);
         setOperationAction(ISD::FP_ROUND, MVT::f32, Legal);
         setTruncStoreAction(MVT::f128, MVT::f64, Expand);
@@ -10206,6 +10221,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
              MI.getOpcode() == PPC::SELECT_CC_I8 ||
              MI.getOpcode() == PPC::SELECT_CC_F4 ||
              MI.getOpcode() == PPC::SELECT_CC_F8 ||
+             MI.getOpcode() == PPC::SELECT_CC_F16 ||
              MI.getOpcode() == PPC::SELECT_CC_QFRC ||
              MI.getOpcode() == PPC::SELECT_CC_QSRC ||
              MI.getOpcode() == PPC::SELECT_CC_QBRC ||
@@ -10217,6 +10233,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
              MI.getOpcode() == PPC::SELECT_I8 ||
              MI.getOpcode() == PPC::SELECT_F4 ||
              MI.getOpcode() == PPC::SELECT_F8 ||
+             MI.getOpcode() == PPC::SELECT_F16 ||
              MI.getOpcode() == PPC::SELECT_QFRC ||
              MI.getOpcode() == PPC::SELECT_QSRC ||
              MI.getOpcode() == PPC::SELECT_QBRC ||
@@ -10252,6 +10269,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     if (MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8 ||
         MI.getOpcode() == PPC::SELECT_F4 || MI.getOpcode() == PPC::SELECT_F8 ||
+        MI.getOpcode() == PPC::SELECT_F16 ||
         MI.getOpcode() == PPC::SELECT_QFRC ||
         MI.getOpcode() == PPC::SELECT_QSRC ||
         MI.getOpcode() == PPC::SELECT_QBRC ||

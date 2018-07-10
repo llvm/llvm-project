@@ -543,6 +543,18 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // the exits.
   Loop *OuterL = &L;
 
+  if (DefaultExitBB) {
+    // Clear out the default destination temporarily to allow accurate
+    // predecessor lists to be examined below.
+    SI.setDefaultDest(nullptr);
+    // Check the loop containing this exit.
+    Loop *ExitL = LI.getLoopFor(DefaultExitBB);
+    if (!ExitL || ExitL->contains(OuterL))
+      OuterL = ExitL;
+  }
+
+  // Store the exit cases into a separate data structure and remove them from
+  // the switch.
   SmallVector<std::pair<ConstantInt *, BasicBlock *>, 4> ExitCases;
   ExitCases.reserve(ExitCaseIndices.size());
   // We walk the case indices backwards so that we remove the last case first
@@ -576,23 +588,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                            SI.case_begin()->getCaseSuccessor();
                   }))
     CommonSuccBB = SI.case_begin()->getCaseSuccessor();
-
-  if (DefaultExitBB) {
-    // We can't remove the default edge so replace it with an edge to either
-    // the single common remaining successor (if we have one) or an unreachable
-    // block.
-    if (CommonSuccBB) {
-      SI.setDefaultDest(CommonSuccBB);
-    } else {
-      BasicBlock *UnreachableBB = BasicBlock::Create(
-          ParentBB->getContext(),
-          Twine(ParentBB->getName()) + ".unreachable_default",
-          ParentBB->getParent());
-      new UnreachableInst(ParentBB->getContext(), UnreachableBB);
-      SI.setDefaultDest(UnreachableBB);
-      DT.addNewBlock(UnreachableBB, ParentBB);
-    }
-  } else {
+  if (!DefaultExitBB) {
     // If we're not unswitching the default, we need it to match any cases to
     // have a common successor or if we have no cases it is the common
     // successor.
@@ -688,8 +684,34 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // pointing at unreachable and other complexity.
   if (CommonSuccBB) {
     BasicBlock *BB = SI.getParent();
+    // We may have had multiple edges to this common successor block, so remove
+    // them as predecessors. We skip the first one, either the default or the
+    // actual first case.
+    bool SkippedFirst = DefaultExitBB == nullptr;
+    for (auto Case : SI.cases()) {
+      assert(Case.getCaseSuccessor() == CommonSuccBB &&
+             "Non-common successor!");
+      (void)Case;
+      if (!SkippedFirst) {
+        SkippedFirst = true;
+        continue;
+      }
+      CommonSuccBB->removePredecessor(BB,
+                                      /*DontDeleteUselessPHIs*/ true);
+    }
+    // Now nuke the switch and replace it with a direct branch.
     SI.eraseFromParent();
     BranchInst::Create(CommonSuccBB, BB);
+  } else if (DefaultExitBB) {
+    assert(SI.getNumCases() > 0 &&
+           "If we had no cases we'd have a common successor!");
+    // Move the last case to the default successor. This is valid as if the
+    // default got unswitched it cannot be reached. This has the advantage of
+    // being simple and keeping the number of edges from this switch to
+    // successors the same, and avoiding any PHI update complexity.
+    auto LastCaseI = std::prev(SI.case_end());
+    SI.setDefaultDest(LastCaseI->getCaseSuccessor());
+    SI.removeCase(LastCaseI);
   }
 
   // Walk the unswitched exit blocks and the unswitched split blocks and update
@@ -949,19 +971,6 @@ static BasicBlock *buildClonedLoopBlocks(
           AC.registerAssumption(II);
     }
 
-  // Remove the cloned parent as a predecessor of the cloned continue successor
-  // if we did in fact clone it.
-  auto *ClonedParentBB = cast<BasicBlock>(VMap.lookup(ParentBB));
-  if (auto *ClonedContinueSuccBB =
-          cast_or_null<BasicBlock>(VMap.lookup(ContinueSuccBB)))
-    ClonedContinueSuccBB->removePredecessor(ClonedParentBB,
-                                            /*DontDeleteUselessPHIs*/ true);
-  // Replace the cloned branch with an unconditional branch to the cloned
-  // unswitched successor.
-  auto *ClonedSuccBB = cast<BasicBlock>(VMap.lookup(UnswitchedSuccBB));
-  ClonedParentBB->getTerminator()->eraseFromParent();
-  BranchInst::Create(ClonedSuccBB, ClonedParentBB);
-
   // Update any PHI nodes in the cloned successors of the skipped blocks to not
   // have spurious incoming values.
   for (auto *LoopBB : L.blocks())
@@ -970,6 +979,45 @@ static BasicBlock *buildClonedLoopBlocks(
         if (auto *ClonedSuccBB = cast_or_null<BasicBlock>(VMap.lookup(SuccBB)))
           for (PHINode &PN : ClonedSuccBB->phis())
             PN.removeIncomingValue(LoopBB, /*DeletePHIIfEmpty*/ false);
+
+  // Remove the cloned parent as a predecessor of any successor we ended up
+  // cloning other than the unswitched one.
+  auto *ClonedParentBB = cast<BasicBlock>(VMap.lookup(ParentBB));
+  for (auto *SuccBB : successors(ParentBB)) {
+    if (SuccBB == UnswitchedSuccBB)
+      continue;
+
+    auto *ClonedSuccBB = cast_or_null<BasicBlock>(VMap.lookup(SuccBB));
+    if (!ClonedSuccBB)
+      continue;
+
+    ClonedSuccBB->removePredecessor(ClonedParentBB,
+                                    /*DontDeleteUselessPHIs*/ true);
+  }
+
+  // Replace the cloned branch with an unconditional branch to the cloned
+  // unswitched successor.
+  auto *ClonedSuccBB = cast<BasicBlock>(VMap.lookup(UnswitchedSuccBB));
+  ClonedParentBB->getTerminator()->eraseFromParent();
+  BranchInst::Create(ClonedSuccBB, ClonedParentBB);
+
+  // If there are duplicate entries in the PHI nodes because of multiple edges
+  // to the unswitched successor, we need to nuke all but one as we replaced it
+  // with a direct branch.
+  for (PHINode &PN : ClonedSuccBB->phis()) {
+    bool Found = false;
+    // Loop over the incoming operands backwards so we can easily delete as we
+    // go without invalidating the index.
+    for (int i = PN.getNumOperands() - 1; i >= 0; --i) {
+      if (PN.getIncomingBlock(i) != ClonedParentBB)
+        continue;
+      if (!Found) {
+        Found = true;
+        continue;
+      }
+      PN.removeIncomingValue(i, /*DeletePHIIfEmpty*/ false);
+    }
+  }
 
   // Record the domtree updates for the new blocks.
   SmallPtrSet<BasicBlock *, 4> SuccSet;
@@ -1779,7 +1827,8 @@ static bool unswitchNontrivialInvariants(
     UnswitchedSuccBBs.insert(BI->getSuccessor(ClonedSucc));
   else
     for (auto Case : SI->cases())
-      UnswitchedSuccBBs.insert(Case.getCaseSuccessor());
+      if (Case.getCaseSuccessor() != RetainedSuccBB)
+        UnswitchedSuccBBs.insert(Case.getCaseSuccessor());
 
   assert(!UnswitchedSuccBBs.count(RetainedSuccBB) &&
          "Should not unswitch the same successor we are retaining!");
@@ -1873,19 +1922,44 @@ static bool unswitchNontrivialInvariants(
   // nuke the initial terminator placed in the split block.
   SplitBB->getTerminator()->eraseFromParent();
   if (FullUnswitch) {
-    for (BasicBlock *SuccBB : UnswitchedSuccBBs) {
-      // Remove the parent as a predecessor of the unswitched successor.
-      SuccBB->removePredecessor(ParentBB,
-                                /*DontDeleteUselessPHIs*/ true);
-      DTUpdates.push_back({DominatorTree::Delete, ParentBB, SuccBB});
-    }
-
-    // Now splice the terminator from the original loop and rewrite its
-    // successors.
-    SplitBB->getInstList().splice(SplitBB->end(), ParentBB->getInstList(), TI);
+    // First we need to unhook the successor relationship as we'll be replacing
+    // the terminator with a direct branch. This is much simpler for branches
+    // than switches so we handle those first.
     if (BI) {
+      // Remove the parent as a predecessor of the unswitched successor.
       assert(UnswitchedSuccBBs.size() == 1 &&
              "Only one possible unswitched block for a branch!");
+      BasicBlock *UnswitchedSuccBB = *UnswitchedSuccBBs.begin();
+      UnswitchedSuccBB->removePredecessor(ParentBB,
+                                          /*DontDeleteUselessPHIs*/ true);
+      DTUpdates.push_back({DominatorTree::Delete, ParentBB, UnswitchedSuccBB});
+    } else {
+      // Note that we actually want to remove the parent block as a predecessor
+      // of *every* case successor. The case successor is either unswitched,
+      // completely eliminating an edge from the parent to that successor, or it
+      // is a duplicate edge to the retained successor as the retained successor
+      // is always the default successor and as we'll replace this with a direct
+      // branch we no longer need the duplicate entries in the PHI nodes.
+      assert(SI->getDefaultDest() == RetainedSuccBB &&
+             "Not retaining default successor!");
+      for (auto &Case : SI->cases())
+        Case.getCaseSuccessor()->removePredecessor(
+            ParentBB,
+            /*DontDeleteUselessPHIs*/ true);
+
+      // We need to use the set to populate domtree updates as even when there
+      // are multiple cases pointing at the same successor we only want to
+      // remove and insert one edge in the domtree.
+      for (BasicBlock *SuccBB : UnswitchedSuccBBs)
+        DTUpdates.push_back({DominatorTree::Delete, ParentBB, SuccBB});
+    }
+
+    // Now that we've unhooked the successor relationship, splice the terminator
+    // from the original loop to the split.
+    SplitBB->getInstList().splice(SplitBB->end(), ParentBB->getInstList(), TI);
+
+    // Now wire up the terminator to the preheaders.
+    if (BI) {
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
@@ -1894,16 +1968,19 @@ static bool unswitchNontrivialInvariants(
       assert(SI && "Must either be a branch or switch!");
 
       // Walk the cases and directly update their successors.
+      SI->setDefaultDest(LoopPH);
       for (auto &Case : SI->cases())
-        Case.setSuccessor(ClonedPHs.find(Case.getCaseSuccessor())->second);
+        if (Case.getCaseSuccessor() == RetainedSuccBB)
+          Case.setSuccessor(LoopPH);
+        else
+          Case.setSuccessor(ClonedPHs.find(Case.getCaseSuccessor())->second);
+
       // We need to use the set to populate domtree updates as even when there
       // are multiple cases pointing at the same successor we only want to
-      // insert one edge in the domtree.
+      // remove and insert one edge in the domtree.
       for (BasicBlock *SuccBB : UnswitchedSuccBBs)
         DTUpdates.push_back(
             {DominatorTree::Insert, SplitBB, ClonedPHs.find(SuccBB)->second});
-
-      SI->setDefaultDest(LoopPH);
     }
 
     // Create a new unconditional branch to the continuing block (as opposed to

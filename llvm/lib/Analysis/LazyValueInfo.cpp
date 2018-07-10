@@ -704,9 +704,11 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(ValueLatticeElement &BBLV,
     assert(isa<Argument>(Val) && "Unknown live-in to the entry block");
     // Before giving up, see if we can prove the pointer non-null local to
     // this particular block.
-    if (Val->getType()->isPointerTy() &&
-        (isKnownNonZero(Val, DL) || isObjectDereferencedInBlock(Val, BB))) {
-      PointerType *PTy = cast<PointerType>(Val->getType());
+    PointerType *PTy = dyn_cast<PointerType>(Val->getType());
+    if (PTy &&
+        (isKnownNonZero(Val, DL) ||
+          (isObjectDereferencedInBlock(Val, BB) &&
+           !NullPointerIsDefined(BB->getParent(), PTy->getAddressSpace())))) {
       Result = ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
     } else {
       Result = ValueLatticeElement::getOverdefined();
@@ -739,9 +741,9 @@ bool LazyValueInfoImpl::solveBlockValueNonLocal(ValueLatticeElement &BBLV,
                         << "' - overdefined because of pred (non local).\n");
       // Before giving up, see if we can prove the pointer non-null local to
       // this particular block.
-      if (Val->getType()->isPointerTy() &&
-          isObjectDereferencedInBlock(Val, BB)) {
-        PointerType *PTy = cast<PointerType>(Val->getType());
+      PointerType *PTy = dyn_cast<PointerType>(Val->getType());
+      if (PTy && isObjectDereferencedInBlock(Val, BB) &&
+          !NullPointerIsDefined(BB->getParent(), PTy->getAddressSpace())) {
         Result = ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
       }
 

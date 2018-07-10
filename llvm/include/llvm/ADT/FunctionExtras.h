@@ -44,7 +44,7 @@ template <typename FunctionT> class unique_function;
 
 template <typename ReturnT, typename... ParamTs>
 class unique_function<ReturnT(ParamTs...)> {
-  static constexpr int InlineStorageSize = sizeof(void *) * 3;
+  static constexpr size_t InlineStorageSize = sizeof(void *) * 3;
 
   // MSVC has a bug and ICEs if we give it a particular dependent value
   // expression as part of the `std::conditional` below. To work around this,

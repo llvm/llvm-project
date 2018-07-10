@@ -1904,7 +1904,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       // If the loop has multiple back-edges, and so more than one "bottom"
       // basic block, we have to guarantee a re-walk over every blocks.
       if ((std::count(BlockWaitcntProcessedSet.begin(),
-                      BlockWaitcntProcessedSet.end(), &MBB) < Count)) {
+                      BlockWaitcntProcessedSet.end(), &MBB) < (int)Count)) {
         BlockWaitcntBracketsMap[&MBB]->setRevisitLoop(true);
         LLVM_DEBUG(dbgs() << "set-revisit1: Block"
                           << ContainingLoop->getHeader()->getNumber() << '\n';);

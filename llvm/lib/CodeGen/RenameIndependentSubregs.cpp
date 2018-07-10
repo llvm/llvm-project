@@ -219,7 +219,8 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     if (!MO.isDef() && !MO.readsReg())
       continue;
 
-    SlotIndex Pos = LIS->getInstructionIndex(*MO.getParent());
+    auto *MI = MO.getParent();
+    SlotIndex Pos = LIS->getInstructionIndex(*MI);
     Pos = MO.isDef() ? Pos.getRegSlot(MO.isEarlyClobber())
                      : Pos.getBaseIndex();
     unsigned SubRegIdx = MO.getSubReg();
@@ -245,11 +246,14 @@ void RenameIndependentSubregs::rewriteOperands(const IntEqClasses &Classes,
     MO.setReg(VReg);
 
     if (MO.isTied() && Reg != VReg) {
-      /// Undef use operands are not tracked in the equivalence class but need
-      /// to be update if they are tied.
-      MO.getParent()->substituteRegister(Reg, VReg, 0, TRI);
+      /// Undef use operands are not tracked in the equivalence class,
+      /// but need to be updated if they are tied; take care to only
+      /// update the tied operand.
+      unsigned OperandNo = MI->getOperandNo(&MO);
+      unsigned TiedIdx = MI->findTiedOperandIdx(OperandNo);
+      MI->getOperand(TiedIdx).setReg(VReg);
 
-      // substituteRegister breaks the iterator, so restart.
+      // above substitution breaks the iterator, so restart.
       I = MRI->reg_nodbg_begin(Reg);
     }
   }

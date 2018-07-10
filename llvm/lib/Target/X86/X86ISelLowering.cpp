@@ -4786,6 +4786,20 @@ bool X86TargetLowering::hasAndNot(SDValue Y) const {
   return Subtarget.hasSSE2();
 }
 
+bool X86TargetLowering::preferShiftsToClearExtremeBits(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  // For vectors, we don't have a preference, but we probably want a mask.
+  if (VT.isVector())
+    return false;
+
+  // 64-bit shifts on 32-bit targets produce really bad bloated code.
+  if (VT == MVT::i64 && !Subtarget.is64Bit())
+    return false;
+
+  return true;
+}
+
 MVT X86TargetLowering::hasFastEqualityCompare(unsigned NumBits) const {
   MVT VT = MVT::getIntegerVT(NumBits);
   if (isTypeLegal(VT))
@@ -4959,6 +4973,11 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
          "Incorrect size of mask after widening the elements!");
 
   return true;
+}
+
+static bool canWidenShuffleElements(ArrayRef<int> Mask) {
+  SmallVector<int, 32> WidenedMask;
+  return canWidenShuffleElements(Mask, WidenedMask);
 }
 
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
@@ -8937,6 +8956,12 @@ static bool isRepeatedShuffleMask(unsigned LaneSizeInBits, MVT VT,
 static bool
 is128BitLaneRepeatedShuffleMask(MVT VT, ArrayRef<int> Mask,
                                 SmallVectorImpl<int> &RepeatedMask) {
+  return isRepeatedShuffleMask(128, VT, Mask, RepeatedMask);
+}
+
+static bool
+is128BitLaneRepeatedShuffleMask(MVT VT, ArrayRef<int> Mask) {
+  SmallVector<int, 32> RepeatedMask;
   return isRepeatedShuffleMask(128, VT, Mask, RepeatedMask);
 }
 
@@ -23424,12 +23449,6 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     return R;
   }
 
-  // If possible, lower this packed shift into a vector multiply instead of
-  // expanding it into a sequence of scalar shifts.
-  if (Op.getOpcode() == ISD::SHL)
-    if (SDValue Scale = convertShiftLeftToScale(Amt, dl, Subtarget, DAG))
-      return DAG.getNode(ISD::MUL, dl, VT, R, Scale);
-
   // If possible, lower this shift as a sequence of two shifts by
   // constant plus a BLENDing shuffle instead of scalarizing it.
   // Example:
@@ -23440,7 +23459,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   //
   // The advantage is that the two shifts from the example would be
   // lowered as X86ISD::VSRLI nodes in parallel before blending.
-  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32)) {
+  if (ConstantAmt && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
+                      (VT == MVT::v16i16 && Subtarget.hasInt256()))) {
     SDValue Amt1, Amt2;
     unsigned NumElts = VT.getVectorNumElements();
     SmallVector<int, 8> ShuffleMask;
@@ -23463,8 +23483,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       break;
     }
 
+    // Only perform this blend if we can perform it without loading a mask.
     if (ShuffleMask.size() == NumElts && Amt1 && Amt2 &&
-        isa<ConstantSDNode>(Amt1) && isa<ConstantSDNode>(Amt2)) {
+        isa<ConstantSDNode>(Amt1) && isa<ConstantSDNode>(Amt2) &&
+        (VT != MVT::v16i16 ||
+         is128BitLaneRepeatedShuffleMask(VT, ShuffleMask)) &&
+        (VT == MVT::v4i32 || Subtarget.hasSSE41() ||
+         Op.getOpcode() != ISD::SHL || canWidenShuffleElements(ShuffleMask))) {
       SDValue Splat1 =
           DAG.getConstant(cast<ConstantSDNode>(Amt1)->getAPIntValue(), dl, VT);
       SDValue Shift1 = DAG.getNode(Op->getOpcode(), dl, VT, R, Splat1);
@@ -23474,6 +23499,12 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getVectorShuffle(VT, dl, Shift1, Shift2, ShuffleMask);
     }
   }
+
+  // If possible, lower this packed shift into a vector multiply instead of
+  // expanding it into a sequence of scalar shifts.
+  if (Op.getOpcode() == ISD::SHL)
+    if (SDValue Scale = convertShiftLeftToScale(Amt, dl, Subtarget, DAG))
+      return DAG.getNode(ISD::MUL, dl, VT, R, Scale);
 
   // v4i32 Non Uniform Shifts.
   // If the shift amount is constant we can shift each lane using the SSE2
@@ -37765,7 +37796,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
 
   auto invertIfNegative = [&DAG](SDValue &V) {
     if (SDValue NegVal = isFNEG(V.getNode())) {
-      V = NegVal;
+      V = DAG.getBitcast(V.getValueType(), NegVal);
       return true;
     }
     // Look through extract_vector_elts. If it comes from an FNEG, create a
@@ -37774,6 +37805,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
         isa<ConstantSDNode>(V.getOperand(1)) &&
         cast<ConstantSDNode>(V.getOperand(1))->getZExtValue() == 0) {
       if (SDValue NegVal = isFNEG(V.getOperand(0).getNode())) {
+        NegVal = DAG.getBitcast(V.getOperand(0).getValueType(), NegVal);
         V = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(V), V.getValueType(),
                         NegVal, V.getOperand(1));
         return true;

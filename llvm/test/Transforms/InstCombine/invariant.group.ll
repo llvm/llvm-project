@@ -8,6 +8,13 @@ define i8* @simplifyNullLaunder() {
   ret i8* %b2
 }
 
+; CHECK-LABEL: define i8* @dontSimplifyNullLaunderNoNullOpt()
+define i8* @dontSimplifyNullLaunderNoNullOpt() #0 {
+; CHECK-NEXT: call i8* @llvm.launder.invariant.group.p0i8(i8* null)
+  %b2 = call i8* @llvm.launder.invariant.group.p0i8(i8* null)
+  ret i8* %b2
+}
+
 ; CHECK-LABEL: define i8 addrspace(42)* @dontsimplifyNullLaunderForDifferentAddrspace()
 define i8 addrspace(42)* @dontsimplifyNullLaunderForDifferentAddrspace() {
 ; CHECK: %b2 = call i8 addrspace(42)* @llvm.launder.invariant.group.p42i8(i8 addrspace(42)* null)
@@ -41,6 +48,13 @@ define i8* @simplifyNullStrip() {
   ret i8* %b2
 }
 
+; CHECK-LABEL: define i8* @dontSimplifyNullStripNonNullOpt()
+define i8* @dontSimplifyNullStripNonNullOpt() #0 {
+; CHECK-NEXT: call i8* @llvm.strip.invariant.group.p0i8(i8* null)
+  %b2 = call i8* @llvm.strip.invariant.group.p0i8(i8* null)
+  ret i8* %b2
+}
+
 ; CHECK-LABEL: define i8 addrspace(42)* @dontsimplifyNullStripForDifferentAddrspace()
 define i8 addrspace(42)* @dontsimplifyNullStripForDifferentAddrspace() {
 ; CHECK: %b2 = call i8 addrspace(42)* @llvm.strip.invariant.group.p42i8(i8 addrspace(42)* null)
@@ -66,3 +80,4 @@ define i8 addrspace(42)* @simplifyUndefStrip2() {
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 declare i8 addrspace(42)* @llvm.strip.invariant.group.p42i8(i8 addrspace(42)*)
 
+attributes #0 = { "null-pointer-is-valid"="true" }

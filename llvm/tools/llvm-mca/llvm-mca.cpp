@@ -460,7 +460,7 @@ int main(int argc, char **argv) {
     Width = DispatchWidth;
 
   // Create an instruction builder.
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, *MCIA);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, *MCIA, *IP);
 
   // Create a context to control ownership of the pipeline hardware.
   mca::Context MCA(*MRI, *STI);

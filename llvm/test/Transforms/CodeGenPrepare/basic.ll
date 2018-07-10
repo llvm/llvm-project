@@ -46,7 +46,7 @@ entry:
 ; CHECK-LABEL: @test_objectsize_null_flag_noas0(
 define i64 @test_objectsize_null_flag_noas0() {
 entry:
-  ; CHECK: ret i64 0
+  ; CHECK: ret i64 -1
   %0 = tail call i64 @llvm.objectsize.i64.p1i8(i8 addrspace(1)* null, i1 false,
                                                i1 true)
   ret i64 %0
@@ -58,6 +58,24 @@ entry:
   ; CHECK: ret i64 0
   %0 = tail call i64 @llvm.objectsize.i64.p1i8(i8 addrspace(1)* null, i1 true,
                                                i1 true)
+  ret i64 %0
+}
+
+; CHECK-LABEL: @test_objectsize_null_known_flag_noas0
+define i64 @test_objectsize_null_known_flag_noas0() {
+entry:
+  ; CHECK: ret i64 -1
+  %0 = tail call i64 @llvm.objectsize.i64.p1i8(i8 addrspace(1)* null, i1 false,
+                                               i1 false)
+  ret i64 %0
+}
+
+; CHECK-LABEL: @test_objectsize_null_known_flag_min_noas0
+define i64 @test_objectsize_null_known_flag_min_noas0() {
+entry:
+  ; CHECK: ret i64 0
+  %0 = tail call i64 @llvm.objectsize.i64.p1i8(i8 addrspace(1)* null, i1 true,
+                                               i1 false)
   ret i64 %0
 }
 

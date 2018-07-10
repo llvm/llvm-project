@@ -717,7 +717,28 @@ public:
   MachineInstrBuilder buildExtractVectorElement(unsigned Res, unsigned Val,
                                                 unsigned Idx);
 
-  /// Build and insert `OldValRes = G_ATOMIC_CMPXCHG Addr, CmpVal, NewVal,
+  /// Build and insert `OldValRes<def>, SuccessRes<def> =
+  /// G_ATOMIC_CMPXCHG_WITH_SUCCESS Addr, CmpVal, NewVal, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with \p NewVal if it is currently
+  /// \p CmpVal otherwise leaves it unchanged. Puts the original value from \p
+  /// Addr in \p Res, along with an s1 indicating whether it was replaced.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register of scalar type.
+  /// \pre \p SuccessRes must be a generic virtual register of scalar type. It
+  ///      will be assigned 0 on failure and 1 on success.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, \p CmpVal, and \p NewVal must be generic virtual
+  ///      registers of the same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder
+  buildAtomicCmpXchgWithSuccess(unsigned OldValRes, unsigned SuccessRes,
+                                unsigned Addr, unsigned CmpVal, unsigned NewVal,
+                                MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMIC_CMPXCHG Addr, CmpVal, NewVal,
   /// MMO`.
   ///
   /// Atomically replace the value at \p Addr with \p NewVal if it is currently
@@ -734,6 +755,193 @@ public:
   MachineInstrBuilder buildAtomicCmpXchg(unsigned OldValRes, unsigned Addr,
                                          unsigned CmpVal, unsigned NewVal,
                                          MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_<Opcode> Addr, Val, MMO`.
+  ///
+  /// Atomically read-modify-update the value at \p Addr with \p Val. Puts the
+  /// original value from \p Addr in \p OldValRes. The modification is
+  /// determined by the opcode.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMW(unsigned Opcode, unsigned OldValRes,
+                                     unsigned Addr, unsigned Val,
+                                     MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_XCHG Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with \p Val. Puts the original
+  /// value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWXchg(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_ADD Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the addition of \p Val and
+  /// the original value. Puts the original value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWAdd(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_SUB Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the subtraction of \p Val and
+  /// the original value. Puts the original value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWSub(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_AND Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the bitwise and of \p Val and
+  /// the original value. Puts the original value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWAnd(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_NAND Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the bitwise nand of \p Val
+  /// and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWNand(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_OR Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the bitwise or of \p Val and
+  /// the original value. Puts the original value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWOr(unsigned OldValRes, unsigned Addr,
+                                       unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_XOR Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the bitwise xor of \p Val and
+  /// the original value. Puts the original value from \p Addr in \p OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWXor(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_MAX Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the signed maximum of \p
+  /// Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWMax(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_MIN Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the signed minimum of \p
+  /// Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWMin(unsigned OldValRes, unsigned Addr,
+                                        unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_UMAX Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the unsigned maximum of \p
+  /// Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWUmax(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO);
+
+  /// Build and insert `OldValRes<def> = G_ATOMICRMW_UMIN Addr, Val, MMO`.
+  ///
+  /// Atomically replace the value at \p Addr with the unsigned minimum of \p
+  /// Val and the original value. Puts the original value from \p Addr in \p
+  /// OldValRes.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p OldValRes must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
+  ///      same type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildAtomicRMWUmin(unsigned OldValRes, unsigned Addr,
+                                         unsigned Val, MachineMemOperand &MMO);
 };
 
 /// A CRTP class that contains methods for building instructions that can

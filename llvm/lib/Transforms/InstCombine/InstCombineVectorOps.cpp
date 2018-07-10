@@ -1280,52 +1280,61 @@ static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
   // The opcodes must be the same. Use a new name to make that clear.
   BinaryOperator::BinaryOps BOpc = Opc0;
 
+  // We are moving a binop after a shuffle. When a shuffle has an undefined
+  // mask element, the result is undefined, but it is not poison or undefined
+  // behavior. That is not necessarily true for div/rem/shift.
+  Constant *Mask = Shuf.getMask();
+  bool MightCreatePoisonOrUB =
+      Mask->containsUndefElement() &&
+      (Instruction::isIntDivRem(BOpc) || Instruction::isShift(BOpc));
+
+  // Select the constant elements needed for the single binop.
+  Constant *NewC = ConstantExpr::getShuffleVector(C0, C1, Mask);
   Value *V;
   if (X == Y) {
+    // The new binop constant must not have any potential for extra poison/UB.
+    if (MightCreatePoisonOrUB)
+      NewC = getSafeVectorConstantForBinop(BOpc, NewC, ConstantsAreOp1);
+
     // Remove a binop and the shuffle by rearranging the constant:
     // shuffle (op V, C0), (op V, C1), M --> op V, C'
     // shuffle (op C0, V), (op C1, V), M --> op C', V
     V = X;
-  } else if (!Instruction::isIntDivRem(BOpc) &&
-             (B0->hasOneUse() || B1->hasOneUse())) {
+  } else {
     // If there are 2 different variable operands, we must create a new shuffle
     // (select) first, so check uses to ensure that we don't end up with more
     // instructions than we started with.
-    //
+    if (!B0->hasOneUse() && !B1->hasOneUse())
+      return nullptr;
+
+    // Bail out if we can not guarantee safety of the transform.
+    // TODO: We could try harder by replacing the undef mask elements.
+    if (MightCreatePoisonOrUB)
+      return nullptr;
+
     // Note: In general, we do not create new shuffles in InstCombine because we
     // do not know if a target can lower an arbitrary shuffle optimally. In this
     // case, the shuffle uses the existing mask, so there is no additional risk.
-    //
-    // TODO: We are disallowing div/rem because a shuffle with an undef mask
-    // element would propagate an undef value to the div/rem. That's not
-    // safe in general because div/rem allow for undefined behavior. We can
-    // loosen this restriction (eg, check if the mask has no undefs or replace
-    // undef elements).
 
     // Select the variable vectors first, then perform the binop:
     // shuffle (op X, C0), (op Y, C1), M --> op (shuffle X, Y, M), C'
     // shuffle (op C0, X), (op C1, Y), M --> op C', (shuffle X, Y, M)
-    V = Builder.CreateShuffleVector(X, Y, Shuf.getMask());
-  } else {
-    return nullptr;
+    V = Builder.CreateShuffleVector(X, Y, Mask);
   }
-
-  Constant *NewC = ConstantExpr::getShuffleVector(C0, C1, Shuf.getMask());
-
-  // If the shuffle mask contains undef elements, then the new constant
-  // vector will have undefs in those lanes. This could cause the entire
-  // binop to be undef.
-  if (Instruction::isIntDivRem(BOpc))
-    NewC = getSafeVectorConstantForIntDivRem(NewC);
 
   Instruction *NewBO = ConstantsAreOp1 ? BinaryOperator::Create(BOpc, V, NewC) :
                                          BinaryOperator::Create(BOpc, NewC, V);
 
-  // Flags are intersected from the 2 source binops.
+  // Flags are intersected from the 2 source binops. But there are 2 exceptions:
+  // 1. If we changed an opcode, poison conditions might have changed.
+  // 2. If the shuffle had undef mask elements, the new binop might have undefs
+  //    where the original code did not. Drop all poison potential to be safe.
   NewBO->copyIRFlags(B0);
   NewBO->andIRFlags(B1);
   if (DropNSW)
     NewBO->setHasNoSignedWrap(false);
+  if (Mask->containsUndefElement())
+    NewBO->dropPoisonGeneratingFlags();
   return NewBO;
 }
 
