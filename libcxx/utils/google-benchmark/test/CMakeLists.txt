@@ -22,6 +22,12 @@ if( NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
   endforeach()
 endif()
 
+check_cxx_compiler_flag(-O3 BENCHMARK_HAS_O3_FLAG)
+set(BENCHMARK_O3_FLAG "")
+if (BENCHMARK_HAS_O3_FLAG)
+  set(BENCHMARK_O3_FLAG "-O3")
+endif()
+
 # NOTE: These flags must be added after find_package(Threads REQUIRED) otherwise
 # they will break the configuration check.
 if (DEFINED BENCHMARK_CXX_LINKER_FLAGS)
@@ -35,6 +41,10 @@ macro(compile_benchmark_test name)
   target_link_libraries(${name} benchmark ${CMAKE_THREAD_LIBS_INIT})
 endmacro(compile_benchmark_test)
 
+macro(compile_benchmark_test_with_main name)
+  add_executable(${name} "${name}.cc")
+  target_link_libraries(${name} benchmark_main)
+endmacro(compile_benchmark_test_with_main)
 
 macro(compile_output_test name)
   add_executable(${name} "${name}.cc" output_test.h)
@@ -53,14 +63,23 @@ macro(add_filter_test name filter expect)
 endmacro(add_filter_test)
 
 add_filter_test(filter_simple "Foo" 3)
+add_filter_test(filter_simple_negative "-Foo" 2)
 add_filter_test(filter_suffix "BM_.*" 4)
+add_filter_test(filter_suffix_negative "-BM_.*" 1)
 add_filter_test(filter_regex_all ".*" 5)
+add_filter_test(filter_regex_all_negative "-.*" 0)
 add_filter_test(filter_regex_blank "" 5)
+add_filter_test(filter_regex_blank_negative "-" 0)
 add_filter_test(filter_regex_none "monkey" 0)
+add_filter_test(filter_regex_none_negative "-monkey" 5)
 add_filter_test(filter_regex_wildcard ".*Foo.*" 3)
+add_filter_test(filter_regex_wildcard_negative "-.*Foo.*" 2)
 add_filter_test(filter_regex_begin "^BM_.*" 4)
+add_filter_test(filter_regex_begin_negative "-^BM_.*" 1)
 add_filter_test(filter_regex_begin2 "^N" 1)
+add_filter_test(filter_regex_begin2_negative "-^N" 4)
 add_filter_test(filter_regex_end ".*Ba$" 1)
+add_filter_test(filter_regex_end_negative "-.*Ba$" 4)
 
 compile_benchmark_test(options_test)
 add_test(options_benchmarks options_test --benchmark_min_time=0.01)
@@ -93,6 +112,9 @@ add_test(map_test map_test --benchmark_min_time=0.01)
 
 compile_benchmark_test(multiple_ranges_test)
 add_test(multiple_ranges_test multiple_ranges_test --benchmark_min_time=0.01)
+
+compile_benchmark_test_with_main(link_main_test)
+add_test(link_main_test link_main_test --benchmark_min_time=0.01)
 
 compile_output_test(reporter_output_test)
 add_test(reporter_output_test reporter_output_test --benchmark_min_time=0.01)
@@ -144,8 +166,11 @@ if (BENCHMARK_ENABLE_GTEST_TESTS)
     if (TARGET googletest)
       add_dependencies(${name} googletest)
     endif()
+    if (GTEST_INCLUDE_DIRS)
+      target_include_directories(${name} PRIVATE ${GTEST_INCLUDE_DIRS})
+    endif()
     target_link_libraries(${name} benchmark
-        "${GTEST_BOTH_LIBRARIES}" ${CMAKE_THREAD_LIBS_INIT})
+        ${GTEST_BOTH_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
   endmacro(compile_gtest)
 
   macro(add_gtest name)
@@ -153,9 +178,30 @@ if (BENCHMARK_ENABLE_GTEST_TESTS)
     add_test(${name} ${name})
   endmacro()
 
-  add_gtest(statistics_test)
+  add_gtest(benchmark_gtest)
+  add_gtest(statistics_gtest)
+  add_gtest(string_util_gtest)
 endif(BENCHMARK_ENABLE_GTEST_TESTS)
 
+###############################################################################
+# Assembly Unit Tests
+###############################################################################
+
+if (BENCHMARK_ENABLE_ASSEMBLY_TESTS)
+  if (NOT LLVM_FILECHECK_EXE)
+    message(FATAL_ERROR "LLVM FileCheck is required when including this file")
+  endif()
+  include(AssemblyTests.cmake)
+  add_filecheck_test(donotoptimize_assembly_test)
+  add_filecheck_test(state_assembly_test)
+  add_filecheck_test(clobber_memory_assembly_test)
+endif()
+
+
+
+###############################################################################
+# Code Coverage Configuration
+###############################################################################
 
 # Add the coverage command(s)
 if(CMAKE_BUILD_TYPE)

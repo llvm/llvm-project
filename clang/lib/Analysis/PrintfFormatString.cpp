@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/FormatString.h"
+#include "clang/Analysis/Analyses/OSLog.h"
 #include "FormatStringParsing.h"
 #include "clang/Basic/TargetInfo.h"
 
@@ -119,36 +120,55 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     return true;
   }
 
-  const char *OSLogVisibilityFlagsStart = nullptr,
-             *OSLogVisibilityFlagsEnd = nullptr;
   if (*I == '{') {
-    OSLogVisibilityFlagsStart = I++;
-    // Find the end of the modifier.
-    while (I != E && *I != '}') {
-      I++;
-    }
-    if (I == E) {
-      if (Warn)
-        H.HandleIncompleteSpecifier(Start, E - Start);
-      return true;
-    }
-    assert(*I == '}');
-    OSLogVisibilityFlagsEnd = I++;
+    ++I;
+    unsigned char PrivacyFlags = 0;
+    StringRef MatchedStr;
 
-    // Just see if 'private' or 'public' is the first word. os_log itself will
-    // do any further parsing.
-    const char *P = OSLogVisibilityFlagsStart + 1;
-    while (P < OSLogVisibilityFlagsEnd && isspace(*P))
-      P++;
-    const char *WordStart = P;
-    while (P < OSLogVisibilityFlagsEnd && (isalnum(*P) || *P == '_'))
-      P++;
-    const char *WordEnd = P;
-    StringRef Word(WordStart, WordEnd - WordStart);
-    if (Word == "private") {
-      FS.setIsPrivate(WordStart);
-    } else if (Word == "public") {
-      FS.setIsPublic(WordStart);
+    do {
+      StringRef Str(I, E - I);
+      std::string Match = "^[\t\n\v\f\r ]*(private|public)[\t\n\v\f\r ]*(,|})";
+      llvm::Regex R(Match);
+      SmallVector<StringRef, 2> Matches;
+
+      if (R.match(Str, &Matches)) {
+        MatchedStr = Matches[1];
+        I += Matches[0].size();
+
+        // Set the privacy flag if there is a privacy annotation in the
+        // comma-delimited segment. This overrides any privacy annotations that
+        // appeared in previous comma-delimited segments.
+        if (MatchedStr.equals("private"))
+          PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
+        else if (MatchedStr.equals("public"))
+          PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
+      } else {
+        size_t CommaOrBracePos =
+            Str.find_if([](char c) { return c == ',' || c == '}'; });
+        I += CommaOrBracePos + 1;
+
+        if (CommaOrBracePos == StringRef::npos) {
+          // Neither a comma nor the closing brace was found.
+          if (Warn)
+            H.HandleIncompleteSpecifier(Start, E - Start);
+          return true;
+        }
+      }
+      // Continue until the closing brace is found.
+    } while (*(I - 1) == ',');
+
+    // Set the privacy flag.
+    switch (PrivacyFlags) {
+    case 0:
+      break;
+    case clang::analyze_os_log::OSLogBufferItem::IsPrivate:
+      FS.setIsPrivate(MatchedStr.data());
+      break;
+    case clang::analyze_os_log::OSLogBufferItem::IsPublic:
+      FS.setIsPublic(MatchedStr.data());
+      break;
+    default:
+      llvm_unreachable("Unexpected privacy flag value");
     }
   }
 

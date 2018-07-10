@@ -1745,53 +1745,53 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize() {
   size_t OldSize = RelrRelocs.size();
   RelrRelocs.clear();
 
+  // Same as Config->Wordsize but faster because this is a compile-time
+  // constant.
+  const size_t Wordsize = sizeof(typename ELFT::uint);
+
   // Number of bits to use for the relocation offsets bitmap.
-  // These many relative relocations can be encoded in a single entry.
-  const size_t NBits = 8 * Config->Wordsize - 1;
+  // Must be either 63 or 31.
+  const size_t NBits = Wordsize * 8 - 1;
 
   // Get offsets for all relative relocations and sort them.
   std::vector<uint64_t> Offsets;
-  for (const RelativeReloc &Rel : Relocs) {
+  for (const RelativeReloc &Rel : Relocs)
     Offsets.push_back(Rel.getOffset());
-  }
-  std::sort(Offsets.begin(), Offsets.end());
+  llvm::sort(Offsets.begin(), Offsets.end());
 
-  uint64_t Base = 0;
-  typename std::vector<uint64_t>::iterator Curr = Offsets.begin();
-  while (Curr != Offsets.end()) {
-    uint64_t Current = *Curr;
-    assert(Current % 2 == 0);
+  // For each leading relocation, find following ones that can be folded
+  // as a bitmap and fold them.
+  for (size_t I = 0, E = Offsets.size(); I < E;) {
+    // Add a leading relocation.
+    RelrRelocs.push_back(Elf_Relr(Offsets[I]));
+    uint64_t Base = Offsets[I] + Wordsize;
+    ++I;
 
-    uint64_t Bits = 0;
-    typename std::vector<uint64_t>::iterator Next = Curr;
-    if (Base > 0 && Base <= Current) {
-      while (Next != Offsets.end()) {
-        uint64_t Delta = *Next - Base;
-        // If Next is too far out, it cannot be folded into Curr.
-        if (Delta >= NBits * Config->Wordsize)
+    // Find foldable relocations to construct bitmaps.
+    while (I < E) {
+      uint64_t Bitmap = 0;
+
+      while (I < E) {
+        uint64_t Delta = Offsets[I] - Base;
+
+        // If it is too far, it cannot be folded.
+        if (Delta >= NBits * Wordsize)
           break;
-        // If Next is not a multiple of wordsize away, it cannot
-        // be folded into Curr.
-        if (Delta % Config->Wordsize != 0)
+
+        // If it is not a multiple of wordsize away, it cannot be folded.
+        if (Delta % Wordsize)
           break;
-        // Next can be folded into Curr, add it to the bitmap.
-        Bits |= 1ULL << (Delta / Config->Wordsize);
-        ++Next;
+
+        // Fold it.
+        Bitmap |= 1ULL << (Delta / Wordsize);
+        ++I;
       }
-    }
 
-    if (Bits == 0) {
-      RelrRelocs.push_back(Elf_Relr(Current));
-      // This is not a continuation entry, only one offset was
-      // consumed. Set base offset for subsequent bitmap entries.
-      Base = Current + Config->Wordsize;
-      ++Curr;
-    } else {
-      RelrRelocs.push_back(Elf_Relr((Bits << 1) | 1));
-      // This is a continuation entry encoding multiple offsets
-      // in a bitmap. Advance base offset by NBits words.
-      Base += NBits * Config->Wordsize;
-      Curr = Next;
+      if (!Bitmap)
+        break;
+
+      RelrRelocs.push_back(Elf_Relr((Bitmap << 1) | 1));
+      Base += NBits * Wordsize;
     }
   }
 
@@ -2446,16 +2446,18 @@ GdbIndexSection::GdbIndexSection(std::vector<GdbIndexChunk> &&C)
   SymtabOffset = CuTypesOffset + getAddressAreaSize(Chunks) * 20;
   ConstantPoolOffset = SymtabOffset + GdbSymtab.size() * 8;
 
-  size_t Off = 0;
   for (ArrayRef<uint32_t> Vec : CuVectors) {
-    CuVectorOffsets.push_back(Off);
-    Off += (Vec.size() + 1) * 4;
+    CuVectorOffsets.push_back(CuVectorsPoolSize);
+    CuVectorsPoolSize += (Vec.size() + 1) * 4;
   }
-  StringPoolOffset = ConstantPoolOffset + Off;
-}
 
-size_t GdbIndexSection::getSize() const {
-  return StringPoolOffset + StringPoolSize;
+  uint64_t PoolSize = CuVectorsPoolSize + StringPoolSize;
+  TotalSize = ConstantPoolOffset + PoolSize;
+
+  // Length fields in the .gdb_index section are only 4 byte long,
+  // so the section cannot contain very large contents.
+  if (ConstantPoolOffset > UINT32_MAX || PoolSize > UINT32_MAX)
+    error(".gdb_index section too large");
 }
 
 void GdbIndexSection::writeTo(uint8_t *Buf) {
@@ -2491,7 +2493,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   // Write the symbol table.
   for (GdbSymbol *Sym : GdbSymtab) {
     if (Sym) {
-      write32le(Buf, Sym->NameOffset + StringPoolOffset - ConstantPoolOffset);
+      write32le(Buf, CuVectorsPoolSize + Sym->NameOffset);
       write32le(Buf + 4, CuVectorOffsets[Sym->CuVectorIndex]);
     }
     Buf += 8;

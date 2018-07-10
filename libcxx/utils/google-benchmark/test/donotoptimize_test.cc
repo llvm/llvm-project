@@ -28,13 +28,13 @@ private:
 int main(int, char*[]) {
   // this test verifies compilation of DoNotOptimize() for some types
 
-  char buffer8[8];
+  char buffer8[8] = "";
   benchmark::DoNotOptimize(buffer8);
 
-  char buffer20[20];
+  char buffer20[20] = "";
   benchmark::DoNotOptimize(buffer20);
 
-  char buffer1024[1024];
+  char buffer1024[1024] = "";
   benchmark::DoNotOptimize(buffer1024);
   benchmark::DoNotOptimize(&buffer1024[0]);
 

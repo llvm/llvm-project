@@ -1,9 +1,9 @@
 #ifndef CHECK_H_
 #define CHECK_H_
 
+#include <cmath>
 #include <cstdlib>
 #include <ostream>
-#include <cmath>
 
 #include "internal_macros.h"
 #include "log.h"
@@ -62,6 +62,8 @@ class CheckHandler {
 #define CHECK(b) ::benchmark::internal::GetNullLogInstance()
 #endif
 
+// clang-format off
+// preserve whitespacing between operators for alignment
 #define CHECK_EQ(a, b) CHECK((a) == (b))
 #define CHECK_NE(a, b) CHECK((a) != (b))
 #define CHECK_GE(a, b) CHECK((a) >= (b))
@@ -75,5 +77,6 @@ class CheckHandler {
 #define CHECK_FLOAT_LE(a, b, eps) CHECK((b) - (a) > -(eps))
 #define CHECK_FLOAT_GT(a, b, eps) CHECK((a) - (b) >  (eps))
 #define CHECK_FLOAT_LT(a, b, eps) CHECK((b) - (a) >  (eps))
+//clang-format on
 
 #endif  // CHECK_H_

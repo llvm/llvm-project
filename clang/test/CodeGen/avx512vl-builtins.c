@@ -8503,7 +8503,8 @@ void test_mm256_mask_cvtusepi64_storeu_epi16(void * __P, __mmask8 __M, __m256i _
 
 __m128i test_mm_cvtepi32_epi8(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepi32_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.db.128
+  // CHECK: trunc <4 x i32> %{{.*}} to <4 x i8>
+  // CHECK: shufflevector <4 x i8> %{{.*}}, <4 x i8> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   return _mm_cvtepi32_epi8(__A); 
 }
 
@@ -8527,7 +8528,8 @@ void test_mm_mask_cvtepi32_storeu_epi8(void * __P, __mmask8 __M, __m128i __A) {
 
 __m128i test_mm256_cvtepi32_epi8(__m256i __A) {
   // CHECK-LABEL: @test_mm256_cvtepi32_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.db.256
+  // CHECK: trunc <8 x i32> %{{.*}} to <8 x i8>
+  // CHECK: shufflevector <8 x i8> %{{.*}}, <8 x i8> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm256_cvtepi32_epi8(__A); 
 }
 
@@ -8551,7 +8553,8 @@ void test_mm256_mask_cvtepi32_storeu_epi8(void * __P, __mmask8 __M, __m256i __A)
 
 __m128i test_mm_cvtepi32_epi16(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepi32_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmov.dw.128
+  // CHECK: trunc <4 x i32> %{{.*}} to <4 x i16>
+  // CHECK: shufflevector <4 x i16> %{{.*}}, <4 x i16> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm_cvtepi32_epi16(__A); 
 }
 
@@ -8599,7 +8602,8 @@ void test_mm256_mask_cvtepi32_storeu_epi16(void *  __P, __mmask8 __M, __m256i __
 
 __m128i test_mm_cvtepi64_epi8(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.qb.128
+  // CHECK: trunc <2 x i64> %{{.*}} to <2 x i8>
+  // CHECK: shufflevector <2 x i8> %{{.*}}, <2 x i8> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   return _mm_cvtepi64_epi8(__A); 
 }
 
@@ -8623,7 +8627,8 @@ void test_mm_mask_cvtepi64_storeu_epi8(void * __P, __mmask8 __M, __m128i __A) {
 
 __m128i test_mm256_cvtepi64_epi8(__m256i __A) {
   // CHECK-LABEL: @test_mm256_cvtepi64_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.qb.256
+  // CHECK: trunc <4 x i64> %{{.*}} to <4 x i8>
+  // CHECK: shufflevector <4 x i8> %{{.*}}, <4 x i8> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   return _mm256_cvtepi64_epi8(__A); 
 }
 
@@ -8647,7 +8652,8 @@ void test_mm256_mask_cvtepi64_storeu_epi8(void * __P, __mmask8 __M, __m256i __A)
 
 __m128i test_mm_cvtepi64_epi32(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepi64_epi32
-  // CHECK: @llvm.x86.avx512.mask.pmov.qd.128
+  // CHECK: trunc <2 x i64> %{{.*}} to <2 x i32>
+  // CHECK: shufflevector <2 x i32> %{{.*}}, <2 x i32> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm_cvtepi64_epi32(__A); 
 }
 
@@ -8697,7 +8703,8 @@ void test_mm256_mask_cvtepi64_storeu_epi32(void * __P, __mmask8 __M, __m256i __A
 
 __m128i test_mm_cvtepi64_epi16(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepi64_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmov.qw.128
+  // CHECK: trunc <2 x i64> %{{.*}} to <2 x i16>
+  // CHECK: shufflevector <2 x i16> %{{.*}}, <2 x i16> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
   return _mm_cvtepi64_epi16(__A); 
 }
 
@@ -8721,7 +8728,8 @@ void test_mm_mask_cvtepi64_storeu_epi16(void * __P, __mmask8 __M, __m128i __A) {
 
 __m128i test_mm256_cvtepi64_epi16(__m256i __A) {
   // CHECK-LABEL: @test_mm256_cvtepi64_epi16
-  // CHECK: @llvm.x86.avx512.mask.pmov.qw.256
+  // CHECK: trunc <4 x i64> %{{.*}} to <4 x i16>
+  // CHECK: shufflevector <4 x i16> %{{.*}}, <4 x i16> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return _mm256_cvtepi64_epi16(__A); 
 }
 

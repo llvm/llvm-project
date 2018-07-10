@@ -317,35 +317,14 @@ public:
   }
 
   void VisitFunctionDecl(const FunctionDecl *D) {
-    ID.AddInteger(D->getStorageClass());
-    Hash.AddBoolean(D->isInlineSpecified());
-    Hash.AddBoolean(D->isVirtualAsWritten());
-    Hash.AddBoolean(D->isPure());
-    Hash.AddBoolean(D->isDeletedAsWritten());
-
-    ID.AddInteger(D->param_size());
-
-    for (auto *Param : D->parameters()) {
-      Hash.AddSubDecl(Param);
-    }
-
-    AddQualType(D->getReturnType());
-
-    const auto* SpecializationArgs = D->getTemplateSpecializationArgs();
-    Hash.AddBoolean(SpecializationArgs);
-    if (SpecializationArgs) {
-      ID.AddInteger(SpecializationArgs->size());
-      for (const TemplateArgument &TA : SpecializationArgs->asArray()) {
-        Hash.AddTemplateArgument(TA);
-      }
-    }
+    // Handled by the ODRHash for FunctionDecl
+    ID.AddInteger(D->getODRHash());
 
     Inherited::VisitFunctionDecl(D);
   }
 
   void VisitCXXMethodDecl(const CXXMethodDecl *D) {
-    Hash.AddBoolean(D->isConst());
-    Hash.AddBoolean(D->isVolatile());
+    // Handled by the ODRHash for FunctionDecl
 
     Inherited::VisitCXXMethodDecl(D);
   }
@@ -425,7 +404,6 @@ public:
   }
 
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
-    Visit(D->getTemplatedDecl());
     AddDecl(D->getTemplatedDecl());
     Inherited::VisitFunctionTemplateDecl(D);
   }
@@ -479,9 +457,13 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.
   llvm::SmallVector<const Decl *, 16> Decls;
-  for (const Decl *SubDecl : Record->decls()) {
+  for (Decl *SubDecl : Record->decls()) {
     if (isWhitelistedDecl(SubDecl, Record)) {
       Decls.push_back(SubDecl);
+      if (auto *Function = dyn_cast<FunctionDecl>(SubDecl)) {
+        // Compute/Preload ODRHash into FunctionDecl.
+        Function->getODRHash();
+      }
     }
   }
 
@@ -505,24 +487,47 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   }
 }
 
-void ODRHash::AddFunctionDecl(const FunctionDecl *Function) {
+void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
+                              bool SkipBody) {
   assert(Function && "Expecting non-null pointer.");
-
-  // Skip hashing these kinds of function.
-  if (Function->isImplicit()) return;
-  if (Function->isDefaulted()) return;
-  if (Function->isDeleted()) return;
-  if (!Function->hasBody()) return;
-  if (!Function->getBody()) return;
 
   // Skip functions that are specializations or in specialization context.
   const DeclContext *DC = Function;
   while (DC) {
     if (isa<ClassTemplateSpecializationDecl>(DC)) return;
-    if (auto *F = dyn_cast<FunctionDecl>(DC))
-      if (F->isFunctionTemplateSpecialization()) return;
+    if (auto *F = dyn_cast<FunctionDecl>(DC)) {
+      if (F->isFunctionTemplateSpecialization()) {
+        if (!isa<CXXMethodDecl>(DC)) return;
+        if (DC->getLexicalParent()->isFileContext()) return;
+        // Inline method specializations are the only supported
+        // specialization for now.
+      }
+    }
     DC = DC->getParent();
   }
+
+  ID.AddInteger(Function->getDeclKind());
+
+  const auto *SpecializationArgs = Function->getTemplateSpecializationArgs();
+  AddBoolean(SpecializationArgs);
+  if (SpecializationArgs) {
+    ID.AddInteger(SpecializationArgs->size());
+    for (const TemplateArgument &TA : SpecializationArgs->asArray()) {
+      AddTemplateArgument(TA);
+    }
+  }
+
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Function)) {
+    AddBoolean(Method->isConst());
+    AddBoolean(Method->isVolatile());
+  }
+
+  ID.AddInteger(Function->getStorageClass());
+  AddBoolean(Function->isInlineSpecified());
+  AddBoolean(Function->isVirtualAsWritten());
+  AddBoolean(Function->isPure());
+  AddBoolean(Function->isDeletedAsWritten());
+  AddBoolean(Function->isExplicitlyDefaulted());
 
   AddDecl(Function);
 
@@ -532,7 +537,21 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function) {
   for (auto Param : Function->parameters())
     AddSubDecl(Param);
 
-  AddStmt(Function->getBody());
+  if (SkipBody) {
+    AddBoolean(false);
+    return;
+  }
+
+  const bool HasBody = Function->isThisDeclarationADefinition() &&
+                       !Function->isDefaulted() && !Function->isDeleted() &&
+                       !Function->isLateTemplateParsed();
+  AddBoolean(HasBody);
+  if (HasBody) {
+    auto *Body = Function->getBody();
+    AddBoolean(Body);
+    if (Body)
+      AddStmt(Body);
+  }
 }
 
 void ODRHash::AddDecl(const Decl *D) {

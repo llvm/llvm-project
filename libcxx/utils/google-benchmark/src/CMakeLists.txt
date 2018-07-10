@@ -11,6 +11,10 @@ file(GLOB
     *.cc
     ${PROJECT_SOURCE_DIR}/include/benchmark/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+file(GLOB BENCHMARK_MAIN "benchmark_main.cc")
+foreach(item ${BENCHMARK_MAIN})
+  list(REMOVE_ITEM SOURCE_FILES "${item}")
+endforeach()
 
 add_library(benchmark ${SOURCE_FILES})
 set_target_properties(benchmark PROPERTIES
@@ -34,6 +38,23 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   target_link_libraries(benchmark Shlwapi)
 endif()
 
+# We need extra libraries on Solaris
+if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+  target_link_libraries(benchmark kstat)
+endif()
+
+# Benchmark main library
+add_library(benchmark_main "benchmark_main.cc")
+set_target_properties(benchmark_main PROPERTIES
+  OUTPUT_NAME "benchmark_main"
+  VERSION ${GENERIC_LIB_VERSION}
+  SOVERSION ${GENERIC_LIB_SOVERSION}
+)
+target_include_directories(benchmark PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    )
+target_link_libraries(benchmark_main benchmark)
+
 set(include_install_dir "include")
 set(lib_install_dir "lib/")
 set(bin_install_dir "bin/")
@@ -51,7 +72,7 @@ set(namespace "${PROJECT_NAME}::")
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    "${version_config}" VERSION ${GIT_VERSION} COMPATIBILITY SameMajorVersion
+  "${version_config}" VERSION ${GENERIC_LIB_VERSION} COMPATIBILITY SameMajorVersion
 )
 
 configure_file("${PROJECT_SOURCE_DIR}/cmake/Config.cmake.in" "${project_config}" @ONLY)
@@ -60,7 +81,7 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/benchmark.pc.in" "${pkg_config}" @ON
 if (BENCHMARK_ENABLE_INSTALL)
   # Install target (will install the library to specified CMAKE_INSTALL_PREFIX variable)
   install(
-    TARGETS benchmark
+    TARGETS benchmark benchmark_main
     EXPORT ${targets_export_name}
     ARCHIVE DESTINATION ${lib_install_dir}
     LIBRARY DESTINATION ${lib_install_dir}
