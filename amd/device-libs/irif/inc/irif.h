@@ -343,10 +343,10 @@ extern __attribute__((const)) uint __llvm_amdgcn_sad_hi_u8(uint, uint, uint) __a
 extern __attribute__((const)) uint __llvm_amdgcn_sad_u16(uint, uint, uint) __asm("llvm.amdgcn.sad.u16");
 extern __attribute__((const)) uint __llvm_amdgcn_msad_u8(uint, uint, uint) __asm("llvm.amdgcn.msad.u8");
 
-extern __attribute__((const)) ulong __llvm_amdgcn_icmp_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i32");
-extern __attribute__((const)) ulong __llvm_amdgcn_icmp_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i64");
-extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.f32");
-extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.f64");
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i32");
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_icmp_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i64");
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_fcmp_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.f32");
+extern __attribute__((const, convergent)) ulong __llvm_amdgcn_fcmp_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.f64");
 
 extern __attribute__((const)) float __llvm_amdgcn_cubeid(float, float, float) __asm("llvm.amdgcn.cubeid");
 extern __attribute__((const)) float __llvm_amdgcn_cubema(float, float, float) __asm("llvm.amdgcn.cubema");
