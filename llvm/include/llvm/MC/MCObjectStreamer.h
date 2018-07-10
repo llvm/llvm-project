@@ -90,6 +90,9 @@ protected:
 public:
   void visitUsedSymbol(const MCSymbol &Sym) override;
 
+  /// Create a dummy fragment to assign any pending labels.
+  void flushPendingLabels() { flushPendingLabels(nullptr); }
+
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override;
   /// \name MCStreamer Interface

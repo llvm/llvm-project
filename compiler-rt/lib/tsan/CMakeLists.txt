@@ -80,14 +80,15 @@ set(TSAN_HEADERS
   rtl/tsan_flags.inc
   rtl/tsan_ignoreset.h
   rtl/tsan_interceptors.h
-  rtl/tsan_interface_ann.h
   rtl/tsan_interface.h
+  rtl/tsan_interface_ann.h
   rtl/tsan_interface_inl.h
   rtl/tsan_interface_java.h
   rtl/tsan_mman.h
   rtl/tsan_mutex.h
   rtl/tsan_mutexset.h
   rtl/tsan_platform.h
+  rtl/tsan_ppc_regs.h
   rtl/tsan_report.h
   rtl/tsan_rtl.h
   rtl/tsan_stack_trace.h
@@ -114,6 +115,7 @@ if(APPLE)
     OS ${TSAN_SUPPORTED_OS}
     ARCHS ${TSAN_SUPPORTED_ARCH}
     SOURCES ${TSAN_SOURCES} ${TSAN_CXX_SOURCES} ${TSAN_ASM_SOURCES}
+    ADDITIONAL_HEADERS ${TSAN_HEADERS}
     OBJECT_LIBS RTInterception
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
@@ -128,6 +130,7 @@ if(APPLE)
     OS ${TSAN_SUPPORTED_OS}
     ARCHS ${TSAN_SUPPORTED_ARCH}
     SOURCES ${TSAN_SOURCES} ${TSAN_CXX_SOURCES} ${TSAN_ASM_SOURCES}
+    ADDITIONAL_HEADERS ${TSAN_HEADERS}
     CFLAGS ${TSAN_RTL_CFLAGS})
 
   # Build and check Go runtime.
@@ -181,6 +184,7 @@ else()
               $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
               $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
               $<TARGET_OBJECTS:RTUbsan.${arch}>
+      ADDITIONAL_HEADERS ${TSAN_HEADERS}
       CFLAGS ${TSAN_RTL_CFLAGS}
       PARENT_TARGET tsan)
     add_compiler_rt_runtime(clang_rt.tsan_cxx
@@ -188,6 +192,7 @@ else()
       ARCHS ${arch}
       SOURCES ${TSAN_CXX_SOURCES}
               $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
+      ADDITIONAL_HEADERS ${TSAN_HEADERS}
       CFLAGS ${TSAN_RTL_CFLAGS}
       PARENT_TARGET tsan)
     list(APPEND TSAN_RUNTIME_LIBRARIES clang_rt.tsan-${arch}

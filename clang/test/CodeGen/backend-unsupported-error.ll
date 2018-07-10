@@ -3,7 +3,7 @@
 
 ; This is to check that backend errors for unsupported features are formatted correctly
 
-; CHECK: error: test.c:2:20: in function bar i32 (): unsupported call to function foo.2
+; CHECK: error: test.c:2:20: in function bar i32 (): unsupported call to function foo
 
 target triple = "r600-unknown-unknown"
 
@@ -21,7 +21,7 @@ entry:
   ret i32 %call, !dbg !15
 }
 
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind noinline "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

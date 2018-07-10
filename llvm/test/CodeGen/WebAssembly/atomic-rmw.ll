@@ -179,7 +179,7 @@ define i64 @add_sext_i16_i64(i16* %p, i64 %v) {
 ; 32->64 sext rmw gets selected as i32.atomic.rmw.add, i64_extend_s/i32
 ; CHECK-LABEL: add_sext_i32_i64:
 ; CHECK-NEXT: .param i32, i64{{$}}
-; CHECK: i32.wrap/i64 $push0=, $1
+; CHECK: i32.wrap/i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.add $push1=, 0($0), $pop0{{$}}
 ; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
@@ -307,7 +307,7 @@ define i64 @and_sext_i16_i64(i16* %p, i64 %v) {
 ; 32->64 sext rmw gets selected as i32.atomic.rmw.and, i64_extend_s/i32
 ; CHECK-LABEL: and_sext_i32_i64:
 ; CHECK-NEXT: .param i32, i64{{$}}
-; CHECK: i32.wrap/i64 $push0=, $1
+; CHECK: i32.wrap/i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.and $push1=, 0($0), $pop0{{$}}
 ; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
@@ -371,7 +371,7 @@ define i64 @or_sext_i16_i64(i16* %p, i64 %v) {
 ; 32->64 sext rmw gets selected as i32.atomic.rmw.or, i64_extend_s/i32
 ; CHECK-LABEL: or_sext_i32_i64:
 ; CHECK-NEXT: .param i32, i64{{$}}
-; CHECK: i32.wrap/i64 $push0=, $1
+; CHECK: i32.wrap/i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.or $push1=, 0($0), $pop0{{$}}
 ; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
@@ -435,7 +435,7 @@ define i64 @xor_sext_i16_i64(i16* %p, i64 %v) {
 ; 32->64 sext rmw gets selected as i32.atomic.rmw.xor, i64_extend_s/i32
 ; CHECK-LABEL: xor_sext_i32_i64:
 ; CHECK-NEXT: .param i32, i64{{$}}
-; CHECK: i32.wrap/i64 $push0=, $1
+; CHECK: i32.wrap/i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.xor $push1=, 0($0), $pop0{{$}}
 ; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}
@@ -499,7 +499,7 @@ define i64 @xchg_sext_i16_i64(i16* %p, i64 %v) {
 ; 32->64 sext rmw gets selected as i32.atomic.rmw.xchg, i64_extend_s/i32
 ; CHECK-LABEL: xchg_sext_i32_i64:
 ; CHECK-NEXT: .param i32, i64{{$}}
-; CHECK: i32.wrap/i64 $push0=, $1
+; CHECK: i32.wrap/i64 $push0=, $1{{$}}
 ; CHECK: i32.atomic.rmw.xchg $push1=, 0($0), $pop0{{$}}
 ; CHECK-NEXT: i64.extend_s/i32 $push2=, $pop1{{$}}
 ; CHECK-NEXT: return $pop2{{$}}

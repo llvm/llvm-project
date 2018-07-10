@@ -5,6 +5,12 @@ set(DFSAN_RTL_SOURCES
   dfsan.cc
   dfsan_custom.cc
   dfsan_interceptors.cc)
+
+set(DFSAN_RTL_HEADERS
+  dfsan.h
+  dfsan_flags.inc
+  dfsan_platform.h)
+
 set(DFSAN_COMMON_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF DFSAN_COMMON_CFLAGS)
 # Prevent clang from generating libc calls.
@@ -23,6 +29,7 @@ foreach(arch ${DFSAN_SUPPORTED_ARCH})
             $<TARGET_OBJECTS:RTInterception.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+    ADDITIONAL_HEADERS ${DFSAN_RTL_HEADERS}
     CFLAGS ${DFSAN_CFLAGS}
     PARENT_TARGET dfsan)
   add_sanitizer_rt_symbols(clang_rt.dfsan

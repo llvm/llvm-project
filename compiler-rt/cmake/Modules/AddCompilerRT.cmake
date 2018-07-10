@@ -32,9 +32,11 @@ endfunction()
 #                                  SOURCES <source files>
 #                                  CFLAGS <compile flags>
 #                                  DEFS <compile definitions>
-#                                  DEPS <dependencies>)
+#                                  DEPS <dependencies>
+#                                  ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_object_libraries name)
-  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS" ${ARGN})
+  cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;ADDITIONAL_HEADERS"
+    ${ARGN})
   set(libnames)
   if(APPLE)
     foreach(os ${LIB_OS})
@@ -54,6 +56,13 @@ function(add_compiler_rt_object_libraries name)
       endif()
     endforeach()
   endif()
+
+  # Add headers to LIB_SOURCES for IDEs
+  compiler_rt_process_sources(LIB_SOURCES
+    ${LIB_SOURCES}
+    ADDITIONAL_HEADERS
+      ${LIB_ADDITIONAL_HEADERS}
+  )
 
   foreach(libname ${libnames})
     add_library(${libname} OBJECT ${LIB_SOURCES})
@@ -132,7 +141,8 @@ endmacro()
 #                         DEFS <compile definitions>
 #                         LINK_LIBS <linked libraries> (only for shared library)
 #                         OBJECT_LIBS <object libraries to use as sources>
-#                         PARENT_TARGET <convenience parent target>)
+#                         PARENT_TARGET <convenience parent target>
+#                         ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_runtime name type)
   if(NOT type MATCHES "^(STATIC|SHARED)$")
     message(FATAL_ERROR "type argument must be STATIC or SHARED")
@@ -141,7 +151,7 @@ function(add_compiler_rt_runtime name type)
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"
-    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;LINK_LIBS;OBJECT_LIBS"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
@@ -150,6 +160,18 @@ function(add_compiler_rt_runtime name type)
     set(NO_LTO_FLAGS "-fno-lto")
   else()
     set(NO_LTO_FLAGS "")
+  endif()
+
+  list(LENGTH LIB_SOURCES LIB_SOURCES_LENGTH)
+  if (${LIB_SOURCES_LENGTH} GREATER 0)
+    # Add headers to LIB_SOURCES for IDEs. It doesn't make sense to
+    # do this for a runtime library that only consists of OBJECT
+    # libraries, so only add the headers when source files are present.
+    compiler_rt_process_sources(LIB_SOURCES
+      ${LIB_SOURCES}
+      ADDITIONAL_HEADERS
+        ${LIB_ADDITIONAL_HEADERS}
+    )
   endif()
 
   if(APPLE)

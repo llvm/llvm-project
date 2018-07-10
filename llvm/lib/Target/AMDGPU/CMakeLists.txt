@@ -40,6 +40,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUCallLowering.cpp
   AMDGPUCodeGenPrepare.cpp
   AMDGPUFrameLowering.cpp
+  AMDGPUHSAMetadataStreamer.cpp
   AMDGPUInstrInfo.cpp
   AMDGPUInstructionSelector.cpp
   AMDGPUIntrinsicInfo.cpp

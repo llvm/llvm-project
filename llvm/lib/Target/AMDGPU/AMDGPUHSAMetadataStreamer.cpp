@@ -15,6 +15,10 @@
 
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPU.h"
+#include "AMDGPUSubtarget.h"
+#include "SIMachineFunctionInfo.h"
+#include "SIProgramInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
@@ -196,6 +200,57 @@ std::vector<uint32_t> MetadataStreamer::getWorkGroupDimensions(
   return Dims;
 }
 
+Kernel::CodeProps::Metadata MetadataStreamer::getHSACodeProps(
+    const MachineFunction &MF,
+    const SIProgramInfo &ProgramInfo) const {
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
+  const Function &F = MF.getFunction();
+
+  // Avoid asserting on erroneous cases.
+  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
+    return HSACodeProps;
+
+  HSACodeProps.mKernargSegmentSize = STM.getKernArgSegmentSize(F);
+  HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
+  HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
+  HSACodeProps.mKernargSegmentAlign =
+      std::max(uint32_t(4), MFI.getMaxKernArgAlign());
+  HSACodeProps.mWavefrontSize = STM.getWavefrontSize();
+  HSACodeProps.mNumSGPRs = ProgramInfo.NumSGPR;
+  HSACodeProps.mNumVGPRs = ProgramInfo.NumVGPR;
+  HSACodeProps.mMaxFlatWorkGroupSize = MFI.getMaxFlatWorkGroupSize();
+  HSACodeProps.mIsDynamicCallStack = ProgramInfo.DynamicCallStack;
+  HSACodeProps.mIsXNACKEnabled = STM.isXNACKEnabled();
+  HSACodeProps.mNumSpilledSGPRs = MFI.getNumSpilledSGPRs();
+  HSACodeProps.mNumSpilledVGPRs = MFI.getNumSpilledVGPRs();
+
+  return HSACodeProps;
+}
+
+Kernel::DebugProps::Metadata MetadataStreamer::getHSADebugProps(
+    const MachineFunction &MF,
+    const SIProgramInfo &ProgramInfo) const {
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  HSAMD::Kernel::DebugProps::Metadata HSADebugProps;
+
+  if (!STM.debuggerSupported())
+    return HSADebugProps;
+
+  HSADebugProps.mDebuggerABIVersion.push_back(1);
+  HSADebugProps.mDebuggerABIVersion.push_back(0);
+
+  if (STM.debuggerEmitPrologue()) {
+    HSADebugProps.mPrivateSegmentBufferSGPR =
+        ProgramInfo.DebuggerPrivateSegmentBufferSGPR;
+    HSADebugProps.mWavefrontPrivateSegmentOffsetSGPR =
+        ProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;
+  }
+
+  return HSADebugProps;
+}
+
 void MetadataStreamer::emitVersion() {
   auto &Version = HSAMetadata.mVersion;
 
@@ -255,36 +310,7 @@ void MetadataStreamer::emitKernelArgs(const Function &Func) {
   for (auto &Arg : Func.args())
     emitKernelArg(Arg);
 
-  // TODO: What about other languages?
-  if (!Func.getParent()->getNamedMetadata("opencl.ocl.version"))
-    return;
-
-  auto &DL = Func.getParent()->getDataLayout();
-  auto Int64Ty = Type::getInt64Ty(Func.getContext());
-
-  emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetX);
-  emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetY);
-  emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetZ);
-
-  auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
-                                      AMDGPUASI.GLOBAL_ADDRESS);
-
-  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
-  // "none" argument.
-  if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenPrintfBuffer);
-  else
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
-
-  // Emit "default queue" and "completion action" arguments if enqueue kernel is
-  // used, otherwise emit dummy "none" arguments.
-  if (Func.hasFnAttribute("calls-enqueue-kernel")) {
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenDefaultQueue);
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenCompletionAction);
-  } else {
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
-  }
+  emitHiddenKernelArgs(Func);
 }
 
 void MetadataStreamer::emitKernelArg(const Argument &Arg) {
@@ -378,6 +404,48 @@ void MetadataStreamer::emitKernelArg(const DataLayout &DL, Type *Ty,
   }
 }
 
+void MetadataStreamer::emitHiddenKernelArgs(const Function &Func) {
+  int HiddenArgNumBytes =
+      getIntegerAttribute(Func, "amdgpu-implicitarg-num-bytes", 0);
+
+  if (!HiddenArgNumBytes)
+    return;
+
+  auto &DL = Func.getParent()->getDataLayout();
+  auto Int64Ty = Type::getInt64Ty(Func.getContext());
+
+  if (HiddenArgNumBytes >= 8)
+    emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetX);
+  if (HiddenArgNumBytes >= 16)
+    emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetY);
+  if (HiddenArgNumBytes >= 24)
+    emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetZ);
+
+  auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
+                                      AMDGPUASI.GLOBAL_ADDRESS);
+
+  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
+  // "none" argument.
+  if (HiddenArgNumBytes >= 32) {
+    if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenPrintfBuffer);
+    else
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+  }
+
+  // Emit "default queue" and "completion action" arguments if enqueue kernel is
+  // used, otherwise emit dummy "none" arguments.
+  if (HiddenArgNumBytes >= 48) {
+    if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenDefaultQueue);
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenCompletionAction);
+    } else {
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+    }
+  }
+}
+
 void MetadataStreamer::begin(const Module &Mod) {
   AMDGPUASI = getAMDGPUAS(Mod);
   emitVersion();
@@ -395,10 +463,11 @@ void MetadataStreamer::end() {
     verify(HSAMetadataString);
 }
 
-void MetadataStreamer::emitKernel(
-    const Function &Func,
-    const Kernel::CodeProps::Metadata &CodeProps,
-    const Kernel::DebugProps::Metadata &DebugProps) {
+void MetadataStreamer::emitKernel(const MachineFunction &MF, const SIProgramInfo &ProgramInfo) {
+  auto &Func = MF.getFunction();
+  auto CodeProps = getHSACodeProps(MF, ProgramInfo);
+  auto DebugProps = getHSADebugProps(MF, ProgramInfo);
+
   if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL)
     return;
 

@@ -59,7 +59,6 @@ statistics from the file. If that fails then the process will quit.
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <limits.h>
 
 #include <fstream>
 #include <iostream>
@@ -306,18 +305,6 @@ int ExecuteFilesOnyByOne(int argc, char **argv) {
   return 0;
 }
 
-static void set_iterations(int *N, const char *arg) {
-  char *next_char;
-  long NL = strtol(arg, &next_char, 10);
-  if (NL < 1 || NL > INT_MAX || *next_char != '\0') {
-    fprintf(stderr, "WARNING: iterations invalid `%s`\n",
-        arg);
-    ::exit(-1);
-  }
-
-  *N = static_cast<int>(NL);
-}
-
 int main(int argc, char **argv) {
   fprintf(stderr,
       "======================= INFO =========================\n"
@@ -344,12 +331,11 @@ int main(int argc, char **argv) {
 
   int N = 1000;
   if (argc == 2 && argv[1][0] == '-')
-    set_iterations(&N, argv[1] + 1);
-  else if(argc == 2) {
-    fprintf(stderr, "WARNING: using the deprecated call style `%s %d`\n",
-        argv[0], N);
-    set_iterations(&N, argv[1]);
-  } else if (argc > 1)
+      N = atoi(argv[1] + 1);
+  else if(argc == 2 && (N = atoi(argv[1])) > 0)
+      fprintf(stderr, "WARNING: using the deprecated call style `%s %d`\n",
+              argv[0], N);
+  else if (argc > 1)
     return ExecuteFilesOnyByOne(argc, argv);
 
   assert(N > 0);

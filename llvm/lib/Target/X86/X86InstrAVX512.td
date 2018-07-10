@@ -4439,11 +4439,6 @@ let Predicates = [HasAVX512] in {
 
   def : Pat<(v2f64 (X86Movsd VR128X:$src1, (scalar_to_vector FR64X:$src2))),
             (VMOVSDZrr VR128X:$src1, (COPY_TO_REGCLASS FR64X:$src2, VR128X))>;
-
-  def : Pat<(v2f64 (X86Movlpd VR128X:$src1, VR128X:$src2)),
-            (VMOVSDZrr VR128X:$src1, VR128X:$src2)>;
-  def : Pat<(v4f32 (X86Movlps VR128X:$src1, VR128X:$src2)),
-            (VMOVSDZrr VR128X:$src1, VR128X:$src2)>;
 }
 
 let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecLogic.XMM] in {
@@ -6405,7 +6400,8 @@ def VMOVHLPSZrr : AVX512PSI<0x12, MRMSrcReg, (outs VR128X:$dst),
 // All patterns was taken from SSS implementation.
 //===----------------------------------------------------------------------===//
 
-multiclass avx512_mov_hilo_packed<bits<8> opc, string OpcodeStr, SDNode OpNode,
+multiclass avx512_mov_hilo_packed<bits<8> opc, string OpcodeStr,
+                                  SDPatternOperator OpNode,
                                   X86VectorVTInfo _> {
   let ExeDomain = _.ExeDomain in
   def rm : AVX512<opc, MRMSrcMem, (outs _.RC:$dst),
@@ -6423,9 +6419,9 @@ defm VMOVHPSZ128 : avx512_mov_hilo_packed<0x16, "vmovhps", X86Movlhps,
                                   v4f32x_info>, EVEX_CD8<32, CD8VT2>, PS;
 defm VMOVHPDZ128 : avx512_mov_hilo_packed<0x16, "vmovhpd", X86Unpckl,
                                   v2f64x_info>, EVEX_CD8<64, CD8VT1>, PD, VEX_W;
-defm VMOVLPSZ128 : avx512_mov_hilo_packed<0x12, "vmovlps", X86Movlps,
+defm VMOVLPSZ128 : avx512_mov_hilo_packed<0x12, "vmovlps", null_frag,
                                   v4f32x_info>, EVEX_CD8<32, CD8VT2>, PS;
-defm VMOVLPDZ128 : avx512_mov_hilo_packed<0x12, "vmovlpd", X86Movlpd,
+defm VMOVLPDZ128 : avx512_mov_hilo_packed<0x12, "vmovlpd", null_frag,
                                   v2f64x_info>, EVEX_CD8<64, CD8VT1>, PD, VEX_W;
 
 let Predicates = [HasAVX512] in {
@@ -6440,12 +6436,7 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v2f64 (X86Unpckl VR128X:$src1,
                     (bc_v2f64 (v2i64 (scalar_to_vector (loadi64 addr:$src2)))))),
            (VMOVHPDZ128rm VR128X:$src1, addr:$src2)>;
-  // VMOVLPS patterns
-  def : Pat<(v4f32 (X86Movlps VR128X:$src1, (load addr:$src2))),
-          (VMOVLPSZ128rm VR128X:$src1, addr:$src2)>;
   // VMOVLPD patterns
-  def : Pat<(v2f64 (X86Movlpd VR128X:$src1, (load addr:$src2))),
-          (VMOVLPDZ128rm VR128X:$src1, addr:$src2)>;
   def : Pat<(v2f64 (X86Movsd VR128X:$src1,
                            (v2f64 (scalar_to_vector (loadf64 addr:$src2))))),
           (VMOVLPDZ128rm VR128X:$src1, addr:$src2)>;
@@ -6487,14 +6478,6 @@ let Predicates = [HasAVX512] in {
                            (v2f64 (X86VPermilpi VR128X:$src, (i8 1))),
                            (iPTR 0))), addr:$dst),
            (VMOVHPDZ128mr addr:$dst, VR128X:$src)>;
-  // VMOVLPS patterns
-  def : Pat<(store (v4f32 (X86Movlps (load addr:$src1), VR128X:$src2)),
-                   addr:$src1),
-            (VMOVLPSZ128mr addr:$src1, VR128X:$src2)>;
-  // VMOVLPD patterns
-  def : Pat<(store (v2f64 (X86Movlpd (load addr:$src1), VR128X:$src2)),
-                   addr:$src1),
-            (VMOVLPDZ128mr addr:$src1, VR128X:$src2)>;
 }
 //===----------------------------------------------------------------------===//
 // FMA - Fused Multiply Operations

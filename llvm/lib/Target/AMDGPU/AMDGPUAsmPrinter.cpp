@@ -207,9 +207,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return;
 
-  HSAMetadataStream.emitKernel(MF->getFunction(),
-                               getHSACodeProps(*MF, CurrentProgramInfo),
-                               getHSADebugProps(*MF, CurrentProgramInfo));
+  HSAMetadataStream.emitKernel(*MF, CurrentProgramInfo);
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
@@ -1195,57 +1193,6 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
     Out.debug_private_segment_buffer_sgpr =
       CurrentProgramInfo.DebuggerPrivateSegmentBufferSGPR;
   }
-}
-
-AMDGPU::HSAMD::Kernel::CodeProps::Metadata AMDGPUAsmPrinter::getHSACodeProps(
-    const MachineFunction &MF,
-    const SIProgramInfo &ProgramInfo) const {
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
-  const Function &F = MF.getFunction();
-
-  // Avoid asserting on erroneous cases.
-  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
-    return HSACodeProps;
-
-  HSACodeProps.mKernargSegmentSize = STM.getKernArgSegmentSize(F);
-  HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
-  HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
-  HSACodeProps.mKernargSegmentAlign =
-      std::max(uint32_t(4), MFI.getMaxKernArgAlign());
-  HSACodeProps.mWavefrontSize = STM.getWavefrontSize();
-  HSACodeProps.mNumSGPRs = CurrentProgramInfo.NumSGPR;
-  HSACodeProps.mNumVGPRs = CurrentProgramInfo.NumVGPR;
-  HSACodeProps.mMaxFlatWorkGroupSize = MFI.getMaxFlatWorkGroupSize();
-  HSACodeProps.mIsDynamicCallStack = ProgramInfo.DynamicCallStack;
-  HSACodeProps.mIsXNACKEnabled = STM.isXNACKEnabled();
-  HSACodeProps.mNumSpilledSGPRs = MFI.getNumSpilledSGPRs();
-  HSACodeProps.mNumSpilledVGPRs = MFI.getNumSpilledVGPRs();
-
-  return HSACodeProps;
-}
-
-AMDGPU::HSAMD::Kernel::DebugProps::Metadata AMDGPUAsmPrinter::getHSADebugProps(
-    const MachineFunction &MF,
-    const SIProgramInfo &ProgramInfo) const {
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
-  HSAMD::Kernel::DebugProps::Metadata HSADebugProps;
-
-  if (!STM.debuggerSupported())
-    return HSADebugProps;
-
-  HSADebugProps.mDebuggerABIVersion.push_back(1);
-  HSADebugProps.mDebuggerABIVersion.push_back(0);
-
-  if (STM.debuggerEmitPrologue()) {
-    HSADebugProps.mPrivateSegmentBufferSGPR =
-        ProgramInfo.DebuggerPrivateSegmentBufferSGPR;
-    HSADebugProps.mWavefrontPrivateSegmentOffsetSGPR =
-        ProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;
-  }
-
-  return HSADebugProps;
 }
 
 bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

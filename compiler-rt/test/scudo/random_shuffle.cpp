@@ -1,6 +1,6 @@
 // RUN: %clangxx_scudo %s -o %t
 // RUN: rm -rf %t-dir/random_shuffle_tmp_dir
-// RUN: mkdir %t-dir/random_shuffle_tmp_dir
+// RUN: mkdir -p %t-dir/random_shuffle_tmp_dir
 // RUN: %run %t 100 > %t-dir/random_shuffle_tmp_dir/out1
 // RUN: %run %t 100 > %t-dir/random_shuffle_tmp_dir/out2
 // RUN: %run %t 10000 > %t-dir/random_shuffle_tmp_dir/out1
