@@ -122,8 +122,8 @@ public:
     return order() < Other.order();
   }
 
-    // Subclasses should implement:
-    // static uint32_t hash(StringRef Name);
+  // Subclasses should implement:
+  // static uint32_t hash(StringRef Name);
 
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS) const = 0;
@@ -286,25 +286,6 @@ void emitDWARF5AccelTable(AsmPrinter *Asm,
                           AccelTable<DWARF5AccelTableData> &Contents,
                           const DwarfDebug &DD,
                           ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
-
-/// Abstraction to allow different users (DwarfDebug and dsymutil) to emit
-/// Dwarf accelerator tables.
-class AccelTableWriterInfo {
-public:
-  virtual ~AccelTableWriterInfo() = default;
-  virtual MCSymbol* getLabelForCU(unsigned Idx) const = 0;
-  virtual unsigned getNumberOfCUs() const = 0;
-  virtual unsigned getUnqiueIDForUnitDie(const DIE* UnitDie) const = 0;
-};
-
-void emitDWARF5AccelTable(AsmPrinter *Asm,
-                          AccelTable<DWARF5AccelTableData> &Contents,
-                          const DwarfDebug &DD,
-                          ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
-
-void emitDWARF5AccelTable(
-    AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
-    std::unique_ptr<AccelTableWriterInfo> WriterInfo);
 
 /// Accelerator table data implementation for simple Apple accelerator tables
 /// with just a DIE reference.

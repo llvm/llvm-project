@@ -408,7 +408,7 @@ bool FreeBSD::isPIEDefault() const { return getSanitizerArgs().requiresPIE(); }
 SanitizerMask FreeBSD::getSupportedSanitizers() const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
-  const bool IsMIPS64 = getTriple().isMIPS32();
+  const bool IsMIPS64 = getTriple().isMIPS64();
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::Vptr;

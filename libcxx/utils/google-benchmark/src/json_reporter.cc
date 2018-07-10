@@ -17,12 +17,12 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iomanip>  // for setprecision
 #include <iostream>
+#include <limits>
 #include <string>
 #include <tuple>
 #include <vector>
-#include <iomanip> // for setprecision
-#include <limits>
 
 #include "string_util.h"
 #include "timers.h"
@@ -32,15 +32,15 @@ namespace benchmark {
 namespace {
 
 std::string FormatKV(std::string const& key, std::string const& value) {
-  return StringPrintF("\"%s\": \"%s\"", key.c_str(), value.c_str());
+  return StrFormat("\"%s\": \"%s\"", key.c_str(), value.c_str());
 }
 
 std::string FormatKV(std::string const& key, const char* value) {
-  return StringPrintF("\"%s\": \"%s\"", key.c_str(), value);
+  return StrFormat("\"%s\": \"%s\"", key.c_str(), value);
 }
 
 std::string FormatKV(std::string const& key, bool value) {
-  return StringPrintF("\"%s\": %s", key.c_str(), value ? "true" : "false");
+  return StrFormat("\"%s\": %s", key.c_str(), value ? "true" : "false");
 }
 
 std::string FormatKV(std::string const& key, int64_t value) {
@@ -53,7 +53,7 @@ std::string FormatKV(std::string const& key, double value) {
   std::stringstream ss;
   ss << '"' << key << "\": ";
 
-  const auto max_digits10 = std::numeric_limits<decltype (value)>::max_digits10;
+  const auto max_digits10 = std::numeric_limits<decltype(value)>::max_digits10;
   const auto max_fractional_digits10 = max_digits10 - 1;
 
   ss << std::scientific << std::setprecision(max_fractional_digits10) << value;
@@ -76,6 +76,10 @@ bool JSONReporter::ReportContext(const Context& context) {
 
   std::string walltime_value = LocalDateTimeString();
   out << indent << FormatKV("date", walltime_value) << ",\n";
+
+  if (Context::executable_name) {
+    out << indent << FormatKV("executable", Context::executable_name) << ",\n";
+  }
 
   CPUInfo const& info = context.cpu_info;
   out << indent << FormatKV("num_cpus", static_cast<int64_t>(info.num_cpus))
@@ -157,40 +161,30 @@ void JSONReporter::PrintRunData(Run const& run) {
   }
   if (!run.report_big_o && !run.report_rms) {
     out << indent << FormatKV("iterations", run.iterations) << ",\n";
-    out << indent
-        << FormatKV("real_time", run.GetAdjustedRealTime())
-        << ",\n";
-    out << indent
-        << FormatKV("cpu_time", run.GetAdjustedCPUTime());
+    out << indent << FormatKV("real_time", run.GetAdjustedRealTime()) << ",\n";
+    out << indent << FormatKV("cpu_time", run.GetAdjustedCPUTime());
     out << ",\n"
         << indent << FormatKV("time_unit", GetTimeUnitString(run.time_unit));
   } else if (run.report_big_o) {
-    out << indent
-        << FormatKV("cpu_coefficient", run.GetAdjustedCPUTime())
+    out << indent << FormatKV("cpu_coefficient", run.GetAdjustedCPUTime())
         << ",\n";
-    out << indent
-        << FormatKV("real_coefficient", run.GetAdjustedRealTime())
+    out << indent << FormatKV("real_coefficient", run.GetAdjustedRealTime())
         << ",\n";
     out << indent << FormatKV("big_o", GetBigOString(run.complexity)) << ",\n";
     out << indent << FormatKV("time_unit", GetTimeUnitString(run.time_unit));
   } else if (run.report_rms) {
-    out << indent
-        << FormatKV("rms", run.GetAdjustedCPUTime());
+    out << indent << FormatKV("rms", run.GetAdjustedCPUTime());
   }
   if (run.bytes_per_second > 0.0) {
     out << ",\n"
-        << indent
-        << FormatKV("bytes_per_second", run.bytes_per_second);
+        << indent << FormatKV("bytes_per_second", run.bytes_per_second);
   }
   if (run.items_per_second > 0.0) {
     out << ",\n"
-        << indent
-        << FormatKV("items_per_second", run.items_per_second);
+        << indent << FormatKV("items_per_second", run.items_per_second);
   }
-  for(auto &c : run.counters) {
-    out << ",\n"
-        << indent
-        << FormatKV(c.first, c.second);
+  for (auto& c : run.counters) {
+    out << ",\n" << indent << FormatKV(c.first, c.second);
   }
   if (!run.report_label.empty()) {
     out << ",\n" << indent << FormatKV("label", run.report_label);
@@ -198,4 +192,4 @@ void JSONReporter::PrintRunData(Run const& run) {
   out << '\n';
 }
 
-} // end namespace benchmark
+}  // end namespace benchmark

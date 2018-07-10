@@ -1747,7 +1747,6 @@ public:
     ExecutionContext exe_ctx = GetCommandInterpreter().GetExecutionContext();
     m_options.NotifyOptionParsingStarting(&exe_ctx);
 
-    const char *expr = nullptr;
 
     // Print out an usage syntax on an empty command line.
     if (raw_command_line[0] == '\0') {
@@ -1755,34 +1754,12 @@ public:
       return true;
     }
 
-    if (raw_command_line[0] == '-') {
-      // We have some options and these options MUST end with --.
-      const char *end_options = nullptr;
-      const char *s = raw_command_line;
-      while (s && s[0]) {
-        end_options = ::strstr(s, "--");
-        if (end_options) {
-          end_options += 2; // Get past the "--"
-          if (::isspace(end_options[0])) {
-            expr = end_options;
-            while (::isspace(*expr))
-              ++expr;
-            break;
-          }
-        }
-        s = end_options;
-      }
+    OptionsWithRaw args(raw_command_line);
+    const char *expr = args.GetRawPart().c_str();
 
-      if (end_options) {
-        Args args(
-            llvm::StringRef(raw_command_line, end_options - raw_command_line));
-        if (!ParseOptions(args, result))
-          return false;
-      }
-    }
-
-    if (expr == nullptr)
-      expr = raw_command_line;
+    if (args.HasArgs())
+      if (!ParseOptions(args.GetArgs(), result))
+        return false;
 
     PlatformSP platform_sp(
         m_interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform());

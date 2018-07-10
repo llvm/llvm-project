@@ -18,12 +18,6 @@ namespace __xray {
 
 namespace {
 
-TEST(FunctionCallTrieTest, Construction) {
-  // We want to make sure that we can create one of these without the set of
-  // allocators we need. This will by default use the global allocators.
-  FunctionCallTrie Trie;
-}
-
 TEST(FunctionCallTrieTest, ConstructWithTLSAllocators) {
   // FIXME: Support passing in configuration for allocators in the allocator
   // constructors.
@@ -56,6 +50,17 @@ TEST(FunctionCallTrieTest, MissingFunctionEntry) {
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
   Trie.exitFunction(1, 1);
+  const auto &R = Trie.getRoots();
+
+  ASSERT_TRUE(R.empty());
+}
+
+TEST(FunctionCallTrieTest, NoMatchingEntersForExit) {
+  auto A = FunctionCallTrie::InitAllocators();
+  FunctionCallTrie Trie(A);
+  Trie.enterFunction(2, 1);
+  Trie.enterFunction(3, 3);
+  Trie.exitFunction(1, 5);
   const auto &R = Trie.getRoots();
 
   ASSERT_TRUE(R.empty());
@@ -151,6 +156,31 @@ TEST(FunctionCallTrieTest, MissingIntermediaryExit) {
   EXPECT_EQ(F3.CumulativeLocalTime, 100);
   EXPECT_EQ(F2.CumulativeLocalTime, 300);
   EXPECT_EQ(F1.CumulativeLocalTime, 100);
+}
+
+TEST(FunctionCallTrieTest, DeepCallStack) {
+  // Simulate a relatively deep call stack (32 levels) and ensure that we can
+  // properly pop all the way up the stack.
+  profilingFlags()->setDefaults();
+  auto A = FunctionCallTrie::InitAllocators();
+  FunctionCallTrie Trie(A);
+  for (int i = 0; i < 32; ++i)
+    Trie.enterFunction(i + 1, i);
+  Trie.exitFunction(1, 33);
+
+  // Here, validate that we have a 32-level deep function call path from the
+  // root (1) down to the leaf (33).
+  const auto &R = Trie.getRoots();
+  ASSERT_EQ(R.size(), 1u);
+  auto F = R[0];
+  for (int i = 0; i < 32; ++i) {
+    EXPECT_EQ(F->FId, i + 1);
+    EXPECT_EQ(F->CallCount, 1);
+    if (F->Callees.empty() && i != 31)
+      FAIL() << "Empty callees for FId " << F->FId;
+    if (i != 31)
+      F = F->Callees[0].NodePtr;
+  }
 }
 
 // TODO: Test that we can handle cross-CPU migrations, where TSCs are not

@@ -431,7 +431,8 @@ void ImportFile::parse() {
   // address pointed by the __imp_ symbol. (This allows you to call
   // DLL functions just like regular non-DLL functions.)
   if (Hdr->getType() == llvm::COFF::IMPORT_CODE)
-    ThunkSym = Symtab->addImportThunk(Name, ImpSym, Hdr->Machine);
+    ThunkSym = Symtab->addImportThunk(
+        Name, cast_or_null<DefinedImportData>(ImpSym), Hdr->Machine);
 }
 
 void BitcodeFile::parse() {

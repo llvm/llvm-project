@@ -258,9 +258,9 @@ profilingLoggingInit(size_t BufferSize, size_t BufferMax, void *Options,
   {
     SpinMutexLock Lock(&ProfilerOptionsMutex);
     FlagParser ConfigParser;
-    auto *F = profilingFlags();
-    F->setDefaults();
-    registerProfilerFlags(&ConfigParser, F);
+    ProfilerFlags Flags;
+    Flags.setDefaults();
+    registerProfilerFlags(&ConfigParser, &Flags);
     ConfigParser.ParseString(profilingCompilerDefinedFlags());
     const char *Env = GetEnv("XRAY_PROFILING_OPTIONS");
     if (Env == nullptr)
@@ -271,6 +271,7 @@ profilingLoggingInit(size_t BufferSize, size_t BufferMax, void *Options,
     ConfigParser.ParseString(static_cast<const char *>(Options));
     if (Verbosity())
       ReportUnrecognizedFlags();
+    *profilingFlags() = Flags;
   }
 
   // We need to reset the profile data collection implementation now.

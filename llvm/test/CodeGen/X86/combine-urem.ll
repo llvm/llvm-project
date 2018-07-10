@@ -27,6 +27,94 @@ define <4 x i32> @combine_vec_urem_by_one(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; TODO fold (urem x, -1) -> select((icmp eq x, -1), 0, x)
+define i32 @combine_urem_by_negone(i32 %x) {
+; CHECK-LABEL: combine_urem_by_negone:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shlq $31, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    sarq $63, %rcx
+; CHECK-NEXT:    subl %ecx, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = urem i32 %x, -1
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_urem_by_negone(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_urem_by_negone:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2147483649,2147483649,2147483649,2147483649]
+; SSE-NEXT:    pmuludq %xmm2, %xmm1
+; SSE-NEXT:    pmuludq %xmm0, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; SSE-NEXT:    psrad $31, %xmm2
+; SSE-NEXT:    psubd %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_vec_urem_by_negone:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [2147483649,2147483649,2147483649,2147483649]
+; AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; AVX1-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_vec_urem_by_negone:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483649,2147483649,2147483649,2147483649]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
+; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm1
+; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = urem <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i32> %1
+}
+
+; fold (urem x, INT_MIN) -> (and x, ~INT_MIN)
+define i32 @combine_urem_by_minsigned(i32 %x) {
+; CHECK-LABEL: combine_urem_by_minsigned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = urem i32 %x, -2147483648
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_urem_by_minsigned(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_urem_by_minsigned:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_vec_urem_by_minsigned:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_vec_urem_by_minsigned:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = urem <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  ret <4 x i32> %1
+}
+
 ; TODO fold (urem x, x) -> 0
 define i32 @combine_urem_dupe(i32 %x) {
 ; CHECK-LABEL: combine_urem_dupe:

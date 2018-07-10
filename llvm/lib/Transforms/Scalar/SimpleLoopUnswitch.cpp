@@ -543,6 +543,18 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // the exits.
   Loop *OuterL = &L;
 
+  if (DefaultExitBB) {
+    // Clear out the default destination temporarily to allow accurate
+    // predecessor lists to be examined below.
+    SI.setDefaultDest(nullptr);
+    // Check the loop containing this exit.
+    Loop *ExitL = LI.getLoopFor(DefaultExitBB);
+    if (!ExitL || ExitL->contains(OuterL))
+      OuterL = ExitL;
+  }
+
+  // Store the exit cases into a separate data structure and remove them from
+  // the switch.
   SmallVector<std::pair<ConstantInt *, BasicBlock *>, 4> ExitCases;
   ExitCases.reserve(ExitCaseIndices.size());
   // We walk the case indices backwards so that we remove the last case first
@@ -576,23 +588,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                            SI.case_begin()->getCaseSuccessor();
                   }))
     CommonSuccBB = SI.case_begin()->getCaseSuccessor();
-
-  if (DefaultExitBB) {
-    // We can't remove the default edge so replace it with an edge to either
-    // the single common remaining successor (if we have one) or an unreachable
-    // block.
-    if (CommonSuccBB) {
-      SI.setDefaultDest(CommonSuccBB);
-    } else {
-      BasicBlock *UnreachableBB = BasicBlock::Create(
-          ParentBB->getContext(),
-          Twine(ParentBB->getName()) + ".unreachable_default",
-          ParentBB->getParent());
-      new UnreachableInst(ParentBB->getContext(), UnreachableBB);
-      SI.setDefaultDest(UnreachableBB);
-      DT.addNewBlock(UnreachableBB, ParentBB);
-    }
-  } else {
+  if (!DefaultExitBB) {
     // If we're not unswitching the default, we need it to match any cases to
     // have a common successor or if we have no cases it is the common
     // successor.
@@ -688,8 +684,34 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // pointing at unreachable and other complexity.
   if (CommonSuccBB) {
     BasicBlock *BB = SI.getParent();
+    // We may have had multiple edges to this common successor block, so remove
+    // them as predecessors. We skip the first one, either the default or the
+    // actual first case.
+    bool SkippedFirst = DefaultExitBB == nullptr;
+    for (auto Case : SI.cases()) {
+      assert(Case.getCaseSuccessor() == CommonSuccBB &&
+             "Non-common successor!");
+      (void)Case;
+      if (!SkippedFirst) {
+        SkippedFirst = true;
+        continue;
+      }
+      CommonSuccBB->removePredecessor(BB,
+                                      /*DontDeleteUselessPHIs*/ true);
+    }
+    // Now nuke the switch and replace it with a direct branch.
     SI.eraseFromParent();
     BranchInst::Create(CommonSuccBB, BB);
+  } else if (DefaultExitBB) {
+    assert(SI.getNumCases() > 0 &&
+           "If we had no cases we'd have a common successor!");
+    // Move the last case to the default successor. This is valid as if the
+    // default got unswitched it cannot be reached. This has the advantage of
+    // being simple and keeping the number of edges from this switch to
+    // successors the same, and avoiding any PHI update complexity.
+    auto LastCaseI = std::prev(SI.case_end());
+    SI.setDefaultDest(LastCaseI->getCaseSuccessor());
+    SI.removeCase(LastCaseI);
   }
 
   // Walk the unswitched exit blocks and the unswitched split blocks and update

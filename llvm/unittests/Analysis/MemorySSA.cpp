@@ -50,7 +50,7 @@ protected:
 
     TestAnalyses(MemorySSATest &Test)
         : DT(*Test.F), AC(*Test.F), AA(Test.TLI),
-          BAA(Test.DL, Test.TLI, AC, &DT) {
+          BAA(Test.DL, *Test.F, Test.TLI, AC, &DT) {
       AA.addAAResult(BAA);
       MSSA = make_unique<MemorySSA>(*Test.F, &AA, &DT);
       Walker = MSSA->getWalker();

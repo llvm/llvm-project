@@ -1421,9 +1421,9 @@ Instruction *InstCombiner::foldShuffledBinop(BinaryOperator &Inst) {
       // It may not be safe to execute a binop on a vector with undef elements
       // because the entire instruction can be folded to undef or create poison
       // that did not exist in the original code.
-      if (Inst.isIntDivRem() ||
-          (Inst.isShift() && isa<Constant>(Inst.getOperand(1))))
-        NewC = getSafeVectorConstantForBinop(Inst.getOpcode(), NewC);
+      bool ConstOp1 = isa<Constant>(Inst.getOperand(1));
+      if (Inst.isIntDivRem() || (Inst.isShift() && ConstOp1))
+        NewC = getSafeVectorConstantForBinop(Inst.getOpcode(), NewC, ConstOp1);
       
       // Op(shuffle(V1, Mask), C) -> shuffle(Op(V1, NewC), Mask)
       // Op(C, shuffle(V1, Mask)) -> shuffle(Op(NewC, V1), Mask)

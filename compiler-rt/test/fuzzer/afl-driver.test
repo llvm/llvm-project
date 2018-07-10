@@ -21,16 +21,9 @@ CHECK3: __afl_persistent_loop calle, Count = 666
 CHECK3: LLVMFuzzerTestOneInput called; Size = 3
 
 
-RUN: not %run %t-AFLDriverTest %t.file3 2>&1 | FileCheck %s --check-prefix=CHECK4
-CHECK4: WARNING: using the deprecated call style `{{.*}} 1000`
-CHECK4: WARNING: iterations invalid `{{.*}}`
+RUN: %run %t-AFLDriverTest %t.file3 2>&1 | FileCheck %s --check-prefix=CHECK4
+CHECK4: LLVMFuzzerTestOneInput called; Size = 3
 
 RUN: %run %t-AFLDriverTest %t.file3 %t.file4  2>&1 | FileCheck %s --check-prefix=CHECK5
 CHECK5: LLVMFuzzerTestOneInput called; Size = 3
 CHECK5: LLVMFuzzerTestOneInput called; Size = 4
-
-RUN: not %run %t-AFLDriverTest < %t.file3 --1 2>&1 | FileCheck %s --check-prefix=CHECK6
-CHECK6: WARNING: iterations invalid `-1`
-
-RUN: not %run %t-AFLDriverTest < %t.file3 -Invalid 2>&1 | FileCheck %s --check-prefix=CHECK7
-CHECK7: WARNING: iterations invalid `Invalid`

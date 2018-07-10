@@ -52,6 +52,7 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::elf;
 
+using llvm::support::endian::read32le;
 using llvm::support::endian::write32le;
 using llvm::support::endian::write64le;
 
@@ -1745,53 +1746,53 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize() {
   size_t OldSize = RelrRelocs.size();
   RelrRelocs.clear();
 
+  // Same as Config->Wordsize but faster because this is a compile-time
+  // constant.
+  const size_t Wordsize = sizeof(typename ELFT::uint);
+
   // Number of bits to use for the relocation offsets bitmap.
-  // These many relative relocations can be encoded in a single entry.
-  const size_t NBits = 8 * Config->Wordsize - 1;
+  // Must be either 63 or 31.
+  const size_t NBits = Wordsize * 8 - 1;
 
   // Get offsets for all relative relocations and sort them.
   std::vector<uint64_t> Offsets;
-  for (const RelativeReloc &Rel : Relocs) {
+  for (const RelativeReloc &Rel : Relocs)
     Offsets.push_back(Rel.getOffset());
-  }
-  std::sort(Offsets.begin(), Offsets.end());
+  llvm::sort(Offsets.begin(), Offsets.end());
 
-  uint64_t Base = 0;
-  typename std::vector<uint64_t>::iterator Curr = Offsets.begin();
-  while (Curr != Offsets.end()) {
-    uint64_t Current = *Curr;
-    assert(Current % 2 == 0);
+  // For each leading relocation, find following ones that can be folded
+  // as a bitmap and fold them.
+  for (size_t I = 0, E = Offsets.size(); I < E;) {
+    // Add a leading relocation.
+    RelrRelocs.push_back(Elf_Relr(Offsets[I]));
+    uint64_t Base = Offsets[I] + Wordsize;
+    ++I;
 
-    uint64_t Bits = 0;
-    typename std::vector<uint64_t>::iterator Next = Curr;
-    if (Base > 0 && Base <= Current) {
-      while (Next != Offsets.end()) {
-        uint64_t Delta = *Next - Base;
-        // If Next is too far out, it cannot be folded into Curr.
-        if (Delta >= NBits * Config->Wordsize)
+    // Find foldable relocations to construct bitmaps.
+    while (I < E) {
+      uint64_t Bitmap = 0;
+
+      while (I < E) {
+        uint64_t Delta = Offsets[I] - Base;
+
+        // If it is too far, it cannot be folded.
+        if (Delta >= NBits * Wordsize)
           break;
-        // If Next is not a multiple of wordsize away, it cannot
-        // be folded into Curr.
-        if (Delta % Config->Wordsize != 0)
+
+        // If it is not a multiple of wordsize away, it cannot be folded.
+        if (Delta % Wordsize)
           break;
-        // Next can be folded into Curr, add it to the bitmap.
-        Bits |= 1ULL << (Delta / Config->Wordsize);
-        ++Next;
+
+        // Fold it.
+        Bitmap |= 1ULL << (Delta / Wordsize);
+        ++I;
       }
-    }
 
-    if (Bits == 0) {
-      RelrRelocs.push_back(Elf_Relr(Current));
-      // This is not a continuation entry, only one offset was
-      // consumed. Set base offset for subsequent bitmap entries.
-      Base = Current + Config->Wordsize;
-      ++Curr;
-    } else {
-      RelrRelocs.push_back(Elf_Relr((Bits << 1) | 1));
-      // This is a continuation entry encoding multiple offsets
-      // in a bitmap. Advance base offset by NBits words.
-      Base += NBits * Config->Wordsize;
-      Curr = Next;
+      if (!Bitmap)
+        break;
+
+      RelrRelocs.push_back(Elf_Relr((Bitmap << 1) | 1));
+      Base += NBits * Wordsize;
     }
   }
 
@@ -2311,19 +2312,17 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
 }
 
 static std::vector<GdbIndexChunk::NameTypeEntry>
-readPubNamesAndTypes(DWARFContext &Dwarf) {
+readPubNamesAndTypes(DWARFContext &Dwarf, uint32_t Idx) {
   StringRef Sec1 = Dwarf.getDWARFObj().getGnuPubNamesSection();
   StringRef Sec2 = Dwarf.getDWARFObj().getGnuPubTypesSection();
 
   std::vector<GdbIndexChunk::NameTypeEntry> Ret;
   for (StringRef Sec : {Sec1, Sec2}) {
     DWARFDebugPubTable Table(Sec, Config->IsLE, true);
-    for (const DWARFDebugPubTable::Set &Set : Table.getData()) {
-      for (const DWARFDebugPubTable::Entry &Ent : Set.Entries) {
-        CachedHashStringRef S(Ent.Name, computeGdbHash(Ent.Name));
-        Ret.push_back({S, Ent.Descriptor.toBits()});
-      }
-    }
+    for (const DWARFDebugPubTable::Set &Set : Table.getData())
+      for (const DWARFDebugPubTable::Entry &Ent : Set.Entries)
+        Ret.push_back({{Ent.Name, computeGdbHash(Ent.Name)},
+                       (Ent.Descriptor.toBits() << 24) | Idx});
   }
   return Ret;
 }
@@ -2334,43 +2333,6 @@ static std::vector<InputSection *> getDebugInfoSections() {
     if (InputSection *IS = dyn_cast<InputSection>(S))
       if (IS->Name == ".debug_info")
         Ret.push_back(IS);
-  return Ret;
-}
-
-void GdbIndexSection::fixCuIndex() {
-  uint32_t Idx = 0;
-  for (GdbIndexChunk &Chunk : Chunks) {
-    for (GdbIndexChunk::AddressEntry &Ent : Chunk.AddressAreas)
-      Ent.CuIndex += Idx;
-    Idx += Chunk.CompilationUnits.size();
-  }
-}
-
-std::vector<std::vector<uint32_t>> GdbIndexSection::createCuVectors() {
-  std::vector<std::vector<uint32_t>> Ret;
-  uint32_t Idx = 0;
-  uint32_t Off = 0;
-
-  for (GdbIndexChunk &Chunk : Chunks) {
-    for (GdbIndexChunk::NameTypeEntry &Ent : Chunk.NamesAndTypes) {
-      GdbSymbol *&Sym = Symbols[Ent.Name];
-      if (!Sym) {
-        Sym = make<GdbSymbol>(GdbSymbol{Ent.Name.hash(), Off, Ret.size()});
-        Off += Ent.Name.size() + 1;
-        Ret.push_back({});
-      }
-
-      // gcc 5.4.1 produces a buggy .debug_gnu_pubnames that contains
-      // duplicate entries, so we want to dedup them.
-      std::vector<uint32_t> &Vec = Ret[Sym->CuVectorIndex];
-      uint32_t Val = (Ent.Type << 24) | Idx;
-      if (Vec.empty() || Vec.back() != Val)
-        Vec.push_back(Val);
-    }
-    Idx += Chunk.CompilationUnits.size();
-  }
-
-  StringPoolSize = Off;
   return Ret;
 }
 
@@ -2386,7 +2348,7 @@ template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
     Chunks[I].DebugInfoSec = Sections[I];
     Chunks[I].CompilationUnits = readCuList(Dwarf);
     Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
-    Chunks[I].NamesAndTypes = readPubNamesAndTypes(Dwarf);
+    Chunks[I].NamesAndTypes = readPubNamesAndTypes(Dwarf, I);
   });
 
   // .debug_gnu_pub{names,types} are useless in executables.
@@ -2414,48 +2376,61 @@ static size_t getAddressAreaSize(ArrayRef<GdbIndexChunk> Arr) {
   return Ret;
 }
 
-std::vector<GdbSymbol *> GdbIndexSection::createGdbSymtab() {
-  uint32_t Size = NextPowerOf2(Symbols.size() * 4 / 3);
-  if (Size < 1024)
-    Size = 1024;
-
-  uint32_t Mask = Size - 1;
-  std::vector<GdbSymbol *> Ret(Size);
-
-  for (auto &KV : Symbols) {
-    GdbSymbol *Sym = KV.second;
-    uint32_t I = Sym->NameHash & Mask;
-    uint32_t Step = ((Sym->NameHash * 17) & Mask) | 1;
-
-    while (Ret[I])
-      I = (I + Step) & Mask;
-    Ret[I] = Sym;
-  }
-  return Ret;
+// Returns the desired size of an on-disk hash table for a .gdb_index section.
+// There's a tradeoff between size and collision rate. We aim 75% utilization.
+static size_t getSymtabSize(size_t NumSymbols) {
+  return std::max<size_t>(NextPowerOf2(NumSymbols * 4 / 3), 1024);
 }
 
 GdbIndexSection::GdbIndexSection(std::vector<GdbIndexChunk> &&C)
     : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index"), Chunks(std::move(C)) {
-  fixCuIndex();
-  CuVectors = createCuVectors();
-  GdbSymtab = createGdbSymtab();
+  // A map to identify duplicate symbols.
+  DenseMap<CachedHashStringRef, size_t> Map;
+
+  // Initialize Symbols and CuVectors while deduplicating symbols by name.
+  for (GdbIndexChunk &Chunk : Chunks) {
+    for (GdbIndexChunk::NameTypeEntry &Ent : Chunk.NamesAndTypes) {
+      CachedHashStringRef S = Ent.Name;
+      size_t &Idx = Map[S];
+
+      if (!Idx) {
+        Idx = Symbols.size() + 1;
+        Symbols.push_back({S, static_cast<uint32_t>(StringPoolSize),
+                           static_cast<uint32_t>(Symbols.size())});
+        StringPoolSize += S.size() + 1;
+        CuVectors.push_back({});
+      }
+
+      // gcc 5.4.1 produces a buggy .debug_gnu_pubnames that contains
+      // duplicate entries, so we want to dedup them.
+      std::vector<uint32_t> &Vec = CuVectors[Symbols[Idx - 1].CuVectorIdx];
+      if (Vec.empty() || Vec.back() != Ent.Type)
+        Vec.push_back(Ent.Type);
+    }
+
+    // NamesAndTypes is useless beyond this point, so clear it to save memory.
+    Chunk.NamesAndTypes = {};
+  }
 
   // Compute offsets early to know the section size.
   // Each chunk size needs to be in sync with what we write in writeTo.
   CuTypesOffset = CuListOffset + getCuSize(Chunks) * 16;
   SymtabOffset = CuTypesOffset + getAddressAreaSize(Chunks) * 20;
-  ConstantPoolOffset = SymtabOffset + GdbSymtab.size() * 8;
+  SymtabSize = getSymtabSize(Symbols.size());
+  ConstantPoolOffset = SymtabOffset + SymtabSize * 8;
 
-  size_t Off = 0;
   for (ArrayRef<uint32_t> Vec : CuVectors) {
-    CuVectorOffsets.push_back(Off);
-    Off += (Vec.size() + 1) * 4;
+    CuVectorOffsets.push_back(CuVectorsPoolSize);
+    CuVectorsPoolSize += (Vec.size() + 1) * 4;
   }
-  StringPoolOffset = ConstantPoolOffset + Off;
-}
 
-size_t GdbIndexSection::getSize() const {
-  return StringPoolOffset + StringPoolSize;
+  uint64_t PoolSize = CuVectorsPoolSize + StringPoolSize;
+  TotalSize = ConstantPoolOffset + PoolSize;
+
+  // Length fields in the .gdb_index section are only 4 byte long,
+  // so the section cannot contain very large contents.
+  if (ConstantPoolOffset > UINT32_MAX || PoolSize > UINT32_MAX)
+    error(".gdb_index section too large");
 }
 
 void GdbIndexSection::writeTo(uint8_t *Buf) {
@@ -2469,33 +2444,43 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   Buf += 24;
 
   // Write the CU list.
-  for (GdbIndexChunk &D : Chunks) {
-    for (GdbIndexChunk::CuEntry &Cu : D.CompilationUnits) {
-      write64le(Buf, D.DebugInfoSec->OutSecOff + Cu.CuOffset);
+  for (GdbIndexChunk &Chunk : Chunks) {
+    for (GdbIndexChunk::CuEntry &Cu : Chunk.CompilationUnits) {
+      write64le(Buf, Chunk.DebugInfoSec->OutSecOff + Cu.CuOffset);
       write64le(Buf + 8, Cu.CuLength);
       Buf += 16;
     }
   }
 
   // Write the address area.
-  for (GdbIndexChunk &D : Chunks) {
-    for (GdbIndexChunk::AddressEntry &E : D.AddressAreas) {
+  uint32_t Idx = 0;
+  for (GdbIndexChunk &Chunk : Chunks) {
+    for (GdbIndexChunk::AddressEntry &E : Chunk.AddressAreas) {
       uint64_t BaseAddr = E.Section->getVA(0);
       write64le(Buf, BaseAddr + E.LowAddress);
       write64le(Buf + 8, BaseAddr + E.HighAddress);
-      write32le(Buf + 16, E.CuIndex);
+      write32le(Buf + 16, E.CuIndex + Idx);
       Buf += 20;
     }
+    Idx += Chunk.CompilationUnits.size();
   }
 
-  // Write the symbol table.
-  for (GdbSymbol *Sym : GdbSymtab) {
-    if (Sym) {
-      write32le(Buf, Sym->NameOffset + StringPoolOffset - ConstantPoolOffset);
-      write32le(Buf + 4, CuVectorOffsets[Sym->CuVectorIndex]);
-    }
-    Buf += 8;
+  // Write the on-disk open-addressing hash table containing symbols.
+  for (GdbSymbol &Sym : Symbols) {
+    uint32_t Mask = SymtabSize - 1;
+    uint32_t H = Sym.Name.hash();
+    uint32_t I = H & Mask;
+    uint32_t Step = ((H * 17) & Mask) | 1;
+
+    while (read32le(Buf + I * 8))
+      I = (I + Step) & Mask;
+
+    uint8_t *P = Buf + I * 8;
+    write32le(P, CuVectorsPoolSize + Sym.OutputOff);
+    write32le(P + 4, CuVectorOffsets[Sym.CuVectorIdx]);
   }
+
+  Buf += SymtabSize * 8;
 
   // Write the CU vectors.
   for (ArrayRef<uint32_t> Vec : CuVectors) {
@@ -2508,13 +2493,8 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   }
 
   // Write the string pool.
-  for (auto &KV : Symbols) {
-    CachedHashStringRef S = KV.first;
-    GdbSymbol *Sym = KV.second;
-    size_t Off = Sym->NameOffset;
-    memcpy(Buf + Off, S.val().data(), S.size());
-    Buf[Off + S.size()] = '\0';
-  }
+  for (GdbSymbol &Sym : Symbols)
+    memcpy(Buf + Sym.OutputOff, Sym.Name.data(), Sym.Name.size());
 }
 
 bool GdbIndexSection::empty() const { return !Out::DebugInfo; }

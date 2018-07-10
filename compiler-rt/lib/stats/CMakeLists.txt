@@ -1,3 +1,6 @@
+set(STATS_HEADERS
+  stats.h)
+
 include_directories(..)
 
 add_custom_target(stats)
@@ -22,6 +25,7 @@ add_compiler_rt_runtime(clang_rt.stats
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
   SOURCES stats.cc
+  ADDITIONAL_HEADERS ${STATS_HEADERS}
   OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc
               RTSanitizerCommonSymbolizer
@@ -35,6 +39,7 @@ add_compiler_rt_runtime(clang_rt.stats_client
   ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
   SOURCES stats_client.cc
+  ADDITIONAL_HEADERS ${STATS_HEADERS}
   CFLAGS ${SANITIZER_COMMON_CFLAGS}
   LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
   PARENT_TARGET stats)

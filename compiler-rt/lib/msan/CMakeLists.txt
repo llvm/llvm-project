@@ -15,6 +15,17 @@ set(MSAN_RTL_SOURCES
 set(MSAN_RTL_CXX_SOURCES
   msan_new_delete.cc)
 
+set(MSAN_RTL_HEADERS
+  msan.h
+  msan_allocator.h
+  msan_chained_origin_depot.h
+  msan_flags.h
+  msan_flags.inc
+  msan_interface_internal.h
+  msan_origin.h
+  msan_poisoning.h
+  msan_report.h
+  msan_thread.h)
 
 set(MSAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -43,6 +54,7 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
             $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
             $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
             $<TARGET_OBJECTS:RTUbsan.${arch}>
+    ADDITIONAL_HEADERS ${MSAN_RTL_HEADERS}
     CFLAGS ${MSAN_RTL_CFLAGS}
     PARENT_TARGET msan)
   add_compiler_rt_runtime(clang_rt.msan_cxx
@@ -50,6 +62,7 @@ foreach(arch ${MSAN_SUPPORTED_ARCH})
     ARCHS ${arch}
     SOURCES ${MSAN_RTL_CXX_SOURCES}
             $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
+    ADDITIONAL_HEADERS ${MSAN_RTL_HEADERS}
     CFLAGS ${MSAN_RTL_CFLAGS}
     PARENT_TARGET msan)
   list(APPEND MSAN_RUNTIME_LIBRARIES clang_rt.msan-${arch}

@@ -1994,6 +1994,11 @@ InlineCost llvm::getInlineCost(
   if (Caller->hasFnAttribute(Attribute::OptimizeNone))
     return llvm::InlineCost::getNever();
 
+  // Don't inline a function that treats null pointer as valid into a caller
+  // that does not have this attribute.
+  if (!Caller->nullPointerIsDefined() && Callee->nullPointerIsDefined())
+    return llvm::InlineCost::getNever();
+
   // Don't inline functions which can be interposed at link-time.  Don't inline
   // functions marked noinline or call sites marked noinline.
   // Note: inlining non-exact non-interposable functions is fine, since we know

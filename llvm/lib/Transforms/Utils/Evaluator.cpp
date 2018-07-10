@@ -24,6 +24,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
@@ -217,16 +218,26 @@ Constant *Evaluator::ComputeLoadResult(Constant *P) {
   return nullptr;  // don't know how to evaluate.
 }
 
+static Function *getFunction(Constant *C) {
+  if (auto *Fn = dyn_cast<Function>(C))
+    return Fn;
+
+  if (auto *Alias = dyn_cast<GlobalAlias>(C))
+    if (auto *Fn = dyn_cast<Function>(Alias->getAliasee()))
+      return Fn;
+  return nullptr;
+}
+
 Function *
 Evaluator::getCalleeWithFormalArgs(CallSite &CS,
                                    SmallVector<Constant *, 8> &Formals) {
   auto *V = CS.getCalledValue();
-  if (auto *Fn = dyn_cast<Function>(getVal(V)))
+  if (auto *Fn = getFunction(getVal(V)))
     return getFormalParams(CS, Fn, Formals) ? Fn : nullptr;
 
   auto *CE = dyn_cast<ConstantExpr>(V);
   if (!CE || CE->getOpcode() != Instruction::BitCast ||
-      !getFormalParams(CS, cast<Function>(CE->getOperand(0)), Formals))
+      !getFormalParams(CS, getFunction(CE->getOperand(0)), Formals))
     return nullptr;
 
   return dyn_cast<Function>(
@@ -235,6 +246,9 @@ Evaluator::getCalleeWithFormalArgs(CallSite &CS,
 
 bool Evaluator::getFormalParams(CallSite &CS, Function *F,
                                 SmallVector<Constant *, 8> &Formals) {
+  if (!F)
+    return false;
+
   auto *FTy = F->getFunctionType();
   if (FTy->getNumParams() > CS.getNumArgOperands()) {
     LLVM_DEBUG(dbgs() << "Too few arguments for function.\n");

@@ -37,6 +37,10 @@ bool IndexingContext::shouldIndexFunctionLocalSymbols() const {
   return IndexOpts.IndexFunctionLocals;
 }
 
+bool IndexingContext::shouldIndexImplicitInstantiation() const {
+  return IndexOpts.IndexImplicitInstantiation;
+}
+
 bool IndexingContext::handleDecl(const Decl *D,
                                  SymbolRoleSet Roles,
                                  ArrayRef<SymbolRelation> Relations) {

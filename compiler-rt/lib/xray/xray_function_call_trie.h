@@ -17,8 +17,8 @@
 
 #include "xray_profiling_flags.h"
 #include "xray_segmented_array.h"
+#include <memory> // For placement new.
 #include <utility>
-#include <memory>  // For placement new.
 
 namespace __xray {
 
@@ -128,15 +128,12 @@ public:
 
 private:
   struct ShadowStackEntry {
-    int32_t FId; // We're copying the function ID into the stack to avoid having
-                 // to reach into the node just to get the function ID.
     uint64_t EntryTSC;
     Node *NodePtr;
 
     // We add a constructor here to allow us to inplace-construct through
     // Array<...>'s AppendEmplace.
-    ShadowStackEntry(int32_t F, uint64_t T, Node *N)
-        : FId(F), EntryTSC(T), NodePtr(N) {}
+    ShadowStackEntry(uint64_t T, Node *N) : EntryTSC{T}, NodePtr{N} {}
   };
 
   using NodeArray = Array<Node>;
@@ -219,30 +216,30 @@ public:
 
   // TODO: Support configuration of options through the arguments.
   static Allocators InitAllocators() {
+    return InitAllocatorsCustom(profilingFlags()->per_thread_allocator_max);
+  }
+
+  static Allocators InitAllocatorsCustom(uptr Max) {
     Allocators A;
     auto NodeAllocator = reinterpret_cast<Allocators::NodeAllocatorType *>(
         InternalAlloc(sizeof(Allocators::NodeAllocatorType)));
-    new (NodeAllocator) Allocators::NodeAllocatorType(
-        profilingFlags()->per_thread_allocator_max, 0);
+    new (NodeAllocator) Allocators::NodeAllocatorType(Max, 0);
     A.NodeAllocator = NodeAllocator;
 
     auto RootAllocator = reinterpret_cast<Allocators::RootAllocatorType *>(
         InternalAlloc(sizeof(Allocators::RootAllocatorType)));
-    new (RootAllocator) Allocators::RootAllocatorType(
-        profilingFlags()->per_thread_allocator_max, 0);
+    new (RootAllocator) Allocators::RootAllocatorType(Max, 0);
     A.RootAllocator = RootAllocator;
 
     auto ShadowStackAllocator =
         reinterpret_cast<Allocators::ShadowStackAllocatorType *>(
             InternalAlloc(sizeof(Allocators::ShadowStackAllocatorType)));
-    new (ShadowStackAllocator) Allocators::ShadowStackAllocatorType(
-        profilingFlags()->per_thread_allocator_max, 0);
+    new (ShadowStackAllocator) Allocators::ShadowStackAllocatorType(Max, 0);
     A.ShadowStackAllocator = ShadowStackAllocator;
 
     auto NodeIdPairAllocator = reinterpret_cast<NodeIdPairAllocatorType *>(
         InternalAlloc(sizeof(NodeIdPairAllocatorType)));
-    new (NodeIdPairAllocator)
-        NodeIdPairAllocatorType(profilingFlags()->per_thread_allocator_max, 0);
+    new (NodeIdPairAllocator) NodeIdPairAllocatorType(Max, 0);
     A.NodeIdPairAllocator = NodeIdPairAllocator;
     return A;
   }
@@ -253,20 +250,14 @@ private:
   ShadowStackArray ShadowStack;
   NodeIdPairAllocatorType *NodeIdPairAllocator = nullptr;
 
-  const Allocators &GetGlobalAllocators() {
-    static const Allocators A = [] { return InitAllocators(); }();
-    return A;
-  }
-
 public:
   explicit FunctionCallTrie(const Allocators &A)
       : Nodes(*A.NodeAllocator), Roots(*A.RootAllocator),
         ShadowStack(*A.ShadowStackAllocator),
         NodeIdPairAllocator(A.NodeIdPairAllocator) {}
 
-  FunctionCallTrie() : FunctionCallTrie(GetGlobalAllocators()) {}
-
-  void enterFunction(int32_t FId, uint64_t TSC) {
+  void enterFunction(const int32_t FId, uint64_t TSC) {
+    DCHECK_NE(FId, 0);
     // This function primarily deals with ensuring that the ShadowStack is
     // consistent and ready for when an exit event is encountered.
     if (UNLIKELY(ShadowStack.empty())) {
@@ -275,12 +266,13 @@ public:
       if (UNLIKELY(NewRoot == nullptr))
         return;
       Roots.Append(NewRoot);
-      ShadowStack.AppendEmplace(FId, TSC, NewRoot);
+      ShadowStack.AppendEmplace(TSC, NewRoot);
       return;
     }
 
     auto &Top = ShadowStack.back();
     auto TopNode = Top.NodePtr;
+    DCHECK_NE(TopNode, nullptr);
 
     // If we've seen this callee before, then we just access that node and place
     // that on the top of the stack.
@@ -288,7 +280,7 @@ public:
         [FId](const NodeIdPair &NR) { return NR.FId == FId; });
     if (Callee != nullptr) {
       CHECK_NE(Callee->NodePtr, nullptr);
-      ShadowStack.AppendEmplace(FId, TSC, Callee->NodePtr);
+      ShadowStack.AppendEmplace(TSC, Callee->NodePtr);
       return;
     }
 
@@ -297,8 +289,10 @@ public:
         Nodes.AppendEmplace(TopNode, *NodeIdPairAllocator, 0, 0, FId);
     if (UNLIKELY(NewNode == nullptr))
       return;
+    DCHECK_NE(NewNode, nullptr);
     TopNode->Callees.AppendEmplace(NewNode, FId);
-    ShadowStack.AppendEmplace(FId, TSC, NewNode);
+    ShadowStack.AppendEmplace(TSC, NewNode);
+    DCHECK_NE(ShadowStack.back().NodePtr, nullptr);
     return;
   }
 
@@ -307,14 +301,11 @@ public:
     // entered this function before. We do as little processing here as we can,
     // since most of the hard work would have already been done at function
     // entry.
-    if (UNLIKELY(ShadowStack.empty()))
-      return;
-
     uint64_t CumulativeTreeTime = 0;
     while (!ShadowStack.empty()) {
-      auto &Top = ShadowStack.back();
+      const auto &Top = ShadowStack.back();
       auto TopNode = Top.NodePtr;
-      auto TopFId = TopNode->FId;
+      DCHECK_NE(TopNode, nullptr);
       auto LocalTime = TSC - Top.EntryTSC;
       TopNode->CallCount++;
       TopNode->CumulativeLocalTime += LocalTime - CumulativeTreeTime;
@@ -322,7 +313,7 @@ public:
       ShadowStack.trim(1);
 
       // TODO: Update the histogram for the node.
-      if (TopFId == FId)
+      if (TopNode->FId == FId)
         break;
     }
   }
@@ -344,28 +335,34 @@ public:
   // This function must *not* be called with a non-empty FunctionCallTrie |O|.
   void deepCopyInto(FunctionCallTrie &O) const {
     DCHECK(O.getRoots().empty());
+
+    // We then push the root into a stack, to use as the parent marker for new
+    // nodes we push in as we're traversing depth-first down the call tree.
+    struct NodeAndParent {
+      FunctionCallTrie::Node *Node;
+      FunctionCallTrie::Node *NewNode;
+    };
+    using Stack = Array<NodeAndParent>;
+
+    typename Stack::AllocatorType StackAllocator(
+        profilingFlags()->stack_allocator_max, 0);
+    Stack DFSStack(StackAllocator);
+
     for (const auto Root : getRoots()) {
       // Add a node in O for this root.
       auto NewRoot = O.Nodes.AppendEmplace(
           nullptr, *O.NodeIdPairAllocator, Root->CallCount,
           Root->CumulativeLocalTime, Root->FId);
+
+      // Because we cannot allocate more memory we should bail out right away.
+      if (UNLIKELY(NewRoot == nullptr))
+        return;
+
       O.Roots.Append(NewRoot);
-
-      // We then push the root into a stack, to use as the parent marker for new
-      // nodes we push in as we're traversing depth-first down the call tree.
-      struct NodeAndParent {
-        FunctionCallTrie::Node *Node;
-        FunctionCallTrie::Node *NewNode;
-      };
-      using Stack = Array<NodeAndParent>;
-
-      typename Stack::AllocatorType StackAllocator(
-          profilingFlags()->stack_allocator_max, 0);
-      Stack DFSStack(StackAllocator);
 
       // TODO: Figure out what to do if we fail to allocate any more stack
       // space. Maybe warn or report once?
-      DFSStack.Append(NodeAndParent{Root, NewRoot});
+      DFSStack.AppendEmplace(Root, NewRoot);
       while (!DFSStack.empty()) {
         NodeAndParent NP = DFSStack.back();
         DCHECK_NE(NP.Node, nullptr);
@@ -375,9 +372,10 @@ public:
           auto NewNode = O.Nodes.AppendEmplace(
               NP.NewNode, *O.NodeIdPairAllocator, Callee.NodePtr->CallCount,
               Callee.NodePtr->CumulativeLocalTime, Callee.FId);
-          DCHECK_NE(NewNode, nullptr);
+          if (UNLIKELY(NewNode == nullptr))
+            return;
           NP.NewNode->Callees.AppendEmplace(NewNode, Callee.FId);
-          DFSStack.Append(NodeAndParent{Callee.NodePtr, NewNode});
+          DFSStack.AppendEmplace(Callee.NodePtr, NewNode);
         }
       }
     }
@@ -408,6 +406,9 @@ public:
       if (R == nullptr) {
         TargetRoot = O.Nodes.AppendEmplace(nullptr, *O.NodeIdPairAllocator, 0,
                                            0, Root->FId);
+        if (UNLIKELY(TargetRoot == nullptr))
+          return;
+
         O.Roots.Append(TargetRoot);
       } else {
         TargetRoot = *R;
@@ -430,10 +431,14 @@ public:
           if (TargetCallee == nullptr) {
             auto NewTargetNode = O.Nodes.AppendEmplace(
                 NT.TargetNode, *O.NodeIdPairAllocator, 0, 0, Callee.FId);
+
+            if (UNLIKELY(NewTargetNode == nullptr))
+              return;
+
             TargetCallee =
                 NT.TargetNode->Callees.AppendEmplace(NewTargetNode, Callee.FId);
           }
-          DFSStack.Append(NodeAndTarget{Callee.NodePtr, TargetCallee->NodePtr});
+          DFSStack.AppendEmplace(Callee.NodePtr, TargetCallee->NodePtr);
         }
       }
     }

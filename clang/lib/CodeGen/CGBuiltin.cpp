@@ -9832,6 +9832,13 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
     return EmitX86Select(*this, Ops[0], Ops[1], Ops[2]);
+  case X86::BI__builtin_ia32_selectss_128:
+  case X86::BI__builtin_ia32_selectsd_128: {
+    Value *A = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
+    Value *B = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
+    A = EmitX86ScalarSelect(*this, Ops[0], A, B);
+    return Builder.CreateInsertElement(Ops[1], A, (uint64_t)0);
+  }
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpb256_mask:
   case X86::BI__builtin_ia32_cmpb512_mask:
@@ -10060,30 +10067,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_pternlogq128_maskz:
   case X86::BI__builtin_ia32_pternlogq256_maskz:
     return EmitX86Ternlog(*this, /*ZeroMask*/true, Ops);
-
-  case X86::BI__builtin_ia32_divss_round_mask:
-  case X86::BI__builtin_ia32_divsd_round_mask: {
-    Intrinsic::ID ID;
-    switch (BuiltinID) {
-    default: llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_divss_round_mask:
-      ID = Intrinsic::x86_avx512_mask_div_ss_round; break;
-    case X86::BI__builtin_ia32_divsd_round_mask:
-      ID = Intrinsic::x86_avx512_mask_div_sd_round; break;
-    }
-    Function *Intr = CGM.getIntrinsic(ID);
-
-    // If round parameter is not _MM_FROUND_CUR_DIRECTION, don't lower.
-    if (cast<llvm::ConstantInt>(Ops[4])->getZExtValue() != (uint64_t)4)
-      return Builder.CreateCall(Intr, Ops);
-
-    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
-    Value *B = Builder.CreateExtractElement(Ops[1], (uint64_t)0);
-    Value *C = Builder.CreateExtractElement(Ops[2], (uint64_t)0);
-    Value *Div = Builder.CreateFDiv(A, B);
-    Div = EmitX86ScalarSelect(*this, Ops[3], Div, C);
-    return Builder.CreateInsertElement(Ops[0], Div, (uint64_t)0);
-  }
 
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:

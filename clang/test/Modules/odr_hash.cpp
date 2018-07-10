@@ -660,6 +660,202 @@ Invalid1* i1;
 #undef DECLS
 }  // namespace Method
 
+namespace MethodBody {
+#if defined(FIRST)
+struct S1 {
+  int A() { return 0; }
+};
+#elif defined(SECOND)
+struct S1 {
+  int A() { return 0; }
+};
+#else
+S1 s1;
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  int BothBodies() { return 0; }
+};
+#elif defined(SECOND)
+struct S2 {
+  int BothBodies() { return 1; }
+};
+#else
+S2 s2;
+// expected-error@first.h:* {{'MethodBody::S2' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'BothBodies' with body}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'BothBodies' with different body}}
+#endif
+
+#if defined(FIRST)
+struct S3 {
+  int FirstBody() { return 0; }
+};
+#elif defined(SECOND)
+struct S3 {
+  int FirstBody();
+};
+#else
+S3 s3;
+// expected-error@first.h:* {{'MethodBody::S3' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'FirstBody' with body}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'FirstBody' with no body}}
+#endif
+
+#if defined(FIRST)
+struct S4 {
+  int SecondBody();
+};
+#elif defined(SECOND)
+struct S4 {
+  int SecondBody() { return 0; }
+};
+#else
+S4 s4;
+// expected-error@first.h:* {{'MethodBody::S4' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'SecondBody' with no body}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'SecondBody' with body}}
+#endif
+
+#if defined(FIRST)
+struct S5 {
+  int FirstBodySecondOutOfLine() { return 0; }
+};
+#elif defined(SECOND)
+struct S5 {
+  int FirstBodySecondOutOfLine();
+};
+int S5::FirstBodySecondOutOfLine() { return 0; }
+#else
+S5 s5;
+// expected-error@second.h:* {{'MethodBody::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'FirstBodySecondOutOfLine' with no body}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'FirstBodySecondOutOfLine' with body}}
+#endif
+
+#if defined(FIRST)
+struct S6 {
+  int FirstOutOfLineSecondBody();
+};
+int S6::FirstOutOfLineSecondBody() { return 0; }
+#elif defined(SECOND)
+struct S6 {
+  int FirstOutOfLineSecondBody() { return 0; }
+};
+#else
+S6 s6;
+// expected-error@first.h:* {{'MethodBody::S6' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'FirstOutOfLineSecondBody' with no body}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'FirstOutOfLineSecondBody' with body}}
+#endif
+
+#if defined(FIRST)
+struct S7 {
+  int BothOutOfLine();
+};
+int S7::BothOutOfLine() { return 1; }
+#elif defined(SECOND)
+struct S7 {
+  int BothOutOfLine();
+};
+int S7::BothOutOfLine() { return 0; }
+#else
+S7 s7;
+// expected-error@second.h:* {{'MethodBody::S7::BothOutOfLine' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+#endif
+
+#if defined(FIRST)
+struct S8 {
+  int FirstBodySecondOutOfLine() { return 0; }
+};
+#elif defined(SECOND)
+struct S8 {
+  int FirstBodySecondOutOfLine();
+};
+int S8::FirstBodySecondOutOfLine() { return 1; }
+#else
+S8 s8;
+// expected-error@second.h:* {{'MethodBody::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'FirstBodySecondOutOfLine' with no body}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'FirstBodySecondOutOfLine' with body}}
+#endif
+
+#if defined(FIRST)
+struct S9 {
+  int FirstOutOfLineSecondBody();
+};
+int S9::FirstOutOfLineSecondBody() { return 1; }
+#elif defined(SECOND)
+struct S9 {
+  int FirstOutOfLineSecondBody() { return 0; }
+};
+#else
+S9 s9;
+// expected-error@first.h:* {{'MethodBody::S9' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'FirstOutOfLineSecondBody' with no body}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'FirstOutOfLineSecondBody' with body}}
+#endif
+
+#if defined(FIRST)
+struct S10 {
+  S10(int);
+  S10() = delete;
+};
+#elif defined(SECOND)
+struct S10 {
+  S10(int);
+  S10();
+};
+#else
+S10 s10(10);
+// expected-error@first.h:* {{'MethodBody::S10' has different definitions in different modules; first difference is definition in module 'FirstModule' found constructor is deleted}}
+// expected-note@second.h:* {{but in 'SecondModule' found constructor is not deleted}}
+#endif
+
+#if defined(FIRST)
+struct S11 {
+  S11() = default;
+};
+#elif defined(SECOND)
+struct S11 {
+  S11();
+};
+#else
+S11 s11;
+// expected-error@first.h:* {{'MethodBody::S11' has different definitions in different modules; first difference is definition in module 'FirstModule' found constructor is defaulted}}
+// expected-note@second.h:* {{but in 'SecondModule' found constructor is not defaulted}}
+#endif
+
+#define DECLS(CLASSNAME) \
+  CLASSNAME() = default; \
+  ~CLASSNAME() = delete; \
+  void A();              \
+  void B() { return; };  \
+  void C();              \
+  void D();
+
+#define OUTOFLINEDEFS(CLASSNAME) \
+  void CLASSNAME::C() {}         \
+  void CLASSNAME::D() { return; }
+
+#if defined(FIRST) || defined(SECOND)
+struct Valid1 {
+  DECLS(Valid1)
+};
+OUTOFLINEDEFS(Valid1)
+#else
+Valid1* v1;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Invalid1 {
+  DECLS(Invalid1)
+  ACCESS
+};
+OUTOFLINEDEFS(Invalid1)
+#else
+Invalid1* i1;
+// expected-error@first.h:* {{'MethodBody::Invalid1' has different definitions in different modules; first difference is definition in module 'FirstModule' found public access specifier}}
+// expected-note@second.h:* {{but in 'SecondModule' found private access specifier}}
+#endif
+#undef DECLS
+}  // namespace MethodBody
+
 namespace Constructor {
 #if defined(FIRST)
 struct S1 {
@@ -3631,6 +3827,32 @@ template <int> void S11::foo() {}
 S11 s11;
 #endif
 
+#if defined(FIRST)
+struct S12 {
+  void foo(int x);
+};
+#elif defined(SECOND)
+struct S12 {
+  void foo(int x);
+};
+void S12::foo(int y) {}
+#else
+S12 s12;
+#endif
+
+#if defined(FIRST)
+struct S13 {
+  void foo(int x);
+};
+void S13::foo(int y) {}
+#elif defined(SECOND)
+struct S13 {
+  void foo(int x);
+};
+void S13::foo(int y) {}
+#else
+S13 s13;
+#endif
 }  // namespace FunctionDecl
 
 namespace DeclTemplateArguments {
