@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUHSAMetadataStreamer.h"
-#include "AMDGPU.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
@@ -255,36 +255,7 @@ void MetadataStreamer::emitKernelArgs(const Function &Func) {
   for (auto &Arg : Func.args())
     emitKernelArg(Arg);
 
-  // TODO: What about other languages?
-  if (!Func.getParent()->getNamedMetadata("opencl.ocl.version"))
-    return;
-
-  auto &DL = Func.getParent()->getDataLayout();
-  auto Int64Ty = Type::getInt64Ty(Func.getContext());
-
-  emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetX);
-  emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetY);
-  emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetZ);
-
-  auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
-                                      AMDGPUASI.GLOBAL_ADDRESS);
-
-  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
-  // "none" argument.
-  if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenPrintfBuffer);
-  else
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
-
-  // Emit "default queue" and "completion action" arguments if enqueue kernel is
-  // used, otherwise emit dummy "none" arguments.
-  if (Func.hasFnAttribute("calls-enqueue-kernel")) {
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenDefaultQueue);
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenCompletionAction);
-  } else {
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
-    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
-  }
+  emitHiddenKernelArgs(Func);
 }
 
 void MetadataStreamer::emitKernelArg(const Argument &Arg) {
@@ -375,6 +346,48 @@ void MetadataStreamer::emitKernelArg(const DataLayout &DL, Type *Ty,
                  .Default(nullptr);
     if (P)
       *P = true;
+  }
+}
+
+void MetadataStreamer::emitHiddenKernelArgs(const Function &Func) {
+  int HiddenArgNumBytes =
+      getIntegerAttribute(Func, "amdgpu-implicitarg-num-bytes", 0);
+
+  if (!HiddenArgNumBytes)
+    return;
+
+  auto &DL = Func.getParent()->getDataLayout();
+  auto Int64Ty = Type::getInt64Ty(Func.getContext());
+
+  if (HiddenArgNumBytes >= 8)
+    emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetX);
+  if (HiddenArgNumBytes >= 16)
+    emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetY);
+  if (HiddenArgNumBytes >= 24)
+    emitKernelArg(DL, Int64Ty, ValueKind::HiddenGlobalOffsetZ);
+
+  auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
+                                      AMDGPUASI.GLOBAL_ADDRESS);
+
+  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
+  // "none" argument.
+  if (HiddenArgNumBytes >= 32) {
+    if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenPrintfBuffer);
+    else
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+  }
+
+  // Emit "default queue" and "completion action" arguments if enqueue kernel is
+  // used, otherwise emit dummy "none" arguments.
+  if (HiddenArgNumBytes >= 48) {
+    if (Func.hasFnAttribute("calls-enqueue-kernel")) {
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenDefaultQueue);
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenCompletionAction);
+    } else {
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
+    }
   }
 }
 

@@ -147,7 +147,6 @@ multiclass subvector_subreg_lowering<RegisterClass subRC, ValueType subVT,
   def : Pat<(subVT (extract_subvector (VT RC:$src), (iPTR 0))),
             (subVT (EXTRACT_SUBREG RC:$src, subIdx))>;
 
-  let AddedComplexity = 25 in // to give priority over vinsertf128rm
   def : Pat<(VT (insert_subvector undef, subRC:$src, (iPTR 0))),
             (VT (INSERT_SUBREG (IMPLICIT_DEF), subRC:$src, subIdx))>;
 }

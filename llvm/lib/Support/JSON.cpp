@@ -8,6 +8,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include <cctype>
 
@@ -198,6 +199,14 @@ class Parser {
 public:
   Parser(StringRef JSON)
       : Start(JSON.begin()), P(JSON.begin()), End(JSON.end()) {}
+
+  bool checkUTF8() {
+    size_t ErrOffset;
+    if (isUTF8(StringRef(Start, End - Start), &ErrOffset))
+      return true;
+    P = Start + ErrOffset; // For line/column calculation.
+    return parseError("Invalid UTF-8 sequence");
+  }
 
   bool parseValue(Value &Out);
 
@@ -458,7 +467,7 @@ bool Parser::parseUnicode(std::string &Out) {
 
     // Case 3: it's a leading surrogate. We expect a trailing one next.
     // Case 3a: there's no trailing \u escape. Don't advance in the stream.
-    if (!LLVM_LIKELY(P + 2 <= End && *P == '\\' && *(P + 1) == 'u')) {
+    if (LLVM_UNLIKELY(P + 2 > End || *P != '\\' || *(P + 1) != 'u')) {
       Invalid(); // Leading surrogate was unpaired.
       return true;
     }
@@ -496,9 +505,10 @@ bool Parser::parseError(const char *Msg) {
 Expected<Value> parse(StringRef JSON) {
   Parser P(JSON);
   Value E = nullptr;
-  if (P.parseValue(E))
-    if (P.assertEnd())
-      return std::move(E);
+  if (P.checkUTF8())
+    if (P.parseValue(E))
+      if (P.assertEnd())
+        return std::move(E);
   return P.takeError();
 }
 char ParseError::ID = 0;
@@ -512,6 +522,37 @@ static std::vector<const Object::value_type *> sortedElements(const Object &O) {
                return L->first < R->first;
              });
   return Elements;
+}
+
+bool isUTF8(llvm::StringRef S, size_t *ErrOffset) {
+  // Fast-path for ASCII, which is valid UTF-8.
+  if (LLVM_LIKELY(isASCII(S)))
+    return true;
+
+  const UTF8 *Data = reinterpret_cast<const UTF8 *>(S.data()), *Rest = Data;
+  if (LLVM_LIKELY(isLegalUTF8String(&Rest, Data + S.size())))
+    return true;
+
+  if (ErrOffset)
+    *ErrOffset = Rest - Data;
+  return false;
+}
+
+std::string fixUTF8(llvm::StringRef S) {
+  // This isn't particularly efficient, but is only for error-recovery.
+  std::vector<UTF32> Codepoints(S.size()); // 1 codepoint per byte suffices.
+  const UTF8 *In8 = reinterpret_cast<const UTF8 *>(S.data());
+  UTF32 *Out32 = Codepoints.data();
+  ConvertUTF8toUTF32(&In8, In8 + S.size(), &Out32, Out32 + Codepoints.size(),
+                     lenientConversion);
+  Codepoints.resize(Out32 - Codepoints.data());
+  std::string Res(4 * Codepoints.size(), 0); // 4 bytes per codepoint suffice
+  const UTF32 *In32 = Codepoints.data();
+  UTF8 *Out8 = reinterpret_cast<UTF8 *>(&Res[0]);
+  ConvertUTF32toUTF8(&In32, In32 + Codepoints.size(), &Out8, Out8 + Res.size(),
+                     strictConversion);
+  Res.resize(reinterpret_cast<char *>(Out8) - Res.data());
+  return Res;
 }
 
 } // namespace json

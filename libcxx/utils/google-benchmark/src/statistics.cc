@@ -17,9 +17,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <string>
 #include <vector>
-#include <numeric>
 #include "check.h"
 #include "statistics.h"
 
@@ -30,22 +30,25 @@ auto StatisticsSum = [](const std::vector<double>& v) {
 };
 
 double StatisticsMean(const std::vector<double>& v) {
-  if (v.size() == 0) return 0.0;
+  if (v.empty()) return 0.0;
   return StatisticsSum(v) * (1.0 / v.size());
 }
 
 double StatisticsMedian(const std::vector<double>& v) {
   if (v.size() < 3) return StatisticsMean(v);
-  std::vector<double> partial;
-  // we need roundDown(count/2)+1 slots
-  partial.resize(1 + (v.size() / 2));
-  std::partial_sort_copy(v.begin(), v.end(), partial.begin(), partial.end());
-  // did we have odd number of samples?
-  // if yes, then the last element of partially-sorted vector is the median
-  // it no, then the average of the last two elements is the median
-  if(v.size() % 2 == 1)
-    return partial.back();
-  return (partial[partial.size() - 2] + partial[partial.size() - 1]) / 2.0;
+  std::vector<double> copy(v);
+
+  auto center = copy.begin() + v.size() / 2;
+  std::nth_element(copy.begin(), center, copy.end());
+
+  // did we have an odd number of samples?
+  // if yes, then center is the median
+  // it no, then we are looking for the average between center and the value
+  // before
+  if (v.size() % 2 == 1) return *center;
+  auto center2 = copy.begin() + v.size() / 2 - 1;
+  std::nth_element(copy.begin(), center2, copy.end());
+  return (*center + *center2) / 2.0;
 }
 
 // Return the sum of the squares of this sample set
@@ -62,11 +65,10 @@ auto Sqrt = [](const double dat) {
 
 double StatisticsStdDev(const std::vector<double>& v) {
   const auto mean = StatisticsMean(v);
-  if (v.size() == 0) return mean;
+  if (v.empty()) return mean;
 
   // Sample standard deviation is undefined for n = 1
-  if (v.size() == 1)
-    return 0.0;
+  if (v.size() == 1) return 0.0;
 
   const double avg_squares = SumSquares(v) * (1.0 / v.size());
   return Sqrt(v.size() / (v.size() - 1.0) * (avg_squares - Sqr(mean)));
@@ -105,11 +107,11 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     Counter c;
     std::vector<double> s;
   };
-  std::map< std::string, CounterStat > counter_stats;
-  for(Run const& r : reports) {
-    for(auto const& cnt : r.counters) {
+  std::map<std::string, CounterStat> counter_stats;
+  for (Run const& r : reports) {
+    for (auto const& cnt : r.counters) {
       auto it = counter_stats.find(cnt.first);
-      if(it == counter_stats.end()) {
+      if (it == counter_stats.end()) {
         counter_stats.insert({cnt.first, {cnt.second, std::vector<double>{}}});
         it = counter_stats.find(cnt.first);
         it->second.s.reserve(reports.size());
@@ -129,7 +131,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     items_per_second_stat.emplace_back(run.items_per_second);
     bytes_per_second_stat.emplace_back(run.bytes_per_second);
     // user counters
-    for(auto const& cnt : run.counters) {
+    for (auto const& cnt : run.counters) {
       auto it = counter_stats.find(cnt.first);
       CHECK_NE(it, counter_stats.end());
       it->second.s.emplace_back(cnt.second);
@@ -145,7 +147,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     }
   }
 
-  for(const auto& Stat : *reports[0].statistics) {
+  for (const auto& Stat : *reports[0].statistics) {
     // Get the data from the accumulator to BenchmarkReporter::Run's.
     Run data;
     data.benchmark_name = reports[0].benchmark_name + "_" + Stat.name_;
@@ -160,7 +162,7 @@ std::vector<BenchmarkReporter::Run> ComputeStats(
     data.time_unit = reports[0].time_unit;
 
     // user counters
-    for(auto const& kv : counter_stats) {
+    for (auto const& kv : counter_stats) {
       const auto uc_stat = Stat.compute_(kv.second.s);
       auto c = Counter(uc_stat, counter_stats[kv.first].c.flags);
       data.counters[kv.first] = c;

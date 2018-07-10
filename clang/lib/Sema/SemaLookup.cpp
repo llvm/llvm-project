@@ -4990,6 +4990,8 @@ bool FunctionCallFilterCCC::ValidateCandidate(const TypoCorrection &candidate) {
         // determine if it is a pointer or reference to a function. If so,
         // check against the number of arguments expected for the pointee.
         QualType ValType = cast<ValueDecl>(ND)->getType();
+        if (ValType.isNull())
+          continue;
         if (ValType->isAnyPointerType() || ValType->isReferenceType())
           ValType = ValType->getPointeeType();
         if (const FunctionProtoType *FPT = ValType->getAs<FunctionProtoType>())

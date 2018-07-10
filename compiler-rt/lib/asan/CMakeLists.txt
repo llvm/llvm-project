@@ -38,6 +38,34 @@ set(ASAN_CXX_SOURCES
 set(ASAN_PREINIT_SOURCES
   asan_preinit.cc)
 
+SET(ASAN_HEADERS
+  asan_activation.h
+  asan_activation_flags.inc
+  asan_allocator.h
+  asan_descriptions.h
+  asan_errors.h
+  asan_fake_stack.h
+  asan_flags.h
+  asan_flags.inc
+  asan_init_version.h
+  asan_interceptors.h
+  asan_interceptors_memintrinsics.h
+  asan_interface.inc
+  asan_interface_internal.h
+  asan_internal.h
+  asan_lock.h
+  asan_malloc_local.h
+  asan_mapping.h
+  asan_mapping_myriad.h
+  asan_poisoning.h
+  asan_premap_shadow.h
+  asan_report.h
+  asan_scariness_score.h
+  asan_stack.h
+  asan_stats.h
+  asan_suppressions.h
+  asan_thread.h)
+
 include_directories(..)
 
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
@@ -84,21 +112,28 @@ add_compiler_rt_object_libraries(RTAsan_dynamic
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
   ARCHS ${ASAN_SUPPORTED_ARCH}
   SOURCES ${ASAN_SOURCES} ${ASAN_CXX_SOURCES}
+  ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CFLAGS}
   DEFS ${ASAN_DYNAMIC_DEFINITIONS})
 
 if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan
     ARCHS ${ASAN_SUPPORTED_ARCH}
-    SOURCES ${ASAN_SOURCES} CFLAGS ${ASAN_CFLAGS}
+    SOURCES ${ASAN_SOURCES}
+    ADDITIONAL_HEADERS ${ASAN_HEADERS}
+    CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
   add_compiler_rt_object_libraries(RTAsan_cxx
     ARCHS ${ASAN_SUPPORTED_ARCH}
-    SOURCES ${ASAN_CXX_SOURCES} CFLAGS ${ASAN_CFLAGS}
+    SOURCES ${ASAN_CXX_SOURCES}
+    ADDITIONAL_HEADERS ${ASAN_HEADERS}
+    CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
   add_compiler_rt_object_libraries(RTAsan_preinit
     ARCHS ${ASAN_SUPPORTED_ARCH}
-    SOURCES ${ASAN_PREINIT_SOURCES} CFLAGS ${ASAN_CFLAGS}
+    SOURCES ${ASAN_PREINIT_SOURCES}
+    ADDITIONAL_HEADERS ${ASAN_HEADERS}
+    CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
 
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc "")

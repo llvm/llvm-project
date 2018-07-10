@@ -18,11 +18,11 @@
 
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "xray_utils.h"
 #include <cstddef>
 #include <cstdint>
-
-#include "sanitizer_common/sanitizer_internal_defs.h"
 
 namespace __xray {
 
@@ -40,8 +40,7 @@ template <size_t N> struct Allocator {
   // The Allocator returns memory as Block instances.
   struct Block {
     /// Compute the minimum cache-line size multiple that is >= N.
-    static constexpr auto Size =
-        kCacheLineSize * ((N / kCacheLineSize) + (N % kCacheLineSize ? 1 : 0));
+    static constexpr auto Size = nearest_boundary(N, kCacheLineSize);
     void *Data = nullptr;
   };
 
@@ -61,15 +60,16 @@ private:
 
     // We compute the number of pointers to areas in memory where we consider as
     // individual blocks we've allocated. To ensure that instances of the
-    // BlockLink object are cache-line sized, we deduct one additional
-    // pointers worth representing the pointer to the previous link.
+    // BlockLink object are cache-line sized, we deduct two pointers worth
+    // representing the pointer to the previous link and the backing store for
+    // the whole block.
     //
     // This structure corresponds to the following layout:
     //
-    //   Blocks [ 0, 1, 2, .., BlockPtrCount - 1]
+    //   Blocks [ 0, 1, 2, .., BlockPtrCount - 2]
     //
     static constexpr auto BlockPtrCount =
-        (kCacheLineSize / sizeof(Block *)) - 1;
+        (kCacheLineSize / sizeof(Block *)) - 2;
 
     BlockLink() {
       // Zero out Blocks.
@@ -81,6 +81,7 @@ private:
     // FIXME: Align this to cache-line address boundaries?
     Block Blocks[BlockPtrCount];
     BlockLink *Prev = nullptr;
+    void *BackingStore = nullptr;
   };
 
   static_assert(sizeof(BlockLink) == kCacheLineSize,
@@ -96,17 +97,26 @@ private:
   BlockLink *Tail = &NullLink;
   size_t Counter = 0;
 
-  BlockLink *NewChainLink() {
+  BlockLink *NewChainLink(uint64_t Alignment) {
     auto NewChain = reinterpret_cast<BlockLink *>(
         InternalAlloc(sizeof(BlockLink), nullptr, kCacheLineSize));
     auto BackingStore = reinterpret_cast<char *>(InternalAlloc(
-        BlockLink::BlockPtrCount * Block::Size, nullptr, kCacheLineSize));
+        (BlockLink::BlockPtrCount + 1) * Block::Size, nullptr, Alignment));
     size_t Offset = 0;
     DCHECK_NE(NewChain, nullptr);
     DCHECK_NE(BackingStore, nullptr);
+    NewChain->BackingStore = BackingStore;
+
+    // Here we ensure that the alignment of the pointers we're handing out
+    // adhere to the alignment requirements of the call to Allocate().
     for (auto &B : NewChain->Blocks) {
-      B.Data = BackingStore + Offset;
-      Offset += Block::Size;
+      auto AlignmentAdjustment =
+          nearest_boundary(reinterpret_cast<uintptr_t>(BackingStore + Offset),
+                           Alignment) -
+          reinterpret_cast<uintptr_t>(BackingStore + Offset);
+      B.Data = BackingStore + AlignmentAdjustment + Offset;
+      DCHECK_EQ(reinterpret_cast<uintptr_t>(B.Data) % Alignment, 0);
+      Offset += AlignmentAdjustment + Block::Size;
     }
     NewChain->Prev = Tail;
     return NewChain;
@@ -117,7 +127,7 @@ public:
     // FIXME: Implement PreAllocate support!
   }
 
-  Block Allocate() {
+  Block Allocate(uint64_t Alignment = 8) {
     SpinMutexLock Lock(&Mutex);
     // Check whether we're over quota.
     if (Counter * Block::Size >= MaxMemory)
@@ -128,7 +138,7 @@ public:
     Block B{};
     BlockLink *Link = Tail;
     if (UNLIKELY(Counter == 0 || ChainOffset == 0))
-      Tail = Link = NewChainLink();
+      Tail = Link = NewChainLink(Alignment);
 
     B = Link->Blocks[ChainOffset];
     ++Counter;
@@ -140,7 +150,7 @@ public:
     for (auto *C = Tail; C != &NullLink;) {
       // We know that the data block is a large contiguous page, we deallocate
       // that at once.
-      InternalFree(C->Blocks[0].Data);
+      InternalFree(C->BackingStore);
       auto Prev = C->Prev;
       InternalFree(C);
       C = Prev;

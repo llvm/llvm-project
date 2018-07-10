@@ -7,6 +7,30 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+not     z31.b, p7/m, z31.b
+// CHECK-INST: not	z31.b, p7/m, z31.b
+// CHECK-ENCODING: [0xff,0xbf,0x1e,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf 1e 04 <unknown>
+
+not     z31.h, p7/m, z31.h
+// CHECK-INST: not	z31.h, p7/m, z31.h
+// CHECK-ENCODING: [0xff,0xbf,0x5e,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf 5e 04 <unknown>
+
+not     z31.s, p7/m, z31.s
+// CHECK-INST: not	z31.s, p7/m, z31.s
+// CHECK-ENCODING: [0xff,0xbf,0x9e,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf 9e 04 <unknown>
+
+not     z31.d, p7/m, z31.d
+// CHECK-INST: not	z31.d, p7/m, z31.d
+// CHECK-ENCODING: [0xff,0xbf,0xde,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff bf de 04 <unknown>
+
 not     p0.b, p0/z, p0.b
 // CHECK-INST: not     p0.b, p0/z, p0.b
 // CHECK-ENCODING: [0x00,0x42,0x00,0x25]

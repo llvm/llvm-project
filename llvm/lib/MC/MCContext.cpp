@@ -535,6 +535,26 @@ MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
   return *new (MCSubtargetAllocator.Allocate()) MCSubtargetInfo(STI);
 }
 
+void MCContext::addDebugPrefixMapEntry(const std::string &From,
+                                       const std::string &To) {
+  DebugPrefixMap.insert(std::make_pair(From, To));
+}
+
+void MCContext::RemapDebugPath(std::string *Path) {
+  for (const auto &Entry : DebugPrefixMap)
+    if (StringRef(*Path).startswith(Entry.first)) {
+      std::string RemappedPath =
+          (Twine(Entry.second) + Path->substr(Entry.first.size())).str();
+      Path->swap(RemappedPath);
+    }
+}
+
+void MCContext::RemapCompilationDir() {
+  std::string CompDir = CompilationDir.str();
+  RemapDebugPath(&CompDir);
+  CompilationDir = CompDir;
+}
+
 //===----------------------------------------------------------------------===//
 // Dwarf Management
 //===----------------------------------------------------------------------===//

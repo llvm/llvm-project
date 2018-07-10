@@ -1159,8 +1159,8 @@ multiclass sve_int_bin_pred_arit_1<bits<3> opc, string asm> {
 // SVE Integer Arithmetic - Unary Predicated Group
 //===----------------------------------------------------------------------===//
 
-class sve_int_un_pred_arit_0<bits<2> sz8_64, bits<3> opc, string asm,
-                             ZPRRegOp zprty>
+class sve_int_un_pred_arit<bits<2> sz8_64, bits<4> opc,
+                             string asm, ZPRRegOp zprty>
 : I<(outs zprty:$Zd), (ins zprty:$_Zd, PPR3bAny:$Pg, zprty:$Zn),
   asm, "\t$Zd, $Pg/m, $Zn",
   "",
@@ -1170,8 +1170,9 @@ class sve_int_un_pred_arit_0<bits<2> sz8_64, bits<3> opc, string asm,
   bits<5> Zn;
   let Inst{31-24} = 0b00000100;
   let Inst{23-22} = sz8_64;
-  let Inst{21-19} = 0b010;
-  let Inst{18-16} = opc;
+  let Inst{21-20} = 0b01;
+  let Inst{19}    = opc{0};
+  let Inst{18-16} = opc{3-1};
   let Inst{15-13} = 0b101;
   let Inst{12-10} = Pg;
   let Inst{9-5}   = Zn;
@@ -1181,27 +1182,39 @@ class sve_int_un_pred_arit_0<bits<2> sz8_64, bits<3> opc, string asm,
 }
 
 multiclass sve_int_un_pred_arit_0<bits<3> opc, string asm> {
-  def _B : sve_int_un_pred_arit_0<0b00, opc, asm, ZPR8>;
-  def _H : sve_int_un_pred_arit_0<0b01, opc, asm, ZPR16>;
-  def _S : sve_int_un_pred_arit_0<0b10, opc, asm, ZPR32>;
-  def _D : sve_int_un_pred_arit_0<0b11, opc, asm, ZPR64>;
+  def _B : sve_int_un_pred_arit<0b00, { opc, 0b0 }, asm, ZPR8>;
+  def _H : sve_int_un_pred_arit<0b01, { opc, 0b0 }, asm, ZPR16>;
+  def _S : sve_int_un_pred_arit<0b10, { opc, 0b0 }, asm, ZPR32>;
+  def _D : sve_int_un_pred_arit<0b11, { opc, 0b0 }, asm, ZPR64>;
 }
 
 multiclass sve_int_un_pred_arit_0_h<bits<3> opc, string asm> {
-  def _H : sve_int_un_pred_arit_0<0b01, opc, asm, ZPR16>;
-  def _S : sve_int_un_pred_arit_0<0b10, opc, asm, ZPR32>;
-  def _D : sve_int_un_pred_arit_0<0b11, opc, asm, ZPR64>;
+  def _H : sve_int_un_pred_arit<0b01, { opc, 0b0 }, asm, ZPR16>;
+  def _S : sve_int_un_pred_arit<0b10, { opc, 0b0 }, asm, ZPR32>;
+  def _D : sve_int_un_pred_arit<0b11, { opc, 0b0 }, asm, ZPR64>;
 }
 
 multiclass sve_int_un_pred_arit_0_w<bits<3> opc, string asm> {
-  def _S : sve_int_un_pred_arit_0<0b10, opc, asm, ZPR32>;
-  def _D : sve_int_un_pred_arit_0<0b11, opc, asm, ZPR64>;
+  def _S : sve_int_un_pred_arit<0b10, { opc, 0b0 }, asm, ZPR32>;
+  def _D : sve_int_un_pred_arit<0b11, { opc, 0b0 }, asm, ZPR64>;
 }
 
 multiclass sve_int_un_pred_arit_0_d<bits<3> opc, string asm> {
-  def _D : sve_int_un_pred_arit_0<0b11, opc, asm, ZPR64>;
+  def _D : sve_int_un_pred_arit<0b11, { opc, 0b0 }, asm, ZPR64>;
 }
 
+multiclass sve_int_un_pred_arit_1<bits<3> opc, string asm> {
+  def _B : sve_int_un_pred_arit<0b00, { opc, 0b1 }, asm, ZPR8>;
+  def _H : sve_int_un_pred_arit<0b01, { opc, 0b1 }, asm, ZPR16>;
+  def _S : sve_int_un_pred_arit<0b10, { opc, 0b1 }, asm, ZPR32>;
+  def _D : sve_int_un_pred_arit<0b11, { opc, 0b1 }, asm, ZPR64>;
+}
+
+multiclass sve_int_un_pred_arit_1_fp<bits<3> opc, string asm> {
+  def _H : sve_int_un_pred_arit<0b01, { opc, 0b1 }, asm, ZPR16>;
+  def _S : sve_int_un_pred_arit<0b10, { opc, 0b1 }, asm, ZPR32>;
+  def _D : sve_int_un_pred_arit<0b11, { opc, 0b1 }, asm, ZPR64>;
+}
 
 //===----------------------------------------------------------------------===//
 // SVE Integer Wide Immediate - Unpredicated Group

@@ -1792,7 +1792,8 @@ __m128i test_mm256_maskz_cvtusepi16_epi8(__mmask16 __M, __m256i __A) {
 
 __m128i test_mm_cvtepi16_epi8(__m128i __A) {
   // CHECK-LABEL: @test_mm_cvtepi16_epi8
-  // CHECK: @llvm.x86.avx512.mask.pmov.wb.128
+  // CHECK: trunc <8 x i16> %{{.*}} to <8 x i8>
+  // CHECK: shufflevector <8 x i8> %{{.*}}, <8 x i8> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   return _mm_cvtepi16_epi8(__A); 
 }
 

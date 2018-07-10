@@ -794,9 +794,7 @@ __m128i test_mm_move_epi64(__m128i A) {
 __m128d test_mm_move_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_move_sd
   // CHECK: extractelement <2 x double> %{{.*}}, i32 0
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
-  // CHECK: extractelement <2 x double> %{{.*}}, i32 1
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
+  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 0
   return _mm_move_sd(A, B);
 }
 

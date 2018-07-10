@@ -46,4 +46,25 @@ static void BM_StringFindMatch2(benchmark::State &state) {
 }
 BENCHMARK(BM_StringFindMatch2)->Range(1, MAX_STRING_LEN / 4);
 
+static void BM_StringCtorDefault(benchmark::State &state) {
+  while (state.KeepRunning()) {
+    for (unsigned I=0; I < 1000; ++I) {
+      std::string Default;
+      benchmark::DoNotOptimize(Default.c_str());
+    }
+  }
+}
+BENCHMARK(BM_StringCtorDefault);
+
+static void BM_StringCtorCStr(benchmark::State &state) {
+  std::string Input = getRandomString(state.range(0));
+  const char *Str = Input.c_str();
+  benchmark::DoNotOptimize(Str);
+  while (state.KeepRunning()) {
+    std::string Tmp(Str);
+    benchmark::DoNotOptimize(Tmp.c_str());
+  }
+}
+BENCHMARK(BM_StringCtorCStr)->Arg(1)->Arg(8)->Range(16, MAX_STRING_LEN / 4);
+
 BENCHMARK_MAIN();

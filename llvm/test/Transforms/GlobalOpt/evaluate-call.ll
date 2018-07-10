@@ -28,9 +28,11 @@ target triple = "x86_64-apple-macosx10.12.0"
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_main.cpp, i8* null }]
 
 define internal void @__cxx_global_var_init() section "__TEXT,__StaticInit,regular,pure_instructions" {
-  call void @_ZN1SC1Ev(%struct.S* @_s)
+  call void @_ZN1SC1Ev_alias(%struct.S* @_s)
   ret void
 }
+
+@_ZN1SC1Ev_alias = linkonce_odr unnamed_addr alias void (%struct.S*), void (%struct.S*)* @_ZN1SC1Ev
 
 define linkonce_odr void @_ZN1SC1Ev(%struct.S*) unnamed_addr align 2 {
   %2 = alloca %struct.S*, align 8

@@ -3934,3 +3934,195 @@ exit:
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 }
+
+; A devilish pattern. This is a crafty, crafty test case designed to risk
+; creating indirect cycles with trivial and non-trivial unswitching. The inner
+; loop has a switch with a trivial exit edge that can be unswitched, but the
+; rest of the switch cannot be unswitched because its cost is too high.
+; However, the unswitching of the trivial edge creates a new switch in the
+; outer loop. *This* switch isn't trivial, but has a low cost to unswitch. When
+; we unswitch this switch from the outer loop, we will remove it completely and
+; create a clone of the inner loop on one side. This clone will then again be
+; viable for unswitching the inner-most loop. This lets us check that the
+; unswitching doesn't end up cycling infinitely even when the cycle is
+; indirect and due to revisiting a loop after cloning.
+define void @test30(i32 %arg) {
+; CHECK-LABEL: define void @test30(
+entry:
+  br label %outer.header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 %arg, label %[[ENTRY_SPLIT:.*]] [
+; CHECK-NEXT:      i32 1, label %[[ENTRY_SPLIT_US:.*]]
+; CHECK-NEXT:      i32 2, label %[[ENTRY_SPLIT_US]]
+; CHECK-NEXT:    ]
+;
+; CHECK:       [[ENTRY_SPLIT_US]]:
+; CHECK-NEXT:    switch i32 %arg, label %[[ENTRY_SPLIT_US_SPLIT:.*]] [
+; CHECK-NEXT:      i32 1, label %[[ENTRY_SPLIT_US_SPLIT_US:.*]]
+; CHECK-NEXT:    ]
+
+outer.header:
+  br label %inner.header
+
+inner.header:
+  switch i32 %arg, label %inner.loopexit1 [
+    i32 1, label %inner.body1
+    i32 2, label %inner.body2
+  ]
+
+inner.body1:
+  %a = call i32 @a()
+  br label %inner.latch
+; The (super convoluted) fully unswitched loop around `@a`.
+;
+; CHECK:       [[ENTRY_SPLIT_US_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_US_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_US_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_US_US:.*]]
+;
+; CHECK:       [[OUTER_LATCH_US_US:.*]]:
+; CHECK-NEXT:    %[[OUTER_COND_US_US:.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 %[[OUTER_COND_US_US]], label %[[OUTER_HEADER_US_US]], label %[[EXIT_SPLIT_US_SPLIT_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_SPLIT_US_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_SPLIT_US_US_US:.*]]
+;
+; CHECK:       [[INNER_LOOPEXIT2_US_US:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH_US_US]]
+;
+; CHECK:       [[OUTER_HEADER_SPLIT_SPLIT_US_US_US]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER_US_US_US:.*]]
+;
+; CHECK:       [[INNER_HEADER_US_US_US]]:
+; CHECK-NEXT:    br label %[[INNER_BODY1_US_US_US:.*]]
+;
+; CHECK:       [[INNER_BODY1_US_US_US]]:
+; CHECK-NEXT:    %[[A:.*]] = call i32 @a()
+; CHECK-NEXT:    br label %[[INNER_LATCH_US_US_US:.*]]
+;
+; CHECK:       [[INNER_LATCH_US_US_US]]:
+; CHECK-NEXT:    %[[PHI_A:.*]] = phi i32 [ %[[A]], %[[INNER_BODY1_US_US_US]] ]
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 %[[PHI_A]])
+; CHECK-NEXT:    %[[INNER_COND_US_US_US:.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 %[[INNER_COND_US_US_US]], label %[[INNER_HEADER_US_US_US]], label %[[INNER_LOOPEXIT2_SPLIT_US_US_US:.*]]
+;
+; CHECK:       [[INNER_LOOPEXIT2_SPLIT_US_US_US]]:
+; CHECK-NEXT:    br label %[[INNER_LOOPEXIT2_US_US]]
+;
+; CHECK:       [[EXIT_SPLIT_US_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[EXIT_SPLIT_US:.*]]
+
+
+inner.body2:
+  %b = call i32 @b()
+  br label %inner.latch
+; The fully unswitched loop around `@b`.
+;
+; CHECK:       [[ENTRY_SPLIT_US_SPLIT]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_US:.*]]
+;
+; CHECK:       [[INNER_HEADER_US:.*]]:
+; CHECK-NEXT:    br label %[[INNER_BODY2_US:.*]]
+;
+; CHECK:       [[INNER_BODY2_US]]:
+; CHECK-NEXT:    %[[B:.*]] = call i32 @b()
+; CHECK-NEXT:    br label %[[INNER_LATCH_US:.*]]
+;
+; CHECK:       [[INNER_LATCH_US]]:
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 0)
+; CHECK-NEXT:    call void @sink1(i32 %[[B]])
+; CHECK-NEXT:    %[[INNER_COND_US:.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 %[[INNER_COND_US]], label %[[INNER_HEADER_US]], label %[[INNER_LOOPEXIT2_SPLIT_US:.*]]
+;
+; CHECK:       [[INNER_LOOPEXIT2_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[INNER_LOOPEXIT2_US:.*]]
+;
+; CHECK:       [[OUTER_LATCH_US:.*]]:
+; CHECK-NEXT:    %[[OUTER_COND_US:.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 %[[OUTER_COND_US]], label %[[OUTER_HEADER_US]], label %[[EXIT_SPLIT_US_SPLIT:.*]]
+;
+; CHECK:       [[OUTER_HEADER_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_SPLIT_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_SPLIT_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER_US]]
+;
+; CHECK:       [[INNER_LOOPEXIT2_US]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH_US]]
+;
+; CHECK:       [[EXIT_SPLIT_US]]:
+; CHECK-NEXT:    br label %exit
+
+inner.latch:
+  %phi = phi i32 [ %a, %inner.body1 ], [ %b, %inner.body2 ]
+  ; Make 10 junk calls here to ensure we're over the "50" cost threshold of
+  ; non-trivial unswitching for this inner switch.
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 0)
+  call void @sink1(i32 %phi)
+  %inner.cond = call i1 @cond()
+  br i1 %inner.cond, label %inner.header, label %inner.loopexit2
+
+inner.loopexit1:
+  br label %outer.latch
+; The unswitched `loopexit1` path.
+;
+; CHECK:       [[ENTRY_SPLIT]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+;
+; CHECK:       outer.header:
+; CHECK-NEXT:    br label %inner.loopexit1
+;
+; CHECK:       inner.loopexit1:
+; CHECK-NEXT:    br label %outer.latch
+;
+; CHECK:       outer.latch:
+; CHECK-NEXT:    %outer.cond = call i1 @cond()
+; CHECK-NEXT:    br i1 %outer.cond, label %outer.header, label %[[EXIT_SPLIT:.*]]
+;
+; CHECK:       [[EXIT_SPLIT]]:
+; CHECK-NEXT:    br label %exit
+
+inner.loopexit2:
+  br label %outer.latch
+
+outer.latch:
+  %outer.cond = call i1 @cond()
+  br i1 %outer.cond, label %outer.header, label %exit
+
+exit:
+  ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+}

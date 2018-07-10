@@ -73,6 +73,8 @@ private:
                      StringRef BaseTypeName = "", StringRef AccQual = "",
                      StringRef TypeQual = "");
 
+  void emitHiddenKernelArgs(const Function &Func);
+
 public:
   MetadataStreamer() = default;
   ~MetadataStreamer() = default;

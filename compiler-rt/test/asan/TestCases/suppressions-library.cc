@@ -7,7 +7,7 @@
 // FIXME: Remove usage of backticks around basename below.
 // REQUIRES: shell
 
-// RUN: echo "interceptor_via_lib:"`basename %dynamiclib` > %t.supp
+// RUN: echo "interceptor_via_lib:"%xdynamiclib_filename > %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
 // XFAIL: android

@@ -500,11 +500,11 @@ public:
   typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
   typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
 
-  AccessAnalysis(const DataLayout &Dl, AliasAnalysis *AA, LoopInfo *LI,
-                 MemoryDepChecker::DepCandidates &DA,
+  AccessAnalysis(const DataLayout &Dl, Loop *TheLoop, AliasAnalysis *AA,
+                 LoopInfo *LI, MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE)
-      : DL(Dl), AST(*AA), LI(LI), DepCands(DA), IsRTCheckAnalysisNeeded(false),
-        PSE(PSE) {}
+      : DL(Dl), TheLoop(TheLoop), AST(*AA), LI(LI), DepCands(DA),
+        IsRTCheckAnalysisNeeded(false), PSE(PSE) {}
 
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, bool IsReadOnly) {
@@ -578,6 +578,9 @@ private:
   PtrAccessSet Accesses;
 
   const DataLayout &DL;
+
+  /// The loop being checked.
+  const Loop *TheLoop;
 
   /// List of accesses that need a further dependence check.
   MemAccessInfoList CheckDeps;
@@ -910,7 +913,10 @@ void AccessAnalysis::processMemAccesses() {
           for (Value *UnderlyingObj : TempObjects) {
             // nullptr never alias, don't join sets for pointer that have "null"
             // in their UnderlyingObjects list.
-            if (isa<ConstantPointerNull>(UnderlyingObj))
+            if (isa<ConstantPointerNull>(UnderlyingObj) &&
+                !NullPointerIsDefined(
+                    TheLoop->getHeader()->getParent(),
+                    UnderlyingObj->getType()->getPointerAddressSpace()))
               continue;
 
             UnderlyingObjToAccessMap::iterator Prev =
@@ -1026,8 +1032,9 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
   bool IsNoWrapAddRec = !ShouldCheckWrap ||
     PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW) ||
     isNoWrapAddRec(Ptr, AR, PSE, Lp);
-  bool IsInAddressSpaceZero = PtrTy->getAddressSpace() == 0;
-  if (!IsNoWrapAddRec && !IsInBoundsGEP && !IsInAddressSpaceZero) {
+  if (!IsNoWrapAddRec && !IsInBoundsGEP &&
+      NullPointerIsDefined(Lp->getHeader()->getParent(),
+                           PtrTy->getAddressSpace())) {
     if (Assume) {
       PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
       IsNoWrapAddRec = true;
@@ -1073,8 +1080,9 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
   // If the SCEV could wrap but we have an inbounds gep with a unit stride we
   // know we can't "wrap around the address space". In case of address space
   // zero we know that this won't happen without triggering undefined behavior.
-  if (!IsNoWrapAddRec && (IsInBoundsGEP || IsInAddressSpaceZero) &&
-      Stride != 1 && Stride != -1) {
+  if (!IsNoWrapAddRec && Stride != 1 && Stride != -1 &&
+      (IsInBoundsGEP || !NullPointerIsDefined(Lp->getHeader()->getParent(),
+                                              PtrTy->getAddressSpace()))) {
     if (Assume) {
       // We can avoid this case by adding a run-time check.
       LLVM_DEBUG(dbgs() << "LAA: Non unit strided pointer which is not either "
@@ -1845,7 +1853,7 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
 
   MemoryDepChecker::DepCandidates DependentAccesses;
   AccessAnalysis Accesses(TheLoop->getHeader()->getModule()->getDataLayout(),
-                          AA, LI, DependentAccesses, *PSE);
+                          TheLoop, AA, LI, DependentAccesses, *PSE);
 
   // Holds the analyzed pointers. We don't want to call GetUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once

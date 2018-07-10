@@ -27,6 +27,79 @@ define <4 x i32> @combine_vec_srem_by_one(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; fold (srem x, -1) -> 0
+define i32 @combine_srem_by_negone(i32 %x) {
+; CHECK-LABEL: combine_srem_by_negone:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %1 = srem i32 %x, -1
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_srem_by_negone(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_srem_by_negone:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_srem_by_negone:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = srem <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i32> %1
+}
+
+; TODO fold (srem x, INT_MIN)
+define i32 @combine_srem_by_minsigned(i32 %x) {
+; CHECK-LABEL: combine_srem_by_minsigned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    subl %eax, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = srem i32 %x, -2147483648
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_srem_by_minsigned(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_srem_by_minsigned:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    psrld $1, %xmm1
+; SSE-NEXT:    paddd %xmm0, %xmm1
+; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_vec_srem_by_minsigned:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX1-NEXT:    vpsrld $1, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_vec_srem_by_minsigned:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX2-NEXT:    vpsrld $1, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = srem <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  ret <4 x i32> %1
+}
+
 ; TODO fold (srem x, x) -> 0
 define i32 @combine_srem_dupe(i32 %x) {
 ; CHECK-LABEL: combine_srem_dupe:
