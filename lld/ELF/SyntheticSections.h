@@ -713,8 +713,6 @@ private:
   size_t Size;
 };
 
-template <class ELFT> GdbIndexSection *createGdbIndex();
-
 // --eh-frame-hdr option tells linker to construct a header for all the
 // .eh_frame sections. This header is placed to a section named .eh_frame_hdr
 // and also to a PT_GNU_EH_FRAME segment.

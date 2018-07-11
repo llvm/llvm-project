@@ -586,6 +586,19 @@ struct CompletionRecorder : public CodeCompleteConsumer {
   void ProcessCodeCompleteResults(class Sema &S, CodeCompletionContext Context,
                                   CodeCompletionResult *InResults,
                                   unsigned NumResults) override final {
+    // Results from recovery mode are generally useless, and the callback after
+    // recovery (if any) is usually more interesting. To make sure we handle the
+    // future callback from sema, we just ignore all callbacks in recovery mode,
+    // as taking only results from recovery mode results in poor completion
+    // results.
+    // FIXME: in case there is no future sema completion callback after the
+    // recovery mode, we might still want to provide some results (e.g. trivial
+    // identifier-based completion).
+    if (Context.getKind() == CodeCompletionContext::CCC_Recovery) {
+      log("Code complete: Ignoring sema code complete callback with Recovery "
+          "context.");
+      return;
+    }
     // If a callback is called without any sema result and the context does not
     // support index-based completion, we simply skip it to give way to
     // potential future callbacks with results.

@@ -34,16 +34,16 @@
 # DWARF-NEXT:    Low/High address = [0x201000, 0x201001) (Size: 0x1), CU id = 0
 # DWARF-NEXT:    Low/High address = [0x201004, 0x201006) (Size: 0x2), CU id = 1
 # DWARF:       Symbol table offset = 0x60, size = 1024, filled slots:
-# DWARF-NEXT:    512: Name offset = 0x2b, CU vector offset = 0x14
-# DWARF-NEXT:      String name: aaaaaaaaaaaaaaaa, CU vector index: 2
-# DWARF-NEXT:    754: Name offset = 0x27, CU vector offset = 0x8
-# DWARF-NEXT:      String name: int, CU vector index: 1
-# DWARF-NEXT:    822: Name offset = 0x1c, CU vector offset = 0x0
-# DWARF-NEXT:      String name: entrypoint, CU vector index: 0
+# DWARF-NEXT:    512: Name offset = 0x1c, CU vector offset = 0x0
+# DWARF-NEXT:      String name: aaaaaaaaaaaaaaaa, CU vector index: 0
+# DWARF-NEXT:    754: Name offset = 0x38, CU vector offset = 0x10
+# DWARF-NEXT:      String name: int, CU vector index: 2
+# DWARF-NEXT:    822: Name offset = 0x2d, CU vector offset = 0x8
+# DWARF-NEXT:      String name: entrypoint, CU vector index: 1
 # DWARF:       Constant pool offset = 0x2060, has 3 CU vectors:
-# DWARF-NEXT:    0(0x0): 0x30000000
-# DWARF-NEXT:    1(0x8): 0x90000000 0x90000001
-# DWARF-NEXT:    2(0x14): 0x30000001
+# DWARF-NEXT:    0(0x0): 0x30000001
+# DWARF-NEXT:    1(0x8): 0x30000000
+# DWARF-NEXT:    2(0x10): 0x90000000 0x90000001
 
 # SECTION-NOT: debug_gnu_pubnames
 

@@ -2366,27 +2366,51 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameTypeEntry>> NameTypes) {
   typedef GdbIndexSection::GdbSymbol GdbSymbol;
   typedef GdbIndexSection::NameTypeEntry NameTypeEntry;
 
-  // A map to uniquify symbols by name.
-  DenseMap<CachedHashStringRef, size_t> Map;
+  // The number of symbols we will handle in this function is of the order
+  // of millions for very large executables, so we use multi-threading to
+  // speed it up.
+  size_t NumShards = 32;
+  size_t Concurrency = 1;
+  if (ThreadsEnabled)
+    Concurrency =
+        std::min<size_t>(PowerOf2Floor(hardware_concurrency()), NumShards);
+
+  // A sharded map to uniquify symbols by name.
+  std::vector<DenseMap<CachedHashStringRef, size_t>> Map(NumShards);
+  size_t Shift = 32 - countTrailingZeros(NumShards);
 
   // Instantiate GdbSymbols while uniqufying them by name.
-  std::vector<GdbSymbol> Ret;
-  for (ArrayRef<NameTypeEntry> Entries : NameTypes) {
-    for (const NameTypeEntry &Ent : Entries) {
-      size_t &Idx = Map[Ent.Name];
-      if (Idx) {
-        // gcc 5.4.1 produces a buggy .debug_gnu_pubnames that contains
-        // duplicate entries, so we want to dedup them.
-        std::vector<uint32_t> &Vec = Ret[Idx - 1].CuVector;
-        if (Vec.empty() || Vec.back() != Ent.Type)
-          Vec.push_back(Ent.Type);
-        continue;
-      }
+  std::vector<std::vector<GdbSymbol>> Symbols(NumShards);
+  parallelForEachN(0, Concurrency, [&](size_t ThreadId) {
+    for (ArrayRef<NameTypeEntry> Entries : NameTypes) {
+      for (const NameTypeEntry &Ent : Entries) {
+        size_t ShardId = Ent.Name.hash() >> Shift;
+        if ((ShardId & (Concurrency - 1)) != ThreadId)
+          continue;
 
-      Idx = Ret.size() + 1;
-      Ret.push_back({Ent.Name, {Ent.Type}, 0, 0});
+        size_t &Idx = Map[ShardId][Ent.Name];
+        if (Idx) {
+          Symbols[ShardId][Idx - 1].CuVector.push_back(Ent.Type);
+          continue;
+        }
+
+        Idx = Symbols[ShardId].size() + 1;
+        Symbols[ShardId].push_back({Ent.Name, {Ent.Type}, 0, 0});
+      }
     }
-  }
+  });
+
+  size_t NumSymbols = 0;
+  for (ArrayRef<GdbSymbol> V : Symbols)
+    NumSymbols += V.size();
+
+  // The return type is a flattened vector, so we'll copy each vector
+  // contents to Ret.
+  std::vector<GdbSymbol> Ret;
+  Ret.reserve(NumSymbols);
+  for (std::vector<GdbSymbol> &Vec : Symbols)
+    for (GdbSymbol &Sym : Vec)
+      Ret.push_back(std::move(Sym));
 
   // CU vectors and symbol names are adjacent in the output file.
   // We can compute their offsets in the output file now.
