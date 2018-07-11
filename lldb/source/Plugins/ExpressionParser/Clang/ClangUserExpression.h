@@ -188,6 +188,13 @@ private:
                     lldb::addr_t struct_address,
                     DiagnosticManager &diagnostic_manager) override;
 
+  llvm::Optional<lldb::LanguageType> GetLanguageForExpr(
+      DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx);
+  bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
+                                   ExecutionContext &exe_ctx);
+  bool PrepareForParsing(DiagnosticManager &diagnostic_manager,
+                         ExecutionContext &exe_ctx);
+
   ClangUserExpressionHelper m_type_system_helper;
 
   class ResultDelegate : public Materializer::PersistentVariableDelegate {
