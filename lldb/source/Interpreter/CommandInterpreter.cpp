@@ -144,6 +144,26 @@ void CommandInterpreter::SetPromptOnQuit(bool b) {
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
+void CommandInterpreter::AllowExitCodeOnQuit(bool allow) {
+  m_allow_exit_code = allow;
+  if (!allow)
+    m_quit_exit_code.reset();
+}
+
+bool CommandInterpreter::SetQuitExitCode(int exit_code) {
+  if (!m_allow_exit_code)
+    return false;
+  m_quit_exit_code = exit_code;
+  return true;
+}
+
+int CommandInterpreter::GetQuitExitCode(bool &exited) const {
+  exited = m_quit_exit_code.hasValue();
+  if (exited)
+    return *m_quit_exit_code;
+  return 0;
+}
+
 void CommandInterpreter::ResolveCommand(const char *command_line,
                                         CommandReturnObject &result) {
   std::string command = command_line;

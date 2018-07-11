@@ -1019,8 +1019,10 @@ DeduceTemplateArguments(Sema &S,
   return Sema::TDK_Success;
 }
 
-/// Determine whether the parameter has qualifiers that are either
-/// inconsistent with or a superset of the argument's qualifiers.
+/// Determine whether the parameter has qualifiers that the argument
+/// lacks. Put another way, determine whether there is no way to add
+/// a deduced set of qualifiers to the ParamType that would result in
+/// its qualifiers matching those of the ArgType.
 static bool hasInconsistentOrSupersetQualifiersOf(QualType ParamType,
                                                   QualType ArgType) {
   Qualifiers ParamQs = ParamType.getQualifiers();
@@ -1044,10 +1046,8 @@ static bool hasInconsistentOrSupersetQualifiersOf(QualType ParamType,
       ParamQs.hasObjCLifetime())
     return true;
 
-  // CVR qualifier superset.
-  return (ParamQs.getCVRQualifiers() != ArgQs.getCVRQualifiers()) &&
-      ((ParamQs.getCVRQualifiers() | ArgQs.getCVRQualifiers())
-                                                == ParamQs.getCVRQualifiers());
+  // CVR qualifiers inconsistent or a superset.
+  return (ParamQs.getCVRQualifiers() & ~ArgQs.getCVRQualifiers()) != 0;
 }
 
 /// Compare types for equality with respect to possibly compatible

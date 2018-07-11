@@ -22,26 +22,27 @@
 
 namespace {
 #define GET_GLOBALISEL_PREDICATE_BITSET
+#define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATE_BITSET
+#undef AMDGPUSubtarget
 }
 
 namespace llvm {
 
 class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
-class AMDGPUSubtarget;
+class GCNSubtarget;
 class MachineInstr;
 class MachineOperand;
 class MachineRegisterInfo;
 class SIInstrInfo;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
-class SISubtarget;
 
 class AMDGPUInstructionSelector : public InstructionSelector {
 public:
-  AMDGPUInstructionSelector(const SISubtarget &STI,
+  AMDGPUInstructionSelector(const GCNSubtarget &STI,
                             const AMDGPURegisterBankInfo &RBI,
                             const AMDGPUTargetMachine &TM);
 
@@ -91,11 +92,13 @@ private:
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;
   const AMDGPUTargetMachine &TM;
-  const SISubtarget &STI;
+  const GCNSubtarget &STI;
   bool EnableLateStructurizeCFG;
 #define GET_GLOBALISEL_PREDICATES_DECL
+#define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_DECL
+#undef AMDGPUSubtarget
 
 #define GET_GLOBALISEL_TEMPORARIES_DECL
 #include "AMDGPUGenGlobalISel.inc"

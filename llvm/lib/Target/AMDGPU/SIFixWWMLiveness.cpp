@@ -185,7 +185,7 @@ bool SIFixWWMLiveness::runOnMachineFunction(MachineFunction &MF) {
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();
 
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   TRI = &TII->getRegisterInfo();

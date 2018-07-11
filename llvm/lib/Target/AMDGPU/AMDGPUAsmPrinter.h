@@ -34,7 +34,7 @@ namespace llvm {
 class AMDGPUMachineFunction;
 class AMDGPUTargetStreamer;
 class MCOperand;
-class SISubtarget;
+class GCNSubtarget;
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
 private:
@@ -50,7 +50,7 @@ private:
     bool HasDynamicallySizedStack = false;
     bool HasRecursion = false;
 
-    int32_t getTotalNumSGPRs(const SISubtarget &ST) const;
+    int32_t getTotalNumSGPRs(const GCNSubtarget &ST) const;
   };
 
   SIProgramInfo CurrentProgramInfo;

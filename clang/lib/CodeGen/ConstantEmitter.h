@@ -50,7 +50,7 @@ public:
     : CGM(CGM), CGF(CGF) {}
 
   /// Initialize this emission in the context of the given function.
-  /// Use this if the expression might contain contextaul references like
+  /// Use this if the expression might contain contextual references like
   /// block addresses or PredefinedExprs.
   ConstantEmitter(CodeGenFunction &CGF)
     : CGM(CGF.CGM), CGF(&CGF) {}

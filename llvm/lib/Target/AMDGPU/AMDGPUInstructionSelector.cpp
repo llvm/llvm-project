@@ -37,11 +37,13 @@
 using namespace llvm;
 
 #define GET_GLOBALISEL_IMPL
+#define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_IMPL
+#undef AMDGPUSubtarget
 
 AMDGPUInstructionSelector::AMDGPUInstructionSelector(
-    const SISubtarget &STI, const AMDGPURegisterBankInfo &RBI,
+    const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI,
     const AMDGPUTargetMachine &TM)
     : InstructionSelector(), TII(*STI.getInstrInfo()),
       TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
@@ -447,7 +449,7 @@ bool AMDGPUInstructionSelector::selectSMRD(MachineInstr &I,
 
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
-  const SISubtarget &Subtarget = MF->getSubtarget<SISubtarget>();
+  const GCNSubtarget &Subtarget = MF->getSubtarget<GCNSubtarget>();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   unsigned DstReg = I.getOperand(0).getReg();
   const DebugLoc &DL = I.getDebugLoc();

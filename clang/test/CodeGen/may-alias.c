@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -Werror -triple i386-unknown-unknown -emit-llvm -O1 \
 // RUN:     -no-struct-path-tbaa -disable-llvm-passes -o - %s | \
-// RUN:     FileCheck %s -check-prefixes=CHECK,SCALAR
+// RUN:     FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=CHECK,SCALAR
 // RUN: %clang_cc1 -Werror -triple i386-unknown-unknown -emit-llvm -O1 \
 // RUN:     -disable-llvm-passes -o - %s | \
-// RUN:     FileCheck %s -check-prefixes=CHECK,OLD-PATH
+// RUN:     FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=CHECK,OLD-PATH
 // RUN: %clang_cc1 -Werror -triple i386-unknown-unknown -emit-llvm -O1 \
 // RUN:     -new-struct-path-tbaa -disable-llvm-passes -o - %s | \
-// RUN:     FileCheck %s -check-prefixes=CHECK,NEW-PATH
+// RUN:     FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=CHECK,NEW-PATH
 
 // Types with the may_alias attribute should be considered equivalent
 // to char for aliasing.

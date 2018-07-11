@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isR700 : Predicate<"Subtarget->getGeneration() == R600Subtarget::R700">;
+def isR700 : Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::R700">;
 
 let Predicates = [isR700] in {
   def SIN_r700 : SIN_Common<0x6E>;

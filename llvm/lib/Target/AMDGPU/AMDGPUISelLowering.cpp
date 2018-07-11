@@ -155,7 +155,7 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
-                                           const AMDGPUCommonSubtarget &STI)
+                                           const AMDGPUSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
   AMDGPUASI = AMDGPU::getAMDGPUAS(TM);
   // Lower floating point store/load to integer store/load to reduce the number
@@ -3939,8 +3939,8 @@ SDValue AMDGPUTargetLowering::loadInputValue(SelectionDAG &DAG,
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const MachineFunction &MF, const ImplicitParameter Param) const {
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
-  const AMDGPUCommonSubtarget &ST =
-      AMDGPUCommonSubtarget::get(getTargetMachine(), MF.getFunction());
+  const AMDGPUSubtarget &ST =
+      AMDGPUSubtarget::get(getTargetMachine(), MF.getFunction());
   unsigned ExplicitArgOffset = ST.getExplicitKernelArgOffset(MF.getFunction());
   unsigned Alignment = ST.getAlignmentForImplicitArgPtr();
   uint64_t ArgOffset = alignTo(MFI->getExplicitKernArgSize(), Alignment) +
@@ -4242,8 +4242,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     switch (IID) {
     case Intrinsic::amdgcn_mbcnt_lo:
     case Intrinsic::amdgcn_mbcnt_hi: {
-      const SISubtarget &ST =
-          DAG.getMachineFunction().getSubtarget<SISubtarget>();
+      const GCNSubtarget &ST =
+          DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
       // These return at most the wavefront size - 1.
       unsigned Size = Op.getValueType().getSizeInBits();
       Known.Zero.setHighBits(Size - ST.getWavefrontSizeLog2());

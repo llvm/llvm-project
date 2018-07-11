@@ -124,7 +124,7 @@ bool AMDGPULowerIntrinsics::makeLIDRangeMetadata(Function &F) const {
     if (!CI)
       continue;
 
-    Changed |= AMDGPUCommonSubtarget::get(TM, F).makeLIDRangeMetadata(CI);
+    Changed |= AMDGPUSubtarget::get(TM, F).makeLIDRangeMetadata(CI);
   }
   return Changed;
 }

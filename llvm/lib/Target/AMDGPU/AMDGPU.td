@@ -411,23 +411,23 @@ def FeatureGCN : SubtargetFeature<"gcn",
   "GCN or newer GPU"
 >;
 
-class AMDGPUSubtargetFeatureGeneration <string Value,
+class GCNSubtargetFeatureGeneration <string Value,
                                   list<SubtargetFeature> Implies> :
-        SubtargetFeatureGeneration <Value, "AMDGPUSubtarget", Implies>;
+        SubtargetFeatureGeneration <Value, "GCNSubtarget", Implies>;
 
-def FeatureSouthernIslands : AMDGPUSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
+def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureGCN,
   FeatureLDSBankCount32, FeatureMovrel]
 >;
 
-def FeatureSeaIslands : AMDGPUSubtargetFeatureGeneration<"SEA_ISLANDS",
+def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureGCN, FeatureFlatAddressSpace,
   FeatureCIInsts, FeatureMovrel]
 >;
 
-def FeatureVolcanicIslands : AMDGPUSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
+def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
    FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
@@ -438,7 +438,7 @@ def FeatureVolcanicIslands : AMDGPUSubtargetFeatureGeneration<"VOLCANIC_ISLANDS"
   ]
 >;
 
-def FeatureGFX9 : AMDGPUSubtargetFeatureGeneration<"GFX9",
+def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
   [FeatureFP64, FeatureLocalMemorySize65536,
    FeatureWavefrontSize64, FeatureFlatAddressSpace, FeatureGCN,
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,

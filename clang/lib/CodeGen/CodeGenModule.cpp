@@ -1485,10 +1485,6 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   setLinkageForGV(F, FD);
   setGVProperties(F, FD);
 
-  if (FD->getAttr<PragmaClangTextSectionAttr>()) {
-    F->addFnAttr("implicit-section-name");
-  }
-
   if (const SectionAttr *SA = FD->getAttr<SectionAttr>())
     F->setSection(SA->getName());
 

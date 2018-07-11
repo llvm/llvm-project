@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck %s -check-prefix=PWR7
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck %s -check-prefix=PWR8
-; RUN: llc -verify-machineinstrs -mcpu=a2q < %s | FileCheck %s -check-prefix=A2Q
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=PWR7
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=PWR8
+; RUN: llc -verify-machineinstrs -mcpu=a2q < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=A2Q
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
