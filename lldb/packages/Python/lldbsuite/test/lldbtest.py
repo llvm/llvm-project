@@ -1596,6 +1596,10 @@ class Base(unittest2.TestCase):
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [
+            # Begin Swift modifications
+            "llvm-build/Ninja-DebugAssert/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin/clang",
+            # End Swift modifications
             "llvm-build/Release+Asserts/x86_64/bin/clang",
             "llvm-build/Debug+Asserts/x86_64/bin/clang",
             "llvm-build/Release/x86_64/bin/clang",
