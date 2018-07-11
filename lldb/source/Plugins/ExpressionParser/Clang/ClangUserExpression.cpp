@@ -447,7 +447,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 lldb_private::ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
                                 bool generate_debug_info,
-                                uint32_t line_offset = 0) {
+                                uint32_t line_offset) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (!PrepareForParsing(diagnostic_manager, exe_ctx))
