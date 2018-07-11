@@ -79,7 +79,7 @@ static FILE *output_file = NULL;
  * Buffer that we write things into.
  */
 #define WRITE_BUFFER_SIZE (128 * 1024)
-static char *write_buffer = NULL;
+static unsigned char *write_buffer = NULL;
 static uint64_t cur_buffer_size = 0;
 static uint64_t cur_pos = 0;
 static uint64_t file_size = 0;
@@ -210,11 +210,12 @@ static uint32_t read_32bit_value() {
 
 static uint32_t read_le_32bit_value() {
   uint32_t val = 0;
+  int i;
 
   if (new_file)
     return (uint32_t)-1;
 
-  for (int i = 0; i < 4; i++)
+  for (i = 0; i < 4; i++)
     val |= write_buffer[cur_pos++] << (8*i);
   return val;
 }

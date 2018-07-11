@@ -167,8 +167,8 @@ define i32 @cmp_slt0(i32 %a, i32 %b, i32 %x, i32 %y) {
 entry:
 ; CHECK-LABEL: cmp_slt0
 ; CHECK: sub
-; CHECK: cmp
-; CHECK: bge
+; CHECK: cmn
+; CHECK: bgt
   %load = load i32, i32* @t, align 4
   %sub = sub i32 %load, 17
   %cmp = icmp slt i32 %sub, 0

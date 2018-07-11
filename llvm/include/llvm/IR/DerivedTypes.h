@@ -193,7 +193,7 @@ public:
 /// StructType::create() forms.
 ///
 /// Independent of what kind of struct you have, the body of a struct type are
-/// laid out in memory consequtively with the elements directly one after the
+/// laid out in memory consecutively with the elements directly one after the
 /// other (if the struct is packed) or (if not packed) with padding between the
 /// elements as defined by DataLayout (which is required to match what the code
 /// generator for a target expects).

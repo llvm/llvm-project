@@ -161,14 +161,14 @@ pxor        (%rax), %mm2
 # CHECK-NEXT: [3]: RThroughput
 # CHECK-NEXT: [4]: MayLoad
 # CHECK-NEXT: [5]: MayStore
-# CHECK-NEXT: [6]: HasSideEffects
+# CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  9      10    5.00    *      *      *     emms
+# CHECK-NEXT:  9      10    5.00    *      *      U     emms
 # CHECK-NEXT:  1      1     0.50                        movd	%eax, %mm2
 # CHECK-NEXT:  1      3     1.00    *                   movd	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        movd	%mm0, %ecx
-# CHECK-NEXT:  1      1     1.00           *      *     movd	%mm0, (%rax)
+# CHECK-NEXT:  1      1     1.00           *      U     movd	%mm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                        movq	%rax, %mm2
 # CHECK-NEXT:  1      3     1.00    *                   movq	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        movq	%mm0, %rcx

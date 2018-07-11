@@ -169,7 +169,7 @@ false:
 
 define i32 @slt_neg_soimm(i32 %a) {
 ; CHECK-LABEL: slt_neg_soimm:
-; CHECK: mvn     r1, #7929856
+; CHECK: cmn.w r0, #7929856
   %b = icmp slt i32 %a, -7929856
   br i1 %b, label %true, label %false
 
@@ -208,8 +208,7 @@ false:
 
 define i32 @sgt_neg_soimm(i32 %a) {
 ; CHECK-LABEL: sgt_neg_soimm:
-; CHECK: movs    r1, #1
-; CHECK: movt    r1, #65415
+; CHECK: cmn.w r0, #7929856
   %b = icmp sgt i32 %a, -7929856
   br i1 %b, label %true, label %false
 

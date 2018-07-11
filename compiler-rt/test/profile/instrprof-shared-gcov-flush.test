@@ -1,5 +1,5 @@
-# This test fails on Mac, powerpc64 BE (https://bugs.llvm.org/show_bug.cgi?id=38121).
-XFAIL: darwin || powerpc64-unknown-linux-gnu
+# This test fails on Mac (https://bugs.llvm.org/show_bug.cgi?id=38121).
+XFAIL: darwin
 
 RUN: mkdir -p %t.d
 RUN: cd %t.d

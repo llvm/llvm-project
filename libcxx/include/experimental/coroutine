@@ -283,6 +283,7 @@ public:
   _LIBCPP_CONSTEXPR_AFTER_CXX17 void destroy() const _NOEXCEPT {}
 
 private:
+  _LIBCPP_INLINE_VISIBILITY
   friend coroutine_handle<noop_coroutine_promise> noop_coroutine() _NOEXCEPT;
 
   _LIBCPP_INLINE_VISIBILITY coroutine_handle() _NOEXCEPT {

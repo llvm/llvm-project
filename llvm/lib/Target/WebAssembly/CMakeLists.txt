@@ -13,6 +13,7 @@ tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(WebAssemblyCommonTableGen)
 
 add_llvm_target(WebAssemblyCodeGen
+  WebAssemblyAddMissingPrototypes.cpp
   WebAssemblyArgumentMove.cpp
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCallIndirectFixup.cpp

@@ -399,7 +399,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT: [3]: RThroughput
 # CHECK-NEXT: [4]: MayLoad
 # CHECK-NEXT: [5]: MayStore
-# CHECK-NEXT: [6]: HasSideEffects
+# CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                        addpd	%xmm0, %xmm2
@@ -410,7 +410,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   andnpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        andpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   andpd	(%rax), %xmm2
-# CHECK-NEXT:  1      3     1.00    *      *      *     clflush	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *      U     clflush	(%rax)
 # CHECK-NEXT:  1      3     1.00                        cmppd	$0, %xmm0, %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   cmppd	$0, (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        cmpsd	$0, %xmm0, %xmm2
@@ -459,8 +459,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      72    69.00   *                   divpd	(%rax), %xmm2
 # CHECK-NEXT:  1      34    32.00                       divsd	%xmm0, %xmm2
 # CHECK-NEXT:  1      37    32.00   *                   divsd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00    *      *      *     lfence
-# CHECK-NEXT:  1      1     1.00    *      *      *     maskmovdqu	%xmm0, %xmm1
+# CHECK-NEXT:  1      1     1.00    *      *      U     lfence
+# CHECK-NEXT:  1      1     1.00    *      *      U     maskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  1      3     1.00                        maxpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      6     1.00    *                   maxpd	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        maxsd	%xmm0, %xmm2

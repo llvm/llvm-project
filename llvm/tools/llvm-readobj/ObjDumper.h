@@ -44,6 +44,7 @@ public:
   virtual void printNeededLibraries() { }
   virtual void printProgramHeaders() { }
   virtual void printSectionAsString(StringRef SectionName) {}
+  virtual void printSectionAsHex(StringRef SectionName) {}
   virtual void printHashTable() { }
   virtual void printGnuHashTable() { }
   virtual void printLoadName() {}
@@ -88,6 +89,7 @@ public:
 
 protected:
   ScopedPrinter &W;
+  void SectionHexDump(StringRef SecName, const uint8_t *Section, size_t Size);
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,

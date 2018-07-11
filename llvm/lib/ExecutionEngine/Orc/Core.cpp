@@ -363,67 +363,165 @@ AbsoluteSymbolsMaterializationUnit::extractFlags(const SymbolMap &Symbols) {
   return Flags;
 }
 
-SymbolAliasesMaterializationUnit::SymbolAliasesMaterializationUnit(
-    SymbolAliasMap Aliases)
-    : MaterializationUnit(extractFlags(Aliases)), Aliases(std::move(Aliases)) {}
+ReExportsMaterializationUnit::ReExportsMaterializationUnit(
+    VSO *SourceVSO, SymbolAliasMap Aliases)
+    : MaterializationUnit(extractFlags(Aliases)), SourceVSO(SourceVSO),
+      Aliases(std::move(Aliases)) {}
 
-void SymbolAliasesMaterializationUnit::materialize(
+void ReExportsMaterializationUnit::materialize(
     MaterializationResponsibility R) {
-  auto &V = R.getTargetVSO();
-  auto &ES = V.getExecutionSession();
 
-  // FIXME: Use a unique_ptr when we move to C++14 and have generalized lambda
-  // capture.
-  auto SharedR = std::make_shared<MaterializationResponsibility>(std::move(R));
+  VSO &SrcV = SourceVSO ? *SourceVSO : R.getTargetVSO();
+  auto &ES = SrcV.getExecutionSession();
 
-  auto OnResolve = [this, SharedR](
-                       Expected<AsynchronousSymbolQuery::ResolutionResult> RR) {
-    if (RR) {
-      SymbolMap ResolutionMap;
-      for (auto &KV : Aliases) {
-        assert(RR->Symbols.count(KV.second.Aliasee) &&
-               "Result map missing entry?");
-        ResolutionMap[KV.first] = JITEvaluatedSymbol(
-            RR->Symbols[KV.second.Aliasee].getAddress(), KV.second.AliasFlags);
-      }
+  // Find the set of requested aliases and aliasees. Return any unrequested
+  // aliases back to the VSO so as to not prematurely materialize any aliasees.
+  auto RequestedSymbols = R.getRequestedSymbols();
+  SymbolAliasMap RequestedAliases;
 
-      SharedR->resolve(ResolutionMap);
-      SharedR->finalize();
-    } else {
-      auto &ES = SharedR->getTargetVSO().getExecutionSession();
-      ES.reportError(RR.takeError());
-      SharedR->failMaterialization();
-    }
+  for (auto &Name : RequestedSymbols) {
+    auto I = Aliases.find(Name);
+    assert(I != Aliases.end() && "Symbol not found in aliases map?");
+    RequestedAliases[Name] = std::move(I->second);
+    Aliases.erase(I);
+  }
+
+  if (!Aliases.empty()) {
+    if (SourceVSO)
+      R.replace(reexports(*SourceVSO, std::move(Aliases)));
+    else
+      R.replace(symbolAliases(std::move(Aliases)));
+  }
+
+  // The OnResolveInfo struct will hold the aliases and responsibilty for each
+  // query in the list.
+  struct OnResolveInfo {
+    OnResolveInfo(MaterializationResponsibility R, SymbolAliasMap Aliases)
+        : R(std::move(R)), Aliases(std::move(Aliases)) {}
+
+    MaterializationResponsibility R;
+    SymbolAliasMap Aliases;
   };
 
-  auto OnReady = [&ES](Error Err) { ES.reportError(std::move(Err)); };
+  // Build a list of queries to issue. In each round we build the largest set of
+  // aliases that we can resolve without encountering a chain definition of the
+  // form Foo -> Bar, Bar -> Baz. Such a form would deadlock as the query would
+  // be waitin on a symbol that it itself had to resolve. Usually this will just
+  // involve one round and a single query.
 
-  SymbolNameSet Aliasees;
-  for (auto &KV : Aliases)
-    Aliasees.insert(KV.second.Aliasee);
+  std::vector<std::pair<SymbolNameSet, std::shared_ptr<OnResolveInfo>>>
+      QueryInfos;
+  while (!RequestedAliases.empty()) {
+    SymbolNameSet ResponsibilitySymbols;
+    SymbolNameSet QuerySymbols;
+    SymbolAliasMap QueryAliases;
 
-  auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      Aliasees, std::move(OnResolve), std::move(OnReady));
-  auto Unresolved = V.lookup(Q, Aliasees);
+    for (auto I = RequestedAliases.begin(), E = RequestedAliases.end();
+         I != E;) {
+      auto Tmp = I++;
 
-  if (!Unresolved.empty())
-    ES.failQuery(*Q, make_error<SymbolsNotFound>(std::move(Unresolved)));
+      // Chain detected. Skip this symbol for this round.
+      if (&SrcV == &R.getTargetVSO() &&
+          (QueryAliases.count(Tmp->second.Aliasee) ||
+           RequestedAliases.count(Tmp->second.Aliasee)))
+        continue;
+
+      ResponsibilitySymbols.insert(Tmp->first);
+      QuerySymbols.insert(Tmp->second.Aliasee);
+      QueryAliases[Tmp->first] = std::move(Tmp->second);
+      RequestedAliases.erase(Tmp);
+    }
+    assert(!QuerySymbols.empty() && "Alias cycle detected!");
+
+    auto QueryInfo = std::make_shared<OnResolveInfo>(
+        R.delegate(ResponsibilitySymbols), std::move(QueryAliases));
+    QueryInfos.push_back(
+        make_pair(std::move(QuerySymbols), std::move(QueryInfo)));
+  }
+
+  // Issue the queries.
+  while (!QueryInfos.empty()) {
+    auto QuerySymbols = std::move(QueryInfos.back().first);
+    auto QueryInfo = std::move(QueryInfos.back().second);
+
+    QueryInfos.pop_back();
+
+    auto OnResolve =
+        [QueryInfo,
+         &SrcV](Expected<AsynchronousSymbolQuery::ResolutionResult> RR) {
+          if (RR) {
+            SymbolMap ResolutionMap;
+            SymbolNameSet Resolved;
+            for (auto &KV : QueryInfo->Aliases) {
+              assert(RR->Symbols.count(KV.second.Aliasee) &&
+                     "Result map missing entry?");
+              ResolutionMap[KV.first] = JITEvaluatedSymbol(
+                  RR->Symbols[KV.second.Aliasee].getAddress(),
+                  KV.second.AliasFlags);
+
+              // FIXME: We're creating a SymbolFlagsMap and a std::map of
+              // std::sets just to add one dependency here. This needs a
+              // re-think.
+              Resolved.insert(KV.first);
+            }
+            QueryInfo->R.resolve(ResolutionMap);
+
+            SymbolDependenceMap Deps;
+            Deps[&SrcV] = std::move(Resolved);
+            QueryInfo->R.addDependencies(Deps);
+
+            QueryInfo->R.finalize();
+          } else {
+            auto &ES = QueryInfo->R.getTargetVSO().getExecutionSession();
+            ES.reportError(RR.takeError());
+            QueryInfo->R.failMaterialization();
+          }
+        };
+
+    auto OnReady = [&ES](Error Err) { ES.reportError(std::move(Err)); };
+
+    auto Q = std::make_shared<AsynchronousSymbolQuery>(
+        QuerySymbols, std::move(OnResolve), std::move(OnReady));
+
+    auto Unresolved = SrcV.lookup(Q, std::move(QuerySymbols));
+
+    if (!Unresolved.empty()) {
+      ES.failQuery(*Q, make_error<SymbolsNotFound>(std::move(Unresolved)));
+      return;
+    }
+  }
 }
 
-void SymbolAliasesMaterializationUnit::discard(const VSO &V,
-                                               SymbolStringPtr Name) {
+void ReExportsMaterializationUnit::discard(const VSO &V, SymbolStringPtr Name) {
   assert(Aliases.count(Name) &&
          "Symbol not covered by this MaterializationUnit");
   Aliases.erase(Name);
 }
 
 SymbolFlagsMap
-SymbolAliasesMaterializationUnit::extractFlags(const SymbolAliasMap &Aliases) {
+ReExportsMaterializationUnit::extractFlags(const SymbolAliasMap &Aliases) {
   SymbolFlagsMap SymbolFlags;
   for (auto &KV : Aliases)
     SymbolFlags[KV.first] = KV.second.AliasFlags;
 
   return SymbolFlags;
+}
+
+Expected<SymbolAliasMap>
+buildSimpleReexportsAliasMap(VSO &SourceV, const SymbolNameSet &Symbols) {
+  SymbolFlagsMap Flags;
+  auto Unresolved = SourceV.lookupFlags(Flags, Symbols);
+
+  if (!Unresolved.empty())
+    return make_error<SymbolsNotFound>(std::move(Unresolved));
+
+  SymbolAliasMap Result;
+  for (auto &Name : Symbols) {
+    assert(Flags.count(Name) && "Missing entry in flags map");
+    Result[Name] = SymbolAliasMapEntry(Name, Flags[Name]);
+  }
+
+  return Result;
 }
 
 Error VSO::defineMaterializing(const SymbolFlagsMap &SymbolFlags) {

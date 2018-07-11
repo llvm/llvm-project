@@ -4369,8 +4369,6 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::VSRLDQ:
   case X86ISD::MOVLHPS:
   case X86ISD::MOVHLPS:
-  case X86ISD::MOVLPS:
-  case X86ISD::MOVLPD:
   case X86ISD::MOVSHDUP:
   case X86ISD::MOVSLDUP:
   case X86ISD::MOVDDUP:
@@ -5951,10 +5949,6 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     DecodeMOVDDUPMask(NumElems, Mask);
     IsUnary = true;
     break;
-  case X86ISD::MOVLPD:
-  case X86ISD::MOVLPS:
-    // Not yet implemented
-    return false;
   case X86ISD::VPERMIL2: {
     assert(N->getOperand(0).getValueType() == VT && "Unexpected value type");
     assert(N->getOperand(1).getValueType() == VT && "Unexpected value type");
@@ -11363,8 +11357,7 @@ static SDValue lowerV2F64VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
       // We can either use a special instruction to load over the low double or
       // to move just the low double.
       return DAG.getNode(
-          isShuffleFoldableLoad(V1S) ? X86ISD::MOVLPD : X86ISD::MOVSD,
-          DL, MVT::v2f64, V2,
+          X86ISD::MOVSD, DL, MVT::v2f64, V2,
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, V1S));
 
   if (Subtarget.hasSSE41())
@@ -26041,8 +26034,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::SHUF128:            return "X86ISD::SHUF128";
   case X86ISD::MOVLHPS:            return "X86ISD::MOVLHPS";
   case X86ISD::MOVHLPS:            return "X86ISD::MOVHLPS";
-  case X86ISD::MOVLPS:             return "X86ISD::MOVLPS";
-  case X86ISD::MOVLPD:             return "X86ISD::MOVLPD";
   case X86ISD::MOVDDUP:            return "X86ISD::MOVDDUP";
   case X86ISD::MOVSHDUP:           return "X86ISD::MOVSHDUP";
   case X86ISD::MOVSLDUP:           return "X86ISD::MOVSLDUP";
@@ -33458,6 +33449,36 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       SDValue Ops[] = {LCMOV, TrueOp, DAG.getConstant(CC1, DL, MVT::i8), Flags};
       SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);
       return CMOV;
+    }
+  }
+
+  // Handle (CMOV (ADD (CTTZ X), C), C-1, (X != 0)) ->
+  // (ADD (CMOV (CTTZ X), -1, (X != 0)), C) or
+  // (CMOV C-1, (ADD (CTTZ X), C), (X == 0)) ->
+  // (ADD (CMOV C-1, (CTTZ X), (X == 0)), C)
+  if (CC == X86::COND_NE || CC == X86::COND_E) {
+    auto *Cnst = CC == X86::COND_E ? dyn_cast<ConstantSDNode>(TrueOp)
+                                   : dyn_cast<ConstantSDNode>(FalseOp);
+    SDValue Add = CC == X86::COND_E ? FalseOp : TrueOp;
+
+    if (Cnst && Add.getOpcode() == ISD::ADD && Add.hasOneUse()) {
+      auto *AddOp1 = dyn_cast<ConstantSDNode>(Add.getOperand(1));
+      SDValue AddOp2 = Add.getOperand(0);
+      if (AddOp1 && (AddOp2.getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
+                     AddOp2.getOpcode() == ISD::CTTZ)) {
+        APInt Diff = Cnst->getAPIntValue() - AddOp1->getAPIntValue();
+        if (CC == X86::COND_NE) {
+          Add = DAG.getNode(X86ISD::CMOV, DL, Add.getValueType(), AddOp2,
+                            DAG.getConstant(Diff, DL, Add.getValueType()),
+                            DAG.getConstant(CC, DL, MVT::i8), Cond);
+        } else {
+          Add = DAG.getNode(X86ISD::CMOV, DL, Add.getValueType(),
+                            DAG.getConstant(Diff, DL, Add.getValueType()),
+                            AddOp2, DAG.getConstant(CC, DL, MVT::i8), Cond);
+        }
+        return DAG.getNode(X86ISD::ADD, DL, Add.getValueType(), Add,
+                           SDValue(AddOp1, 0));
+      }
     }
   }
 

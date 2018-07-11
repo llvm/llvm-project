@@ -28,6 +28,7 @@ class DataLayout;
 class Function;
 class MDNode;
 class Module;
+struct SIProgramInfo;
 class Type;
 
 namespace AMDGPU {
@@ -54,6 +55,13 @@ private:
   std::string getTypeName(Type *Ty, bool Signed) const;
 
   std::vector<uint32_t> getWorkGroupDimensions(MDNode *Node) const;
+
+  Kernel::CodeProps::Metadata getHSACodeProps(
+      const MachineFunction &MF,
+      const SIProgramInfo &ProgramInfo) const;
+  Kernel::DebugProps::Metadata getHSADebugProps(
+      const MachineFunction &MF,
+      const SIProgramInfo &ProgramInfo) const;
 
   void emitVersion();
 
@@ -87,9 +95,7 @@ public:
 
   void end();
 
-  void emitKernel(const Function &Func,
-                  const Kernel::CodeProps::Metadata &CodeProps,
-                  const Kernel::DebugProps::Metadata &DebugProps);
+  void emitKernel(const MachineFunction &MF, const SIProgramInfo &ProgramInfo);
 };
 
 } // end namespace HSAMD

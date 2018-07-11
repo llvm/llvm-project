@@ -26,8 +26,8 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; LIN-SSE2-NEXT:    movslq %edx, %rdx
 ; LIN-SSE2-NEXT:    movslq %esi, %rsi
 ; LIN-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; LIN-SSE2-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; LIN-SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; LIN-SSE2-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; LIN-SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; LIN-SSE2-NEXT:    retq
 ;
@@ -42,10 +42,10 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; LIN-SSE4-NEXT:    cltq
 ; LIN-SSE4-NEXT:    movslq %ecx, %rcx
 ; LIN-SSE4-NEXT:    movslq %edx, %rdx
+; LIN-SSE4-NEXT:    movslq %esi, %rsi
 ; LIN-SSE4-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; LIN-SSE4-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; LIN-SSE4-NEXT:    movslq %esi, %rax
 ; LIN-SSE4-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; LIN-SSE4-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; LIN-SSE4-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; LIN-SSE4-NEXT:    retq
 ;
@@ -60,13 +60,13 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; WIN-SSE2-NEXT:    movd %xmm1, %r10d
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm0, %edx
-; WIN-SSE2-NEXT:    movslq %r8d, %rax
+; WIN-SSE2-NEXT:    movslq %r8d, %r11
 ; WIN-SSE2-NEXT:    movslq %r9d, %r8
-; WIN-SSE2-NEXT:    movslq %r10d, %r9
+; WIN-SSE2-NEXT:    movslq %r10d, %rax
 ; WIN-SSE2-NEXT:    movslq %edx, %rdx
 ; WIN-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; WIN-SSE2-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; WIN-SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; WIN-SSE2-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; WIN-SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; WIN-SSE2-NEXT:    retq
 ;
@@ -79,12 +79,12 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; WIN-SSE4-NEXT:    pextrd $2, %xmm0, %r8d
 ; WIN-SSE4-NEXT:    pextrd $3, %xmm0, %r9d
 ; WIN-SSE4-NEXT:    cltq
-; WIN-SSE4-NEXT:    movslq %edx, %rdx
-; WIN-SSE4-NEXT:    movslq %r8d, %r8
+; WIN-SSE4-NEXT:    movslq %edx, %r10
+; WIN-SSE4-NEXT:    movslq %r8d, %rdx
+; WIN-SSE4-NEXT:    movslq %r9d, %r8
 ; WIN-SSE4-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; WIN-SSE4-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; WIN-SSE4-NEXT:    movslq %r9d, %rax
 ; WIN-SSE4-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; WIN-SSE4-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; WIN-SSE4-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; WIN-SSE4-NEXT:    retq
 ;
@@ -97,13 +97,13 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; LIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; LIN32-NEXT:    movdqa (%edx), %xmm0
 ; LIN32-NEXT:    pand (%ecx), %xmm0
-; LIN32-NEXT:    pextrd $1, %xmm0, %ecx
-; LIN32-NEXT:    pextrd $2, %xmm0, %edx
-; LIN32-NEXT:    pextrd $3, %xmm0, %esi
-; LIN32-NEXT:    movd %xmm0, %edi
+; LIN32-NEXT:    movd %xmm0, %ecx
+; LIN32-NEXT:    pextrd $1, %xmm0, %edx
+; LIN32-NEXT:    pextrd $2, %xmm0, %esi
+; LIN32-NEXT:    pextrd $3, %xmm0, %edi
 ; LIN32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; LIN32-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; LIN32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; LIN32-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; LIN32-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; LIN32-NEXT:    popl %esi
 ; LIN32-NEXT:    popl %edi

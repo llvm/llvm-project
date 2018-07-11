@@ -3087,7 +3087,7 @@ Sema::IsQualificationConversion(QualType FromType, QualType ToType,
   //   in multi-level pointers, subject to the following rules: [...]
   bool PreviousToQualsIncludeConst = true;
   bool UnwrappedAnyPointer = false;
-  while (Context.UnwrapSimilarPointerTypes(FromType, ToType)) {
+  while (Context.UnwrapSimilarTypes(FromType, ToType)) {
     // Within each iteration of the loop, we check the qualifiers to
     // determine if this still looks like a qualification
     // conversion. Then, if all is well, we unwrap one more level of
@@ -3642,16 +3642,6 @@ CompareImplicitConversionSequences(Sema &S, SourceLocation Loc,
   return Result;
 }
 
-static bool hasSimilarType(ASTContext &Context, QualType T1, QualType T2) {
-  while (Context.UnwrapSimilarPointerTypes(T1, T2)) {
-    Qualifiers Quals;
-    T1 = Context.getUnqualifiedArrayType(T1, Quals);
-    T2 = Context.getUnqualifiedArrayType(T2, Quals);
-  }
-
-  return Context.hasSameUnqualifiedType(T1, T2);
-}
-
 // Per 13.3.3.2p3, compare the given standard conversion sequences to
 // determine if one is a proper subset of the other.
 static ImplicitConversionSequence::CompareKind
@@ -3675,7 +3665,7 @@ compareStandardConversionSubsets(ASTContext &Context,
       Result = ImplicitConversionSequence::Worse;
     else
       return ImplicitConversionSequence::Indistinguishable;
-  } else if (!hasSimilarType(Context, SCS1.getToType(1), SCS2.getToType(1)))
+  } else if (!Context.hasSimilarType(SCS1.getToType(1), SCS2.getToType(1)))
     return ImplicitConversionSequence::Indistinguishable;
 
   if (SCS1.Third == SCS2.Third) {
@@ -3949,7 +3939,7 @@ CompareQualificationConversions(Sema &S,
                : ImplicitConversionSequence::Better;
   }
 
-  while (S.Context.UnwrapSimilarPointerTypes(T1, T2)) {
+  while (S.Context.UnwrapSimilarTypes(T1, T2)) {
     // Within each iteration of the loop, we check the qualifiers to
     // determine if this still looks like a qualification
     // conversion. Then, if all is well, we unwrap one more level of

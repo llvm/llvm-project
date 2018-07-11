@@ -2368,6 +2368,142 @@ class sve_int_setffr<string asm>
 // SVE Permute Vector - Predicated Group
 //===----------------------------------------------------------------------===//
 
+class sve_int_perm_clast_rz<bits<2> sz8_64, bit ab, string asm,
+                            ZPRRegOp zprty, RegisterClass rt>
+: I<(outs rt:$Rdn), (ins PPR3bAny:$Pg, rt:$_Rdn, zprty:$Zm),
+  asm, "\t$Rdn, $Pg, $_Rdn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rdn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-17} = 0b11000;
+  let Inst{16}    = ab;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Rdn;
+
+  let Constraints = "$Rdn = $_Rdn";
+}
+
+multiclass sve_int_perm_clast_rz<bit ab, string asm> {
+  def _B : sve_int_perm_clast_rz<0b00, ab, asm, ZPR8, GPR32>;
+  def _H : sve_int_perm_clast_rz<0b01, ab, asm, ZPR16, GPR32>;
+  def _S : sve_int_perm_clast_rz<0b10, ab, asm, ZPR32, GPR32>;
+  def _D : sve_int_perm_clast_rz<0b11, ab, asm, ZPR64, GPR64>;
+}
+
+class sve_int_perm_clast_vz<bits<2> sz8_64, bit ab, string asm,
+                            ZPRRegOp zprty, RegisterClass rt>
+: I<(outs rt:$Vdn), (ins PPR3bAny:$Pg, rt:$_Vdn, zprty:$Zm),
+  asm, "\t$Vdn, $Pg, $_Vdn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Vdn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-17} = 0b10101;
+  let Inst{16}    = ab;
+  let Inst{15-13} = 0b100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Vdn;
+
+  let Constraints = "$Vdn = $_Vdn";
+}
+
+multiclass sve_int_perm_clast_vz<bit ab, string asm> {
+  def _B : sve_int_perm_clast_vz<0b00, ab, asm, ZPR8, FPR8>;
+  def _H : sve_int_perm_clast_vz<0b01, ab, asm, ZPR16, FPR16>;
+  def _S : sve_int_perm_clast_vz<0b10, ab, asm, ZPR32, FPR32>;
+  def _D : sve_int_perm_clast_vz<0b11, ab, asm, ZPR64, FPR64>;
+}
+
+class sve_int_perm_clast_zz<bits<2> sz8_64, bit ab, string asm,
+                            ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, zprty:$Zm),
+  asm, "\t$Zdn, $Pg, $_Zdn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zdn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-17} = 0b10100;
+  let Inst{16}    = ab;
+  let Inst{15-13} = 0b100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sve_int_perm_clast_zz<bit ab, string asm> {
+  def _B : sve_int_perm_clast_zz<0b00, ab, asm, ZPR8>;
+  def _H : sve_int_perm_clast_zz<0b01, ab, asm, ZPR16>;
+  def _S : sve_int_perm_clast_zz<0b10, ab, asm, ZPR32>;
+  def _D : sve_int_perm_clast_zz<0b11, ab, asm, ZPR64>;
+}
+
+class sve_int_perm_last_r<bits<2> sz8_64, bit ab, string asm,
+                          ZPRRegOp zprty, RegisterClass resultRegType>
+: I<(outs resultRegType:$Rd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Rd, $Pg, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Rd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-17} = 0b10000;
+  let Inst{16}    = ab;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Rd;
+}
+
+multiclass sve_int_perm_last_r<bit ab, string asm> {
+  def _B : sve_int_perm_last_r<0b00, ab, asm, ZPR8, GPR32>;
+  def _H : sve_int_perm_last_r<0b01, ab, asm, ZPR16, GPR32>;
+  def _S : sve_int_perm_last_r<0b10, ab, asm, ZPR32, GPR32>;
+  def _D : sve_int_perm_last_r<0b11, ab, asm, ZPR64, GPR64>;
+}
+
+class sve_int_perm_last_v<bits<2> sz8_64, bit ab, string asm,
+                          ZPRRegOp zprty, RegisterClass dstRegtype>
+: I<(outs dstRegtype:$Vd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Vd, $Pg, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Vd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000101;
+  let Inst{23-22} = sz8_64;
+  let Inst{21-17} = 0b10001;
+  let Inst{16}    = ab;
+  let Inst{15-13} = 0b100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Vd;
+}
+
+multiclass sve_int_perm_last_v<bit ab, string asm> {
+  def _B : sve_int_perm_last_v<0b00, ab, asm, ZPR8, FPR8>;
+  def _H : sve_int_perm_last_v<0b01, ab, asm, ZPR16, FPR16>;
+  def _S : sve_int_perm_last_v<0b10, ab, asm, ZPR32, FPR32>;
+  def _D : sve_int_perm_last_v<0b11, ab, asm, ZPR64, FPR64>;
+}
+
 class sve_int_perm_cpy_r<bits<2> sz8_64, string asm, ZPRRegOp zprty,
                          RegisterClass srcRegType>
 : I<(outs zprty:$Zd), (ins zprty:$_Zd, PPR3bAny:$Pg, srcRegType:$Rn),
@@ -2437,6 +2573,28 @@ multiclass sve_int_perm_cpy_v<string asm> {
   def : InstAlias<"mov $Zd, $Pg/m, $Vn",
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPR3bAny:$Pg, FPR64:$Vn), 1>;
 }
+
+class sve_int_perm_compact<bit sz, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zn),
+  asm, "\t$Zd, $Pg, $Zn",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-23} = 0b000001011;
+  let Inst{22}    = sz;
+  let Inst{21-13} = 0b100001100;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve_int_perm_compact<string asm> {
+  def _S : sve_int_perm_compact<0b0, asm, ZPR32>;
+  def _D : sve_int_perm_compact<0b1, asm, ZPR64>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // SVE Memory - Contiguous Load Group

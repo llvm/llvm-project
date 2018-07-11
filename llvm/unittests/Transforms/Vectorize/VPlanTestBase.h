@@ -27,19 +27,12 @@ namespace llvm {
 /// given loop entry block.
 class VPlanTestBase : public testing::Test {
 protected:
-  std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<LoopInfo> LI;
-  std::unique_ptr<Module> M;
   std::unique_ptr<LLVMContext> Ctx;
+  std::unique_ptr<Module> M;
+  std::unique_ptr<LoopInfo> LI;
+  std::unique_ptr<DominatorTree> DT;
 
   VPlanTestBase() : Ctx(new LLVMContext) {}
-  ~VPlanTestBase() {
-    LI.release();
-    DT.release();
-    M.release();
-    // We need to release objects depending on Ctx first.
-    Ctx.release();
-  }
 
   Module &parseModule(const char *ModuleString) {
     SMDiagnostic Err;
@@ -51,10 +44,10 @@ protected:
   void doAnalysis(Function &F) {
     DT.reset(new DominatorTree(F));
     LI.reset(new LoopInfo(*DT));
-	}
+  }
 
   VPlanPtr buildHCFG(BasicBlock *LoopHeader) {
-		doAnalysis(*LoopHeader->getParent());
+    doAnalysis(*LoopHeader->getParent());
 
     auto Plan = llvm::make_unique<VPlan>();
     VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get());

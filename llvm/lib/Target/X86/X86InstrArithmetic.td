@@ -391,8 +391,6 @@ def NEG64m : RI<0xF7, MRM3m, (outs), (ins i64mem:$dst), "neg{q}\t$dst",
 // Note: NOT does not set EFLAGS!
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
-// Match xor -1 to not. Favors these over a move imm + xor to save code size.
-let AddedComplexity = 15 in {
 def NOT8r  : I<0xF6, MRM2r, (outs GR8 :$dst), (ins GR8 :$src1),
                "not{b}\t$dst",
                [(set GR8:$dst, (not GR8:$src1))]>;
@@ -404,7 +402,6 @@ def NOT32r : I<0xF7, MRM2r, (outs GR32:$dst), (ins GR32:$src1),
                [(set GR32:$dst, (not GR32:$src1))]>, OpSize32;
 def NOT64r : RI<0xF7, MRM2r, (outs GR64:$dst), (ins GR64:$src1), "not{q}\t$dst",
                 [(set GR64:$dst, (not GR64:$src1))]>;
-}
 } // Constraints = "$src1 = $dst", SchedRW
 
 let SchedRW = [WriteALURMW] in {

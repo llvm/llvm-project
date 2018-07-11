@@ -14,6 +14,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUHSAMetadataStreamer.h"
+#include "AMDGPU.h"
+#include "AMDGPUSubtarget.h"
+#include "SIMachineFunctionInfo.h"
+#include "SIProgramInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
@@ -194,6 +198,57 @@ std::vector<uint32_t> MetadataStreamer::getWorkGroupDimensions(
   for (auto &Op : Node->operands())
     Dims.push_back(mdconst::extract<ConstantInt>(Op)->getZExtValue());
   return Dims;
+}
+
+Kernel::CodeProps::Metadata MetadataStreamer::getHSACodeProps(
+    const MachineFunction &MF,
+    const SIProgramInfo &ProgramInfo) const {
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
+  const Function &F = MF.getFunction();
+
+  // Avoid asserting on erroneous cases.
+  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
+    return HSACodeProps;
+
+  HSACodeProps.mKernargSegmentSize = STM.getKernArgSegmentSize(F);
+  HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
+  HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
+  HSACodeProps.mKernargSegmentAlign =
+      std::max(uint32_t(4), MFI.getMaxKernArgAlign());
+  HSACodeProps.mWavefrontSize = STM.getWavefrontSize();
+  HSACodeProps.mNumSGPRs = ProgramInfo.NumSGPR;
+  HSACodeProps.mNumVGPRs = ProgramInfo.NumVGPR;
+  HSACodeProps.mMaxFlatWorkGroupSize = MFI.getMaxFlatWorkGroupSize();
+  HSACodeProps.mIsDynamicCallStack = ProgramInfo.DynamicCallStack;
+  HSACodeProps.mIsXNACKEnabled = STM.isXNACKEnabled();
+  HSACodeProps.mNumSpilledSGPRs = MFI.getNumSpilledSGPRs();
+  HSACodeProps.mNumSpilledVGPRs = MFI.getNumSpilledVGPRs();
+
+  return HSACodeProps;
+}
+
+Kernel::DebugProps::Metadata MetadataStreamer::getHSADebugProps(
+    const MachineFunction &MF,
+    const SIProgramInfo &ProgramInfo) const {
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  HSAMD::Kernel::DebugProps::Metadata HSADebugProps;
+
+  if (!STM.debuggerSupported())
+    return HSADebugProps;
+
+  HSADebugProps.mDebuggerABIVersion.push_back(1);
+  HSADebugProps.mDebuggerABIVersion.push_back(0);
+
+  if (STM.debuggerEmitPrologue()) {
+    HSADebugProps.mPrivateSegmentBufferSGPR =
+        ProgramInfo.DebuggerPrivateSegmentBufferSGPR;
+    HSADebugProps.mWavefrontPrivateSegmentOffsetSGPR =
+        ProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;
+  }
+
+  return HSADebugProps;
 }
 
 void MetadataStreamer::emitVersion() {
@@ -408,10 +463,11 @@ void MetadataStreamer::end() {
     verify(HSAMetadataString);
 }
 
-void MetadataStreamer::emitKernel(
-    const Function &Func,
-    const Kernel::CodeProps::Metadata &CodeProps,
-    const Kernel::DebugProps::Metadata &DebugProps) {
+void MetadataStreamer::emitKernel(const MachineFunction &MF, const SIProgramInfo &ProgramInfo) {
+  auto &Func = MF.getFunction();
+  auto CodeProps = getHSACodeProps(MF, ProgramInfo);
+  auto DebugProps = getHSADebugProps(MF, ProgramInfo);
+
   if (Func.getCallingConv() != CallingConv::AMDGPU_KERNEL)
     return;
 

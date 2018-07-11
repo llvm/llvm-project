@@ -707,15 +707,19 @@ void llvm::gatherImportedSummariesForModule(
 }
 
 /// Emit the files \p ModulePath will import from into \p OutputFilename.
-std::error_code
-llvm::EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
-                       const FunctionImporter::ImportMapTy &ModuleImports) {
+std::error_code llvm::EmitImportsFiles(
+    StringRef ModulePath, StringRef OutputFilename,
+    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   std::error_code EC;
   raw_fd_ostream ImportsOS(OutputFilename, EC, sys::fs::OpenFlags::F_None);
   if (EC)
     return EC;
-  for (auto &ILI : ModuleImports)
-    ImportsOS << ILI.first() << "\n";
+  for (auto &ILI : ModuleToSummariesForIndex)
+    // The ModuleToSummariesForIndex map includes an entry for the current
+    // Module (needed for writing out the index files). We don't want to
+    // include it in the imports file, however, so filter it out.
+    if (ILI.first != ModulePath)
+      ImportsOS << ILI.first << "\n";
   return std::error_code();
 }
 

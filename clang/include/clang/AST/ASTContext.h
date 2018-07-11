@@ -2282,7 +2282,19 @@ public:
   bool ObjCMethodsAreEqual(const ObjCMethodDecl *MethodDecl,
                            const ObjCMethodDecl *MethodImp);
 
-  bool UnwrapSimilarPointerTypes(QualType &T1, QualType &T2);
+  bool UnwrapSimilarTypes(QualType &T1, QualType &T2);
+
+  /// Determine if two types are similar, according to the C++ rules. That is,
+  /// determine if they are the same other than qualifiers on the initial
+  /// sequence of pointer / pointer-to-member / array (and in Clang, object
+  /// pointer) types and their element types.
+  ///
+  /// Clang offers a number of qualifiers in addition to the C++ qualifiers;
+  /// those qualifiers are also ignored in the 'similarity' check.
+  bool hasSimilarType(QualType T1, QualType T2);
+
+  /// Determine if two types are similar, ignoring only CVR qualifiers.
+  bool hasCvrSimilarType(QualType T1, QualType T2);
 
   /// Retrieves the "canonical" nested name specifier for a
   /// given nested name specifier.

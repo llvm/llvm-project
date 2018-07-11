@@ -77,18 +77,31 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   TestTU Test;
   Test.HeaderCode = R"cpp(
-    int header();
-    int header_main();
-    )cpp";
+  int header();
+  int header_main();
+
+  namespace hdr { class Bar {}; } // namespace hdr
+
+  #define DEFINE_FLAG(X) \
+  namespace flags { \
+  int FLAGS_##X; \
+  } \
+
+  DEFINE_FLAG(FOO)
+  )cpp";
   Test.Code = R"cpp(
-    int ::header_main() {}
-    int main();
+  using hdr::Bar;
 
-    [[deprecated]]
-    int deprecated() { return 0; }
+  using flags::FLAGS_FOO;
 
-    namespace { struct X { void y() { int z; } }; }
-    struct S{}
+  int ::header_main() {}
+  int main();
+
+  [[deprecated]]
+  int deprecated() { return 0; }
+
+  namespace { struct X { void y() { int z; } }; }
+  struct S{}
   )cpp";
   auto AST = Test.build();
 
@@ -110,6 +123,32 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "header_main"), 42));
   EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
       << "Current file and header";
+
+  auto constructShadowDeclCompletionResult = [&](const std::string DeclName) {
+    auto *Shadow =
+        *dyn_cast<UsingDecl>(
+             &findAnyDecl(AST,
+                          [&](const NamedDecl &ND) {
+                            if (const UsingDecl *Using =
+                                    dyn_cast<UsingDecl>(&ND))
+                              if (Using->shadow_size() &&
+                                  Using->getQualifiedNameAsString() == DeclName)
+                                return true;
+                            return false;
+                          }))
+             ->shadow_begin();
+    CodeCompletionResult Result(Shadow->getTargetDecl(), 42);
+    Result.ShadowDecl = Shadow;
+    return Result;
+  };
+
+  Relevance = {};
+  Relevance.merge(constructShadowDeclCompletionResult("Bar"));
+  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+      << "Using declaration in main file";
+  Relevance.merge(constructShadowDeclCompletionResult("FLAGS_FOO"));
+  EXPECT_FLOAT_EQ(Relevance.SemaProximityScore, 1.0f)
+      << "Using declaration in main file";
 
   Relevance = {};
   Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "X"), 42));
@@ -191,7 +230,8 @@ TEST(QualityTests, SymbolRelevanceSignalsSanity) {
 }
 
 TEST(QualityTests, SortText) {
-  EXPECT_LT(sortText(std::numeric_limits<float>::infinity()), sortText(1000.2f));
+  EXPECT_LT(sortText(std::numeric_limits<float>::infinity()),
+            sortText(1000.2f));
   EXPECT_LT(sortText(1000.2f), sortText(1));
   EXPECT_LT(sortText(1), sortText(0.3f));
   EXPECT_LT(sortText(0.3f), sortText(0));

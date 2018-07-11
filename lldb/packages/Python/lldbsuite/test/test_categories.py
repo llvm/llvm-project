@@ -26,6 +26,7 @@ all_categories = {
     'gmodules': 'Tests that can be run with -gmodules debug information',
     'expression': 'Tests related to the expression parser',
     'libc++': 'Test for libc++ data formatters',
+    'libstdcxx': 'Test for libstdcxx data formatters',
     'objc': 'Tests related to the Objective-C programming language support',
     'pyapi': 'Tests related to the Python API',
     'basic_process': 'Basic process execution sniff tests.',

@@ -18,13 +18,13 @@ struct StructuralEquivalenceTest : ::testing::Test {
   std::unique_ptr<ASTUnit> AST0, AST1;
   std::string Code0, Code1; // Buffers for SourceManager
 
-  // Get a pair of Decl pointers to the synthetised declarations from the given
-  // code snipets. By default we search for the unique Decl with name 'foo' in
-  // both snippets.
-  std::tuple<NamedDecl *, NamedDecl *>
-  makeNamedDecls(const std::string &SrcCode0, const std::string &SrcCode1,
-                 Language Lang, const char *const Identifier = "foo") {
-
+  // Get a pair of node pointers into the synthesized AST from the given code
+  // snippets. To determine the returned node, a separate matcher is specified
+  // for both snippets. The first matching node is returned.
+  template <typename NodeType, typename MatcherType>
+  std::tuple<NodeType *, NodeType *> makeDecls(
+      const std::string &SrcCode0, const std::string &SrcCode1, Language Lang,
+      const MatcherType &Matcher0, const MatcherType &Matcher1) {
     this->Code0 = SrcCode0;
     this->Code1 = SrcCode1;
     ArgVector Args = getBasicRunOptionsForLanguage(Lang);
@@ -34,28 +34,32 @@ struct StructuralEquivalenceTest : ::testing::Test {
     AST0 = tooling::buildASTFromCodeWithArgs(Code0, Args, InputFileName);
     AST1 = tooling::buildASTFromCodeWithArgs(Code1, Args, InputFileName);
 
-    ASTContext &Ctx0 = AST0->getASTContext(), &Ctx1 = AST1->getASTContext();
+    NodeType *D0 = FirstDeclMatcher<NodeType>().match(
+        AST0->getASTContext().getTranslationUnitDecl(), Matcher0);
+    NodeType *D1 = FirstDeclMatcher<NodeType>().match(
+        AST1->getASTContext().getTranslationUnitDecl(), Matcher1);
 
-    auto getDecl = [](ASTContext &Ctx, const std::string &Name) -> NamedDecl * {
-      IdentifierInfo *SearchedII = &Ctx.Idents.get(Name);
-      assert(SearchedII && "Declaration with the identifier "
-                           "should be specified in test!");
-      DeclarationName SearchDeclName(SearchedII);
-      SmallVector<NamedDecl *, 4> FoundDecls;
-      Ctx.getTranslationUnitDecl()->localUncachedLookup(SearchDeclName,
-                                                        FoundDecls);
-
-      // We should find one Decl but one only.
-      assert(FoundDecls.size() == 1);
-
-      return FoundDecls[0];
-    };
-
-    NamedDecl *D0 = getDecl(Ctx0, Identifier);
-    NamedDecl *D1 = getDecl(Ctx1, Identifier);
-    assert(D0);
-    assert(D1);
     return std::make_tuple(D0, D1);
+  }
+
+  // Get a pair of node pointers into the synthesized AST from the given code
+  // snippets. The same matcher is used for both snippets.
+  template <typename NodeType, typename MatcherType>
+  std::tuple<NodeType *, NodeType *> makeDecls(
+      const std::string &SrcCode0, const std::string &SrcCode1, Language Lang,
+      const MatcherType &AMatcher) {
+    return makeDecls<NodeType, MatcherType>(
+          SrcCode0, SrcCode1, Lang, AMatcher, AMatcher);
+  }
+
+  // Get a pair of Decl pointers to the synthesized declarations from the given
+  // code snippets. We search for the first NamedDecl with given name in both
+  // snippets.
+  std::tuple<NamedDecl *, NamedDecl *> makeNamedDecls(
+      const std::string &SrcCode0, const std::string &SrcCode1,
+      Language Lang, const char *const Identifier = "foo") {
+    auto Matcher = namedDecl(hasName(Identifier));
+    return makeDecls<NamedDecl>(SrcCode0, SrcCode1, Lang, Matcher);
   }
 
   bool testStructuralMatch(NamedDecl *D0, NamedDecl *D1) {
@@ -110,35 +114,29 @@ TEST_F(StructuralEquivalenceTest, CharVsSignedCharInStruct) {
 }
 
 TEST_F(StructuralEquivalenceTest, IntVsSignedIntTemplateSpec) {
-  auto Decls = makeNamedDecls(
-      "template <class T> struct foo; template<> struct foo<int>{};",
-      "template <class T> struct foo; template<> struct foo<signed int>{};",
-      Lang_CXX);
-  ClassTemplateSpecializationDecl *Spec0 =
-      *cast<ClassTemplateDecl>(get<0>(Decls))->spec_begin();
-  ClassTemplateSpecializationDecl *Spec1 =
-      *cast<ClassTemplateDecl>(get<1>(Decls))->spec_begin();
-  ASSERT_TRUE(Spec0 != nullptr);
-  ASSERT_TRUE(Spec1 != nullptr);
+  auto Decls = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(template <class T> struct foo; template<> struct foo<int>{};)",
+      R"(template <class T> struct foo; template<> struct foo<signed int>{};)",
+      Lang_CXX,
+      classTemplateSpecializationDecl());
+  auto Spec0 = get<0>(Decls);
+  auto Spec1 = get<1>(Decls);
   EXPECT_TRUE(testStructuralMatch(Spec0, Spec1));
 }
 
 TEST_F(StructuralEquivalenceTest, CharVsSignedCharTemplateSpec) {
-  auto Decls = makeNamedDecls(
-      "template <class T> struct foo; template<> struct foo<char>{};",
-      "template <class T> struct foo; template<> struct foo<signed char>{};",
-      Lang_CXX);
-  ClassTemplateSpecializationDecl *Spec0 =
-      *cast<ClassTemplateDecl>(get<0>(Decls))->spec_begin();
-  ClassTemplateSpecializationDecl *Spec1 =
-      *cast<ClassTemplateDecl>(get<1>(Decls))->spec_begin();
-  ASSERT_TRUE(Spec0 != nullptr);
-  ASSERT_TRUE(Spec1 != nullptr);
+  auto Decls = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(template <class T> struct foo; template<> struct foo<char>{};)",
+      R"(template <class T> struct foo; template<> struct foo<signed char>{};)",
+      Lang_CXX,
+      classTemplateSpecializationDecl());
+  auto Spec0 = get<0>(Decls);
+  auto Spec1 = get<1>(Decls);
   EXPECT_FALSE(testStructuralMatch(Spec0, Spec1));
 }
 
 TEST_F(StructuralEquivalenceTest, CharVsSignedCharTemplateSpecWithInheritance) {
-  auto Decls = makeNamedDecls(
+  auto Decls = makeDecls<ClassTemplateSpecializationDecl>(
       R"(
       struct true_type{};
       template <class T> struct foo;
@@ -149,14 +147,9 @@ TEST_F(StructuralEquivalenceTest, CharVsSignedCharTemplateSpecWithInheritance) {
       template <class T> struct foo;
       template<> struct foo<signed char> : true_type {};
       )",
-      Lang_CXX);
-  ClassTemplateSpecializationDecl *Spec0 =
-      *cast<ClassTemplateDecl>(get<0>(Decls))->spec_begin();
-  ClassTemplateSpecializationDecl *Spec1 =
-      *cast<ClassTemplateDecl>(get<1>(Decls))->spec_begin();
-  ASSERT_TRUE(Spec0 != nullptr);
-  ASSERT_TRUE(Spec1 != nullptr);
-  EXPECT_FALSE(testStructuralMatch(Spec0, Spec1));
+      Lang_CXX,
+      classTemplateSpecializationDecl());
+  EXPECT_FALSE(testStructuralMatch(Decls));
 }
 
 // This test is disabled for now.
@@ -201,6 +194,351 @@ TEST_F(StructuralEquivalenceTest, WrongOrderOfFieldsInClass) {
   RD->addDeclInternal(FD);
 
   EXPECT_FALSE(testStructuralMatch(Decls));
+}
+
+struct StructuralEquivalenceFunctionTest : StructuralEquivalenceTest {
+};
+
+TEST_F(StructuralEquivalenceFunctionTest, ParamConstWithRef) {
+  auto t = makeNamedDecls("void foo(int&);",
+                          "void foo(const int&);", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ParamConstSimple) {
+  auto t = makeNamedDecls("void foo(int);",
+                          "void foo(const int);", Lang_CXX);
+  EXPECT_TRUE(testStructuralMatch(t));
+  // consider this OK
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, Throw) {
+  auto t = makeNamedDecls("void foo();",
+                          "void foo() throw();", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, Noexcept) {
+  auto t = makeNamedDecls("void foo();",
+                          "void foo() noexcept;", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ThrowVsNoexcept) {
+  auto t = makeNamedDecls("void foo() throw();",
+                          "void foo() noexcept;", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ThrowVsNoexceptFalse) {
+  auto t = makeNamedDecls("void foo() throw();",
+                          "void foo() noexcept(false);", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ThrowVsNoexceptTrue) {
+  auto t = makeNamedDecls("void foo() throw();",
+                          "void foo() noexcept(true);", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, DISABLED_NoexceptNonMatch) {
+  // The expression is not checked yet.
+  auto t = makeNamedDecls("void foo() noexcept(false);",
+                          "void foo() noexcept(true);", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, NoexceptMatch) {
+  auto t = makeNamedDecls("void foo() noexcept(false);",
+                          "void foo() noexcept(false);", Lang_CXX11);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, NoexceptVsNoexceptFalse) {
+  auto t = makeNamedDecls("void foo() noexcept;",
+                          "void foo() noexcept(false);", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, NoexceptVsNoexceptTrue) {
+  auto t = makeNamedDecls("void foo() noexcept;",
+                          "void foo() noexcept(true);", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ReturnType) {
+  auto t = makeNamedDecls("char foo();",
+                          "int foo();", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ReturnConst) {
+  auto t = makeNamedDecls("char foo();",
+                          "const char foo();", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ReturnRef) {
+  auto t = makeNamedDecls("char &foo();",
+                          "char &&foo();", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ParamCount) {
+  auto t = makeNamedDecls("void foo(int);",
+                          "void foo(int, int);", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ParamType) {
+  auto t = makeNamedDecls("void foo(int);",
+                          "void foo(char);", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ParamName) {
+  auto t = makeNamedDecls("void foo(int a);",
+                          "void foo(int b);", Lang_CXX);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, Variadic) {
+  auto t = makeNamedDecls("void foo(int x...);",
+                          "void foo(int x);", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, ParamPtr) {
+  auto t = makeNamedDecls("void foo(int *);",
+                          "void foo(int);", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, NameInParen) {
+  auto t = makeNamedDecls(
+      "void ((foo))();",
+      "void foo();",
+      Lang_CXX);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, NameInParenWithExceptionSpec) {
+  auto t = makeNamedDecls(
+      "void (foo)() throw(int);",
+      "void (foo)() noexcept;",
+      Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, NameInParenWithConst) {
+  auto t = makeNamedDecls(
+      "struct A { void (foo)() const; };",
+      "struct A { void (foo)(); };",
+      Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+struct StructuralEquivalenceCXXMethodTest : StructuralEquivalenceTest {
+};
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Virtual) {
+  auto t = makeDecls<CXXMethodDecl>(
+      "struct X { void foo(); };",
+      "struct X { virtual void foo(); };", Lang_CXX,
+      cxxMethodDecl(hasName("foo")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Pure) {
+  auto t = makeNamedDecls("struct X { virtual void foo(); };",
+                          "struct X { virtual void foo() = 0; };", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, DISABLED_Final) {
+  // The final-ness is not checked yet.
+  auto t = makeNamedDecls("struct X { virtual void foo(); };",
+                          "struct X { virtual void foo() final; };", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Const) {
+  auto t = makeNamedDecls("struct X { void foo(); };",
+                          "struct X { void foo() const; };", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Static) {
+  auto t = makeNamedDecls("struct X { void foo(); };",
+                          "struct X { static void foo(); };", Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Ref1) {
+  auto t = makeNamedDecls("struct X { void foo(); };",
+                          "struct X { void foo() &&; };", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Ref2) {
+  auto t = makeNamedDecls("struct X { void foo() &; };",
+                          "struct X { void foo() &&; };", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, AccessSpecifier) {
+  auto t = makeDecls<CXXMethodDecl>(
+      "struct X { public: void foo(); };",
+      "struct X { private: void foo(); };", Lang_CXX,
+      cxxMethodDecl(hasName("foo")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Delete) {
+  auto t = makeNamedDecls("struct X { void foo(); };",
+                          "struct X { void foo() = delete; };", Lang_CXX11);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Constructor) {
+  auto t = makeDecls<FunctionDecl>(
+      "void foo();", "struct foo { foo(); };", Lang_CXX,
+      functionDecl(), cxxConstructorDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, ConstructorParam) {
+  auto t = makeDecls<CXXConstructorDecl>("struct X { X(); };",
+                                         "struct X { X(int); };", Lang_CXX,
+                                         cxxConstructorDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, ConstructorExplicit) {
+  auto t = makeDecls<CXXConstructorDecl>("struct X { X(int); };",
+                                         "struct X { explicit X(int); };",
+                                         Lang_CXX11,
+                                         cxxConstructorDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, ConstructorDefault) {
+  auto t = makeDecls<CXXConstructorDecl>("struct X { X(); };",
+                                         "struct X { X() = default; };",
+                                         Lang_CXX11,
+                                         cxxConstructorDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Conversion) {
+  auto t = makeDecls<CXXConversionDecl>("struct X { operator bool(); };",
+                                        "struct X { operator char(); };",
+                                         Lang_CXX11,
+                                         cxxConversionDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, Operator) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X { int operator +(int); };",
+      "struct X { int operator -(int); };", Lang_CXX,
+      functionDecl(hasOverloadedOperatorName("+")),
+      functionDecl(hasOverloadedOperatorName("-")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, OutOfClass1) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X { virtual void f(); }; void X::f() { }",
+      "struct X { virtual void f() { }; };",
+      Lang_CXX,
+      functionDecl(allOf(hasName("f"), isDefinition())));
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceCXXMethodTest, OutOfClass2) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X { virtual void f(); }; void X::f() { }",
+      "struct X { void f(); }; void X::f() { }",
+      Lang_CXX,
+      functionDecl(allOf(hasName("f"), isDefinition())));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+struct StructuralEquivalenceRecordTest : StructuralEquivalenceTest {
+};
+
+TEST_F(StructuralEquivalenceRecordTest, Name) {
+  auto t = makeDecls<CXXRecordDecl>(
+      "struct A{ };",
+      "struct B{ };",
+      Lang_CXX,
+      cxxRecordDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest, Fields) {
+  auto t = makeNamedDecls(
+      "struct foo{ int x; };",
+      "struct foo{ char x; };",
+      Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest, DISABLED_Methods) {
+  // Currently, methods of a class are not checked at class equivalence.
+  auto t = makeNamedDecls(
+      "struct foo{ int x(); };",
+      "struct foo{ char x(); };",
+      Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest, Bases) {
+  auto t = makeNamedDecls(
+      "struct A{ }; struct foo: A { };",
+      "struct B{ }; struct foo: B { };",
+      Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest, InheritanceVirtual) {
+  auto t = makeNamedDecls(
+      "struct A{ }; struct foo: A { };",
+      "struct A{ }; struct foo: virtual A { };",
+      Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest, DISABLED_InheritanceType) {
+  // Access specifier in inheritance is not checked yet.
+  auto t = makeNamedDecls(
+      "struct A{ }; struct foo: public A { };",
+      "struct A{ }; struct foo: private A { };",
+      Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceRecordTest, Match) {
+  auto Code = R"(
+      struct A{ };
+      struct B{ };
+      struct foo: A, virtual B {
+        void x();
+        int a;
+      };
+      )";
+  auto t = makeNamedDecls(Code, Code, Lang_CXX);
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTest, CompareSameDeclWithMultiple) {
+  auto t = makeNamedDecls(
+      "struct A{ }; struct B{ }; void foo(A a, A b);",
+      "struct A{ }; struct B{ }; void foo(A a, B b);",
+      Lang_CXX);
+  EXPECT_FALSE(testStructuralMatch(t));
 }
 
 } // end namespace ast_matchers

@@ -329,14 +329,14 @@ void ASTWorker::update(
     // Remove the old AST if it's still in cache.
     IdleASTs.take(this);
 
-    log("Updating file " + FileName + " with command [" +
-        Inputs.CompileCommand.Directory + "] " +
+    log("Updating file {0} with command [{1}] {2}", FileName,
+        Inputs.CompileCommand.Directory,
         llvm::join(Inputs.CompileCommand.CommandLine, " "));
     // Rebuild the preamble and the AST.
     std::unique_ptr<CompilerInvocation> Invocation =
         buildCompilerInvocation(Inputs);
     if (!Invocation) {
-      log("Could not build CompilerInvocation for file " + FileName);
+      elog("Could not build CompilerInvocation for file {0}", FileName);
       // Make sure anyone waiting for the preamble gets notified it could not
       // be built.
       PreambleWasBuilt.notify();
@@ -628,8 +628,8 @@ void TUScheduler::update(
 void TUScheduler::remove(PathRef File) {
   bool Removed = Files.erase(File);
   if (!Removed)
-    log("Trying to remove file from TUScheduler that is not tracked. File:" +
-        File);
+    elog("Trying to remove file from TUScheduler that is not tracked: {0}",
+         File);
 }
 
 void TUScheduler::runWithAST(

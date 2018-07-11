@@ -52,11 +52,11 @@ ThreadKDP::~ThreadKDP() {
 
 const char *ThreadKDP::GetName() {
   if (m_thread_name.empty())
-    return NULL;
+    return nullptr;
   return m_thread_name.c_str();
 }
 
-const char *ThreadKDP::GetQueueName() { return NULL; }
+const char *ThreadKDP::GetQueueName() { return nullptr; }
 
 void ThreadKDP::RefreshStateAfterStop() {
   // Invalidate all registers in our register context. We don't set "force" to
@@ -79,8 +79,8 @@ void ThreadKDP::Dump(Log *log, uint32_t index) {}
 
 bool ThreadKDP::ShouldStop(bool &step_more) { return true; }
 lldb::RegisterContextSP ThreadKDP::GetRegisterContext() {
-  if (m_reg_context_sp.get() == NULL)
-    m_reg_context_sp = CreateRegisterContextForFrame(NULL);
+  if (!m_reg_context_sp)
+    m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
@@ -119,7 +119,7 @@ ThreadKDP::CreateRegisterContextForFrame(StackFrame *frame) {
     }
   } else {
     Unwind *unwinder = GetUnwinder();
-    if (unwinder)
+    if (unwinder != nullptr)
       reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;

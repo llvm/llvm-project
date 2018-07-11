@@ -17,11 +17,11 @@ stmxcsr (%rsp)
 # CHECK-NEXT: [3]: RThroughput
 # CHECK-NEXT: [4]: MayLoad
 # CHECK-NEXT: [5]: MayStore
-# CHECK-NEXT: [6]: HasSideEffects
+# CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      100   0.50    *      *      *     int3
-# CHECK-NEXT:  1      1     1.00    *      *      *     stmxcsr	(%rsp)
+# CHECK-NEXT:  1      100   0.50    *      *      U     int3
+# CHECK-NEXT:  1      1     1.00    *      *      U     stmxcsr	(%rsp)
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789          0123456789          0123456789

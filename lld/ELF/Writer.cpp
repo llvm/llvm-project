@@ -370,7 +370,7 @@ template <class ELFT> static void createSyntheticSections() {
   Add(InX::IgotPlt);
 
   if (Config->GdbIndex) {
-    InX::GdbIndex = createGdbIndex<ELFT>();
+    InX::GdbIndex = GdbIndexSection::create<ELFT>();
     Add(InX::GdbIndex);
   }
 
@@ -1425,13 +1425,12 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
     if (!Config->Relocatable && Config->EMachine == EM_ARM &&
         Sec->Type == SHT_ARM_EXIDX) {
 
-      if (!Sections.empty() && isa<ARMExidxSentinelSection>(Sections.back())) {
+      if (auto *Sentinel = dyn_cast<ARMExidxSentinelSection>(Sections.back())) {
         assert(Sections.size() >= 2 &&
                "We should create a sentinel section only if there are "
                "alive regular exidx sections.");
         // The last executable section is required to fill the sentinel.
         // Remember it here so that we don't have to find it again.
-        auto *Sentinel = cast<ARMExidxSentinelSection>(Sections.back());
         Sentinel->Highest = Sections[Sections.size() - 2]->getLinkOrderDep();
       }
 
@@ -1442,16 +1441,13 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
         // previous one. This does not require any rewriting of InputSection
         // contents but misses opportunities for fine grained deduplication
         // where only a subset of the InputSection contents can be merged.
-        int Cur = 1;
-        int Prev = 0;
+        size_t Prev = 0;
         // The last one is a sentinel entry which should not be removed.
-        int N = Sections.size() - 1;
-        while (Cur < N) {
-          if (isDuplicateArmExidxSec(Sections[Prev], Sections[Cur]))
-            Sections[Cur] = nullptr;
+        for (size_t I = 1; I < Sections.size() - 1; ++I) {
+          if (isDuplicateArmExidxSec(Sections[Prev], Sections[I]))
+            Sections[I] = nullptr;
           else
-            Prev = Cur;
-          ++Cur;
+            Prev = I;
         }
       }
     }

@@ -2498,17 +2498,26 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
                                        [(set f128:$vT,
                                              (fma f128:$vA, f128:$vB,
                                                   (fneg f128:$vTi)))]>;
-  def XSMSUBQPO : X_VT5_VA5_VB5_FMA_Ro<63, 420, "xsmsubqpo" , []>;
+  def XSMSUBQPO : X_VT5_VA5_VB5_FMA_Ro<63, 420, "xsmsubqpo" ,
+                                      [(set f128:$vT,
+                                      (int_ppc_fmaf128_round_to_odd
+                                      f128:$vA, f128:$vB, (fneg f128:$vTi)))]>;
   def XSNMADDQP : X_VT5_VA5_VB5_FMA <63, 452, "xsnmaddqp",
                                      [(set f128:$vT,
                                            (fneg (fma f128:$vA, f128:$vB,
                                                       f128:$vTi)))]>;
-  def XSNMADDQPO: X_VT5_VA5_VB5_FMA_Ro<63, 452, "xsnmaddqpo", []>;
+  def XSNMADDQPO: X_VT5_VA5_VB5_FMA_Ro<63, 452, "xsnmaddqpo",
+                                      [(set f128:$vT,
+                                      (fneg (int_ppc_fmaf128_round_to_odd
+                                      f128:$vA, f128:$vB, f128:$vTi)))]>;
   def XSNMSUBQP : X_VT5_VA5_VB5_FMA <63, 484, "xsnmsubqp",
                                      [(set f128:$vT,
                                            (fneg (fma f128:$vA, f128:$vB,
                                                       (fneg f128:$vTi))))]>;
-  def XSNMSUBQPO: X_VT5_VA5_VB5_FMA_Ro<63, 484, "xsnmsubqpo", []>;
+  def XSNMSUBQPO: X_VT5_VA5_VB5_FMA_Ro<63, 484, "xsnmsubqpo",
+                                      [(set f128:$vT,
+                                      (fneg (int_ppc_fmaf128_round_to_odd
+                                      f128:$vA, f128:$vB, (fneg f128:$vTi))))]>;
 
   // Additional fnmsub patterns: -a*c + b == -(a*c - b)
   def : Pat<(fma (fneg f128:$A), f128:$C, f128:$B), (XSNMSUBQP $B, $C, $A)>;
