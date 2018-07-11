@@ -598,61 +598,49 @@ bool CommandObjectExpression::DoExecute(const char *command,
     if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group, exe_ctx))
       return false;
 
-    if (end_options) {
-      Args args(llvm::StringRef(command, end_options - command));
-      if (!ParseOptions(args, result))
-        return false;
-
-      Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
-      if (error.Fail()) {
-        result.AppendError(error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
 #ifdef LLDB_CONFIGURATION_DEBUG
-      m_command_options.playground =
-          m_playground_option.GetOptionValue().GetCurrentValue();
+    m_command_options.playground =
+        m_playground_option.GetOptionValue().GetCurrentValue();
 #endif
 
-      if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-        Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+    if (m_repl_option.GetOptionValue().GetCurrentValue()) {
+      Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
 
-        // If we weren't passed in a target, let's see if the dummy target can
-        // make a REPL:
-        if (!target)
-          target = GetDummyTarget();
+      // If we weren't passed in a target, let's see if the dummy target can
+      // make a REPL:
+      if (!target)
+        target = GetDummyTarget();
 
-        if (target) {
-          // Drop into REPL
-          m_expr_lines.clear();
-          m_expr_line_count = 0;
+      if (target) {
+        // Drop into REPL
+        m_expr_lines.clear();
+        m_expr_line_count = 0;
 
-          Debugger &debugger = target->GetDebugger();
+        Debugger &debugger = target->GetDebugger();
 
-          // Check if the LLDB command interpreter is sitting on top of a REPL
-          // that launched it...
-          if (debugger.CheckTopIOHandlerTypes(IOHandler::Type::CommandInterpreter,
-                                              IOHandler::Type::REPL)) {
-            // the LLDB command interpreter is sitting on top of a REPL that
-            // launched it, so just say the command interpreter is done and
-            // fall back to the existing REPL
-            m_interpreter.GetIOHandler(false)->SetIsDone(true);
-          } else {
-            // We are launching the REPL on top of the current LLDB command
-            // interpreter, so just push one
-            bool initialize = false;
-            Status repl_error;
-            REPLSP repl_sp(target->GetREPL(
-                repl_error, m_command_options.language, nullptr, false));
+        // Check if the LLDB command interpreter is sitting on top of a REPL
+        // that launched it...
+        if (debugger.CheckTopIOHandlerTypes(IOHandler::Type::CommandInterpreter,
+                                            IOHandler::Type::REPL)) {
+          // the LLDB command interpreter is sitting on top of a REPL that
+          // launched it, so just say the command interpreter is done and
+          // fall back to the existing REPL
+          m_interpreter.GetIOHandler(false)->SetIsDone(true);
+        } else {
+          // We are launching the REPL on top of the current LLDB command
+          // interpreter, so just push one
+          bool initialize = false;
+          Status repl_error;
+          REPLSP repl_sp(target->GetREPL(
+              repl_error, m_command_options.language, nullptr, false));
 
-            if (!repl_sp) {
-              initialize = true;
-              repl_sp = target->GetREPL(repl_error, m_command_options.language,
-                                        nullptr, true);
-              if (!repl_error.Success()) {
-                result.SetError(repl_error);
-                return result.Succeeded();
-              }
+          if (!repl_sp) {
+            initialize = true;
+            repl_sp = target->GetREPL(repl_error, m_command_options.language,
+                                      nullptr, true);
+            if (!repl_error.Success()) {
+              result.SetError(repl_error);
+              return result.Succeeded();
             }
           }
 
