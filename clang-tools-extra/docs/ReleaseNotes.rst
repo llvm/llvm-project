@@ -67,6 +67,12 @@ Improvements to clang-tidy
 
 - New module ``zircon`` for checks related to Fuchsia's Zircon kernel.
 
+- New :doc:`abseil-string-find-startswith
+  <clang-tidy/checks/abseil-string-find-startswith>` check.
+
+  Checks whether a ``std::string::find()`` result is compared with 0, and
+  suggests replacing with ``absl::StartsWith()``.
+
 - New :doc:`android-comparison-in-temp-failure-retry
   <clang-tidy/checks/android-comparison-in-temp-failure-retry>` check.
 
@@ -96,12 +102,12 @@ Improvements to clang-tidy
   Warns on unused function return values.
 
 - New :doc:`cert-msc32-c
-  <clang-tidy/checks/cert-properly-seeded-random-generator>` check
+  <clang-tidy/checks/cert-msc32-c>` check
 
   Detects inappropriate seeding of ``srand()`` function.
 
 - New :doc:`cert-msc51-cpp
-  <clang-tidy/checks/cert-properly-seeded-random-generator>` check
+  <clang-tidy/checks/cert-msc51-cpp>` check
 
   Detects inappropriate seeding of C++ random generators and C ``srand()`` function.
   
@@ -121,12 +127,6 @@ Improvements to clang-tidy
   <clang-tidy/checks/fuchsia-multiple-inheritance>` check.
 
   Warns if a class inherits from multiple classes that are not pure virtual.
-
-- New :doc:`abseil-string-find-startswith
-  <clang-tidy/checks/abseil-string-find-startswith>` check.
-
-  Checks whether a ``std::string::find()`` result is compared with 0, and
-  suggests replacing with ``absl::StartsWith()``.
 
 - New `fuchsia-restrict-system-includes
   <http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-restrict-system-includes.html>`_ check
