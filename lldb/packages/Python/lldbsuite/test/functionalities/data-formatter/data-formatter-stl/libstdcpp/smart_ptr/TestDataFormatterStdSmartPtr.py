@@ -15,10 +15,7 @@ from lldbsuite.test import lldbutil
 class StdSmartPtrDataFormatterTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD
-    @skipIfWindows  # libstdcpp not ported to Windows
-    @skipIfDarwin  # doesn't compile on Darwin
-    @skipIfwatchOS  # libstdcpp not ported to watchos
+    @add_test_categories(["libstdcxx"])
     def test_with_run_command(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)

@@ -1,6 +1,6 @@
 // RUN: %clangxx_asan -fsanitize-coverage=func,trace-pc-guard %s -o %t
-// RUN: rm -rf %T/coverage-fork
-// RUN: mkdir -p %T/coverage-fork && cd %T/coverage-fork
+// RUN: rm -rf %t-dir
+// RUN: mkdir -p %t-dir && cd %t-dir
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t 2>&1 | FileCheck %s
 //
 // UNSUPPORTED: android

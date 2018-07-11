@@ -88,14 +88,14 @@ public:
   static const weak_equality equivalent;
   static const weak_equality nonequivalent;
 
-  friend constexpr bool operator==(weak_equality __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator==(_CmpUnspecifiedParam, weak_equality __v) noexcept;
-  friend constexpr bool operator!=(weak_equality __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator!=(_CmpUnspecifiedParam, weak_equality __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(weak_equality __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(_CmpUnspecifiedParam, weak_equality __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(weak_equality __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(_CmpUnspecifiedParam, weak_equality __v) noexcept;
 
 #ifndef _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
-  friend constexpr weak_equality operator<=>(weak_equality __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr weak_equality operator<=>(_CmpUnspecifiedParam, weak_equality __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr weak_equality operator<=>(weak_equality __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr weak_equality operator<=>(_CmpUnspecifiedParam, weak_equality __v) noexcept;
 #endif
 
 private:
@@ -148,20 +148,20 @@ public:
   static const strong_equality nonequivalent;
 
   // conversion
-  constexpr operator weak_equality() const noexcept {
+  _LIBCPP_INLINE_VISIBILITY constexpr operator weak_equality() const noexcept {
     return __value_ == _EqResult::__zero ? weak_equality::equivalent
           : weak_equality::nonequivalent;
   }
 
   // comparisons
-  friend constexpr bool operator==(strong_equality __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator!=(strong_equality __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator==(_CmpUnspecifiedParam, strong_equality __v) noexcept;
-  friend constexpr bool operator!=(_CmpUnspecifiedParam, strong_equality __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(strong_equality __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(strong_equality __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(_CmpUnspecifiedParam, strong_equality __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(_CmpUnspecifiedParam, strong_equality __v) noexcept;
 
 #ifndef _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
-  friend constexpr strong_equality operator<=>(strong_equality __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr strong_equality operator<=>(_CmpUnspecifiedParam, strong_equality __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr strong_equality operator<=>(strong_equality __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr strong_equality operator<=>(_CmpUnspecifiedParam, strong_equality __v) noexcept;
 #endif
 private:
   _EqResult __value_;
@@ -235,22 +235,22 @@ public:
   }
 
   // comparisons
-  friend constexpr bool operator==(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator!=(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator< (partial_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator<=(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator> (partial_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator>=(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator==(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
-  friend constexpr bool operator!=(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
-  friend constexpr bool operator< (_CmpUnspecifiedParam, partial_ordering __v) noexcept;
-  friend constexpr bool operator<=(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
-  friend constexpr bool operator> (_CmpUnspecifiedParam, partial_ordering __v) noexcept;
-  friend constexpr bool operator>=(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator< (partial_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator<=(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator> (partial_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator>=(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator< (_CmpUnspecifiedParam, partial_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator<=(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator> (_CmpUnspecifiedParam, partial_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator>=(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
 
 #ifndef _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
-  friend constexpr partial_ordering operator<=>(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr partial_ordering operator<=>(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr partial_ordering operator<=>(partial_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr partial_ordering operator<=>(_CmpUnspecifiedParam, partial_ordering __v) noexcept;
 #endif
 
 private:
@@ -351,22 +351,22 @@ public:
   }
 
   // comparisons
-  friend constexpr bool operator==(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator!=(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator< (weak_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator<=(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator> (weak_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator>=(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator==(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
-  friend constexpr bool operator!=(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
-  friend constexpr bool operator< (_CmpUnspecifiedParam, weak_ordering __v) noexcept;
-  friend constexpr bool operator<=(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
-  friend constexpr bool operator> (_CmpUnspecifiedParam, weak_ordering __v) noexcept;
-  friend constexpr bool operator>=(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator< (weak_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator<=(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator> (weak_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator>=(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator< (_CmpUnspecifiedParam, weak_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator<=(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator> (_CmpUnspecifiedParam, weak_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator>=(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
 
 #ifndef _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
-  friend constexpr weak_ordering operator<=>(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr weak_ordering operator<=>(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr weak_ordering operator<=>(weak_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr weak_ordering operator<=>(_CmpUnspecifiedParam, weak_ordering __v) noexcept;
 #endif
 
 private:
@@ -477,22 +477,22 @@ public:
   }
 
   // comparisons
-  friend constexpr bool operator==(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator!=(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator< (strong_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator<=(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator> (strong_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator>=(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr bool operator==(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
-  friend constexpr bool operator!=(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
-  friend constexpr bool operator< (_CmpUnspecifiedParam, strong_ordering __v) noexcept;
-  friend constexpr bool operator<=(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
-  friend constexpr bool operator> (_CmpUnspecifiedParam, strong_ordering __v) noexcept;
-  friend constexpr bool operator>=(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator< (strong_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator<=(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator> (strong_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator>=(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator==(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator!=(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator< (_CmpUnspecifiedParam, strong_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator<=(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator> (_CmpUnspecifiedParam, strong_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr bool operator>=(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
 
 #ifndef _LIBCPP_HAS_NO_SPACESHIP_OPERATOR
-  friend constexpr strong_ordering operator<=>(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
-  friend constexpr strong_ordering operator<=>(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr strong_ordering operator<=>(strong_ordering __v, _CmpUnspecifiedParam) noexcept;
+  _LIBCPP_INLINE_VISIBILITY friend constexpr strong_ordering operator<=>(_CmpUnspecifiedParam, strong_ordering __v) noexcept;
 #endif
 
 private:

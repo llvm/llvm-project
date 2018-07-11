@@ -514,110 +514,81 @@ bool CommandObjectExpression::DoExecute(const char *command,
   auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
   m_option_group.NotifyOptionParsingStarting(&exe_ctx);
 
-  const char *expr = nullptr;
-
   if (command[0] == '\0') {
     GetMultilineExpression();
     return result.Succeeded();
   }
 
-  if (command[0] == '-') {
-    // We have some options and these options MUST end with --.
-    const char *end_options = nullptr;
-    const char *s = command;
-    while (s && s[0]) {
-      end_options = ::strstr(s, "--");
-      if (end_options) {
-        end_options += 2; // Get past the "--"
-        if (::isspace(end_options[0])) {
-          expr = end_options;
-          while (::isspace(*expr))
-            ++expr;
-          break;
-        }
-      }
-      s = end_options;
-    }
+  OptionsWithRaw args(command);
+  const char *expr = args.GetRawPart().c_str();
 
-    if (end_options) {
-      Args args(llvm::StringRef(command, end_options - command));
-      if (!ParseOptions(args, result))
-        return false;
+  if (args.HasArgs()) {
+    if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group, exe_ctx))
+      return false;
 
-      Status error(m_option_group.NotifyOptionParsingFinished(&exe_ctx));
-      if (error.Fail()) {
-        result.AppendError(error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
+    if (m_repl_option.GetOptionValue().GetCurrentValue()) {
+      Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+      if (target) {
+        // Drop into REPL
+        m_expr_lines.clear();
+        m_expr_line_count = 0;
 
-      if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-        Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
-        if (target) {
-          // Drop into REPL
-          m_expr_lines.clear();
-          m_expr_line_count = 0;
+        Debugger &debugger = target->GetDebugger();
 
-          Debugger &debugger = target->GetDebugger();
+        // Check if the LLDB command interpreter is sitting on top of a REPL
+        // that launched it...
+        if (debugger.CheckTopIOHandlerTypes(IOHandler::Type::CommandInterpreter,
+                                            IOHandler::Type::REPL)) {
+          // the LLDB command interpreter is sitting on top of a REPL that
+          // launched it, so just say the command interpreter is done and
+          // fall back to the existing REPL
+          m_interpreter.GetIOHandler(false)->SetIsDone(true);
+        } else {
+          // We are launching the REPL on top of the current LLDB command
+          // interpreter, so just push one
+          bool initialize = false;
+          Status repl_error;
+          REPLSP repl_sp(target->GetREPL(repl_error, m_command_options.language,
+                                         nullptr, false));
 
-          // Check if the LLDB command interpreter is sitting on top of a REPL
-          // that launched it...
-          if (debugger.CheckTopIOHandlerTypes(
-                  IOHandler::Type::CommandInterpreter, IOHandler::Type::REPL)) {
-            // the LLDB command interpreter is sitting on top of a REPL that
-            // launched it, so just say the command interpreter is done and
-            // fall back to the existing REPL
-            m_interpreter.GetIOHandler(false)->SetIsDone(true);
-          } else {
-            // We are launching the REPL on top of the current LLDB command
-            // interpreter, so just push one
-            bool initialize = false;
-            Status repl_error;
-            REPLSP repl_sp(target->GetREPL(
-                repl_error, m_command_options.language, nullptr, false));
-
-            if (!repl_sp) {
-              initialize = true;
-              repl_sp = target->GetREPL(repl_error, m_command_options.language,
-                                        nullptr, true);
-              if (!repl_error.Success()) {
-                result.SetError(repl_error);
-                return result.Succeeded();
-              }
-            }
-
-            if (repl_sp) {
-              if (initialize) {
-                repl_sp->SetCommandOptions(m_command_options);
-                repl_sp->SetFormatOptions(m_format_options);
-                repl_sp->SetValueObjectDisplayOptions(m_varobj_options);
-              }
-
-              IOHandlerSP io_handler_sp(repl_sp->GetIOHandler());
-
-              io_handler_sp->SetIsDone(false);
-
-              debugger.PushIOHandler(io_handler_sp);
-            } else {
-              repl_error.SetErrorStringWithFormat(
-                  "Couldn't create a REPL for %s",
-                  Language::GetNameForLanguageType(m_command_options.language));
+          if (!repl_sp) {
+            initialize = true;
+            repl_sp = target->GetREPL(repl_error, m_command_options.language,
+                                      nullptr, true);
+            if (!repl_error.Success()) {
               result.SetError(repl_error);
               return result.Succeeded();
             }
           }
+
+          if (repl_sp) {
+            if (initialize) {
+              repl_sp->SetCommandOptions(m_command_options);
+              repl_sp->SetFormatOptions(m_format_options);
+              repl_sp->SetValueObjectDisplayOptions(m_varobj_options);
+            }
+
+            IOHandlerSP io_handler_sp(repl_sp->GetIOHandler());
+
+            io_handler_sp->SetIsDone(false);
+
+            debugger.PushIOHandler(io_handler_sp);
+          } else {
+            repl_error.SetErrorStringWithFormat(
+                "Couldn't create a REPL for %s",
+                Language::GetNameForLanguageType(m_command_options.language));
+            result.SetError(repl_error);
+            return result.Succeeded();
+          }
         }
       }
-      // No expression following options
-      else if (expr == nullptr || expr[0] == '\0') {
-        GetMultilineExpression();
-        return result.Succeeded();
-      }
+    }
+    // No expression following options
+    else if (expr[0] == '\0') {
+      GetMultilineExpression();
+      return result.Succeeded();
     }
   }
-
-  if (expr == nullptr)
-    expr = command;
 
   Target *target = GetSelectedOrDummyTarget();
   if (EvaluateExpression(expr, &(result.GetOutputStream()),
@@ -629,13 +600,12 @@ bool CommandObjectExpression::DoExecute(const char *command,
       // for expr???)
       // If we can it would be nice to show that.
       std::string fixed_command("expression ");
-      if (expr == command)
-        fixed_command.append(m_fixed_expression);
-      else {
+      if (args.HasArgs()) {
         // Add in any options that might have been in the original command:
-        fixed_command.append(command, expr - command);
+        fixed_command.append(args.GetArgStringWithDelimiter());
         fixed_command.append(m_fixed_expression);
-      }
+      } else
+        fixed_command.append(m_fixed_expression);
       history.AppendString(fixed_command);
     }
     // Increment statistics to record this expression evaluation success.

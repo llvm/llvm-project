@@ -331,6 +331,22 @@ bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
   return found_word;
 }
 
+bool CommandObject::ParseOptionsAndNotify(Args &args,
+                                          CommandReturnObject &result,
+                                          OptionGroupOptions &group_options,
+                                          ExecutionContext &exe_ctx) {
+  if (!ParseOptions(args, result))
+    return false;
+
+  Status error(group_options.NotifyOptionParsingFinished(&exe_ctx));
+  if (error.Fail()) {
+    result.AppendError(error.AsCString());
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+  return true;
+}
+
 int CommandObject::GetNumArgumentEntries() { return m_arguments.size(); }
 
 CommandObject::CommandArgumentEntry *

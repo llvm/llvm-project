@@ -117,6 +117,11 @@ struct Mutable {
   ~Mutable() {}
 };
 
+struct Point {
+  ~Point() {}
+  int x, y;
+};
+
 Mutable& operator<<(Mutable &Out, bool B) {
   Out.setBool(B);
   return Out;
@@ -211,6 +216,15 @@ void positiveOnlyUsedAsConstArguments() {
     useTwice(UsedAsConst, UsedAsConst);
     useByValue(UsedAsConst);
     useByConstValue(UsedAsConst);
+  }
+}
+
+void positiveOnlyAccessedFieldAsConst() {
+  for (auto UsedAsConst : View<Iterator<Point>>()) {
+    // CHECK-MESSAGES: [[@LINE-1]]:13: warning: loop variable is copied but only used as const reference; consider making it a const reference [performance-for-range-copy]
+    // CHECK-FIXES: for (const auto& UsedAsConst : View<Iterator<Point>>()) {
+    use(UsedAsConst.x);
+    use(UsedAsConst.y);
   }
 }
 

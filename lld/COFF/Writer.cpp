@@ -544,17 +544,24 @@ void Writer::createImportTables() {
     if (Config->DLLOrder.count(DLL) == 0)
       Config->DLLOrder[DLL] = Config->DLLOrder.size();
 
-    if (DefinedImportThunk *Thunk = File->ThunkSym)
+    if (File->ThunkSym) {
+      if (!isa<DefinedImportThunk>(File->ThunkSym))
+        fatal(toString(*File->ThunkSym) + " was replaced");
+      DefinedImportThunk *Thunk = cast<DefinedImportThunk>(File->ThunkSym);
       if (File->ThunkLive)
         TextSec->addChunk(Thunk->getChunk());
+    }
 
+    if (File->ImpSym && !isa<DefinedImportData>(File->ImpSym))
+      fatal(toString(*File->ImpSym) + " was replaced");
+    DefinedImportData *ImpSym = cast_or_null<DefinedImportData>(File->ImpSym);
     if (Config->DelayLoads.count(StringRef(File->DLLName).lower())) {
       if (!File->ThunkSym)
         fatal("cannot delay-load " + toString(File) +
-              " due to import of data: " + toString(*File->ImpSym));
-      DelayIdata.add(File->ImpSym);
+              " due to import of data: " + toString(*ImpSym));
+      DelayIdata.add(ImpSym);
     } else {
-      Idata.add(File->ImpSym);
+      Idata.add(ImpSym);
     }
   }
 

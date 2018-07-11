@@ -3,7 +3,10 @@
 // RUN: not %run %t n 2>&1 | FileCheck %s -check-prefix=CHECK -check-prefix=NON_EXEC
 
 // Not every OS lists every memory region in MemoryMappingLayout.
-// REQUIRES: linux || freebsd || netbsd
+// This is limited to x86_64 because some architectures (e.g. the s390 before
+// the z14) don't support NX mappings and others like PowerPC use function
+// descriptors.
+// REQUIRES: x86-target-arch && (linux || freebsd || netbsd)
 
 #include <assert.h>
 
@@ -20,12 +23,6 @@ int main(int argc, char **argv) {
   }
 
   func();
-  // x86 reports the SEGV with both address=X and pc=X.
-  // On PowerPC64 ELFv1, the pointer is taken to be a function-descriptor
-  // pointer out of which three 64-bit quantities are read. This will SEGV, but
-  // the compiler is free to choose the order. As a result, the address is
-  // either X, X+0x8 or X+0x10. The pc is still in main() because it has not
-  // actually made the call when the faulting access occurs.
   // CHECK: DEADLYSIGNAL
   // CHECK: {{AddressSanitizer: (SEGV|access-violation).*(address|pc) }}
   // NON_EXEC: PC is at a non-executable region. Maybe a wild jump?
