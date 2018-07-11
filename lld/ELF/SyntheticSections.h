@@ -924,6 +924,8 @@ public:
   void writeTo(uint8_t *Buf) override;
   bool empty() const override;
 
+  static bool classof(const SectionBase *D);
+
   // The last section referenced by a regular .ARM.exidx section.
   // It is found and filled in Writer<ELFT>::resolveShfLinkOrder().
   // The sentinel points at the end of that section.

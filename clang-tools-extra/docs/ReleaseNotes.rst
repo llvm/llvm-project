@@ -95,6 +95,16 @@ Improvements to clang-tidy
 
   Warns on unused function return values.
 
+- New :doc:`cert-msc32-c
+  <clang-tidy/checks/cert-properly-seeded-random-generator>` check
+
+  Detects inappropriate seeding of ``srand()`` function.
+
+- New :doc:`cert-msc51-cpp
+  <clang-tidy/checks/cert-properly-seeded-random-generator>` check
+
+  Detects inappropriate seeding of C++ random generators and C ``srand()`` function.
+  
 - New :doc:`cppcoreguidelines-avoid-goto
   <clang-tidy/checks/cppcoreguidelines-avoid-goto>` check.
 
@@ -252,17 +262,6 @@ Improvements to clang-tidy
   <clang-tidy/checks/bugprone-unused-raii>`
 
 - The 'google-runtime-member-string-references' check was removed.
-
-- New `cert-msc51-cpp
-  <http://clang.llvm.org/extra/clang-tidy/checks/cert-properly-seeded-random-generator.html>`_ check
-
-  Detects inappropriate seeding of C++ random generators and C ``srand()`` function.
-  
-- New `cert-msc32-c
-  <http://clang.llvm.org/extra/clang-tidy/checks/cert-properly-seeded-random-generator.html>`_ check
-
-  Detects inappropriate seeding of ``srand()`` function.
-
 
 Improvements to include-fixer
 -----------------------------
