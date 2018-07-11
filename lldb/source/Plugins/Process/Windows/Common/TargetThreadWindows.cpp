@@ -16,10 +16,10 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 
+#include "Plugins/Process/Utility/UnwindLLDB.h"
 #include "ProcessWindows.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
-#include "Plugins/Process/Utility/UnwindLLDB.h"
 
 #if defined(_WIN64)
 #include "x64/RegisterContextWindows_x64.h"
@@ -33,7 +33,7 @@ using namespace lldb_private;
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
     : Thread(process, thread.GetNativeThread().GetThreadId()),
-      m_host_thread(thread) {}
+      m_thread_reg_ctx_sp(), m_host_thread(thread) {}
 
 TargetThreadWindows::~TargetThreadWindows() { DestroyThread(); }
 
@@ -49,40 +49,53 @@ void TargetThreadWindows::DidStop() {}
 
 RegisterContextSP TargetThreadWindows::GetRegisterContext() {
   if (!m_reg_context_sp)
-    m_reg_context_sp = CreateRegisterContextForFrameIndex(0);
+    m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
 
   return m_reg_context_sp;
 }
 
 RegisterContextSP
 TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
-  return CreateRegisterContextForFrameIndex(frame->GetConcreteFrameIndex());
-}
+  RegisterContextSP reg_ctx_sp;
+  uint32_t concrete_frame_idx = 0;
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
 
-RegisterContextSP
-TargetThreadWindows::CreateRegisterContextForFrameIndex(uint32_t idx) {
-  if (!m_reg_context_sp) {
-    ArchSpec arch = HostInfo::GetArchitecture();
-    switch (arch.GetMachine()) {
-    case llvm::Triple::x86:
+  if (frame)
+    concrete_frame_idx = frame->GetConcreteFrameIndex();
+
+  if (concrete_frame_idx == 0) {
+    if (!m_thread_reg_ctx_sp) {
+      ArchSpec arch = HostInfo::GetArchitecture();
+      switch (arch.GetMachine()) {
+      case llvm::Triple::x86:
 #if defined(_WIN64)
-// FIXME: This is a Wow64 process, create a RegisterContextWindows_Wow64
+        // FIXME: This is a Wow64 process, create a RegisterContextWindows_Wow64
+        LLDB_LOG(log, "This is a Wow64 process, we should create a "
+                      "RegisterContextWindows_Wow64, but we don't.");
 #else
-      m_reg_context_sp.reset(new RegisterContextWindows_x86(*this, idx));
+        m_thread_reg_ctx_sp.reset(
+            new RegisterContextWindows_x86(*this, concrete_frame_idx));
 #endif
-      break;
-    case llvm::Triple::x86_64:
+        break;
+      case llvm::Triple::x86_64:
 #if defined(_WIN64)
-      m_reg_context_sp.reset(new RegisterContextWindows_x64(*this, idx));
+        m_thread_reg_ctx_sp.reset(
+            new RegisterContextWindows_x64(*this, concrete_frame_idx));
 #else
-// LLDB is 32-bit, but the target process is 64-bit.  We probably can't debug
-// this.
+        LLDB_LOG(log, "LLDB is 32-bit, but the target process is 64-bit.");
 #endif
-    default:
-      break;
+      default:
+        break;
+      }
     }
+    reg_ctx_sp = m_thread_reg_ctx_sp;
+  } else {
+    Unwind *unwinder = GetUnwinder();
+    if (unwinder != nullptr)
+      reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
   }
-  return m_reg_context_sp;
+
+  return reg_ctx_sp;
 }
 
 bool TargetThreadWindows::CalculateStopInfo() {
@@ -93,7 +106,7 @@ bool TargetThreadWindows::CalculateStopInfo() {
 Unwind *TargetThreadWindows::GetUnwinder() {
   // FIXME: Implement an unwinder based on the Windows unwinder exposed through
   // DIA SDK.
-  if (m_unwinder_ap.get() == NULL)
+  if (!m_unwinder_ap)
     m_unwinder_ap.reset(new UnwindLLDB(*this));
   return m_unwinder_ap.get();
 }
@@ -118,9 +131,10 @@ Status TargetThreadWindows::DoResume() {
     DWORD previous_suspend_count = 0;
     HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
     do {
-      // ResumeThread returns -1 on error, or the thread's *previous* suspend count on success.
-      // This means that the return value is 1 when the thread was restarted.
-      // Note that DWORD is an unsigned int, so we need to explicitly compare with -1.
+      // ResumeThread returns -1 on error, or the thread's *previous* suspend
+      // count on success. This means that the return value is 1 when the thread
+      // was restarted. Note that DWORD is an unsigned int, so we need to
+      // explicitly compare with -1.
       previous_suspend_count = ::ResumeThread(thread_handle);
 
       if (previous_suspend_count == (DWORD)-1)
