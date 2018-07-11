@@ -37,7 +37,7 @@ if(TARGET lldb-mi)
 endif()
 
 if(NOT LLDB_BUILT_STANDALONE)
-  list(APPEND LLDB_TEST_DEPS yaml2obj dsymutil)
+  list(APPEND LLDB_TEST_DEPS yaml2obj llvm-dsymutil)
 endif()
 
 if(TARGET liblldb)
