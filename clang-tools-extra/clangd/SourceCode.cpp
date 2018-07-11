@@ -192,7 +192,7 @@ getAbsoluteFilePath(const FileEntry *F, const SourceManager &SourceMgr) {
     FilePath = F->getName();
   if (!llvm::sys::path::is_absolute(FilePath)) {
     if (!SourceMgr.getFileManager().makeAbsolutePath(FilePath)) {
-      log("Could not turn relative path to absolute: " + FilePath);
+      log("Could not turn relative path to absolute: {0}", FilePath);
       return llvm::None;
     }
   }

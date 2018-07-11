@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/SourceMgr.h"
 #include <istream>
@@ -68,14 +69,18 @@ void JSONOutput::writeMessage(const json::Value &Message) {
     Outs << "Content-Length: " << S.size() << "\r\n\r\n" << S;
     Outs.flush();
   }
-  log(llvm::Twine("--> ") + S + "\n");
+  vlog("--> {0}\n", S);
 }
 
-void JSONOutput::log(const Twine &Message) {
+void JSONOutput::log(Logger::Level Level,
+                     const llvm::formatv_object_base &Message) {
+  if (Level < MinLevel)
+    return;
   llvm::sys::TimePoint<> Timestamp = std::chrono::system_clock::now();
   trace::log(Message);
   std::lock_guard<std::mutex> Guard(StreamMutex);
-  Logs << llvm::formatv("[{0:%H:%M:%S.%L}] {1}\n", Timestamp, Message);
+  Logs << llvm::formatv("{0}[{1:%H:%M:%S.%L}] {2}\n", indicator(Level),
+                        Timestamp, Message);
   Logs.flush();
 }
 
@@ -90,7 +95,7 @@ void JSONOutput::mirrorInput(const Twine &Message) {
 void clangd::reply(json::Value &&Result) {
   auto ID = Context::current().get(RequestID);
   if (!ID) {
-    log("Attempted to reply to a notification!");
+    elog("Attempted to reply to a notification!");
     return;
   }
   RequestSpan::attach([&](json::Object &Args) { Args["Reply"] = Result; });
@@ -104,7 +109,7 @@ void clangd::reply(json::Value &&Result) {
 }
 
 void clangd::replyError(ErrorCode code, const llvm::StringRef &Message) {
-  log("Error " + Twine(static_cast<int>(code)) + ": " + Message);
+  elog("Error {0}: {1}", static_cast<int>(code), Message);
   RequestSpan::attach([&](json::Object &Args) {
     Args["Error"] = json::Object{{"code", static_cast<int>(code)},
                                  {"message", Message.str()}};
@@ -230,9 +235,9 @@ static llvm::Optional<std::string> readStandardMessage(std::FILE *In,
     // Content-Length is a mandatory header, and the only one we handle.
     if (LineRef.consume_front("Content-Length: ")) {
       if (ContentLength != 0) {
-        log("Warning: Duplicate Content-Length header received. "
-            "The previous value for this message (" +
-            llvm::Twine(ContentLength) + ") was ignored.");
+        elog("Warning: Duplicate Content-Length header received. "
+             "The previous value for this message ({0}) was ignored.",
+             ContentLength);
       }
       llvm::getAsUnsignedInteger(LineRef.trim(), 0, ContentLength);
       continue;
@@ -248,8 +253,9 @@ static llvm::Optional<std::string> readStandardMessage(std::FILE *In,
 
   // The fuzzer likes crashing us by sending "Content-Length: 9999999999999999"
   if (ContentLength > 1 << 30) { // 1024M
-    log("Refusing to read message with long Content-Length: " +
-        Twine(ContentLength) + ". Expect protocol errors.");
+    elog("Refusing to read message with long Content-Length: {0}. "
+         "Expect protocol errors",
+         ContentLength);
     return llvm::None;
   }
   if (ContentLength == 0) {
@@ -264,8 +270,8 @@ static llvm::Optional<std::string> readStandardMessage(std::FILE *In,
                                        ContentLength - Pos, In);
     Out.mirrorInput(StringRef(&JSON[Pos], Read));
     if (Read == 0) {
-      log("Input was aborted. Read only " + llvm::Twine(Pos) +
-          " bytes of expected " + llvm::Twine(ContentLength) + ".");
+      elog("Input was aborted. Read only {0} bytes of expected {1}.", Pos,
+           ContentLength);
       return llvm::None;
     }
     clearerr(In); // If we're done, the error was transient. If we're not done,
@@ -297,7 +303,7 @@ static llvm::Optional<std::string> readDelimitedMessage(std::FILE *In,
   }
 
   if (ferror(In)) {
-    log("Input error while reading message!");
+    elog("Input error while reading message!");
     return llvm::None;
   } else { // Including EOF
     Out.mirrorInput(
@@ -321,21 +327,20 @@ void clangd::runLanguageServerLoop(std::FILE *In, JSONOutput &Out,
       (InputStyle == Delimited) ? readDelimitedMessage : readStandardMessage;
   while (!IsDone && !feof(In)) {
     if (ferror(In)) {
-      log("IO error: " + llvm::sys::StrError());
+      elog("IO error: {0}", llvm::sys::StrError());
       return;
     }
     if (auto JSON = ReadMessage(In, Out)) {
       if (auto Doc = json::parse(*JSON)) {
         // Log the formatted message.
-        log(llvm::formatv(Out.Pretty ? "<-- {0:2}\n" : "<-- {0}\n", *Doc));
+        vlog(Out.Pretty ? "<-- {0:2}\n" : "<-- {0}\n", *Doc);
         // Finally, execute the action for this JSON message.
         if (!Dispatcher.call(*Doc, Out))
-          log("JSON dispatch failed!");
+          elog("JSON dispatch failed!");
       } else {
         // Parse error. Log the raw message.
-        log(llvm::formatv("<-- {0}\n" , *JSON));
-        log(llvm::Twine("JSON parse error: ") +
-            llvm::toString(Doc.takeError()));
+        vlog("<-- {0}\n", *JSON);
+        elog("JSON parse error: {0}", llvm::toString(Doc.takeError()));
       }
     }
   }

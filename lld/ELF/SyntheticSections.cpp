@@ -2278,16 +2278,48 @@ static uint32_t computeGdbHash(StringRef S) {
   return H;
 }
 
-static std::vector<GdbIndexChunk::CuEntry> readCuList(DWARFContext &Dwarf) {
-  std::vector<GdbIndexChunk::CuEntry> Ret;
+GdbIndexSection::GdbIndexSection()
+    : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index") {}
+
+// Returns the desired size of an on-disk hash table for a .gdb_index section.
+// There's a tradeoff between size and collision rate. We aim 75% utilization.
+size_t GdbIndexSection::computeSymtabSize() const {
+  return std::max<size_t>(NextPowerOf2(Symbols.size() * 4 / 3), 1024);
+}
+
+// Compute the output section size.
+void GdbIndexSection::initOutputSize() {
+  Size = sizeof(GdbIndexHeader) + computeSymtabSize() * 8;
+
+  for (GdbChunk &Chunk : Chunks)
+    Size += Chunk.CompilationUnits.size() * 16 + Chunk.AddressAreas.size() * 20;
+
+  // Add the constant pool size if exists.
+  if (!Symbols.empty()) {
+    GdbSymbol &Sym = Symbols.back();
+    Size += Sym.NameOff + Sym.Name.size() + 1;
+  }
+}
+
+static std::vector<InputSection *> getDebugInfoSections() {
+  std::vector<InputSection *> Ret;
+  for (InputSectionBase *S : InputSections)
+    if (InputSection *IS = dyn_cast<InputSection>(S))
+      if (IS->Name == ".debug_info")
+        Ret.push_back(IS);
+  return Ret;
+}
+
+static std::vector<GdbIndexSection::CuEntry> readCuList(DWARFContext &Dwarf) {
+  std::vector<GdbIndexSection::CuEntry> Ret;
   for (std::unique_ptr<DWARFCompileUnit> &Cu : Dwarf.compile_units())
     Ret.push_back({Cu->getOffset(), Cu->getLength() + 4});
   return Ret;
 }
 
-static std::vector<GdbIndexChunk::AddressEntry>
+static std::vector<GdbIndexSection::AddressEntry>
 readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
-  std::vector<GdbIndexChunk::AddressEntry> Ret;
+  std::vector<GdbIndexSection::AddressEntry> Ret;
 
   uint32_t CuIdx = 0;
   for (std::unique_ptr<DWARFCompileUnit> &Cu : Dwarf.compile_units()) {
@@ -2311,12 +2343,12 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
   return Ret;
 }
 
-static std::vector<GdbIndexChunk::NameTypeEntry>
+static std::vector<GdbIndexSection::NameTypeEntry>
 readPubNamesAndTypes(DWARFContext &Dwarf, uint32_t Idx) {
   StringRef Sec1 = Dwarf.getDWARFObj().getGnuPubNamesSection();
   StringRef Sec2 = Dwarf.getDWARFObj().getGnuPubTypesSection();
 
-  std::vector<GdbIndexChunk::NameTypeEntry> Ret;
+  std::vector<GdbIndexSection::NameTypeEntry> Ret;
   for (StringRef Sec : {Sec1, Sec2}) {
     DWARFDebugPubTable Table(Sec, Config->IsLE, true);
     for (const DWARFDebugPubTable::Set &Set : Table.getData())
@@ -2327,147 +2359,119 @@ readPubNamesAndTypes(DWARFContext &Dwarf, uint32_t Idx) {
   return Ret;
 }
 
-static std::vector<InputSection *> getDebugInfoSections() {
-  std::vector<InputSection *> Ret;
-  for (InputSectionBase *S : InputSections)
-    if (InputSection *IS = dyn_cast<InputSection>(S))
-      if (IS->Name == ".debug_info")
-        Ret.push_back(IS);
+// Create a list of symbols from a given list of symbol names and types
+// by uniquifying them by name.
+static std::vector<GdbIndexSection::GdbSymbol>
+createSymbols(ArrayRef<std::vector<GdbIndexSection::NameTypeEntry>> NameTypes) {
+  typedef GdbIndexSection::GdbSymbol GdbSymbol;
+  typedef GdbIndexSection::NameTypeEntry NameTypeEntry;
+
+  // A map to uniquify symbols by name.
+  DenseMap<CachedHashStringRef, size_t> Map;
+
+  // Instantiate GdbSymbols while uniqufying them by name.
+  std::vector<GdbSymbol> Ret;
+  for (ArrayRef<NameTypeEntry> Entries : NameTypes) {
+    for (const NameTypeEntry &Ent : Entries) {
+      size_t &Idx = Map[Ent.Name];
+      if (Idx) {
+        // gcc 5.4.1 produces a buggy .debug_gnu_pubnames that contains
+        // duplicate entries, so we want to dedup them.
+        std::vector<uint32_t> &Vec = Ret[Idx - 1].CuVector;
+        if (Vec.empty() || Vec.back() != Ent.Type)
+          Vec.push_back(Ent.Type);
+        continue;
+      }
+
+      Idx = Ret.size() + 1;
+      Ret.push_back({Ent.Name, {Ent.Type}, 0, 0});
+    }
+  }
+
+  // CU vectors and symbol names are adjacent in the output file.
+  // We can compute their offsets in the output file now.
+  size_t Off = 0;
+  for (GdbSymbol &Sym : Ret) {
+    Sym.CuVectorOff = Off;
+    Off += (Sym.CuVector.size() + 1) * 4;
+  }
+  for (GdbSymbol &Sym : Ret) {
+    Sym.NameOff = Off;
+    Off += Sym.Name.size() + 1;
+  }
+
   return Ret;
 }
 
-template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
-  // Gather debug info to create a .gdb_index section.
+// Returns a newly-created .gdb_index section.
+template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
   std::vector<InputSection *> Sections = getDebugInfoSections();
-  std::vector<GdbIndexChunk> Chunks(Sections.size());
-
-  parallelForEachN(0, Chunks.size(), [&](size_t I) {
-    ObjFile<ELFT> *File = Sections[I]->getFile<ELFT>();
-    DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(File));
-
-    Chunks[I].DebugInfoSec = Sections[I];
-    Chunks[I].CompilationUnits = readCuList(Dwarf);
-    Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
-    Chunks[I].NamesAndTypes = readPubNamesAndTypes(Dwarf, I);
-  });
 
   // .debug_gnu_pub{names,types} are useless in executables.
   // They are present in input object files solely for creating
-  // a .gdb_index. So we can remove it from the output.
+  // a .gdb_index. So we can remove them from the output.
   for (InputSectionBase *S : InputSections)
     if (S->Name == ".debug_gnu_pubnames" || S->Name == ".debug_gnu_pubtypes")
       S->Live = false;
 
-  // Create a .gdb_index and returns it.
-  return make<GdbIndexSection>(std::move(Chunks));
-}
+  std::vector<GdbChunk> Chunks(Sections.size());
+  std::vector<std::vector<NameTypeEntry>> NameTypes(Sections.size());
 
-static size_t getCuSize(ArrayRef<GdbIndexChunk> Arr) {
-  size_t Ret = 0;
-  for (const GdbIndexChunk &D : Arr)
-    Ret += D.CompilationUnits.size();
+  parallelForEachN(0, Sections.size(), [&](size_t I) {
+    ObjFile<ELFT> *File = Sections[I]->getFile<ELFT>();
+    DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(File));
+
+    Chunks[I].Sec = Sections[I];
+    Chunks[I].CompilationUnits = readCuList(Dwarf);
+    Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
+    NameTypes[I] = readPubNamesAndTypes(Dwarf, I);
+  });
+
+  auto *Ret = make<GdbIndexSection>();
+  Ret->Chunks = std::move(Chunks);
+  Ret->Symbols = createSymbols(NameTypes);
+  Ret->initOutputSize();
   return Ret;
-}
-
-static size_t getAddressAreaSize(ArrayRef<GdbIndexChunk> Arr) {
-  size_t Ret = 0;
-  for (const GdbIndexChunk &D : Arr)
-    Ret += D.AddressAreas.size();
-  return Ret;
-}
-
-// Returns the desired size of an on-disk hash table for a .gdb_index section.
-// There's a tradeoff between size and collision rate. We aim 75% utilization.
-static size_t getSymtabSize(size_t NumSymbols) {
-  return std::max<size_t>(NextPowerOf2(NumSymbols * 4 / 3), 1024);
-}
-
-GdbIndexSection::GdbIndexSection(std::vector<GdbIndexChunk> &&C)
-    : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index"), Chunks(std::move(C)) {
-  // A map to identify duplicate symbols.
-  DenseMap<CachedHashStringRef, size_t> Map;
-
-  // Initialize Symbols and CuVectors while deduplicating symbols by name.
-  for (GdbIndexChunk &Chunk : Chunks) {
-    for (GdbIndexChunk::NameTypeEntry &Ent : Chunk.NamesAndTypes) {
-      CachedHashStringRef S = Ent.Name;
-      size_t &Idx = Map[S];
-
-      if (!Idx) {
-        Idx = Symbols.size() + 1;
-        Symbols.push_back({S, static_cast<uint32_t>(StringPoolSize),
-                           static_cast<uint32_t>(Symbols.size())});
-        StringPoolSize += S.size() + 1;
-        CuVectors.push_back({});
-      }
-
-      // gcc 5.4.1 produces a buggy .debug_gnu_pubnames that contains
-      // duplicate entries, so we want to dedup them.
-      std::vector<uint32_t> &Vec = CuVectors[Symbols[Idx - 1].CuVectorIdx];
-      if (Vec.empty() || Vec.back() != Ent.Type)
-        Vec.push_back(Ent.Type);
-    }
-
-    // NamesAndTypes is useless beyond this point, so clear it to save memory.
-    Chunk.NamesAndTypes = {};
-  }
-
-  // Compute offsets early to know the section size.
-  // Each chunk size needs to be in sync with what we write in writeTo.
-  CuTypesOffset = CuListOffset + getCuSize(Chunks) * 16;
-  SymtabOffset = CuTypesOffset + getAddressAreaSize(Chunks) * 20;
-  SymtabSize = getSymtabSize(Symbols.size());
-  ConstantPoolOffset = SymtabOffset + SymtabSize * 8;
-
-  for (ArrayRef<uint32_t> Vec : CuVectors) {
-    CuVectorOffsets.push_back(CuVectorsPoolSize);
-    CuVectorsPoolSize += (Vec.size() + 1) * 4;
-  }
-
-  uint64_t PoolSize = CuVectorsPoolSize + StringPoolSize;
-  TotalSize = ConstantPoolOffset + PoolSize;
-
-  // Length fields in the .gdb_index section are only 4 byte long,
-  // so the section cannot contain very large contents.
-  if (ConstantPoolOffset > UINT32_MAX || PoolSize > UINT32_MAX)
-    error(".gdb_index section too large");
 }
 
 void GdbIndexSection::writeTo(uint8_t *Buf) {
-  // Write the section header.
-  write32le(Buf, 7);
-  write32le(Buf + 4, CuListOffset);
-  write32le(Buf + 8, CuTypesOffset);
-  write32le(Buf + 12, CuTypesOffset);
-  write32le(Buf + 16, SymtabOffset);
-  write32le(Buf + 20, ConstantPoolOffset);
-  Buf += 24;
+  // Write the header.
+  auto *Hdr = reinterpret_cast<GdbIndexHeader *>(Buf);
+  uint8_t *Start = Buf;
+  Hdr->Version = 7;
+  Buf += sizeof(*Hdr);
 
   // Write the CU list.
-  for (GdbIndexChunk &Chunk : Chunks) {
-    for (GdbIndexChunk::CuEntry &Cu : Chunk.CompilationUnits) {
-      write64le(Buf, Chunk.DebugInfoSec->OutSecOff + Cu.CuOffset);
+  Hdr->CuListOff = Buf - Start;
+  for (GdbChunk &Chunk : Chunks) {
+    for (CuEntry &Cu : Chunk.CompilationUnits) {
+      write64le(Buf, Chunk.Sec->OutSecOff + Cu.CuOffset);
       write64le(Buf + 8, Cu.CuLength);
       Buf += 16;
     }
   }
 
   // Write the address area.
-  uint32_t Idx = 0;
-  for (GdbIndexChunk &Chunk : Chunks) {
-    for (GdbIndexChunk::AddressEntry &E : Chunk.AddressAreas) {
+  Hdr->CuTypesOff = Buf - Start;
+  Hdr->AddressAreaOff = Buf - Start;
+  uint32_t CuOff = 0;
+  for (GdbChunk &Chunk : Chunks) {
+    for (AddressEntry &E : Chunk.AddressAreas) {
       uint64_t BaseAddr = E.Section->getVA(0);
       write64le(Buf, BaseAddr + E.LowAddress);
       write64le(Buf + 8, BaseAddr + E.HighAddress);
-      write32le(Buf + 16, E.CuIndex + Idx);
+      write32le(Buf + 16, E.CuIndex + CuOff);
       Buf += 20;
     }
-    Idx += Chunk.CompilationUnits.size();
+    CuOff += Chunk.CompilationUnits.size();
   }
 
   // Write the on-disk open-addressing hash table containing symbols.
+  Hdr->SymtabOff = Buf - Start;
+  size_t SymtabSize = computeSymtabSize();
+  uint32_t Mask = SymtabSize - 1;
+
   for (GdbSymbol &Sym : Symbols) {
-    uint32_t Mask = SymtabSize - 1;
     uint32_t H = Sym.Name.hash();
     uint32_t I = H & Mask;
     uint32_t Step = ((H * 17) & Mask) | 1;
@@ -2475,26 +2479,26 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
     while (read32le(Buf + I * 8))
       I = (I + Step) & Mask;
 
-    uint8_t *P = Buf + I * 8;
-    write32le(P, CuVectorsPoolSize + Sym.OutputOff);
-    write32le(P + 4, CuVectorOffsets[Sym.CuVectorIdx]);
+    write32le(Buf + I * 8, Sym.NameOff);
+    write32le(Buf + I * 8 + 4, Sym.CuVectorOff);
   }
 
   Buf += SymtabSize * 8;
 
+  // Write the string pool.
+  Hdr->ConstantPoolOff = Buf - Start;
+  for (GdbSymbol &Sym : Symbols)
+    memcpy(Buf + Sym.NameOff, Sym.Name.data(), Sym.Name.size());
+
   // Write the CU vectors.
-  for (ArrayRef<uint32_t> Vec : CuVectors) {
-    write32le(Buf, Vec.size());
+  for (GdbSymbol &Sym : Symbols) {
+    write32le(Buf, Sym.CuVector.size());
     Buf += 4;
-    for (uint32_t Val : Vec) {
+    for (uint32_t Val : Sym.CuVector) {
       write32le(Buf, Val);
       Buf += 4;
     }
   }
-
-  // Write the string pool.
-  for (GdbSymbol &Sym : Symbols)
-    memcpy(Buf + Sym.OutputOff, Sym.Name.data(), Sym.Name.size());
 }
 
 bool GdbIndexSection::empty() const { return !Out::DebugInfo; }
@@ -2984,10 +2988,10 @@ StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
 SymbolTableBaseSection *InX::SymTab;
 
-template GdbIndexSection *elf::createGdbIndex<ELF32LE>();
-template GdbIndexSection *elf::createGdbIndex<ELF32BE>();
-template GdbIndexSection *elf::createGdbIndex<ELF64LE>();
-template GdbIndexSection *elf::createGdbIndex<ELF64BE>();
+template GdbIndexSection *GdbIndexSection::create<ELF32LE>();
+template GdbIndexSection *GdbIndexSection::create<ELF32BE>();
+template GdbIndexSection *GdbIndexSection::create<ELF64LE>();
+template GdbIndexSection *GdbIndexSection::create<ELF64BE>();
 
 template void elf::splitSections<ELF32LE>();
 template void elf::splitSections<ELF32BE>();

@@ -308,11 +308,10 @@ struct CodeCompletionBuilder {
         if (Include->second)
           Completion.HeaderInsertion = Includes.insert(Include->first);
       } else
-        log(llvm::formatv(
-            "Failed to generate include insertion edits for adding header "
+        log("Failed to generate include insertion edits for adding header "
             "(FileURI='{0}', IncludeHeader='{1}') into {2}",
             C.IndexResult->CanonicalDeclaration.FileURI,
-            C.IndexResult->Detail->IncludeHeader, FileName));
+            C.IndexResult->Detail->IncludeHeader, FileName);
     }
   }
 
@@ -593,11 +592,10 @@ struct CompletionRecorder : public CodeCompleteConsumer {
     if (NumResults == 0 && !contextAllowsIndex(Context.getKind()))
       return;
     if (CCSema) {
-      log(llvm::formatv(
-          "Multiple code complete callbacks (parser backtracked?). "
+      log("Multiple code complete callbacks (parser backtracked?). "
           "Dropping results from context {0}, keeping results from {1}.",
           getCompletionKindString(Context.getKind()),
-          getCompletionKindString(this->CCContext.getKind())));
+          getCompletionKindString(this->CCContext.getKind()));
       return;
     }
     // Record the completion context.
@@ -798,7 +796,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
                                           &DummyDiagsConsumer, false),
       Input.VFS);
   if (!CI) {
-    log("Couldn't create CompilerInvocation");
+    elog("Couldn't create CompilerInvocation");
     return false;
   }
   auto &FrontendOpts = CI->getFrontendOpts();
@@ -812,8 +810,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   FrontendOpts.CodeCompletionAt.FileName = Input.FileName;
   auto Offset = positionToOffset(Input.Contents, Input.Pos);
   if (!Offset) {
-    log("Code completion position was invalid " +
-        llvm::toString(Offset.takeError()));
+    elog("Code completion position was invalid {0}", Offset.takeError());
     return false;
   }
   std::tie(FrontendOpts.CodeCompletionAt.Line,
@@ -836,7 +833,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
 
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
-    log("BeginSourceFile() failed when running codeComplete for " +
+    log("BeginSourceFile() failed when running codeComplete for {0}",
         Input.FileName);
     return false;
   }
@@ -844,7 +841,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
     Clang->getPreprocessor().addPPCallbacks(
         collectIncludeStructureCallback(Clang->getSourceManager(), Includes));
   if (!Action.Execute()) {
-    log("Execute() failed when running codeComplete for " + Input.FileName);
+    log("Execute() failed when running codeComplete for {0}", Input.FileName);
     return false;
   }
   Action.EndSourceFile();
@@ -965,8 +962,8 @@ public:
                            format::DefaultFallbackStyle, SemaCCInput.Contents,
                            SemaCCInput.VFS.get());
       if (!Style) {
-        log("Failed to get FormatStyle for file" + SemaCCInput.FileName + ": " +
-            llvm::toString(Style.takeError()) + ". Fallback is LLVM style.");
+        log("getStyle() failed for file {0}: {1}. Fallback is LLVM style.",
+            SemaCCInput.FileName, Style.takeError());
         Style = format::getLLVMStyle();
       }
       // If preprocessor was run, inclusions from preprocessor callback should
@@ -1001,10 +998,9 @@ public:
       Inserter.reset(); // Make sure this doesn't out-live Clang.
       SPAN_ATTACH(Tracer, "sema_completion_kind",
                   getCompletionKindString(Recorder->CCContext.getKind()));
-      log(llvm::formatv(
-          "Code complete: sema context {0}, query scopes [{1}]",
+      log("Code complete: sema context {0}, query scopes [{1}]",
           getCompletionKindString(Recorder->CCContext.getKind()),
-          llvm::join(QueryScopes.begin(), QueryScopes.end(), ",")));
+          llvm::join(QueryScopes.begin(), QueryScopes.end(), ","));
     });
 
     Recorder = RecorderOwner.get();
@@ -1016,10 +1012,10 @@ public:
     SPAN_ATTACH(Tracer, "merged_results", NBoth);
     SPAN_ATTACH(Tracer, "returned_results", int64_t(Output.Completions.size()));
     SPAN_ATTACH(Tracer, "incomplete", Output.HasMore);
-    log(llvm::formatv("Code complete: {0} results from Sema, {1} from Index, "
-                      "{2} matched, {3} returned{4}.",
-                      NSema, NIndex, NBoth, Output.Completions.size(),
-                      Output.HasMore ? " (incomplete)" : ""));
+    log("Code complete: {0} results from Sema, {1} from Index, "
+        "{2} matched, {3} returned{4}.",
+        NSema, NIndex, NBoth, Output.Completions.size(),
+        Output.HasMore ? " (incomplete)" : "");
     assert(!Opts.Limit || Output.Completions.size() <= Opts.Limit);
     // We don't assert that isIncomplete means we hit a limit.
     // Indexes may choose to impose their own limits even if we don't have one.
@@ -1068,9 +1064,8 @@ private:
     Req.Scopes = QueryScopes;
     // FIXME: we should send multiple weighted paths here.
     Req.ProximityPaths.push_back(FileName);
-    log(llvm::formatv("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])",
-                      Req.Query,
-                      llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ",")));
+    vlog("Code complete: fuzzyFind(\"{0}\", scopes=[{1}])", Req.Query,
+         llvm::join(Req.Scopes.begin(), Req.Scopes.end(), ","));
     // Run the query against the index.
     if (Opts.Index->fuzzyFind(
             Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); }))
@@ -1178,9 +1173,9 @@ private:
                                ? Scores.Total / Relevance.NameMatch
                                : Scores.Quality;
 
-    LLVM_DEBUG(llvm::dbgs() << "CodeComplete: " << First.Name << " (" << Origin
-                            << ") = " << Scores.Total << "\n"
-                            << Quality << Relevance << "\n");
+    dlog("CodeComplete: {0} ({1}) = {2}\n{3}{4}\n", First.Name,
+         llvm::to_string(Origin), Scores.Total, llvm::to_string(Quality),
+         llvm::to_string(Relevance));
 
     NSema += bool(Origin & SymbolOrigin::AST);
     NIndex += FromIndex;

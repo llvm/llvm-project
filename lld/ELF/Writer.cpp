@@ -370,7 +370,7 @@ template <class ELFT> static void createSyntheticSections() {
   Add(InX::IgotPlt);
 
   if (Config->GdbIndex) {
-    InX::GdbIndex = createGdbIndex<ELFT>();
+    InX::GdbIndex = GdbIndexSection::create<ELFT>();
     Add(InX::GdbIndex);
   }
 
