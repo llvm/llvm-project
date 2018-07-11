@@ -820,8 +820,8 @@ define <2 x double> @test_x86_sse2_cvtss2sd_load_optsize(<2 x double> %a0, <4 x 
 ; X86-AVX1:       ## %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vcvtss2sd (%eax), %xmm1, %xmm1 ## encoding: [0xc5,0xf2,0x5a,0x08]
-; X86-AVX1-NEXT:    vblendps $3, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x03]
-; X86-AVX1-NEXT:    ## xmm0 = xmm1[0,1],xmm0[2,3]
+; X86-AVX1-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x10,0xc1]
+; X86-AVX1-NEXT:    ## xmm0 = xmm1[0],xmm0[1]
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: test_x86_sse2_cvtss2sd_load_optsize:
@@ -842,8 +842,8 @@ define <2 x double> @test_x86_sse2_cvtss2sd_load_optsize(<2 x double> %a0, <4 x 
 ; X64-AVX1-LABEL: test_x86_sse2_cvtss2sd_load_optsize:
 ; X64-AVX1:       ## %bb.0:
 ; X64-AVX1-NEXT:    vcvtss2sd (%rdi), %xmm1, %xmm1 ## encoding: [0xc5,0xf2,0x5a,0x0f]
-; X64-AVX1-NEXT:    vblendps $3, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x03]
-; X64-AVX1-NEXT:    ## xmm0 = xmm1[0,1],xmm0[2,3]
+; X64-AVX1-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x10,0xc1]
+; X64-AVX1-NEXT:    ## xmm0 = xmm1[0],xmm0[1]
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_x86_sse2_cvtss2sd_load_optsize:

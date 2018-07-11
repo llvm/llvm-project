@@ -57,6 +57,11 @@ OPTIONS
 
  Print all records to standard output (default).
 
+.. option:: -dump-json
+
+ Print a JSON representation of all records, suitable for further
+ automated processing.
+
 .. option:: -print-enums
 
  Print enumeration values for a class.

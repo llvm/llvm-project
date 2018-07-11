@@ -251,6 +251,10 @@ absoluteSymbols(SymbolMap Symbols) {
 }
 
 struct SymbolAliasMapEntry {
+  SymbolAliasMapEntry() = default;
+  SymbolAliasMapEntry(SymbolStringPtr Aliasee, JITSymbolFlags AliasFlags)
+      : Aliasee(std::move(Aliasee)), AliasFlags(AliasFlags) {}
+
   SymbolStringPtr Aliasee;
   JITSymbolFlags AliasFlags;
 };
@@ -260,19 +264,27 @@ using SymbolAliasMap = std::map<SymbolStringPtr, SymbolAliasMapEntry>;
 
 /// A materialization unit for symbol aliases. Allows existing symbols to be
 /// aliased with alternate flags.
-class SymbolAliasesMaterializationUnit : public MaterializationUnit {
+class ReExportsMaterializationUnit : public MaterializationUnit {
 public:
-  SymbolAliasesMaterializationUnit(SymbolAliasMap Aliases);
+  /// SourceVSO is allowed to be nullptr, in which case the source VSO is
+  /// taken to be whatever VSO these definitions are materialized in. This
+  /// is useful for defining aliases within a VSO.
+  ///
+  /// Note: Care must be taken that no sets of aliases form a cycle, as such
+  ///       a cycle will result in a deadlock when any symbol in the cycle is
+  ///       resolved.
+  ReExportsMaterializationUnit(VSO *SourceVSO, SymbolAliasMap Aliases);
 
 private:
   void materialize(MaterializationResponsibility R) override;
   void discard(const VSO &V, SymbolStringPtr Name) override;
   static SymbolFlagsMap extractFlags(const SymbolAliasMap &Aliases);
 
+  VSO *SourceVSO = nullptr;
   SymbolAliasMap Aliases;
 };
 
-/// Create a SymbolAliasesMaterializationUnit with the given aliases.
+/// Create a ReExportsMaterializationUnit with the given aliases.
 /// Useful for defining symbol aliases.: E.g., given a VSO V containing symbols
 /// "foo" and "bar", we can define aliases "baz" (for "foo") and "qux" (for
 /// "bar") with:
@@ -284,11 +296,24 @@ private:
 ///       {Qux, { Bar, JITSymbolFlags::Weak }}}))
 ///     return Err;
 /// \endcode
-inline std::unique_ptr<SymbolAliasesMaterializationUnit>
+inline std::unique_ptr<ReExportsMaterializationUnit>
 symbolAliases(SymbolAliasMap Aliases) {
-  return llvm::make_unique<SymbolAliasesMaterializationUnit>(
-      std::move(Aliases));
+  return llvm::make_unique<ReExportsMaterializationUnit>(nullptr,
+                                                         std::move(Aliases));
 }
+
+/// Create a materialization unit for re-exporting symbols from another VSO
+/// with alternative names/flags.
+inline std::unique_ptr<ReExportsMaterializationUnit>
+reexports(VSO &SourceV, SymbolAliasMap Aliases) {
+  return llvm::make_unique<ReExportsMaterializationUnit>(&SourceV,
+                                                         std::move(Aliases));
+}
+
+/// Build a SymbolAliasMap for the common case where you want to re-export
+/// symbols from another VSO with the same linkage/flags.
+Expected<SymbolAliasMap>
+buildSimpleReexportsAliasMap(VSO &SourceV, const SymbolNameSet &Symbols);
 
 /// Base utilities for ExecutionSession.
 class ExecutionSessionBase {

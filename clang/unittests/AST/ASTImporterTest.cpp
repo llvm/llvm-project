@@ -2243,6 +2243,132 @@ TEST_P(ImportExpr, UnresolvedMemberExpr) {
                  compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
 }
 
+TEST_P(ASTImporterTestBase, ImportOfEquivalentRecord) {
+  Decl *ToR1;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { };", Lang_CXX, "input0.cc");
+    auto *FromR = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("A")));
+
+    ToR1 = Import(FromR, Lang_CXX);
+  }
+
+  Decl *ToR2;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { };", Lang_CXX, "input1.cc");
+    auto *FromR = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("A")));
+
+    ToR2 = Import(FromR, Lang_CXX);
+  }
+  
+  EXPECT_EQ(ToR1, ToR2);
+}
+
+TEST_P(ASTImporterTestBase, ImportOfNonEquivalentRecord) {
+  Decl *ToR1;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { int x; };", Lang_CXX, "input0.cc");
+    auto *FromR = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("A")));
+    ToR1 = Import(FromR, Lang_CXX);
+  }
+  Decl *ToR2;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { unsigned x; };", Lang_CXX, "input1.cc");
+    auto *FromR = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("A")));
+    ToR2 = Import(FromR, Lang_CXX);
+  }
+  EXPECT_NE(ToR1, ToR2);
+}
+
+TEST_P(ASTImporterTestBase, ImportOfEquivalentField) {
+  Decl *ToF1;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { int x; };", Lang_CXX, "input0.cc");
+    auto *FromF = FirstDeclMatcher<FieldDecl>().match(
+        FromTU, fieldDecl(hasName("x")));
+    ToF1 = Import(FromF, Lang_CXX);
+  }
+  Decl *ToF2;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { int x; };", Lang_CXX, "input1.cc");
+    auto *FromF = FirstDeclMatcher<FieldDecl>().match(
+        FromTU, fieldDecl(hasName("x")));
+    ToF2 = Import(FromF, Lang_CXX);
+  }
+  EXPECT_EQ(ToF1, ToF2);
+}
+
+TEST_P(ASTImporterTestBase, ImportOfNonEquivalentField) {
+  Decl *ToF1;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { int x; };", Lang_CXX, "input0.cc");
+    auto *FromF = FirstDeclMatcher<FieldDecl>().match(
+        FromTU, fieldDecl(hasName("x")));
+    ToF1 = Import(FromF, Lang_CXX);
+  }
+  Decl *ToF2;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { unsigned x; };", Lang_CXX, "input1.cc");
+    auto *FromF = FirstDeclMatcher<FieldDecl>().match(
+        FromTU, fieldDecl(hasName("x")));
+    ToF2 = Import(FromF, Lang_CXX);
+  }
+  EXPECT_NE(ToF1, ToF2);
+}
+
+TEST_P(ASTImporterTestBase, ImportOfEquivalentMethod) {
+  Decl *ToM1;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { void x(); }; void A::x() { }", Lang_CXX, "input0.cc");
+    auto *FromM = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("x"), isDefinition()));
+    ToM1 = Import(FromM, Lang_CXX);
+  }
+  Decl *ToM2;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { void x(); }; void A::x() { }", Lang_CXX, "input1.cc");
+    auto *FromM = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("x"), isDefinition()));
+    ToM2 = Import(FromM, Lang_CXX);
+  }
+  EXPECT_EQ(ToM1, ToM2);
+}
+
+TEST_P(ASTImporterTestBase, ImportOfNonEquivalentMethod) {
+  Decl *ToM1;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { void x(); }; void A::x() { }",
+        Lang_CXX, "input0.cc");
+    auto *FromM = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("x"), isDefinition()));
+    ToM1 = Import(FromM, Lang_CXX);
+  }
+  Decl *ToM2;
+  {
+    Decl *FromTU = getTuDecl(
+        "struct A { void x() const; }; void A::x() const { }",
+        Lang_CXX, "input1.cc");
+    auto *FromM = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("x"), isDefinition()));
+    ToM2 = Import(FromM, Lang_CXX);
+  }
+  EXPECT_NE(ToM1, ToM2);
+}
+
 struct DeclContextTest : ASTImporterTestBase {};
 
 TEST_P(DeclContextTest, removeDeclOfClassTemplateSpecialization) {

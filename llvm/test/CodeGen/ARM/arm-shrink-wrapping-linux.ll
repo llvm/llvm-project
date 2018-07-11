@@ -19,13 +19,13 @@ target triple = "armv7--linux-gnueabi"
 ; without shrink-wrapping.
 ; DISABLE: push
 ;
-; CHECK: cmp r1, #0
+; CHECK: cmn r1, #1
 ;
 ; With shrink-wrapping, we branch to a pre-header, where the prologue
 ; is located.
-; ENABLE-NEXT: blt [[LOOP_PREHEADER:[.a-zA-Z0-9_]+]]
+; ENABLE-NEXT: ble [[LOOP_PREHEADER:[.a-zA-Z0-9_]+]]
 ; Without shrink-wrapping, we go straight into the loop.
-; DISABLE-NEXT: blt [[LOOP_HEADER:[.a-zA-Z0-9_]+]]
+; DISABLE-NEXT: ble [[LOOP_HEADER:[.a-zA-Z0-9_]+]]
 ;
 ; CHECK: @ %if.end29
 ; DISABLE-NEXT: pop

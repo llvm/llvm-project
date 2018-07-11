@@ -1900,6 +1900,8 @@ public:
   Init *resolve(Init *VarName) override;
 };
 
+void EmitJSON(RecordKeeper &RK, raw_ostream &OS);
+
 } // end namespace llvm
 
 #endif // LLVM_TABLEGEN_RECORD_H

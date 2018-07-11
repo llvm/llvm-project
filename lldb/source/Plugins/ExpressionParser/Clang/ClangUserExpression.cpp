@@ -322,17 +322,8 @@ private:
 };
 } // namespace
 
-bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
-                                ExecutionContext &exe_ctx,
-                                lldb_private::ExecutionPolicy execution_policy,
-                                bool keep_result_in_memory,
-                                bool generate_debug_info) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
-  Status err;
-
-  InstallContext(exe_ctx);
-
+bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_manager,
+                                 ExecutionContext &exe_ctx) {
   if (Target *target = exe_ctx.GetTargetPtr()) {
     if (PersistentExpressionState *persistent_state =
             target->GetPersistentExpressionStateForLanguage(
@@ -349,26 +340,15 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                  "error: couldn't start parsing (no target)");
     return false;
   }
+  return true;
+}
 
-  ScanContext(exe_ctx, err);
-
-  if (!err.Success()) {
-    diagnostic_manager.PutString(eDiagnosticSeverityWarning, err.AsCString());
-  }
-
-  ////////////////////////////////////
-  // Generate the expression
-  //
-
-  ApplyObjcCastHack(m_expr_text);
-
-  std::string prefix = m_expr_prefix;
-
+static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target) {
   if (ClangModulesDeclVendor *decl_vendor =
-          m_target->GetClangModulesDeclVendor()) {
+          target->GetClangModulesDeclVendor()) {
     const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
         llvm::cast<ClangPersistentVariables>(
-            m_target->GetPersistentExpressionStateForLanguage(
+            target->GetPersistentExpressionStateForLanguage(
                 lldb::eLanguageTypeC))
             ->GetHandLoadedClangModules();
     ClangModulesDeclVendor::ModuleVector modules_for_macros;
@@ -377,7 +357,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       modules_for_macros.push_back(module);
     }
 
-    if (m_target->GetEnableAutoImportClangModules()) {
+    if (target->GetEnableAutoImportClangModules()) {
       if (StackFrame *frame = exe_ctx.GetFramePtr()) {
         if (Block *block = frame->GetFrameBlock()) {
           SymbolContext sc;
@@ -394,8 +374,13 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
       }
     }
   }
+}
 
-  lldb::LanguageType lang_type = lldb::eLanguageTypeUnknown;
+llvm::Optional<lldb::LanguageType> ClangUserExpression::GetLanguageForExpr(
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
+  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
+
+  std::string prefix = m_expr_prefix;
 
   if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
     m_transformed_text = m_expr_text;
@@ -415,8 +400,49 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                               exe_ctx)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
-      return false;
+      return llvm::Optional<lldb::LanguageType>();
     }
+  }
+  return lang_type;
+}
+
+bool ClangUserExpression::PrepareForParsing(
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
+  InstallContext(exe_ctx);
+
+  if (!SetupPersistentState(diagnostic_manager, exe_ctx))
+    return false;
+
+  Status err;
+  ScanContext(exe_ctx, err);
+
+  if (!err.Success()) {
+    diagnostic_manager.PutString(eDiagnosticSeverityWarning, err.AsCString());
+  }
+
+  ////////////////////////////////////
+  // Generate the expression
+  //
+
+  ApplyObjcCastHack(m_expr_text);
+
+  SetupDeclVendor(exe_ctx, m_target);
+  return true;
+}
+
+bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
+                                ExecutionContext &exe_ctx,
+                                lldb_private::ExecutionPolicy execution_policy,
+                                bool keep_result_in_memory,
+                                bool generate_debug_info) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  if (!PrepareForParsing(diagnostic_manager, exe_ctx))
+    return false;
+
+  lldb::LanguageType lang_type = lldb::LanguageType::eLanguageTypeUnknown;
+  if (auto new_lang = GetLanguageForExpr(diagnostic_manager, exe_ctx)) {
+    lang_type = new_lang.getValue();
   }
 
   if (log)

@@ -51,6 +51,7 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeWebAssemblyAddMissingPrototypesPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
   initializeLowerGlobalDtorsPass(PR);
   initializeFixFunctionBitcastsPass(PR);
@@ -213,6 +214,9 @@ void WebAssemblyPassConfig::addIRPasses() {
     // control specifically what gets lowered.
     addPass(createAtomicExpandPass());
   }
+
+  // Add signatures to prototype-less function declarations
+  addPass(createWebAssemblyAddMissingPrototypes());
 
   // Lower .llvm.global_dtors into .llvm_global_ctors with __cxa_atexit calls.
   addPass(createWebAssemblyLowerGlobalDtors());

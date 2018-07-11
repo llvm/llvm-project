@@ -152,6 +152,12 @@ namespace opts {
   cl::alias StringDumpShort("p", cl::desc("Alias for --string-dump"),
                             cl::aliasopt(StringDump));
 
+  // -hex-dump
+  cl::list<std::string> HexDump("hex-dump", cl::desc("<number|name>"),
+                                cl::ZeroOrMore);
+  cl::alias HexDumpShort("x", cl::desc("Alias for --hex-dump"),
+                         cl::aliasopt(HexDump));
+
   // -hash-table
   cl::opt<bool> HashTable("hash-table",
     cl::desc("Display ELF hash table"));
@@ -430,6 +436,10 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
   if (!opts::StringDump.empty())
     llvm::for_each(opts::StringDump, [&Dumper](StringRef SectionName) {
       Dumper->printSectionAsString(SectionName);
+    });
+  if (!opts::HexDump.empty())
+    llvm::for_each(opts::HexDump, [&Dumper](StringRef SectionName) {
+      Dumper->printSectionAsHex(SectionName);
     });
   if (opts::HashTable)
     Dumper->printHashTable();

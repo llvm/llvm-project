@@ -965,6 +965,8 @@ public:
   std::error_code getDataDirectory(uint32_t index,
                                    const data_directory *&Res) const;
   std::error_code getSection(int32_t index, const coff_section *&Res) const;
+  std::error_code getSection(StringRef SectionName,
+                             const coff_section *&Res) const;
 
   template <typename coff_symbol_type>
   std::error_code getSymbol(uint32_t Index,

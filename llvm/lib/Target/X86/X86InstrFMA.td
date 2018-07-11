@@ -589,7 +589,6 @@ multiclass scalar_fma4_patterns<SDNode Op, string Name,
                                ValueType VT, ValueType EltVT,
                                RegisterClass RC, PatFrag mem_frag> {
   let Predicates = [HasFMA4] in {
-    let AddedComplexity = 15 in
     def : Pat<(VT (X86vzmovl (VT (scalar_to_vector
                                   (Op RC:$src1, RC:$src2, RC:$src3))))),
               (!cast<Instruction>(Name#"rr_Int")

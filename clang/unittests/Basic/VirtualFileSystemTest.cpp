@@ -794,7 +794,7 @@ TEST_F(InMemoryFileSystemTest, WorkingDirectory) {
 
   auto Stat = FS.status("/b/c");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
-  ASSERT_EQ("c", Stat->getName());
+  ASSERT_EQ("/b/c", Stat->getName());
   ASSERT_EQ("/b", *FS.getCurrentWorkingDirectory());
 
   Stat = FS.status("c");
@@ -917,6 +917,37 @@ TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
   Stat = FS.status("/a/b");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isRegularFile());
+}
+
+// Test that the name returned by status() is in the same form as the path that
+// was requested (to match the behavior of RealFileSystem).
+TEST_F(InMemoryFileSystemTest, StatusName) {
+  NormalizedFS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"),
+                       /*User=*/None,
+                       /*Group=*/None, sys::fs::file_type::regular_file);
+  NormalizedFS.setCurrentWorkingDirectory("/a/b");
+
+  // Access using InMemoryFileSystem::status.
+  auto Stat = NormalizedFS.status("../b/c");
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n"
+                                << NormalizedFS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+  ASSERT_EQ("../b/c", Stat->getName());
+
+  // Access using InMemoryFileAdaptor::status.
+  auto File = NormalizedFS.openFileForRead("../b/c");
+  ASSERT_FALSE(File.getError()) << File.getError() << "\n"
+                                << NormalizedFS.toString();
+  Stat = (*File)->status();
+  ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n"
+                                << NormalizedFS.toString();
+  ASSERT_TRUE(Stat->isRegularFile());
+  ASSERT_EQ("../b/c", Stat->getName());
+
+  // Access using a directory iterator.
+  std::error_code EC;
+  clang::vfs::directory_iterator It = NormalizedFS.dir_begin("../b", EC);
+  ASSERT_EQ("../b/c", It->getName());
 }
 
 // NOTE: in the tests below, we use '//root/' as our root directory, since it is

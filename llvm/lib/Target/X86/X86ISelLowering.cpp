@@ -33452,6 +33452,36 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Handle (CMOV (ADD (CTTZ X), C), C-1, (X != 0)) ->
+  // (ADD (CMOV (CTTZ X), -1, (X != 0)), C) or
+  // (CMOV C-1, (ADD (CTTZ X), C), (X == 0)) ->
+  // (ADD (CMOV C-1, (CTTZ X), (X == 0)), C)
+  if (CC == X86::COND_NE || CC == X86::COND_E) {
+    auto *Cnst = CC == X86::COND_E ? dyn_cast<ConstantSDNode>(TrueOp)
+                                   : dyn_cast<ConstantSDNode>(FalseOp);
+    SDValue Add = CC == X86::COND_E ? FalseOp : TrueOp;
+
+    if (Cnst && Add.getOpcode() == ISD::ADD && Add.hasOneUse()) {
+      auto *AddOp1 = dyn_cast<ConstantSDNode>(Add.getOperand(1));
+      SDValue AddOp2 = Add.getOperand(0);
+      if (AddOp1 && (AddOp2.getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
+                     AddOp2.getOpcode() == ISD::CTTZ)) {
+        APInt Diff = Cnst->getAPIntValue() - AddOp1->getAPIntValue();
+        if (CC == X86::COND_NE) {
+          Add = DAG.getNode(X86ISD::CMOV, DL, Add.getValueType(), AddOp2,
+                            DAG.getConstant(Diff, DL, Add.getValueType()),
+                            DAG.getConstant(CC, DL, MVT::i8), Cond);
+        } else {
+          Add = DAG.getNode(X86ISD::CMOV, DL, Add.getValueType(),
+                            DAG.getConstant(Diff, DL, Add.getValueType()),
+                            AddOp2, DAG.getConstant(CC, DL, MVT::i8), Cond);
+        }
+        return DAG.getNode(X86ISD::ADD, DL, Add.getValueType(), Add,
+                           SDValue(AddOp1, 0));
+      }
+    }
+  }
+
   return SDValue();
 }
 

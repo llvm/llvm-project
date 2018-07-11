@@ -57,7 +57,7 @@ using namespace lldb_private;
 
 FreeBSDThread::FreeBSDThread(Process &process, lldb::tid_t tid)
     : Thread(process, tid), m_frame_ap(), m_breakpoint(),
-      m_thread_name_valid(false), m_thread_name(), m_posix_thread(NULL) {
+      m_thread_name_valid(false), m_thread_name(), m_posix_thread(nullptr) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
   LLDB_LOGV(log, "tid = {0}", tid);
 
@@ -106,7 +106,7 @@ void FreeBSDThread::RefreshStateAfterStop() {
   }
 }
 
-const char *FreeBSDThread::GetInfo() { return NULL; }
+const char *FreeBSDThread::GetInfo() { return nullptr; }
 
 void FreeBSDThread::SetName(const char *name) {
   m_thread_name_valid = (name && name[0]);
@@ -157,15 +157,15 @@ const char *FreeBSDThread::GetName() {
   }
 
   if (m_thread_name.empty())
-    return NULL;
+    return nullptr;
   return m_thread_name.c_str();
 }
 
 lldb::RegisterContextSP FreeBSDThread::GetRegisterContext() {
   if (!m_reg_context_sp) {
-    m_posix_thread = NULL;
+    m_posix_thread = nullptr;
 
-    RegisterInfoInterface *reg_interface = NULL;
+    RegisterInfoInterface *reg_interface = nullptr;
     const ArchSpec &target_arch = GetProcess()->GetTarget().GetArchitecture();
 
     assert(target_arch.GetTriple().getOS() == llvm::Triple::FreeBSD);
@@ -281,7 +281,7 @@ bool FreeBSDThread::CalculateStopInfo() {
 }
 
 Unwind *FreeBSDThread::GetUnwinder() {
-  if (m_unwinder_ap.get() == NULL)
+  if (!m_unwinder_ap)
     m_unwinder_ap.reset(new UnwindLLDB(*this));
 
   return m_unwinder_ap.get();
@@ -480,7 +480,7 @@ void FreeBSDThread::BreakNotify(const ProcessMessage &message) {
     // make any assumptions about the thread ID so we must always report the
     // breakpoint regardless of the thread.
     if (bp_site->ValidForThisThread(this) ||
-        GetProcess()->GetOperatingSystem() != NULL)
+        GetProcess()->GetOperatingSystem() != nullptr)
       SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(*this, bp_id));
     else {
       const bool should_stop = false;
@@ -544,7 +544,7 @@ void FreeBSDThread::TraceNotify(const ProcessMessage &message) {
   // assumptions about the thread ID so we must always report the breakpoint
   // regardless of the thread.
   if (bp_site && (bp_site->ValidForThisThread(this) ||
-                  GetProcess()->GetOperatingSystem() != NULL))
+                  GetProcess()->GetOperatingSystem() != nullptr))
     SetStopInfo(StopInfo::CreateStopReasonWithBreakpointSiteID(
         *this, bp_site->GetID()));
   else {

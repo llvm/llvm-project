@@ -273,11 +273,9 @@ def MMX_MOVNTQmr  : MMXI<0xE7, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
                          Sched<[SchedWriteVecMoveLSNT.MMX.MR]>;
 
 let Predicates = [HasMMX] in {
-  let AddedComplexity = 15 in
   // movd to MMX register zero-extends
   def : Pat<(x86mmx (X86vzmovl (x86mmx (scalar_to_vector GR32:$src)))),
             (MMX_MOVD64rr GR32:$src)>;
-  let AddedComplexity = 20 in
   def : Pat<(x86mmx (X86vzmovl (x86mmx (scalar_to_vector (loadi32 addr:$src))))),
             (MMX_MOVD64rm addr:$src)>;
 }
