@@ -230,6 +230,7 @@ namespace clang {
     bool IsStructuralMatch(EnumConstantDecl *FromEC, EnumConstantDecl *ToEC);
     bool IsStructuralMatch(FunctionTemplateDecl *From,
                            FunctionTemplateDecl *To);
+    bool IsStructuralMatch(FunctionDecl *From, FunctionDecl *To);
     bool IsStructuralMatch(ClassTemplateDecl *From, ClassTemplateDecl *To);
     bool IsStructuralMatch(VarTemplateDecl *From, VarTemplateDecl *To);
     Decl *VisitDecl(Decl *D);
@@ -1525,6 +1526,13 @@ bool ASTNodeImporter::IsStructuralMatch(FunctionTemplateDecl *From,
   return Ctx.IsStructurallyEquivalent(From, To);
 }
 
+bool ASTNodeImporter::IsStructuralMatch(FunctionDecl *From, FunctionDecl *To) {
+  StructuralEquivalenceContext Ctx(
+      Importer.getFromContext(), Importer.getToContext(),
+      Importer.getNonEquivalentDecls(), false, false);
+  return Ctx.IsStructurallyEquivalent(From, To);
+}
+
 bool ASTNodeImporter::IsStructuralMatch(EnumConstantDecl *FromEC,
                                         EnumConstantDecl *ToEC) {
   const llvm::APSInt &FromVal = FromEC->getInitVal();
@@ -2433,13 +2441,15 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
       if (auto *FoundFunction = dyn_cast<FunctionDecl>(FoundDecl)) {
         if (FoundFunction->hasExternalFormalLinkage() &&
             D->hasExternalFormalLinkage()) {
-          if (Importer.IsStructurallyEquivalent(D->getType(), 
-                                                FoundFunction->getType())) {
-              if (D->doesThisDeclarationHaveABody() &&
-                  FoundFunction->hasBody())
-                return Importer.Imported(D, FoundFunction);
-              FoundByLookup = FoundFunction;
-              break;
+          if (IsStructuralMatch(D, FoundFunction)) {
+            const FunctionDecl *Definition = nullptr;
+            if (D->doesThisDeclarationHaveABody() &&
+                FoundFunction->hasBody(Definition)) {
+              return Importer.Imported(
+                  D, const_cast<FunctionDecl *>(Definition));
+            }
+            FoundByLookup = FoundFunction;
+            break;
           }
 
           // FIXME: Check for overloading more carefully, e.g., by boosting

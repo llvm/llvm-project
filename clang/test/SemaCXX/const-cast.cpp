@@ -58,8 +58,14 @@ short *bad_const_cast_test(char const *volatile *const volatile *var)
   // Non-pointer.
   char v = const_cast<char>(**var2); // expected-error {{const_cast to 'char', which is not a reference, pointer-to-object, or pointer-to-data-member}}
   const int *ar[100] = {0};
-  // Not even lenient g++ accepts this.
-  int *(*rar)[100] = const_cast<int *(*)[100]>(&ar); // expected-error {{const_cast from 'const int *(*)[100]' to 'int *(*)[100]' is not allowed}}
+  extern const int *aub[];
+  // const_cast looks through arrays as of DR330.
+  (void) const_cast<int *(*)[100]>(&ar); // ok
+  (void) const_cast<int *(*)[]>(&aub); // ok
+  // ... but the array bound must exactly match.
+  (void) const_cast<int *(*)[]>(&ar); // expected-error {{const_cast from 'const int *(*)[100]' to 'int *(*)[]' is not allowed}}
+  (void) const_cast<int *(*)[99]>(&ar); // expected-error {{const_cast from 'const int *(*)[100]' to 'int *(*)[99]' is not allowed}}
+  (void) const_cast<int *(*)[100]>(&aub); // expected-error {{const_cast from 'const int *(*)[]' to 'int *(*)[100]' is not allowed}}
   f fp1 = 0;
   // Function pointers.
   f fp2 = const_cast<f>(fp1); // expected-error {{const_cast to 'f' (aka 'int (*)(int)'), which is not a reference, pointer-to-object, or pointer-to-data-member}}

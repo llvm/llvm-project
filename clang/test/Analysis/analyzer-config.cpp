@@ -40,7 +40,6 @@ public:
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
 // CHECK-NEXT: ipa-always-inline-size = 3
-// CHECK-NEXT: leak-diagnostics-reference-allocation = false
 // CHECK-NEXT: max-inlinable-size = 100
 // CHECK-NEXT: max-nodes = 225000
 // CHECK-NEXT: max-times-inline-large = 32
@@ -51,4 +50,4 @@ public:
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 31
+// CHECK-NEXT: num-entries = 30

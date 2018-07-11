@@ -294,6 +294,9 @@ private:
   /// \sa getGraphTrimInterval
   Optional<unsigned> GraphTrimInterval;
 
+  /// \sa getMaxSymbolComplexity
+  Optional<unsigned> MaxSymbolComplexity;
+
   /// \sa getMaxTimesInlineLarge
   Optional<unsigned> MaxTimesInlineLarge;
 
@@ -642,6 +645,11 @@ public:
   /// This is controlled by the 'graph-trim-interval' config option. To disable
   /// node reclamation, set the option to "0".
   unsigned getGraphTrimInterval();
+
+  /// Returns the maximum complexity of symbolic constraint (50 by default).
+  ///
+  /// This is controlled by "-analyzer-config max-symbol-complexity" option.
+  unsigned getMaxSymbolComplexity();
 
   /// Returns the maximum times a large function could be inlined.
   ///

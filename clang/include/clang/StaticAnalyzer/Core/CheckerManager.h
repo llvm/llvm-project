@@ -144,31 +144,18 @@ public:
 //===----------------------------------------------------------------------===//
 
   /// Used to register checkers.
+  /// All arguments are automatically passed through to the checker
+  /// constructor.
   ///
   /// \returns a pointer to the checker object.
-  template <typename CHECKER>
-  CHECKER *registerChecker() {
+  template <typename CHECKER, typename... AT>
+  CHECKER *registerChecker(AT... Args) {
     CheckerTag tag = getTag<CHECKER>();
     CheckerRef &ref = CheckerTags[tag];
     if (ref)
       return static_cast<CHECKER *>(ref); // already registered.
 
-    CHECKER *checker = new CHECKER();
-    checker->Name = CurrentCheckName;
-    CheckerDtors.push_back(CheckerDtor(checker, destruct<CHECKER>));
-    CHECKER::_register(checker, *this);
-    ref = checker;
-    return checker;
-  }
-
-  template <typename CHECKER>
-  CHECKER *registerChecker(AnalyzerOptions &AOpts) {
-    CheckerTag tag = getTag<CHECKER>();
-    CheckerRef &ref = CheckerTags[tag];
-    if (ref)
-      return static_cast<CHECKER *>(ref); // already registered.
-
-    CHECKER *checker = new CHECKER(AOpts);
+    CHECKER *checker = new CHECKER(Args...);
     checker->Name = CurrentCheckName;
     CheckerDtors.push_back(CheckerDtor(checker, destruct<CHECKER>));
     CHECKER::_register(checker, *this);

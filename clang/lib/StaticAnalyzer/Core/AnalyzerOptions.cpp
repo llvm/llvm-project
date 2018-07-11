@@ -388,6 +388,12 @@ unsigned AnalyzerOptions::getGraphTrimInterval() {
   return GraphTrimInterval.getValue();
 }
 
+unsigned AnalyzerOptions::getMaxSymbolComplexity() {
+  if (!MaxSymbolComplexity.hasValue())
+    MaxSymbolComplexity = getOptionAsInteger("max-symbol-complexity", 10000);
+  return MaxSymbolComplexity.getValue();
+}
+
 unsigned AnalyzerOptions::getMaxTimesInlineLarge() {
   if (!MaxTimesInlineLarge.hasValue())
     MaxTimesInlineLarge = getOptionAsInteger("max-times-inline-large", 32);
