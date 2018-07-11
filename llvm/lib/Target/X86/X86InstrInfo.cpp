@@ -1547,9 +1547,29 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   }
   case X86::BLENDPDrri:
   case X86::BLENDPSrri:
-  case X86::PBLENDWrri:
   case X86::VBLENDPDrri:
   case X86::VBLENDPSrri:
+    // If we're optimizing for size, try to use MOVSD/MOVSS.
+    if (MI.getParent()->getParent()->getFunction().optForSize()) {
+      unsigned Mask, Opc;
+      switch (MI.getOpcode()) {
+      default: llvm_unreachable("Unreachable!");
+      case X86::BLENDPDrri:  Opc = X86::MOVSDrr;  Mask = 0x03; break;
+      case X86::BLENDPSrri:  Opc = X86::MOVSSrr;  Mask = 0x0F; break;
+      case X86::VBLENDPDrri: Opc = X86::VMOVSDrr; Mask = 0x03; break;
+      case X86::VBLENDPSrri: Opc = X86::VMOVSSrr; Mask = 0x0F; break;
+      }
+      if ((MI.getOperand(3).getImm() ^ Mask) == 1) {
+        auto &WorkingMI = cloneIfNew(MI);
+        WorkingMI.setDesc(get(Opc));
+        WorkingMI.RemoveOperand(3);
+        return TargetInstrInfo::commuteInstructionImpl(WorkingMI,
+                                                       /*NewMI=*/false,
+                                                       OpIdx1, OpIdx2);
+      }
+    }
+    LLVM_FALLTHROUGH;
+  case X86::PBLENDWrri:
   case X86::VBLENDPDYrri:
   case X86::VBLENDPSYrri:
   case X86::VPBLENDDrri:
@@ -3571,6 +3591,13 @@ static X86::CondCode isUseDefConvertible(MachineInstr &MI) {
   case X86::TZCNT32rr: case X86::TZCNT32rm:
   case X86::TZCNT64rr: case X86::TZCNT64rm:
     return X86::COND_B;
+  case X86::BSF16rr:
+  case X86::BSF16rm:
+  case X86::BSF32rr:
+  case X86::BSF32rm:
+  case X86::BSF64rr:
+  case X86::BSF64rm:
+    return X86::COND_E;
   }
 }
 

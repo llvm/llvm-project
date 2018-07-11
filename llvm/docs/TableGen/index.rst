@@ -76,11 +76,14 @@ example, to get a list of all of the definitions that subclass a particular type
   ADD16rr, ADD32mi, ADD32mi8, ADD32mr, ADD32ri, ADD32ri8, ADD32rm, ADD32rr,
   ADD64mi32, ADD64mi8, ADD64mr, ADD64ri32, ...
 
-The default backend prints out all of the records.
+The default backend prints out all of the records. There is also a general
+backend which outputs all the records as a JSON data structure, enabled using
+the `-dump-json` option.
 
 If you plan to use TableGen, you will most likely have to write a `backend`_
 that extracts the information specific to what you need and formats it in the
-appropriate way.
+appropriate way. You can do this by extending TableGen itself in C++, or by
+writing a script in any language that can consume the JSON output.
 
 Example
 -------

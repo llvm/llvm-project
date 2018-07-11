@@ -195,7 +195,6 @@ class MipsAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseImm(OperandVector &Operands);
   OperandMatchResultTy parseJumpTarget(OperandVector &Operands);
   OperandMatchResultTy parseInvNum(OperandVector &Operands);
-  OperandMatchResultTy parseRegisterPair(OperandVector &Operands);
   OperandMatchResultTy parseMovePRegPair(OperandVector &Operands);
   OperandMatchResultTy parseRegisterList(OperandVector &Operands);
 
@@ -1436,10 +1435,6 @@ public:
   StringRef getToken() const {
     assert(Kind == k_Token && "Invalid access!");
     return StringRef(Tok.Data, Tok.Length);
-  }
-
-  bool isRegPair() const {
-    return Kind == k_RegPair && RegIdx.Index <= 30;
   }
 
   unsigned getReg() const override {
@@ -6278,22 +6273,6 @@ MipsAsmParser::parseRegisterList(OperandVector &Operands) {
   SMLoc E = Parser.getTok().getLoc();
   Operands.push_back(MipsOperand::CreateRegList(Regs, S, E, *this));
   parseMemOperand(Operands);
-  return MatchOperand_Success;
-}
-
-OperandMatchResultTy
-MipsAsmParser::parseRegisterPair(OperandVector &Operands) {
-  MCAsmParser &Parser = getParser();
-
-  SMLoc S = Parser.getTok().getLoc();
-  if (parseAnyRegister(Operands) != MatchOperand_Success)
-    return MatchOperand_ParseFail;
-
-  SMLoc E = Parser.getTok().getLoc();
-  MipsOperand Op = static_cast<MipsOperand &>(*Operands.back());
-
-  Operands.pop_back();
-  Operands.push_back(MipsOperand::CreateRegPair(Op, S, E, *this));
   return MatchOperand_Success;
 }
 

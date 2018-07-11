@@ -580,6 +580,7 @@ function(llvm_add_library name)
 
   if(ARG_SHARED OR ARG_MODULE)
     llvm_externalize_debuginfo(${name})
+    llvm_codesign(${name})
   endif()
 endfunction()
 
@@ -784,6 +785,8 @@ macro(add_llvm_executable name)
     # API for all shared libaries loaded by this executable.
     target_link_libraries(${name} PRIVATE ${LLVM_PTHREAD_LIB})
   endif()
+
+  llvm_codesign(${name})
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
@@ -1587,6 +1590,32 @@ function(llvm_externalize_debuginfo name)
       ${strip_command} -R .gnu_debuglink
       COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:${name}>.debug $<TARGET_FILE:${name}>
       )
+  endif()
+endfunction()
+
+function(llvm_codesign name)
+  if(NOT LLVM_CODESIGNING_IDENTITY)
+    return()
+  endif()
+
+  if(APPLE)
+    if(NOT CMAKE_CODESIGN)
+      set(CMAKE_CODESIGN xcrun codesign)
+    endif()
+    if(NOT CMAKE_CODESIGN_ALLOCATE)
+      execute_process(
+        COMMAND xcrun -f codesign_allocate
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE CMAKE_CODESIGN_ALLOCATE
+      )
+    endif()
+    add_custom_command(
+      TARGET ${name} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E
+              env CODESIGN_ALLOCATE=${CMAKE_CODESIGN_ALLOCATE}
+              ${CMAKE_CODESIGN} -s ${LLVM_CODESIGNING_IDENTITY}
+              $<TARGET_FILE:${name}>
+    )
   endif()
 endfunction()
 

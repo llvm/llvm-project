@@ -41,6 +41,7 @@ protected:
 
 public:
   static bool EnableLateStructurizeCFG;
+  static bool EnableFunctionCalls;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, TargetOptions Options,

@@ -27,6 +27,68 @@ define <4 x i32> @combine_vec_urem_by_one(<4 x i32> %x) {
   ret <4 x i32> %1
 }
 
+; fold (urem x, -1) -> select((icmp eq x, -1), 0, x)
+define i32 @combine_urem_by_negone(i32 %x) {
+; CHECK-LABEL: combine_urem_by_negone:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $-1, %edi
+; CHECK-NEXT:    cmovnel %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = urem i32 %x, -1
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_urem_by_negone(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_urem_by_negone:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE-NEXT:    pandn %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_urem_by_negone:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpandn %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %1 = urem <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i32> %1
+}
+
+; fold (urem x, INT_MIN) -> (and x, ~INT_MIN)
+define i32 @combine_urem_by_minsigned(i32 %x) {
+; CHECK-LABEL: combine_urem_by_minsigned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $2147483647, %edi # imm = 0x7FFFFFFF
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = urem i32 %x, -2147483648
+  ret i32 %1
+}
+
+define <4 x i32> @combine_vec_urem_by_minsigned(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_urem_by_minsigned:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_vec_urem_by_minsigned:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_vec_urem_by_minsigned:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %1 = urem <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  ret <4 x i32> %1
+}
+
 ; TODO fold (urem x, x) -> 0
 define i32 @combine_urem_dupe(i32 %x) {
 ; CHECK-LABEL: combine_urem_dupe:

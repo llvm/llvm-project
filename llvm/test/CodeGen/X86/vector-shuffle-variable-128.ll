@@ -73,17 +73,17 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 ; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    andl $3, %edi
-; SSE2-NEXT:    andl $3, %esi
-; SSE2-NEXT:    andl $3, %edx
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    andl $3, %ecx
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    andl $3, %esi
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    andl $3, %edx
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    andl $3, %ecx
+; SSE2-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: var_shuffle_v4f32_v4f32_xxxx_i32:
@@ -93,17 +93,17 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 ; SSSE3-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSSE3-NEXT:    andl $3, %edi
-; SSSE3-NEXT:    andl $3, %esi
-; SSSE3-NEXT:    andl $3, %edx
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    andl $3, %ecx
 ; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    andl $3, %esi
 ; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSSE3-NEXT:    andl $3, %edx
 ; SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSSE3-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    andl $3, %ecx
+; SSSE3-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shuffle_v4f32_v4f32_xxxx_i32:
@@ -113,11 +113,11 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 ; SSE41-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    andl $3, %edi
+; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    andl $3, %esi
 ; SSE41-NEXT:    andl $3, %edx
-; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $3, %ecx
-; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
@@ -130,11 +130,11 @@ define <4 x float> @var_shuffle_v4f32_v4f32_xxxx_i32(<4 x float> %x, i32 %i0, i3
 ; AVX-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX-NEXT:    andl $3, %edi
+; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    andl $3, %esi
 ; AVX-NEXT:    andl $3, %edx
-; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $3, %ecx
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
@@ -1222,10 +1222,10 @@ define <4 x float> @var_shuffle_v4f32_v4f32_x0yx_i32(<4 x float> %x, <4 x float>
 ; SSE-NEXT:    andl $3, %edi
 ; SSE-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $3, %edx
+; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    andl $3, %ecx
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -1239,10 +1239,10 @@ define <4 x float> @var_shuffle_v4f32_v4f32_x0yx_i32(<4 x float> %x, <4 x float>
 ; AVX-NEXT:    andl $3, %edi
 ; AVX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $3, %edx
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    andl $3, %ecx
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]

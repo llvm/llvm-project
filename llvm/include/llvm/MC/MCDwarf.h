@@ -301,6 +301,8 @@ public:
                                FileNumber));
   }
 
+  void RemapDwarfDirs(MCContext &Context);
+
   void setRootFile(StringRef Directory, StringRef FileName,
                    MD5::MD5Result *Checksum, Optional<StringRef> Source) {
     Header.CompilationDir = Directory;

@@ -298,7 +298,9 @@ namespace {
     SDValue visitMUL(SDNode *N);
     SDValue useDivRem(SDNode *N);
     SDValue visitSDIV(SDNode *N);
+    SDValue visitSDIVLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitUDIV(SDNode *N);
+    SDValue visitUDIVLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitREM(SDNode *N);
     SDValue visitMULHU(SDNode *N);
     SDValue visitMULHS(SDNode *N);
@@ -3010,7 +3012,6 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   EVT CCVT = getSetCCResultType(VT);
-  unsigned BitWidth = VT.getScalarSizeInBits();
 
   // fold vector ops
   if (VT.isVector())
@@ -3046,6 +3047,28 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   // udiv instead.  Handles (X&15) /s 4 -> X&15 >> 2
   if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
     return DAG.getNode(ISD::UDIV, DL, N1.getValueType(), N0, N1);
+
+  if (SDValue V = visitSDIVLike(N0, N1, N))
+    return V;
+
+  // sdiv, srem -> sdivrem
+  // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
+  // true.  Otherwise, we break the simplification logic in visitREM().
+  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
+    if (SDValue DivRem = useDivRem(N))
+        return DivRem;
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT CCVT = getSetCCResultType(VT);
+  unsigned BitWidth = VT.getScalarSizeInBits();
+
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // Helper for determining whether a value is a power-2 constant scalar or a
   // vector of such elements.
@@ -3119,13 +3142,6 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     if (SDValue Op = BuildSDIV(N))
       return Op;
 
-  // sdiv, srem -> sdivrem
-  // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
-  // true.  Otherwise, we break the simplification logic in visitREM().
-  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
-    if (SDValue DivRem = useDivRem(N))
-        return DivRem;
-
   return SDValue();
 }
 
@@ -3133,6 +3149,7 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  EVT CCVT = getSetCCResultType(VT);
 
   // fold vector ops
   if (VT.isVector())
@@ -3148,12 +3165,40 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     if (SDValue Folded = DAG.FoldConstantArithmetic(ISD::UDIV, DL, VT,
                                                     N0C, N1C))
       return Folded;
+  // fold (udiv X, 1) -> X
+  if (N1C && N1C->isOne())
+    return N0;
+  // fold (udiv X, -1) -> select(X == -1, 1, 0)
+  if (N1C && N1C->getAPIntValue().isAllOnesValue())
+    return DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, N0, N1, ISD::SETEQ),
+                         DAG.getConstant(1, DL, VT),
+                         DAG.getConstant(0, DL, VT));
 
   if (SDValue V = simplifyDivRem(N, DAG))
     return V;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
+
+  if (SDValue V = visitUDIVLike(N0, N1, N))
+    return V;
+
+  // sdiv, srem -> sdivrem
+  // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
+  // true.  Otherwise, we break the simplification logic in visitREM().
+  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
+    if (SDValue DivRem = useDivRem(N))
+        return DivRem;
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitUDIVLike(SDValue N0, SDValue N1, SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
 
   // fold (udiv x, (1 << c)) -> x >>u c
   if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
@@ -3190,13 +3235,6 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     if (SDValue Op = BuildUDIV(N))
       return Op;
 
-  // sdiv, srem -> sdivrem
-  // If the divisor is constant, then return DIVREM only if isIntDivCheap() is
-  // true.  Otherwise, we break the simplification logic in visitREM().
-  if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
-    if (SDValue DivRem = useDivRem(N))
-        return DivRem;
-
   return SDValue();
 }
 
@@ -3206,6 +3244,8 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  EVT CCVT = getSetCCResultType(VT);
+
   bool isSigned = (Opcode == ISD::SREM);
   SDLoc DL(N);
 
@@ -3215,6 +3255,10 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   if (N0C && N1C)
     if (SDValue Folded = DAG.FoldConstantArithmetic(Opcode, DL, VT, N0C, N1C))
       return Folded;
+  // fold (urem X, -1) -> select(X == -1, 0, x)
+  if (!isSigned && N1C && N1C->getAPIntValue().isAllOnesValue())
+    return DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, N0, N1, ISD::SETEQ),
+                         DAG.getConstant(0, DL, VT), N0);
 
   if (SDValue V = simplifyDivRem(N, DAG))
     return V;
@@ -3248,22 +3292,22 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
 
   // If X/C can be simplified by the division-by-constant logic, lower
   // X%C to the equivalent of X-X/C*C.
-  // To avoid mangling nodes, this simplification requires that the combine()
-  // call for the speculative DIV must not cause a DIVREM conversion.  We guard
-  // against this by skipping the simplification if isIntDivCheap().  When
-  // div is not cheap, combine will not return a DIVREM.  Regardless,
-  // checking cheapness here makes sense since the simplification results in
-  // fatter code.
-  if (N1C && !N1C->isNullValue() && !TLI.isIntDivCheap(VT, Attr)) {
-    unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
-    SDValue Div = DAG.getNode(DivOpcode, DL, VT, N0, N1);
-    AddToWorklist(Div.getNode());
-    SDValue OptimizedDiv = combine(Div.getNode());
-    if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != Div.getNode() &&
-        OptimizedDiv.getOpcode() != ISD::UDIVREM &&
+  // Reuse the SDIVLike/UDIVLike combines - to avoid mangling nodes, the
+  // speculative DIV must not cause a DIVREM conversion.  We guard against this
+  // by skipping the simplification if isIntDivCheap().  When div is not cheap,
+  // combine will not return a DIVREM.  Regardless, checking cheapness here
+  // makes sense since the simplification results in fatter code.
+  // TODO: replace matchUnaryPredicate with SelectionDAG::isKnownNeverZero(N1).
+  if (ISD::matchUnaryPredicate(
+          N1, [](ConstantSDNode *C) { return !C->isNullValue(); }) &&
+      !TLI.isIntDivCheap(VT, Attr)) {
+    SDValue OptimizedDiv =
+        isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
+    if (OptimizedDiv.getNode() && OptimizedDiv.getOpcode() != ISD::UDIVREM &&
         OptimizedDiv.getOpcode() != ISD::SDIVREM) {
       SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, OptimizedDiv, N1);
       SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
+      AddToWorklist(OptimizedDiv.getNode());
       AddToWorklist(Mul.getNode());
       return Sub;
     }

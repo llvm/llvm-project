@@ -242,3 +242,51 @@ cleanup:                                          ; preds = %for.body7, %if.then
 unreachable:                                      ; preds = %cleanup
   unreachable
 }
+
+; Test that the PHI node in cleanup17 is removed as the switch default block is
+; not reachable.
+define void @test4() {
+; CHECK-LABEL: @test4
+entry:
+  switch i32 undef, label %cleanup17 [
+    i32 0, label %return
+    i32 9, label %return
+  ]
+
+cleanup17:
+; CHECK: cleanup17:
+; CHECK-NOT: phi i16 [ undef, %entry ]
+; CHECK: return:
+
+  %retval.4 = phi i16 [ undef, %entry ]
+  unreachable
+
+return:
+  ret void
+}
+
+; Test that the PHI node in for.inc is updated correctly as the switch is
+; replaced with a single branch to for.inc
+define void @test5() {
+; CHECK-LABEL: @test5
+entry:
+  br i1 undef, label %cleanup10, label %cleanup10.thread
+
+cleanup10.thread:
+  br label %for.inc
+
+cleanup10:
+  switch i32 undef, label %unreachable [
+    i32 0, label %for.inc
+    i32 4, label %for.inc
+  ]
+
+for.inc:
+; CHECK: for.inc:
+; CHECK-NEXT: phi i16 [ 0, %cleanup10.thread ], [ undef, %cleanup10 ]
+%0 = phi i16 [ undef, %cleanup10 ], [ 0, %cleanup10.thread ], [ undef, %cleanup10 ]
+  unreachable
+
+unreachable:
+  unreachable
+}

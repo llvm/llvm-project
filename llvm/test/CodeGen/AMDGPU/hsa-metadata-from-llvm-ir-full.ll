@@ -54,7 +54,7 @@
 ; CHECK-NEXT:       AddrSpaceQual: Global
 ; CHECK-NOT:        ValueKind:     HiddenDefaultQueue
 ; CHECK-NOT:        ValueKind:     HiddenCompletionAction
-define amdgpu_kernel void @test_char(i8 %a)
+define amdgpu_kernel void @test_char(i8 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
     !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
   ret void
@@ -89,7 +89,7 @@ define amdgpu_kernel void @test_char(i8 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_ushort2(<2 x i16> %a)
+define amdgpu_kernel void @test_ushort2(<2 x i16> %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !10
     !kernel_arg_base_type !10 !kernel_arg_type_qual !4 {
   ret void
@@ -124,7 +124,7 @@ define amdgpu_kernel void @test_ushort2(<2 x i16> %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_int3(<3 x i32> %a)
+define amdgpu_kernel void @test_int3(<3 x i32> %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !11
     !kernel_arg_base_type !11 !kernel_arg_type_qual !4 {
   ret void
@@ -159,7 +159,7 @@ define amdgpu_kernel void @test_int3(<3 x i32> %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_ulong4(<4 x i64> %a)
+define amdgpu_kernel void @test_ulong4(<4 x i64> %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !12
     !kernel_arg_base_type !12 !kernel_arg_type_qual !4 {
   ret void
@@ -194,7 +194,7 @@ define amdgpu_kernel void @test_ulong4(<4 x i64> %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_half8(<8 x half> %a)
+define amdgpu_kernel void @test_half8(<8 x half> %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !13
     !kernel_arg_base_type !13 !kernel_arg_type_qual !4 {
   ret void
@@ -229,7 +229,7 @@ define amdgpu_kernel void @test_half8(<8 x half> %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_float16(<16 x float> %a)
+define amdgpu_kernel void @test_float16(<16 x float> %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !14
     !kernel_arg_base_type !14 !kernel_arg_type_qual !4 {
   ret void
@@ -264,7 +264,7 @@ define amdgpu_kernel void @test_float16(<16 x float> %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_double16(<16 x double> %a)
+define amdgpu_kernel void @test_double16(<16 x double> %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !15
     !kernel_arg_base_type !15 !kernel_arg_type_qual !4 {
   ret void
@@ -300,7 +300,7 @@ define amdgpu_kernel void @test_double16(<16 x double> %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_pointer(i32 addrspace(1)* %a)
+define amdgpu_kernel void @test_pointer(i32 addrspace(1)* %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !16
     !kernel_arg_base_type !16 !kernel_arg_type_qual !4 {
   ret void
@@ -336,7 +336,7 @@ define amdgpu_kernel void @test_pointer(i32 addrspace(1)* %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_image(%opencl.image2d_t addrspace(1)* %a)
+define amdgpu_kernel void @test_image(%opencl.image2d_t addrspace(1)* %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !17
     !kernel_arg_base_type !17 !kernel_arg_type_qual !4 {
   ret void
@@ -371,7 +371,7 @@ define amdgpu_kernel void @test_image(%opencl.image2d_t addrspace(1)* %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_sampler(i32 %a)
+define amdgpu_kernel void @test_sampler(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !18
     !kernel_arg_base_type !18 !kernel_arg_type_qual !4 {
   ret void
@@ -407,7 +407,7 @@ define amdgpu_kernel void @test_sampler(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a)
+define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !19
     !kernel_arg_base_type !19 !kernel_arg_type_qual !4 {
   ret void
@@ -443,7 +443,7 @@ define amdgpu_kernel void @test_queue(%opencl.queue_t addrspace(1)* %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_struct(%struct.A addrspace(5)* byval %a)
+define amdgpu_kernel void @test_struct(%struct.A addrspace(5)* byval %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !20
     !kernel_arg_base_type !20 !kernel_arg_type_qual !4 {
   ret void
@@ -478,7 +478,7 @@ define amdgpu_kernel void @test_struct(%struct.A addrspace(5)* byval %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_i128(i128 %a)
+define amdgpu_kernel void @test_i128(i128 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !21
     !kernel_arg_base_type !21 !kernel_arg_type_qual !4 {
   ret void
@@ -527,7 +527,7 @@ define amdgpu_kernel void @test_i128(i128 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
+define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c) #0
     !kernel_arg_addr_space !22 !kernel_arg_access_qual !23 !kernel_arg_type !24
     !kernel_arg_base_type !24 !kernel_arg_type_qual !25 {
   ret void
@@ -582,7 +582,7 @@ define amdgpu_kernel void @test_multi_arg(i32 %a, <2 x i16> %b, <3 x i8> %c)
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
                                            i32 addrspace(4)* %c,
-                                           i32 addrspace(3)* %l)
+                                           i32 addrspace(3)* %l) #0
     !kernel_arg_addr_space !50 !kernel_arg_access_qual !23 !kernel_arg_type !51
     !kernel_arg_base_type !51 !kernel_arg_type_qual !25 {
   ret void
@@ -640,7 +640,7 @@ define amdgpu_kernel void @test_addr_space(i32 addrspace(1)* %g,
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_type_qual(i32 addrspace(1)* %a,
                                           i32 addrspace(1)* %b,
-                                          %opencl.pipe_t addrspace(1)* %c)
+                                          %opencl.pipe_t addrspace(1)* %c) #0
     !kernel_arg_addr_space !22 !kernel_arg_access_qual !23 !kernel_arg_type !51
     !kernel_arg_base_type !51 !kernel_arg_type_qual !70 {
   ret void
@@ -694,7 +694,7 @@ define amdgpu_kernel void @test_type_qual(i32 addrspace(1)* %a,
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_access_qual(%opencl.image1d_t addrspace(1)* %ro,
                                             %opencl.image2d_t addrspace(1)* %wo,
-                                            %opencl.image3d_t addrspace(1)* %rw)
+                                            %opencl.image3d_t addrspace(1)* %rw) #0
     !kernel_arg_addr_space !60 !kernel_arg_access_qual !61 !kernel_arg_type !62
     !kernel_arg_base_type !62 !kernel_arg_type_qual !25 {
   ret void
@@ -731,7 +731,7 @@ define amdgpu_kernel void @test_access_qual(%opencl.image1d_t addrspace(1)* %ro,
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_vec_type_hint_half(i32 %a)
+define amdgpu_kernel void @test_vec_type_hint_half(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !26 {
   ret void
@@ -768,7 +768,7 @@ define amdgpu_kernel void @test_vec_type_hint_half(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_vec_type_hint_float(i32 %a)
+define amdgpu_kernel void @test_vec_type_hint_float(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !27 {
   ret void
@@ -805,7 +805,7 @@ define amdgpu_kernel void @test_vec_type_hint_float(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_vec_type_hint_double(i32 %a)
+define amdgpu_kernel void @test_vec_type_hint_double(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !28 {
   ret void
@@ -842,7 +842,7 @@ define amdgpu_kernel void @test_vec_type_hint_double(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_vec_type_hint_char(i32 %a)
+define amdgpu_kernel void @test_vec_type_hint_char(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !29 {
   ret void
@@ -879,7 +879,7 @@ define amdgpu_kernel void @test_vec_type_hint_char(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_vec_type_hint_short(i32 %a)
+define amdgpu_kernel void @test_vec_type_hint_short(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !30 {
   ret void
@@ -916,7 +916,7 @@ define amdgpu_kernel void @test_vec_type_hint_short(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_vec_type_hint_long(i32 %a)
+define amdgpu_kernel void @test_vec_type_hint_long(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !31 {
   ret void
@@ -953,7 +953,7 @@ define amdgpu_kernel void @test_vec_type_hint_long(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a)
+define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !32 {
   ret void
@@ -991,7 +991,7 @@ define amdgpu_kernel void @test_vec_type_hint_unknown(i32 %a)
 ; CHECK-NEXT:       ValueKind:         HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:         I8
 ; CHECK-NEXT:       AddrSpaceQual:     Global
-define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a)
+define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !5
     !reqd_work_group_size !6 {
@@ -1030,7 +1030,7 @@ define amdgpu_kernel void @test_reqd_wgs_vec_type_hint(i32 %a)
 ; CHECK-NEXT:       ValueKind:         HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:         I8
 ; CHECK-NEXT:       AddrSpaceQual:     Global
-define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a)
+define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 !vec_type_hint !7
     !work_group_size_hint !8 {
@@ -1067,7 +1067,7 @@ define amdgpu_kernel void @test_wgs_hint_vec_type_hint(i32 %a)
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_arg_ptr_to_ptr(i32 addrspace(5)* addrspace(1)* %a)
+define amdgpu_kernel void @test_arg_ptr_to_ptr(i32 addrspace(5)* addrspace(1)* %a) #0
     !kernel_arg_addr_space !81 !kernel_arg_access_qual !2 !kernel_arg_type !80
     !kernel_arg_base_type !80 !kernel_arg_type_qual !4 {
   ret void
@@ -1103,7 +1103,7 @@ define amdgpu_kernel void @test_arg_ptr_to_ptr(i32 addrspace(5)* addrspace(1)* %
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B addrspace(5)* byval %a)
+define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B addrspace(5)* byval %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !82
     !kernel_arg_base_type !82 !kernel_arg_type_qual !4 {
  ret void
@@ -1138,7 +1138,7 @@ define amdgpu_kernel void @test_arg_struct_contains_ptr(%struct.B addrspace(5)* 
 ; CHECK-NEXT:       ValueKind:     HiddenPrintfBuffer
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x i32 addrspace(1)*> %a)
+define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x i32 addrspace(1)*> %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !83
     !kernel_arg_base_type !83 !kernel_arg_type_qual !4 {
   ret void
@@ -1175,7 +1175,7 @@ define amdgpu_kernel void @test_arg_vector_of_ptr(<2 x i32 addrspace(1)*> %a)
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @test_arg_unknown_builtin_type(
-    %opencl.clk_event_t addrspace(1)* %a)
+    %opencl.clk_event_t addrspace(1)* %a) #0
     !kernel_arg_addr_space !81 !kernel_arg_access_qual !2 !kernel_arg_type !84
     !kernel_arg_base_type !84 !kernel_arg_type_qual !4 {
   ret void
@@ -1279,7 +1279,7 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
                                               <4 x i8> addrspace(3)* %e,
                                               <8 x i8> addrspace(3)* %f,
                                               <16 x i8> addrspace(3)* %g,
-                                              {} addrspace(3)* %h)
+                                              {} addrspace(3)* %h) #0
     !kernel_arg_addr_space !91 !kernel_arg_access_qual !92 !kernel_arg_type !93
     !kernel_arg_base_type !93 !kernel_arg_type_qual !94 {
   ret void
@@ -1383,7 +1383,7 @@ define amdgpu_kernel void @test_pointee_align_attribute(i64 addrspace(1)* align 
                                                         <4 x i8> addrspace(3)* align 256 %e,
                                                         <8 x i8> addrspace(3)* align 128 %f,
                                                         <16 x i8> addrspace(3)* align 1024 %g,
-                                                        {} addrspace(3)* align 16 %h)
+                                                        {} addrspace(3)* align 16 %h) #0
     !kernel_arg_addr_space !91 !kernel_arg_access_qual !92 !kernel_arg_type !93
     !kernel_arg_base_type !93 !kernel_arg_type_qual !94 {
   ret void
@@ -1422,7 +1422,7 @@ define amdgpu_kernel void @test_pointee_align_attribute(i64 addrspace(1)* align 
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
 define amdgpu_kernel void @__test_block_invoke_kernel(
-    <{ i32, i32, i8*, i8 addrspace(1)*, i8 }> %arg) #0
+    <{ i32, i32, i8*, i8 addrspace(1)*, i8 }> %arg) #1
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !110
     !kernel_arg_base_type !110 !kernel_arg_type_qual !4 {
   ret void
@@ -1467,14 +1467,15 @@ define amdgpu_kernel void @__test_block_invoke_kernel(
 ; CHECK-NEXT:       ValueKind:     HiddenCompletionAction
 ; CHECK-NEXT:       ValueType:     I8
 ; CHECK-NEXT:       AddrSpaceQual: Global
-define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #1
+define amdgpu_kernel void @test_enqueue_kernel_caller(i8 %a) #2
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !9
     !kernel_arg_base_type !9 !kernel_arg_type_qual !4 {
   ret void
 }
 
-attributes #0 = { "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
-attributes #1 = { "calls-enqueue-kernel" }
+attributes #0 = { "amdgpu-implicitarg-num-bytes"="48" }
+attributes #1 = { "amdgpu-implicitarg-num-bytes"="48" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
+attributes #2 = { "amdgpu-implicitarg-num-bytes"="48" "calls-enqueue-kernel" }
 
 !llvm.printf.fmts = !{!100, !101}
 

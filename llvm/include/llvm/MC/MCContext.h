@@ -137,6 +137,9 @@ namespace llvm {
     /// The compilation directory to use for DW_AT_comp_dir.
     SmallString<128> CompilationDir;
 
+    /// Prefix replacement map for source file information.
+    std::map<const std::string, const std::string> DebugPrefixMap;
+
     /// The main file name if passed in explicitly.
     std::string MainFileName;
 
@@ -489,6 +492,21 @@ namespace llvm {
 
     /// Set the compilation directory for DW_AT_comp_dir
     void setCompilationDir(StringRef S) { CompilationDir = S.str(); }
+
+    /// Get the debug prefix map.
+    const std::map<const std::string, const std::string> &
+    getDebugPrefixMap() const {
+      return DebugPrefixMap;
+    }
+
+    /// Add an entry to the debug prefix map.
+    void addDebugPrefixMapEntry(const std::string &From, const std::string &To);
+
+    // Remaps the given path in-place as per the debug prefix map.
+    void RemapDebugPath(std::string *Path);
+
+    // Remaps the compilation dir as per the debug prefix map.
+    void RemapCompilationDir();
 
     /// Get the main file name for use in error messages and debug
     /// info. This can be set to ensure we've got the correct file name

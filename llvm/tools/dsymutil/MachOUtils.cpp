@@ -322,8 +322,10 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
-  MCAsmLayout Layout(MCAsm);
 
+  // Layout but don't emit.
+  ObjectStreamer.flushPendingLabels();
+  MCAsmLayout Layout(MCAsm);
   MCAsm.layout(Layout);
 
   BinaryHolder InputBinaryHolder(false);

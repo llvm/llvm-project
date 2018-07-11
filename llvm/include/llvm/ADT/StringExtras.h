@@ -88,6 +88,17 @@ inline bool isAlpha(char C) {
 /// lowercase letter as classified by "C" locale.
 inline bool isAlnum(char C) { return isAlpha(C) || isDigit(C); }
 
+/// Checks whether character \p C is valid ASCII (high bit is zero).
+inline bool isASCII(char C) { return static_cast<unsigned char>(C) <= 127; }
+
+/// Checks whether all characters in S are ASCII.
+inline bool isASCII(llvm::StringRef S) {
+  for (char C : S)
+    if (LLVM_UNLIKELY(!isASCII(C)))
+      return false;
+  return true;
+}
+
 /// Returns the corresponding lowercase character if \p x is uppercase.
 inline char toLower(char x) {
   if (x >= 'A' && x <= 'Z')

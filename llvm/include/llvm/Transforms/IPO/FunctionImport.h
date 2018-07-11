@@ -143,9 +143,9 @@ void gatherImportedSummariesForModule(
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-std::error_code
-EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
-                 const FunctionImporter::ImportMapTy &ModuleImports);
+std::error_code EmitImportsFiles(
+    StringRef ModulePath, StringRef OutputFilename,
+    const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
 /// Resolve WeakForLinker values in \p TheModule based on the information
 /// recorded in the summaries during global summary-based analysis.
