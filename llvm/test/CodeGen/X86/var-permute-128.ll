@@ -436,16 +436,16 @@ define <4 x float> @var_shuffle_v4f32(<4 x float> %v, <4 x i32> %indices) nounwi
 ; SSE3-NEXT:    movd %xmm1, %esi
 ; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE3-NEXT:    andl $3, %eax
+; SSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE3-NEXT:    andl $3, %ecx
-; SSE3-NEXT:    andl $3, %edx
-; SSE3-NEXT:    andl $3, %esi
-; SSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE3-NEXT:    andl $3, %edx
 ; SSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE3-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE3-NEXT:    andl $3, %esi
+; SSE3-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE3-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE3-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE3-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: var_shuffle_v4f32:

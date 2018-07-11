@@ -45,8 +45,9 @@ class LangOptions;
 class NamedDecl;
 class NestedNameSpecifier;
 class Preprocessor;
-class Sema;
 class RawComment;
+class Sema;
+class UsingShadowDecl;
 
 /// Default priority values for code-completion results based
 /// on their kind.
@@ -836,6 +837,12 @@ public:
   /// informative rather than required.
   NestedNameSpecifier *Qualifier = nullptr;
 
+  /// If this Decl was unshadowed by using declaration, this can store a
+  /// pointer to the UsingShadowDecl which was used in the unshadowing process.
+  /// This information can be used to uprank CodeCompletionResults / which have
+  /// corresponding `using decl::qualified::name;` nearby.
+  const UsingShadowDecl *ShadowDecl = nullptr;
+
   /// Build a result that refers to a declaration.
   CodeCompletionResult(const NamedDecl *Declaration, unsigned Priority,
                        NestedNameSpecifier *Qualifier = nullptr,
@@ -847,7 +854,7 @@ public:
         QualifierIsInformative(QualifierIsInformative),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
         DeclaringEntity(false), Qualifier(Qualifier) {
-    //FIXME: Add assert to check FixIts range requirements.
+    // FIXME: Add assert to check FixIts range requirements.
     computeCursorKindAndAvailability(Accessible);
   }
 

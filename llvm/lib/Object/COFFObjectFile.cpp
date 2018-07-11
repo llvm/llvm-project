@@ -979,6 +979,21 @@ std::error_code COFFObjectFile::getSection(int32_t Index,
   return object_error::parse_failed;
 }
 
+std::error_code COFFObjectFile::getSection(StringRef SectionName,
+                                           const coff_section *&Result) const {
+  Result = nullptr;
+  StringRef SecName;
+  for (const SectionRef &Section : sections()) {
+    if (std::error_code E = Section.getName(SecName))
+      return E;
+    if (SecName == SectionName) {
+      Result = getCOFFSection(Section);
+      return std::error_code();
+    }
+  }
+  return object_error::parse_failed;
+}
+
 std::error_code COFFObjectFile::getString(uint32_t Offset,
                                           StringRef &Result) const {
   if (StringTableSize <= 4)

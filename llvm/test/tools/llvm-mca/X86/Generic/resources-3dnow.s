@@ -84,10 +84,10 @@ pswapd      (%rax), %mm2
 # CHECK-NEXT: [3]: RThroughput
 # CHECK-NEXT: [4]: MayLoad
 # CHECK-NEXT: [5]: MayStore
-# CHECK-NEXT: [6]: HasSideEffects
+# CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  31     31    10.33   *      *      *     femms
+# CHECK-NEXT:  31     31    10.33   *      *      U     femms
 # CHECK-NEXT:  1      3     1.00                        pavgusb	%mm0, %mm2
 # CHECK-NEXT:  2      8     1.00    *                   pavgusb	(%rax), %mm2
 # CHECK-NEXT:  1      3     1.00                        pf2id	%mm0, %mm2

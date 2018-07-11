@@ -375,7 +375,7 @@ void StoreDiags::flushLastDiag() {
   if (mentionsMainFile(*LastDiag))
     Output.push_back(std::move(*LastDiag));
   else
-    log(Twine("Dropped diagnostic outside main file:") + LastDiag->File + ":" +
+    log("Dropped diagnostic outside main file: {0}: {1}", LastDiag->File,
         LastDiag->Message);
   LastDiag.reset();
 }

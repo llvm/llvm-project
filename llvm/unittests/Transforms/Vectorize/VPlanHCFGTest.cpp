@@ -8,35 +8,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
-#include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGTransforms.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Dominators.h"
+#include "VPlanTestBase.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
 namespace {
 
-class VPlanHCFGTest : public testing::Test {
-protected:
-  std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<LoopInfo> LI;
-
-  VPlanHCFGTest() {}
-
-  VPlanPtr doBuildPlan(BasicBlock *LoopHeader) {
-    DT.reset(new DominatorTree(*LoopHeader->getParent()));
-    LI.reset(new LoopInfo(*DT));
-
-    auto Plan = llvm::make_unique<VPlan>();
-    VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get());
-    HCFGBuilder.buildHierarchicalCFG(*Plan.get());
-    return Plan;
-  }
-};
+class VPlanHCFGTest : public VPlanTestBase {};
 
 TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
-  LLVMContext Ctx;
   const char *ModuleString =
       "define void @f(i32* %A, i64 %N) {\n"
       "entry:\n"
@@ -54,12 +35,11 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
       "  ret void\n"
       "}\n";
 
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(ModuleString, Err, Ctx);
+  Module &M = parseModule(ModuleString);
 
-  Function *F = M->getFunction("f");
+  Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = doBuildPlan(LoopHeader);
+  auto Plan = buildHCFG(LoopHeader);
 
   VPBasicBlock *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
@@ -115,7 +95,6 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
-  LLVMContext Ctx;
   const char *ModuleString =
       "define void @f(i32* %A, i64 %N) {\n"
       "entry:\n"
@@ -133,12 +112,11 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
       "  ret void\n"
       "}\n";
 
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(ModuleString, Err, Ctx);
+  Module &M = parseModule(ModuleString);
 
-  Function *F = M->getFunction("f");
+  Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = doBuildPlan(LoopHeader);
+  auto Plan = buildHCFG(LoopHeader);
 
   LoopVectorizationLegality::InductionList Inductions;
   SmallPtrSet<Instruction *, 1> DeadInstructions;

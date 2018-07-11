@@ -30,14 +30,16 @@ class JSONOutput : public Logger {
   // JSONOutput now that we pass Context everywhere.
 public:
   JSONOutput(llvm::raw_ostream &Outs, llvm::raw_ostream &Logs,
-             llvm::raw_ostream *InputMirror = nullptr, bool Pretty = false)
-      : Pretty(Pretty), Outs(Outs), Logs(Logs), InputMirror(InputMirror) {}
+             Logger::Level MinLevel, llvm::raw_ostream *InputMirror = nullptr,
+             bool Pretty = false)
+      : Pretty(Pretty), MinLevel(MinLevel), Outs(Outs), Logs(Logs),
+        InputMirror(InputMirror) {}
 
   /// Emit a JSONRPC message.
   void writeMessage(const llvm::json::Value &Result);
 
   /// Write a line to the logging stream.
-  void log(const Twine &Message) override;
+  void log(Level, const llvm::formatv_object_base &Message) override;
 
   /// Mirror \p Message into InputMirror stream. Does nothing if InputMirror is
   /// null.
@@ -48,6 +50,7 @@ public:
   const bool Pretty;
 
 private:
+  Logger::Level MinLevel;
   llvm::raw_ostream &Outs;
   llvm::raw_ostream &Logs;
   llvm::raw_ostream *InputMirror;

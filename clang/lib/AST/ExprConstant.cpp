@@ -5787,8 +5787,8 @@ bool PointerExprEvaluator::VisitUnaryAddrOf(const UnaryOperator *E) {
   return evaluateLValue(E->getSubExpr(), Result);
 }
 
-bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
-  const Expr* SubExpr = E->getSubExpr();
+bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
 
   switch (E->getCastKind()) {
   default:
@@ -5805,7 +5805,11 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr* E) {
     // permitted in constant expressions in C++11. Bitcasts from cv void* are
     // also static_casts, but we disallow them as a resolution to DR1312.
     if (!E->getType()->isVoidPointerType()) {
-      Result.Designator.setInvalid();
+      // If we changed anything other than cvr-qualifiers, we can't use this
+      // value for constant folding. FIXME: Qualification conversions should
+      // always be CK_NoOp, but we get this wrong in C.
+      if (!Info.Ctx.hasCvrSimilarType(E->getType(), E->getSubExpr()->getType()))
+        Result.Designator.setInvalid();
       if (SubExpr->getType()->isVoidPointerType())
         CCEDiag(E, diag::note_constexpr_invalid_cast)
           << 3 << SubExpr->getType();

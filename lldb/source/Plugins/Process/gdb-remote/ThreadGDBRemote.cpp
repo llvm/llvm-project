@@ -55,7 +55,7 @@ ThreadGDBRemote::~ThreadGDBRemote() {
 
 const char *ThreadGDBRemote::GetName() {
   if (m_thread_name.empty())
-    return NULL;
+    return nullptr;
   return m_thread_name.c_str();
 }
 
@@ -109,7 +109,7 @@ const char *ThreadGDBRemote::GetQueueName() {
         return m_dispatch_queue_name.c_str();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 QueueKind ThreadGDBRemote::GetQueueKind() {
@@ -289,8 +289,8 @@ void ThreadGDBRemote::Dump(Log *log, uint32_t index) {}
 
 bool ThreadGDBRemote::ShouldStop(bool &step_more) { return true; }
 lldb::RegisterContextSP ThreadGDBRemote::GetRegisterContext() {
-  if (m_reg_context_sp.get() == NULL)
-    m_reg_context_sp = CreateRegisterContextForFrame(NULL);
+  if (!m_reg_context_sp)
+    m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
   return m_reg_context_sp;
 }
 
@@ -317,7 +317,7 @@ ThreadGDBRemote::CreateRegisterContextForFrame(StackFrame *frame) {
     }
   } else {
     Unwind *unwinder = GetUnwinder();
-    if (unwinder)
+    if (unwinder != nullptr)
       reg_ctx_sp = unwinder->CreateRegisterContextForFrame(frame);
   }
   return reg_ctx_sp;

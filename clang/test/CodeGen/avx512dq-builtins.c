@@ -6,7 +6,7 @@
 __m512i test_mm512_mullo_epi64 (__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mullo_epi64
   // CHECK: mul <8 x i64>
-  return (__m512i) ((__v8di) __A * (__v8di) __B);
+  return (__m512i) _mm512_mullo_epi64(__A, __B);
 }
 
 __m512i test_mm512_mask_mullo_epi64 (__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {

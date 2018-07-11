@@ -118,12 +118,12 @@ void ClangdServer::setRootPath(PathRef RootPath) {
   auto FS = FSProvider.getFileSystem();
   auto Status = FS->status(RootPath);
   if (!Status)
-    log("Failed to get status for RootPath " + RootPath + ": " +
-        Status.getError().message());
+    elog("Failed to get status for RootPath {0}: {1}", RootPath,
+         Status.getError().message());
   else if (Status->isDirectory())
     this->RootPath = RootPath;
   else
-    log("The provided RootPath " + RootPath + " is not a directory.");
+    elog("The provided RootPath {0} is not a directory.", RootPath);
 }
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,

@@ -1060,13 +1060,6 @@ MipsMCCodeEmitter::getRegisterListOpValue16(const MCInst &MI, unsigned OpNo,
 }
 
 unsigned
-MipsMCCodeEmitter::getRegisterPairOpValue(const MCInst &MI, unsigned OpNo,
-                                          SmallVectorImpl<MCFixup> &Fixups,
-                                          const MCSubtargetInfo &STI) const {
-  return getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
-}
-
-unsigned
 MipsMCCodeEmitter::getMovePRegPairOpValue(const MCInst &MI, unsigned OpNo,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {

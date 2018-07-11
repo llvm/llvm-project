@@ -2216,6 +2216,10 @@ def mno_abicalls : Flag<["-"], "mno-abicalls">, Group<m_mips_Features_Group>,
   HelpText<"Disable SVR4-style position-independent code (Mips only)">;
 def mno_crc : Flag<["-"], "mno-crc">, Group<m_mips_Features_Group>,
   HelpText<"Disallow use of CRC instructions (Mips only)">;
+def mvirt : Flag<["-"], "mvirt">, Group<m_mips_Features_Group>;
+def mno_virt : Flag<["-"], "mno-virt">, Group<m_mips_Features_Group>;
+def mginv : Flag<["-"], "mginv">, Group<m_mips_Features_Group>;
+def mno_ginv : Flag<["-"], "mno-ginv">, Group<m_mips_Features_Group>;
 def mips1 : Flag<["-"], "mips1">,
   Alias<march_EQ>, AliasArgs<["mips1"]>, Group<m_mips_Features_Group>,
   HelpText<"Equivalent to -march=mips1">, Flags<[HelpHidden]>;

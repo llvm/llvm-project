@@ -517,7 +517,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       if (MO.isDef() && !MO.isEarlyClobber()) {
         Defs.push_back(Reg);
         continue;
-      } else if (MO.readsReg())
+      } else if (!MO.isDebug() && MO.readsReg())
         ReadRegister(Reg);
     }
 
