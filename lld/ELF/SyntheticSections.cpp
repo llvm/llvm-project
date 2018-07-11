@@ -2946,6 +2946,10 @@ bool ARMExidxSentinelSection::empty() const {
   return true;
 }
 
+bool ARMExidxSentinelSection::classof(const SectionBase *D) {
+  return D->kind() == InputSectionBase::Synthetic && D->Type == SHT_ARM_EXIDX;
+}
+
 ThunkSection::ThunkSection(OutputSection *OS, uint64_t Off)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
                        Config->Wordsize, ".text.thunk") {
