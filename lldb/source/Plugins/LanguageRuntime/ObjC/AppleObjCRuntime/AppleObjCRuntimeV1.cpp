@@ -284,6 +284,10 @@ bool AppleObjCRuntimeV1::ClassDescriptorV1::Describe(
   return false;
 }
 
+lldb::addr_t AppleObjCRuntimeV1::GetTaggedPointerObfuscator() {
+  return 0;
+}
+
 lldb::addr_t AppleObjCRuntimeV1::GetISAHashTablePointer() {
   if (m_isa_hash_table_ptr == LLDB_INVALID_ADDRESS) {
     ModuleSP objc_module_sp(GetObjCModule());
