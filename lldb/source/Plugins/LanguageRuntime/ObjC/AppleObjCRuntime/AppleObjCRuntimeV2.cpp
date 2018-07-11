@@ -385,7 +385,9 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
       m_get_class_info_args_mutex(), m_get_shared_cache_class_info_code(),
       m_get_shared_cache_class_info_args(LLDB_INVALID_ADDRESS),
       m_get_shared_cache_class_info_args_mutex(), m_decl_vendor_ap(),
-      m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS), m_hash_signature(),
+      m_tagged_pointer_obfuscator(LLDB_INVALID_ADDRESS),
+      m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS),
+      m_hash_signature(),
       m_has_object_getClass(false), m_loaded_objc_opt(false),
       m_non_pointer_isa_cache_ap(
           NonPointerISACache::CreateInstance(*this, objc_module_sp)),
@@ -1207,6 +1209,38 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
     }
   }
   return objc_class_sp;
+}
+
+lldb::addr_t AppleObjCRuntimeV2::GetTaggedPointerObfuscator() {
+  if (m_tagged_pointer_obfuscator != LLDB_INVALID_ADDRESS)
+    return m_tagged_pointer_obfuscator;
+
+
+  Process *process = GetProcess();
+  ModuleSP objc_module_sp(GetObjCModule());
+
+  if (!objc_module_sp)
+    return LLDB_INVALID_ADDRESS;
+
+  static ConstString g_gdb_objc_obfuscator("objc_debug_taggedpointer_obfuscator");
+
+  const Symbol *symbol = objc_module_sp->FindFirstSymbolWithNameAndType(
+  g_gdb_objc_obfuscator, lldb::eSymbolTypeAny);
+  if (symbol) {
+    lldb::addr_t g_gdb_obj_obfuscator_ptr =
+      symbol->GetLoadAddress(&process->GetTarget());
+
+    if (g_gdb_obj_obfuscator_ptr != LLDB_INVALID_ADDRESS) {
+      Status error;
+      m_tagged_pointer_obfuscator = process->ReadPointerFromMemory(
+        g_gdb_obj_obfuscator_ptr, error);
+    }
+  }
+  // If we don't have a correct value at this point, there must be no obfuscation.
+  if (m_tagged_pointer_obfuscator == LLDB_INVALID_ADDRESS)
+    m_tagged_pointer_obfuscator = 0;
+
+  return m_tagged_pointer_obfuscator;
 }
 
 lldb::addr_t AppleObjCRuntimeV2::GetISAHashTablePointer() {
@@ -2227,7 +2261,9 @@ AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
       return ObjCLanguageRuntime::ClassDescriptorSP();
     }
   }
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(name, ptr));
+
+  lldb::addr_t unobfuscated = ptr ^ m_runtime.GetTaggedPointerObfuscator();
+  return ClassDescriptorSP(new ClassDescriptorV2Tagged(name, unobfuscated));
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::
@@ -2259,8 +2295,9 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t data_payload;
+  uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
-  if (!IsPossibleTaggedPointer(ptr))
+  if (!IsPossibleTaggedPointer(unobfuscated))
     return ObjCLanguageRuntime::ClassDescriptorSP();
 
   uintptr_t slot = (ptr >> m_objc_debug_taggedpointer_slot_shift) &
@@ -2286,7 +2323,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
   }
 
   data_payload =
-      (((uint64_t)ptr << m_objc_debug_taggedpointer_payload_lshift) >>
+      (((uint64_t)unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
 
   return ClassDescriptorSP(
@@ -2343,11 +2380,12 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t data_payload;
+  uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
-  if (!IsPossibleTaggedPointer(ptr))
+  if (!IsPossibleTaggedPointer(unobfuscated))
     return ObjCLanguageRuntime::ClassDescriptorSP();
 
-  if (!IsPossibleExtendedTaggedPointer(ptr))
+  if (!IsPossibleExtendedTaggedPointer(unobfuscated))
     return this->TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(ptr);
 
   uintptr_t slot = (ptr >> m_objc_debug_taggedpointer_ext_slot_shift) &
@@ -2373,7 +2411,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
   }
 
   data_payload =
-      (((uint64_t)ptr << m_objc_debug_taggedpointer_ext_payload_lshift) >>
+      (((uint64_t)unobfuscated << m_objc_debug_taggedpointer_ext_payload_lshift) >>
        m_objc_debug_taggedpointer_ext_payload_rshift);
 
   return ClassDescriptorSP(

@@ -45,6 +45,8 @@ public:
     }
   }
 
+  lldb::addr_t GetTaggedPointerObfuscator();
+
   class ClassDescriptorV1 : public ObjCLanguageRuntime::ClassDescriptor {
   public:
     ClassDescriptorV1(ValueObject &isa_pointer);
