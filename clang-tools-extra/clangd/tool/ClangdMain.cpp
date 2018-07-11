@@ -98,6 +98,14 @@ static llvm::cl::opt<bool>
     PrettyPrint("pretty", llvm::cl::desc("Pretty-print JSON output"),
                 llvm::cl::init(false));
 
+static llvm::cl::opt<Logger::Level> LogLevel(
+    "log", llvm::cl::desc("Verbosity of log messages written to stderr"),
+    llvm::cl::values(clEnumValN(Logger::Error, "error", "Error messages only"),
+                     clEnumValN(Logger::Info, "info",
+                                "High level execution tracing"),
+                     clEnumValN(Logger::Debug, "verbose", "Low level details")),
+    llvm::cl::init(Logger::Info));
+
 static llvm::cl::opt<bool> Test(
     "lit-test",
     llvm::cl::desc(
@@ -223,7 +231,7 @@ int main(int argc, char *argv[]) {
   if (Tracer)
     TracingSession.emplace(*Tracer);
 
-  JSONOutput Out(llvm::outs(), llvm::errs(),
+  JSONOutput Out(llvm::outs(), llvm::errs(), LogLevel,
                  InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
                  PrettyPrint);
 

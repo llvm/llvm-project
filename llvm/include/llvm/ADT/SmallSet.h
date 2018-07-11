@@ -17,13 +17,67 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/type_traits.h"
 #include <cstddef>
 #include <functional>
 #include <set>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
+
+/// SmallSetIterator - This class implements a const_iterator for SmallSet by
+/// delegating to the underlying SmallVector or Set iterators.
+template <typename T, unsigned N, typename C>
+class SmallSetIterator
+    : public iterator_facade_base<SmallSetIterator<T, N, C>,
+                                  std::forward_iterator_tag, T> {
+private:
+  using SetIterTy = typename std::set<T, C>::const_iterator;
+  using VecIterTy = typename SmallVector<T, N>::const_iterator;
+  using SelfTy = SmallSetIterator<T, N, C>;
+
+  /// Iterators to the parts of the SmallSet containing the data. They are set
+  /// depending on isSmall.
+  union {
+    SetIterTy SetIter;
+    VecIterTy VecIter;
+  };
+
+  bool isSmall;
+
+public:
+  SmallSetIterator(SetIterTy SetIter) : SetIter(SetIter), isSmall(false) {
+    // Use static_assert here, as the SmallSetIterator type is incomplete in the
+    // class scope.
+    static_assert(std::is_trivially_destructible<SelfTy>() &&
+                      llvm::is_trivially_copy_constructible<SelfTy>() &&
+                      llvm::is_trivially_move_constructible<SelfTy>(),
+                  "SelfTy needs to by trivially constructible and destructible");
+  }
+
+  SmallSetIterator(VecIterTy VecIter) : VecIter(VecIter), isSmall(true) {}
+
+  bool operator==(const SmallSetIterator &RHS) const {
+    if (isSmall != RHS.isSmall)
+      return false;
+    if (isSmall)
+      return VecIter == RHS.VecIter;
+    return SetIter == RHS.SetIter;
+  }
+
+  SmallSetIterator &operator++() { // Preincrement
+    if (isSmall)
+      VecIter++;
+    else
+      SetIter++;
+    return *this;
+  }
+
+  const T &operator*() const { return isSmall ? *VecIter : *SetIter; }
+};
 
 /// SmallSet - This maintains a set of unique values, optimizing for the case
 /// when the set is small (less than N).  In this case, the set can be
@@ -50,6 +104,7 @@ class SmallSet {
 
 public:
   using size_type = size_t;
+  using const_iterator = SmallSetIterator<T, N, C>;
 
   SmallSet() = default;
 
@@ -119,6 +174,18 @@ public:
   void clear() {
     Vector.clear();
     Set.clear();
+  }
+
+  const_iterator begin() const {
+    if (isSmall())
+      return {Vector.begin()};
+    return {Set.begin()};
+  }
+
+  const_iterator end() const {
+    if (isSmall())
+      return {Vector.end()};
+    return {Set.end()};
   }
 
 private:

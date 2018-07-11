@@ -24,6 +24,7 @@ using namespace llvm;
 
 enum ActionType {
   PrintRecords,
+  DumpJSON,
   GenEmitter,
   GenRegisterInfo,
   GenInstrInfo,
@@ -59,6 +60,8 @@ namespace {
   Action(cl::desc("Action to perform:"),
          cl::values(clEnumValN(PrintRecords, "print-records",
                                "Print all records to stdout (default)"),
+                    clEnumValN(DumpJSON, "dump-json",
+                               "Dump all records as machine-readable JSON"),
                     clEnumValN(GenEmitter, "gen-emitter",
                                "Generate machine code emitter"),
                     clEnumValN(GenRegisterInfo, "gen-register-info",
@@ -125,6 +128,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {
   case PrintRecords:
     OS << Records;           // No argument, dump all contents
+    break;
+  case DumpJSON:
+    EmitJSON(Records, OS);
     break;
   case GenEmitter:
     EmitCodeEmitter(Records, OS);

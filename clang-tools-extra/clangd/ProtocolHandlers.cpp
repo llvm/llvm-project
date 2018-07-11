@@ -33,7 +33,7 @@ struct HandlerRegisterer {
       if (fromJSON(RawParams, P)) {
         (Callbacks->*Handler)(P);
       } else {
-        log("Failed to decode " + Method + " request.");
+        elog("Failed to decode {0} request.", Method);
       }
     });
   }

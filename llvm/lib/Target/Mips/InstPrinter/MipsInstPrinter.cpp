@@ -197,11 +197,6 @@ printFCCOperand(const MCInst *MI, int opNum, raw_ostream &O) {
 }
 
 void MipsInstPrinter::
-printRegisterPair(const MCInst *MI, int opNum, raw_ostream &O) {
-  printRegName(O, MI->getOperand(opNum).getReg());
-}
-
-void MipsInstPrinter::
 printSHFMask(const MCInst *MI, int opNum, raw_ostream &O) {
   llvm_unreachable("TODO");
 }

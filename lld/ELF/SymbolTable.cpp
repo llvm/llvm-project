@@ -38,7 +38,7 @@ static InputFile *getFirstElf() {
     return ObjectFiles[0];
   if (!SharedFiles.empty())
     return SharedFiles[0];
-  return nullptr;
+  return BitcodeFiles[0];
 }
 
 // All input object files must be for the same architecture

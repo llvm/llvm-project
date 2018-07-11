@@ -14,15 +14,15 @@ define <4 x double> @var_shuffle_v4f64_v4f64_xxxx_i64(<4 x double> %x, i64 %i0, 
 ; ALL-NEXT:    andq $-32, %rsp
 ; ALL-NEXT:    subq $64, %rsp
 ; ALL-NEXT:    andl $3, %esi
-; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    andl $3, %ecx
 ; ALL-NEXT:    andl $3, %edx
+; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    vmovaps %ymm0, (%rsp)
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; ALL-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; ALL-NEXT:    movq %rbp, %rsp
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
@@ -68,15 +68,15 @@ define <4 x double> @var_shuffle_v4f64_v2f64_xxxx_i64(<2 x double> %x, i64 %i0, 
 ; ALL-LABEL: var_shuffle_v4f64_v2f64_xxxx_i64:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    andl $1, %esi
-; ALL-NEXT:    andl $1, %edi
 ; ALL-NEXT:    andl $1, %ecx
 ; ALL-NEXT:    andl $1, %edx
+; ALL-NEXT:    andl $1, %edi
 ; ALL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; ALL-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; ALL-NEXT:    retq
   %x0 = extractelement <2 x double> %x, i64 %i0
   %x1 = extractelement <2 x double> %x, i64 %i1
@@ -194,21 +194,21 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 ; ALL-NEXT:    movl 16(%rbp), %eax
 ; ALL-NEXT:    andl $7, %eax
 ; ALL-NEXT:    andl $7, %edi
+; ALL-NEXT:    vmovaps %ymm0, (%rsp)
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    andl $7, %esi
 ; ALL-NEXT:    andl $7, %edx
 ; ALL-NEXT:    andl $7, %ecx
 ; ALL-NEXT:    andl $7, %r8d
-; ALL-NEXT:    vmovaps %ymm0, (%rsp)
-; ALL-NEXT:    andl $7, %r9d
-; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ALL-NEXT:    andl $7, %r9d
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; ALL-NEXT:    movq %rbp, %rsp
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
@@ -245,21 +245,21 @@ define <8 x float> @var_shuffle_v8f32_v4f32_xxxxxxxx_i32(<4 x float> %x, i32 %i0
 ; ALL-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; ALL-NEXT:    andl $3, %eax
 ; ALL-NEXT:    andl $3, %edi
+; ALL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    andl $3, %edx
 ; ALL-NEXT:    andl $3, %ecx
 ; ALL-NEXT:    andl $3, %r8d
-; ALL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; ALL-NEXT:    andl $3, %r9d
-; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; ALL-NEXT:    andl $3, %r9d
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; ALL-NEXT:    retq
   %x0 = extractelement <4 x float> %x, i32 %i0
   %x1 = extractelement <4 x float> %x, i32 %i1

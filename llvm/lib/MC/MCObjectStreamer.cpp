@@ -661,8 +661,7 @@ void MCObjectStreamer::EmitFileDirective(StringRef Filename) {
 }
 
 void MCObjectStreamer::FinishImpl() {
-  // Remap the compilation directory before emitting.
-  getContext().RemapCompilationDir();
+  getContext().RemapDebugPaths();
 
   // If we are generating dwarf for assembly source files dump out the sections.
   if (getContext().getGenDwarfForAssembly())

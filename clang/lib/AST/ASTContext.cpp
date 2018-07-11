@@ -4965,15 +4965,49 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
                                     SourceRange());
 }
 
-/// UnwrapSimilarPointerTypes - If T1 and T2 are pointer types  that
-/// may be similar (C++ 4.4), replaces T1 and T2 with the type that
-/// they point to and return true. If T1 and T2 aren't pointer types
-/// or pointer-to-member types, or if they are not similar at this
-/// level, returns false and leaves T1 and T2 unchanged. Top-level
-/// qualifiers on T1 and T2 are ignored. This function will typically
-/// be called in a loop that successively "unwraps" pointer and
-/// pointer-to-member types to compare them at each level.
-bool ASTContext::UnwrapSimilarPointerTypes(QualType &T1, QualType &T2) {
+/// Attempt to unwrap two types that may both be array types with the same bound
+/// (or both be array types of unknown bound) for the purpose of comparing the
+/// cv-decomposition of two types per C++ [conv.qual].
+static void unwrapSimilarArrayTypes(ASTContext &Ctx, QualType &T1,
+                                    QualType &T2) {
+  while (true) {
+    auto *AT1 = Ctx.getAsArrayType(T1);
+    if (!AT1) return;
+
+    auto *AT2 = Ctx.getAsArrayType(T2);
+    if (!AT2) return;
+
+    // If we don't have two array types with the same constant bound nor two
+    // incomplete array types, we've unwrapped everything we can.
+    if (auto *CAT1 = dyn_cast<ConstantArrayType>(AT1)) {
+      auto *CAT2 = dyn_cast<ConstantArrayType>(AT2);
+      if (!CAT2 || CAT1->getSize() != CAT2->getSize())
+        return;
+    } else if (!isa<IncompleteArrayType>(AT1) ||
+               !isa<IncompleteArrayType>(AT2)) {
+      return;
+    }
+
+    T1 = AT1->getElementType();
+    T2 = AT2->getElementType();
+  }
+}
+
+/// Attempt to unwrap two types that may be similar (C++ [conv.qual]).
+///
+/// If T1 and T2 are both pointer types of the same kind, or both array types
+/// with the same bound, unwraps layers from T1 and T2 until a pointer type is
+/// unwrapped. Top-level qualifiers on T1 and T2 are ignored.
+///
+/// This function will typically be called in a loop that successively
+/// "unwraps" pointer and pointer-to-member types to compare them at each
+/// level.
+///
+/// \return \c true if a pointer type was unwrapped, \c false if we reached a
+/// pair of types that can't be unwrapped further.
+bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2) {
+  unwrapSimilarArrayTypes(*this, T1, T2);
+
   const auto *T1PtrType = T1->getAs<PointerType>();
   const auto *T2PtrType = T2->getAs<PointerType>();
   if (T1PtrType && T2PtrType) {
@@ -5005,6 +5039,37 @@ bool ASTContext::UnwrapSimilarPointerTypes(QualType &T1, QualType &T2) {
   // FIXME: Block pointers, too?
   
   return false;
+}
+
+bool ASTContext::hasSimilarType(QualType T1, QualType T2) {
+  while (true) {
+    Qualifiers Quals;
+    T1 = getUnqualifiedArrayType(T1, Quals);
+    T2 = getUnqualifiedArrayType(T2, Quals);
+    if (hasSameType(T1, T2))
+      return true;
+    if (!UnwrapSimilarTypes(T1, T2))
+      return false;
+  }
+}
+
+bool ASTContext::hasCvrSimilarType(QualType T1, QualType T2) {
+  while (true) {
+    Qualifiers Quals1, Quals2;
+    T1 = getUnqualifiedArrayType(T1, Quals1);
+    T2 = getUnqualifiedArrayType(T2, Quals2);
+
+    Quals1.removeCVRQualifiers();
+    Quals2.removeCVRQualifiers();
+    if (Quals1 != Quals2)
+      return false;
+
+    if (hasSameType(T1, T2))
+      return true;
+
+    if (!UnwrapSimilarTypes(T1, T2))
+      return false;
+  }
 }
 
 DeclarationNameInfo

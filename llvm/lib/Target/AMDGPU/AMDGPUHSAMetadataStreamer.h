@@ -28,7 +28,7 @@ class DataLayout;
 class Function;
 class MDNode;
 class Module;
-class SIProgramInfo;
+struct SIProgramInfo;
 class Type;
 
 namespace AMDGPU {

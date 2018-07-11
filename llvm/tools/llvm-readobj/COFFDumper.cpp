@@ -83,6 +83,7 @@ public:
   void printSymbols() override;
   void printDynamicSymbols() override;
   void printUnwindInfo() override;
+  void printSectionAsHex(StringRef StringName) override;
 
   void printNeededLibraries() override;
 
@@ -652,6 +653,28 @@ void COFFDumper::printFileHeaders() {
 
   if (const dos_header *DH = Obj->getDOSHeader())
     printDOSHeader(DH);
+}
+
+void COFFDumper::printSectionAsHex(StringRef SectionName) {
+  char *StrPtr;
+  long SectionIndex = strtol(SectionName.data(), &StrPtr, 10);
+  const coff_section *Sec;
+  if (*StrPtr)
+    error(Obj->getSection(SectionName, Sec));
+  else {
+    error(Obj->getSection((int)SectionIndex, Sec));
+    if (!Sec)
+      return error(object_error::parse_failed);
+  }
+
+  StringRef SecName;
+  error(Obj->getSectionName(Sec, SecName));
+
+  ArrayRef<uint8_t> Content;
+  error(Obj->getSectionContents(Sec, Content));
+  const uint8_t *SecContent = Content.data();
+
+  SectionHexDump(SecName, SecContent, Content.size());
 }
 
 void COFFDumper::printDOSHeader(const dos_header *DH) {

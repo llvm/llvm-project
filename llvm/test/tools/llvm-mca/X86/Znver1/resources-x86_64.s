@@ -625,7 +625,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT: [3]: RThroughput
 # CHECK-NEXT: [4]: MayLoad
 # CHECK-NEXT: [5]: MayStore
-# CHECK-NEXT: [6]: HasSideEffects
+# CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     0.25                        adcb	$7, %al
@@ -778,7 +778,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      6     0.50    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  2      6     0.50    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  2      6     0.50    *      *            btsq	$7, (%rax)
-# CHECK-NEXT:  1      1     0.25                  *     clc
+# CHECK-NEXT:  1      1     0.25                  U     clc
 # CHECK-NEXT:  1      1     0.25                        decb	%dil
 # CHECK-NEXT:  2      5     0.50    *      *            decb	(%rax)
 # CHECK-NEXT:  1      1     0.25                        decw	%di
@@ -787,22 +787,22 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      5     0.50    *      *            decl	(%rax)
 # CHECK-NEXT:  1      1     0.25                        decq	%rdi
 # CHECK-NEXT:  2      5     0.50    *      *            decq	(%rax)
-# CHECK-NEXT:  1      15    15.00                 *     divb	%dil
-# CHECK-NEXT:  2      19    15.00   *             *     divb	(%rax)
-# CHECK-NEXT:  2      17    17.00                 *     divw	%si
-# CHECK-NEXT:  3      21    17.00   *             *     divw	(%rax)
-# CHECK-NEXT:  2      25    25.00                 *     divl	%edx
-# CHECK-NEXT:  3      29    25.00   *             *     divl	(%rax)
-# CHECK-NEXT:  2      41    41.00                 *     divq	%rcx
-# CHECK-NEXT:  3      45    41.00   *             *     divq	(%rax)
-# CHECK-NEXT:  1      15    15.00                 *     idivb	%dil
-# CHECK-NEXT:  2      19    15.00   *             *     idivb	(%rax)
-# CHECK-NEXT:  2      17    17.00                 *     idivw	%si
-# CHECK-NEXT:  3      21    17.00   *             *     idivw	(%rax)
-# CHECK-NEXT:  2      25    25.00                 *     idivl	%edx
-# CHECK-NEXT:  3      29    25.00   *             *     idivl	(%rax)
-# CHECK-NEXT:  2      41    41.00                 *     idivq	%rcx
-# CHECK-NEXT:  3      45    41.00   *             *     idivq	(%rax)
+# CHECK-NEXT:  1      15    15.00                 U     divb	%dil
+# CHECK-NEXT:  2      19    15.00   *             U     divb	(%rax)
+# CHECK-NEXT:  2      17    17.00                 U     divw	%si
+# CHECK-NEXT:  3      21    17.00   *             U     divw	(%rax)
+# CHECK-NEXT:  2      25    25.00                 U     divl	%edx
+# CHECK-NEXT:  3      29    25.00   *             U     divl	(%rax)
+# CHECK-NEXT:  2      41    41.00                 U     divq	%rcx
+# CHECK-NEXT:  3      45    41.00   *             U     divq	(%rax)
+# CHECK-NEXT:  1      15    15.00                 U     idivb	%dil
+# CHECK-NEXT:  2      19    15.00   *             U     idivb	(%rax)
+# CHECK-NEXT:  2      17    17.00                 U     idivw	%si
+# CHECK-NEXT:  3      21    17.00   *             U     idivw	(%rax)
+# CHECK-NEXT:  2      25    25.00                 U     idivl	%edx
+# CHECK-NEXT:  3      29    25.00   *             U     idivl	(%rax)
+# CHECK-NEXT:  2      41    41.00                 U     idivq	%rcx
+# CHECK-NEXT:  3      45    41.00   *             U     idivq	(%rax)
 # CHECK-NEXT:  1      4     1.00                        imulb	%dil
 # CHECK-NEXT:  2      8     1.00    *                   imulb	(%rax)
 # CHECK-NEXT:  1      3     1.00                        imulw	%di

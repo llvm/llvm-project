@@ -452,3 +452,84 @@ define <8 x i32> @ashr_lshr_shl_v8i32(<8 x i32> %a, <8 x i32> %b) {
   %r7 = insertelement <8 x i32>   %r6, i32 %ab7, i32 7
   ret <8 x i32> %r7
 }
+
+define <8 x i32> @add_v8i32_undefs(<8 x i32> %a) {
+; CHECK-LABEL: @add_v8i32_undefs(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[A:%.*]], <i32 undef, i32 4, i32 8, i32 16, i32 undef, i32 4, i32 8, i32 16>
+; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
+;
+  %a0 = extractelement <8 x i32> %a, i32 0
+  %a1 = extractelement <8 x i32> %a, i32 1
+  %a2 = extractelement <8 x i32> %a, i32 2
+  %a3 = extractelement <8 x i32> %a, i32 3
+  %a4 = extractelement <8 x i32> %a, i32 4
+  %a5 = extractelement <8 x i32> %a, i32 5
+  %a6 = extractelement <8 x i32> %a, i32 6
+  %a7 = extractelement <8 x i32> %a, i32 7
+  %ab0 = add i32 %a0, undef
+  %ab1 = add i32 %a1, 4
+  %ab2 = add i32 %a2, 8
+  %ab3 = add i32 %a3, 16
+  %ab4 = add i32 %a4, undef
+  %ab5 = add i32 %a5, 4
+  %ab6 = add i32 %a6, 8
+  %ab7 = add i32 %a7, 16
+  %r0 = insertelement <8 x i32> undef, i32 %ab0, i32 0
+  %r1 = insertelement <8 x i32>   %r0, i32 %ab1, i32 1
+  %r2 = insertelement <8 x i32>   %r1, i32 %ab2, i32 2
+  %r3 = insertelement <8 x i32>   %r2, i32 %ab3, i32 3
+  %r4 = insertelement <8 x i32>   %r3, i32 %ab4, i32 4
+  %r5 = insertelement <8 x i32>   %r4, i32 %ab5, i32 5
+  %r6 = insertelement <8 x i32>   %r5, i32 %ab6, i32 6
+  %r7 = insertelement <8 x i32>   %r6, i32 %ab7, i32 7
+  ret <8 x i32> %r7
+}
+
+define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
+; CHECK-LABEL: @sdiv_v8i32_undefs(
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <8 x i32> [[A:%.*]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = extractelement <8 x i32> [[A]], i32 2
+; CHECK-NEXT:    [[A3:%.*]] = extractelement <8 x i32> [[A]], i32 3
+; CHECK-NEXT:    [[A5:%.*]] = extractelement <8 x i32> [[A]], i32 5
+; CHECK-NEXT:    [[A6:%.*]] = extractelement <8 x i32> [[A]], i32 6
+; CHECK-NEXT:    [[A7:%.*]] = extractelement <8 x i32> [[A]], i32 7
+; CHECK-NEXT:    [[AB1:%.*]] = sdiv i32 [[A1]], 4
+; CHECK-NEXT:    [[AB2:%.*]] = sdiv i32 [[A2]], 8
+; CHECK-NEXT:    [[AB3:%.*]] = sdiv i32 [[A3]], 16
+; CHECK-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
+; CHECK-NEXT:    [[AB6:%.*]] = sdiv i32 [[A6]], 8
+; CHECK-NEXT:    [[AB7:%.*]] = sdiv i32 [[A7]], 16
+; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x i32> undef, i32 [[AB1]], i32 1
+; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
+; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
+; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i32 5
+; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
+; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
+; CHECK-NEXT:    ret <8 x i32> [[R7]]
+;
+  %a0 = extractelement <8 x i32> %a, i32 0
+  %a1 = extractelement <8 x i32> %a, i32 1
+  %a2 = extractelement <8 x i32> %a, i32 2
+  %a3 = extractelement <8 x i32> %a, i32 3
+  %a4 = extractelement <8 x i32> %a, i32 4
+  %a5 = extractelement <8 x i32> %a, i32 5
+  %a6 = extractelement <8 x i32> %a, i32 6
+  %a7 = extractelement <8 x i32> %a, i32 7
+  %ab0 = sdiv i32 %a0, undef
+  %ab1 = sdiv i32 %a1, 4
+  %ab2 = sdiv i32 %a2, 8
+  %ab3 = sdiv i32 %a3, 16
+  %ab4 = sdiv i32 %a4, undef
+  %ab5 = sdiv i32 %a5, 4
+  %ab6 = sdiv i32 %a6, 8
+  %ab7 = sdiv i32 %a7, 16
+  %r0 = insertelement <8 x i32> undef, i32 %ab0, i32 0
+  %r1 = insertelement <8 x i32>   %r0, i32 %ab1, i32 1
+  %r2 = insertelement <8 x i32>   %r1, i32 %ab2, i32 2
+  %r3 = insertelement <8 x i32>   %r2, i32 %ab3, i32 3
+  %r4 = insertelement <8 x i32>   %r3, i32 %ab4, i32 4
+  %r5 = insertelement <8 x i32>   %r4, i32 %ab5, i32 5
+  %r6 = insertelement <8 x i32>   %r5, i32 %ab6, i32 6
+  %r7 = insertelement <8 x i32>   %r6, i32 %ab7, i32 7
+  ret <8 x i32> %r7
+}

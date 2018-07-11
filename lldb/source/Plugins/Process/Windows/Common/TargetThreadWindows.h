@@ -42,10 +42,9 @@ public:
   HostThread GetHostThread() const { return m_host_thread; }
 
 private:
-  lldb::RegisterContextSP CreateRegisterContextForFrameIndex(uint32_t idx);
-
+  lldb::RegisterContextSP m_thread_reg_ctx_sp;
   HostThread m_host_thread;
 };
-}
+} // namespace lldb_private
 
 #endif

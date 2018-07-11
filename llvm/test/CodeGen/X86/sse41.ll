@@ -394,7 +394,7 @@ define <4 x float> @insertps_or_blendps(<4 x float> %t1, float %t2) minsize noun
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movss {{[0-9]+}}(%esp), %xmm1 ## encoding: [0xf3,0x0f,0x10,0x4c,0x24,0x04]
 ; X86-SSE-NEXT:    ## xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    blendps $1, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0c,0xc1,0x01]
+; X86-SSE-NEXT:    movss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x10,0xc1]
 ; X86-SSE-NEXT:    ## xmm0 = xmm1[0],xmm0[1,2,3]
 ; X86-SSE-NEXT:    retl ## encoding: [0xc3]
 ;
@@ -402,7 +402,7 @@ define <4 x float> @insertps_or_blendps(<4 x float> %t1, float %t2) minsize noun
 ; X86-AVX1:       ## %bb.0:
 ; X86-AVX1-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm1 ## encoding: [0xc5,0xfa,0x10,0x4c,0x24,0x04]
 ; X86-AVX1-NEXT:    ## xmm1 = mem[0],zero,zero,zero
-; X86-AVX1-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; X86-AVX1-NEXT:    vmovss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x10,0xc1]
 ; X86-AVX1-NEXT:    ## xmm0 = xmm1[0],xmm0[1,2,3]
 ; X86-AVX1-NEXT:    retl ## encoding: [0xc3]
 ;
@@ -416,13 +416,13 @@ define <4 x float> @insertps_or_blendps(<4 x float> %t1, float %t2) minsize noun
 ;
 ; X64-SSE-LABEL: insertps_or_blendps:
 ; X64-SSE:       ## %bb.0:
-; X64-SSE-NEXT:    blendps $1, %xmm1, %xmm0 ## encoding: [0x66,0x0f,0x3a,0x0c,0xc1,0x01]
+; X64-SSE-NEXT:    movss %xmm1, %xmm0 ## encoding: [0xf3,0x0f,0x10,0xc1]
 ; X64-SSE-NEXT:    ## xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: insertps_or_blendps:
 ; X64-AVX1:       ## %bb.0:
-; X64-AVX1-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; X64-AVX1-NEXT:    vmovss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x10,0xc1]
 ; X64-AVX1-NEXT:    ## xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;

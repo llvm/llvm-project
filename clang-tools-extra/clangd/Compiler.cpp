@@ -31,7 +31,7 @@ void IgnoreDiagnostics::log(DiagnosticsEngine::Level DiagLevel,
     OS << ":";
   }
 
-  clangd::log(llvm::formatv("Ignored diagnostic. {0}{1}", Location, Message));
+  clangd::log("Ignored diagnostic. {0}{1}", Location, Message);
 }
 
 void IgnoreDiagnostics::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,

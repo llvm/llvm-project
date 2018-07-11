@@ -34,16 +34,17 @@ bool fromJSON(const json::Value &E, URIForFile &R) {
   if (auto S = E.getAsString()) {
     auto U = URI::parse(*S);
     if (!U) {
-      log("Failed to parse URI " + *S + ": " + llvm::toString(U.takeError()));
+      elog("Failed to parse URI {0}: {1}", *S, U.takeError());
       return false;
     }
     if (U->scheme() != "file" && U->scheme() != "test") {
-      log("Clangd only supports 'file' URI scheme for workspace files: " + *S);
+      elog("Clangd only supports 'file' URI scheme for workspace files: {0}",
+           *S);
       return false;
     }
     auto Path = URI::resolve(*U);
     if (!Path) {
-      log(llvm::toString(Path.takeError()));
+      log("{0}", Path.takeError());
       return false;
     }
     R = URIForFile(*Path);

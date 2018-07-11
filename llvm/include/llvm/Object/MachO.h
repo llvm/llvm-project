@@ -304,6 +304,8 @@ public:
   std::error_code getSectionContents(DataRefImpl Sec,
                                      StringRef &Res) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;
+  Expected<SectionRef> getSection(unsigned SectionIndex) const;
+  Expected<SectionRef> getSection(StringRef SectionName) const;
   bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
   bool isSectionData(DataRefImpl Sec) const override;

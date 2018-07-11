@@ -734,10 +734,10 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
 
   // Instructions which load and store from memory should have a chain,
   // regardless of whether they happen to have an internal pattern saying so.
-  if (Pattern.getSrcPattern()->TreeHasProperty(SDNPHasChain, CGP)
-      && (II.hasCtrlDep || II.mayLoad || II.mayStore || II.canFoldAsLoad ||
-          II.hasSideEffects))
-      NodeHasChain = true;
+  if (Pattern.getSrcPattern()->TreeHasProperty(SDNPHasChain, CGP) &&
+      (II.hasCtrlDep || II.mayLoad || II.mayStore || II.canFoldAsLoad ||
+       II.hasSideEffects))
+    NodeHasChain = true;
 
   bool isRoot = N == Pattern.getDstPattern();
 

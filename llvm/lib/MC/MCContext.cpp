@@ -540,19 +540,26 @@ void MCContext::addDebugPrefixMapEntry(const std::string &From,
   DebugPrefixMap.insert(std::make_pair(From, To));
 }
 
-void MCContext::RemapDebugPath(std::string *Path) {
-  for (const auto &Entry : DebugPrefixMap)
-    if (StringRef(*Path).startswith(Entry.first)) {
-      std::string RemappedPath =
-          (Twine(Entry.second) + Path->substr(Entry.first.size())).str();
-      Path->swap(RemappedPath);
-    }
-}
+void MCContext::RemapDebugPaths() {
+  const auto &DebugPrefixMap = this->DebugPrefixMap;
+  const auto RemapDebugPath = [&DebugPrefixMap](std::string &Path) {
+    for (const auto &Entry : DebugPrefixMap)
+      if (StringRef(Path).startswith(Entry.first)) {
+        std::string RemappedPath =
+            (Twine(Entry.second) + Path.substr(Entry.first.size())).str();
+        Path.swap(RemappedPath);
+      }
+  };
 
-void MCContext::RemapCompilationDir() {
+  // Remap compilation directory.
   std::string CompDir = CompilationDir.str();
-  RemapDebugPath(&CompDir);
+  RemapDebugPath(CompDir);
   CompilationDir = CompDir;
+
+  // Remap MCDwarfDirs in all compilation units.
+  for (auto &CUIDTablePair : MCDwarfLineTablesCUMap)
+    for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs())
+      RemapDebugPath(Dir);
 }
 
 //===----------------------------------------------------------------------===//

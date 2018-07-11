@@ -103,11 +103,12 @@ define i16 @iter_breaker(i16 %a, i16 %b) {
   %mul_wide = mul i32 %a_wide, %b_wide              ; uses of %mul_wide will be iterated
 
   %trunc_remain = trunc i32 %mul_wide to i8         ; this use will be replaced w/ new value
-                                                    ; when iteration visits it, switching
-                                                    ; iteration to the uses of new value
+  ; when iteration visits it, switching
+  ; iteration to the uses of new value
 
   %trunc_unnecessary = trunc i32 %mul_wide to i16   ; uses of %trunc_unnecessary will have
-                                                    ; been updated to uses of new value
+  ; been updated to uses of new value
+
   %did_ovf = icmp ugt i32 %mul_wide, 65535
   br i1 %did_ovf, label %ret1, label %ret2
 

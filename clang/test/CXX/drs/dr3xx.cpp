@@ -354,6 +354,57 @@ namespace dr329 { // dr329: 3.5
   }
 }
 
+namespace dr330 { // dr330: 7
+  // Conversions between P and Q will be allowed by P0388.
+  typedef int *(*P)[3];
+  typedef const int *const (*Q)[3];
+  typedef const int *Qinner[3];
+  typedef Qinner const *Q2; // same as Q, but 'const' written outside the array type
+  typedef const int *const (*R)[4];
+  typedef const int *const (*S)[];
+  typedef const int *(*T)[];
+  void f(P p, Q q, Q2 q2, R r, S s, T t) {
+    q = p; // ok
+    q2 = p; // ok
+    r = p; // expected-error {{incompatible}}
+    s = p; // expected-error {{incompatible}} (for now)
+    t = p; // expected-error {{incompatible}}
+    s = q; // expected-error {{incompatible}}
+    s = q2; // expected-error {{incompatible}}
+    s = t; // ok, adding const
+    t = s; // expected-error {{incompatible}}
+    (void) const_cast<P>(q);
+    (void) const_cast<P>(q2);
+    (void) const_cast<Q>(p);
+    (void) const_cast<Q2>(p);
+    (void) const_cast<S>(p); // expected-error {{not allowed}} (for now)
+    (void) const_cast<P>(s); // expected-error {{not allowed}} (for now)
+    (void) const_cast<S>(q); // expected-error {{not allowed}}
+    (void) const_cast<S>(q2); // expected-error {{not allowed}}
+    (void) const_cast<Q>(s); // expected-error {{not allowed}}
+    (void) const_cast<Q2>(s); // expected-error {{not allowed}}
+    (void) const_cast<T>(s);
+    (void) const_cast<S>(t);
+    (void) const_cast<T>(q); // expected-error {{not allowed}}
+    (void) const_cast<Q>(t); // expected-error {{not allowed}}
+
+    (void) reinterpret_cast<P>(q); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<P>(q2); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<Q>(p);
+    (void) reinterpret_cast<Q2>(p);
+    (void) reinterpret_cast<S>(p);
+    (void) reinterpret_cast<P>(s); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<S>(q);
+    (void) reinterpret_cast<S>(q2);
+    (void) reinterpret_cast<Q>(s);
+    (void) reinterpret_cast<Q2>(s);
+    (void) reinterpret_cast<T>(s); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<S>(t);
+    (void) reinterpret_cast<T>(q); // expected-error {{casts away qualifiers}}
+    (void) reinterpret_cast<Q>(t);
+  }
+}
+
 namespace dr331 { // dr331: yes
   struct A {
     A(volatile A&); // expected-note {{candidate}}
