@@ -125,16 +125,15 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
     auto &CD = Sym.Definition ? Sym.Definition : Sym.CanonicalDeclaration;
     auto Uri = URI::parse(CD.FileURI);
     if (!Uri) {
-      log(llvm::formatv(
-          "Workspace symbol: Could not parse URI '{0}' for symbol '{1}'.",
-          CD.FileURI, Sym.Name));
+      log("Workspace symbol: Could not parse URI '{0}' for symbol '{1}'.",
+          CD.FileURI, Sym.Name);
       return;
     }
     auto Path = URI::resolve(*Uri, HintPath);
     if (!Path) {
-      log(llvm::formatv("Workspace symbol: Could not resolve path for URI "
-                        "'{0}' for symbol '{1}'.",
-                        (*Uri).toString(), Sym.Name.str()));
+      log("Workspace symbol: Could not resolve path for URI '{0}' for symbol "
+          "'{1}'.",
+          Uri->toString(), Sym.Name);
       return;
     }
     Location L;
@@ -158,16 +157,15 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
     if (auto NameMatch = Filter.match(Sym.Name))
       Relevance.NameMatch = *NameMatch;
     else {
-      log(llvm::formatv("Workspace symbol: {0} didn't match query {1}",
-                        Sym.Name, Filter.pattern()));
+      log("Workspace symbol: {0} didn't match query {1}", Sym.Name,
+          Filter.pattern());
       return;
     }
     Relevance.merge(Sym);
     auto Score =
         evaluateSymbolAndRelevance(Quality.evaluate(), Relevance.evaluate());
-    LLVM_DEBUG(llvm::dbgs() << "FindSymbols: " << Sym.Scope << Sym.Name << " = "
-                            << Score << "\n"
-                            << Quality << Relevance << "\n");
+    dlog("FindSymbols: {0}{1} = {2}\n{3}{4}\n", Sym.Scope, Sym.Name, Score,
+         Quality, Relevance);
 
     Top.push({Score, std::move(Info)});
   });

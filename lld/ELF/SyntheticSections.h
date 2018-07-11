@@ -26,6 +26,7 @@
 #include "InputSection.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Endian.h"
 #include <functional>
 
 namespace lld {
@@ -651,9 +652,8 @@ private:
   bool IsIplt;
 };
 
-// GdbIndexChunk is created for each .debug_info section and contains
-// information to create a part of .gdb_index for a given input section.
-struct GdbIndexChunk {
+class GdbIndexSection final : public SyntheticSection {
+public:
   struct AddressEntry {
     InputSection *Section;
     uint64_t LowAddress;
@@ -671,46 +671,46 @@ struct GdbIndexChunk {
     uint32_t Type;
   };
 
-  InputSection *DebugInfoSec;
-  std::vector<AddressEntry> AddressAreas;
-  std::vector<CuEntry> CompilationUnits;
-  std::vector<NameTypeEntry> NamesAndTypes;
-};
+  struct GdbChunk {
+    InputSection *Sec;
+    std::vector<AddressEntry> AddressAreas;
+    std::vector<CuEntry> CompilationUnits;
+  };
 
-class GdbIndexSection final : public SyntheticSection {
-public:
-  GdbIndexSection(std::vector<GdbIndexChunk> &&Chunks);
+  struct GdbSymbol {
+    llvm::CachedHashStringRef Name;
+    std::vector<uint32_t> CuVector;
+    uint32_t NameOff;
+    uint32_t CuVectorOff;
+  };
+
+  GdbIndexSection();
+  template <typename ELFT> static GdbIndexSection *create();
   void writeTo(uint8_t *Buf) override;
-  size_t getSize() const override { return TotalSize; }
+  size_t getSize() const override { return Size; }
   bool empty() const override;
 
 private:
-  struct GdbSymbol {
-    llvm::CachedHashStringRef Name;
-    uint32_t OutputOff;
-    uint32_t CuVectorIdx;
+  struct GdbIndexHeader {
+    llvm::support::ulittle32_t Version;
+    llvm::support::ulittle32_t CuListOff;
+    llvm::support::ulittle32_t CuTypesOff;
+    llvm::support::ulittle32_t AddressAreaOff;
+    llvm::support::ulittle32_t SymtabOff;
+    llvm::support::ulittle32_t ConstantPoolOff;
   };
+
+  void initOutputSize();
+  size_t computeSymtabSize() const;
+
+  // Each chunk contains information gathered from debug sections of a
+  // single object file.
+  std::vector<GdbChunk> Chunks;
 
   // A symbol table for this .gdb_index section.
   std::vector<GdbSymbol> Symbols;
 
-  // CU vector is a part of constant pool area of section.
-  std::vector<std::vector<uint32_t>> CuVectors;
-
-  // Each chunk contains information gathered from a debug sections of single
-  // object and used to build different areas of gdb index.
-  std::vector<GdbIndexChunk> Chunks;
-
-  uint64_t CuListOffset = 24;
-  uint64_t CuTypesOffset;
-  uint64_t SymtabOffset;
-  uint64_t SymtabSize = 0;
-  uint64_t ConstantPoolOffset;
-  uint64_t CuVectorsPoolSize = 0;
-  uint64_t StringPoolSize = 0;
-  uint64_t TotalSize;
-
-  std::vector<uint32_t> CuVectorOffsets;
+  size_t Size;
 };
 
 template <class ELFT> GdbIndexSection *createGdbIndex();

@@ -52,7 +52,7 @@ llvm::Optional<std::string> toURI(const SourceManager &SM, StringRef Path,
   if (std::error_code EC =
           SM.getFileManager().getVirtualFileSystem()->makeAbsolute(
               AbsolutePath))
-    log("Warning: could not make absolute file: " + EC.message());
+    log("Warning: could not make absolute file: {0}", EC.message());
   if (llvm::sys::path::is_absolute(AbsolutePath)) {
     // Handle the symbolic link path case where the current working directory
     // (getCurrentWorkingDirectory) is a symlink./ We always want to the real
@@ -86,8 +86,7 @@ llvm::Optional<std::string> toURI(const SourceManager &SM, StringRef Path,
       return U->toString();
     ErrMsg += llvm::toString(U.takeError()) + "\n";
   }
-  log(llvm::Twine("Failed to create an URI for file ") + AbsolutePath + ": " +
-      ErrMsg);
+  log("Failed to create an URI for file {0}: {1}", AbsolutePath, ErrMsg);
   return llvm::None;
 }
 
