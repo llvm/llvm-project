@@ -41,7 +41,7 @@ int main () {
 
 #if TEST_STD_VER > 11
     static_assert( test<std::string_view>    ({ "abc", 3}), "");
-#ifdef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     static_assert( test<std::u16string_view> ({u"abc", 3}), "");
     static_assert( test<std::u32string_view> ({U"abc", 3}), "");
 #endif
