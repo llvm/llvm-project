@@ -49,7 +49,7 @@ void RetireStage::notifyInstructionRetired(const InstRef &IR) {
 
   for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
     PRF.removeRegisterWrite(*WS.get(), FreedRegs, !Desc.isZeroLatency());
-  notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
+  notifyEvent<HWInstructionEvent>(HWInstructionRetiredEvent(IR, FreedRegs));
 }
 
 } // namespace mca

@@ -120,8 +120,8 @@ public:
   virtual void onCycleBegin() {}
   virtual void onCycleEnd() {}
 
-  virtual void onInstructionEvent(const HWInstructionEvent &Event) {}
-  virtual void onStallEvent(const HWStallEvent &Event) {}
+  virtual void onEvent(const HWInstructionEvent &Event) {}
+  virtual void onEvent(const HWStallEvent &Event) {}
 
   using ResourceRef = std::pair<uint64_t, uint64_t>;
   virtual void onResourceAvailable(const ResourceRef &RRef) {}

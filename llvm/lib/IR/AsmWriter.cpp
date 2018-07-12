@@ -2618,8 +2618,9 @@ void AssemblyWriter::printModuleSummaryIndex() {
   unsigned i = 0;
   for (auto &ModPair : moduleVec) {
     Out << "^" << i++ << " = module: (";
-    Out << "path: \"" << ModPair.first << "\"";
-    Out << ", hash: (";
+    Out << "path: \"";
+    printEscapedString(ModPair.first, Out);
+    Out << "\", hash: (";
     FieldSeparator FS;
     for (auto Hash : ModPair.second)
       Out << FS << Hash;

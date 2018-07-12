@@ -411,10 +411,14 @@ int ClangTool::run(ToolAction *Action) {
   // This just needs to be some symbol in the binary.
   static int StaticSymbol;
 
-  llvm::SmallString<128> InitialDirectory;
-  if (std::error_code EC = llvm::sys::fs::current_path(InitialDirectory))
+  std::string InitialDirectory;
+  if (llvm::ErrorOr<std::string> CWD =
+          OverlayFileSystem->getCurrentWorkingDirectory()) {
+    InitialDirectory = std::move(*CWD);
+  } else {
     llvm::report_fatal_error("Cannot detect current path: " +
-                             Twine(EC.message()));
+                             Twine(CWD.getError().message()));
+  }
 
   // First insert all absolute paths into the in-memory VFS. These are global
   // for all compile commands.

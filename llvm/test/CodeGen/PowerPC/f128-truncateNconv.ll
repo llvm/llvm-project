@@ -1,6 +1,6 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -verify-machineinstrs -enable-ppc-quad-precision \
-; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s
+; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
 @f128Array = global [4 x fp128] [fp128 0xL00000000000000004004C00000000000,
                                  fp128 0xLF000000000000000400808AB851EB851,
@@ -16,9 +16,9 @@ entry:
   ret i64 %conv
 
 ; CHECK-LABEL: qpConv2sdw
-; CHECK: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xscvqpsdz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: mfvsrd 3, [[CONV]]
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xscvqpsdz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: mfvsrd r3, v[[CONV]]
 ; CHECK-NEXT: blr
 }
 
@@ -33,11 +33,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2sdw_02
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK: lxv [[REG:[0-9]+]], 32([[REG0]])
-; CHECK-NEXT: xscvqpsdz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: stxsd [[CONV]], 0(3)
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK: lxv v[[REG:[0-9]+]], 32(r[[REG0]])
+; CHECK-NEXT: xscvqpsdz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: stxsd v[[CONV]], 0(r3)
 ; CHECK-NEXT: blr
 }
 
@@ -53,13 +53,13 @@ entry:
   ret i64 %conv
 
 ; CHECK-LABEL: qpConv2sdw_03
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK-DAG: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 16([[REG0]])
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK: xsaddqp [[REG]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpsdz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: mfvsrd 3, [[CONV]]
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK: xsaddqp v[[REG]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpsdz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: mfvsrd r3, v[[CONV]]
 ; CHECK-NEXT: blr
 }
 
@@ -75,11 +75,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2sdw_04
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK: xsaddqp [[REG]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpsdz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: stxsd [[CONV]], 0(5)
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK: xsaddqp v[[REG]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpsdz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: stxsd v[[CONV]], 0(r5)
 ; CHECK-NEXT: blr
 }
 
@@ -96,8 +96,8 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2sdw_testXForm
-; CHECK: xscvqpsdz [[CONV:[0-9]+]],
-; CHECK-NEXT: stxsdx [[CONV]], 3, 4
+; CHECK: xscvqpsdz v[[CONV:[0-9]+]],
+; CHECK-NEXT: stxsdx v[[CONV]], r3, r4
 ; CHECK-NEXT: blr
 }
 
@@ -109,9 +109,9 @@ entry:
   ret i64 %conv
 
 ; CHECK-LABEL: qpConv2udw
-; CHECK: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xscvqpudz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: mfvsrd 3, [[CONV]]
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xscvqpudz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: mfvsrd r3, v[[CONV]]
 ; CHECK-NEXT: blr
 }
 
@@ -126,11 +126,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2udw_02
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK: lxv [[REG:[0-9]+]], 32([[REG0]])
-; CHECK-NEXT: xscvqpudz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: stxsd [[CONV]], 0(3)
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK: lxv v[[REG:[0-9]+]], 32(r[[REG0]])
+; CHECK-NEXT: xscvqpudz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: stxsd v[[CONV]], 0(r3)
 ; CHECK-NEXT: blr
 }
 
@@ -146,13 +146,13 @@ entry:
   ret i64 %conv
 
 ; CHECK-LABEL: qpConv2udw_03
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK-DAG: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 16([[REG0]])
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK: xsaddqp [[REG]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpudz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: mfvsrd 3, [[CONV]]
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK: xsaddqp v[[REG]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpudz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: mfvsrd r3, v[[CONV]]
 ; CHECK-NEXT: blr
 }
 
@@ -168,11 +168,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2udw_04
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK: xsaddqp [[REG]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpudz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: stxsd [[CONV]], 0(5)
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK: xsaddqp v[[REG]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpudz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: stxsd v[[CONV]], 0(r5)
 ; CHECK-NEXT: blr
 }
 
@@ -189,8 +189,8 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2udw_testXForm
-; CHECK: xscvqpudz [[CONV:[0-9]+]],
-; CHECK-NEXT: stxsdx [[CONV]], 3, 4
+; CHECK: xscvqpudz v[[CONV:[0-9]+]],
+; CHECK-NEXT: stxsdx v[[CONV]], r3, r4
 ; CHECK-NEXT: blr
 }
 
@@ -202,10 +202,10 @@ entry:
   ret i32 %conv
 
 ; CHECK-LABEL: qpConv2sw
-; CHECK: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xscvqpswz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: mfvsrwz [[REG2:[0-9]+]], [[CONV]]
-; CHECK-NEXT: extsw 3, [[REG2]]
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xscvqpswz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: mfvsrwz r[[REG2:[0-9]+]], v[[CONV]]
+; CHECK-NEXT: extsw r3, r[[REG2]]
 ; CHECK-NEXT: blr
 }
 
@@ -220,11 +220,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2sw_02
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK: lxv [[REG:[0-9]+]], 32([[REG0]])
-; CHECK-NEXT: xscvqpswz [[CONV:[0-9]+]], [[REG]]
-; CHECK-NEXT: stxsiwx [[CONV]], 0, 3
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK: lxv v[[REG:[0-9]+]], 32(r[[REG0]])
+; CHECK-NEXT: xscvqpswz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: stxsiwx v[[CONV]], 0, r3
 ; CHECK-NEXT: blr
 }
 
@@ -240,14 +240,14 @@ entry:
   ret i32 %conv
 
 ; CHECK-LABEL: qpConv2sw_03
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK-DAG: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 16([[REG0]])
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xsaddqp [[ADD:[0-9]+]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpswz [[CONV:[0-9]+]], [[ADD]]
-; CHECK-NEXT: mfvsrwz [[REG2:[0-9]+]], [[CONV]]
-; CHECK-NEXT: extsw 3, [[REG2]]
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xsaddqp v[[ADD:[0-9]+]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpswz v[[CONV:[0-9]+]], v[[ADD]]
+; CHECK-NEXT: mfvsrwz r[[REG2:[0-9]+]], v[[CONV]]
+; CHECK-NEXT: extsw r3, r[[REG2]]
 ; CHECK-NEXT: blr
 }
 
@@ -263,11 +263,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2sw_04
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xsaddqp [[ADD:[0-9]+]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpswz [[CONV:[0-9]+]], [[ADD]]
-; CHECK-NEXT: stxsiwx [[CONV]], 0, 5
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xsaddqp v[[ADD:[0-9]+]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpswz v[[CONV:[0-9]+]], v[[ADD]]
+; CHECK-NEXT: stxsiwx v[[CONV]], 0, r5
 ; CHECK-NEXT: blr
 }
 
@@ -279,9 +279,9 @@ entry:
   ret i32 %conv
 
 ; CHECK-LABEL: qpConv2uw
-; CHECK: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xscvqpuwz [[CONV:[0-9]+]], [[ADD]]
-; CHECK-NEXT: mfvsrwz 3, [[CONV]]
+; CHECK: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xscvqpuwz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: mfvsrwz r3, v[[CONV]]
 ; CHECK: blr
 }
 
@@ -296,11 +296,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2uw_02
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK: lxv [[REG:[0-9]+]], 32([[REG0]])
-; CHECK-NEXT: xscvqpuwz [[CONV:[0-9]+]], [[ADD]]
-; CHECK-NEXT: stxsiwx [[CONV]], 0, 3
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK: lxv v[[REG:[0-9]+]], 32(r[[REG0]])
+; CHECK-NEXT: xscvqpuwz v[[CONV:[0-9]+]], v[[REG]]
+; CHECK-NEXT: stxsiwx v[[CONV]], 0, r3
 ; CHECK: blr
 }
 
@@ -316,13 +316,13 @@ entry:
   ret i32 %conv
 
 ; CHECK-LABEL: qpConv2uw_03
-; CHECK: addis [[REG0:[0-9]+]], 2, .LC0@toc@ha
-; CHECK-DAG: ld [[REG0]], .LC0@toc@l([[REG0]])
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 16([[REG0]])
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xsaddqp [[ADD:[0-9]+]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpuwz [[CONV:[0-9]+]], [[ADD]]
-; CHECK-NEXT: mfvsrwz 3, [[CONV]]
+; CHECK: addis r[[REG0:[0-9]+]], r2, .LC0@toc@ha
+; CHECK-DAG: ld r[[REG0]], .LC0@toc@l(r[[REG0]])
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 16(r[[REG0]])
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xsaddqp v[[ADD:[0-9]+]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpuwz v[[CONV:[0-9]+]], v[[ADD]]
+; CHECK-NEXT: mfvsrwz r3, v[[CONV]]
 ; CHECK: blr
 }
 
@@ -338,11 +338,11 @@ entry:
   ret void
 
 ; CHECK-LABEL: qpConv2uw_04
-; CHECK-DAG: lxv [[REG1:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG:[0-9]+]], 0(3)
-; CHECK-NEXT: xsaddqp [[ADD:[0-9]+]], [[REG]], [[REG1]]
-; CHECK-NEXT: xscvqpuwz [[CONV:[0-9]+]], [[ADD]]
-; CHECK-NEXT: stxsiwx [[CONV]], 0, 5
+; CHECK-DAG: lxv v[[REG1:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG:[0-9]+]], 0(r3)
+; CHECK-NEXT: xsaddqp v[[ADD:[0-9]+]], v[[REG]], v[[REG1]]
+; CHECK-NEXT: xscvqpuwz v[[CONV:[0-9]+]], v[[ADD]]
+; CHECK-NEXT: stxsiwx v[[CONV]], 0, r5
 ; CHECK: blr
 }
 
@@ -352,10 +352,10 @@ entry:
 define signext i16 @qpConv2shw(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2shw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    extsh 3, 3
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    extsh r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -367,11 +367,11 @@ entry:
 define void @qpConv2shw_02(i16* nocapture %res) {
 ; CHECK-LABEL: qpConv2shw_02:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 2, 32(4)
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    stxsihx 2, 0, 3
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v2, 32(r4)
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    stxsihx v2, 0, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* getelementptr inbounds
@@ -386,14 +386,14 @@ entry:
 define signext i16 @qpConv2shw_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2shw_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 3, 16(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    extsh 3, 3
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    extsh r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -410,11 +410,11 @@ define void @qpConv2shw_04(fp128* nocapture readonly %a,
                            fp128* nocapture readonly %b, i16* nocapture %res) {
 ; CHECK-LABEL: qpConv2shw_04:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    lxv 3, 0(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    stxsihx 2, 0, 5
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    stxsihx v2, 0, r5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -429,10 +429,10 @@ entry:
 define zeroext i16 @qpConv2uhw(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2uhw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    clrldi 3, 3, 32
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -444,11 +444,11 @@ entry:
 define void @qpConv2uhw_02(i16* nocapture %res) {
 ; CHECK-LABEL: qpConv2uhw_02:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 2, 32(4)
-; CHECK-NEXT:    xscvqpuwz 2, 2
-; CHECK-NEXT:    stxsihx 2, 0, 3
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v2, 32(r4)
+; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    stxsihx v2, 0, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* getelementptr inbounds
@@ -463,14 +463,14 @@ entry:
 define zeroext i16 @qpConv2uhw_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2uhw_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 3, 16(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    clrldi 3, 3, 32
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -487,11 +487,11 @@ define void @qpConv2uhw_04(fp128* nocapture readonly %a,
                            fp128* nocapture readonly %b, i16* nocapture %res) {
 ; CHECK-LABEL: qpConv2uhw_04:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    lxv 3, 0(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpuwz 2, 2
-; CHECK-NEXT:    stxsihx 2, 0, 5
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    stxsihx v2, 0, r5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -506,10 +506,10 @@ entry:
 define signext i8 @qpConv2sb(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2sb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    extsb 3, 3
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    extsb r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -521,11 +521,11 @@ entry:
 define void @qpConv2sb_02(i8* nocapture %res) {
 ; CHECK-LABEL: qpConv2sb_02:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 2, 32(4)
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    stxsibx 2, 0, 3
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v2, 32(r4)
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    stxsibx v2, 0, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* getelementptr inbounds
@@ -540,14 +540,14 @@ entry:
 define signext i8 @qpConv2sb_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2sb_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 3, 16(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    extsb 3, 3
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    extsb r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -564,11 +564,11 @@ define void @qpConv2sb_04(fp128* nocapture readonly %a,
                           fp128* nocapture readonly %b, i8* nocapture %res) {
 ; CHECK-LABEL: qpConv2sb_04:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    lxv 3, 0(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    stxsibx 2, 0, 5
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    stxsibx v2, 0, r5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -583,10 +583,10 @@ entry:
 define zeroext i8 @qpConv2ub(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2ub:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    clrldi 3, 3, 32
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -598,11 +598,11 @@ entry:
 define void @qpConv2ub_02(i8* nocapture %res) {
 ; CHECK-LABEL: qpConv2ub_02:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 2, 32(4)
-; CHECK-NEXT:    xscvqpuwz 2, 2
-; CHECK-NEXT:    stxsibx 2, 0, 3
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v2, 32(r4)
+; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    stxsibx v2, 0, r3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* getelementptr inbounds
@@ -617,14 +617,14 @@ entry:
 define zeroext i8 @qpConv2ub_03(fp128* nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2ub_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    lxv 3, 16(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    clrldi 3, 3, 32
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    lxv v3, 16(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16
@@ -641,11 +641,11 @@ define void @qpConv2ub_04(fp128* nocapture readonly %a,
                           fp128* nocapture readonly %b, i8* nocapture %res) {
 ; CHECK-LABEL: qpConv2ub_04:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    lxv 3, 0(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvqpuwz 2, 2
-; CHECK-NEXT:    stxsibx 2, 0, 5
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    lxv v3, 0(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvqpuwz v2, v2
+; CHECK-NEXT:    stxsibx v2, 0, r5
 ; CHECK-NEXT:    blr
 entry:
   %0 = load fp128, fp128* %a, align 16

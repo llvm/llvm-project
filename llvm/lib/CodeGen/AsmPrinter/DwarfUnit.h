@@ -112,6 +112,8 @@ public:
   uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
   const DICompileUnit *getCUNode() const { return CUNode; }
 
+  uint16_t getDwarfVersion() const { return DD->getDwarfVersion(); }
+
   /// Return true if this compile unit has something to write out.
   bool hasContent() const { return getUnitDie().hasChildren(); }
 
@@ -292,6 +294,9 @@ public:
 
   /// Add the DW_AT_str_offsets_base attribute to the unit DIE.
   void addStringOffsetsStart();
+
+  /// Add the DW_AT_rnglists_base attribute to the unit DIE.
+  void addRnglistsBase();
 
   virtual DwarfCompileUnit &getCU() = 0;
 

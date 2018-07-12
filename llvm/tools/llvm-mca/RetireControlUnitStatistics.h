@@ -47,7 +47,7 @@ class RetireControlUnitStatistics : public View {
 public:
   RetireControlUnitStatistics() : NumRetired(0), NumCycles(0) {}
 
-  void onInstructionEvent(const HWInstructionEvent &Event) override;
+  void onEvent(const HWInstructionEvent &Event) override;
 
   void onCycleBegin() override { NumCycles++; }
 

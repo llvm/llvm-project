@@ -39,8 +39,7 @@ void RegisterFileStatistics::initializeRegisterFileInfo() {
   std::fill(RegisterFiles.begin(), RegisterFiles.end(), Empty);
 }
 
-void RegisterFileStatistics::onInstructionEvent(
-    const HWInstructionEvent &Event) {
+void RegisterFileStatistics::onEvent(const HWInstructionEvent &Event) {
   switch (Event.Type) {
   default:
     break;

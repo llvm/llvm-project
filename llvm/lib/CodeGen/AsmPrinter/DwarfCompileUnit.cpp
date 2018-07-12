@@ -399,21 +399,30 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
                                          SmallVector<RangeSpan, 2> Range) {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
 
-  // Emit offset in .debug_range as a relocatable label. emitDIE will handle
-  // emitting it appropriately.
+  // Emit the offset into .debug_ranges or .debug_rnglists as a relocatable
+  // label. emitDIE() will handle emitting it appropriately.
   const MCSymbol *RangeSectionSym =
-      TLOF.getDwarfRangesSection()->getBeginSymbol();
+      DD->getDwarfVersion() >= 5
+          ? TLOF.getDwarfRnglistsSection()->getBeginSymbol()
+          : TLOF.getDwarfRangesSection()->getBeginSymbol();
 
   RangeSpanList List(Asm->createTempSymbol("debug_ranges"), std::move(Range));
 
   // Under fission, ranges are specified by constant offsets relative to the
   // CU's DW_AT_GNU_ranges_base.
-  if (isDwoUnit())
-    addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
-                    RangeSectionSym);
-  else
+  // FIXME: For DWARF v5, do not generate the DW_AT_ranges attribute under
+  // fission until we support the forms using the .debug_addr section
+  // (DW_RLE_startx_endx etc.).
+  if (isDwoUnit()) {
+    if (DD->getDwarfVersion() < 5)
+      addSectionDelta(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
+                      RangeSectionSym);
+  } else {
     addSectionLabel(ScopeDIE, dwarf::DW_AT_ranges, List.getSym(),
                     RangeSectionSym);
+    if (DD->getDwarfVersion() >= 5)
+      addRnglistsBase();
+  }
 
   // Add the range list to the set of ranges to be emitted.
   (Skeleton ? Skeleton : this)->CURangeLists.push_back(std::move(List));

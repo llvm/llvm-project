@@ -1117,7 +1117,7 @@ def PATCHABLE_FUNCTION_ENTER : StandardPseudoInstruction {
   let hasSideEffects = 0;
 }
 def PATCHABLE_RET : StandardPseudoInstruction {
-  let OutOperandList = (outs unknown:$dst);
+  let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "# XRay Function Patchable RET.";
   let usesCustomInserter = 1;
@@ -1134,7 +1134,7 @@ def PATCHABLE_FUNCTION_EXIT : StandardPseudoInstruction {
   let isReturn = 0; // Original return instruction will follow
 }
 def PATCHABLE_TAIL_CALL : StandardPseudoInstruction {
-  let OutOperandList = (outs unknown:$dst);
+  let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "# XRay Tail Call Exit.";
   let usesCustomInserter = 1;

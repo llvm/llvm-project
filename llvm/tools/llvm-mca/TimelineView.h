@@ -174,7 +174,7 @@ public:
 
   // Event handlers.
   void onCycleEnd() override { ++CurrentCycle; }
-  void onInstructionEvent(const HWInstructionEvent &Event) override;
+  void onEvent(const HWInstructionEvent &Event) override;
 
   // print functionalities.
   void printTimeline(llvm::raw_ostream &OS) const;

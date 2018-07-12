@@ -66,13 +66,13 @@ public:
       : NumDispatched(0), NumCycles(0),
         HWStalls(HWStallEvent::LastGenericEvent) {}
 
-  void onInstructionEvent(const HWInstructionEvent &Event) override;
+  void onEvent(const HWStallEvent &Event) override;
+
+  void onEvent(const HWInstructionEvent &Event) override;
 
   void onCycleBegin() override { NumCycles++; }
 
   void onCycleEnd() override { updateHistograms(); }
-
-  void onStallEvent(const HWStallEvent &Event) override;
 
   void printView(llvm::raw_ostream &OS) const override {
     printDispatchStalls(OS);
