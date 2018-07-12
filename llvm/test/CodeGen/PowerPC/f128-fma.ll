@@ -1,5 +1,6 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -ppc-vsr-nums-as-vr < %s | FileCheck %s
+; RUN:   -enable-ppc-quad-precision -ppc-vsr-nums-as-vr \
+; RUN:   -ppc-asm-full-reg-names < %s | FileCheck %s
 
 define void @qpFmadd(fp128* nocapture readonly %a, fp128* nocapture %b,
                    fp128* nocapture readonly %c, fp128* nocapture %res) {
@@ -12,11 +13,11 @@ entry:
   ret void
 ; CHECK-LABEL: qpFmadd
 ; CHECK-NOT: bl fmal
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsmaddqp [[REG5]], [[REG3]], [[REG4]]
-; CHECK-NEXT: stxv [[REG5]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsmaddqp v[[REG5]], v[[REG3]], v[[REG4]]
+; CHECK-NEXT: stxv v[[REG5]], 0(r6)
 ; CHECK-NEXT: blr
 }
 declare fp128 @llvm.fmuladd.f128(fp128, fp128, fp128)
@@ -35,11 +36,11 @@ entry:
   ret void
 ; CHECK-LABEL: qpFmadd_02
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsmaddqp [[REG3]], [[REG4]], [[REG5]]
-; CHECK-NEXT: stxv [[REG3]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsmaddqp v[[REG3]], v[[REG4]], v[[REG5]]
+; CHECK-NEXT: stxv v[[REG3]], 0(r6)
 ; CHECK-NEXT: blr
 }
 
@@ -57,11 +58,11 @@ entry:
   ret void
 ; CHECK-LABEL: qpFmadd_03
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsmaddqp [[REG5]], [[REG3]], [[REG4]]
-; CHECK-NEXT: stxv [[REG5]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsmaddqp v[[REG5]], v[[REG3]], v[[REG4]]
+; CHECK-NEXT: stxv v[[REG5]], 0(r6)
 ; CHECK-NEXT: blr
 }
 
@@ -80,11 +81,11 @@ entry:
   ret void
 ; CHECK-LABEL: qpFnmadd
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsnmaddqp [[REG3]], [[REG4]], [[REG5]]
-; CHECK-NEXT: stxv [[REG3]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsnmaddqp v[[REG3]], v[[REG4]], v[[REG5]]
+; CHECK-NEXT: stxv v[[REG3]], 0(r6)
 ; CHECK-NEXT: blr
 }
 
@@ -103,11 +104,11 @@ entry:
   ret void
 ; CHECK-LABEL: qpFnmadd_02
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsnmaddqp [[REG5]], [[REG3]], [[REG4]]
-; CHECK-NEXT: stxv [[REG5]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsnmaddqp v[[REG5]], v[[REG3]], v[[REG4]]
+; CHECK-NEXT: stxv v[[REG5]], 0(r6)
 ; CHECK-NEXT: blr
 }
 
@@ -125,11 +126,11 @@ entry:
   ret void
 ; CHECK-LABEL: qpFmsub
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsnmsubqp [[REG3]], [[REG5]], [[REG4]]
-; CHECK-NEXT: stxv [[REG3]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsnmsubqp v[[REG3]], v[[REG5]], v[[REG4]]
+; CHECK-NEXT: stxv v[[REG3]], 0(r6)
 ; CHECK-NEXT: blr
 }
 
@@ -147,11 +148,11 @@ entry:
   ret void
 ; CHECK-LABEL: qpFmsub_02
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsmsubqp [[REG5]], [[REG3]], [[REG4]]
-; CHECK-NEXT: stxv [[REG5]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsmsubqp v[[REG5]], v[[REG3]], v[[REG4]]
+; CHECK-NEXT: stxv v[[REG5]], 0(r6)
 ; CHECK-NEXT: blr
 }
 
@@ -170,12 +171,12 @@ entry:
   ret void
 ; CHECK-LABEL: qpFnmsub
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsnegqp [[REG4]], [[REG4]]
-; CHECK: xsnmaddqp [[REG3]], [[REG4]], [[REG5]]
-; CHECK-NEXT: stxv [[REG3]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsnegqp v[[REG4]], v[[REG4]]
+; CHECK: xsnmaddqp v[[REG3]], v[[REG4]], v[[REG5]]
+; CHECK-NEXT: stxv v[[REG3]], 0(r6)
 ; CHECK-NEXT: blr
 }
 
@@ -194,10 +195,10 @@ entry:
   ret void
 ; CHECK-LABEL: qpFnmsub_02
 ; CHECK-NOT: bl __multf3
-; CHECK-DAG: lxv [[REG3:[0-9]+]], 0(3)
-; CHECK-DAG: lxv [[REG4:[0-9]+]], 0(4)
-; CHECK-DAG: lxv [[REG5:[0-9]+]], 0(5)
-; CHECK: xsnmsubqp [[REG5]], [[REG3]], [[REG4]]
-; CHECK-NEXT: stxv [[REG5]], 0(6)
+; CHECK-DAG: lxv v[[REG3:[0-9]+]], 0(r3)
+; CHECK-DAG: lxv v[[REG4:[0-9]+]], 0(r4)
+; CHECK-DAG: lxv v[[REG5:[0-9]+]], 0(r5)
+; CHECK: xsnmsubqp v[[REG5]], v[[REG3]], v[[REG4]]
+; CHECK-NEXT: stxv v[[REG5]], 0(r6)
 ; CHECK-NEXT: blr
 }

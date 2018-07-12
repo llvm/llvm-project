@@ -38,16 +38,32 @@ using namespace minidump;
 
 class MinidumpParserTest : public testing::Test {
 public:
-  void SetUpData(const char *minidump_filename,
-                 uint64_t load_size = UINT64_MAX) {
+  void SetUpData(const char *minidump_filename) {
     std::string filename = GetInputFilePath(minidump_filename);
-    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
+    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, -1, 0);
+    ASSERT_NE(BufferPtr, nullptr);
+    llvm::Optional<MinidumpParser> optional_parser =
+        MinidumpParser::Create(BufferPtr);
+    ASSERT_TRUE(optional_parser.hasValue());
+    parser.reset(new MinidumpParser(optional_parser.getValue()));
+    ASSERT_GT(parser->GetData().size(), 0UL);
+    auto result = parser->Initialize();
+    ASSERT_TRUE(result.Success()) << result.AsCString();
+  }
+
+  void InvalidMinidump(const char *minidump_filename, uint64_t load_size) {
+    std::string filename = GetInputFilePath(minidump_filename);
+    auto BufferPtr =
+        DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
+    ASSERT_NE(BufferPtr, nullptr);
 
     llvm::Optional<MinidumpParser> optional_parser =
         MinidumpParser::Create(BufferPtr);
     ASSERT_TRUE(optional_parser.hasValue());
     parser.reset(new MinidumpParser(optional_parser.getValue()));
     ASSERT_GT(parser->GetData().size(), 0UL);
+    auto result = parser->Initialize();
+    ASSERT_TRUE(result.Fail());
   }
 
   std::unique_ptr<MinidumpParser> parser;
@@ -68,12 +84,15 @@ TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
   EXPECT_EQ(1232UL, context.size());
 }
 
-TEST_F(MinidumpParserTest, GetThreadsTruncatedFile) {
-  SetUpData("linux-x86_64.dmp", 200);
-  llvm::ArrayRef<MinidumpThread> thread_list;
+TEST_F(MinidumpParserTest, TruncatedMinidumps) {
+  InvalidMinidump("linux-x86_64.dmp", 32);
+  InvalidMinidump("linux-x86_64.dmp", 100);
+  InvalidMinidump("linux-x86_64.dmp", 20 * 1024);
+}
 
-  thread_list = parser->GetThreads();
-  ASSERT_EQ(0UL, thread_list.size());
+TEST_F(MinidumpParserTest, IllFormedMinidumps) {
+  InvalidMinidump("bad_duplicate_streams.dmp", -1);
+  InvalidMinidump("bad_overlapping_streams.dmp", -1);
 }
 
 TEST_F(MinidumpParserTest, GetArchitecture) {

@@ -314,13 +314,13 @@ class Attr;
     /// \param D A declaration in the "to" context.
     virtual void CompleteDecl(Decl* D);
     
-    /// Note that we have imported the "from" declaration by mapping it
-    /// to the (potentially-newly-created) "to" declaration.
-    ///
     /// Subclasses can override this function to observe all of the \c From ->
     /// \c To declaration mappings as they are imported.
-    virtual Decl *Imported(Decl *From, Decl *To);
-      
+    virtual Decl *Imported(Decl *From, Decl *To) { return To; }
+
+    /// Store and assign the imported declaration to its counterpart.
+    Decl *MapImported(Decl *From, Decl *To);
+
     /// Called by StructuralEquivalenceContext.  If a RecordDecl is
     /// being compared to another RecordDecl as part of import, completing the
     /// other RecordDecl may trigger importation of the first RecordDecl. This

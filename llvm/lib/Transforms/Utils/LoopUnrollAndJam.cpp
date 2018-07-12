@@ -45,26 +45,24 @@ using namespace llvm;
 STATISTIC(NumUnrolledAndJammed, "Number of loops unroll and jammed");
 STATISTIC(NumCompletelyUnrolledAndJammed, "Number of loops unroll and jammed");
 
-static bool containsBB(std::vector<BasicBlock *> &V, BasicBlock *BB) {
-  return std::find(V.begin(), V.end(), BB) != V.end();
-}
+typedef SmallPtrSet<BasicBlock *, 4> BasicBlockSet;
 
 // Partition blocks in an outer/inner loop pair into blocks before and after
 // the loop
 static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
-                                     std::vector<BasicBlock *> &ForeBlocks,
-                                     std::vector<BasicBlock *> &SubLoopBlocks,
-                                     std::vector<BasicBlock *> &AftBlocks,
+                                     BasicBlockSet &ForeBlocks,
+                                     BasicBlockSet &SubLoopBlocks,
+                                     BasicBlockSet &AftBlocks,
                                      DominatorTree *DT) {
   BasicBlock *SubLoopLatch = SubLoop->getLoopLatch();
-  SubLoopBlocks = SubLoop->getBlocks();
+  SubLoopBlocks.insert(SubLoop->block_begin(), SubLoop->block_end());
 
   for (BasicBlock *BB : L->blocks()) {
     if (!SubLoop->contains(BB)) {
       if (DT->dominates(SubLoopLatch, BB))
-        AftBlocks.push_back(BB);
+        AftBlocks.insert(BB);
       else
-        ForeBlocks.push_back(BB);
+        ForeBlocks.insert(BB);
     }
   }
 
@@ -76,7 +74,7 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
       continue;
     TerminatorInst *TI = BB->getTerminator();
     for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      if (!containsBB(ForeBlocks, TI->getSuccessor(i)))
+      if (!ForeBlocks.count(TI->getSuccessor(i)))
         return false;
   }
 
@@ -84,10 +82,10 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
 }
 
 // Move the phi operands of Header from Latch out of AftBlocks to InsertLoc.
-static void
-moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header, BasicBlock *Latch,
-                                  Instruction *InsertLoc,
-                                  std::vector<BasicBlock *> &AftBlocks) {
+static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
+                                              BasicBlock *Latch,
+                                              Instruction *InsertLoc,
+                                              BasicBlockSet &AftBlocks) {
   // We need to ensure we move the instructions in the correct order,
   // starting with the earliest required instruction and moving forward.
   std::vector<Instruction *> Worklist;
@@ -101,7 +99,7 @@ moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header, BasicBlock *Latch,
   while (!Worklist.empty()) {
     Instruction *I = Worklist.back();
     Worklist.pop_back();
-    if (!containsBB(AftBlocks, I->getParent()))
+    if (!AftBlocks.count(I->getParent()))
       continue;
 
     Visited.push_back(I);
@@ -236,9 +234,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Partition blocks in an outer/inner loop pair into blocks before and after
   // the loop
-  std::vector<BasicBlock *> SubLoopBlocks;
-  std::vector<BasicBlock *> ForeBlocks;
-  std::vector<BasicBlock *> AftBlocks;
+  BasicBlockSet SubLoopBlocks;
+  BasicBlockSet ForeBlocks;
+  BasicBlockSet AftBlocks;
   partitionOuterLoopBlocks(L, SubLoop, ForeBlocks, SubLoopBlocks, AftBlocks,
                            DT);
 
@@ -292,21 +290,21 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       BasicBlock *New = CloneBasicBlock(*BB, VMap, "." + Twine(It));
       Header->getParent()->getBasicBlockList().push_back(New);
 
-      if (containsBB(ForeBlocks, *BB)) {
+      if (ForeBlocks.count(*BB)) {
         L->addBasicBlockToLoop(New, *LI);
 
         if (*BB == ForeBlocksFirst[0])
           ForeBlocksFirst.push_back(New);
         if (*BB == ForeBlocksLast[0])
           ForeBlocksLast.push_back(New);
-      } else if (containsBB(SubLoopBlocks, *BB)) {
+      } else if (SubLoopBlocks.count(*BB)) {
         SubLoop->addBasicBlockToLoop(New, *LI);
 
         if (*BB == SubLoopBlocksFirst[0])
           SubLoopBlocksFirst.push_back(New);
         if (*BB == SubLoopBlocksLast[0])
           SubLoopBlocksLast.push_back(New);
-      } else if (containsBB(AftBlocks, *BB)) {
+      } else if (AftBlocks.count(*BB)) {
         L->addBasicBlockToLoop(New, *LI);
 
         if (*BB == AftBlocksFirst[0])
@@ -554,7 +552,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                           : LoopUnrollResult::PartiallyUnrolled;
 }
 
-static bool getLoadsAndStores(std::vector<BasicBlock *> &Blocks,
+static bool getLoadsAndStores(BasicBlockSet &Blocks,
                               SmallVector<Value *, 4> &MemInstr) {
   // Scan the BBs and collect legal loads and stores.
   // Returns false if non-simple loads/stores are found.
@@ -617,10 +615,9 @@ static bool checkDependencies(SmallVector<Value *, 4> &Earlier,
   return true;
 }
 
-static bool checkDependencies(Loop *L, std::vector<BasicBlock *> &ForeBlocks,
-                              std::vector<BasicBlock *> &SubLoopBlocks,
-                              std::vector<BasicBlock *> &AftBlocks,
-                              DependenceInfo &DI) {
+static bool checkDependencies(Loop *L, BasicBlockSet &ForeBlocks,
+                              BasicBlockSet &SubLoopBlocks,
+                              BasicBlockSet &AftBlocks, DependenceInfo &DI) {
   // Get all loads/store pairs for each blocks
   SmallVector<Value *, 4> ForeMemInstr;
   SmallVector<Value *, 4> SubLoopMemInstr;
@@ -702,9 +699,9 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return false;
 
   // Split blocks into Fore/SubLoop/Aft based on dominators
-  std::vector<BasicBlock *> SubLoopBlocks;
-  std::vector<BasicBlock *> ForeBlocks;
-  std::vector<BasicBlock *> AftBlocks;
+  BasicBlockSet SubLoopBlocks;
+  BasicBlockSet ForeBlocks;
+  BasicBlockSet AftBlocks;
   if (!partitionOuterLoopBlocks(L, SubLoop, ForeBlocks, SubLoopBlocks,
                                 AftBlocks, &DT))
     return false;
@@ -751,7 +748,7 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     if (Visited.insert(I).second) {
       if (SubLoop->contains(I->getParent()))
         return false;
-      if (containsBB(AftBlocks, I->getParent())) {
+      if (AftBlocks.count(I->getParent())) {
         // If we hit a phi node in afts we know we are done (probably LCSSA)
         if (isa<PHINode>(I))
           return false;

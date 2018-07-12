@@ -64,7 +64,6 @@ class DispatchStage : public Stage {
   void dispatch(InstRef IR);
   void updateRAWDependencies(ReadState &RS, const llvm::MCSubtargetInfo &STI);
 
-  void notifyStallEvent(const HWStallEvent &Event);
   void notifyInstructionDispatched(const InstRef &IR,
                                    llvm::ArrayRef<unsigned> UsedPhysRegs);
 

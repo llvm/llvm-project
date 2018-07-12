@@ -37,6 +37,7 @@ public:
   StandaloneToolExecutor(
       const CompilationDatabase &Compilations,
       llvm::ArrayRef<std::string> SourcePaths,
+      IntrusiveRefCntPtr<vfs::FileSystem> BaseFS = vfs::getRealFileSystem(),
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>());
 

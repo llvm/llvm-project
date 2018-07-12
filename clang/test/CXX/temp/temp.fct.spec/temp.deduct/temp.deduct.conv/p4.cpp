@@ -129,4 +129,21 @@ namespace non_ptr_ref_cv_qual {
   };
   int (&test_conv_to_arr_1)[3] = ConvToArr(); // ok
   const int (&test_conv_to_arr_2)[3] = ConvToArr(); // ok, with qualification conversion
+
+#if __cplusplus >= 201702L
+  template<bool Noexcept, typename T, typename ...U> using Function = T(U...) noexcept(Noexcept);
+  template<bool Noexcept> struct ConvToFunction {
+    template <typename T, typename ...U> operator Function<Noexcept, T, U...>&(); // expected-note {{candidate}}
+  };
+  void (&fn1)(int) noexcept(false) = ConvToFunction<false>();
+  void (&fn2)(int) noexcept(true)  = ConvToFunction<false>(); // expected-error {{no viable}}
+  void (&fn3)(int) noexcept(false) = ConvToFunction<true>();
+  void (&fn4)(int) noexcept(true)  = ConvToFunction<true>();
+
+  struct ConvToFunctionDeducingNoexcept {
+    template <bool Noexcept, typename T, typename ...U> operator Function<Noexcept, T, U...>&();
+  };
+  void (&fn5)(int) noexcept(false) = ConvToFunctionDeducingNoexcept();
+  void (&fn6)(int) noexcept(true)  = ConvToFunctionDeducingNoexcept();
+#endif
 }

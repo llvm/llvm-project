@@ -1235,7 +1235,9 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   // argument before trying to disambiguate.
 
   EnterExpressionEvaluationContext EnterConstantEvaluated(
-      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+    /*LambdaContextDecl=*/nullptr,
+    /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
   if (isCXXTypeId(TypeIdAsTemplateArgument)) {
     TypeResult TypeArg = ParseTypeName(
         /*Range=*/nullptr, DeclaratorContext::TemplateArgContext);

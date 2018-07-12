@@ -34,7 +34,7 @@ void TimelineView::initialize(unsigned MaxIterations) {
   std::fill(WaitTime.begin(), WaitTime.end(), NullWTEntry);
 }
 
-void TimelineView::onInstructionEvent(const HWInstructionEvent &Event) {
+void TimelineView::onEvent(const HWInstructionEvent &Event) {
   const unsigned Index = Event.IR.getSourceIndex();
   if (CurrentCycle >= MaxCycle || Index >= Timeline.size())
     return;

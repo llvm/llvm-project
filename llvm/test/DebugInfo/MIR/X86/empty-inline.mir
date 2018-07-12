@@ -1,6 +1,6 @@
-# RUN: llc  -filetype=obj -o - %s | llvm-dwarfdump -a - | FileCheck %s
+# RUN: llc -verify-machineinstrs -start-after=virtregrewriter -filetype=obj -o - %s | llvm-dwarfdump -a - | FileCheck %s
 #
-# This testcase has an implicit def pseudo-iunstruction with a debug location.
+# This testcase has an implicit def pseudo-instruction with a debug location.
 #
 # CHECK: .debug_info contents:
 # CHECK: DW_TAG_subprogram

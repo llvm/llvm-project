@@ -309,9 +309,7 @@ unsigned Parser::ParseAttributeArgsCommon(
       EnterExpressionEvaluationContext Unevaluated(
           Actions,
           Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
-                 : Sema::ExpressionEvaluationContext::ConstantEvaluated,
-          /*LambdaContextDecl=*/nullptr,
-          /*IsDecltype=*/false);
+                 : Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
       ExprResult ArgExpr(
           Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));

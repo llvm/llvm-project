@@ -20,12 +20,12 @@ using namespace llvm;
 
 namespace mca {
 
-void DispatchStatistics::onStallEvent(const HWStallEvent &Event) {
+void DispatchStatistics::onEvent(const HWStallEvent &Event) {
   if (Event.Type < HWStallEvent::LastGenericEvent)
     HWStalls[Event.Type]++;
 }
 
-void DispatchStatistics::onInstructionEvent(const HWInstructionEvent &Event) {
+void DispatchStatistics::onEvent(const HWInstructionEvent &Event) {
   if (Event.Type == HWInstructionEvent::Dispatched)
     ++NumDispatched;
 }

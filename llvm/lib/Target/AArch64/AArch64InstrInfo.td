@@ -2430,6 +2430,23 @@ defm STURBB : StoreUnscaled<0b00, 0, 0b00, GPR32z, "sturb",
                          [(truncstorei8 GPR32z:$Rt,
                                   (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 
+// Armv8.4 LDAPR & STLR with Immediate Offset instruction
+let Predicates = [HasV8_4a] in {
+defm STLURB     : BaseLoadStoreUnscaleV84<"stlurb",   0b00, 0b00, GPR32>;
+defm STLURH     : BaseLoadStoreUnscaleV84<"stlurh",   0b01, 0b00, GPR32>;
+defm STLUR      : BaseLoadStoreUnscaleV84<"stlur",    0b10, 0b00, GPR32>;
+defm STLUR64    : BaseLoadStoreUnscaleV84<"stlur",    0b11, 0b00, GPR64>;
+defm LDAPURB    : BaseLoadStoreUnscaleV84<"ldapurb",  0b00, 0b01, GPR32>;
+defm LDAPURSB   : BaseLoadStoreUnscaleV84<"ldapursb", 0b00, 0b11, GPR32>;
+defm LDAPURSB64 : BaseLoadStoreUnscaleV84<"ldapursb", 0b00, 0b10, GPR64>;
+defm LDAPURH    : BaseLoadStoreUnscaleV84<"ldapurh",  0b01, 0b01, GPR32>;
+defm LDAPURSH   : BaseLoadStoreUnscaleV84<"ldapursh", 0b01, 0b11, GPR32>;
+defm LDAPURSH64 : BaseLoadStoreUnscaleV84<"ldapursh", 0b01, 0b10, GPR64>;
+defm LDAPUR     : BaseLoadStoreUnscaleV84<"ldapur",   0b10, 0b01, GPR32>;
+defm LDAPURSW   : BaseLoadStoreUnscaleV84<"ldapursw", 0b10, 0b10, GPR64>;
+defm LDAPUR64   : BaseLoadStoreUnscaleV84<"ldapur",   0b11, 0b01, GPR64>;
+}
+
 // Match all store 64 bits width whose type is compatible with FPR64
 def : Pat<(store (v1f64 FPR64:$Rt), (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
           (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;

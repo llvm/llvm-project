@@ -17,6 +17,8 @@ set(test_inputs
    linux-x86_64.dmp
    linux-x86_64_not_crashed.dmp
    fizzbuzz_no_heap.dmp
-   fizzbuzz_wow64.dmp)
+   fizzbuzz_wow64.dmp
+   bad_duplicate_streams.dmp
+   bad_overlapping_streams.dmp)
 
 add_unittest_inputs(LLDBMinidumpTests "${test_inputs}")

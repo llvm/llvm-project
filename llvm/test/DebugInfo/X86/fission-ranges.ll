@@ -2,6 +2,9 @@
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
 ; RUN: llvm-objdump -h %t | FileCheck --check-prefix=HDR %s
 
+; RUN: llc -dwarf-version=5 -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
+; RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=V5RNGLISTS %s
+
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NEXT: DW_AT_stmt_list
@@ -9,7 +12,6 @@
 ; CHECK-NEXT: DW_AT_comp_dir
 ; CHECK-NEXT: DW_AT_GNU_dwo_id
 ; CHECK-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]                   (0x00000000)
-
 
 ; CHECK: .debug_info.dwo contents:
 ; CHECK: DW_AT_location [DW_FORM_sec_offset]   ([[A:0x[0-9a-z]*]]
@@ -34,7 +36,6 @@
 ; CHECK:      [[D]]:
 ; CHECK-NEXT:   Addr idx 6 (w/ length 17): DW_OP_reg0 RAX
 
-
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
 ; HDR-NOT: .rela.{{.*}}.dwo
 
@@ -44,6 +45,22 @@
 
 ; HDR: .debug_addr 00000038
 ; HDR-NOT: .rela.{{.*}}.dwo
+
+; Check for the existence of a DWARF v5-style range list table in the .debug_rnglists
+; section and that the compile unit has a DW_AT_rnglists_base attribute.
+; The table should contain at least one rangelist with at least 2 individual ranges.
+
+; V5RNGLISTS:      .debug_info contents:
+; V5RNGLISTS:      DW_TAG_compile_unit
+; V5RNGLISTS-NOT:  DW_TAG
+; V5RNGLISTS:      DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
+; V5RNGLISTS:      .debug_rnglists contents:
+; V5RNGLISTS-NEXT: 0x00000000: Range List Header: length = 0x00000014, version = 0x0005,
+; V5RNGLISTS-SAME: addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+; V5RNGLISTS-NEXT: Ranges:
+; V5RNGLISTS-NEXT: 0x0000000c: [DW_RLE_offset_pair]:
+; V5RNGLISTS-NEXT: 0x0000000f: [DW_RLE_offset_pair]:
+; V5RNGLISTS:      0x{{[0-9a-f]+}}: [DW_RLE_end_of_list]
 
 ; From the code:
 
