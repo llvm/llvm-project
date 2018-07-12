@@ -204,6 +204,11 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
       MemoryLocation Loc = MemoryLocation::get(VI);
       if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
         continue;
+    } else if (isa<SyncInst>(I) || isa<DetachInst>(I) || isa<ReattachInst>(I)) {
+      // Tapir instructions only access memory accessed by other instructions in
+      // the function.  Hence we let the other instructions determine the
+      // attribute of this function.
+      continue;
     }
 
     // Any remaining instructions need to be taken seriously!  Check if they
