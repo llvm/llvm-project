@@ -105,7 +105,7 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   if (!DataPtr)
     return nullptr;
 
-  assert(DataPtr->GetByteSize() == header_size);
+  lldbassert(DataPtr->GetByteSize() == header_size);
 
   // first, only try to parse the header, beacuse we need to be fast
   llvm::ArrayRef<uint8_t> HeaderBytes = DataPtr->GetData();
@@ -164,10 +164,29 @@ void ProcessMinidump::Terminate() {
 Status ProcessMinidump::DoLoadCore() {
   Status error;
 
+  // Minidump parser initialization & consistency checks
+  error = m_minidump_parser.Initialize();
+  if (error.Fail())
+    return error;
+
+  // Do we support the minidump's architecture?
+  ArchSpec arch = GetArchitecture();
+  switch (arch.GetMachine()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    // supported
+    break;
+
+  default:
+    error.SetErrorStringWithFormat("unsupported minidump architecture: %s",
+                                   arch.GetArchitectureName());
+    return error;
+  }
+
   m_thread_list = m_minidump_parser.GetThreads();
   m_active_exception = m_minidump_parser.GetExceptionStream();
   ReadModuleList();
-  GetTarget().SetArchitecture(GetArchitecture());
+  GetTarget().SetArchitecture(arch);
 
   llvm::Optional<lldb::pid_t> pid = m_minidump_parser.GetPid();
   if (!pid) {

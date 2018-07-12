@@ -1375,8 +1375,7 @@ static bool isDuplicateArmExidxSec(InputSection *Prev, InputSection *Cur) {
   };
 
   // Get the last table Entry from the previous .ARM.exidx section.
-  const ExidxEntry &PrevEntry = *reinterpret_cast<const ExidxEntry *>(
-      Prev->Data.data() + Prev->getSize() - sizeof(ExidxEntry));
+  const ExidxEntry &PrevEntry = Prev->getDataAs<ExidxEntry>().back();
   if (IsExtabRef(PrevEntry.Unwind))
     return false;
 
@@ -1388,14 +1387,7 @@ static bool isDuplicateArmExidxSec(InputSection *Prev, InputSection *Cur) {
   // consecutive identical entries are rare and the effort to check that they
   // are identical is high.
 
-  if (isa<SyntheticSection>(Cur))
-    // Exidx sentinel section has implicit EXIDX_CANTUNWIND;
-    return PrevEntry.Unwind == 0x1;
-
-  ArrayRef<const ExidxEntry> Entries(
-      reinterpret_cast<const ExidxEntry *>(Cur->Data.data()),
-      Cur->getSize() / sizeof(ExidxEntry));
-  for (const ExidxEntry &Entry : Entries)
+  for (const ExidxEntry Entry : Cur->getDataAs<ExidxEntry>())
     if (IsExtabRef(Entry.Unwind) || Entry.Unwind != PrevEntry.Unwind)
       return false;
   // All table entries in this .ARM.exidx Section can be merged into the

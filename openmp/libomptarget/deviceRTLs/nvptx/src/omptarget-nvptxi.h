@@ -125,6 +125,30 @@ INLINE void omptarget_nvptx_TaskDescr::CopyConvergentParent(
   items.threadId = tid;
 }
 
+INLINE void omptarget_nvptx_TaskDescr::SaveLoopData() {
+  loopData.loopUpperBound =
+      omptarget_nvptx_threadPrivateContext->LoopUpperBound(items.threadId);
+  loopData.nextLowerBound =
+      omptarget_nvptx_threadPrivateContext->NextLowerBound(items.threadId);
+  loopData.schedule =
+      omptarget_nvptx_threadPrivateContext->ScheduleType(items.threadId);
+  loopData.chunk = omptarget_nvptx_threadPrivateContext->Chunk(items.threadId);
+  loopData.stride =
+      omptarget_nvptx_threadPrivateContext->Stride(items.threadId);
+}
+
+INLINE void omptarget_nvptx_TaskDescr::RestoreLoopData() const {
+  omptarget_nvptx_threadPrivateContext->Chunk(items.threadId) = loopData.chunk;
+  omptarget_nvptx_threadPrivateContext->LoopUpperBound(items.threadId) =
+      loopData.loopUpperBound;
+  omptarget_nvptx_threadPrivateContext->NextLowerBound(items.threadId) =
+      loopData.nextLowerBound;
+  omptarget_nvptx_threadPrivateContext->Stride(items.threadId) =
+      loopData.stride;
+  omptarget_nvptx_threadPrivateContext->ScheduleType(items.threadId) =
+      loopData.schedule;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Thread Private Context
 ////////////////////////////////////////////////////////////////////////////////

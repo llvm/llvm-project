@@ -33,9 +33,6 @@ const MinidumpHeader *MinidumpHeader::Parse(llvm::ArrayRef<uint8_t> &data) {
       version != MinidumpHeaderConstants::Version)
     return nullptr;
 
-  // TODO check for max number of streams ?
-  // TODO more sanity checks ?
-
   return header;
 }
 
