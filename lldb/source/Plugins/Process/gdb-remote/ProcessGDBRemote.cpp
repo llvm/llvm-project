@@ -1523,7 +1523,6 @@ void ProcessGDBRemote::ClearThreadIDList() {
 size_t
 ProcessGDBRemote::UpdateThreadIDsFromStopReplyThreadsValue(std::string &value) {
   m_thread_ids.clear();
-  m_thread_pcs.clear();
   size_t comma_pos;
   lldb::tid_t tid;
   while ((comma_pos = value.find(',')) != std::string::npos) {
