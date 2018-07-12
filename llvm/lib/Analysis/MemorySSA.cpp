@@ -141,7 +141,7 @@ public:
       IsCall = false;
       // There is no such thing as a memorylocation for a fence inst, and it is
       // unique in that regard.
-      if (!isa<FenceInst>(Inst))
+      if (!isa<FenceInst>(Inst) && !isa<SyncInst>(Inst))
         Loc = MemoryLocation::get(Inst);
     }
   }
@@ -1724,8 +1724,8 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
     if (II->getIntrinsicID() == Intrinsic::assume)
       return nullptr;
 
-  // FIXME: Also ignore detach and sync instructions.
-  if (isa<DetachInst>(I) || isa<SyncInst>(I))
+  // Ignore detach instructions.
+  if (isa<DetachInst>(I))
     return nullptr;
 
   bool Def, Use;

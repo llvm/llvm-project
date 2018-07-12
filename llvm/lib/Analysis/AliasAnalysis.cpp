@@ -782,6 +782,10 @@ ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
 
 ModRefInfo AAResults::getModRefInfo(const SyncInst *S,
                                     const MemoryLocation &Loc) {
+  // If no memory location pointer is given, treat the sync like a fence.
+  if (!Loc.Ptr)
+    return ModRefInfo::ModRef;
+
   ModRefInfo Result = ModRefInfo::NoModRef;
   SmallPtrSet<const BasicBlock *, 32> Visited;
   SmallVector<const BasicBlock *, 32> WorkList;
