@@ -21,12 +21,12 @@ namespace llvm {
 
 class GCNTargetMachine;
 class LLVMContext;
-class SISubtarget;
+class GCNSubtarget;
 
 /// This class provides the information for the target register banks.
 class AMDGPULegalizerInfo : public LegalizerInfo {
 public:
-  AMDGPULegalizerInfo(const SISubtarget &ST,
+  AMDGPULegalizerInfo(const GCNSubtarget &ST,
                       const GCNTargetMachine &TM);
 };
 } // End llvm namespace.

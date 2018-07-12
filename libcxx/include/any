@@ -104,7 +104,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14
 
-_LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_bad_any_cast()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -304,7 +304,7 @@ private:
         __any_imp::_Buffer __buf;
     };
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void * __call(_Action __a, any * __other = nullptr,
                   type_info const * __info = nullptr,
                    const void* __fallback_info = nullptr) const
@@ -312,7 +312,7 @@ private:
         return __h(__a, this, __other, __info, __fallback_info);
     }
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void * __call(_Action __a, any * __other = nullptr,
                   type_info const * __info = nullptr,
                   const void* __fallback_info = nullptr)

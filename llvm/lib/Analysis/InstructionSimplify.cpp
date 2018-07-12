@@ -540,6 +540,10 @@ static Value *SimplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   if (match(Op1, m_Zero()))
     return Op0;
 
+  // If two operands are negative, return 0.
+  if (isKnownNegation(Op0, Op1))
+    return Constant::getNullValue(Op0->getType());
+
   // X + (Y - X) -> Y
   // (Y - X) + X -> Y
   // Eg: X + -X -> 0

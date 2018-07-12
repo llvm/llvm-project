@@ -23,12 +23,12 @@
 namespace llvm {
 
 class AMDGPUMachineFunction;
-class AMDGPUCommonSubtarget;
+class AMDGPUSubtarget;
 struct ArgDescriptor;
 
 class AMDGPUTargetLowering : public TargetLowering {
 private:
-  const AMDGPUCommonSubtarget *Subtarget;
+  const AMDGPUSubtarget *Subtarget;
 
   /// \returns AMDGPUISD::FFBH_U32 node if the incoming \p Op may have been
   /// legalized from a smaller type VT. Need to match pre-legalized type because
@@ -125,7 +125,7 @@ protected:
   void analyzeFormalArgumentsCompute(CCState &State,
                               const SmallVectorImpl<ISD::InputArg> &Ins) const;
 public:
-  AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUCommonSubtarget &STI);
+  AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
 
   bool mayIgnoreSignedZero(SDValue Op) const {
     if (getTargetMachine().Options.NoSignedZerosFPMath)

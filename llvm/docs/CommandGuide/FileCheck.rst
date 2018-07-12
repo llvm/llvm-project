@@ -95,6 +95,13 @@ OPTIONS
 
  Show the version number of this program.
 
+.. option:: --allow-deprecated-dag-overlap
+
+  Enable overlapping among matches in a group of consecutive ``CHECK-DAG:``
+  directives.  This option is deprecated and is only provided for convenience
+  as old tests are migrated to the new non-overlapping ``CHECK-DAG:``
+  implementation.
+
 EXIT STATUS
 -----------
 
@@ -359,6 +366,25 @@ of a bug in the compiler), it may match further away from the use, and mask
 real bugs away.
 
 In those cases, to enforce the order, use a non-DAG directive between DAG-blocks.
+
+A ``CHECK-DAG:`` directive skips matches that overlap the matches of any
+preceding ``CHECK-DAG:`` directives in the same ``CHECK-DAG:`` block.  Not only
+is this non-overlapping behavior consistent with other directives, but it's
+also necessary to handle sets of non-unique strings or patterns.  For example,
+the following directives look for unordered log entries for two tasks in a
+parallel program, such as the OpenMP runtime:
+
+.. code-block:: text
+
+    // CHECK-DAG: [[THREAD_ID:[0-9]+]]: task_begin
+    // CHECK-DAG: [[THREAD_ID]]: task_end
+    //
+    // CHECK-DAG: [[THREAD_ID:[0-9]+]]: task_begin
+    // CHECK-DAG: [[THREAD_ID]]: task_end
+
+The second pair of directives is guaranteed not to match the same log entries
+as the first pair even though the patterns are identical and even if the text
+of the log entries is identical because the thread ID manages to be reused.
 
 The "CHECK-LABEL:" directive
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

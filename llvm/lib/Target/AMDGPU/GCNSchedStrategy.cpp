@@ -35,7 +35,7 @@ void GCNMaxOccupancySchedStrategy::initialize(ScheduleDAGMI *DAG) {
 
   MF = &DAG->MF;
 
-  const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
 
   // FIXME: This is also necessary, because some passes that run after
   // scheduling and before regalloc increase register pressure.
@@ -294,7 +294,7 @@ SUnit *GCNMaxOccupancySchedStrategy::pickNode(bool &IsTopNode) {
 GCNScheduleDAGMILive::GCNScheduleDAGMILive(MachineSchedContext *C,
                         std::unique_ptr<MachineSchedStrategy> S) :
   ScheduleDAGMILive(C, std::move(S)),
-  ST(MF.getSubtarget<SISubtarget>()),
+  ST(MF.getSubtarget<GCNSubtarget>()),
   MFI(*MF.getInfo<SIMachineFunctionInfo>()),
   StartingOccupancy(MFI.getOccupancy()),
   MinOccupancy(StartingOccupancy), Stage(0), RegionIdx(0) {

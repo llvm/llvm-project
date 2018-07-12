@@ -259,7 +259,7 @@ struct __throw_with_nested;
 
 template <class _Tp, class _Up>
 struct __throw_with_nested<_Tp, _Up, true> {
-    _LIBCPP_NORETURN static inline _LIBCPP_ALWAYS_INLINE void
+    _LIBCPP_NORETURN static inline _LIBCPP_INLINE_VISIBILITY void
 #ifndef _LIBCPP_CXX03_LANG
     __do_throw(_Tp&& __t)
 #else
@@ -272,7 +272,7 @@ struct __throw_with_nested<_Tp, _Up, true> {
 
 template <class _Tp, class _Up>
 struct __throw_with_nested<_Tp, _Up, false> {
-    _LIBCPP_NORETURN static inline _LIBCPP_ALWAYS_INLINE void
+    _LIBCPP_NORETURN static inline _LIBCPP_INLINE_VISIBILITY void
 #ifndef _LIBCPP_CXX03_LANG
     __do_throw(_Tp&& __t)
 #else

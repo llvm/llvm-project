@@ -62,7 +62,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 
   friend BaseT;
 
-  const AMDGPUSubtarget *ST;
+  const GCNSubtarget *ST;
   const AMDGPUTargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphicsShader;
@@ -91,7 +91,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     AMDGPU::HalfRate64Ops
   };
 
-  const AMDGPUSubtarget *getST() const { return ST; }
+  const GCNSubtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
 
   static inline int getFullRateInstrCost() {
@@ -118,7 +118,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
 public:
   explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(static_cast<const AMDGPUSubtarget*>(TM->getSubtargetImpl(F))),
+      ST(static_cast<const GCNSubtarget*>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()),
       CommonTTI(TM, F),
       IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())) {}

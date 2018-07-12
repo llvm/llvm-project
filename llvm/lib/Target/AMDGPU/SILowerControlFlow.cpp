@@ -486,7 +486,7 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
 

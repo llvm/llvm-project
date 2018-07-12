@@ -346,7 +346,7 @@ void R600SchedStrategy::PrepareNextSlot() {
   LLVM_DEBUG(dbgs() << "New Slot\n");
   assert (OccupedSlotsMask && "Slot wasn't filled");
   OccupedSlotsMask = 0;
-//  if (HwGen == R600Subtarget::NORTHERN_ISLANDS)
+//  if (HwGen == AMDGPUSubtarget::NORTHERN_ISLANDS)
 //    OccupedSlotsMask |= 16;
   InstructionsGroupCandidate.clear();
   LoadAlu();

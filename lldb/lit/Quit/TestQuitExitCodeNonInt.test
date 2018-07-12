@@ -1,0 +1,4 @@
+# UNSUPPORTED: windows
+# RUN: %lldb -b -s %s 2>&1 | FileCheck %s
+q str
+// CHECK: Couldn't parse 'str'

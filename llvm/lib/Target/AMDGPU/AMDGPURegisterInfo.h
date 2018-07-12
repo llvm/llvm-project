@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-class AMDGPUSubtarget;
+class GCNSubtarget;
 class TargetInstrInfo;
 
 struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {

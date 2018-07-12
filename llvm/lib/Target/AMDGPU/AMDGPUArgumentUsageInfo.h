@@ -18,7 +18,7 @@ namespace llvm {
 
 class Function;
 class raw_ostream;
-class SISubtarget;
+class GCNSubtarget;
 class TargetMachine;
 class TargetRegisterClass;
 class TargetRegisterInfo;

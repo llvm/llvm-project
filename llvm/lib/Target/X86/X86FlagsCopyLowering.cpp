@@ -413,9 +413,9 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
 
     LLVM_DEBUG(dbgs() << "Rewriting copy: "; CopyI->dump());
 
-    // Scan for usage of newly set EFLAGS so we can rewrite them. We just buffer
-    // jumps because their usage is very constrained.
-    bool FlagsKilled = false;
+    // While rewriting uses, we buffer jumps and rewrite them in a second pass
+    // because doing so will perturb the CFG that we are walking to find the
+    // uses in the first place.
     SmallVector<MachineInstr *, 4> JmpIs;
 
     // Gather the condition flags that have already been preserved in
@@ -435,6 +435,9 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
 
     do {
       MachineBasicBlock &UseMBB = *Blocks.pop_back_val();
+
+      // Track when if/when we find a kill of the flags in this block.
+      bool FlagsKilled = false;
 
       // We currently don't do any PHI insertion and so we require that the
       // test basic block dominates all of the use basic blocks.
@@ -555,7 +558,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
 
       // If the flags were killed, we're done with this block.
       if (FlagsKilled)
-        break;
+        continue;
 
       // Otherwise we need to scan successors for ones where the flags live-in
       // and queue those up for processing.

@@ -791,7 +791,7 @@ SDValue R600TargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
   SDValue TrigVal = DAG.getNode(TrigNode, DL, VT,
       DAG.getNode(ISD::FADD, DL, VT, FractPart,
         DAG.getConstantFP(-0.5, DL, MVT::f32)));
-  if (Gen >= R600Subtarget::R700)
+  if (Gen >= AMDGPUSubtarget::R700)
     return TrigVal;
   // On R600 hw, COS/SIN input must be between -Pi and Pi.
   return DAG.getNode(ISD::FMUL, DL, VT, TrigVal,

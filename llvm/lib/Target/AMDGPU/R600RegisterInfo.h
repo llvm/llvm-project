@@ -20,8 +20,6 @@
 
 namespace llvm {
 
-class AMDGPUSubtarget;
-
 struct R600RegisterInfo final : public R600GenRegisterInfo {
   RegClassWeight RCW;
 

@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-def isR600 : Predicate<"Subtarget->getGeneration() <= R600Subtarget::R700">;
+def isR600 : Predicate<"Subtarget->getGeneration() <= AMDGPUSubtarget::R700">;
 
 def isR600toCayman : Predicate<
-    "Subtarget->getGeneration() <= R600Subtarget::NORTHERN_ISLANDS">;
+    "Subtarget->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS">;
 
 class R600Pat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
   let SubtargetPredicate = isR600toCayman;

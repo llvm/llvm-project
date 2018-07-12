@@ -67,7 +67,7 @@ using namespace llvm::AMDGPU;
 // instructions to run at the double precision rate for the device so it's
 // probably best to just report no single precision denormals.
 static uint32_t getFPMode(const MachineFunction &F) {
-  const SISubtarget& ST = F.getSubtarget<SISubtarget>();
+  const GCNSubtarget& ST = F.getSubtarget<GCNSubtarget>();
   // TODO: Is there any real use for the flush in only / flush out only modes?
 
   uint32_t FP32Denormals =
@@ -197,7 +197,7 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
       TM.getTargetTriple().getOS() == Triple::AMDHSA)
     return;
 
-  const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
+  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   amd_kernel_code_t KernelCode;
   if (STM.isAmdCodeObjectV2(MF->getFunction())) {
     getAmdKernelCode(KernelCode, CurrentProgramInfo, *MF);
@@ -255,14 +255,14 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
   }
 
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  const AMDGPUSubtarget &STM = MF->getSubtarget<AMDGPUSubtarget>();
+  const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   if (MFI->isEntryFunction() && STM.isAmdCodeObjectV2(MF->getFunction())) {
     SmallString<128> SymbolName;
     getNameWithPrefix(SymbolName, &MF->getFunction()),
     getTargetStreamer()->EmitAMDGPUSymbolType(
         SymbolName, ELF::STT_AMDGPU_HSA_KERNEL);
   }
-  const AMDGPUSubtarget &STI = MF->getSubtarget<AMDGPUSubtarget>();
+  const GCNSubtarget &STI = MF->getSubtarget<GCNSubtarget>();
   if (STI.dumpCode()) {
     // Disassemble function name label to text.
     DisasmLines.push_back(MF->getName().str() + ":");
@@ -274,7 +274,7 @@ void AMDGPUAsmPrinter::EmitFunctionEntryLabel() {
 }
 
 void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
-  const AMDGPUSubtarget &STI = MBB.getParent()->getSubtarget<AMDGPUSubtarget>();
+  const GCNSubtarget &STI = MBB.getParent()->getSubtarget<GCNSubtarget>();
   if (STI.dumpCode() && !isBlockOnlyReachableByFallthrough(&MBB)) {
     // Write a line for the basic block label if it is not only fallthrough.
     DisasmLines.push_back(
@@ -399,7 +399,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   SetupMachineFunction(MF);
 
-  const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Context = getObjFileLowering().getContext();
   // FIXME: This should be an explicit check for Mesa.
   if (!STM.isAmdHsaOS() && !STM.isAmdPalOS()) {
@@ -440,7 +440,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       SIFunctionResourceInfo &Info = CallGraphResourceInfo[&MF.getFunction()];
       emitCommonFunctionComments(
         Info.NumVGPR,
-        Info.getTotalNumSGPRs(MF.getSubtarget<SISubtarget>()),
+        Info.getTotalNumSGPRs(MF.getSubtarget<GCNSubtarget>()),
         Info.PrivateSegmentSize,
         getFunctionCodeSize(MF), MFI);
       return false;
@@ -475,7 +475,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->emitRawComment(
       " WaveLimiterHint : " + Twine(MFI->needsWaveLimiter()), false);
 
-    if (MF.getSubtarget<SISubtarget>().debuggerEmitPrologue()) {
+    if (MF.getSubtarget<GCNSubtarget>().debuggerEmitPrologue()) {
       OutStreamer->emitRawComment(
         " DebuggerWavefrontPrivateSegmentOffsetSGPR: s" +
         Twine(CurrentProgramInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR), false);
@@ -526,7 +526,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 }
 
 uint64_t AMDGPUAsmPrinter::getFunctionCodeSize(const MachineFunction &MF) const {
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = STM.getInstrInfo();
 
   uint64_t CodeSize = 0;
@@ -558,7 +558,7 @@ static bool hasAnyNonFlatUseOfReg(const MachineRegisterInfo &MRI,
 }
 
 int32_t AMDGPUAsmPrinter::SIFunctionResourceInfo::getTotalNumSGPRs(
-  const SISubtarget &ST) const {
+  const GCNSubtarget &ST) const {
   return NumExplicitSGPR + IsaInfo::getNumExtraSGPRs(ST.getFeatureBits(),
                                                      UsesVCC, UsesFlatScratch);
 }
@@ -568,7 +568,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
   SIFunctionResourceInfo Info;
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -812,7 +812,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     MF.getFunction().getContext().diagnose(DiagStackSize);
   }
 
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const SIInstrInfo *TII = STM.getInstrInfo();
   const SIRegisterInfo *RI = &TII->getRegisterInfo();
@@ -927,7 +927,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.DX10Clamp = STM.enableDX10Clamp();
 
   unsigned LDSAlignShift;
-  if (STM.getGeneration() < SISubtarget::SEA_ISLANDS) {
+  if (STM.getGeneration() < AMDGPUSubtarget::SEA_ISLANDS) {
     // LDS is allocated in 64 dword blocks.
     LDSAlignShift = 8;
   } else {
@@ -1000,7 +1000,7 @@ static unsigned getRsrcReg(CallingConv::ID CallConv) {
 
 void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
                                          const SIProgramInfo &CurrentProgramInfo) {
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned RsrcReg = getRsrcReg(MF.getFunction().getCallingConv());
 
@@ -1129,7 +1129,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
                                         const SIProgramInfo &CurrentProgramInfo,
                                         const MachineFunction &MF) const {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
 
   AMDGPU::initDefaultAMDKernelCodeT(Out, STM.getFeatureBits());
 

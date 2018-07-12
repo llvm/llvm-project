@@ -26,7 +26,7 @@ using namespace llvm;
 // Pin the vtable to this file.
 //void AMDGPUInstrInfo::anchor() {}
 
-AMDGPUInstrInfo::AMDGPUInstrInfo(const AMDGPUSubtarget &ST) { }
+AMDGPUInstrInfo::AMDGPUInstrInfo(const GCNSubtarget &ST) { }
 
 
 // TODO: Should largely merge with AMDGPUTTIImpl::isSourceOfDivergence.

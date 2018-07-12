@@ -108,6 +108,30 @@ void deref_after_scope_char32_t_data() {
   // expected-note@-1 {{Use of memory after it is freed}}
 }
 
+void multiple_symbols(bool cond) {
+  const char *c1, *d1;
+  {
+    std::string s1;
+    c1 = s1.c_str(); // expected-note {{Pointer to dangling buffer was obtained here}}
+    d1 = s1.data(); // expected-note {{Pointer to dangling buffer was obtained here}}
+    const char *local = s1.c_str();
+    consume(local); // no-warning
+  } // expected-note {{Internal buffer is released because the object was destroyed}}
+  // expected-note@-1 {{Internal buffer is released because the object was destroyed}}
+  std::string s2;
+  const char *c2 = s2.c_str();
+  if (cond) {
+    // expected-note@-1 {{Assuming 'cond' is not equal to 0}}
+    // expected-note@-2 {{Taking true branch}}
+    // expected-note@-3 {{Assuming 'cond' is 0}}
+    // expected-note@-4 {{Taking false branch}}
+    consume(c1); // expected-warning {{Use of memory after it is freed}}
+    // expected-note@-1 {{Use of memory after it is freed}}
+  } else {
+    consume(d1); // expected-warning {{Use of memory after it is freed}}
+  } // expected-note@-1 {{Use of memory after it is freed}}
+}
+
 void deref_after_scope_cstr_ok() {
   const char *c;
   std::string s;

@@ -34,12 +34,14 @@ using namespace llvm;
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
+#define AMDGPUSubtarget GCNSubtarget
 #include "AMDGPUGenSubtargetInfo.inc"
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
+#undef AMDGPUSubtarget
 #include "R600GenSubtargetInfo.inc"
 
-AMDGPUSubtarget::~AMDGPUSubtarget() = default;
+GCNSubtarget::~GCNSubtarget() = default;
 
 R600Subtarget &
 R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
@@ -51,7 +53,7 @@ R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
   // FIXME: I don't think think Evergreen has any useful support for
   // denormals, but should be checked. Should we issue a warning somewhere
   // if someone tries to enable these?
-  if (getGeneration() <= R600Subtarget::NORTHERN_ISLANDS) {
+  if (getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS) {
     FP32Denormals = false;
   }
 
@@ -61,8 +63,8 @@ R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
-AMDGPUSubtarget &
-AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
+GCNSubtarget &
+GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                                  StringRef GPU, StringRef FS) {
   // Determine default and user-specified characteristics
   // On SI+, we want FP64 denormals to be on by default. FP32 denormals can be
@@ -122,7 +124,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
-AMDGPUCommonSubtarget::AMDGPUCommonSubtarget(const Triple &TT,
+AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT,
                                              const FeatureBitset &FeatureBits) :
   TargetTriple(TT),
   SubtargetFeatureBits(FeatureBits),
@@ -140,11 +142,10 @@ AMDGPUCommonSubtarget::AMDGPUCommonSubtarget(const Triple &TT,
   WavefrontSize(0)
   { }
 
-AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                                 const TargetMachine &TM) :
+GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
+                                 const GCNTargetMachine &TM) :
     AMDGPUGenSubtargetInfo(TT, GPU, FS),
-    AMDGPUCommonSubtarget(TT, getFeatureBits()),
-    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
+    AMDGPUSubtarget(TT, getFeatureBits()),
     TargetTriple(TT),
     Gen(SOUTHERN_ISLANDS),
     IsaVersion(ISAVersion0_0_0),
@@ -206,12 +207,19 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     ScalarizeGlobal(false),
 
-    FeatureDisable(false) {
+    FeatureDisable(false),
+    InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
+    TLInfo(TM, *this), 
+    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
   AS = AMDGPU::getAMDGPUAS(TT);
-  initializeSubtargetDependencies(TT, GPU, FS);
+  CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
+  Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
+  RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
+  InstSelector.reset(new AMDGPUInstructionSelector(
+  *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
 }
 
-unsigned AMDGPUCommonSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
+unsigned AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
   const Function &F) const {
   if (NWaves == 1)
     return getLocalMemorySize();
@@ -221,7 +229,7 @@ unsigned AMDGPUCommonSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
   return getLocalMemorySize() * MaxWaves / WorkGroupsPerCu / NWaves;
 }
 
-unsigned AMDGPUCommonSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
+unsigned AMDGPUSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
   const Function &F) const {
   unsigned WorkGroupSize = getFlatWorkGroupSizes(F).second;
   unsigned WorkGroupsPerCu = getMaxWorkGroupsPerCU(WorkGroupSize);
@@ -234,13 +242,13 @@ unsigned AMDGPUCommonSubtarget::getOccupancyWithLocalMemSize(uint32_t Bytes,
 }
 
 unsigned
-AMDGPUCommonSubtarget::getOccupancyWithLocalMemSize(const MachineFunction &MF) const {
+AMDGPUSubtarget::getOccupancyWithLocalMemSize(const MachineFunction &MF) const {
   const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
   return getOccupancyWithLocalMemSize(MFI->getLDSSize(), MF.getFunction());
 }
 
 std::pair<unsigned, unsigned>
-AMDGPUCommonSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
+AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   switch (CC) {
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_KERNEL:
@@ -258,7 +266,7 @@ AMDGPUCommonSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   }
 }
 
-std::pair<unsigned, unsigned> AMDGPUCommonSubtarget::getFlatWorkGroupSizes(
+std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   const Function &F) const {
   // FIXME: 1024 if function.
   // Default minimum/maximum flat work group sizes.
@@ -288,7 +296,7 @@ std::pair<unsigned, unsigned> AMDGPUCommonSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
-std::pair<unsigned, unsigned> AMDGPUCommonSubtarget::getWavesPerEU(
+std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   const Function &F) const {
   // Default minimum/maximum number of waves per execution unit.
   std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
@@ -336,7 +344,7 @@ std::pair<unsigned, unsigned> AMDGPUCommonSubtarget::getWavesPerEU(
   return Requested;
 }
 
-bool AMDGPUCommonSubtarget::makeLIDRangeMetadata(Instruction *I) const {
+bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   Function *Kernel = I->getParent()->getParent();
   unsigned MinSize = 0;
   unsigned MaxSize = getFlatWorkGroupSizes(*Kernel).second;
@@ -401,7 +409,7 @@ bool AMDGPUCommonSubtarget::makeLIDRangeMetadata(Instruction *I) const {
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
                              const TargetMachine &TM) :
   R600GenSubtargetInfo(TT, GPU, FS),
-  AMDGPUCommonSubtarget(TT, getFeatureBits()),
+  AMDGPUSubtarget(TT, getFeatureBits()),
   InstrInfo(*this),
   FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
   FMA(false),
@@ -417,20 +425,7 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
   InstrItins(getInstrItineraryForCPU(GPU)),
   AS (AMDGPU::getAMDGPUAS(TT)) { }
 
-SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                         const GCNTargetMachine &TM)
-    : AMDGPUSubtarget(TT, GPU, FS, TM), InstrInfo(*this),
-      FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
-      TLInfo(TM, *this) {
-  CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
-  Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
-
-  RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
-  InstSelector.reset(new AMDGPUInstructionSelector(
-      *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
-}
-
-void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
+void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
                                       unsigned NumRegionInstrs) const {
   // Track register pressure so the scheduler can try to decrease
   // pressure once register usage is above the threshold defined by
@@ -447,11 +442,11 @@ void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
-bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
+bool GCNSubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
-uint64_t SISubtarget::getExplicitKernArgSize(const Function &F) const {
+uint64_t GCNSubtarget::getExplicitKernArgSize(const Function &F) const {
   assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL);
 
   const DataLayout &DL = F.getParent()->getDataLayout();
@@ -467,7 +462,7 @@ uint64_t SISubtarget::getExplicitKernArgSize(const Function &F) const {
   return ExplicitArgBytes;
 }
 
-unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
+unsigned GCNSubtarget::getKernArgSegmentSize(const Function &F,
                                             int64_t ExplicitArgBytes) const {
   if (ExplicitArgBytes == -1)
     ExplicitArgBytes = getExplicitKernArgSize(F);
@@ -485,8 +480,8 @@ unsigned SISubtarget::getKernArgSegmentSize(const Function &F,
   return alignTo(TotalSize, 4);
 }
 
-unsigned SISubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
-  if (getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
+unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
+  if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
     if (SGPRs <= 80)
       return 10;
     if (SGPRs <= 88)
@@ -508,7 +503,7 @@ unsigned SISubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   return 5;
 }
 
-unsigned SISubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
+unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
   if (VGPRs <= 24)
     return 10;
   if (VGPRs <= 28)
@@ -530,7 +525,7 @@ unsigned SISubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
   return 1;
 }
 
-unsigned SISubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
+unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   if (MFI.hasFlatScratchInit()) {
     if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
@@ -544,7 +539,7 @@ unsigned SISubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   return 2; // VCC.
 }
 
-unsigned SISubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
+unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
@@ -594,7 +589,7 @@ unsigned SISubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                   MaxAddressableNumSGPRs);
 }
 
-unsigned SISubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
+unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
@@ -675,21 +670,21 @@ struct MemOpClusterMutation : ScheduleDAGMutation {
 };
 } // namespace
 
-void SISubtarget::getPostRAMutations(
+void GCNSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(llvm::make_unique<MemOpClusterMutation>(&InstrInfo));
 }
 
-const AMDGPUCommonSubtarget &AMDGPUCommonSubtarget::get(const MachineFunction &MF) {
+const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {
   if (MF.getTarget().getTargetTriple().getArch() == Triple::amdgcn)
-    return static_cast<const AMDGPUCommonSubtarget&>(MF.getSubtarget<AMDGPUSubtarget>());
+    return static_cast<const AMDGPUSubtarget&>(MF.getSubtarget<GCNSubtarget>());
   else
-    return static_cast<const AMDGPUCommonSubtarget&>(MF.getSubtarget<R600Subtarget>());
+    return static_cast<const AMDGPUSubtarget&>(MF.getSubtarget<R600Subtarget>());
 }
 
-const AMDGPUCommonSubtarget &AMDGPUCommonSubtarget::get(const TargetMachine &TM, const Function &F) {
+const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Function &F) {
   if (TM.getTargetTriple().getArch() == Triple::amdgcn)
-    return static_cast<const AMDGPUCommonSubtarget&>(TM.getSubtarget<AMDGPUSubtarget>(F));
+    return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
   else
-    return static_cast<const AMDGPUCommonSubtarget&>(TM.getSubtarget<R600Subtarget>(F));
+    return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<R600Subtarget>(F));
 }

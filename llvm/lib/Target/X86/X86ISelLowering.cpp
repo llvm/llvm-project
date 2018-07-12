@@ -20710,39 +20710,6 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                               Src1, Src2, Src3),
                                   Mask, PassThru, Subtarget, DAG);
     }
-    case FMA_OP_SCALAR_MASK:
-    case FMA_OP_SCALAR_MASK3:
-    case FMA_OP_SCALAR_MASKZ: {
-      SDValue Src1 = Op.getOperand(1);
-      SDValue Src2 = Op.getOperand(2);
-      SDValue Src3 = Op.getOperand(3);
-      SDValue Mask = Op.getOperand(4);
-      MVT VT = Op.getSimpleValueType();
-      SDValue PassThru = SDValue();
-
-      // set PassThru element
-      if (IntrData->Type == FMA_OP_SCALAR_MASKZ)
-        PassThru = getZeroVector(VT, Subtarget, DAG, dl);
-      else if (IntrData->Type == FMA_OP_SCALAR_MASK3)
-        PassThru = Src3;
-      else
-        PassThru = Src1;
-
-      unsigned IntrWithRoundingModeOpcode = IntrData->Opc1;
-      if (IntrWithRoundingModeOpcode != 0) {
-        SDValue Rnd = Op.getOperand(5);
-        if (!isRoundModeCurDirection(Rnd))
-          return getScalarMaskingNode(DAG.getNode(IntrWithRoundingModeOpcode, dl,
-                                                  Op.getValueType(), Src1, Src2,
-                                                  Src3, Rnd),
-                                      Mask, PassThru, Subtarget, DAG);
-      }
-
-      return getScalarMaskingNode(DAG.getNode(IntrData->Opc0, dl,
-                                              Op.getValueType(), Src1, Src2,
-                                              Src3),
-                                  Mask, PassThru, Subtarget, DAG);
-    }
     case IFMA_OP:
       // NOTE: We need to swizzle the operands to pass the multiply operands
       // first.
@@ -26088,22 +26055,6 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case X86ISD::FNMSUB_RND:         return "X86ISD::FNMSUB_RND";
   case X86ISD::FMADDSUB_RND:       return "X86ISD::FMADDSUB_RND";
   case X86ISD::FMSUBADD_RND:       return "X86ISD::FMSUBADD_RND";
-  case X86ISD::FMADDS1:            return "X86ISD::FMADDS1";
-  case X86ISD::FNMADDS1:           return "X86ISD::FNMADDS1";
-  case X86ISD::FMSUBS1:            return "X86ISD::FMSUBS1";
-  case X86ISD::FNMSUBS1:           return "X86ISD::FNMSUBS1";
-  case X86ISD::FMADDS1_RND:        return "X86ISD::FMADDS1_RND";
-  case X86ISD::FNMADDS1_RND:       return "X86ISD::FNMADDS1_RND";
-  case X86ISD::FMSUBS1_RND:        return "X86ISD::FMSUBS1_RND";
-  case X86ISD::FNMSUBS1_RND:       return "X86ISD::FNMSUBS1_RND";
-  case X86ISD::FMADDS3:            return "X86ISD::FMADDS3";
-  case X86ISD::FNMADDS3:           return "X86ISD::FNMADDS3";
-  case X86ISD::FMSUBS3:            return "X86ISD::FMSUBS3";
-  case X86ISD::FNMSUBS3:           return "X86ISD::FNMSUBS3";
-  case X86ISD::FMADDS3_RND:        return "X86ISD::FMADDS3_RND";
-  case X86ISD::FNMADDS3_RND:       return "X86ISD::FNMADDS3_RND";
-  case X86ISD::FMSUBS3_RND:        return "X86ISD::FMSUBS3_RND";
-  case X86ISD::FNMSUBS3_RND:       return "X86ISD::FNMSUBS3_RND";
   case X86ISD::VPMADD52H:          return "X86ISD::VPMADD52H";
   case X86ISD::VPMADD52L:          return "X86ISD::VPMADD52L";
   case X86ISD::VRNDSCALE:          return "X86ISD::VRNDSCALE";
@@ -37740,28 +37691,12 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:             Opcode = X86ISD::FNMADD;       break;
     case X86ISD::FMADD_RND:    Opcode = X86ISD::FNMADD_RND;   break;
-    case X86ISD::FMADDS1:      Opcode = X86ISD::FNMADDS1;     break;
-    case X86ISD::FMADDS3:      Opcode = X86ISD::FNMADDS3;     break;
-    case X86ISD::FMADDS1_RND:  Opcode = X86ISD::FNMADDS1_RND; break;
-    case X86ISD::FMADDS3_RND:  Opcode = X86ISD::FNMADDS3_RND; break;
     case X86ISD::FMSUB:        Opcode = X86ISD::FNMSUB;       break;
     case X86ISD::FMSUB_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
-    case X86ISD::FMSUBS1:      Opcode = X86ISD::FNMSUBS1;     break;
-    case X86ISD::FMSUBS3:      Opcode = X86ISD::FNMSUBS3;     break;
-    case X86ISD::FMSUBS1_RND:  Opcode = X86ISD::FNMSUBS1_RND; break;
-    case X86ISD::FMSUBS3_RND:  Opcode = X86ISD::FNMSUBS3_RND; break;
     case X86ISD::FNMADD:       Opcode = ISD::FMA;             break;
     case X86ISD::FNMADD_RND:   Opcode = X86ISD::FMADD_RND;    break;
-    case X86ISD::FNMADDS1:     Opcode = X86ISD::FMADDS1;      break;
-    case X86ISD::FNMADDS3:     Opcode = X86ISD::FMADDS3;      break;
-    case X86ISD::FNMADDS1_RND: Opcode = X86ISD::FMADDS1_RND;  break;
-    case X86ISD::FNMADDS3_RND: Opcode = X86ISD::FMADDS3_RND;  break;
     case X86ISD::FNMSUB:       Opcode = X86ISD::FMSUB;        break;
     case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FMSUB_RND;    break;
-    case X86ISD::FNMSUBS1:     Opcode = X86ISD::FMSUBS1;      break;
-    case X86ISD::FNMSUBS3:     Opcode = X86ISD::FMSUBS3;      break;
-    case X86ISD::FNMSUBS1_RND: Opcode = X86ISD::FMSUBS1_RND;  break;
-    case X86ISD::FNMSUBS3_RND: Opcode = X86ISD::FMSUBS3_RND;  break;
     }
   }
 
@@ -37770,28 +37705,12 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:             Opcode = X86ISD::FMSUB;        break;
     case X86ISD::FMADD_RND:    Opcode = X86ISD::FMSUB_RND;    break;
-    case X86ISD::FMADDS1:      Opcode = X86ISD::FMSUBS1;      break;
-    case X86ISD::FMADDS3:      Opcode = X86ISD::FMSUBS3;      break;
-    case X86ISD::FMADDS1_RND:  Opcode = X86ISD::FMSUBS1_RND;  break;
-    case X86ISD::FMADDS3_RND:  Opcode = X86ISD::FMSUBS3_RND;  break;
     case X86ISD::FMSUB:        Opcode = ISD::FMA;             break;
     case X86ISD::FMSUB_RND:    Opcode = X86ISD::FMADD_RND;    break;
-    case X86ISD::FMSUBS1:      Opcode = X86ISD::FMADDS1;      break;
-    case X86ISD::FMSUBS3:      Opcode = X86ISD::FMADDS3;      break;
-    case X86ISD::FMSUBS1_RND:  Opcode = X86ISD::FMADDS1_RND;  break;
-    case X86ISD::FMSUBS3_RND:  Opcode = X86ISD::FMADDS3_RND;  break;
     case X86ISD::FNMADD:       Opcode = X86ISD::FNMSUB;       break;
     case X86ISD::FNMADD_RND:   Opcode = X86ISD::FNMSUB_RND;   break;
-    case X86ISD::FNMADDS1:     Opcode = X86ISD::FNMSUBS1;     break;
-    case X86ISD::FNMADDS3:     Opcode = X86ISD::FNMSUBS3;     break;
-    case X86ISD::FNMADDS1_RND: Opcode = X86ISD::FNMSUBS1_RND; break;
-    case X86ISD::FNMADDS3_RND: Opcode = X86ISD::FNMSUBS3_RND; break;
     case X86ISD::FNMSUB:       Opcode = X86ISD::FNMADD;       break;
     case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FNMADD_RND;   break;
-    case X86ISD::FNMSUBS1:     Opcode = X86ISD::FNMADDS1;     break;
-    case X86ISD::FNMSUBS3:     Opcode = X86ISD::FNMADDS3;     break;
-    case X86ISD::FNMSUBS1_RND: Opcode = X86ISD::FNMADDS1_RND; break;
-    case X86ISD::FNMSUBS3_RND: Opcode = X86ISD::FNMADDS3_RND; break;
     }
   }
 
@@ -37836,28 +37755,11 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
-  bool IsScalarS1 = N->getOpcode() == X86ISD::FMADDS1 ||
-                    N->getOpcode() == X86ISD::FMSUBS1 ||
-                    N->getOpcode() == X86ISD::FNMADDS1 ||
-                    N->getOpcode() == X86ISD::FNMSUBS1 ||
-                    N->getOpcode() == X86ISD::FMADDS1_RND ||
-                    N->getOpcode() == X86ISD::FMSUBS1_RND ||
-                    N->getOpcode() == X86ISD::FNMADDS1_RND ||
-                    N->getOpcode() == X86ISD::FNMSUBS1_RND;
-  bool IsScalarS3 = N->getOpcode() == X86ISD::FMADDS3 ||
-                    N->getOpcode() == X86ISD::FMSUBS3 ||
-                    N->getOpcode() == X86ISD::FNMADDS3 ||
-                    N->getOpcode() == X86ISD::FNMSUBS3 ||
-                    N->getOpcode() == X86ISD::FMADDS3_RND ||
-                    N->getOpcode() == X86ISD::FMSUBS3_RND ||
-                    N->getOpcode() == X86ISD::FNMADDS3_RND ||
-                    N->getOpcode() == X86ISD::FNMSUBS3_RND;
-
   // Do not convert the passthru input of scalar intrinsics.
   // FIXME: We could allow negations of the lower element only.
-  bool NegA = !IsScalarS1 && invertIfNegative(A);
+  bool NegA = invertIfNegative(A);
   bool NegB = invertIfNegative(B);
-  bool NegC = !IsScalarS3 && invertIfNegative(C);
+  bool NegC = invertIfNegative(C);
 
   if (!NegA && !NegB && !NegC)
     return SDValue();
@@ -39483,28 +39385,12 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VZEXT_MOVL:
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
   case X86ISD::FMADD_RND:
-  case X86ISD::FMADDS1_RND:
-  case X86ISD::FMADDS3_RND:
-  case X86ISD::FMADDS1:
-  case X86ISD::FMADDS3:
   case X86ISD::FMSUB:
   case X86ISD::FMSUB_RND:
-  case X86ISD::FMSUBS1_RND:
-  case X86ISD::FMSUBS3_RND:
-  case X86ISD::FMSUBS1:
-  case X86ISD::FMSUBS3:
   case X86ISD::FNMADD:
   case X86ISD::FNMADD_RND:
-  case X86ISD::FNMADDS1_RND:
-  case X86ISD::FNMADDS3_RND:
-  case X86ISD::FNMADDS1:
-  case X86ISD::FNMADDS3:
   case X86ISD::FNMSUB:
   case X86ISD::FNMSUB_RND:
-  case X86ISD::FNMSUBS1_RND:
-  case X86ISD::FNMSUBS3_RND:
-  case X86ISD::FNMSUBS1:
-  case X86ISD::FNMSUBS3:
   case ISD::FMA: return combineFMA(N, DAG, Subtarget);
   case X86ISD::FMADDSUB_RND:
   case X86ISD::FMSUBADD_RND:

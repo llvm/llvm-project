@@ -49,7 +49,7 @@ struct GCNRegPressure {
   unsigned getVGPRTuplesWeight() const { return Value[VGPR_TUPLE]; }
   unsigned getSGPRTuplesWeight() const { return Value[SGPR_TUPLE]; }
 
-  unsigned getOccupancy(const SISubtarget &ST) const {
+  unsigned getOccupancy(const GCNSubtarget &ST) const {
     return std::min(ST.getOccupancyWithNumSGPRs(getSGPRNum()),
                     ST.getOccupancyWithNumVGPRs(getVGPRNum()));
   }
@@ -59,11 +59,11 @@ struct GCNRegPressure {
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
 
-  bool higherOccupancy(const SISubtarget &ST, const GCNRegPressure& O) const {
+  bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure& O) const {
     return getOccupancy(ST) > O.getOccupancy(ST);
   }
 
-  bool less(const SISubtarget &ST, const GCNRegPressure& O,
+  bool less(const GCNSubtarget &ST, const GCNRegPressure& O,
     unsigned MaxOccupancy = std::numeric_limits<unsigned>::max()) const;
 
   bool operator==(const GCNRegPressure &O) const {
@@ -74,7 +74,7 @@ struct GCNRegPressure {
     return !(*this == O);
   }
 
-  void print(raw_ostream &OS, const SISubtarget *ST = nullptr) const;
+  void print(raw_ostream &OS, const GCNSubtarget *ST = nullptr) const;
   void dump() const { print(dbgs()); }
 
 private:

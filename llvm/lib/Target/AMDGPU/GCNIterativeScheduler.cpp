@@ -108,7 +108,7 @@ static void printLivenessInfo(raw_ostream &OS,
 
 LLVM_DUMP_METHOD
 void GCNIterativeScheduler::printRegions(raw_ostream &OS) const {
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   for (const auto R : Regions) {
     OS << "Region to schedule ";
     printRegion(OS, R->Begin, R->End, LIS, 1);
@@ -132,7 +132,7 @@ LLVM_DUMP_METHOD
 void GCNIterativeScheduler::printSchedRP(raw_ostream &OS,
                                          const GCNRegPressure &Before,
                                          const GCNRegPressure &After) const {
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   OS << "RP before: ";
   Before.print(OS, &ST);
   OS << "RP after:  ";
@@ -316,7 +316,7 @@ void GCNIterativeScheduler::schedule() { // overriden
              if (!Regions.empty() && Regions.back()->Begin == RegionBegin) {
                dbgs() << "Max RP: ";
                Regions.back()->MaxPressure.print(
-                   dbgs(), &MF.getSubtarget<SISubtarget>());
+                   dbgs(), &MF.getSubtarget<GCNSubtarget>());
              } dbgs()
              << '\n';);
 }
@@ -418,7 +418,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
 
 #ifndef NDEBUG
   const auto RegionMaxRP = getRegionPressure(R);
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
 #endif
   assert((SchedMaxRP == RegionMaxRP && (MaxRP.empty() || SchedMaxRP == MaxRP))
   || (dbgs() << "Max RP mismatch!!!\n"
@@ -433,7 +433,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
 
 // Sort recorded regions by pressure - highest at the front
 void GCNIterativeScheduler::sortRegionsByPressure(unsigned TargetOcc) {
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   llvm::sort(Regions.begin(), Regions.end(),
     [&ST, TargetOcc](const Region *R1, const Region *R2) {
     return R2->MaxPressure.less(ST, R1->MaxPressure, TargetOcc);
@@ -451,7 +451,7 @@ void GCNIterativeScheduler::sortRegionsByPressure(unsigned TargetOcc) {
 // BestSchedules aren't deleted on fail.
 unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
   // TODO: assert Regions are sorted descending by pressure
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   const auto Occ = Regions.front()->MaxPressure.getOccupancy(ST);
   LLVM_DEBUG(dbgs() << "Trying to improve occupancy, target = " << TargetOcc
                     << ", current = " << Occ << '\n');
@@ -488,7 +488,7 @@ unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
 
 void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
   bool TryMaximizeOccupancy) {
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   auto TgtOcc = MFI->getMinAllowedOccupancy();
 
@@ -542,7 +542,7 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
 // Minimal Register Strategy
 
 void GCNIterativeScheduler::scheduleMinReg(bool force) {
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const auto TgtOcc = MFI->getOccupancy();
   sortRegionsByPressure(TgtOcc);
@@ -576,7 +576,7 @@ void GCNIterativeScheduler::scheduleMinReg(bool force) {
 
 void GCNIterativeScheduler::scheduleILP(
   bool TryMaximizeOccupancy) {
-  const auto &ST = MF.getSubtarget<SISubtarget>();
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   auto TgtOcc = MFI->getMinAllowedOccupancy();
 

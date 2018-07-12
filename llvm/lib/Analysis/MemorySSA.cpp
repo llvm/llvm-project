@@ -1473,8 +1473,18 @@ void MemorySSA::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
   insertIntoListsBefore(What, BB, Where);
 }
 
-void MemorySSA::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
+void MemorySSA::moveTo(MemoryAccess *What, BasicBlock *BB,
                        InsertionPlace Point) {
+  if (isa<MemoryPhi>(What)) {
+    assert(Point == Beginning &&
+           "Can only move a Phi at the beginning of the block");
+    // Update lookup table entry
+    ValueToMemoryAccess.erase(What->getBlock());
+    bool Inserted = ValueToMemoryAccess.insert({BB, What}).second;
+    (void)Inserted;
+    assert(Inserted && "Cannot move a Phi to a block that already has one");
+  }
+
   removeFromLists(What, false);
   What->setBlock(BB);
   insertIntoListsForBlock(What, BB, Point);
