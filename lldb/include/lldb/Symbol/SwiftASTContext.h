@@ -389,12 +389,10 @@ public:
   union ExtraTypeInformation {
     uint64_t m_intValue;
     struct ExtraTypeInformationFlags {
-      ExtraTypeInformationFlags(bool is_trivial_option_set, bool is_zero_size)
-          : m_is_trivial_option_set(is_trivial_option_set),
-            m_is_zero_size(is_zero_size) {}
+      ExtraTypeInformationFlags(bool is_trivial_option_set)
+          : m_is_trivial_option_set(is_trivial_option_set) {}
 
       bool m_is_trivial_option_set : 1;
-      bool m_is_zero_size : 1;
     } m_flags;
 
     ExtraTypeInformation();

@@ -4726,11 +4726,11 @@ void SwiftASTContext::AddDebuggerClient(
 }
 
 SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation()
-    : m_flags(false, false) {}
+    : m_flags(false) {}
 
 SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
     swift::CanType swift_can_type)
-    : m_flags(false, false) {
+    : m_flags(false) {
   static ConstString g_rawValue("rawValue");
 
   swift::ASTContext &ast_ctx = swift_can_type->getASTContext();
@@ -4756,44 +4756,6 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
         }
       }
     }
-  }
-
-  if (auto metatype_type = swift::dyn_cast_or_null<swift::MetatypeType>(
-          swift_can_type)) {
-    if (!metatype_type->hasRepresentation() ||
-        (swift::MetatypeRepresentation::Thin ==
-         metatype_type->getRepresentation()))
-      m_flags.m_is_zero_size = true;
-  } else if (auto enum_decl = swift_can_type->getEnumOrBoundGenericEnum()) {
-    size_t num_nopayload = 0, num_payload = 0;
-    for (auto the_case : enum_decl->getAllElements()) {
-      if (the_case->getArgumentInterfaceType()) {
-        num_payload = 1;
-        break;
-      } else {
-        if (++num_nopayload > 1)
-          break;
-      }
-    }
-    if (num_nopayload == 1 && num_payload == 0)
-      m_flags.m_is_zero_size = true;
-  } else if (auto struct_decl =
-                 swift_can_type->getStructOrBoundGenericStruct()) {
-    bool has_storage = false;
-    auto members = struct_decl->getMembers();
-    for (const auto &member : members) {
-      if (swift::VarDecl *var_decl =
-              swift::dyn_cast<swift::VarDecl>(member)) {
-        if (!var_decl->isStatic() && var_decl->hasStorage()) {
-          has_storage = true;
-          break;
-        }
-      }
-    }
-    m_flags.m_is_zero_size = !has_storage;
-  } else if (auto tuple_type = swift::dyn_cast_or_null<swift::TupleType>(
-                 swift_can_type)) {
-    m_flags.m_is_zero_size = (tuple_type->getNumElements() == 0);
   }
 }
 
@@ -5145,17 +5107,20 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
 }
 
 bool SwiftASTContext::IsPossibleZeroSizeType(
-    const CompilerType &compiler_type) {
-  if (!compiler_type.IsValid())
+  const CompilerType &compiler_type) {
+  if (!SwiftASTContext::IsFullyRealized(compiler_type))
     return false;
-
-  if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(
-          compiler_type.GetTypeSystem()))
-    return ast
-        ->GetExtraTypeInformation(
-            GetCanonicalSwiftType(compiler_type).getPointer())
-        .m_flags.m_is_zero_size;
-  return false;
+  auto ast =
+    llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem());
+  if (!ast)
+    return false;
+  const swift::irgen::TypeInfo *type_info =
+    ast->GetSwiftTypeInfo(compiler_type.GetOpaqueQualType());
+  if (!type_info->isFixedSize())
+    return false;
+  auto *fixed_type_info =
+    swift::cast<const swift::irgen::FixedTypeInfo>(type_info);
+  return fixed_type_info->getFixedSize().getValue() == 0;
 }
 
 bool SwiftASTContext::IsErrorType(const CompilerType &compiler_type) {
