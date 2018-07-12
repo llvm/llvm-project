@@ -206,9 +206,9 @@ extern ulong OCKL_MANGLE_T(wfscan_xor,u64)(ulong x, bool inclusive);
 extern uint OCKL_MANGLE_U32(wfbcast)(uint x, uint i);
 extern ulong OCKL_MANGLE_U64(wfbcast)(ulong x, uint i);
 
-extern __attribute__((const)) bool OCKL_MANGLE_I32(wfany)(int e);
-extern __attribute__((const)) bool OCKL_MANGLE_I32(wfall)(int e);
-extern __attribute__((const)) bool OCKL_MANGLE_I32(wfsame)(int e);
+extern bool OCKL_MANGLE_I32(wfany)(int e);
+extern bool OCKL_MANGLE_I32(wfall)(int e);
+extern bool OCKL_MANGLE_I32(wfsame)(int e);
 
 DECL_CONST_OCKL_BINARY_U32(bfm)
 extern __attribute__((const)) int OCKL_MANGLE_I32(bfe)(int, uint, uint);

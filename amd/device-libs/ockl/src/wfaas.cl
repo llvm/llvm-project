@@ -8,7 +8,7 @@
 #include "irif.h"
 #include "ockl.h"
 
-#define ATTR __attribute__((always_inline, const))
+#define ATTR __attribute__((always_inline))
 
 // XXX from llvm/include/llvm/IR/InstrTypes.h
 #define ICMP_NE 33
