@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the TapirTaskInfo class that is used to identify parallel
-// tasks and fibrils in Tapir.
+// tasks and spindles in Tapir.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,8 +17,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
-// #include "llvm/Analysis/TapirTaskInfoImpl.h"
-// #include "llvm/Analysis/TapirTaskIterator.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
@@ -34,7 +32,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 #include <algorithm>
+
 using namespace llvm;
+
+#define DEBUG_TYPE "task-info"
 
 // Always verify taskinfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -47,6 +48,23 @@ static cl::opt<bool, true>
                     cl::Hidden, cl::desc("Verify task info (time consuming)"));
 
 //===----------------------------------------------------------------------===//
+// Spindle implementation
+//
+
+/// Return true if this spindle is a shared EH spindle.
+bool Spindle::isSharedEH() const {
+  return getParentTask()->containsSharedEH(this);
+}
+
+/// Return true if this spindle is the continuation of a detached task.
+bool Spindle::isTaskContinuation() const {
+  for (const Spindle *Pred : predecessors(this))
+    if (predInDifferentTask(Pred))
+      return true;
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // Task implementation
 //
 
@@ -57,7 +75,6 @@ LLVM_DUMP_METHOD void Task::dumpVerbose() const {
   print(dbgs(), /*Depth=*/0, /*Verbose=*/true);
 }
 #endif
-
 
 // Add the unassociated spindles to the task T in order of a DFS CFG traversal
 // starting at the entry block of T.
@@ -81,9 +98,6 @@ AssociateWithTask(TaskInfo *TI, Task *T,
     if (!Visited.insert(S).second) continue;
 
     // Add the spindle S to T.
-    dbgs() << "Adding spindle: ";
-    S->print(dbgs());
-    dbgs() << "\n";
     TI->addSpindleToTask(S, T);
 
     // Add the successor spindles of S that are associated with T to the
@@ -296,14 +310,6 @@ void TaskInfo::analyze(Function &F) {
         } else
           break;
       }
-      dbgs() << "Task T: ";
-      T->print(dbgs());
-      dbgs() << "UnassocSpindles:\n";
-      for (Spindle *S : UnassocSpindles) {
-        dbgs() << "\t";
-        S->print(dbgs());
-        dbgs() << "\n";
-      }
       // Associate the unassociated spindles with task T.
       if (!UnassocSpindles.empty())
         AssociateWithTask(this, T, UnassocSpindles);
@@ -315,7 +321,7 @@ void TaskInfo::analyze(Function &F) {
       Task *LastTask = UnassocTasks.back();
       if (DomTree.dominates(T->getEntry(), LastTask->getEntry())) {
         for (Task *UnassocTask : UnassocTasks)
-          T->SubTasks.push_back(UnassocTask);
+          T->addSubTask(UnassocTask);
         UnassocTasks.clear();
       }
     }
@@ -326,73 +332,10 @@ void TaskInfo::analyze(Function &F) {
   computeSpindleEdges(this);
 }
 
-// struct RenamePassData {
-//   DomTreeNode *DTN;
-//   DomTreeNode::const_iterator ChildIt;
-//   SmallPtrSet<Value *, 8> *IncomingUnsync;
-
-//   RenamePassData(DomTreeNode *D, DomTreeNode::const_iterator It,
-//                  SmallPtrSetImpl<Value *> *Unsync)
-//       : DTN(D), ChildIt(It), IncomingUnsync(Unsync) {}
-
-//   void swap(RenamePassData &RHS) {
-//     std::swap(DTN, RHS.DTN);
-//     std::swap(ChildIt, RHS.ChildIt);
-//     std::swap(IncomingUnsync, RHS.IncomingUnsync);
-//   }
-// };
-
-// void TaskInfo::updateState(Spindle *S, StateT IncomingVal,
-//                            DenseMap<const Spindle *, StateT> &State) {
-//   if (!State[S])
-//     State[S] = IncomingVal;
-//   else if (S->isPhi())
-//     State[S].addIncomingToPhi(IncomingVal);
-// }
-
-// void TaskInfo::updateSuccessorPhis(Spindle *S, StateT IncomingVal,
-//                                    DenseMap<const Spindle *, StateT> &State) {
-//   // Pass through values to our successors
-//   for (const Spindle *Succ : successors(S)) {
-//     if (!Succ->isPhi()) continue;
-//     if (!State[Succ])
-//       State[Succ] = IncomingVal;
-//     else
-//       State[Succ].addIncomingToPhi(IncomingVal);
-//   }
-// }
-
-// void TaskInfo::evalParallelState(StateT IncomingVal,
-//                                  DenseMap<const Spindle *, StateT> &State) {
-//   SmallVector<evalData<StateT>, 32> WorkStack;
-//   SmallPtrSet<Spindle *, 8> VisitedSpindles;
-
-//   DomTreeNode *Root = DomTree.getRootNode();
-//   Spindle *RootSpindle = getSpindleFor(Root->getBlock());
-//   State[RootSpindle] = IncomingVal;
-//   WorkStack.push_back({Root, Root->begin(), IncomingVal});
-
-//   while (!WorkStack.empty()) {
-//     DomTreeNode *Node = WorkStack.back().DTN;
-//     DomTreeNode::const_iterator ChildIt = WorkStack.back().ChildIt;
-//     IncomingVal = WorkStack.back().IncomingVal;
-
-    
-//     if (ChildIt == Node->end())
-//       WorkStack.pop_back();
-//     else {
-//       DomTreeNode *Child = *ChildIt;
-//       ++WorkStack.back().ChildIt;
-//       BasicBlock *BB = Child->getBlock();
-//       Spindle *S = getSpindleFor(BB);
-
-//       if (S != getSpindleFor(Node->getBlock()))
-//         IncomingVal = IncomingVal.getOutgoingVal(BB->getTerminator());
-//       updateSuccessorPhis(S, IncomingVal, State);
-//       WorkStack.push_back({Child, Child->begin(), IncomingVal});
-//     }
-//   }
-// }
+raw_ostream &llvm::operator<<(raw_ostream &OS, const Spindle &S) {
+  S.print(OS);
+  return OS;
+}
 
 // TaskInfo::TaskInfo(const DomTreeBase<BasicBlock> &DomTree) { analyze(DomTree); }
 
@@ -464,13 +407,10 @@ bool TaskInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 //   }
 // }
 
-raw_ostream &operator<<(raw_ostream &OS, const Spindle &S) {
-  S.print(OS);
-  return OS;
-}
-
 /// Print spindle with all the BBs inside it.
-void Spindle::print(raw_ostream &OS, bool TaskExit, bool Verbose) const {
+void Spindle::print(raw_ostream &OS, bool Verbose) const {
+  if (getParentTask()->getEntrySpindle() == this)
+    OS << "<task entry>";
   BasicBlock *Entry = getEntry();
   for (unsigned i = 0; i < getBlocks().size(); ++i) {
     BasicBlock *BB = getBlocks()[i];
@@ -490,7 +430,7 @@ void Spindle::print(raw_ostream &OS, bool TaskExit, bool Verbose) const {
 
     if (isSpindleExiting(BB)) {
       OS << "<sp exit>";
-      if (TaskExit) {
+      if (getParentTask()->isTaskExiting(BB)) {
         if (isDetachedRethrow(BB->getTerminator()) ||
             isa<UnreachableInst>(BB->getTerminator()) ||
             isa<ResumeInst>(BB->getTerminator()))
@@ -507,16 +447,49 @@ void Spindle::print(raw_ostream &OS, bool TaskExit, bool Verbose) const {
   }
 }
 
+// Helper routine to print the shared exception-handling spindles reached by
+// spindle S.
+static void printSharedEHSucc(const Spindle *S, const Task *ParentTask,
+                              SmallPtrSetImpl<const Spindle *> &Visited,
+                              raw_ostream &OS, bool Verbose) {
+  for (const auto &Exit : S->exits())
+    for (const BasicBlock *Succ : successors(&Exit))
+      if (const Spindle *EH = ParentTask->getSharedEHContaining(Succ)) {
+        if (!Visited.insert(EH).second) continue;
+        EH->print(OS, Verbose);
+      }
+}
+
 /// Print task with all the BBs inside it.
-  void Task::print(raw_ostream &OS, unsigned Depth, bool Verbose) const {
+void Task::print(raw_ostream &OS, unsigned Depth, bool Verbose) const {
   OS.indent(Depth * 2) << "task at depth " << Depth << " containing: ";
+
+  // Print the spindles in this task.
   const Spindle *Entry = getEntrySpindle();
+  SmallPtrSet<const Spindle *, 1> VisitedSharedEHSpindles;
   for (const Spindle *S : spindles()) {
-    if (S == Entry)
-      OS << "<entry>";
-    S->print(OS, isTaskExiting(S), Verbose);
+    // if (S == Entry)
+    //   OS << "<entry>";
+    S->print(OS, Verbose);
+    // If this spindle exits to a shared EH spindle, print those shared EH
+    // spindles.
+    if (Task *Parent = getParentTask())
+      if (Parent->hasSharedEHSpindles())
+        printSharedEHSucc(S, Parent, VisitedSharedEHSpindles, OS, Verbose);
   }
   OS << "\n";
+
+  // If this task contains tracks any shared EH spindles for its subtasks, print
+  // those shared EH spindles.
+  if (hasSharedEHSpindles()) {
+    for (const Spindle *S : shared_eh_spindles()) {
+      OS << "<shared EH>";
+      S->print(OS, Verbose);
+      OS << "\n";
+    }
+  }
+
+  // Print the subtasks of this task.
   for (const Task *SubTask : getSubTasks())
     SubTask->print(OS, Depth+1, Verbose);
 }
@@ -711,18 +684,3 @@ PreservedAnalyses TaskVerifierPass::run(Function &F,
   TI.verify(DT);
   return PreservedAnalyses::all();
 }
-
-// //===----------------------------------------------------------------------===//
-// // TaskBlocksDFS implementation
-// //
-
-// /// Traverse the task blocks and store the DFS result.
-// /// Useful for clients that just want the final DFS result and don't need to
-// /// visit blocks during the initial traversal.
-// void TaskBlocksDFS::perform(TaskInfo *TI) {
-//   TaskBlocksTraversal Traversal(*this, TI);
-//   for (TaskBlocksTraversal::POTIterator POI = Traversal.begin(),
-//                                         POE = Traversal.end();
-//        POI != POE; ++POI)
-//     ;
-// }

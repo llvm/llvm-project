@@ -144,10 +144,9 @@ SmallVectorImpl<Function *> *LowerTapirToTarget::processFunction(
 
       // Record calls to get Tapir-loop grainsizes.
       for (Instruction &I : *CurBB)
-        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
           if (Intrinsic::tapir_loop_grainsize == II->getIntrinsicID())
             GrainsizeCalls.push_back(II);
-        }
 
       // Record detach instructions in this function.
       if (DetachInst *DI = dyn_cast<DetachInst>(CurBB->getTerminator())) {
@@ -214,78 +213,15 @@ SmallVectorImpl<Function *> *LowerTapirToTarget::processFunction(
   return NewHelpers;
 }
 
-static int64_t countRedundantSyncs(TaskInfo &TI, BasicBlock *B) {
-  Spindle *S = TI.getSpindleFor(B);
-  if (!S->isPhi())
-    return 1;
-
-  SmallVector<Spindle *, 8> WorkList;
-  SmallVector<Spindle *, 8> ToProcess;
-  SmallPtrSet<Spindle *, 8> Visited;
-  DenseMap<Spindle *, unsigned> MightBeSynced;
-  WorkList.push_back(S);
-
-  while (!WorkList.empty()) {
-    Spindle *SP = WorkList.pop_back_val();
-
-    if (!Visited.insert(SP).second) continue;
-    if (!SP->isPhi()) {
-      MightBeSynced[SP] = SP->isSync();
-      continue;
-    }
-
-    bool Queue = true;
-    for (BasicBlock *PredB : predecessors(SP->getEntry())) {
-      // if (isa<ReattachInst>(PredB->getTerminator()) ||
-      //     isDetachedRethrow(PredB->getTerminator())) {
-      if (TI.getTaskFor(PredB) != TI.getTaskFor(SP)) {
-        Queue = false;
-        MightBeSynced[SP] = 0;
-        break;
-      }
-    }
-    if (!Queue) continue;
-
-    ToProcess.push_back(SP);
-    for (Spindle *PredS : TI.predecessors(SP))
-      WorkList.push_back(PredS);
-  }
-
-  for (Spindle *S : reverse(ToProcess)) {
-    MightBeSynced[S] = 0;
-    for (Spindle *Pred : TI.predecessors(S)) {
-      if (MightBeSynced[Pred])
-        MightBeSynced[S] |= MightBeSynced[Pred];
-    }
-  }
-  return MightBeSynced[S];
-}
-
-static void analyzeSyncs(TaskInfo &TI, Function *F) {
-  int64_t numRedundantSyncs = 0;
-  for (BasicBlock &B : *F) {
-    if (!isa<SyncInst>(B.getTerminator()))
-      continue;
-
-    numRedundantSyncs += countRedundantSyncs(TI, &B);
-  }
-  dbgs() << "Counted " << numRedundantSyncs << " partially redundant syncs.\n";
-}
-
 bool LowerTapirToTarget::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
   // Add functions that detach to the work list.
   SmallVector<Function *, 4> WorkList;
-  for (Function &F : M) {
-    if (tapirTarget->shouldProcessFunction(F)) {
-      dbgs() << "Checking " << F.getName() << "\n";
-      TaskInfo &TI = getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
-      analyzeSyncs(TI, &F);
+  for (Function &F : M)
+    if (tapirTarget->shouldProcessFunction(F))
       WorkList.push_back(&F);
-    }
-  }
 
   if (WorkList.empty())
     return false;
