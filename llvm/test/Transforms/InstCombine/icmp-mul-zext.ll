@@ -11,9 +11,8 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], [[SH_PROM]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[SHR]] to i64
 ; CHECK-NEXT:    [[MUL3:%.*]] = mul nuw nsw i64 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[CONV6:%.*]] = and i64 [[MUL3]], 4294967295
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[CONV6]], [[MUL3]]
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[MUL3]], 4294967295
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[MUL3]], [[TMP2]]
 ; CHECK-NEXT:    [[CONV4:%.*]] = trunc i64 [[AND]] to i32
@@ -21,8 +20,8 @@ define i32 @sterix(i32, i8, i64) {
 ; CHECK-NEXT:    [[PHITMP:%.*]] = zext i1 [[TOBOOL7]] to i32
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHITMP]], [[LOR_RHS]] ]
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[PHITMP]], [[LOR_RHS]] ]
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
   %conv = zext i32 %0 to i64
@@ -103,11 +102,12 @@ define i16 @iter_breaker(i16 %a, i16 %b) {
   %mul_wide = mul i32 %a_wide, %b_wide              ; uses of %mul_wide will be iterated
 
   %trunc_remain = trunc i32 %mul_wide to i8         ; this use will be replaced w/ new value
-                                                    ; when iteration visits it, switching
-                                                    ; iteration to the uses of new value
+  ; when iteration visits it, switching
+  ; iteration to the uses of new value
 
   %trunc_unnecessary = trunc i32 %mul_wide to i16   ; uses of %trunc_unnecessary will have
-                                                    ; been updated to uses of new value
+  ; been updated to uses of new value
+
   %did_ovf = icmp ugt i32 %mul_wide, 65535
   br i1 %did_ovf, label %ret1, label %ret2
 

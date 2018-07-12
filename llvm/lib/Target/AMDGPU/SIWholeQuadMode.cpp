@@ -849,7 +849,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   LowerToCopyInstrs.clear();
   CallingConv = MF.getFunction().getCallingConv();
 
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();

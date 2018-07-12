@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 def isGCN : Predicate<"Subtarget->getGeneration() "
-                      ">= SISubtarget::SOUTHERN_ISLANDS">,
+                      ">= AMDGPUSubtarget::SOUTHERN_ISLANDS">,
             AssemblerPredicate<"FeatureGCN">;
 def isSI : Predicate<"Subtarget->getGeneration() "
-                      "== SISubtarget::SOUTHERN_ISLANDS">,
+                      "== AMDGPUSubtarget::SOUTHERN_ISLANDS">,
            AssemblerPredicate<"FeatureSouthernIslands">;
 
 

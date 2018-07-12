@@ -502,11 +502,8 @@ namespace llvm {
     /// Add an entry to the debug prefix map.
     void addDebugPrefixMapEntry(const std::string &From, const std::string &To);
 
-    // Remaps the given path in-place as per the debug prefix map.
-    void RemapDebugPath(std::string *Path);
-
-    // Remaps the compilation dir as per the debug prefix map.
-    void RemapCompilationDir();
+    // Remaps all debug directory paths in-place as per the debug prefix map.
+    void RemapDebugPaths();
 
     /// Get the main file name for use in error messages and debug
     /// info. This can be set to ensure we've got the correct file name

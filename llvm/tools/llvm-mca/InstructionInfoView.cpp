@@ -29,7 +29,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
 
   TempStream << "\n\nInstruction Info:\n";
   TempStream << "[1]: #uOps\n[2]: Latency\n[3]: RThroughput\n"
-             << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects\n\n";
+             << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects (U)\n\n";
 
   TempStream << "[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
   for (unsigned I = 0, E = Instructions; I < E; ++I) {
@@ -73,7 +73,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
     TempStream << (MCDesc.mayLoad() ? " *     " : "       ");
     TempStream << (MCDesc.mayStore() ? " *     " : "       ");
-    TempStream << (MCDesc.hasUnmodeledSideEffects() ? " * " : "   ");
+    TempStream << (MCDesc.hasUnmodeledSideEffects() ? " U " : "   ");
 
     MCIP.printInst(&Inst, InstrStream, "", STI);
     InstrStream.flush();

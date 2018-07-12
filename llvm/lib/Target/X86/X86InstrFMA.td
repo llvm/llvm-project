@@ -304,8 +304,7 @@ multiclass fma3s_int_forms<bits<8> opc132, bits<8> opc213, bits<8> opc231,
 }
 
 multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
-                 string OpStr, SDNode OpNodeIntrin, SDNode OpNode,
-                 X86FoldableSchedWrite sched> {
+                 string OpStr, SDNode OpNode, X86FoldableSchedWrite sched> {
   let ExeDomain = SSEPackedSingle in
   defm NAME : fma3s_forms<opc132, opc213, opc231, OpStr, "ss", "SS", OpNode,
                           FR32, f32mem, sched>,
@@ -319,14 +318,14 @@ multiclass fma3s<bits<8> opc132, bits<8> opc213, bits<8> opc231,
                               VR128, sdmem, sched>, VEX_W;
 }
 
-defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", X86Fmadds1, X86Fmadd,
+defm VFMADD : fma3s<0x99, 0xA9, 0xB9, "vfmadd", X86Fmadd,
                     SchedWriteFMA.Scl>, VEX_LIG;
-defm VFMSUB : fma3s<0x9B, 0xAB, 0xBB, "vfmsub", X86Fmsubs1, X86Fmsub,
+defm VFMSUB : fma3s<0x9B, 0xAB, 0xBB, "vfmsub", X86Fmsub,
                     SchedWriteFMA.Scl>, VEX_LIG;
 
-defm VFNMADD : fma3s<0x9D, 0xAD, 0xBD, "vfnmadd", X86Fnmadds1, X86Fnmadd,
+defm VFNMADD : fma3s<0x9D, 0xAD, 0xBD, "vfnmadd", X86Fnmadd,
                      SchedWriteFMA.Scl>, VEX_LIG;
-defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86Fnmsubs1, X86Fnmsub,
+defm VFNMSUB : fma3s<0x9F, 0xAF, 0xBF, "vfnmsub", X86Fnmsub,
                      SchedWriteFMA.Scl>, VEX_LIG;
 
 multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
@@ -353,6 +352,13 @@ multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
                 (Op (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
                     (mem_frag addr:$src3), RC:$src2))))),
               (!cast<Instruction>(Prefix#"132"#Suffix#"m_Int")
+               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
+               addr:$src3)>;
+
+    def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
+                (Op RC:$src2, (mem_frag addr:$src3),
+                    (EltVT (extractelt (VT VR128:$src1), (iPTR 0)))))))),
+              (!cast<Instruction>(Prefix#"231"#Suffix#"m_Int")
                VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
                addr:$src3)>;
   }

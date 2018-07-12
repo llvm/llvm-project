@@ -81,17 +81,17 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("fma.vfmsubadd.") || // Added in 7.0
       Name.startswith("fma.vfnmadd.") || // Added in 7.0
       Name.startswith("fma.vfnmsub.") || // Added in 7.0
-      Name.startswith("avx512.mask.vfmadd.p") || // Added in 7.0
-      Name.startswith("avx512.mask.vfnmadd.p") || // Added in 7.0
-      Name.startswith("avx512.mask.vfnmsub.p") || // Added in 7.0
-      Name.startswith("avx512.mask3.vfmadd.p") || // Added in 7.0
-      Name.startswith("avx512.maskz.vfmadd.p") || // Added in 7.0
-      Name.startswith("avx512.mask3.vfmsub.p") || // Added in 7.0
-      Name.startswith("avx512.mask3.vfnmsub.p") || // Added in 7.0
-      Name.startswith("avx512.mask.vfmaddsub.p") || // Added in 7.0
-      Name.startswith("avx512.maskz.vfmaddsub.p") || // Added in 7.0
-      Name.startswith("avx512.mask3.vfmaddsub.p") || // Added in 7.0
-      Name.startswith("avx512.mask3.vfmsubadd.p") || // Added in 7.0
+      Name.startswith("avx512.mask.vfmadd.") || // Added in 7.0
+      Name.startswith("avx512.mask.vfnmadd.") || // Added in 7.0
+      Name.startswith("avx512.mask.vfnmsub.") || // Added in 7.0
+      Name.startswith("avx512.mask3.vfmadd.") || // Added in 7.0
+      Name.startswith("avx512.maskz.vfmadd.") || // Added in 7.0
+      Name.startswith("avx512.mask3.vfmsub.") || // Added in 7.0
+      Name.startswith("avx512.mask3.vfnmsub.") || // Added in 7.0
+      Name.startswith("avx512.mask.vfmaddsub.") || // Added in 7.0
+      Name.startswith("avx512.maskz.vfmaddsub.") || // Added in 7.0
+      Name.startswith("avx512.mask3.vfmaddsub.") || // Added in 7.0
+      Name.startswith("avx512.mask3.vfmsubadd.") || // Added in 7.0
       Name.startswith("avx512.mask.shuf.i") || // Added in 6.0
       Name.startswith("avx512.mask.shuf.f") || // Added in 6.0
       Name.startswith("avx512.kunpck") || //added in 6.0 
@@ -826,12 +826,27 @@ static Value *getX86MaskVec(IRBuilder<> &Builder, Value *Mask,
 
 static Value *EmitX86Select(IRBuilder<> &Builder, Value *Mask,
                             Value *Op0, Value *Op1) {
-  // If the mask is all ones just emit the align operation.
+  // If the mask is all ones just emit the first operation.
   if (const auto *C = dyn_cast<Constant>(Mask))
     if (C->isAllOnesValue())
       return Op0;
 
   Mask = getX86MaskVec(Builder, Mask, Op0->getType()->getVectorNumElements());
+  return Builder.CreateSelect(Mask, Op0, Op1);
+}
+
+static Value *EmitX86ScalarSelect(IRBuilder<> &Builder, Value *Mask,
+                                  Value *Op0, Value *Op1) {
+  // If the mask is all ones just emit the first operation.
+  if (const auto *C = dyn_cast<Constant>(Mask))
+    if (C->isAllOnesValue())
+      return Op0;
+
+  llvm::VectorType *MaskTy =
+    llvm::VectorType::get(Builder.getInt1Ty(),
+                          Mask->getType()->getIntegerBitWidth());
+  Mask = Builder.CreateBitCast(Mask, MaskTy);
+  Mask = Builder.CreateExtractElement(Mask, (uint64_t)0);
   return Builder.CreateSelect(Mask, Op0, Op1);
 }
 
@@ -2806,6 +2821,64 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
 
       Rep = Builder.CreateInsertElement(Constant::getNullValue(CI->getType()),
                                         Rep, (uint64_t)0);
+    } else if (IsX86 && (Name.startswith("avx512.mask.vfmadd.s") ||
+                         Name.startswith("avx512.maskz.vfmadd.s") ||
+                         Name.startswith("avx512.mask3.vfmadd.s") ||
+                         Name.startswith("avx512.mask3.vfmsub.s") ||
+                         Name.startswith("avx512.mask3.vfnmsub.s"))) {
+      bool IsMask3 = Name[11] == '3';
+      bool IsMaskZ = Name[11] == 'z';
+      // Drop the "avx512.mask." to make it easier.
+      Name = Name.drop_front(IsMask3 || IsMaskZ ? 13 : 12);
+      bool NegMul = Name[2] == 'n';
+      bool NegAcc = NegMul ? Name[4] == 's' : Name[3] == 's';
+
+      Value *A = CI->getArgOperand(0);
+      Value *B = CI->getArgOperand(1);
+      Value *C = CI->getArgOperand(2);
+
+      if (NegMul && (IsMask3 || IsMaskZ))
+        A = Builder.CreateFNeg(A);
+      if (NegMul && !(IsMask3 || IsMaskZ))
+        B = Builder.CreateFNeg(B);
+      if (NegAcc)
+        C = Builder.CreateFNeg(C);
+
+      A = Builder.CreateExtractElement(A, (uint64_t)0);
+      B = Builder.CreateExtractElement(B, (uint64_t)0);
+      C = Builder.CreateExtractElement(C, (uint64_t)0);
+
+      if (!isa<ConstantInt>(CI->getArgOperand(4)) ||
+          cast<ConstantInt>(CI->getArgOperand(4))->getZExtValue() != 4) {
+        Value *Ops[] = { A, B, C, CI->getArgOperand(4) };
+
+        Intrinsic::ID IID;
+        if (Name.back() == 'd')
+          IID = Intrinsic::x86_avx512_vfmadd_f64;
+        else
+          IID = Intrinsic::x86_avx512_vfmadd_f32;
+        Function *FMA = Intrinsic::getDeclaration(CI->getModule(), IID);
+        Rep = Builder.CreateCall(FMA, Ops);
+      } else {
+        Function *FMA = Intrinsic::getDeclaration(CI->getModule(),
+                                                  Intrinsic::fma,
+                                                  A->getType());
+        Rep = Builder.CreateCall(FMA, { A, B, C });
+      }
+
+      Value *PassThru = IsMaskZ ? Constant::getNullValue(Rep->getType()) :
+                        IsMask3 ? C : A;
+
+      // For Mask3 with NegAcc, we need to create a new extractelement that
+      // avoids the negation above.
+      if (NegAcc && IsMask3)
+        PassThru = Builder.CreateExtractElement(CI->getArgOperand(2),
+                                                (uint64_t)0);
+
+      Rep = EmitX86ScalarSelect(Builder, CI->getArgOperand(3),
+                                Rep, PassThru);
+      Rep = Builder.CreateInsertElement(CI->getArgOperand(IsMask3 ? 2 : 0),
+                                        Rep, (uint64_t)0);
     } else if (IsX86 && (Name.startswith("avx512.mask.vfmadd.p") ||
                          Name.startswith("avx512.mask.vfnmadd.p") ||
                          Name.startswith("avx512.mask.vfnmsub.p") ||
@@ -2820,6 +2893,17 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       bool NegMul = Name[2] == 'n';
       bool NegAcc = NegMul ? Name[4] == 's' : Name[3] == 's';
 
+      Value *A = CI->getArgOperand(0);
+      Value *B = CI->getArgOperand(1);
+      Value *C = CI->getArgOperand(2);
+
+      if (NegMul && (IsMask3 || IsMaskZ))
+        A = Builder.CreateFNeg(A);
+      if (NegMul && !(IsMask3 || IsMaskZ))
+        B = Builder.CreateFNeg(B);
+      if (NegAcc)
+        C = Builder.CreateFNeg(C);
+
       if (CI->getNumArgOperands() == 5 &&
           (!isa<ConstantInt>(CI->getArgOperand(4)) ||
            cast<ConstantInt>(CI->getArgOperand(4))->getZExtValue() != 4)) {
@@ -2830,38 +2914,13 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         else
           IID = Intrinsic::x86_avx512_vfmadd_pd_512;
 
-        Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1),
-                         CI->getArgOperand(2), CI->getArgOperand(4) };
-
-        if (NegMul) {
-          if (IsMaskZ || IsMask3)
-            Ops[0] = Builder.CreateFNeg(Ops[0]);
-          else
-            Ops[1] = Builder.CreateFNeg(Ops[1]);
-        }
-        if (NegAcc)
-          Ops[2] = Builder.CreateFNeg(Ops[2]);
-
         Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
-                                 Ops);
+                                 { A, B, C, CI->getArgOperand(4) });
       } else {
-
-        Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1),
-                         CI->getArgOperand(2) };
-
-        if (NegMul) {
-          if (IsMaskZ || IsMask3)
-            Ops[0] = Builder.CreateFNeg(Ops[0]);
-          else
-            Ops[1] = Builder.CreateFNeg(Ops[1]);
-        }
-        if (NegAcc)
-          Ops[2] = Builder.CreateFNeg(Ops[2]);
-
         Function *FMA = Intrinsic::getDeclaration(CI->getModule(),
                                                   Intrinsic::fma,
-                                                  Ops[0]->getType());
-        Rep = Builder.CreateCall(FMA, Ops);
+                                                  A->getType());
+        Rep = Builder.CreateCall(FMA, { A, B, C });
       }
 
       Value *PassThru = IsMaskZ ? llvm::Constant::getNullValue(CI->getType()) :

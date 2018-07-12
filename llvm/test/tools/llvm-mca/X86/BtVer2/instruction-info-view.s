@@ -24,7 +24,7 @@ vhaddps  %xmm3, %xmm3, %xmm4
 # ENABLED-NEXT:  [3]: RThroughput
 # ENABLED-NEXT:  [4]: MayLoad
 # ENABLED-NEXT:  [5]: MayStore
-# ENABLED-NEXT:  [6]: HasSideEffects
+# ENABLED-NEXT:  [6]: HasSideEffects (U)
 
 # ENABLED:       [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # ENABLED-NEXT:   1      2     1.00                        vmulps	%xmm0, %xmm1, %xmm2

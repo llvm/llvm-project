@@ -69,7 +69,7 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   }
 
   unsigned RsrcReg;
-  if (STM.getGeneration() >= R600Subtarget::EVERGREEN) {
+  if (STM.getGeneration() >= AMDGPUSubtarget::EVERGREEN) {
     // Evergreen / Northern Islands
     switch (MF.getFunction().getCallingConv()) {
     default: LLVM_FALLTHROUGH;

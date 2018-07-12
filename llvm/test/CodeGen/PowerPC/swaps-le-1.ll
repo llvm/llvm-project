@@ -1,17 +1,17 @@
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 \
-; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck -allow-deprecated-dag-overlap %s
 
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr8 -disable-ppc-vsx-swap-removal \
-; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck \
+; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck -allow-deprecated-dag-overlap \
 ; RUN:   -check-prefix=NOOPTSWAP %s
 
 ; RUN: llc -O3 -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:  -verify-machineinstrs -ppc-vsr-nums-as-vr < %s | FileCheck \
+; RUN:  -verify-machineinstrs -ppc-vsr-nums-as-vr < %s | FileCheck -allow-deprecated-dag-overlap \
 ; RUN:  -check-prefix=CHECK-P9 --implicit-check-not xxswapd %s
 
 ; RUN: llc -O3 -mcpu=pwr9 -disable-ppc-vsx-swap-removal -mattr=-power9-vector \
 ; RUN:  -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s \
-; RUN:  | FileCheck -check-prefix=NOOPTSWAP %s
+; RUN:  | FileCheck -allow-deprecated-dag-overlap -check-prefix=NOOPTSWAP %s
 
 ; LH: 2016-11-17
 ;   Updated align attritue from 16 to 8 to keep swap instructions tests.

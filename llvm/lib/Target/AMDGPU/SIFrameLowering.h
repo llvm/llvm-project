@@ -17,7 +17,7 @@ namespace llvm {
 class SIInstrInfo;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
-class SISubtarget;
+class GCNSubtarget;
 
 class SIFrameLowering final : public AMDGPUFrameLowering {
 public:
@@ -48,19 +48,19 @@ public:
                                 MachineBasicBlock::iterator MI) const override;
 
 private:
-  void emitFlatScratchInit(const SISubtarget &ST,
+  void emitFlatScratchInit(const GCNSubtarget &ST,
                            MachineFunction &MF,
                            MachineBasicBlock &MBB) const;
 
   unsigned getReservedPrivateSegmentBufferReg(
-    const SISubtarget &ST,
+    const GCNSubtarget &ST,
     const SIInstrInfo *TII,
     const SIRegisterInfo *TRI,
     SIMachineFunctionInfo *MFI,
     MachineFunction &MF) const;
 
   std::pair<unsigned, unsigned> getReservedPrivateSegmentWaveByteOffsetReg(
-    const SISubtarget &ST,
+    const GCNSubtarget &ST,
     const SIInstrInfo *TII,
     const SIRegisterInfo *TRI,
     SIMachineFunctionInfo *MFI,
@@ -70,7 +70,7 @@ private:
   void emitDebuggerPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const;
 
   // Emit scratch setup code for AMDPAL or Mesa, assuming ResourceRegUsed is set.
-  void emitEntryFunctionScratchSetup(const SISubtarget &ST, MachineFunction &MF,
+  void emitEntryFunctionScratchSetup(const GCNSubtarget &ST, MachineFunction &MF,
       MachineBasicBlock &MBB, SIMachineFunctionInfo *MFI,
       MachineBasicBlock::iterator I, unsigned PreloadedPrivateBufferReg,
       unsigned ScratchRsrcReg) const;

@@ -2866,6 +2866,36 @@ Instruction *InstCombiner::foldICmpInstWithConstantNotInt(ICmpInst &I) {
   return nullptr;
 }
 
+/// Some comparisons can be simplified.
+/// In this case, we are looking for comparisons that look like
+/// a check for a lossy truncation.
+/// Folds:
+///   x & (-1 >> y) SrcPred x    to    x DstPred (-1 >> y)
+/// The Mask can be a constant, too.
+static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
+                                          InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate SrcPred;
+  Value *X, *M;
+  auto m_Mask = m_CombineOr(m_LShr(m_AllOnes(), m_Value()), m_LowBitMask());
+  if (!match(&I, m_c_ICmp(SrcPred,
+                          m_c_And(m_CombineAnd(m_Mask, m_Value(M)), m_Value(X)),
+                          m_Deferred(X))))
+    return nullptr;
+
+  ICmpInst::Predicate DstPred;
+  switch (SrcPred) {
+  case ICmpInst::Predicate::ICMP_EQ:
+    //  x & (-1 >> y) == x    ->    x u<= (-1 >> y)
+    DstPred = ICmpInst::Predicate::ICMP_ULE;
+    break;
+  // TODO: more folds are possible, https://bugs.llvm.org/show_bug.cgi?id=38123
+  default:
+    return nullptr;
+  }
+
+  return Builder.CreateICmp(DstPred, X, M);
+}
+
 /// Try to fold icmp (binop), X or icmp X, (binop).
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
@@ -3202,6 +3232,9 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
       return new ICmpInst(ICmpInst::ICMP_NE, Op1, Zero);
     }
   }
+
+  if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
+    return replaceInstUsesWith(I, V);
 
   return nullptr;
 }
@@ -4706,6 +4739,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     if (match(Op1, m_Add(m_Value(X), m_ConstantInt(Cst))) && Op0 == X)
       return foldICmpAddOpConst(X, Cst, I.getSwappedPredicate());
   }
+
   return Changed ? &I : nullptr;
 }
 

@@ -40,7 +40,7 @@ using namespace llvm;
 GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF) :
   CurrCycleInstr(nullptr),
   MF(MF),
-  ST(MF.getSubtarget<SISubtarget>()),
+  ST(MF.getSubtarget<GCNSubtarget>()),
   TII(*ST.getInstrInfo()),
   TRI(TII.getRegisterInfo()),
   ClauseUses(TRI.getNumRegUnits()),
@@ -356,13 +356,13 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) {
 }
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   int WaitStatesNeeded = 0;
 
   WaitStatesNeeded = checkSoftClauseHazards(SMRD);
 
   // This SMRD hazard only affects SI.
-  if (ST.getGeneration() != SISubtarget::SOUTHERN_ISLANDS)
+  if (ST.getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS)
     return WaitStatesNeeded;
 
   // A read of an SGPR by SMRD instruction requires 4 wait states when the
@@ -399,7 +399,7 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
 }
 
 int GCNHazardRecognizer::checkVMEMHazards(MachineInstr* VMEM) {
-  if (ST.getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
+  if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
     return 0;
 
   int WaitStatesNeeded = checkSoftClauseHazards(VMEM);

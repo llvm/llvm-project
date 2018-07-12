@@ -1015,7 +1015,7 @@ vzeroupper
 # CHECK-NEXT: [3]: RThroughput
 # CHECK-NEXT: [4]: MayLoad
 # CHECK-NEXT: [5]: MayStore
-# CHECK-NEXT: [6]: HasSideEffects
+# CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      4     0.50                        vaddpd	%xmm0, %xmm1, %xmm2
@@ -1206,8 +1206,8 @@ vzeroupper
 # CHECK-NEXT:  2      7     1.00    *                   vinsertps	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      6     0.50    *                   vlddqu	(%rax), %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   vlddqu	(%rax), %ymm2
-# CHECK-NEXT:  3      7     1.00    *      *      *     vldmxcsr	(%rax)
-# CHECK-NEXT:  2      1     1.00    *      *      *     vmaskmovdqu	%xmm0, %xmm1
+# CHECK-NEXT:  3      7     1.00    *      *      U     vldmxcsr	(%rax)
+# CHECK-NEXT:  2      1     1.00    *      *      U     vmaskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  2      7     0.50    *                   vmaskmovpd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  2      8     0.50    *                   vmaskmovpd	(%rax), %ymm0, %ymm2
 # CHECK-NEXT:  2      2     1.00    *      *            vmaskmovpd	%xmm0, %xmm1, (%rax)
@@ -1650,7 +1650,7 @@ vzeroupper
 # CHECK-NEXT:  2      23    6.00    *                   vsqrtsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      12    3.00                        vsqrtss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      17    3.00    *                   vsqrtss	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  3      2     1.00    *      *      *     vstmxcsr	(%rax)
+# CHECK-NEXT:  3      2     1.00    *      *      U     vstmxcsr	(%rax)
 # CHECK-NEXT:  1      4     0.50                        vsubpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      10    0.50    *                   vsubpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      4     0.50                        vsubpd	%ymm0, %ymm1, %ymm2
@@ -1699,8 +1699,8 @@ vzeroupper
 # CHECK-NEXT:  2      7     0.50    *                   vxorps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.33                        vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     0.50    *                   vxorps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  16     16    4.00    *      *      *     vzeroall
-# CHECK-NEXT:  4      4     1.00    *      *      *     vzeroupper
+# CHECK-NEXT:  16     16    4.00    *      *      U     vzeroall
+# CHECK-NEXT:  4      4     1.00    *      *      U     vzeroupper
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SKLDivider

@@ -70,7 +70,7 @@ private:
   bool processRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses,
                       GCNDownwardRPTracker &RPT);
 
-  const SISubtarget *ST;
+  const GCNSubtarget *ST;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
   SIMachineFunctionInfo *MFI;
@@ -296,7 +296,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  ST = &MF.getSubtarget<SISubtarget>();
+  ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->isXNACKEnabled())
     return false;
 

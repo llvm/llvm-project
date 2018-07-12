@@ -58,7 +58,8 @@ TEST(DomTreeUpdater, EagerUpdateBasicOperations) {
 
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_TRUE(DTU.hasPostDomTree());
-  ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Eager);
+  ASSERT_TRUE(DTU.isEager());
+  ASSERT_FALSE(DTU.isLazy());
   ASSERT_TRUE(DTU.getDomTree().verify());
   ASSERT_TRUE(DTU.getPostDomTree().verify());
   ASSERT_FALSE(DTU.hasPendingUpdates());
@@ -166,7 +167,8 @@ TEST(DomTreeUpdater, EagerUpdateReplaceEntryBB) {
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Eager);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_TRUE(DTU.hasPostDomTree());
-  ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Eager);
+  ASSERT_TRUE(DTU.isEager());
+  ASSERT_FALSE(DTU.isLazy());
   ASSERT_TRUE(DT.verify());
   ASSERT_TRUE(PDT.verify());
 
@@ -239,7 +241,8 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   DomTreeUpdater DTU(&DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_FALSE(DTU.hasPostDomTree());
-  ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_FALSE(DTU.isEager());
+  ASSERT_TRUE(DTU.isLazy());
   ASSERT_TRUE(DTU.getDomTree().verify());
 
   Function::iterator FI = F->begin();
@@ -327,7 +330,8 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   DomTreeUpdater DTU(&DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_FALSE(DTU.hasPostDomTree());
-  ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_FALSE(DTU.isEager());
+  ASSERT_TRUE(DTU.isLazy());
   ASSERT_TRUE(DTU.getDomTree().verify());
 
   Function::iterator FI = F->begin();
@@ -453,7 +457,8 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
   DomTreeUpdater DTU(&DT, &PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_TRUE(DTU.hasPostDomTree());
-  ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_FALSE(DTU.isEager());
+  ASSERT_TRUE(DTU.isLazy());
   ASSERT_TRUE(DTU.getDomTree().verify());
   ASSERT_TRUE(DTU.getPostDomTree().verify());
 
@@ -535,7 +540,8 @@ TEST(DomTreeUpdater, LazyUpdateReplaceEntryBB) {
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_TRUE(DTU.hasPostDomTree());
-  ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_FALSE(DTU.isEager());
+  ASSERT_TRUE(DTU.isLazy());
   ASSERT_TRUE(DTU.getDomTree().verify());
   ASSERT_TRUE(DTU.getPostDomTree().verify());
 
@@ -624,7 +630,8 @@ TEST(DomTreeUpdater, LazyUpdateStepTest) {
 
   ASSERT_TRUE(DTU.hasDomTree());
   ASSERT_TRUE(DTU.hasPostDomTree());
-  ASSERT_EQ(DTU.getUpdateStrategy(), DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_FALSE(DTU.isEager());
+  ASSERT_TRUE(DTU.isLazy());
   ASSERT_TRUE(DTU.getDomTree().verify());
   ASSERT_TRUE(DTU.getPostDomTree().verify());
   ASSERT_FALSE(DTU.hasPendingUpdates());

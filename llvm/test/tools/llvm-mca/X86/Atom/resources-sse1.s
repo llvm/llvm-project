@@ -191,7 +191,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: [3]: RThroughput
 # CHECK-NEXT: [4]: MayLoad
 # CHECK-NEXT: [5]: MayStore
-# CHECK-NEXT: [6]: HasSideEffects
+# CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      5     5.00                        addps	%xmm0, %xmm2
@@ -230,8 +230,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      70    35.00   *                   divps	(%rax), %xmm2
 # CHECK-NEXT:  1      34    17.00                       divss	%xmm0, %xmm2
 # CHECK-NEXT:  1      34    17.00   *                   divss	(%rax), %xmm2
-# CHECK-NEXT:  1      5     2.50    *      *      *     ldmxcsr	(%rax)
-# CHECK-NEXT:  1      1     1.00    *      *      *     maskmovq	%mm0, %mm1
+# CHECK-NEXT:  1      5     2.50    *      *      U     ldmxcsr	(%rax)
+# CHECK-NEXT:  1      1     1.00    *      *      U     maskmovq	%mm0, %mm1
 # CHECK-NEXT:  1      5     5.00                        maxps	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     5.00    *                   maxps	(%rax), %xmm2
 # CHECK-NEXT:  1      5     5.00                        maxss	%xmm0, %xmm2
@@ -251,7 +251,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   movlps	(%rax), %xmm2
 # CHECK-NEXT:  1      3     3.00                        movmskps	%xmm0, %ecx
 # CHECK-NEXT:  1      1     1.00           *            movntps	%xmm0, (%rax)
-# CHECK-NEXT:  1      1     1.00    *      *      *     movntq	%mm0, (%rax)
+# CHECK-NEXT:  1      1     1.00    *      *      U     movntq	%mm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                        movss	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00           *            movss	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00    *                   movss	(%rax), %xmm2
@@ -298,14 +298,14 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      10    5.00    *                   rsqrtps	(%rax), %xmm2
 # CHECK-NEXT:  1      4     4.00                        rsqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     4.00    *                   rsqrtss	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00    *      *      *     sfence
+# CHECK-NEXT:  1      1     1.00    *      *      U     sfence
 # CHECK-NEXT:  1      1     1.00                        shufps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   shufps	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      70    35.00                       sqrtps	%xmm0, %xmm2
 # CHECK-NEXT:  1      70    35.00   *                   sqrtps	(%rax), %xmm2
 # CHECK-NEXT:  1      34    17.00                       sqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  1      34    17.00   *                   sqrtss	(%rax), %xmm2
-# CHECK-NEXT:  1      15    7.50    *      *      *     stmxcsr	(%rax)
+# CHECK-NEXT:  1      15    7.50    *      *      U     stmxcsr	(%rax)
 # CHECK-NEXT:  1      5     5.00                        subps	%xmm0, %xmm2
 # CHECK-NEXT:  1      5     5.00    *                   subps	(%rax), %xmm2
 # CHECK-NEXT:  1      5     5.00                        subss	%xmm0, %xmm2

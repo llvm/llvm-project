@@ -7,7 +7,7 @@ Introduction
 
 Building with link time optimization requires cooperation from
 the system linker. LTO support on Linux systems requires that you use the
-`gold linker`_ or ld.bfd from binutils >= 2.21.51.0.2, as they support LTO via plugins. This is the same mechanism
+`gold linker`_ which supports LTO via plugins. This is the same mechanism
 used by the `GCC LTO`_ project.
 
 The LLVM gold plugin implements the gold plugin interface on top of
@@ -23,22 +23,24 @@ The LLVM gold plugin implements the gold plugin interface on top of
 How to build it
 ===============
 
-Check for plugin support by running ``/usr/bin/ld -plugin``. If it complains
-"missing argument" then you have plugin support. If not, such as an "unknown option"
-error then you will either need to build gold or install a recent version
-of ld.bfd with plugin support and then build gold plugin.
+You need to have gold with plugin support and build the LLVMgold plugin.
+Check whether you have gold running ``/usr/bin/ld -v``. It will report "GNU
+gold" or else "GNU ld" if not. If you have gold, check for plugin support
+by running ``/usr/bin/ld -plugin``. If it complains "missing argument" then
+you have plugin support. If not, such as an "unknown option" error then you
+will either need to build gold or install a version with plugin support.
 
-* Download, configure and build ld.bfd with plugin support:
+* Download, configure and build gold with plugin support:
 
   .. code-block:: bash
 
      $ git clone --depth 1 git://sourceware.org/git/binutils-gdb.git binutils
      $ mkdir build
      $ cd build
-     $ ../binutils/configure --disable-werror # ld.bfd includes plugin support by default
-     $ make all-ld
+     $ ../binutils/configure --enable-gold --enable-plugins --disable-werror
+     $ make all-gold
 
-  That should leave you with ``build/ld/ld-new`` which supports
+  That should leave you with ``build/gold/ld-new`` which supports
   the ``-plugin`` option. Running ``make`` will additionally build
   ``build/binutils/ar`` and ``nm-new`` binaries supporting plugins.
 

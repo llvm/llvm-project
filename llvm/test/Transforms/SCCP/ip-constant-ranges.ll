@@ -2,7 +2,11 @@
 
 ; Constant range for %a is [1, 48) and for %b is [301, 1000)
 ; CHECK-LABEL: f1
-; CHECK: ret i32 undef
+; CHECK-NOT: icmp
+; CHECK: %a.1 = select i1 false, i32 1, i32 2
+; CHECK: %b.1 = select i1 true, i32 1, i32 2
+; CHECK: %a.2 = select i1 false, i32 1, i32 2
+; CHECK: %b.2 = select i1 true, i32 1, i32 2
 define internal i32 @f1(i32 %a, i32 %b) {
 entry:
   %cmp.a = icmp sgt i32 %a, 300
@@ -24,11 +28,10 @@ entry:
 ; CHECK-LABEL: f2
 ; CHECK: %cmp = icmp sgt i32 %x, 300
 ; CHECK: %res1 = select i1 %cmp, i32 1, i32 2
+; CHECK-NEXT: %res2 = select i1 true, i32 3, i32 4
+; CHECK-NEXT: %res3 = select i1 true, i32 5, i32 6
 ; CHECK-NEXT: %res4 = select i1 %cmp4, i32 3, i32 4
-; CHECK-NEXT: %res6 = add i32 %res1, 3
-; CHECK-NEXT: %res7 = add i32 5, %res4
-; CHECK-NEXT: %res = add i32 %res6, 5
-; CHECK-NEXT: ret i32 %res
+; CHECK-NEXT: %res5 = select i1 true, i32 5, i32 6
 define internal i32 @f2(i32 %x) {
 entry:
   %cmp = icmp sgt i32 %x, 300
@@ -54,7 +57,8 @@ entry:
   %call2 = tail call i32 @f1(i32 47, i32 999)
   %call3 = tail call i32 @f2(i32 47)
   %call4 = tail call i32 @f2(i32 301)
-  %res.1 = add nsw i32 12, %call3
+  %res = add nsw i32 %call1, %call2
+  %res.1 = add nsw i32 %res, %call3
   %res.2 = add nsw i32 %res.1, %call4
   ret i32 %res.2
 }
@@ -141,9 +145,9 @@ define double @test_struct({ double, double } %test) {
 ; Constant range for %x is [47, 302)
 ; CHECK-LABEL: @f5
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: %cmp = icmp sgt i32 %x, undef
-; CHECK-NEXT: %res1 = select i1 %cmp, i32 1, i32 2
-; CHECK-NEXT: %res = add i32 %res1, 3
+; CHECK-NEXT: %res1 = select i1 undef, i32 1, i32 2
+; CHECK-NEXT: %res2 = select i1 undef, i32 3, i32 4
+; CHECK-NEXT: %res = add i32 %res1, %res2
 ; CHECK-NEXT: ret i32 %res
 define internal i32 @f5(i32 %x) {
 entry:
@@ -162,37 +166,4 @@ entry:
   %call2 = tail call i32 @f5(i32 301)
   %res = add nsw i32 %call1, %call2
   ret i32 %res
-}
-
-; Make sure we do re-evaluate the function after ParamState changes.
-; CHECK-LABEL: @recursive_f
-; CHECK-LABEL: entry:
-; CHECK:  %cmp = icmp eq i32 %i, 0
-; CHECK-NEXT: br i1 %cmp, label %if.then, label %if.else
-define internal i32 @recursive_f(i32 %i) {
-entry:
-  %cmp = icmp eq i32 %i, 0
-  br i1 %cmp, label %if.then, label %if.else
-
-if.then:                                          ; preds = %entry
-  br label %return
-
-if.else:                                          ; preds = %entry
-  %sub = sub nsw i32 %i, 1
-  %call = call i32 @recursive_f(i32 %sub)
-  %add = add i32 %i, %call
-  br label %return
-
-return:                                           ; preds = %if.else, %if.then
-  %retval.0 = phi i32 [ 0, %if.then ], [ %add, %if.else ]
-  ret i32 %retval.0
-}
-
-; CHECK-LABEL: @caller5
-; CHECK: %call = call i32 @recursive_f(i32 42)
-; CHECK-NEXT: ret i32 %call
-define i32 @caller5() {
-entry:
-  %call = call i32 @recursive_f(i32 42)
-  ret i32 %call
 }

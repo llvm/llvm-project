@@ -112,6 +112,8 @@ let Predicates = [HasSVE] in {
   // Select elements from either vector (predicated)
   defm SEL_ZPZZ    : sve_int_sel_vvv<"sel">;
 
+  defm COMPACT_ZPZ : sve_int_perm_compact<"compact">;
+
   def AND_PPzPP   : sve_int_pred_log<0b0000, "and">;
   def BIC_PPzPP   : sve_int_pred_log<0b0001, "bic">;
   def EOR_PPzPP   : sve_int_pred_log<0b0010, "eor">;
@@ -127,6 +129,18 @@ let Predicates = [HasSVE] in {
   def ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns">;
   def NORS_PPzPP  : sve_int_pred_log<0b1110, "nors">;
   def NANDS_PPzPP : sve_int_pred_log<0b1111, "nands">;
+
+  defm CLASTA_RPZ : sve_int_perm_clast_rz<0, "clasta">;
+  defm CLASTB_RPZ : sve_int_perm_clast_rz<1, "clastb">;
+  defm CLASTA_VPZ : sve_int_perm_clast_vz<0, "clasta">;
+  defm CLASTB_VPZ : sve_int_perm_clast_vz<1, "clastb">;
+  defm CLASTA_ZPZ : sve_int_perm_clast_zz<0, "clasta">;
+  defm CLASTB_ZPZ : sve_int_perm_clast_zz<1, "clastb">;
+
+  defm LASTA_RPZ : sve_int_perm_last_r<0, "lasta">;
+  defm LASTB_RPZ : sve_int_perm_last_r<1, "lastb">;
+  defm LASTA_VPZ : sve_int_perm_last_v<0, "lasta">;
+  defm LASTB_VPZ : sve_int_perm_last_v<1, "lastb">;
 
   // continuous load with reg+immediate
   defm LD1B_IMM    : sve_mem_cld_si<0b0000, "ld1b",  Z_b, ZPR8>;

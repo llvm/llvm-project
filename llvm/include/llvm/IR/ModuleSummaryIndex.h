@@ -1082,7 +1082,7 @@ public:
     return &I->second;
   }
 
-  /// Collect for the given module the list of function it defines
+  /// Collect for the given module the list of functions it defines
   /// (GUID -> Summary).
   void collectDefinedFunctionsForModule(StringRef ModulePath,
                                         GVSummaryMapTy &GVSummaryMap) const;

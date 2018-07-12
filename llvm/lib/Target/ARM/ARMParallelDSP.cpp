@@ -11,6 +11,7 @@
 /// Armv6 introduced instructions to perform 32-bit SIMD operations. The
 /// purpose of this pass is do some IR pattern matching to create ACLE
 /// DSP intrinsics, which map on these 32-bit SIMD operations.
+/// This pass runs only when unaligned accesses is supported/enabled.
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,7 +65,16 @@ namespace {
     MemInstList  VecLd;     // List of all load instructions of this Mul
     MemLocList   MemLocs;   // All memory locations read by this Mul
 
-    ParallelMAC(Instruction *I, ValueList &V) : Mul(I), VL(V) {};
+    // The MAC-chains we currently recognise are simple chains that accumulate
+    // their results with a reducing integer add statement, and consist of
+    // a chain of adds and muls, which have only sext and load instructions as
+    // operands. Thus, these chains don't write memory. We check that this is
+    // true when we collect the operands, and use this in alias analysis checks
+    // that different parallel MACs don't interfere with each other.
+    bool ReadOnly;
+
+    ParallelMAC(Instruction *I, ValueList &V, bool RdOnly)
+      : Mul(I), VL(V), ReadOnly(RdOnly) {};
   };
 
   struct Reduction {
@@ -73,6 +83,8 @@ namespace {
     Instruction     *AccIntAdd;       // The accumulating integer add statement,
                                       // i.e, the reduction statement.
 
+    ParallelMACList MACCandidates;    // The MAC candidates associated with
+                                      // this reduction statement.
     Reduction (PHINode *P, Instruction *Acc) : Phi(P), AccIntAdd(Acc) { };
   };
 
@@ -380,8 +392,10 @@ static ReductionList MatchReductions(Function &F, Loop *TheLoop,
   const BasicBlock *Latch = TheLoop->getLoopLatch();
 
   // We need a preheader as getIncomingValueForBlock assumes there is one.
-  if (!TheLoop->getLoopPreheader())
+  if (!TheLoop->getLoopPreheader()) {
+    LLVM_DEBUG(dbgs() << "No preheader found, bailing out\n");
     return Reductions;
+  }
 
   for (PHINode &Phi : Header->phis()) {
     const auto *Ty = Phi.getType();
@@ -412,7 +426,7 @@ static ReductionList MatchReductions(Function &F, Loop *TheLoop,
   return Reductions;
 }
 
-static void AddCandidateMAC(ParallelMACList &Candidates, const Instruction *Acc,
+static void AddMACCandidate(ParallelMACList &Candidates, const Instruction *Acc,
                             Value *MulOp0, Value *MulOp1, int MulOpNum) {
   Instruction *Mul = dyn_cast<Instruction>(Acc->getOperand(MulOpNum));
   LLVM_DEBUG(dbgs() << "OK, found acc mul:\t"; Mul->dump());
@@ -420,7 +434,15 @@ static void AddCandidateMAC(ParallelMACList &Candidates, const Instruction *Acc,
   if (IsNarrowSequence<16>(MulOp0, VL) &&
       IsNarrowSequence<16>(MulOp1, VL)) {
     LLVM_DEBUG(dbgs() << "OK, found narrow mul: "; Mul->dump());
-    Candidates.push_back(ParallelMAC(Mul, VL));
+
+    bool MayWriteMem = false;
+    for (auto &V : VL) {
+      if (dyn_cast<Instruction>(V)->mayWriteToMemory()) {
+        MayWriteMem = true;
+        break;
+      }
+    }
+    Candidates.push_back(ParallelMAC(Mul, VL, !MayWriteMem));
   }
 }
 
@@ -433,20 +455,20 @@ static ParallelMACList MatchParallelMACs(Reduction &R) {
   // Pattern 1: the accumulator is the RHS of the mul.
   while(match(Acc, m_Add(m_Mul(m_Value(MulOp0), m_Value(MulOp1)),
                          m_Value(A)))){
-    AddCandidateMAC(Candidates, Acc, MulOp0, MulOp1, 0);
+    AddMACCandidate(Candidates, Acc, MulOp0, MulOp1, 0);
     Acc = dyn_cast<Instruction>(A);
   }
   // Pattern 2: the accumulator is the LHS of the mul.
   while(match(Acc, m_Add(m_Value(A),
                          m_Mul(m_Value(MulOp0), m_Value(MulOp1))))) {
-    AddCandidateMAC(Candidates, Acc, MulOp0, MulOp1, 1);
+    AddMACCandidate(Candidates, Acc, MulOp0, MulOp1, 1);
     Acc = dyn_cast<Instruction>(A);
   }
 
   // The last mul in the chain has a slightly different pattern:
   // the mul is the first operand
   if (match(Acc, m_Add(m_Mul(m_Value(MulOp0), m_Value(MulOp1)), m_Value(A))))
-    AddCandidateMAC(Candidates, Acc, MulOp0, MulOp1, 0);
+    AddMACCandidate(Candidates, Acc, MulOp0, MulOp1, 0);
 
   // Because we start at the bottom of the chain, and we work our way up,
   // the muls are added in reverse program order to the list.
@@ -456,35 +478,35 @@ static ParallelMACList MatchParallelMACs(Reduction &R) {
 
 // Collects all instructions that are not part of the MAC chains, which is the
 // set of instructions that can potentially alias with the MAC operands.
-static Instructions AliasCandidates(BasicBlock *Header,
-                                    ParallelMACList &MACCandidates) {
-  Instructions Aliases;
-  auto IsMACCandidate = [] (Instruction *I, ParallelMACList &MACCandidates) {
-    for (auto &MAC : MACCandidates)
-      for (auto *Val : MAC.VL)
-        if (I == MAC.Mul || Val == I)
-          return true;
-   return false;
-  };
-
-  std::for_each(Header->begin(), Header->end(),
-                [&Aliases, &MACCandidates, &IsMACCandidate] (Instruction &I) {
-                  if (I.mayReadOrWriteMemory() &&
-                      !IsMACCandidate(&I, MACCandidates))
-                    Aliases.push_back(&I); });
-  return Aliases;
+static void AliasCandidates(BasicBlock *Header, Instructions &Reads,
+                            Instructions &Writes) {
+  for (auto &I : *Header) {
+    if (I.mayReadFromMemory())
+      Reads.push_back(&I);
+    if (I.mayWriteToMemory())
+      Writes.push_back(&I);
+  }
 }
 
-// This compares all instructions from the "alias candidates" set, i.e., all
-// instructions that are not part of the MAC-chain, with all instructions in
-// the MAC candidate set, to see if instructions are aliased.
-static bool AreAliased(AliasAnalysis *AA, Instructions AliasCandidates,
-                       ParallelMACList &MACCandidates) {
+// Check whether statements in the basic block that write to memory alias with
+// the memory locations accessed by the MAC-chains.
+// TODO: we need the read statements when we accept more complicated chains.
+static bool AreAliased(AliasAnalysis *AA, Instructions &Reads,
+                       Instructions &Writes, ParallelMACList &MACCandidates) {
   LLVM_DEBUG(dbgs() << "Alias checks:\n");
-  for (auto *I : AliasCandidates) {
-    LLVM_DEBUG(dbgs() << "- "; I->dump());
-    for (auto &MAC : MACCandidates) {
-      LLVM_DEBUG(dbgs() << "mul: "; MAC.Mul->dump());
+  for (auto &MAC : MACCandidates) {
+    LLVM_DEBUG(dbgs() << "mul: "; MAC.Mul->dump());
+
+    // At the moment, we allow only simple chains that only consist of reads,
+    // accumulate their result with an integer add, and thus that don't write
+    // memory, and simply bail if they do.
+    if (!MAC.ReadOnly)
+      return true;
+
+    // Now for all writes in the basic block, check that they don't alias with
+    // the memory locations accessed by our MAC-chain:
+    for (auto *I : Writes) {
+      LLVM_DEBUG(dbgs() << "- "; I->dump());
       assert(MAC.MemLocs.size() >= 2 && "expecting at least 2 memlocs");
       for (auto &MemLoc : MAC.MemLocs) {
         if (isModOrRefSet(intersectModRef(AA->getModRefInfo(I, MemLoc),
@@ -495,6 +517,7 @@ static bool AreAliased(AliasAnalysis *AA, Instructions AliasCandidates,
       }
     }
   }
+
   LLVM_DEBUG(dbgs() << "OK: no aliases found!\n");
   return false;
 }
@@ -554,8 +577,6 @@ static bool SetMemoryLocations(ParallelMACList &Candidates) {
 // If loop invariants are used instead of loads, these need to be packed
 // before the loop begins.
 //
-// Can only be enabled for cores which support unaligned accesses.
-//
 bool ARMParallelDSP::MatchSMLAD(Function &F) {
   BasicBlock *Header = L->getHeader();
   LLVM_DEBUG(dbgs() << "= Matching SMLAD =\n";
@@ -569,11 +590,25 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
     ParallelMACList MACCandidates = MatchParallelMACs(R);
     if (!SetMemoryLocations(MACCandidates))
       continue;
-    Instructions Aliases = AliasCandidates(Header, MACCandidates);
-    if (AreAliased(AA, Aliases, MACCandidates))
-      continue;
-    PMACPairList PMACPairs = CreateParallelMACPairs(MACCandidates);
-    Changed = InsertParallelMACs(R, PMACPairs) || Changed;
+    R.MACCandidates = MACCandidates;
+
+    LLVM_DEBUG(dbgs() << "MAC candidates:\n";
+      for (auto &M : R.MACCandidates)
+        M.Mul->dump();
+      dbgs() << "\n";);
+  }
+
+  // Collect all instructions that may read or write memory. Our alias
+  // analysis checks bail out if any of these instructions aliases with an
+  // instruction from the MAC-chain.
+  Instructions Reads, Writes;
+  AliasCandidates(Header, Reads, Writes);
+
+  for (auto &R : Reductions) {
+    if (AreAliased(AA, Reads, Writes, R.MACCandidates))
+      return false;
+    PMACPairList PMACPairs = CreateParallelMACPairs(R.MACCandidates);
+    Changed |= InsertParallelMACs(R, PMACPairs);
   }
 
   LLVM_DEBUG(if (Changed) dbgs() << "Header block:\n"; Header->dump(););

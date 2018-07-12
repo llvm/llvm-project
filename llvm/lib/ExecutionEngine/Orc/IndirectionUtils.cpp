@@ -323,8 +323,8 @@ void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
     assert(VMap[&OrigGV] == NewGV &&
            "Incorrect global variable mapping in VMap.");
   assert(NewGV->getParent() != OrigGV.getParent() &&
-         "moveGlobalVariable should only be used to move initializers between "
-         "modules");
+         "moveGlobalVariableInitializer should only be used to move "
+         "initializers between modules");
 
   NewGV->setInitializer(MapValue(OrigGV.getInitializer(), VMap, RF_None,
                                  nullptr, Materializer));

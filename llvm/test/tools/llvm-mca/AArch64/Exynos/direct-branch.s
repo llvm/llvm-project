@@ -23,7 +23,7 @@
 # ALL-NEXT: [3]: RThroughput
 # ALL-NEXT: [4]: MayLoad
 # ALL-NEXT: [5]: MayStore
-# ALL-NEXT: [6]: HasSideEffects
+# ALL-NEXT: [6]: HasSideEffects (U)
 
 # ALL:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 
