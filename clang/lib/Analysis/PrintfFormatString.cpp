@@ -135,17 +135,16 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
         MatchedStr = Matches[1];
         I += Matches[0].size();
 
-        // Set the privacy flag if there is a privacy annotation in the
-        // comma-delimited segment. This overrides any privacy annotations that
-        // appeared in previous comma-delimited segments.
+        // Set the privacy flag if the privacy annotation in the
+        // comma-delimited segment is at least as strict as the privacy
+        // annotations in previous comma-delimited segments.
         if (MatchedStr.equals("private"))
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
-        else if (MatchedStr.equals("public"))
+        else if (PrivacyFlags == 0 && MatchedStr.equals("public"))
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
       } else {
         size_t CommaOrBracePos =
             Str.find_if([](char c) { return c == ',' || c == '}'; });
-        I += CommaOrBracePos + 1;
 
         if (CommaOrBracePos == StringRef::npos) {
           // Neither a comma nor the closing brace was found.
@@ -153,6 +152,8 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
             H.HandleIncompleteSpecifier(Start, E - Start);
           return true;
         }
+
+        I += CommaOrBracePos + 1;
       }
       // Continue until the closing brace is found.
     } while (*(I - 1) == ',');

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm %s -o - | FileCheck --check-prefix=COFF %s
+// RUN: %clang_cc1 -triple x86_64-pc-win32 -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=COFF %s
 // COFF-DAG: @bar = external dso_local global i32
 // COFF-DAG: @weak_bar = extern_weak dso_local global i32
 // COFF-DAG: declare dso_local void @foo()
@@ -9,7 +9,7 @@
 // COFF-DAG: @import_var = external dllimport global i32
 // COFF-DAG: declare dllimport void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -mrelocation-model static %s -o - | FileCheck --check-prefix=STATIC %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -mrelocation-model static %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=STATIC %s
 // STATIC-DAG: @bar = external dso_local global i32
 // STATIC-DAG: @weak_bar = extern_weak dso_local global i32
 // STATIC-DAG: declare dso_local void @foo()
@@ -20,7 +20,7 @@
 // STATIC-DAG: @import_var = external dso_local global i32
 // STATIC-DAG: declare dso_local void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -pic-is-pie -mpie-copy-relocations %s -o - | FileCheck --check-prefix=PIE-COPY %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -pic-is-pie -mpie-copy-relocations %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=PIE-COPY %s
 // PIE-COPY-DAG: @bar = external dso_local global i32
 // PIE-COPY-DAG: @weak_bar = extern_weak global i32
 // PIE-COPY-DAG: declare void @foo()
@@ -31,7 +31,7 @@
 // PIE-COPY-DAG: @import_var = external dso_local global i32
 // PIE-COPY-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -pic-is-pie %s -o - | FileCheck --check-prefix=PIE %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -pic-is-pie %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=PIE %s
 // PIE-DAG: @bar = external global i32
 // PIE-DAG: @weak_bar = extern_weak global i32
 // PIE-DAG: declare void @foo()
@@ -42,7 +42,7 @@
 // PIE-DAG: @import_var = external global i32
 // PIE-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -mrelocation-model static -fno-plt %s -o - | FileCheck --check-prefix=NOPLT %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -mrelocation-model static -fno-plt %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=NOPLT %s
 // NOPLT-DAG: @bar = external dso_local global i32
 // NOPLT-DAG: @weak_bar = extern_weak dso_local global i32
 // NOPLT-DAG: declare void @foo()
@@ -53,7 +53,7 @@
 // NOPLT-DAG: @import_var = external dso_local global i32
 // NOPLT-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -fno-plt -pic-is-pie -mpie-copy-relocations %s -o - | FileCheck --check-prefix=PIE-COPY-NOPLT %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -fno-plt -pic-is-pie -mpie-copy-relocations %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=PIE-COPY-NOPLT %s
 // PIE-COPY-NOPLT-DAG: @bar = external dso_local global i32
 // PIE-COPY-NOPLT-DAG: @weak_bar = extern_weak global i32
 // PIE-COPY-NOPLT-DAG: declare void @foo()
@@ -64,8 +64,8 @@
 // PIE-COPY-NOPLT-DAG: @import_var = external dso_local global i32
 // PIE-COPY-NOPLT-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -pic-is-pie -fno-plt %s -o - | FileCheck --check-prefix=PIE-NO-PLT %s
-// RUN: %clang_cc1 -triple powerpc64le-pc-linux -emit-llvm -mrelocation-model static %s -o - | FileCheck --check-prefix=PIE-NO-PLT %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -pic-is-pie -fno-plt %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=PIE-NO-PLT %s
+// RUN: %clang_cc1 -triple powerpc64le-pc-linux -emit-llvm -mrelocation-model static %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=PIE-NO-PLT %s
 // PIE-NO-PLT-DAG: @bar = external global i32
 // PIE-NO-PLT-DAG: @weak_bar = extern_weak global i32
 // PIE-NO-PLT-DAG: declare void @foo()
@@ -76,7 +76,7 @@
 // PIE-NO-PLT-DAG: @import_var = external global i32
 // PIE-NO-PLT-DAG: declare void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck --check-prefix=SHARED %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=SHARED %s
 // SHARED-DAG: @bar = external global i32
 // SHARED-DAG: @weak_bar = extern_weak global i32
 // SHARED-DAG: declare void @foo()

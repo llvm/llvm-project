@@ -284,18 +284,31 @@ class ASTImporterTestBase : public ParameterizedTestsFixture {
   // Buffer for the To context, must live in the test scope.
   std::string ToCode;
 
+  // Represents a "From" translation unit and holds an importer object which we
+  // use to import from this translation unit.
   struct TU {
     // Buffer for the context, must live in the test scope.
     std::string Code;
     std::string FileName;
     std::unique_ptr<ASTUnit> Unit;
     TranslationUnitDecl *TUDecl = nullptr;
+    std::unique_ptr<ASTImporter> Importer;
     TU(StringRef Code, StringRef FileName, ArgVector Args)
         : Code(Code), FileName(FileName),
           Unit(tooling::buildASTFromCodeWithArgs(this->Code, Args,
                                                  this->FileName)),
           TUDecl(Unit->getASTContext().getTranslationUnitDecl()) {
       Unit->enableSourceFileDiagnostics();
+    }
+
+    Decl *import(ASTUnit *ToAST, Decl *FromDecl) {
+      assert(ToAST);
+      if (!Importer) {
+        Importer.reset(new ASTImporter(
+            ToAST->getASTContext(), ToAST->getFileManager(),
+            Unit->getASTContext(), Unit->getFileManager(), false));
+      }
+      return Importer->Import(FromDecl);
     }
   };
 
@@ -329,13 +342,9 @@ public:
     ToAST = tooling::buildASTFromCodeWithArgs(ToCode, ToArgs, OutputFileName);
     ToAST->enableSourceFileDiagnostics();
 
-    ASTContext &FromCtx = FromTU.Unit->getASTContext(),
-               &ToCtx = ToAST->getASTContext();
+    ASTContext &FromCtx = FromTU.Unit->getASTContext();
 
     createVirtualFileIfNeeded(ToAST.get(), InputFileName, FromTU.Code);
-
-    ASTImporter Importer(ToCtx, ToAST->getFileManager(), FromCtx,
-                         FromTU.Unit->getFileManager(), false);
 
     IdentifierInfo *ImportedII = &FromCtx.Idents.get(Identifier);
     assert(ImportedII && "Declaration with the given identifier "
@@ -347,7 +356,8 @@ public:
 
     assert(FoundDecls.size() == 1);
 
-    Decl *Imported = Importer.Import(FoundDecls.front());
+    Decl *Imported = FromTU.import(ToAST.get(), FoundDecls.front());
+
     assert(Imported);
     return std::make_tuple(*FoundDecls.begin(), Imported);
   }
@@ -401,11 +411,7 @@ public:
     assert(It != FromTUs.end());
     createVirtualFileIfNeeded(ToAST.get(), It->FileName, It->Code);
 
-    ASTContext &FromCtx = From->getASTContext(),
-               &ToCtx = ToAST->getASTContext();
-    ASTImporter Importer(ToCtx, ToAST->getFileManager(), FromCtx,
-                         FromCtx.getSourceManager().getFileManager(), false);
-    return Importer.Import(From);
+    return It->import(ToAST.get(), From);
   }
 
   ~ASTImporterTestBase() {
@@ -1089,8 +1095,7 @@ TEST_P(ASTImporterTestBase, ImportOfTemplatedDeclOfClassTemplateDecl) {
   EXPECT_EQ(ToTemplated1, ToTemplated);
 }
 
-TEST_P(ASTImporterTestBase,
-       DISABLED_ImportOfTemplatedDeclOfFunctionTemplateDecl) {
+TEST_P(ASTImporterTestBase, ImportOfTemplatedDeclOfFunctionTemplateDecl) {
   Decl *FromTU = getTuDecl("template<class X> void f(){}", Lang_CXX);
   auto From = FirstDeclMatcher<FunctionTemplateDecl>().match(
       FromTU, functionTemplateDecl());
@@ -1166,7 +1171,7 @@ TEST_P(ASTImporterTestBase, ImportCorrectTemplatedDecl) {
   ASSERT_EQ(ToTemplated1, ToTemplated);
 }
 
-TEST_P(ASTImporterTestBase, DISABLED_ImportFunctionWithBackReferringParameter) {
+TEST_P(ASTImporterTestBase, ImportFunctionWithBackReferringParameter) {
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(
       R"(
@@ -1711,6 +1716,49 @@ TEST_P(ASTImporterTestBase, ObjectsWithUnnamedStructType) {
   EXPECT_NE(To0->getCanonicalDecl(), To1->getCanonicalDecl());
 }
 
+TEST_P(ASTImporterTestBase, ImportDoesUpdateUsedFlag) {
+  auto Pattern = varDecl(hasName("x"));
+  VarDecl *Imported1;
+  {
+    Decl *FromTU = getTuDecl("extern int x;", Lang_CXX, "input0.cc");
+    auto *FromD = FirstDeclMatcher<VarDecl>().match(FromTU, Pattern);
+    Imported1 = cast<VarDecl>(Import(FromD, Lang_CXX));
+  }
+  VarDecl *Imported2;
+  {
+    Decl *FromTU = getTuDecl("int x;", Lang_CXX, "input1.cc");
+    auto *FromD = FirstDeclMatcher<VarDecl>().match(FromTU, Pattern);
+    Imported2 = cast<VarDecl>(Import(FromD, Lang_CXX));
+  }
+  EXPECT_EQ(Imported1->getCanonicalDecl(), Imported2->getCanonicalDecl());
+  EXPECT_FALSE(Imported2->isUsed(false));
+  {
+    Decl *FromTU =
+        getTuDecl("extern int x; int f() { return x; }", Lang_CXX, "input2.cc");
+    auto *FromD =
+        FirstDeclMatcher<FunctionDecl>().match(FromTU, functionDecl());
+    Import(FromD, Lang_CXX);
+  }
+  EXPECT_TRUE(Imported2->isUsed(false));
+}
+
+TEST_P(ASTImporterTestBase, ReimportWithUsedFlag) {
+  auto Pattern = varDecl(hasName("x"));
+
+  Decl *FromTU = getTuDecl("int x;", Lang_CXX, "input0.cc");
+  auto *FromD = FirstDeclMatcher<VarDecl>().match(FromTU, Pattern);
+
+  auto *Imported1 = cast<VarDecl>(Import(FromD, Lang_CXX));
+
+  ASSERT_FALSE(Imported1->isUsed(false));
+
+  FromD->setIsUsed();
+  auto *Imported2 = cast<VarDecl>(Import(FromD, Lang_CXX));
+
+  EXPECT_EQ(Imported1, Imported2);
+  EXPECT_TRUE(Imported2->isUsed(false));
+}
+
 struct ImportFunctions : ASTImporterTestBase {};
 
 TEST_P(ImportFunctions,
@@ -2043,14 +2091,10 @@ TEST_P(ImportFriendFunctions,
   EXPECT_EQ(ToFD->getPreviousDecl(), ImportedD);
 }
 
-// This test is disabled, because ATM we create a redundant FunctionDecl.  We
-// start the import with the definition of `f` then we continue with the import
-// of the type of `f` which involves `X`. During the import of `X` we start
-// again the import of the definition of `f` and then finally we create the
-// node. But then in the first frame of `VisitFunctionDecl` we create a node
-// again since we do not check if such a node exists yet or not. This is being
-// fixed in a separate patch: https://reviews.llvm.org/D47632
-// FIXME enable this test once the above patch is approved.
+// Disabled temporarily, because the new structural equivalence check
+// (https://reviews.llvm.org/D48628) breaks it.
+// PreviousDecl is not set because there is no structural match.
+// FIXME Enable!
 TEST_P(ImportFriendFunctions,
     DISABLED_ImportFriendFunctionRedeclChainDefWithClass) {
   auto Pattern = functionDecl(hasName("f"));
@@ -2080,16 +2124,12 @@ TEST_P(ImportFriendFunctions,
             (*ImportedD->param_begin())->getOriginalType());
 }
 
-// This test is disabled, because ATM we create a redundant FunctionDecl.  We
-// start the import with the definition of `f` then we continue with the import
-// of the type of `f` which involves `X`. During the import of `X` we start
-// again the import of the definition of `f` and then finally we create the
-// node. But then in the first frame of `VisitFunctionDecl` we create a node
-// again since we do not check if such a node exists yet or not. This is being
-// fixed in a separate patch: https://reviews.llvm.org/D47632
-// FIXME enable this test once the above patch is approved.
+// Disabled temporarily, because the new structural equivalence check
+// (https://reviews.llvm.org/D48628) breaks it.
+// PreviousDecl is not set because there is no structural match.
+// FIXME Enable!
 TEST_P(ImportFriendFunctions,
-       DISABLED_ImportFriendFunctionRedeclChainDefWithClass_ImportTheProto) {
+    DISABLED_ImportFriendFunctionRedeclChainDefWithClass_ImportTheProto) {
   auto Pattern = functionDecl(hasName("f"));
 
   Decl *FromTU = getTuDecl(

@@ -811,12 +811,12 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
   }
 
   // Look through using declarations.
-  if (const UsingShadowDecl *Using =
-          dyn_cast<UsingShadowDecl>(R.Declaration)) {
-    MaybeAddResult(Result(Using->getTargetDecl(),
-                          getBasePriority(Using->getTargetDecl()),
-                          R.Qualifier),
-                   CurContext);
+  if (const UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(R.Declaration)) {
+    CodeCompletionResult Result(Using->getTargetDecl(),
+                                getBasePriority(Using->getTargetDecl()),
+                                R.Qualifier);
+    Result.ShadowDecl = Using;
+    MaybeAddResult(Result, CurContext);
     return;
   }
 
@@ -929,10 +929,11 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
 
   // Look through using declarations.
   if (const UsingShadowDecl *Using = dyn_cast<UsingShadowDecl>(R.Declaration)) {
-    AddResult(Result(Using->getTargetDecl(),
-                     getBasePriority(Using->getTargetDecl()),
-                     R.Qualifier),
-              CurContext, Hiding);
+    CodeCompletionResult Result(Using->getTargetDecl(),
+                                getBasePriority(Using->getTargetDecl()),
+                                R.Qualifier);
+    Result.ShadowDecl = Using;
+    AddResult(Result, CurContext, Hiding);
     return;
   }
 
@@ -956,10 +957,10 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
   if (AsNestedNameSpecifier) {
     R.StartsNestedNameSpecifier = true;
     R.Priority = CCP_NestedNameSpecifier;
-  }
-  else if (Filter == &ResultBuilder::IsMember && !R.Qualifier && InBaseClass &&
-           isa<CXXRecordDecl>(R.Declaration->getDeclContext()
-                                                  ->getRedeclContext()))
+  } else if (Filter == &ResultBuilder::IsMember && !R.Qualifier &&
+             InBaseClass &&
+             isa<CXXRecordDecl>(
+                 R.Declaration->getDeclContext()->getRedeclContext()))
     R.QualifierIsInformative = true;
 
   // If this result is supposed to have an informative qualifier, add one.

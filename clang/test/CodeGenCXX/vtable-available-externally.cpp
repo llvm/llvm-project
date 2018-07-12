@@ -1,20 +1,20 @@
 // RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -emit-llvm -o %t
 // RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -O2 -disable-llvm-passes -emit-llvm -o %t.opt
 // RUN: %clang_cc1 %s -I%S -triple=x86_64-apple-darwin10 -std=c++98 -O2 -disable-llvm-passes -emit-llvm -o %t.vtable -fforce-emit-vtables -fstrict-vtable-pointers -mconstructor-aliases
-// RUN: FileCheck --check-prefix=CHECK-TEST1 %s < %t
-// RUN: FileCheck --check-prefix=CHECK-TEST2 %s < %t
-// RUN: FileCheck --check-prefix=CHECK-TEST5 %s < %t
-// RUN: FileCheck --check-prefix=CHECK-TEST8 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST9 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST10 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST11 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST12 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST13 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST14 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST15 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST16 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-TEST17 %s < %t.opt
-// RUN: FileCheck --check-prefix=CHECK-FORCE-EMIT %s < %t.vtable
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST1 %s < %t
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST2 %s < %t
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST5 %s < %t
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST8 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST9 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST10 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST11 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST12 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST13 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST14 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST15 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST16 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-TEST17 %s < %t.opt
+// RUN: FileCheck -allow-deprecated-dag-overlap --check-prefix=CHECK-FORCE-EMIT %s < %t.vtable
 
 
 #include <typeinfo>
