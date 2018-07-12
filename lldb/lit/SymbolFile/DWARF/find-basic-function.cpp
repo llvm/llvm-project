@@ -7,7 +7,7 @@
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL %s
+// RUN:   FileCheck -allow-deprecated-dag-overlap --check-prefix=FULL %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
@@ -21,7 +21,7 @@
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL %s
+// RUN:   FileCheck -allow-deprecated-dag-overlap --check-prefix=FULL %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \
@@ -36,7 +36,7 @@
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=method %t | \
 // RUN:   FileCheck --check-prefix=METHOD %s
 // RUN: lldb-test symbols --name=foo --find=function --function-flags=full %t | \
-// RUN:   FileCheck --check-prefix=FULL %s
+// RUN:   FileCheck -allow-deprecated-dag-overlap --check-prefix=FULL %s
 // RUN: lldb-test symbols --name=_Z3fooi --find=function --function-flags=full %t | \
 // RUN:   FileCheck --check-prefix=FULL-MANGLED %s
 // RUN: lldb-test symbols --name=foo --context=context --find=function --function-flags=base %t | \

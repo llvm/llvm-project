@@ -1,6 +1,3 @@
-# This test fails on powerpc64 BE (https://bugs.llvm.org/show_bug.cgi?id=38121).
-XFAIL: powerpc64-unknown-linux-gnu
-
 RUN: mkdir -p %t.d
 RUN: cd %t.d
 

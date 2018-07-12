@@ -46,12 +46,12 @@ llvm::Optional<Location> ToLSPLocation(const SymbolLocation &Loc,
     return llvm::None;
   auto Uri = URI::parse(Loc.FileURI);
   if (!Uri) {
-    log("Could not parse URI: " + Loc.FileURI);
+    log("Could not parse URI: {0}", Loc.FileURI);
     return llvm::None;
   }
   auto Path = URI::resolve(*Uri, HintPath);
   if (!Path) {
-    log("Could not resolve URI: " + Loc.FileURI);
+    log("Could not resolve URI: {0}", Loc.FileURI);
     return llvm::None;
   }
   Location LSPLoc;

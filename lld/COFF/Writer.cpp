@@ -122,7 +122,7 @@ private:
 class CVDebugRecordChunk : public Chunk {
 public:
   size_t getSize() const override {
-    return sizeof(codeview::DebugInfo) + Config->PDBAltPath.size() + 1;
+    return sizeof(codeview::DebugInfo) + Path.size() + 1;
   }
 
   void writeTo(uint8_t *B) const override {
@@ -132,11 +132,12 @@ public:
 
     // variable sized field (PDB Path)
     char *P = reinterpret_cast<char *>(B + OutputSectionOff + sizeof(*BuildId));
-    if (!Config->PDBAltPath.empty())
-      memcpy(P, Config->PDBAltPath.data(), Config->PDBAltPath.size());
-    P[Config->PDBAltPath.size()] = '\0';
+    if (!Path.empty())
+      memcpy(P, Path.data(), Path.size());
+    P[Path.size()] = '\0';
   }
 
+  SmallString<128> Path;
   mutable codeview::DebugInfo *BuildId = nullptr;
 };
 
@@ -509,6 +510,8 @@ void Writer::createMiscChunks() {
     // if we're ultimately not going to write CodeView data to the PDB.
     auto *CVChunk = make<CVDebugRecordChunk>();
     BuildId = CVChunk;
+    CVChunk->Path = Config->PDBAltPath;
+    llvm::sys::path::remove_dots(CVChunk->Path);
     DebugRecords.push_back(CVChunk);
 
     RdataSec->addChunk(DebugDirectory);

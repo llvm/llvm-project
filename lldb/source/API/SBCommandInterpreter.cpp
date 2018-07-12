@@ -379,6 +379,23 @@ void SBCommandInterpreter::SetPromptOnQuit(bool b) {
     m_opaque_ptr->SetPromptOnQuit(b);
 }
 
+void SBCommandInterpreter::AllowExitCodeOnQuit(bool allow) {
+  if (m_opaque_ptr)
+    m_opaque_ptr->AllowExitCodeOnQuit(allow);
+}
+
+bool SBCommandInterpreter::HasCustomQuitExitCode() {
+  bool exited = false;
+  if (m_opaque_ptr)
+    m_opaque_ptr->GetQuitExitCode(exited);
+  return exited;
+}
+
+int SBCommandInterpreter::GetQuitStatus() {
+  bool exited = false;
+  return (m_opaque_ptr ? m_opaque_ptr->GetQuitExitCode(exited) : 0);
+}
+
 void SBCommandInterpreter::ResolveCommand(const char *command_line,
                                           SBCommandReturnObject &result) {
   result.Clear();

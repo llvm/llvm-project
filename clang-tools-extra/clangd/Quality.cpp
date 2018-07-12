@@ -41,6 +41,17 @@ static bool hasDeclInMainFile(const Decl &D) {
   return false;
 }
 
+static bool hasUsingDeclInMainFile(const CodeCompletionResult &R) {
+  const auto &Context = R.Declaration->getASTContext();
+  const auto &SourceMgr = Context.getSourceManager();
+  if (R.ShadowDecl) {
+    const auto Loc = SourceMgr.getExpansionLoc(R.ShadowDecl->getLocation());
+    if (SourceMgr.isWrittenInMainFile(Loc))
+      return true;
+  }
+  return false;
+}
+
 static SymbolQualitySignals::SymbolCategory categorize(const NamedDecl &ND) {
   class Switch
       : public ConstDeclVisitor<Switch, SymbolQualitySignals::SymbolCategory> {
@@ -231,8 +242,10 @@ void SymbolRelevanceSignals::merge(const CodeCompletionResult &SemaCCResult) {
     // We boost things that have decls in the main file. We give a fixed score
     // for all other declarations in sema as they are already included in the
     // translation unit.
-    float DeclProximity =
-        hasDeclInMainFile(*SemaCCResult.Declaration) ? 1.0 : 0.6;
+    float DeclProximity = (hasDeclInMainFile(*SemaCCResult.Declaration) ||
+                           hasUsingDeclInMainFile(SemaCCResult))
+                              ? 1.0
+                              : 0.6;
     SemaProximityScore = std::max(DeclProximity, SemaProximityScore);
   }
 

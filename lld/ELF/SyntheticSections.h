@@ -713,8 +713,6 @@ private:
   size_t Size;
 };
 
-template <class ELFT> GdbIndexSection *createGdbIndex();
-
 // --eh-frame-hdr option tells linker to construct a header for all the
 // .eh_frame sections. This header is placed to a section named .eh_frame_hdr
 // and also to a PT_GNU_EH_FRAME segment.
@@ -925,6 +923,8 @@ public:
   size_t getSize() const override { return 8; }
   void writeTo(uint8_t *Buf) override;
   bool empty() const override;
+
+  static bool classof(const SectionBase *D);
 
   // The last section referenced by a regular .ARM.exidx section.
   // It is found and filled in Writer<ELFT>::resolveShfLinkOrder().

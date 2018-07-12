@@ -160,7 +160,7 @@ void ClangdLSPServer::onDocumentDidChange(DidChangeTextDocumentParams &Params) {
     DraftMgr.removeDraft(File);
     Server.removeDocument(File);
     CDB.invalidate(File);
-    log(llvm::toString(Contents.takeError()));
+    elog("Failed to update {0}: {1}", File, Contents.takeError());
     return;
   }
 

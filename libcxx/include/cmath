@@ -547,7 +547,7 @@ hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT
 #endif
 
 template <class _A1>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
 __libcpp_isnan_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 {
@@ -559,7 +559,7 @@ __libcpp_isnan_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 }
 
 template <class _A1>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
 __libcpp_isnan_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 {
@@ -567,7 +567,7 @@ __libcpp_isnan_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 }
 
 template <class _A1>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
 __libcpp_isinf_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 {
@@ -579,7 +579,7 @@ __libcpp_isinf_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 }
 
 template <class _A1>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
 __libcpp_isinf_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 {
@@ -587,7 +587,7 @@ __libcpp_isinf_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 }
 
 template <class _A1>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
 __libcpp_isfinite_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 {
@@ -599,7 +599,7 @@ __libcpp_isfinite_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 }
 
 template <class _A1>
-_LIBCPP_ALWAYS_INLINE
+_LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
 __libcpp_isfinite_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 {

@@ -787,20 +787,24 @@ int f(int input_num) {
   EXPECT_THAT(Results.Completions, Contains(Named("X")));
 }
 
-TEST(CompletionTest, CompleteInExcludedPPBranch) {
+TEST(CompletionTest, IgnoreCompleteInExcludedPPBranchWithRecoveryContext) {
   auto Results = completions(R"cpp(
     int bar(int param_in_bar) {
     }
 
     int foo(int param_in_foo) {
 #if 0
+  // In recorvery mode, "param_in_foo" will also be suggested among many other
+  // unrelated symbols; however, this is really a special case where this works.
+  // If the #if block is outside of the function, "param_in_foo" is still
+  // suggested, but "bar" and "foo" are missing. So the recovery mode doesn't
+  // really provide useful results in excluded branches.
   par^
 #endif
     }
 )cpp");
 
-  EXPECT_THAT(Results.Completions, Contains(Labeled("param_in_foo")));
-  EXPECT_THAT(Results.Completions, Not(Contains(Labeled("param_in_bar"))));
+  EXPECT_TRUE(Results.Completions.empty());
 }
 
 SignatureHelp signatures(StringRef Text) {
@@ -1291,6 +1295,18 @@ TEST(CompletionTest, Render) {
   C.BundleSize = 2;
   R = C.render(Opts);
   EXPECT_EQ(R.detail, "[2 overloads]\n\"foo.h\"");
+}
+
+TEST(CompletionTest, IgnoreRecoveryResults) {
+  auto Results = completions(
+      R"cpp(
+          namespace ns { int NotRecovered() { return 0; } }
+          void f() {
+            // Sema enters recovery mode first and then normal mode.
+            if (auto x = ns::NotRecover^)
+          }
+      )cpp");
+  EXPECT_THAT(Results.Completions, UnorderedElementsAre(Named("NotRecovered")));
 }
 
 } // namespace
