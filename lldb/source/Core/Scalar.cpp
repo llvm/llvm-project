@@ -1184,38 +1184,38 @@ bool Scalar::MakeUnsigned() {
   case e_void:
     break;
   case e_sint:
-    success = true;
-    break;
-  case e_uint:
     m_type = e_uint;
     success = true;
     break;
-  case e_slong:
+  case e_uint:
     success = true;
     break;
-  case e_ulong:
+  case e_slong:
     m_type = e_ulong;
     success = true;
     break;
-  case e_slonglong:
+  case e_ulong:
     success = true;
     break;
-  case e_ulonglong:
+  case e_slonglong:
     m_type = e_ulonglong;
     success = true;
     break;
-  case e_sint128:
+  case e_ulonglong:
     success = true;
     break;
-  case e_uint128:
+  case e_sint128:
     m_type = e_uint128;
     success = true;
     break;
+  case e_uint128:
+    success = true;
+    break;
   case e_sint256:
+    m_type = e_uint256;
     success = true;
     break;
   case e_uint256:
-    m_type = e_uint256;
     success = true;
     break;
   case e_float:
