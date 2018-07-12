@@ -330,12 +330,36 @@ static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,
 static void addCilkSanitizerPass(const PassManagerBuilder &Builder,
                                  legacy::PassManagerBase &PM) {
   PM.add(createCilkSanitizerPass());
+
+  // CilkSanitizer inserts complex instrumentation that mostly follows the logic
+  // of the original code, but operates on "shadow" values.  It can benefit from
+  // re-running some general purpose optimization passes.
+  if (Builder.OptLevel > 0) {
+    PM.add(createEarlyCSEPass());
+    PM.add(createReassociatePass());
+    PM.add(createLICMPass());
+    PM.add(createGVNPass());
+    PM.add(createInstructionCombiningPass());
+    PM.add(createDeadStoreEliminationPass());
+  }
 }
 
 static void
 addComprehensiveStaticInstrumentationPass(const PassManagerBuilder &Builder,
                                           PassManagerBase &PM) {
   PM.add(createComprehensiveStaticInstrumentationPass());
+
+  // CSI inserts complex instrumentation that mostly follows the logic of the
+  // original code, but operates on "shadow" values.  It can benefit from
+  // re-running some general purpose optimization passes.
+  if (Builder.OptLevel > 0) {
+    PM.add(createEarlyCSEPass());
+    PM.add(createReassociatePass());
+    PM.add(createLICMPass());
+    PM.add(createGVNPass());
+    PM.add(createInstructionCombiningPass());
+    PM.add(createDeadStoreEliminationPass());
+  }
 }
 
 static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
