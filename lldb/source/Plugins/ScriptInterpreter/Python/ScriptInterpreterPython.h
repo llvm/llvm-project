@@ -151,14 +151,14 @@ public:
   bool Interrupt() override;
 
   bool ExecuteOneLine(
-      const char *command, CommandReturnObject *result,
+      llvm::StringRef command, CommandReturnObject *result,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
   void ExecuteInterpreterLoop() override;
 
   bool ExecuteOneLineWithReturn(
-      const char *in_string, ScriptInterpreter::ScriptReturnType return_type,
-      void *ret_value,
+      llvm::StringRef in_string,
+      ScriptInterpreter::ScriptReturnType return_type, void *ret_value,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
   lldb_private::Status ExecuteMultipleLines(
@@ -259,18 +259,17 @@ public:
   GetSyntheticTypeName(const StructuredData::ObjectSP &implementor) override;
 
   bool
-  RunScriptBasedCommand(const char *impl_function, const char *args,
+  RunScriptBasedCommand(const char *impl_function, llvm::StringRef args,
                         ScriptedCommandSynchronicity synchronicity,
                         lldb_private::CommandReturnObject &cmd_retobj,
                         Status &error,
                         const lldb_private::ExecutionContext &exe_ctx) override;
 
-  bool
-  RunScriptBasedCommand(StructuredData::GenericSP impl_obj_sp, const char *args,
-                        ScriptedCommandSynchronicity synchronicity,
-                        lldb_private::CommandReturnObject &cmd_retobj,
-                        Status &error,
-                        const lldb_private::ExecutionContext &exe_ctx) override;
+  bool RunScriptBasedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef args,
+      ScriptedCommandSynchronicity synchronicity,
+      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
+      const lldb_private::ExecutionContext &exe_ctx) override;
 
   Status GenerateFunction(const char *signature,
                           const StringList &input) override;

@@ -2862,9 +2862,9 @@ public:
     return m_cmd_help_long;
   }
 
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    if (!raw_command_line || !raw_command_line[0]) {
+    if (raw_command_line.empty()) {
       result.SetError(
           "type lookup cannot be invoked without a type name as argument");
       return false;
@@ -2994,7 +2994,8 @@ public:
   ~CommandObjectFormatterInfo() override = default;
 
 protected:
-  bool DoExecute(const char *command, CommandReturnObject &result) override {
+  bool DoExecute(llvm::StringRef command,
+                 CommandReturnObject &result) override {
     TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget();
     Thread *thread = GetDefaultThread();
     if (!thread) {
@@ -3017,16 +3018,16 @@ protected:
           m_discovery_function(*result_valobj_sp);
       if (formatter_sp) {
         std::string description(formatter_sp->GetDescription());
-        result.AppendMessageWithFormat(
-            "%s applied to (%s) %s is: %s\n", m_formatter_name.c_str(),
-            result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>"),
-            command, description.c_str());
+        result.GetOutputStream()
+            << m_formatter_name << " applied to ("
+            << result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>")
+            << ") " << command << " is: " << description << "\n";
         result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormat(
-            "no %s applies to (%s) %s\n", m_formatter_name.c_str(),
-            result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>"),
-            command);
+        result.GetOutputStream()
+            << "no " << m_formatter_name << " applies to ("
+            << result_valobj_sp->GetDisplayTypeName().AsCString("<unknown>")
+            << ") " << command << "\n";
         result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
       }
       return true;

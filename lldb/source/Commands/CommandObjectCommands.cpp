@@ -543,9 +543,9 @@ rather than using a positional placeholder:"
   ~CommandObjectCommandsAlias() override = default;
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    if (!raw_command_line || !raw_command_line[0]) {
+    if (raw_command_line.empty()) {
       result.AppendError("'command alias' requires at least two arguments");
       return false;
     }
@@ -1275,7 +1275,7 @@ public:
   }
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
@@ -1364,7 +1364,7 @@ public:
   }
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
