@@ -362,8 +362,8 @@ protected:
   SelectionDAGTargetInfo TSInfo;
   AMDGPUAS AS;
 private:
-  SITargetLowering TLInfo;
   SIInstrInfo InstrInfo;
+  SITargetLowering TLInfo;
   SIFrameLowering FrameLowering;
 
 public:

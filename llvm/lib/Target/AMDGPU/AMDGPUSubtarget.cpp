@@ -208,8 +208,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     ScalarizeGlobal(false),
 
     FeatureDisable(false),
-    TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
-    InstrInfo(*this),
+    InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
+    TLInfo(TM, *this), 
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
   AS = AMDGPU::getAMDGPUAS(TT);
   CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));

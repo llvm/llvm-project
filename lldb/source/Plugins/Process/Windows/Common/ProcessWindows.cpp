@@ -240,7 +240,7 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   if (working_dir && (!working_dir.ResolvePath() ||
                       !fs::is_directory(working_dir.GetPath()))) {
     result.SetErrorStringWithFormat("No such file or directory: %s",
-                                   working_dir.GetCString());
+                                    working_dir.GetCString());
     return result;
   }
 
@@ -365,7 +365,10 @@ Status ProcessWindows::DoResume() {
       Status result = thread->DoResume();
       if (result.Fail()) {
         failed = true;
-        LLDB_LOG(log, "Trying to resume thread at index {0}, but failed with error {1}.", i, result);
+        LLDB_LOG(
+            log,
+            "Trying to resume thread at index {0}, but failed with error {1}.",
+            i, result);
       }
     }
 
@@ -473,8 +476,9 @@ void ProcessWindows::RefreshStateAfterStop() {
       m_session_data->m_debugger->GetActiveException();
   ExceptionRecordSP active_exception = exception_record.lock();
   if (!active_exception) {
-    LLDB_LOG(log, "there is no active exception in process {0}.  Why is the "
-                  "process stopped?",
+    LLDB_LOG(log,
+             "there is no active exception in process {0}.  Why is the "
+             "process stopped?",
              m_session_data->m_debugger->GetProcess().GetProcessId());
     return;
   }
@@ -491,8 +495,9 @@ void ProcessWindows::RefreshStateAfterStop() {
     const uint64_t pc = register_context->GetPC();
     BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
     if (site && site->ValidForThisThread(stop_thread.get())) {
-      LLDB_LOG(log, "Single-stepped onto a breakpoint in process {0} at "
-                    "address {1:x} with breakpoint site {2}",
+      LLDB_LOG(log,
+               "Single-stepped onto a breakpoint in process {0} at "
+               "address {1:x} with breakpoint site {2}",
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
                site->GetID());
       stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(*stop_thread,
@@ -514,22 +519,25 @@ void ProcessWindows::RefreshStateAfterStop() {
 
     BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
     if (site) {
-      LLDB_LOG(log, "detected breakpoint in process {0} at address {1:x} with "
-                    "breakpoint site {2}",
+      LLDB_LOG(log,
+               "detected breakpoint in process {0} at address {1:x} with "
+               "breakpoint site {2}",
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
                site->GetID());
 
       if (site->ValidForThisThread(stop_thread.get())) {
-        LLDB_LOG(log, "Breakpoint site {0} is valid for this thread ({1:x}), "
-                      "creating stop info.",
+        LLDB_LOG(log,
+                 "Breakpoint site {0} is valid for this thread ({1:x}), "
+                 "creating stop info.",
                  site->GetID(), stop_thread->GetID());
 
         stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(
             *stop_thread, site->GetID());
         register_context->SetPC(pc);
       } else {
-        LLDB_LOG(log, "Breakpoint site {0} is not valid for this thread, "
-                      "creating empty stop info.",
+        LLDB_LOG(log,
+                 "Breakpoint site {0} is not valid for this thread, "
+                 "creating empty stop info.",
                  site->GetID());
       }
       stop_thread->SetStopInfo(stop_info);
@@ -651,8 +659,13 @@ size_t ProcessWindows::DoReadMemory(lldb::addr_t vm_addr, void *buf,
   SIZE_T bytes_read = 0;
   if (!ReadProcessMemory(process.GetNativeProcess().GetSystemHandle(), addr,
                          buf, size, &bytes_read)) {
+    // Reading from the process can fail for a number of reasons - set the
+    // error code and make sure that the number of bytes read is set back to 0
+    // because in some scenarios the value of bytes_read returned from the API
+    // is garbage.
     error.SetError(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "reading failed with error: {0}", error);
+    bytes_read = 0;
   }
   return bytes_read;
 }
@@ -723,8 +736,9 @@ Status ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
       return error;
     } else {
       error.SetError(::GetLastError(), eErrorTypeWin32);
-      LLDB_LOG(log, "VirtualQueryEx returned error {0} while getting memory "
-                    "region info for address {1:x}",
+      LLDB_LOG(log,
+               "VirtualQueryEx returned error {0} while getting memory "
+               "region info for address {1:x}",
                error, vm_addr);
       return error;
     }
@@ -765,8 +779,9 @@ Status ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   }
 
   error.SetError(::GetLastError(), eErrorTypeWin32);
-  LLDB_LOGV(log, "Memory region info for address {0}: readable={1}, "
-                 "executable={2}, writable={3}",
+  LLDB_LOGV(log,
+            "Memory region info for address {0}: readable={1}, "
+            "executable={2}, writable={3}",
             vm_addr, info.GetReadable(), info.GetExecutable(),
             info.GetWritable());
   return error;
@@ -857,8 +872,9 @@ ProcessWindows::OnDebugException(bool first_chance,
   // suite to print out full lldb logs, and then add logging to the process
   // plugin.
   if (!m_session_data) {
-    LLDB_LOG(log, "Debugger thread reported exception {0:x} at address {1:x}, "
-                  "but there is no session.",
+    LLDB_LOG(log,
+             "Debugger thread reported exception {0:x} at address {1:x}, "
+             "but there is no session.",
              record.GetExceptionCode(), record.GetExceptionAddress());
     return ExceptionResult::SendToApplication;
   }
@@ -892,8 +908,9 @@ ProcessWindows::OnDebugException(bool first_chance,
     SetPrivateState(eStateStopped);
     break;
   default:
-    LLDB_LOG(log, "Debugger thread reported exception {0:x} at address {1:x} "
-                  "(first_chance={2})",
+    LLDB_LOG(log,
+             "Debugger thread reported exception {0:x} at address {1:x} "
+             "(first_chance={2})",
              record.GetExceptionCode(), record.GetExceptionAddress(),
              first_chance);
     // For non-breakpoints, give the application a chance to handle the
@@ -967,8 +984,9 @@ void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
   if (m_session_data->m_initial_stop_received) {
     // This happened while debugging.  Do we shutdown the debugging session,
     // try to continue, or do something else?
-    LLDB_LOG(log, "Error {0} occurred during debugging.  Unexpected behavior "
-                  "may result.  {1}",
+    LLDB_LOG(log,
+             "Error {0} occurred during debugging.  Unexpected behavior "
+             "may result.  {1}",
              error.GetError(), error);
   } else {
     // If we haven't actually launched the process yet, this was an error

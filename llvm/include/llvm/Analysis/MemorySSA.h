@@ -781,7 +781,7 @@ protected:
   // relies on the updater to fixup what it breaks, so it is not public.
 
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, AccessList::iterator Where);
-  void moveTo(MemoryUseOrDef *What, BasicBlock *BB, InsertionPlace Point);
+  void moveTo(MemoryAccess *What, BasicBlock *BB, InsertionPlace Point);
 
   // Rename the dominator tree branch rooted at BB.
   void renamePass(BasicBlock *BB, MemoryAccess *IncomingVal,

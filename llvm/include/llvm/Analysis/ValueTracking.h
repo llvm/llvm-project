@@ -101,6 +101,9 @@ class Value;
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
+  /// Return true if the two given values are negation.
+  bool isKnownNegation(const Value *X, const Value *Y);
+
   /// Returns true if the give value is known to be non-negative.
   bool isKnownNonNegative(const Value *V, const DataLayout &DL,
                           unsigned Depth = 0,

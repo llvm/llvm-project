@@ -89,6 +89,37 @@ public:
   void moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where);
   void moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
                    MemorySSA::InsertionPlace Where);
+  /// `From` block was spliced into `From` and `To`.
+  /// Move all accesses from `From` to `To` starting at instruction `Start`.
+  /// `To` is newly created BB, so empty of MemorySSA::MemoryAccesses.
+  /// Edges are already updated, so successors of `To` with MPhi nodes need to
+  /// update incoming block.
+  /// |------|        |------|
+  /// | From |        | From |
+  /// |      |        |------|
+  /// |      |           ||
+  /// |      |   =>      \/
+  /// |      |        |------|  <- Start
+  /// |      |        |  To  |
+  /// |------|        |------|
+  void moveAllAfterSpliceBlocks(BasicBlock *From, BasicBlock *To,
+                                Instruction *Start);
+  /// `From` block was merged into `To`. All instructions were moved and
+  /// `From` is an empty block with successor edges; `From` is about to be
+  /// deleted. Move all accesses from `From` to `To` starting at instruction
+  /// `Start`. `To` may have multiple successors, `From` has a single
+  /// predecessor. `From` may have successors with MPhi nodes, replace their
+  /// incoming block with `To`.
+  /// |------|        |------|
+  /// |  To  |        |  To  |
+  /// |------|        |      |
+  ///    ||      =>   |      |
+  ///    \/           |      |
+  /// |------|        |      |  <- Start
+  /// | From |        |      |
+  /// |------|        |------|
+  void moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
+                               Instruction *Start);
 
   // The below are utility functions. Other than creation of accesses to pass
   // to insertDef, and removeAccess to remove accesses, you should generally
@@ -162,6 +193,9 @@ private:
   // Move What before Where in the MemorySSA IR.
   template <class WhereType>
   void moveTo(MemoryUseOrDef *What, BasicBlock *BB, WhereType Where);
+  // Move all memory accesses from `From` to `To` starting at `Start`.
+  // Restrictions apply, see public wrappers of this method.
+  void moveAllAccesses(BasicBlock *From, BasicBlock *To, Instruction *Start);
   MemoryAccess *getPreviousDef(MemoryAccess *);
   MemoryAccess *getPreviousDefInBlock(MemoryAccess *);
   MemoryAccess *

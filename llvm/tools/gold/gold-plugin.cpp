@@ -834,11 +834,9 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   // FIXME: Check the gold version or add a new option to enable them.
   Conf.Options.RelaxELFRelocations = false;
 
-  // Toggle function/data sections.
-  if (FunctionSections.getNumOccurrences() == 0)
-    Conf.Options.FunctionSections = true;
-  if (DataSections.getNumOccurrences() == 0)
-    Conf.Options.DataSections = true;
+  // Enable function/data sections by default.
+  Conf.Options.FunctionSections = true;
+  Conf.Options.DataSections = true;
 
   Conf.MAttrs = MAttrs;
   Conf.RelocModel = RelocationModel;

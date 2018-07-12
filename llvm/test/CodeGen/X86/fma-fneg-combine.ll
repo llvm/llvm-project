@@ -132,19 +132,21 @@ declare <2 x double> @llvm.x86.avx512.mask.vfmadd.sd(<2 x double> %a, <2 x doubl
 define <4 x float> @test11(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 zeroext %mask) local_unnamed_addr #0 {
 ; SKX-LABEL: test11:
 ; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vxorps {{.*}}(%rip){1to4}, %xmm2, %xmm2
+; SKX-NEXT:    vxorps {{.*}}(%rip){1to4}, %xmm2, %xmm3
+; SKX-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfmadd231ss %xmm1, %xmm0, %xmm2 {%k1}
-; SKX-NEXT:    vmovaps %xmm2, %xmm0
+; SKX-NEXT:    vmovss %xmm0, %xmm3, %xmm3 {%k1}
+; SKX-NEXT:    vmovaps %xmm3, %xmm0
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test11:
 ; KNL:       # %bb.0: # %entry
 ; KNL-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-0,-0,-0,-0]
-; KNL-NEXT:    vxorps %xmm3, %xmm2, %xmm2
+; KNL-NEXT:    vxorps %xmm3, %xmm2, %xmm3
+; KNL-NEXT:    vfmsub213ss {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfmadd231ss %xmm1, %xmm0, %xmm2 {%k1}
-; KNL-NEXT:    vmovaps %xmm2, %xmm0
+; KNL-NEXT:    vmovss %xmm0, %xmm3, %xmm3 {%k1}
+; KNL-NEXT:    vmovaps %xmm3, %xmm0
 ; KNL-NEXT:    retq
 entry:
   %sub.i = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %c
@@ -199,16 +201,20 @@ entry:
 define <2 x double> @test13(<2 x double> %a, <2 x double> %b, <2 x double> %c, i8 %mask) {
 ; SKX-LABEL: test13:
 ; SKX:       # %bb.0: # %entry
-; SKX-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm3
+; SKX-NEXT:    vfnmadd213sd {{.*#+}} xmm1 = -(xmm0 * xmm1) + xmm2
 ; SKX-NEXT:    kmovd %edi, %k1
-; SKX-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1}
+; SKX-NEXT:    vmovsd %xmm1, %xmm3, %xmm3 {%k1}
+; SKX-NEXT:    vmovapd %xmm3, %xmm0
 ; SKX-NEXT:    retq
 ;
 ; KNL-LABEL: test13:
 ; KNL:       # %bb.0: # %entry
-; KNL-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm3
+; KNL-NEXT:    vfnmadd213sd {{.*#+}} xmm1 = -(xmm0 * xmm1) + xmm2
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vfmadd213sd %xmm2, %xmm1, %xmm0 {%k1}
+; KNL-NEXT:    vmovsd %xmm1, %xmm3, %xmm3 {%k1}
+; KNL-NEXT:    vmovapd %xmm3, %xmm0
 ; KNL-NEXT:    retq
 
 entry:

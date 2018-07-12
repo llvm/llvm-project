@@ -56,7 +56,7 @@ define void @foo() {
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    idivq %rcx
+; X64-NEXT:    divq %rcx
 ; X64-NEXT:    jmp .LBB0_3
 ; X64-NEXT:  .LBB0_1:
 ; X64-NEXT:    xorl %eax, %eax

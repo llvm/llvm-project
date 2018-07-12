@@ -99,6 +99,11 @@ namespace clang {
     /// deduction where the parameter is a function type that can be converted
     /// to the argument type.
     TDF_AllowCompatibleFunctionType = 0x20,
+
+    /// Within template argument deduction for a conversion function, we are
+    /// matching with an argument type for which the original argument was
+    /// a reference.
+    TDF_ArgWithReferenceType = 0x40,
   };
 }
 
@@ -1354,6 +1359,18 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
     if (TDF & TDF_ParamWithReferenceType) {
       if (hasInconsistentOrSupersetQualifiersOf(Param, Arg))
         return Sema::TDK_NonDeducedMismatch;
+    } else if (TDF & TDF_ArgWithReferenceType) {
+      // C++ [temp.deduct.conv]p4:
+      //   If the original A is a reference type, A can be more cv-qualified
+      //   than the deduced A
+      if (!Arg.getQualifiers().compatiblyIncludes(Param.getQualifiers()))
+        return Sema::TDK_NonDeducedMismatch;
+
+      // Strip out all extra qualifiers from the argument to figure out the
+      // type we're converting to, prior to the qualification conversion.
+      Qualifiers Quals;
+      Arg = S.Context.getUnqualifiedArrayType(Arg, Quals);
+      Arg = S.Context.getQualifiedType(Arg, Param.getQualifiers());
     } else if (!IsPossiblyOpaquelyQualifiedType(Param)) {
       if (Param.getCVRQualifiers() != Arg.getCVRQualifiers())
         return Sema::TDK_NonDeducedMismatch;
@@ -4025,12 +4042,20 @@ Sema::DeduceTemplateArguments(FunctionTemplateDecl *ConversionTemplate,
   // C++0x [temp.deduct.conv]p4:
   //   [...] If A is a reference type, the type referred to by A is used
   //   for type deduction.
-  if (const ReferenceType *ARef = A->getAs<ReferenceType>())
-    A = ARef->getPointeeType().getUnqualifiedType();
+  if (const ReferenceType *ARef = A->getAs<ReferenceType>()) {
+    A = ARef->getPointeeType();
+    // We work around a defect in the standard here: cv-qualifiers are also
+    // removed from P and A in this case, unless P was a reference type. This
+    // seems to mostly match what other compilers are doing.
+    if (!FromType->getAs<ReferenceType>()) {
+      A = A.getUnqualifiedType();
+      P = P.getUnqualifiedType();
+    }
+
   // C++ [temp.deduct.conv]p3:
   //
   //   If A is not a reference type:
-  else {
+  } else {
     assert(!A->isReferenceType() && "Reference types were handled above");
 
     //   - If P is an array type, the pointer type produced by the
@@ -4079,7 +4104,7 @@ Sema::DeduceTemplateArguments(FunctionTemplateDecl *ConversionTemplate,
   //       cv-qualified than the deduced A (i.e., the type referred to
   //       by the reference)
   if (ToType->isReferenceType())
-    TDF |= TDF_ParamWithReferenceType;
+    TDF |= TDF_ArgWithReferenceType;
   //     - The deduced A can be another pointer or pointer to member
   //       type that can be converted to A via a qualification
   //       conversion.

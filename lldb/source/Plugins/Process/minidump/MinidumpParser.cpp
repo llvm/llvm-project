@@ -60,14 +60,13 @@ MinidumpParser::Create(const lldb::DataBufferSP &data_buf_sp) {
         directory->location;
   }
 
-  return MinidumpParser(data_buf_sp, header, std::move(directory_map));
+  return MinidumpParser(data_buf_sp, std::move(directory_map));
 }
 
 MinidumpParser::MinidumpParser(
-    const lldb::DataBufferSP &data_buf_sp, const MinidumpHeader *header,
+    const lldb::DataBufferSP &data_buf_sp,
     llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &&directory_map)
-    : m_data_sp(data_buf_sp), m_header(header), m_directory_map(directory_map) {
-}
+    : m_data_sp(data_buf_sp), m_directory_map(directory_map) {}
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
   return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes(),

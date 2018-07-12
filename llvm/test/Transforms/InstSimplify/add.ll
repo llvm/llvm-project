@@ -30,10 +30,7 @@ define <2 x i32> @negated_operand_commute_vec(<2 x i32> %x) {
 
 define i8 @knownnegation(i8 %x, i8 %y) {
 ; CHECK-LABEL: @knownnegation(
-; CHECK-NEXT:    [[XY:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[YX:%.*]] = sub i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[XY]], [[YX]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0 
 ;
   %xy = sub i8 %x, %y
   %yx = sub i8 %y, %x
@@ -43,10 +40,7 @@ define i8 @knownnegation(i8 %x, i8 %y) {
 
 define <2 x i8> @knownnegation_commute_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @knownnegation_commute_vec(
-; CHECK-NEXT:    [[XY:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[YX:%.*]] = sub <2 x i8> [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[YX]], [[XY]]
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %xy = sub <2 x i8> %x, %y
   %yx = sub <2 x i8> %y, %x
