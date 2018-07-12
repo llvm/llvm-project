@@ -1,14 +1,14 @@
 ; RUN: llc -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
+; RUN:   -mtriple=powerpc64-unknown-unknown < %s | FileCheck -allow-deprecated-dag-overlap %s \
 ; RUN:   -check-prefix=P9BE -implicit-check-not frsp
 ; RUN: llc -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s \
+; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck -allow-deprecated-dag-overlap %s \
 ; RUN:   -check-prefix=P9LE -implicit-check-not frsp
 ; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
+; RUN:   -mtriple=powerpc64-unknown-unknown < %s | FileCheck -allow-deprecated-dag-overlap %s \
 ; RUN:   -check-prefix=P8BE -implicit-check-not frsp
 ; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s \
+; RUN:   -mtriple=powerpc64le-unknown-unknown < %s | FileCheck -allow-deprecated-dag-overlap %s \
 ; RUN:   -check-prefix=P8LE -implicit-check-not frsp
 
 ; This test case comes from the following C test case (included as it may be

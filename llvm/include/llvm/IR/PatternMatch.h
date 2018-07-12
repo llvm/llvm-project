@@ -407,6 +407,15 @@ inline cst_pred_ty<is_sign_mask> m_SignMask() {
   return cst_pred_ty<is_sign_mask>();
 }
 
+struct is_lowbit_mask {
+  bool isValue(const APInt &C) { return C.isMask(); }
+};
+/// Match an integer or vector with only the low bit(s) set.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
+  return cst_pred_ty<is_lowbit_mask>();
+}
+
 struct is_nan {
   bool isValue(const APFloat &C) { return C.isNaN(); }
 };

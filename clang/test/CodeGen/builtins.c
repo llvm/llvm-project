@@ -421,7 +421,7 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: %[[V5:.*]] = load i8*, i8** %[[DATA_ADDR]]
   // CHECK: %[[V6:.*]] = ptrtoint i8* %[[V5]] to i64
   // CHECK: call void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49(i8* %[[V1]], i32 %[[V2]], i64 %[[V4]], i32 16, i64 %[[V6]])
-  __builtin_os_log_format(buf, "%d %{private,public}s %{public,private}.16P", i, data, data);
+  __builtin_os_log_format(buf, "%d %{public}s %{private}.16P", i, data, data);
 
   // privacy annotations aren't recognized when they are preceded or followed
   // by non-whitespace characters.
@@ -443,7 +443,7 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // The last privacy annotation in the string wins.
 
   // CHECK: call void @__os_log_helper_1_3_1_8_33(
-  __builtin_os_log_format(buf, "%{ public, private, public, private}s", "abc");
+  __builtin_os_log_format(buf, "%{ private, public, private, public}s", "abc");
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49

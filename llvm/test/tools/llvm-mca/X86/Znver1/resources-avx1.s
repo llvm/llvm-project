@@ -1281,7 +1281,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     0.50           *            vmovlpd	%xmm0, (%rax)
 # CHECK-NEXT:  1      8     0.50    *                   vmovlpd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     0.50           *            vmovlps	%xmm0, (%rax)
-# CHECK-NEXT:  1      8     0.50                  U     vmovlps	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  1      8     0.50    *                   vmovlps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vmovmskpd	%xmm0, %ecx
 # CHECK-NEXT:  1      1     1.00                        vmovmskpd	%ymm0, %ecx
 # CHECK-NEXT:  1      1     1.00                        vmovmskps	%xmm0, %ecx

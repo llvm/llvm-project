@@ -584,6 +584,25 @@ DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
   return DWARFDie();
 }
 
+DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
+  if (!Die)
+    return DWARFDie();
+  uint32_t Depth = Die->getDepth();
+  // Unit DIEs always have a depth of zero and never have siblings.
+  if (Depth == 0)
+    return DWARFDie();
+
+  // Find the previous DIE whose depth is the same as the Die's depth.
+  for (size_t I = getDIEIndex(Die); I > 0;) {
+    --I;
+    if (DieArray[I].getDepth() == Depth - 1)
+      return DWARFDie();
+    if (DieArray[I].getDepth() == Depth)
+      return DWARFDie(this, &DieArray[I]);
+  }
+  return DWARFDie();
+}
+
 DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
   if (!Die->hasChildren())
     return DWARFDie();
@@ -593,6 +612,21 @@ DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
   if (I >= DieArray.size())
     return DWARFDie();
   return DWARFDie(this, &DieArray[I]);
+}
+
+DWARFDie DWARFUnit::getLastChild(const DWARFDebugInfoEntry *Die) {
+  if (!Die->hasChildren())
+    return DWARFDie();
+
+  uint32_t Depth = Die->getDepth();
+  for (size_t I = getDIEIndex(Die) + 1, EndIdx = DieArray.size(); I < EndIdx;
+       ++I) {
+    if (DieArray[I].getDepth() == Depth + 1 &&
+        DieArray[I].getTag() == dwarf::DW_TAG_null)
+      return DWARFDie(this, &DieArray[I]);
+    assert(DieArray[I].getDepth() > Depth && "Not processing children?");
+  }
+  return DWARFDie();
 }
 
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {

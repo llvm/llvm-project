@@ -337,9 +337,9 @@ protected:
                }
 
     void init(void* __sb);
-    _LIBCPP_ALWAYS_INLINE void* rdbuf() const {return __rdbuf_;}
+    _LIBCPP_INLINE_VISIBILITY void* rdbuf() const {return __rdbuf_;}
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void rdbuf(void* __sb)
     {
         __rdbuf_ = __sb;
@@ -351,7 +351,7 @@ protected:
     void move(ios_base&);
     void swap(ios_base&) _NOEXCEPT;
 
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void set_rdbuf(void* __sb)
     {
         __rdbuf_ = __sb;
@@ -599,26 +599,26 @@ public:
   // we give it internal linkage.
 
 #if defined(_LIBCPP_CXX03_LANG)
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     operator __cxx03_bool::__bool_type() const {
         return !fail() ? &__cxx03_bool::__true_value : nullptr;
     }
 #else
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_EXPLICIT operator bool() const {return !fail();}
 #endif
 
-    _LIBCPP_ALWAYS_INLINE bool operator!() const    {return  fail();}
-    _LIBCPP_ALWAYS_INLINE iostate rdstate() const   {return ios_base::rdstate();}
-    _LIBCPP_ALWAYS_INLINE void clear(iostate __state = goodbit) {ios_base::clear(__state);}
-    _LIBCPP_ALWAYS_INLINE void setstate(iostate __state) {ios_base::setstate(__state);}
-    _LIBCPP_ALWAYS_INLINE bool good() const {return ios_base::good();}
-    _LIBCPP_ALWAYS_INLINE bool eof() const  {return ios_base::eof();}
-    _LIBCPP_ALWAYS_INLINE bool fail() const {return ios_base::fail();}
-    _LIBCPP_ALWAYS_INLINE bool bad() const  {return ios_base::bad();}
+    _LIBCPP_INLINE_VISIBILITY bool operator!() const    {return  fail();}
+    _LIBCPP_INLINE_VISIBILITY iostate rdstate() const   {return ios_base::rdstate();}
+    _LIBCPP_INLINE_VISIBILITY void clear(iostate __state = goodbit) {ios_base::clear(__state);}
+    _LIBCPP_INLINE_VISIBILITY void setstate(iostate __state) {ios_base::setstate(__state);}
+    _LIBCPP_INLINE_VISIBILITY bool good() const {return ios_base::good();}
+    _LIBCPP_INLINE_VISIBILITY bool eof() const  {return ios_base::eof();}
+    _LIBCPP_INLINE_VISIBILITY bool fail() const {return ios_base::fail();}
+    _LIBCPP_INLINE_VISIBILITY bool bad() const  {return ios_base::bad();}
 
-    _LIBCPP_ALWAYS_INLINE iostate exceptions() const {return ios_base::exceptions();}
-    _LIBCPP_ALWAYS_INLINE void exceptions(iostate __iostate) {ios_base::exceptions(__iostate);}
+    _LIBCPP_INLINE_VISIBILITY iostate exceptions() const {return ios_base::exceptions();}
+    _LIBCPP_INLINE_VISIBILITY void exceptions(iostate __iostate) {ios_base::exceptions(__iostate);}
 
     // 27.5.4.1 Constructor/destructor:
     _LIBCPP_INLINE_VISIBILITY
@@ -652,7 +652,7 @@ public:
     char_type widen(char __c) const;
 
 protected:
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     basic_ios() {// purposefully does no initialization
                 }
     _LIBCPP_INLINE_VISIBILITY 
@@ -661,7 +661,7 @@ protected:
     _LIBCPP_INLINE_VISIBILITY 
     void move(basic_ios& __rhs);
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_INLINE_VISIBILITY
     void move(basic_ios&& __rhs) {move(__rhs);}
 #endif
     _LIBCPP_INLINE_VISIBILITY 

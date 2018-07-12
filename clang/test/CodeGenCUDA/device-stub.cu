@@ -1,27 +1,27 @@
 // RUN: echo "GPU binary would be here" > %t
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - \
-// RUN:   | FileCheck %s --check-prefixes=ALL,NORDC,CUDA,CUDANORDC
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,NORDC,CUDA,CUDANORDC
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS \
-// RUN:   | FileCheck %s -check-prefixes=NOGLOBALS,CUDANOGLOBALS
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=NOGLOBALS,CUDANOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-rdc -fcuda-include-gpubinary %t -o - \
-// RUN:   | FileCheck %s --check-prefixes=ALL,RDC,CUDA,CUDARDC
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,RDC,CUDA,CUDARDC
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - \
-// RUN:   | FileCheck %s -check-prefix=NOGPUBIN
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
-// RUN:   | FileCheck %s --check-prefixes=ALL,NORDC,HIP
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,NORDC,HIP
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS -x hip \
-// RUN:   | FileCheck %s -check-prefixes=NOGLOBALS,HIPNOGLOBALS
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=NOGLOBALS,HIPNOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-rdc -fcuda-include-gpubinary %t -o - -x hip \
-// RUN:   | FileCheck %s --check-prefixes=ALL,RDC,HIP,HIPRDC
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,RDC,HIP,HIPRDC
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - -x hip\
-// RUN:   | FileCheck %s -check-prefix=NOGPUBIN
+// RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=NOGPUBIN
 
 #include "Inputs/cuda.h"
 

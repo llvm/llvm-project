@@ -1,5 +1,5 @@
 ; Verifies correctness of load/store of parameters and return values.
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -O0 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -O0 -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap %s
 
 %s_i1 = type { i1 }
 %s_i8 = type { i8 }

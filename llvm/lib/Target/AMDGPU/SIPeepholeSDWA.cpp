@@ -90,9 +90,9 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void matchSDWAOperands(MachineBasicBlock &MBB);
   std::unique_ptr<SDWAOperand> matchSDWAOperand(MachineInstr &MI);
-  bool isConvertibleToSDWA(const MachineInstr &MI, const SISubtarget &ST) const;
+  bool isConvertibleToSDWA(const MachineInstr &MI, const GCNSubtarget &ST) const;
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
-  void legalizeScalarOperands(MachineInstr &MI, const SISubtarget &ST) const;
+  void legalizeScalarOperands(MachineInstr &MI, const GCNSubtarget &ST) const;
 
   StringRef getPassName() const override { return "SI Peephole SDWA"; }
 
@@ -855,7 +855,7 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineBasicBlock &MBB) {
 }
 
 bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI,
-                                         const SISubtarget &ST) const {
+                                         const GCNSubtarget &ST) const {
   // Check if this is already an SDWA instruction
   unsigned Opc = MI.getOpcode();
   if (TII->isSDWA(Opc))
@@ -1082,7 +1082,7 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
 // If an instruction was converted to SDWA it should not have immediates or SGPR
 // operands (allowed one SGPR on GFX9). Copy its scalar operands into VGPRs.
 void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
-                                            const SISubtarget &ST) const {
+                                            const GCNSubtarget &ST) const {
   const MCInstrDesc &Desc = TII->get(MI.getOpcode());
   unsigned ConstantBusCount = 0;
   for (MachineOperand &Op : MI.explicit_uses()) {
@@ -1113,7 +1113,7 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
 }
 
 bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (!ST.hasSDWA() || skipFunction(MF.getFunction()))
     return false;

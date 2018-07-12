@@ -22,14 +22,14 @@
 
 namespace llvm {
 
-class AMDGPUSubtarget;
+class GCNSubtarget;
 class MachineFunction;
 class MachineInstr;
 class MachineInstrBuilder;
 
 class AMDGPUInstrInfo {
 public:
-  explicit AMDGPUInstrInfo(const AMDGPUSubtarget &st);
+  explicit AMDGPUInstrInfo(const GCNSubtarget &st);
 
   static bool isUniformMMO(const MachineMemOperand *MMO);
 };

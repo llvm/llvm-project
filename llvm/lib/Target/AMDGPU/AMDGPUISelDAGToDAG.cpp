@@ -71,7 +71,7 @@ namespace {
 class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // Subtarget - Keep a pointer to the AMDGPU Subtarget around so that we can
   // make the right decision when generating code for different targets.
-  const AMDGPUSubtarget *Subtarget;
+  const GCNSubtarget *Subtarget;
   AMDGPUAS AMDGPUASI;
   bool EnableLateStructurizeCFG;
 
@@ -274,7 +274,7 @@ FunctionPass *llvm::createR600ISelDag(TargetMachine *TM,
 }
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<AMDGPUSubtarget>();
+  Subtarget = &MF.getSubtarget<GCNSubtarget>();
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
@@ -316,7 +316,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
       }
 
       const SIRegisterInfo *TRI
-        = static_cast<const SISubtarget *>(Subtarget)->getRegisterInfo();
+        = static_cast<const GCNSubtarget *>(Subtarget)->getRegisterInfo();
       return TRI->getPhysRegClass(Reg);
     }
 
@@ -1397,7 +1397,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
     return false;
 
   SDLoc SL(ByteOffsetNode);
-  AMDGPUSubtarget::Generation Gen = Subtarget->getGeneration();
+  GCNSubtarget::Generation Gen = Subtarget->getGeneration();
   int64_t ByteOffset = C->getSExtValue();
   int64_t EncodedOffset = AMDGPU::getSMRDEncodedOffset(*Subtarget, ByteOffset);
 
@@ -1664,7 +1664,7 @@ bool AMDGPUDAGToDAGISel::isCBranchSCC(const SDNode *N) const {
     return true;
 
   if (VT == MVT::i64) {
-    auto ST = static_cast<const SISubtarget *>(Subtarget);
+    auto ST = static_cast<const GCNSubtarget *>(Subtarget);
 
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
     return (CC == ISD::SETEQ || CC == ISD::SETNE) && ST->hasScalarCompareEq64();

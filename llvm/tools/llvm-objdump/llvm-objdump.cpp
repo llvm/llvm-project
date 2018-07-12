@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -90,13 +89,6 @@ llvm::DisassembleAll("disassemble-all",
 static cl::alias
 DisassembleAlld("D", cl::desc("Alias for --disassemble-all"),
              cl::aliasopt(DisassembleAll));
-
-cl::opt<std::string> llvm::Demangle("demangle",
-                                    cl::desc("Demangle symbols names"),
-                                    cl::ValueOptional, cl::init("none"));
-
-static cl::alias DemangleShort("C", cl::desc("Alias for --demangle"),
-                               cl::aliasopt(Demangle));
 
 static cl::list<std::string>
 DisassembleFunctions("df",
@@ -336,11 +328,6 @@ LLVM_ATTRIBUTE_NORETURN void llvm::error(Twine Message) {
   errs() << ToolName << ": " << Message << ".\n";
   errs().flush();
   exit(1);
-}
-
-void llvm::warn(StringRef Message) {
-  errs() << ToolName << ": warning: " << Message << ".\n";
-  errs().flush();
 }
 
 LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
@@ -1524,25 +1511,7 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
         }
       }
 
-      auto PrintSymbol = [](StringRef Name) {
-        outs() << '\n' << Name << ":\n";
-      };
-      StringRef SymbolName = std::get<1>(Symbols[si]);
-      if (Demangle.getValue() == "" || Demangle.getValue() == "itanium") {
-        char *DemangledSymbol = nullptr;
-        size_t Size = 0;
-        int Status;
-        DemangledSymbol =
-            itaniumDemangle(SymbolName.data(), DemangledSymbol, &Size, &Status);
-        if (Status == 0)
-          PrintSymbol(StringRef(DemangledSymbol));
-        else
-          PrintSymbol(SymbolName);
-
-        if (Size != 0)
-          free(DemangledSymbol);
-      } else
-        PrintSymbol(SymbolName);
+      outs() << '\n' << std::get<1>(Symbols[si]) << ":\n";
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
@@ -2391,11 +2360,6 @@ int main(int argc, char **argv) {
 
   if (DisassembleAll || PrintSource || PrintLines)
     Disassemble = true;
-
-  if (Demangle.getValue() != "none" && Demangle.getValue() != "" &&
-      Demangle.getValue() != "itanium")
-    warn("Unsupported demangling style");
-
   if (!Disassemble
       && !Relocations
       && !DynamicRelocations
