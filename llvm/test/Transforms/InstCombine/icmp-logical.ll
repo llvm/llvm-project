@@ -88,9 +88,11 @@ define i1 @masked_and_notA_slightly_optimized(i32 %A) {
 
 define i1 @masked_or_A(i32 %A) {
 ; CHECK-LABEL: @masked_or_A(
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 39
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
 ; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    ret i1 [[TST2]]
+; CHECK-NEXT:    [[RES:%.*]] = or i1 [[TMP1]], [[TST2]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %mask1 = and i32 %A, 7
   %tst1 = icmp eq i32 %mask1, %A

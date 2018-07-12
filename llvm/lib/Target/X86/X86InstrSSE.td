@@ -630,6 +630,7 @@ let Predicates = [UseSSE1] in {
 
 multiclass sse12_mov_hilo_packed_base<bits<8>opc, SDNode psnode, SDNode pdnode,
                                       string base_opc, string asm_opr> {
+  let hasSideEffects = 0, mayLoad = 1 in
   def PSrm : PI<opc, MRMSrcMem,
          (outs VR128:$dst), (ins VR128:$src1, f64mem:$src2),
          !strconcat(base_opc, "s", asm_opr),
@@ -639,6 +640,7 @@ multiclass sse12_mov_hilo_packed_base<bits<8>opc, SDNode psnode, SDNode pdnode,
               SSEPackedSingle>, PS,
      Sched<[SchedWriteFShuffle.XMM.Folded, ReadAfterLd]>;
 
+  let hasSideEffects = 0, mayLoad = 1 in
   def PDrm : PI<opc, MRMSrcMem,
          (outs VR128:$dst), (ins VR128:$src1, f64mem:$src2),
          !strconcat(base_opc, "d", asm_opr),

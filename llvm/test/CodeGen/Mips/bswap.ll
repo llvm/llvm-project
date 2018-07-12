@@ -1,7 +1,7 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck %s -check-prefix=MIPS32
-; RUN: llc  < %s -mtriple=mipsel-mti-linux-gnu -mcpu=mips32r2 -mattr=+micromips | FileCheck %s -check-prefix=MM
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 | FileCheck %s -check-prefix=MIPS64
-; RUN: llc  < %s -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 | FileCheck %s -check-prefix=MIPS16
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS32
+; RUN: llc  < %s -mtriple=mipsel-mti-linux-gnu -mcpu=mips32r2 -mattr=+micromips | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MM
+; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS64
+; RUN: llc  < %s -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=MIPS16
 
 define i32 @bswap32(i32 signext %x) nounwind readnone {
 entry:

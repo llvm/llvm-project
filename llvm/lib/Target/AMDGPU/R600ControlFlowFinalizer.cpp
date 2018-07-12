@@ -137,7 +137,7 @@ unsigned CFStack::getSubEntrySize(CFStack::StackItem Item) {
     return 0;
   case CFStack::FIRST_NON_WQM_PUSH:
   assert(!ST->hasCaymanISA());
-  if (ST->getGeneration() <= R600Subtarget::R700) {
+  if (ST->getGeneration() <= AMDGPUSubtarget::R700) {
     // +1 For the push operation.
     // +2 Extra space required.
     return 3;
@@ -150,7 +150,7 @@ unsigned CFStack::getSubEntrySize(CFStack::StackItem Item) {
     return 2;
   }
   case CFStack::FIRST_NON_WQM_PUSH_W_FULL_ENTRY:
-    assert(ST->getGeneration() >= R600Subtarget::EVERGREEN);
+    assert(ST->getGeneration() >= AMDGPUSubtarget::EVERGREEN);
     // +1 For the push operation.
     // +1 Extra space required.
     return 2;
@@ -177,7 +177,7 @@ void CFStack::pushBranch(unsigned Opcode, bool isWQM) {
                                              // See comment in
                                              // CFStack::getSubEntrySize()
       else if (CurrentEntries > 0 &&
-               ST->getGeneration() > R600Subtarget::EVERGREEN &&
+               ST->getGeneration() > AMDGPUSubtarget::EVERGREEN &&
                !ST->hasCaymanISA() &&
                !branchStackContains(CFStack::FIRST_NON_WQM_PUSH_W_FULL_ENTRY))
         Item = CFStack::FIRST_NON_WQM_PUSH_W_FULL_ENTRY;
@@ -250,7 +250,7 @@ private:
 
   const MCInstrDesc &getHWInstrDesc(ControlFlowInstruction CFI) const {
     unsigned Opcode = 0;
-    bool isEg = (ST->getGeneration() >= R600Subtarget::EVERGREEN);
+    bool isEg = (ST->getGeneration() >= AMDGPUSubtarget::EVERGREEN);
     switch (CFI) {
     case CF_TC:
       Opcode = isEg ? R600::CF_TC_EG : R600::CF_TC_R600;

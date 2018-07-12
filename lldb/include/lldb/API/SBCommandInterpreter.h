@@ -208,6 +208,25 @@ public:
   void SetPromptOnQuit(bool b);
 
   //----------------------------------------------------------------------
+  /// Sets whether the command interpreter should allow custom exit codes
+  /// for the 'quit' command.
+  //----------------------------------------------------------------------
+  void AllowExitCodeOnQuit(bool allow);
+
+  //----------------------------------------------------------------------
+  /// Returns true if the user has called the 'quit' command with a custom exit
+  /// code.
+  //----------------------------------------------------------------------
+  bool HasCustomQuitExitCode();
+
+  //----------------------------------------------------------------------
+  /// Returns the exit code that the user has specified when running the
+  /// 'quit' command. Returns 0 if the user hasn't called 'quit' at all or
+  /// without a custom exit code.
+  //----------------------------------------------------------------------
+  int GetQuitStatus();
+
+  //----------------------------------------------------------------------
   /// Resolve the command just as HandleCommand would, expanding abbreviations
   /// and aliases.  If successful, result->GetOutput has the full expansion.
   //----------------------------------------------------------------------

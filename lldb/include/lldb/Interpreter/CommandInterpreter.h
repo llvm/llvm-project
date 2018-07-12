@@ -455,6 +455,30 @@ public:
 
   void SetPromptOnQuit(bool b);
 
+  //------------------------------------------------------------------
+  /// Specify if the command interpreter should allow that the user can
+  /// specify a custom exit code when calling 'quit'.
+  //------------------------------------------------------------------
+  void AllowExitCodeOnQuit(bool allow);
+
+  //------------------------------------------------------------------
+  /// Sets the exit code for the quit command.
+  /// @param[in] exit_code
+  ///     The exit code that the driver should return on exit.
+  /// @return True if the exit code was successfully set; false if the
+  ///         interpreter doesn't allow custom exit codes.
+  /// @see AllowExitCodeOnQuit
+  //------------------------------------------------------------------
+  LLVM_NODISCARD bool SetQuitExitCode(int exit_code);
+
+  //------------------------------------------------------------------
+  /// Returns the exit code that the user has specified when running the
+  /// 'quit' command.
+  /// @param[out] exited
+  ///     Set to true if the user has called quit with a custom exit code.
+  //------------------------------------------------------------------
+  int GetQuitExitCode(bool &exited) const;
+
   void ResolveCommand(const char *command_line, CommandReturnObject &result);
 
   bool GetStopCmdSourceOnError() const;
@@ -558,6 +582,12 @@ private:
   uint32_t m_num_errors;
   bool m_quit_requested;
   bool m_stopped_for_crash;
+
+  // The exit code the user has requested when calling the 'quit' command.
+  // No value means the user hasn't set a custom exit code so far.
+  llvm::Optional<int> m_quit_exit_code;
+  // If the driver is accepts custom exit codes for the 'quit' command.
+  bool m_allow_exit_code = false;
 };
 
 } // namespace lldb_private

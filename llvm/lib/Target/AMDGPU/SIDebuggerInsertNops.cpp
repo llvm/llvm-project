@@ -63,7 +63,7 @@ FunctionPass *llvm::createSIDebuggerInsertNopsPass() {
 bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
   // Skip this pass if "amdgpu-debugger-insert-nops" attribute was not
   // specified.
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.debuggerInsertNops())
     return false;
 

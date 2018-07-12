@@ -100,7 +100,7 @@ public:
 class GCNTargetMachine final : public AMDGPUTargetMachine {
 private:
   AMDGPUIntrinsicInfo IntrinsicInfo;
-  mutable StringMap<std::unique_ptr<SISubtarget>> SubtargetMap;
+  mutable StringMap<std::unique_ptr<GCNSubtarget>> SubtargetMap;
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -110,7 +110,7 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  const SISubtarget *getSubtargetImpl(const Function &) const override;
+  const GCNSubtarget *getSubtargetImpl(const Function &) const override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 

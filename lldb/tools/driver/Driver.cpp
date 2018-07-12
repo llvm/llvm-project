@@ -962,7 +962,7 @@ std::string EscapeString(std::string arg) {
   return '"' + arg + '"';
 }
 
-void Driver::MainLoop() {
+int Driver::MainLoop() {
   if (::tcgetattr(STDIN_FILENO, &g_old_stdin_termios) == 0) {
     g_old_stdin_termios_is_valid = true;
     atexit(reset_stdin_termios);
@@ -1000,6 +1000,10 @@ void Driver::MainLoop() {
     result.PutError(m_debugger.GetErrorFileHandle());
     result.PutOutput(m_debugger.GetOutputFileHandle());
   }
+
+  // We allow the user to specify an exit code when calling quit which we will
+  // return when exiting.
+  m_debugger.GetCommandInterpreter().AllowExitCodeOnQuit(true);
 
   // Now we handle options we got from the command line
   SBStream commands_stream;
@@ -1159,7 +1163,9 @@ void Driver::MainLoop() {
   reset_stdin_termios();
   fclose(stdin);
 
+  int exit_code = sb_interpreter.GetQuitStatus();
   SBDebugger::Destroy(m_debugger);
+  return exit_code;
 }
 
 void Driver::ResizeWindow(unsigned short col) {
@@ -1237,6 +1243,7 @@ main(int argc, char const *argv[])
   signal(SIGCONT, sigcont_handler);
 #endif
 
+  int exit_code = 0;
   // Create a scope for driver so that the driver object will destroy itself
   // before SBDebugger::Terminate() is called.
   {
@@ -1245,14 +1252,15 @@ main(int argc, char const *argv[])
     bool exiting = false;
     SBError error(driver.ParseArgs(argc, argv, stdout, exiting));
     if (error.Fail()) {
+      exit_code = 1;
       const char *error_cstr = error.GetCString();
       if (error_cstr)
         ::fprintf(stderr, "error: %s\n", error_cstr);
     } else if (!exiting) {
-      driver.MainLoop();
+      exit_code = driver.MainLoop();
     }
   }
 
   SBDebugger::Terminate();
-  return 0;
+  return exit_code;
 }

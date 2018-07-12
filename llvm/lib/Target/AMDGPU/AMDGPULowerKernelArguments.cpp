@@ -68,7 +68,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   auto &TPC = getAnalysis<TargetPassConfig>();
 
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  const SISubtarget &ST = TM.getSubtarget<SISubtarget>(F);
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   LLVMContext &Ctx = F.getParent()->getContext();
   const DataLayout &DL = F.getParent()->getDataLayout();
   BasicBlock &EntryBlock = *F.begin();

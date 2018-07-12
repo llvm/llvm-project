@@ -1,4 +1,4 @@
-# This test fails on Mac (https://bugs.llvm.org/show_bug.cgi?id=38121).
+# This test fails on Mac (https://bugs.llvm.org/show_bug.cgi?id=38134)
 XFAIL: darwin
 
 RUN: mkdir -p %t.d

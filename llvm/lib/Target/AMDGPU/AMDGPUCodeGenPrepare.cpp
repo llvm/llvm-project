@@ -57,7 +57,7 @@ static cl::opt<bool> WidenLoads(
 
 class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
-  const SISubtarget *ST = nullptr;
+  const GCNSubtarget *ST = nullptr;
   DivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   bool HasUnsafeFPMath = false;
@@ -890,7 +890,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
-  ST = &TM.getSubtarget<SISubtarget>(F);
+  ST = &TM.getSubtarget<GCNSubtarget>(F);
   DA = &getAnalysis<DivergenceAnalysis>();
   HasUnsafeFPMath = hasUnsafeFPMath(F);
   AMDGPUASI = TM.getAMDGPUAS();

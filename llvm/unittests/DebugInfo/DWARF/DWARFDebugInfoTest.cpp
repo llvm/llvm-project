@@ -490,6 +490,11 @@ template <uint16_t Version, class AddrType> void TestChildren() {
     EXPECT_TRUE(!NullDieDG.getSibling().isValid());
     EXPECT_TRUE(!NullDieDG.getFirstChild().isValid());
   }
+
+  // Verify the previous sibling of our subprogram is our integer base type.
+  IntDieDG = NullDieDG.getPreviousSibling();
+  EXPECT_TRUE(IntDieDG.isValid());
+  EXPECT_EQ(IntDieDG.getTag(), DW_TAG_base_type);
 }
 
 TEST(DWARFDebugInfo, TestDWARF32Version2Addr4Children) {
@@ -1072,6 +1077,27 @@ TEST(DWARFDebugInfo, TestRelations) {
   // Make sure the parent of all the children of the B are the B.
   EXPECT_EQ(C1.getParent(), C);
   EXPECT_EQ(C2.getParent(), C);
+
+  // Make sure bidirectional iterator works as expected.
+  auto Begin = A.begin();
+  auto End = A.end();
+  auto It = A.begin();
+
+  EXPECT_EQ(It, Begin);
+  EXPECT_EQ(*It, B);
+  ++It;
+  EXPECT_EQ(*It, C);
+  ++It;
+  EXPECT_EQ(*It, D);
+  ++It;
+  EXPECT_EQ(It, End);
+  --It;
+  EXPECT_EQ(*It, D);
+  --It;
+  EXPECT_EQ(*It, C);
+  --It;
+  EXPECT_EQ(*It, B);
+  EXPECT_EQ(It, Begin);
 }
 
 TEST(DWARFDebugInfo, TestDWARFDie) {

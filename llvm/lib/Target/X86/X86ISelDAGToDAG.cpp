@@ -614,9 +614,12 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
     }
   }
 
-  // Prevent folding a load if this can implemented with an insert_subreg.
+  // Prevent folding a load if this can implemented with an insert_subreg or
+  // a move that implicitly zeroes.
   if (Root->getOpcode() == ISD::INSERT_SUBVECTOR &&
-      Root->getOperand(0).isUndef() && isNullConstant(Root->getOperand(2)))
+      isNullConstant(Root->getOperand(2)) &&
+      (Root->getOperand(0).isUndef() ||
+       ISD::isBuildVectorAllZeros(Root->getOperand(0).getNode())))
     return false;
 
   return true;

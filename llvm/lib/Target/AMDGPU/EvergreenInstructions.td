@@ -14,13 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 def isEG : Predicate<
-  "Subtarget->getGeneration() >= R600Subtarget::EVERGREEN && "
+  "Subtarget->getGeneration() >= AMDGPUSubtarget::EVERGREEN && "
   "!Subtarget->hasCaymanISA()"
 >;
 
 def isEGorCayman : Predicate<
-  "Subtarget->getGeneration() == R600Subtarget::EVERGREEN ||"
-  "Subtarget->getGeneration() == R600Subtarget::NORTHERN_ISLANDS"
+  "Subtarget->getGeneration() == AMDGPUSubtarget::EVERGREEN ||"
+  "Subtarget->getGeneration() == AMDGPUSubtarget::NORTHERN_ISLANDS"
 >;
 
 class EGPat<dag pattern, dag result> : AMDGPUPat<pattern, result> {

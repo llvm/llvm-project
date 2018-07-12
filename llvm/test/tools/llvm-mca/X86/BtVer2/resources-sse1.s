@@ -248,7 +248,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00           *            movhps	%xmm0, (%rax)
 # CHECK-NEXT:  1      6     1.00    *                   movhps	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00           *            movlps	%xmm0, (%rax)
-# CHECK-NEXT:  1      6     1.00                  U     movlps	(%rax), %xmm2
+# CHECK-NEXT:  1      6     1.00    *                   movlps	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        movmskps	%xmm0, %ecx
 # CHECK-NEXT:  1      3     1.00           *            movntps	%xmm0, (%rax)
 # CHECK-NEXT:  1      2     1.00    *      *      U     movntq	%mm0, (%rax)

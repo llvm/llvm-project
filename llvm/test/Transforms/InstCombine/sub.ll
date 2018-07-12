@@ -250,15 +250,6 @@ define i64 @test18(i64 %Y) {
   ret i64 %tmp.8
 }
 
-define i32 @test19(i32 %X, i32 %Y) {
-; CHECK-LABEL: @test19(
-; CHECK-NEXT:    ret i32 [[X:%.*]]
-;
-  %Z = sub i32 %X, %Y
-  %Q = add i32 %Z, %Y
-  ret i32 %Q
-}
-
 define i1 @test20(i32 %g, i32 %h) {
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:    [[TMP_4:%.*]] = icmp ne i32 [[H:%.*]], 0

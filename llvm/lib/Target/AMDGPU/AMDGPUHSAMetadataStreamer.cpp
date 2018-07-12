@@ -203,7 +203,7 @@ std::vector<uint32_t> MetadataStreamer::getWorkGroupDimensions(
 Kernel::CodeProps::Metadata MetadataStreamer::getHSACodeProps(
     const MachineFunction &MF,
     const SIProgramInfo &ProgramInfo) const {
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   HSAMD::Kernel::CodeProps::Metadata HSACodeProps;
   const Function &F = MF.getFunction();
@@ -212,7 +212,8 @@ Kernel::CodeProps::Metadata MetadataStreamer::getHSACodeProps(
   if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
     return HSACodeProps;
 
-  HSACodeProps.mKernargSegmentSize = STM.getKernArgSegmentSize(F);
+  HSACodeProps.mKernargSegmentSize =
+      STM.getKernArgSegmentSize(F, MFI.getExplicitKernArgSize());
   HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
   HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
   HSACodeProps.mKernargSegmentAlign =
@@ -232,7 +233,7 @@ Kernel::CodeProps::Metadata MetadataStreamer::getHSACodeProps(
 Kernel::DebugProps::Metadata MetadataStreamer::getHSADebugProps(
     const MachineFunction &MF,
     const SIProgramInfo &ProgramInfo) const {
-  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   HSAMD::Kernel::DebugProps::Metadata HSADebugProps;
 
   if (!STM.debuggerSupported())

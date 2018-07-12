@@ -140,7 +140,7 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 } addrspace(5)* b
 ; GCN: s_and_saveexec_b64
 
 ; CI: v_add_i32_e32 v0, vcc, 4, [[ADD]]
-; CI: buffer_load_dword v1, v0, s[0:3], s4 offen{{$}}
+; CI: buffer_load_dword v1, v1, s[0:3], s4 offen offset:4{{$}}
 
 ; GFX9: v_add_u32_e32 v0, 4, [[ADD]]
 ; GFX9: buffer_load_dword v1, v{{[0-9]+}}, s[0:3], s4 offen offset:4{{$}}

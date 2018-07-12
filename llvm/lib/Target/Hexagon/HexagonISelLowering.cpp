@@ -836,7 +836,7 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
         SDValue Op = N.getOperand(0);
         if (Op.getOpcode() != ISD::AssertSext)
           return false;
-        MVT OrigTy = cast<VTSDNode>(Op.getOperand(1))->getVT().getSimpleVT();
+        EVT OrigTy = cast<VTSDNode>(Op.getOperand(1))->getVT();
         unsigned ThisBW = ty(N).getSizeInBits();
         unsigned OrigBW = OrigTy.getSizeInBits();
         // The type that was sign-extended to get the AssertSext must be

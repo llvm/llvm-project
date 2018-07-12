@@ -42,7 +42,7 @@ class Type;
 ///                         for use inside the LLVM testuite!
 /// \param DataLayoutString Override datalayout in the llvm assembly.
 std::unique_ptr<Module>
-parseAssemblyFile(StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
+parseAssemblyFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
                   SlotMapping *Slots = nullptr, bool UpgradeDebugInfo = true,
                   StringRef DataLayoutString = "");
 
@@ -62,7 +62,7 @@ parseAssemblyFile(StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
 ///                         for use inside the LLVM testuite!
 /// \param DataLayoutString Override datalayout in the llvm assembly.
 std::unique_ptr<Module> parseAssemblyString(StringRef AsmString,
-                                            SMDiagnostic &Error,
+                                            SMDiagnostic &Err,
                                             LLVMContext &Context,
                                             SlotMapping *Slots = nullptr,
                                             bool UpgradeDebugInfo = true,
@@ -92,7 +92,7 @@ struct ParsedModuleAndIndex {
 ///                         for use inside the LLVM testuite!
 /// \param DataLayoutString Override datalayout in the llvm assembly.
 ParsedModuleAndIndex
-parseAssemblyFileWithIndex(StringRef Filename, SMDiagnostic &Error,
+parseAssemblyFileWithIndex(StringRef Filename, SMDiagnostic &Err,
                            LLVMContext &Context, SlotMapping *Slots = nullptr,
                            bool UpgradeDebugInfo = true,
                            StringRef DataLayoutString = "");
@@ -106,7 +106,7 @@ parseAssemblyFileWithIndex(StringRef Filename, SMDiagnostic &Error,
 /// \param Filename The name of the file to parse
 /// \param Error Error result info.
 std::unique_ptr<ModuleSummaryIndex>
-parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Error);
+parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Err);
 
 /// parseAssemblyFile and parseAssemblyString are wrappers around this function.
 /// Parse LLVM Assembly from a MemoryBuffer.

@@ -2871,7 +2871,7 @@ static void checkRegOnlyPHIInputs(MachineFunction &MF) {
 }
 
 bool AMDGPUMachineCFGStructurizer::runOnMachineFunction(MachineFunction &MF) {
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MRI = &(MF.getRegInfo());

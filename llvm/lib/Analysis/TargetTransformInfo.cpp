@@ -636,6 +636,12 @@ getOperandInfo(Value *V, TargetTransformInfo::OperandValueProperties &OpProps) {
       TargetTransformInfo::OK_AnyValue;
   OpProps = TargetTransformInfo::OP_None;
 
+  if (auto *CI = dyn_cast<ConstantInt>(V)) {
+    if (CI->getValue().isPowerOf2())
+      OpProps = TargetTransformInfo::OP_PowerOf2;
+    return TargetTransformInfo::OK_UniformConstantValue;
+  }
+
   const Value *Splat = getSplatValue(V);
 
   // Check for a splat of a constant or for a non uniform vector of constants

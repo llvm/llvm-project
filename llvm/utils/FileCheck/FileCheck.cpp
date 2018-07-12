@@ -28,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cctype>
+#include <list>
 #include <map>
 #include <string>
 #include <system_error>
@@ -81,6 +82,13 @@ static cl::opt<bool> EnableVarScope(
     cl::desc("Enables scope for regex variables. Variables with names that\n"
              "do not start with '$' will be reset at the beginning of\n"
              "each CHECK-LABEL block."));
+
+static cl::opt<bool> AllowDeprecatedDagOverlap(
+    "allow-deprecated-dag-overlap", cl::init(false),
+    cl::desc("Enable overlapping among matches in a group of consecutive\n"
+             "CHECK-DAG directives.  This option is deprecated and is only\n"
+             "provided for convenience as old tests are migrated to the new\n"
+             "non-overlapping CHECK-DAG implementation.\n"));
 
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
@@ -1192,6 +1200,13 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
   size_t LastPos = 0;
   size_t StartPos = LastPos;
 
+  // A sorted list of ranges for non-overlapping dag matches.
+  struct Match {
+    size_t Pos;
+    size_t End;
+  };
+  std::list<Match> Matches;
+
   for (const Pattern &Pat : DagNotStrings) {
     assert((Pat.getCheckTy() == Check::CheckDAG ||
             Pat.getCheckTy() == Check::CheckNot) &&
@@ -1204,19 +1219,42 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
 
     assert((Pat.getCheckTy() == Check::CheckDAG) && "Expect CHECK-DAG!");
 
-    size_t MatchLen = 0, MatchPos;
-
     // CHECK-DAG always matches from the start.
-    StringRef MatchBuffer = Buffer.substr(StartPos);
-    MatchPos = Pat.Match(MatchBuffer, MatchLen, VariableTable);
-    // With a group of CHECK-DAGs, a single mismatching means the match on
-    // that group of CHECK-DAGs fails immediately.
-    if (MatchPos == StringRef::npos) {
-      PrintCheckFailed(SM, Pat.getLoc(), Pat, MatchBuffer, VariableTable);
-      return StringRef::npos;
+    size_t MatchLen = 0, MatchPos = StartPos;
+
+    // Search for a match that doesn't overlap a previous match in this
+    // CHECK-DAG group.
+    for (auto MI = Matches.begin(), ME = Matches.end(); true; ++MI) {
+      StringRef MatchBuffer = Buffer.substr(MatchPos);
+      size_t MatchPosBuf = Pat.Match(MatchBuffer, MatchLen, VariableTable);
+      // With a group of CHECK-DAGs, a single mismatching means the match on
+      // that group of CHECK-DAGs fails immediately.
+      if (MatchPosBuf == StringRef::npos) {
+        PrintCheckFailed(SM, Pat.getLoc(), Pat, MatchBuffer, VariableTable);
+        return StringRef::npos;
+      }
+      // Re-calc it as the offset relative to the start of the original string.
+      MatchPos += MatchPosBuf;
+      if (AllowDeprecatedDagOverlap)
+        break;
+      // Iterate previous matches until overlapping match or insertion point.
+      Match M{MatchPos, MatchPos + MatchLen};
+      bool Overlap = false;
+      for (; MI != ME; ++MI) {
+        if (M.Pos < MI->End) {
+          // !Overlap => New match has no overlap and is before this old match.
+          // Overlap => New match overlaps this old match.
+          Overlap = MI->Pos < M.End;
+          break;
+        }
+      }
+      if (!Overlap) {
+        // Insert non-overlapping match into list.
+        Matches.insert(MI, M);
+        break;
+      }
+      MatchPos = MI->End;
     }
-    // Re-calc it as the offset relative to the start of the original string.
-    MatchPos += StartPos;
 
     if (!NotStrings.empty()) {
       if (MatchPos < LastPos) {
@@ -1238,8 +1276,11 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
         return StringRef::npos;
       }
       // All subsequent CHECK-DAGs should be matched from the farthest
-      // position of all precedent CHECK-DAGs (including this one.)
+      // position of all precedent CHECK-DAGs (not including this one).
       StartPos = LastPos;
+      // Don't waste time checking for (impossible) overlaps before that.
+      Matches.clear();
+      Matches.push_back(Match{MatchPos, MatchPos + MatchLen});
       // If there's CHECK-NOTs between two CHECK-DAGs or from CHECK to
       // CHECK-DAG, verify that there's no 'not' strings occurred in that
       // region.

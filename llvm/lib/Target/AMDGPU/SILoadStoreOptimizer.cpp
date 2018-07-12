@@ -103,7 +103,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
    };
 
 private:
-  const SISubtarget *STM = nullptr;
+  const GCNSubtarget *STM = nullptr;
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -939,7 +939,7 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  STM = &MF.getSubtarget<SISubtarget>();
+  STM = &MF.getSubtarget<GCNSubtarget>();
   if (!STM->loadStoreOptEnabled())
     return false;
 

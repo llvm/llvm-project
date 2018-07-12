@@ -67,7 +67,7 @@ namespace llvm {
       IgnoreColonInIdentifiers = val;
     }
 
-    bool Error(LocTy L, const Twine &Msg) const;
+    bool Error(LocTy ErrorLoc, const Twine &Msg) const;
     bool Error(const Twine &Msg) const { return Error(getLoc(), Msg); }
 
     void Warning(LocTy WarningLoc, const Twine &Msg) const;
@@ -98,7 +98,7 @@ namespace llvm {
     uint64_t atoull(const char *Buffer, const char *End);
     uint64_t HexIntToVal(const char *Buffer, const char *End);
     void HexToIntPair(const char *Buffer, const char *End, uint64_t Pair[2]);
-    void FP80HexToIntPair(const char *Buff, const char *End, uint64_t Pair[2]);
+    void FP80HexToIntPair(const char *Buffer, const char *End, uint64_t Pair[2]);
   };
 } // end namespace llvm
 

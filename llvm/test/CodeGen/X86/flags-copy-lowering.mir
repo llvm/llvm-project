@@ -72,6 +72,18 @@
     call void @foo()
     ret void
   }
+
+  define i64 @test_branch_with_livein_and_kill(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret i64 0
+  }
+
+  define i64 @test_branch_with_interleaved_livein_and_kill(i64 %a, i64 %b) {
+  entry:
+    call void @foo()
+    ret i64 0
+  }
 ...
 ---
 name:            test_branch
@@ -551,5 +563,178 @@ body:             |
   ; CHECK-NEXT:    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %[[REPLACEMENT]]
 
     RET 0
+
+...
+---
+name:            test_branch_with_livein_and_kill
+# CHECK-LABEL: name: test_branch_with_livein_and_kill
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2, %bb.3
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    CMP64rr %0, %1, implicit-def $eflags
+    %2:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[S_REG:[^:]*]]:gr8 = SETSr implicit $eflags
+  ; CHECK-NEXT: %[[NE_REG:[^:]*]]:gr8 = SETNEr implicit $eflags
+  ; CHECK-NEXT: %[[A_REG:[^:]*]]:gr8 = SETAr implicit $eflags
+  ; CHECK-NEXT: %[[B_REG:[^:]*]]:gr8 = SETBr implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %2
+    JA_1 %bb.1, implicit $eflags
+    JB_1 %bb.2, implicit $eflags
+    JMP_1 %bb.3
+  ; CHECK-NOT: $eflags =
+  ;
+  ; CHECK:        TEST8rr %[[A_REG]], %[[A_REG]], implicit-def $eflags
+  ; CHECK-NEXT:   JNE_1 %bb.1, implicit killed $eflags
+  ; CHECK-SAME: {{$[[:space:]]}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: {{.*$}}
+  ; CHECK-SAME: {{$[[:space:]]}}
+  ; CHECK-NEXT:   TEST8rr %[[B_REG]], %[[B_REG]], implicit-def $eflags
+  ; CHECK-NEXT:   JNE_1 %bb.2, implicit killed $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+
+  bb.1:
+    liveins: $eflags
+
+    %3:gr64 = CMOVE64rr %0, %1, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[NE_REG]], %[[NE_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %3:gr64 = CMOVE64rr %0, %1, implicit killed $eflags
+    $rax = COPY %3
+    RET 0, $rax
+
+  bb.2:
+    liveins: $eflags
+
+    %4:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[NE_REG]], %[[NE_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
+    $rax = COPY %4
+    RET 0, $rax
+
+  bb.3:
+    liveins: $eflags
+
+    %5:gr64 = CMOVS64rr %0, %1, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[S_REG]], %[[S_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %5:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
+    $rax = COPY %5
+    RET 0, $rax
+
+...
+---
+name:            test_branch_with_interleaved_livein_and_kill
+# CHECK-LABEL: name: test_branch_with_interleaved_livein_and_kill
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$rsi', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2, %bb.5
+    liveins: $rdi, $rsi
+
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    CMP64rr %0, %1, implicit-def $eflags
+    %2:gr64 = COPY $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+  ; CHECK:      %[[S_REG:[^:]*]]:gr8 = SETSr implicit $eflags
+  ; CHECK-NEXT: %[[P_REG:[^:]*]]:gr8 = SETPr implicit $eflags
+  ; CHECK-NEXT: %[[NE_REG:[^:]*]]:gr8 = SETNEr implicit $eflags
+  ; CHECK-NEXT: %[[A_REG:[^:]*]]:gr8 = SETAr implicit $eflags
+  ; CHECK-NEXT: %[[B_REG:[^:]*]]:gr8 = SETBr implicit $eflags
+  ; CHECK-NEXT: %[[O_REG:[^:]*]]:gr8 = SETOr implicit $eflags
+  ; CHECK-NOT:  COPY{{( killed)?}} $eflags
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+    $eflags = COPY %2
+    JA_1 %bb.1, implicit $eflags
+    JB_1 %bb.2, implicit $eflags
+    JMP_1 %bb.5
+  ; CHECK-NOT: $eflags =
+  ;
+  ; CHECK:        TEST8rr %[[A_REG]], %[[A_REG]], implicit-def $eflags
+  ; CHECK-NEXT:   JNE_1 %bb.1, implicit killed $eflags
+  ; CHECK-SAME: {{$[[:space:]]}}
+  ; CHECK-NEXT: bb.6:
+  ; CHECK-NEXT:   successors: {{.*$}}
+  ; CHECK-SAME: {{$[[:space:]]}}
+  ; CHECK-NEXT:   TEST8rr %[[B_REG]], %[[B_REG]], implicit-def $eflags
+  ; CHECK-NEXT:   JNE_1 %bb.2, implicit killed $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.5
+
+  bb.1:
+    liveins: $eflags
+
+    %3:gr64 = CMOVE64rr %0, %1, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[NE_REG]], %[[NE_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %3:gr64 = CMOVE64rr %0, %1, implicit killed $eflags
+    $rax = COPY %3
+    RET 0, $rax
+
+  bb.2:
+    ; The goal is to have another batch of successors discovered in a block
+    ; between two successors which kill $eflags. This ensures that neither of
+    ; the surrounding kills impact recursing through this block.
+    successors: %bb.3, %bb.4
+    liveins: $eflags
+
+    JO_1 %bb.3, implicit $eflags
+    JMP_1 %bb.4
+  ; CHECK-NOT: $eflags =
+  ;
+  ; CHECK:        TEST8rr %[[O_REG]], %[[O_REG]], implicit-def $eflags
+  ; CHECK-NEXT:   JNE_1 %bb.3, implicit killed $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.4
+
+  bb.3:
+    liveins: $eflags
+
+    %4:gr64 = CMOVNE64rr %0, %1, implicit $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[NE_REG]], %[[NE_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %4:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
+    $rax = COPY %4
+    RET 0, $rax
+
+  bb.4:
+    liveins: $eflags
+
+    %5:gr64 = CMOVP64rr %0, %1, implicit $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[P_REG]], %[[P_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %5:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
+    $rax = COPY %5
+    RET 0, $rax
+
+  bb.5:
+    liveins: $eflags
+
+    %6:gr64 = CMOVS64rr %0, %1, implicit killed $eflags
+  ; CHECK-NOT:     $eflags =
+  ; CHECK:         TEST8rr %[[S_REG]], %[[S_REG]], implicit-def $eflags
+  ; CHECK-NEXT:    %6:gr64 = CMOVNE64rr %0, %1, implicit killed $eflags
+    $rax = COPY %6
+    RET 0, $rax
 
 ...

@@ -16,6 +16,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -26,7 +27,7 @@ using namespace lldb_private;
 
 CommandObjectQuit::CommandObjectQuit(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "quit", "Quit the LLDB debugger.",
-                          "quit") {}
+                          "quit [exit-code]") {}
 
 CommandObjectQuit::~CommandObjectQuit() {}
 
@@ -77,6 +78,41 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
       return false;
     }
   }
+
+  if (command.GetArgumentCount() > 1) {
+    result.AppendError("Too many arguments for 'quit'. Only an optional exit "
+                       "code is allowed");
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
+  if (command.GetArgumentCount() > 1) {
+    result.AppendError("Too many arguments for 'quit'. Only an optional exit "
+                       "code is allowed");
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
+  // We parse the exit code argument if there is one.
+  if (command.GetArgumentCount() == 1) {
+    llvm::StringRef arg = command.GetArgumentAtIndex(0);
+    int exit_code;
+    if (arg.getAsInteger(/*autodetect radix*/ 0, exit_code)) {
+      lldb_private::StreamString s;
+      std::string arg_str = arg.str();
+      s.Printf("Couldn't parse '%s' as integer for exit code.", arg_str.data());
+      result.AppendError(s.GetString());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+    if (!m_interpreter.SetQuitExitCode(exit_code)) {
+      result.AppendError("The current driver doesn't allow custom exit codes"
+                         " for the quit command.");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+  }
+
   const uint32_t event_type =
       CommandInterpreter::eBroadcastBitQuitCommandReceived;
   m_interpreter.BroadcastEvent(event_type);
