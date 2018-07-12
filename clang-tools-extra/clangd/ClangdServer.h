@@ -12,6 +12,7 @@
 
 #include "ClangdUnit.h"
 #include "CodeComplete.h"
+#include "FSProvider.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
@@ -40,22 +41,6 @@ public:
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
   virtual void onDiagnosticsReady(PathRef File,
                                   std::vector<Diag> Diagnostics) = 0;
-};
-
-class FileSystemProvider {
-public:
-  virtual ~FileSystemProvider() = default;
-  /// Called by ClangdServer to obtain a vfs::FileSystem to be used for parsing.
-  /// Context::current() will be the context passed to the clang entrypoint,
-  /// such as addDocument(), and will also be propagated to result callbacks.
-  /// Embedders may use this to isolate filesystem accesses.
-  virtual IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() = 0;
-};
-
-class RealFileSystemProvider : public FileSystemProvider {
-public:
-  /// Returns getRealFileSystem().
-  IntrusiveRefCntPtr<vfs::FileSystem> getFileSystem() override;
 };
 
 /// Provides API to manage ASTs for a collection of C++ files and request
