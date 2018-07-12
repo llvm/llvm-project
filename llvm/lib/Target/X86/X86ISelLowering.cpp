@@ -4973,6 +4973,19 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
   return true;
 }
 
+static bool canWidenShuffleElements(ArrayRef<int> Mask,
+                                    const APInt &Zeroable,
+                                    SmallVectorImpl<int> &WidenedMask) {
+  SmallVector<int, 32> TargetMask(Mask.begin(), Mask.end());
+  for (int i = 0, Size = TargetMask.size(); i < Size; ++i) {
+    if (TargetMask[i] == SM_SentinelUndef)
+      continue;
+    if (Zeroable[i])
+      TargetMask[i] = SM_SentinelZero;
+  }
+  return canWidenShuffleElements(TargetMask, WidenedMask);
+}
+
 static bool canWidenShuffleElements(ArrayRef<int> Mask) {
   SmallVector<int, 32> WidenedMask;
   return canWidenShuffleElements(Mask, WidenedMask);
@@ -13144,7 +13157,7 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
     return SDValue();
 
   SmallVector<int, 4> WidenedMask;
-  if (!canWidenShuffleElements(Mask, WidenedMask))
+  if (!canWidenShuffleElements(Mask, Zeroable, WidenedMask))
     return SDValue();
 
   bool IsLowZero = (Zeroable & 0x3) == 0x3;
@@ -13213,7 +13226,8 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
   //    [6]   - ignore
   //    [7]   - zero high half of destination
 
-  assert(WidenedMask[0] >= 0 && WidenedMask[1] >= 0 && "Undef half?");
+  assert((WidenedMask[0] >= 0 || IsLowZero) &&
+         (WidenedMask[1] >= 0 || IsHighZero) && "Undef half?");
 
   unsigned PermMask = 0;
   PermMask |= IsLowZero  ? 0x08 : (WidenedMask[0] << 0);
@@ -14326,6 +14340,7 @@ static SDValue lowerV4X128VectorShuffle(const SDLoc &DL, MVT VT,
   // function lowerV2X128VectorShuffle() is better solution.
   assert(VT.is512BitVector() && "Unexpected vector size for 512bit shuffle.");
 
+  // TODO - use Zeroable like we do for lowerV2X128VectorShuffle?
   SmallVector<int, 4> WidenedMask;
   if (!canWidenShuffleElements(Mask, WidenedMask))
     return SDValue();

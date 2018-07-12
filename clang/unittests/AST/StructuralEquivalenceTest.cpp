@@ -64,8 +64,9 @@ struct StructuralEquivalenceTest : ::testing::Test {
 
   bool testStructuralMatch(NamedDecl *D0, NamedDecl *D1) {
     llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
-    StructuralEquivalenceContext Ctx(D0->getASTContext(), D1->getASTContext(),
-                                     NonEquivalentDecls, false, false);
+    StructuralEquivalenceContext Ctx(
+        D0->getASTContext(), D1->getASTContext(), NonEquivalentDecls,
+        StructuralEquivalenceKind::Default, false, false);
     return Ctx.IsStructurallyEquivalent(D0, D1);
   }
 

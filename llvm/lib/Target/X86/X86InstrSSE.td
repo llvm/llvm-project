@@ -8117,11 +8117,6 @@ def : Pat<(X86fand FR128:$src1, FR128:$src2),
            (ANDPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
                     (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
 
-def : Pat<(and FR128:$src1, FR128:$src2),
-          (COPY_TO_REGCLASS
-           (ANDPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
-                    (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
-
 def : Pat<(X86for FR128:$src1, (memopf128 addr:$src2)),
           (COPY_TO_REGCLASS
            (ORPSrm (COPY_TO_REGCLASS FR128:$src1, VR128), f128mem:$src2),
@@ -8132,22 +8127,12 @@ def : Pat<(X86for FR128:$src1, FR128:$src2),
            (ORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
                    (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
 
-def : Pat<(or FR128:$src1, FR128:$src2),
-          (COPY_TO_REGCLASS
-           (ORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
-                   (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
-
 def : Pat<(X86fxor FR128:$src1, (memopf128 addr:$src2)),
           (COPY_TO_REGCLASS
            (XORPSrm (COPY_TO_REGCLASS FR128:$src1, VR128), f128mem:$src2),
            FR128)>;
 
 def : Pat<(X86fxor FR128:$src1, FR128:$src2),
-          (COPY_TO_REGCLASS
-           (XORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
-                    (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;
-
-def : Pat<(xor FR128:$src1, FR128:$src2),
           (COPY_TO_REGCLASS
            (XORPSrr (COPY_TO_REGCLASS FR128:$src1, VR128),
                     (COPY_TO_REGCLASS FR128:$src2, VR128)), FR128)>;

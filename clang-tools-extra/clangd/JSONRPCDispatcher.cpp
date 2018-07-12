@@ -69,7 +69,7 @@ void JSONOutput::writeMessage(const json::Value &Message) {
     Outs << "Content-Length: " << S.size() << "\r\n\r\n" << S;
     Outs.flush();
   }
-  vlog("--> {0}\n", S);
+  vlog(">>> {0}\n", S);
 }
 
 void JSONOutput::log(Logger::Level Level,
@@ -99,6 +99,7 @@ void clangd::reply(json::Value &&Result) {
     return;
   }
   RequestSpan::attach([&](json::Object &Args) { Args["Reply"] = Result; });
+  log("--> reply({0})", *ID);
   Context::current()
       .getExisting(RequestOut)
       ->writeMessage(json::Object{
@@ -116,6 +117,7 @@ void clangd::replyError(ErrorCode code, const llvm::StringRef &Message) {
   });
 
   if (auto ID = Context::current().get(RequestID)) {
+    log("--> reply({0}) error: {1}", *ID, Message);
     Context::current()
         .getExisting(RequestOut)
         ->writeMessage(json::Object{
@@ -128,16 +130,18 @@ void clangd::replyError(ErrorCode code, const llvm::StringRef &Message) {
 }
 
 void clangd::call(StringRef Method, json::Value &&Params) {
-  // FIXME: Generate/Increment IDs for every request so that we can get proper
-  // replies once we need to.
   RequestSpan::attach([&](json::Object &Args) {
     Args["Call"] = json::Object{{"method", Method.str()}, {"params", Params}};
   });
+  // FIXME: Generate/Increment IDs for every request so that we can get proper
+  // replies once we need to.
+  auto ID = 1;
+  log("--> {0}({1})", Method, ID);
   Context::current()
       .getExisting(RequestOut)
       ->writeMessage(json::Object{
           {"jsonrpc", "2.0"},
-          {"id", 1},
+          {"id", ID},
           {"method", Method},
           {"params", std::move(Params)},
       });
@@ -146,6 +150,23 @@ void clangd::call(StringRef Method, json::Value &&Params) {
 void JSONRPCDispatcher::registerHandler(StringRef Method, Handler H) {
   assert(!Handlers.count(Method) && "Handler already registered!");
   Handlers[Method] = std::move(H);
+}
+
+static void logIncomingMessage(const llvm::Optional<json::Value> &ID,
+                               llvm::Optional<StringRef> Method,
+                               const json::Object *Error) {
+  if (Method) { // incoming request
+    if (ID)     // call
+      log("<-- {0}({1})", *Method, *ID);
+    else // notification
+      log("<-- {0}", *Method);
+  } else if (ID) { // response, ID must be provided
+    if (Error)
+      log("<-- reply({0}) error: {1}", *ID,
+          Error->getString("message").getValueOr("<no message>"));
+    else
+      log("<-- reply({0})", *ID);
+  }
 }
 
 bool JSONRPCDispatcher::call(const json::Value &Message,
@@ -158,9 +179,9 @@ bool JSONRPCDispatcher::call(const json::Value &Message,
   llvm::Optional<json::Value> ID;
   if (auto *I = Object->get("id"))
     ID = std::move(*I);
-  // Method must be given.
   auto Method = Object->getString("method");
-  if (!Method)
+  logIncomingMessage(ID, Method, Object->getObject("error"));
+  if (!Method) // We only handle incoming requests, and ignore responses.
     return false;
   // Params should be given, use null if not.
   json::Value Params = nullptr;
@@ -333,13 +354,13 @@ void clangd::runLanguageServerLoop(std::FILE *In, JSONOutput &Out,
     if (auto JSON = ReadMessage(In, Out)) {
       if (auto Doc = json::parse(*JSON)) {
         // Log the formatted message.
-        vlog(Out.Pretty ? "<-- {0:2}\n" : "<-- {0}\n", *Doc);
+        vlog(Out.Pretty ? "<<< {0:2}\n" : "<<< {0}\n", *Doc);
         // Finally, execute the action for this JSON message.
         if (!Dispatcher.call(*Doc, Out))
           elog("JSON dispatch failed!");
       } else {
         // Parse error. Log the raw message.
-        vlog("<-- {0}\n", *JSON);
+        vlog("<<< {0}\n", *JSON);
         elog("JSON parse error: {0}", llvm::toString(Doc.takeError()));
       }
     }

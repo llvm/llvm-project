@@ -30,6 +30,14 @@ class QualType;
 class RecordDecl;
 class SourceLocation;
 
+/// \brief Whether to perform a normal or minimal equivalence check.
+/// In case of `Minimal`, we do not perform a recursive check of decls with
+/// external storage.
+enum class StructuralEquivalenceKind {
+  Default,
+  Minimal,
+};
+
 struct StructuralEquivalenceContext {
   /// AST contexts for which we are checking structural equivalence.
   ASTContext &FromCtx, &ToCtx;
@@ -47,6 +55,8 @@ struct StructuralEquivalenceContext {
   /// (which we have already complained about).
   llvm::DenseSet<std::pair<Decl *, Decl *>> &NonEquivalentDecls;
 
+  StructuralEquivalenceKind EqKind;
+
   /// Whether we're being strict about the spelling of types when
   /// unifying two types.
   bool StrictTypeSpelling;
@@ -63,10 +73,11 @@ struct StructuralEquivalenceContext {
   StructuralEquivalenceContext(
       ASTContext &FromCtx, ASTContext &ToCtx,
       llvm::DenseSet<std::pair<Decl *, Decl *>> &NonEquivalentDecls,
+      StructuralEquivalenceKind EqKind,
       bool StrictTypeSpelling = false, bool Complain = true,
       bool ErrorOnTagTypeMismatch = false)
       : FromCtx(FromCtx), ToCtx(ToCtx), NonEquivalentDecls(NonEquivalentDecls),
-        StrictTypeSpelling(StrictTypeSpelling),
+        EqKind(EqKind), StrictTypeSpelling(StrictTypeSpelling),
         ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain) {}
 
   DiagnosticBuilder Diag1(SourceLocation Loc, unsigned DiagID);
