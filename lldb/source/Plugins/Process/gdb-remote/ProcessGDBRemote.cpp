@@ -5244,8 +5244,9 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketMonitor() {}
 
-  bool DoExecute(const char *command, CommandReturnObject &result) override {
-    if (command == NULL || command[0] == '\0') {
+  bool DoExecute(llvm::StringRef command,
+                 CommandReturnObject &result) override {
+    if (command.empty()) {
       result.AppendErrorWithFormat("'%s' takes a command string argument",
                                    m_cmd_name.c_str());
       result.SetStatus(eReturnStatusFailed);
@@ -5257,7 +5258,7 @@ public:
     if (process) {
       StreamString packet;
       packet.PutCString("qRcmd,");
-      packet.PutBytesAsRawHex8(command, strlen(command));
+      packet.PutBytesAsRawHex8(command.data(), command.size());
 
       bool send_async = true;
       StringExtractorGDBRemote response;
