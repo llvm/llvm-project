@@ -298,7 +298,9 @@ public:
       // compute static chunk
       ST stride;
       int lastiter = 0;
-      ForStaticChunk(lastiter, lb, ub, stride, chunk, threadId, tnum);
+      ForStaticChunk(
+          lastiter, lb, ub, stride, chunk,
+          GetOmpThreadId(tid, isSPMDMode(), isRuntimeUninitialized()), tnum);
       // save computed params
       omptarget_nvptx_threadPrivateContext->Chunk(tid) = chunk;
       omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = lb;
@@ -320,7 +322,9 @@ public:
       // compute static chunk
       ST stride;
       int lastiter = 0;
-      ForStaticNoChunk(lastiter, lb, ub, stride, chunk, threadId, tnum);
+      ForStaticNoChunk(
+          lastiter, lb, ub, stride, chunk,
+          GetOmpThreadId(tid, isSPMDMode(), isRuntimeUninitialized()), tnum);
       // save computed params
       omptarget_nvptx_threadPrivateContext->Chunk(tid) = chunk;
       omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = lb;
@@ -366,10 +370,11 @@ public:
   // Support for dispatch next
 
   INLINE static int DynamicNextChunk(T &lb, T &ub, T chunkSize,
-                                     Counter &loopLowerBound,
+                                     int64_t &loopLowerBound,
                                      T loopUpperBound) {
     // calculate lower bound for all lanes in the warp
-    lb = atomicAdd(&loopLowerBound, (Counter)chunkSize);
+    lb = atomicAdd((unsigned long long *)&loopLowerBound,
+                   (unsigned long long)chunkSize);
     ub = lb + chunkSize - 1;  // Clang uses i <= ub
 
     // 3 result cases:

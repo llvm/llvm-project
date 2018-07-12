@@ -386,6 +386,7 @@ EXTERN void __kmpc_serialized_parallel(kmp_Indent *loc, uint32_t global_tid) {
 
   // get current task
   omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
+  currTaskDescr->SaveLoopData();
 
   // allocate new task descriptor and copy value from current one, set prev to
   // it
@@ -417,6 +418,8 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Indent *loc,
       threadId, currTaskDescr->GetPrevTaskDescr());
   // free
   SafeFree(currTaskDescr, (char *)"new seq parallel task");
+  currTaskDescr = getMyTopTaskDescriptor(threadId);
+  currTaskDescr->RestoreLoopData();
 }
 
 EXTERN uint16_t __kmpc_parallel_level(kmp_Indent *loc, uint32_t global_tid) {
