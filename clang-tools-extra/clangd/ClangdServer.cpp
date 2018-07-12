@@ -68,10 +68,6 @@ public:
 
 } // namespace
 
-IntrusiveRefCntPtr<vfs::FileSystem> RealFileSystemProvider::getFileSystem() {
-  return vfs::getRealFileSystem();
-}
-
 ClangdServer::Options ClangdServer::optsForTest() {
   ClangdServer::Options Opts;
   Opts.UpdateDebounce = std::chrono::steady_clock::duration::zero(); // Faster!
