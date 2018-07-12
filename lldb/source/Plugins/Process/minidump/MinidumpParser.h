@@ -89,14 +89,15 @@ public:
 
   llvm::Optional<MemoryRegionInfo> GetMemoryRegionInfo(lldb::addr_t);
 
+  // Perform consistency checks and initialize internal data structures
+  Status Initialize();
+
+private:
+  MinidumpParser(const lldb::DataBufferSP &data_buf_sp);
+
 private:
   lldb::DataBufferSP m_data_sp;
-  const MinidumpHeader *m_header;
   llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
-
-  MinidumpParser(
-      const lldb::DataBufferSP &data_buf_sp, const MinidumpHeader *header,
-      llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &&directory_map);
 };
 
 } // end namespace minidump

@@ -19,7 +19,7 @@ using namespace llvm;
 
 namespace mca {
 
-void SchedulerStatistics::onInstructionEvent(const HWInstructionEvent &Event) {
+void SchedulerStatistics::onEvent(const HWInstructionEvent &Event) {
   if (Event.Type == HWInstructionEvent::Issued)
     ++NumIssued;
 }

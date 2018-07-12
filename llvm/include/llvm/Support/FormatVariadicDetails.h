@@ -17,6 +17,7 @@
 
 namespace llvm {
 template <typename T, typename Enable = void> struct format_provider {};
+class Error;
 
 namespace detail {
 class format_adapter {
@@ -141,6 +142,12 @@ template <typename T>
 typename std::enable_if<uses_stream_operator<T>::value,
                         stream_operator_format_adapter<T>>::type
 build_format_adapter(T &&Item) {
+  // If the caller passed an Error by value, then stream_operator_format_adapter
+  // would be responsible for consuming it.
+  // Make the caller opt into this by calling fmt_consume().
+  static_assert(
+      !std::is_same<llvm::Error, typename std::remove_cv<T>::type>::value,
+      "llvm::Error-by-value must be wrapped in fmt_consume() for formatv");
   return stream_operator_format_adapter<T>(std::forward<T>(Item));
 }
 

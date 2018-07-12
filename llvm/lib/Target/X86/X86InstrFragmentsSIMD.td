@@ -479,29 +479,6 @@ def X86FnmsubRnd    : SDNode<"X86ISD::FNMSUB_RND",    SDTFmaRound, [SDNPCommutat
 def X86FmaddsubRnd  : SDNode<"X86ISD::FMADDSUB_RND",  SDTFmaRound, [SDNPCommutative]>;
 def X86FmsubaddRnd  : SDNode<"X86ISD::FMSUBADD_RND",  SDTFmaRound, [SDNPCommutative]>;
 
-// Scalar FMA intrinsics with passthru bits in operand 1.
-def X86Fmadds1  : SDNode<"X86ISD::FMADDS1",  SDTFPTernaryOp>;
-def X86Fnmadds1 : SDNode<"X86ISD::FNMADDS1", SDTFPTernaryOp>;
-def X86Fmsubs1  : SDNode<"X86ISD::FMSUBS1",  SDTFPTernaryOp>;
-def X86Fnmsubs1 : SDNode<"X86ISD::FNMSUBS1", SDTFPTernaryOp>;
-
-// Scalar FMA intrinsics with passthru bits in operand 1.
-def X86FmaddRnds1   : SDNode<"X86ISD::FMADDS1_RND",     SDTFmaRound>;
-def X86FnmaddRnds1  : SDNode<"X86ISD::FNMADDS1_RND",    SDTFmaRound>;
-def X86FmsubRnds1   : SDNode<"X86ISD::FMSUBS1_RND",     SDTFmaRound>;
-def X86FnmsubRnds1  : SDNode<"X86ISD::FNMSUBS1_RND",    SDTFmaRound>;
-
-def X86Fmadds3  : SDNode<"X86ISD::FMADDS3",  SDTFPTernaryOp, [SDNPCommutative]>;
-def X86Fnmadds3 : SDNode<"X86ISD::FNMADDS3", SDTFPTernaryOp, [SDNPCommutative]>;
-def X86Fmsubs3  : SDNode<"X86ISD::FMSUBS3",  SDTFPTernaryOp, [SDNPCommutative]>;
-def X86Fnmsubs3 : SDNode<"X86ISD::FNMSUBS3", SDTFPTernaryOp, [SDNPCommutative]>;
-
-// Scalar FMA intrinsics with passthru bits in operand 3.
-def X86FmaddRnds3   : SDNode<"X86ISD::FMADDS3_RND",     SDTFmaRound, [SDNPCommutative]>;
-def X86FnmaddRnds3  : SDNode<"X86ISD::FNMADDS3_RND",    SDTFmaRound, [SDNPCommutative]>;
-def X86FmsubRnds3   : SDNode<"X86ISD::FMSUBS3_RND",     SDTFmaRound, [SDNPCommutative]>;
-def X86FnmsubRnds3  : SDNode<"X86ISD::FNMSUBS3_RND",    SDTFmaRound, [SDNPCommutative]>;
-
 def SDTIFma : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0,1>,
                            SDTCisSameAs<1,2>, SDTCisSameAs<1,3>]>;
 def x86vpmadd52l     : SDNode<"X86ISD::VPMADD52L",     SDTIFma, [SDNPCommutative]>;

@@ -40,7 +40,7 @@ void ResourcePressureView::initialize() {
   std::fill(ResourceUsage.begin(), ResourceUsage.end(), 0.0);
 }
 
-void ResourcePressureView::onInstructionEvent(const HWInstructionEvent &Event) {
+void ResourcePressureView::onEvent(const HWInstructionEvent &Event) {
   // We're only interested in Issue events.
   if (Event.Type != HWInstructionEvent::Issued)
     return;

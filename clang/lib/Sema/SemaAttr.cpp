@@ -645,7 +645,7 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   if (PragmaAttributeStack.empty())
     return;
   for (auto &Entry : PragmaAttributeStack) {
-    const AttributeList *Attribute = Entry.Attribute;
+    AttributeList *Attribute = Entry.Attribute;
     assert(Attribute && "Expected an attribute");
 
     // Ensure that the attribute can be applied to the given declaration.
@@ -659,9 +659,10 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
     if (!Applies)
       continue;
     Entry.IsUsed = true;
-    assert(!Attribute->getNext() && "Expected just one attribute");
     PragmaAttributeCurrentTargetDecl = D;
-    ProcessDeclAttributeList(S, D, Attribute);
+    ParsedAttributesView Attrs;
+    Attrs.addAtStart(Attribute);
+    ProcessDeclAttributeList(S, D, Attrs);
     PragmaAttributeCurrentTargetDecl = nullptr;
   }
 }

@@ -30,9 +30,11 @@ static ArgumentsAdjuster getDefaultArgumentsAdjusters() {
 StandaloneToolExecutor::StandaloneToolExecutor(
     const CompilationDatabase &Compilations,
     llvm::ArrayRef<std::string> SourcePaths,
+    IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps)
-    : Tool(Compilations, SourcePaths), Context(&Results),
-      ArgsAdjuster(getDefaultArgumentsAdjusters()) {
+    : Tool(Compilations, SourcePaths, std::move(PCHContainerOps),
+           std::move(BaseFS)),
+      Context(&Results), ArgsAdjuster(getDefaultArgumentsAdjusters()) {
   // Use self-defined default argument adjusters instead of the default
   // adjusters that come with the old `ClangTool`.
   Tool.clearArgumentsAdjusters();
@@ -43,7 +45,7 @@ StandaloneToolExecutor::StandaloneToolExecutor(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps)
     : OptionsParser(std::move(Options)),
       Tool(OptionsParser->getCompilations(), OptionsParser->getSourcePathList(),
-           PCHContainerOps),
+           std::move(PCHContainerOps)),
       Context(&Results), ArgsAdjuster(getDefaultArgumentsAdjusters()) {
   Tool.clearArgumentsAdjusters();
 }

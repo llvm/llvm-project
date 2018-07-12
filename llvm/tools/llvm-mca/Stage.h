@@ -55,7 +55,11 @@ public:
   /// Add a listener to receive callbacks during the execution of this stage.
   void addListener(HWEventListener *Listener);
 
-  virtual void notifyInstructionEvent(const HWInstructionEvent &Event);
+  /// Notify listeners of a particular hardware event.
+  template <typename EventT> void notifyEvent(const EventT &Event) {
+    for (HWEventListener *Listener : Listeners)
+      Listener->onEvent(Event);
+  }
 };
 
 } // namespace mca

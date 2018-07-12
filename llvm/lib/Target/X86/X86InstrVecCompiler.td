@@ -48,8 +48,6 @@ def : Pat<(v2f64 (bitconvert (v4i32 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v8i16 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v16i8 VR128:$src))), (v2f64 VR128:$src)>;
 def : Pat<(v2f64 (bitconvert (v4f32 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(f128  (bitconvert (i128  FR128:$src))), (f128  FR128:$src)>;
-def : Pat<(i128  (bitconvert (f128  FR128:$src))), (i128  FR128:$src)>;
 
 // Bitcasts between 256-bit vector types. Return the original type since
 // no instruction is needed for the conversion

@@ -3752,7 +3752,7 @@ def SZ_V_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAnyZero, v16i8,
 
 // Pseudoes used to implement transparent fp16 support.
 
-let Predicates = [HasMSA] in {
+let ASEPredicate = [HasMSA] in {
  def ST_F16 : MipsPseudo<(outs), (ins MSA128F16:$ws, mem_simm10:$addr),
                           [(store (f16 MSA128F16:$ws), (addrimm10:$addr))]> {
    let usesCustomInserter = 1;

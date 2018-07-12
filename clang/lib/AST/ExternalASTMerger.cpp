@@ -154,7 +154,7 @@ public:
       ToContainer->setMustBuildLookupTable();
       assert(Parent.CanComplete(ToContainer));
     }
-    return ASTImporter::Imported(From, To);
+    return To;
   }
   ASTImporter &GetReverse() { return Reverse; }
 };
@@ -229,7 +229,7 @@ void ExternalASTMerger::CompleteType(TagDecl *Tag) {
       SourceTag->getASTContext().getExternalSource()->CompleteType(SourceTag);
     if (!SourceTag->getDefinition())
       return false;
-    Forward.Imported(SourceTag, Tag);
+    Forward.MapImported(SourceTag, Tag);
     Forward.ImportDefinition(SourceTag);
     Tag->setCompleteDefinition(SourceTag->isCompleteDefinition());
     return true;
@@ -248,7 +248,7 @@ void ExternalASTMerger::CompleteType(ObjCInterfaceDecl *Interface) {
               SourceInterface);
         if (!SourceInterface->getDefinition())
           return false;
-        Forward.Imported(SourceInterface, Interface);
+        Forward.MapImported(SourceInterface, Interface);
         Forward.ImportDefinition(SourceInterface);
         return true;
       });
@@ -304,7 +304,7 @@ void ExternalASTMerger::ForceRecordOrigin(const DeclContext *ToDC,
 void ExternalASTMerger::RecordOriginImpl(const DeclContext *ToDC, DCOrigin Origin,
                                          ASTImporter &Importer) {
   Origins[ToDC] = Origin;
-  Importer.ASTImporter::Imported(cast<Decl>(Origin.DC), const_cast<Decl*>(cast<Decl>(ToDC)));
+  Importer.ASTImporter::MapImported(cast<Decl>(Origin.DC), const_cast<Decl*>(cast<Decl>(ToDC)));
 }
 
 ExternalASTMerger::ExternalASTMerger(const ImporterTarget &Target,

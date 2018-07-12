@@ -2948,33 +2948,31 @@ ExprResult Parser::ParseBlockLiteralExpression() {
     ParseBlockId(CaretLoc);
   } else {
     // Otherwise, pretend we saw (void).
-    ParsedAttributes attrs(AttrFactory);
     SourceLocation NoLoc;
-    ParamInfo.AddTypeInfo(DeclaratorChunk::getFunction(/*HasProto=*/true,
-                                             /*IsAmbiguous=*/false,
-                                             /*RParenLoc=*/NoLoc,
-                                             /*ArgInfo=*/nullptr,
-                                             /*NumArgs=*/0,
-                                             /*EllipsisLoc=*/NoLoc,
-                                             /*RParenLoc=*/NoLoc,
-                                             /*TypeQuals=*/0,
-                                             /*RefQualifierIsLvalueRef=*/true,
-                                             /*RefQualifierLoc=*/NoLoc,
-                                             /*ConstQualifierLoc=*/NoLoc,
-                                             /*VolatileQualifierLoc=*/NoLoc,
-                                             /*RestrictQualifierLoc=*/NoLoc,
-                                             /*MutableLoc=*/NoLoc,
-                                             EST_None,
-                                             /*ESpecRange=*/SourceRange(),
-                                             /*Exceptions=*/nullptr,
-                                             /*ExceptionRanges=*/nullptr,
-                                             /*NumExceptions=*/0,
-                                             /*NoexceptExpr=*/nullptr,
-                                             /*ExceptionSpecTokens=*/nullptr,
-                                             /*DeclsInPrototype=*/None,
-                                             CaretLoc, CaretLoc,
-                                             ParamInfo),
-                          attrs, CaretLoc);
+    ParamInfo.AddTypeInfo(
+        DeclaratorChunk::getFunction(/*HasProto=*/true,
+                                     /*IsAmbiguous=*/false,
+                                     /*RParenLoc=*/NoLoc,
+                                     /*ArgInfo=*/nullptr,
+                                     /*NumArgs=*/0,
+                                     /*EllipsisLoc=*/NoLoc,
+                                     /*RParenLoc=*/NoLoc,
+                                     /*TypeQuals=*/0,
+                                     /*RefQualifierIsLvalueRef=*/true,
+                                     /*RefQualifierLoc=*/NoLoc,
+                                     /*ConstQualifierLoc=*/NoLoc,
+                                     /*VolatileQualifierLoc=*/NoLoc,
+                                     /*RestrictQualifierLoc=*/NoLoc,
+                                     /*MutableLoc=*/NoLoc, EST_None,
+                                     /*ESpecRange=*/SourceRange(),
+                                     /*Exceptions=*/nullptr,
+                                     /*ExceptionRanges=*/nullptr,
+                                     /*NumExceptions=*/0,
+                                     /*NoexceptExpr=*/nullptr,
+                                     /*ExceptionSpecTokens=*/nullptr,
+                                     /*DeclsInPrototype=*/None, CaretLoc,
+                                     CaretLoc, ParamInfo),
+        CaretLoc);
 
     MaybeParseGNUAttributes(ParamInfo);
 

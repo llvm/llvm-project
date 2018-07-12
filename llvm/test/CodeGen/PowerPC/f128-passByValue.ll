@@ -1,14 +1,14 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -enable-ppc-quad-precision -ppc-vsr-nums-as-vr \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s
+; RUN:   -verify-machineinstrs -ppc-asm-full-reg-names < %s | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readnone
 define fp128 @loadConstant() {
 ; CHECK-LABEL: loadConstant:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis [[REG0:[0-9]+]], 2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    addi [[REG0]], [[REG0]], .LCPI0_0@toc@l
-; CHECK-NEXT:    lxvx 2, 0, [[REG0]]
+; CHECK-NEXT:    addis r[[REG0:[0-9]+]], r2, .LCPI0_0@toc@ha
+; CHECK-NEXT:    addi r[[REG0]], r[[REG0]], .LCPI0_0@toc@l
+; CHECK-NEXT:    lxvx v2, 0, r[[REG0]]
 ; CHECK-NEXT:    blr
   entry:
     ret fp128 0xL00000000000000004001400000000000
@@ -18,11 +18,11 @@ define fp128 @loadConstant() {
 define fp128 @loadConstant2(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: loadConstant2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    addis [[REG0:[0-9]+]], 2, .LCPI1_0@toc@ha
-; CHECK-NEXT:    addi [[REG0]], [[REG0]], .LCPI1_0@toc@l
-; CHECK-NEXT:    lxvx [[REG0]], 0, [[REG0]]
-; CHECK-NEXT:    xsaddqp 2, 2, [[REG0]]
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    addis r[[REG0:[0-9]+]], r2, .LCPI1_0@toc@ha
+; CHECK-NEXT:    addi r[[REG0]], r[[REG0]], .LCPI1_0@toc@l
+; CHECK-NEXT:    lxvx v[[REG1:[0-9]+]], 0, r[[REG0]]
+; CHECK-NEXT:    xsaddqp v2, v2, v[[REG1]]
 ; CHECK-NEXT:    blr
   entry:
     %add = fadd fp128 %a, %b
@@ -35,9 +35,9 @@ define fp128 @loadConstant2(fp128 %a, fp128 %b) {
 define signext i32 @fp128Param(fp128 %a) {
 ; CHECK-LABEL: fp128Param:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscvqpswz 2, 2
-; CHECK-NEXT:    mfvsrwz 3, 2
-; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    xscvqpswz v2, v2
+; CHECK-NEXT:    mfvsrwz r3, v2
+; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 entry:
   %conv = fptosi fp128 %a to i32
@@ -49,7 +49,7 @@ entry:
 define fp128 @fp128Return(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: fp128Return:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsaddqp 2, 2, 3
+; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    blr
 entry:
   %add = fadd fp128 %a, %b
@@ -61,11 +61,11 @@ entry:
 define fp128 @fp128Array(fp128* nocapture readonly %farray,
 ; CHECK-LABEL: fp128Array:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sldi 4, 4, 4
-; CHECK-NEXT:    lxv 2, 0(3)
-; CHECK-NEXT:    add 4, 3, 4
-; CHECK-NEXT:    lxv 3, -16(4)
-; CHECK-NEXT:    xsaddqp 2, 2, 3
+; CHECK-NEXT:    sldi r4, r4, 4
+; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    add r4, r3, r4
+; CHECK-NEXT:    lxv v3, -16(r4)
+; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    blr
                          i32 signext %loopcnt, fp128* nocapture readnone %sum) {
 entry:
@@ -84,19 +84,19 @@ entry:
 define fp128 @maxVecParam(fp128 %p1, fp128 %p2, fp128 %p3, fp128 %p4, fp128 %p5,
 ; CHECK-LABEL: maxVecParam:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    lxv [[REG0:[0-9]+]], 224(1)
-; CHECK-NEXT:    xsaddqp 2, 2, 4
-; CHECK-NEXT:    xsaddqp 2, 2, 5
-; CHECK-NEXT:    xsaddqp 2, 2, 6
-; CHECK-NEXT:    xsaddqp 2, 2, 7
-; CHECK-NEXT:    xsaddqp 2, 2, 8
-; CHECK-NEXT:    xsaddqp 2, 2, 9
-; CHECK-NEXT:    xsaddqp 2, 2, 10
-; CHECK-NEXT:    xsaddqp 2, 2, 11
-; CHECK-NEXT:    xsaddqp 2, 2, 12
-; CHECK-NEXT:    xsaddqp 2, 2, 13
-; CHECK-NEXT:    xssubqp 2, 2, [[REG0]]
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    lxv v[[REG0:[0-9]+]], 224(r1)
+; CHECK-NEXT:    xsaddqp v2, v2, v4
+; CHECK-NEXT:    xsaddqp v2, v2, v5
+; CHECK-NEXT:    xsaddqp v2, v2, v6
+; CHECK-NEXT:    xsaddqp v2, v2, v7
+; CHECK-NEXT:    xsaddqp v2, v2, v8
+; CHECK-NEXT:    xsaddqp v2, v2, v9
+; CHECK-NEXT:    xsaddqp v2, v2, v10
+; CHECK-NEXT:    xsaddqp v2, v2, v11
+; CHECK-NEXT:    xsaddqp v2, v2, v12
+; CHECK-NEXT:    xsaddqp v2, v2, v13
+; CHECK-NEXT:    xssubqp v2, v2, v[[REG0]]
 ; CHECK-NEXT:    blr
                           fp128 %p6, fp128 %p7, fp128 %p8, fp128 %p9, fp128 %p10,
                           fp128 %p11, fp128 %p12, fp128 %p13) {
@@ -121,10 +121,10 @@ entry:
 define fp128 @mixParam_01(fp128 %a, i32 signext %i, fp128 %b) {
 ; CHECK-LABEL: mixParam_01:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwa 4, 5
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvsdqp [[REG0:[0-9]+]], 4
-; CHECK-NEXT:    xsaddqp 2, 2, [[REG0]]
+; CHECK-NEXT:    mtvsrwa v4, r5
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvsdqp v[[REG0:[0-9]+]], v4
+; CHECK-NEXT:    xsaddqp v2, v2, v[[REG0]]
 ; CHECK-NEXT:    blr
 entry:
   %add = fadd fp128 %a, %b
@@ -136,10 +136,10 @@ entry:
 define fastcc fp128 @mixParam_01f(fp128 %a, i32 signext %i, fp128 %b) {
 ; CHECK-LABEL: mixParam_01f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwa [[REG0:[0-9]+]], 3
-; CHECK-NEXT:    xsaddqp 2, 2, 3
-; CHECK-NEXT:    xscvsdqp [[REG1:[0-9]+]], [[REG0]]
-; CHECK-NEXT:    xsaddqp 2, 2, [[REG1]]
+; CHECK-NEXT:    mtvsrwa v[[REG0:[0-9]+]], r3
+; CHECK-NEXT:    xsaddqp v2, v2, v3
+; CHECK-NEXT:    xscvsdqp v[[REG1:[0-9]+]], v[[REG0]]
+; CHECK-NEXT:    xsaddqp v2, v2, v[[REG1]]
 ; CHECK-NEXT:    blr
 entry:
   %add = fadd fp128 %a, %b
@@ -152,17 +152,17 @@ entry:
 define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-LABEL: mixParam_02:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-DAG:     lwz 3, 96(1)
-; CHECK:         add 4, 7, 9
-; CHECK-NEXT:    xxlor [[REG0:[0-9]+]], 1, 1
-; CHECK-DAG:     add 4, 4, 10
-; CHECK:         xscvdpqp [[REG0]], [[REG0]]
-; CHECK-NEXT:    add 3, 4, 3
-; CHECK-NEXT:    clrldi 3, 3, 32
-; CHECK-NEXT:    std 3, 0(6)
-; CHECK-NEXT:    lxv [[REG1:[0-9]+]], 0(8)
-; CHECK-NEXT:    xsaddqp 2, [[REG1]], 2
-; CHECK-NEXT:    xsaddqp 2, 2, 3
+; CHECK-DAG:     lwz r3, 96(r1)
+; CHECK:         add r4, r7, r9
+; CHECK-NEXT:    xxlor v[[REG0:[0-9]+]], f1, f1
+; CHECK-DAG:     add r4, r4, r10
+; CHECK:         xscvdpqp v[[REG0]], v[[REG0]]
+; CHECK-NEXT:    add r3, r4, r3
+; CHECK-NEXT:    clrldi r3, r3, 32
+; CHECK-NEXT:    std r3, 0(r6)
+; CHECK-NEXT:    lxv v[[REG1:[0-9]+]], 0(r8)
+; CHECK-NEXT:    xsaddqp v2, v[[REG1]], v2
+; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    blr
                           i16 signext %p4, fp128* nocapture readonly %p5,
                           i32 signext %p6, i8 zeroext %p7, i32 zeroext %p8) {
@@ -185,16 +185,16 @@ entry:
 define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-LABEL: mixParam_02f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    add 4, 4, 6
-; CHECK-NEXT:    xxlor [[REG0:[0-9]+]], 1, 1
-; CHECK-NEXT:    add 4, 4, 7
-; CHECK-NEXT:    xscvdpqp [[REG0]], [[REG0]]
-; CHECK-NEXT:    add 4, 4, 8
-; CHECK-NEXT:    clrldi 4, 4, 32
-; CHECK-NEXT:    std 4, 0(3)
-; CHECK-NEXT:    lxv [[REG1:[0-9]+]], 0(5)
-; CHECK-NEXT:    xsaddqp 2, [[REG1]], 2
-; CHECK-NEXT:    xsaddqp 2, 2, [[REG0]] 
+; CHECK-NEXT:    add r4, r4, r6
+; CHECK-NEXT:    xxlor v[[REG0:[0-9]+]], f1, f1
+; CHECK-NEXT:    add r4, r4, r7
+; CHECK-NEXT:    xscvdpqp v[[REG0]], v[[REG0]]
+; CHECK-NEXT:    add r4, r4, r8
+; CHECK-NEXT:    clrldi r4, r4, 32
+; CHECK-NEXT:    std r4, 0(r3)
+; CHECK-NEXT:    lxv v[[REG1:[0-9]+]], 0(r5)
+; CHECK-NEXT:    xsaddqp v2, v[[REG1]], v2
+; CHECK-NEXT:    xsaddqp v2, v2, v[[REG0]] 
 ; CHECK-NEXT:    blr
                                   i16 signext %p4, fp128* nocapture readonly %p5,
                                   i32 signext %p6, i8 zeroext %p7, i32 zeroext %p8) {
@@ -218,15 +218,15 @@ entry:
 define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-LABEL: mixParam_03:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-DAG:     ld 3, 104(1)
-; CHECK-DAG:     mtvsrwa [[REG2:[0-9]+]], 10
-; CHECK-DAG:     stxv 2, 0(9)
-; CHECK-DAG:     xscvsdqp [[REG1:[0-9]+]], [[REG2]]
-; CHECK:         stxvx 3, 0, 3
-; CHECK-NEXT:    lxv 2, 0(9)
-; CHECK-NEXT:    xsaddqp 2, 2, [[REG1]]
-; CHECK-NEXT:    xscvqpdp 2, 2
-; CHECK-NEXT:    stxsd 2, 0(5)
+; CHECK-DAG:     ld r3, 104(r1)
+; CHECK-DAG:     mtvsrwa v[[REG2:[0-9]+]], r10
+; CHECK-DAG:     stxv v2, 0(r9)
+; CHECK-DAG:     xscvsdqp v[[REG1:[0-9]+]], v[[REG2]]
+; CHECK:         stxvx v3, 0, r3
+; CHECK-NEXT:    lxv v2, 0(r9)
+; CHECK-NEXT:    xsaddqp v2, v2, v[[REG1]]
+; CHECK-NEXT:    xscvqpdp v2, v2
+; CHECK-NEXT:    stxsd v2, 0(r5)
 ; CHECK-NEXT:    blr
                          fp128* nocapture %f2, i32 signext %i1, i8 zeroext %c1,
                          <4 x i32>* nocapture %vec2) {
@@ -245,14 +245,14 @@ entry:
 define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-LABEL: mixParam_03f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mtvsrwa [[REG0:[0-9]+]], 5
-; CHECK-NEXT:    stxv [[REG1:[0-9]+]], 0(4)
-; CHECK-NEXT:    stxv [[REG2:[0-9]+]], 0(7)
-; CHECK-NEXT:    lxv [[REG1]], 0(4)
-; CHECK-NEXT:    xscvsdqp [[REG3:[0-9]+]], [[REG0]]
-; CHECK-NEXT:    xsaddqp [[REG4:[0-9]+]], [[REG1]], [[REG3]]
-; CHECK-NEXT:    xscvqpdp 2, [[REG4]]
-; CHECK-NEXT:    stxsd 2, 0(3)
+; CHECK-NEXT:    mtvsrwa v[[REG0:[0-9]+]], r5
+; CHECK-NEXT:    stxv v[[REG1:[0-9]+]], 0(r4)
+; CHECK-NEXT:    stxv v[[REG2:[0-9]+]], 0(r7)
+; CHECK-NEXT:    lxv v[[REG1]], 0(r4)
+; CHECK-NEXT:    xscvsdqp v[[REG3:[0-9]+]], v[[REG0]]
+; CHECK-NEXT:    xsaddqp v[[REG4:[0-9]+]], v[[REG1]], v[[REG3]]
+; CHECK-NEXT:    xscvqpdp v2, v[[REG4]]
+; CHECK-NEXT:    stxsd v2, 0(r3)
 ; CHECK-NEXT:    blr
                                  fp128* nocapture %f2, i32 signext %i1, i8 zeroext %c1,
                                  <4 x i32>* nocapture %vec2) {

@@ -11,7 +11,8 @@
 // RUN: [ $PROFILES -eq 1 ]
 // RUN: rm -f xray-log.profiling-multi-*
 //
-// UNSUPPORTED: target-is-mips64,target-is-mips64el
+// REQUIRES: x86_64-target-arch
+// REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_interface.h"
 #include "xray/xray_log_interface.h"

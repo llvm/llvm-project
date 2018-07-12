@@ -324,3 +324,129 @@ define <4 x i32> @combine_vec_udiv_by_shl_pow2b(<4 x i32> %x, <4 x i32> %y) {
   %2 = udiv <4 x i32> %x, %1
   ret <4 x i32> %2
 }
+
+; fold (udiv x, c1)
+define i32 @combine_udiv_uniform(i32 %x) {
+; CHECK-LABEL: combine_udiv_uniform:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movl $2987803337, %eax # imm = 0xB21642C9
+; CHECK-NEXT:    imulq %rcx, %rax
+; CHECK-NEXT:    shrq $36, %rax
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    retq
+  %1 = udiv i32 %x, 23
+  ret i32 %1
+}
+
+define <8 x i16> @combine_vec_udiv_uniform(<8 x i16> %x) {
+; SSE-LABEL: combine_vec_udiv_uniform:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [25645,25645,25645,25645,25645,25645,25645,25645]
+; SSE-NEXT:    pmulhuw %xmm0, %xmm1
+; SSE-NEXT:    psubw %xmm1, %xmm0
+; SSE-NEXT:    psrlw $1, %xmm0
+; SSE-NEXT:    paddw %xmm1, %xmm0
+; SSE-NEXT:    psrlw $4, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_udiv_uniform:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmulhuw {{.*}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrlw $1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = udiv <8 x i16> %x, <i16 23, i16 23, i16 23, i16 23, i16 23, i16 23, i16 23, i16 23>
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @combine_vec_udiv_nonuniform(<8 x i16> %x) {
+; SSE-LABEL: combine_vec_udiv_nonuniform:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    movzwl %ax, %ecx
+; SSE-NEXT:    imull $25645, %ecx, %ecx # imm = 0x642D
+; SSE-NEXT:    shrl $16, %ecx
+; SSE-NEXT:    subl %ecx, %eax
+; SSE-NEXT:    movzwl %ax, %eax
+; SSE-NEXT:    shrl %eax
+; SSE-NEXT:    addl %ecx, %eax
+; SSE-NEXT:    shrl $4, %eax
+; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    pextrw $1, %xmm0, %eax
+; SSE-NEXT:    imull $61681, %eax, %eax # imm = 0xF0F1
+; SSE-NEXT:    shrl $21, %eax
+; SSE-NEXT:    pinsrw $1, %eax, %xmm1
+; SSE-NEXT:    pextrw $2, %xmm0, %eax
+; SSE-NEXT:    imull $8195, %eax, %eax # imm = 0x2003
+; SSE-NEXT:    shrl $29, %eax
+; SSE-NEXT:    pinsrw $2, %eax, %xmm1
+; SSE-NEXT:    pextrw $3, %xmm0, %eax
+; SSE-NEXT:    shrl $3, %eax
+; SSE-NEXT:    imull $9363, %eax, %eax # imm = 0x2493
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    pinsrw $3, %eax, %xmm1
+; SSE-NEXT:    pextrw $4, %xmm0, %eax
+; SSE-NEXT:    shrl $7, %eax
+; SSE-NEXT:    pinsrw $4, %eax, %xmm1
+; SSE-NEXT:    pextrw $5, %xmm0, %eax
+; SSE-NEXT:    xorl %ecx, %ecx
+; SSE-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE-NEXT:    sete %cl
+; SSE-NEXT:    pinsrw $5, %ecx, %xmm1
+; SSE-NEXT:    pextrw $6, %xmm0, %eax
+; SSE-NEXT:    imull $32897, %eax, %eax # imm = 0x8081
+; SSE-NEXT:    shrl $31, %eax
+; SSE-NEXT:    pinsrw $6, %eax, %xmm1
+; SSE-NEXT:    pextrw $7, %xmm0, %eax
+; SSE-NEXT:    shrl $15, %eax
+; SSE-NEXT:    pinsrw $7, %eax, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_udiv_nonuniform:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    movzwl %ax, %ecx
+; AVX-NEXT:    imull $25645, %ecx, %ecx # imm = 0x642D
+; AVX-NEXT:    shrl $16, %ecx
+; AVX-NEXT:    subl %ecx, %eax
+; AVX-NEXT:    movzwl %ax, %eax
+; AVX-NEXT:    shrl %eax
+; AVX-NEXT:    addl %ecx, %eax
+; AVX-NEXT:    shrl $4, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpextrw $1, %xmm0, %eax
+; AVX-NEXT:    imull $61681, %eax, %eax # imm = 0xF0F1
+; AVX-NEXT:    shrl $21, %eax
+; AVX-NEXT:    vpinsrw $1, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrw $2, %xmm0, %eax
+; AVX-NEXT:    imull $8195, %eax, %eax # imm = 0x2003
+; AVX-NEXT:    shrl $29, %eax
+; AVX-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrw $3, %xmm0, %eax
+; AVX-NEXT:    shrl $3, %eax
+; AVX-NEXT:    imull $9363, %eax, %eax # imm = 0x2493
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrw $4, %xmm0, %eax
+; AVX-NEXT:    shrl $7, %eax
+; AVX-NEXT:    vpinsrw $4, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrw $5, %xmm0, %eax
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; AVX-NEXT:    sete %cl
+; AVX-NEXT:    vpinsrw $5, %ecx, %xmm1, %xmm1
+; AVX-NEXT:    vpextrw $6, %xmm0, %eax
+; AVX-NEXT:    imull $32897, %eax, %eax # imm = 0x8081
+; AVX-NEXT:    shrl $31, %eax
+; AVX-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; AVX-NEXT:    vpextrw $7, %xmm0, %eax
+; AVX-NEXT:    shrl $15, %eax
+; AVX-NEXT:    vpinsrw $7, %eax, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %1 = udiv <8 x i16> %x, <i16 23, i16 34, i16 -23, i16 56, i16 128, i16 -1, i16 -256, i16 -32768>
+  ret <8 x i16> %1
+}

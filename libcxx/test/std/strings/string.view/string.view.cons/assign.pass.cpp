@@ -33,9 +33,11 @@ bool test (T sv0)
 int main () {
 
     assert( test<std::string_view>    ( "1234"));
+#if TEST_STD_VER >= 11
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     assert( test<std::u16string_view> (u"1234"));
     assert( test<std::u32string_view> (U"1234"));
+#endif
 #endif
     assert( test<std::wstring_view>   (L"1234"));
 

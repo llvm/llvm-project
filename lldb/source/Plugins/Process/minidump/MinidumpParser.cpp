@@ -14,10 +14,13 @@
 
 // Other libraries and framework includes
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 // C includes
 // C++ includes
+#include <algorithm>
 #include <map>
+#include <vector>
 
 using namespace lldb_private;
 using namespace minidump;
@@ -27,47 +30,11 @@ MinidumpParser::Create(const lldb::DataBufferSP &data_buf_sp) {
   if (data_buf_sp->GetByteSize() < sizeof(MinidumpHeader)) {
     return llvm::None;
   }
-
-  llvm::ArrayRef<uint8_t> header_data(data_buf_sp->GetBytes(),
-                                      sizeof(MinidumpHeader));
-  const MinidumpHeader *header = MinidumpHeader::Parse(header_data);
-
-  if (header == nullptr) {
-    return llvm::None;
-  }
-
-  lldb::offset_t directory_list_offset = header->stream_directory_rva;
-  // check if there is enough data for the parsing of the directory list
-  if ((directory_list_offset +
-       sizeof(MinidumpDirectory) * header->streams_count) >
-      data_buf_sp->GetByteSize()) {
-    return llvm::None;
-  }
-
-  const MinidumpDirectory *directory = nullptr;
-  Status error;
-  llvm::ArrayRef<uint8_t> directory_data(
-      data_buf_sp->GetBytes() + directory_list_offset,
-      sizeof(MinidumpDirectory) * header->streams_count);
-  llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> directory_map;
-
-  for (uint32_t i = 0; i < header->streams_count; ++i) {
-    error = consumeObject(directory_data, directory);
-    if (error.Fail()) {
-      return llvm::None;
-    }
-    directory_map[static_cast<const uint32_t>(directory->stream_type)] =
-        directory->location;
-  }
-
-  return MinidumpParser(data_buf_sp, header, std::move(directory_map));
+  return MinidumpParser(data_buf_sp);
 }
 
-MinidumpParser::MinidumpParser(
-    const lldb::DataBufferSP &data_buf_sp, const MinidumpHeader *header,
-    llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &&directory_map)
-    : m_data_sp(data_buf_sp), m_header(header), m_directory_map(directory_map) {
-}
+MinidumpParser::MinidumpParser(const lldb::DataBufferSP &data_buf_sp)
+    : m_data_sp(data_buf_sp) {}
 
 llvm::ArrayRef<uint8_t> MinidumpParser::GetData() {
   return llvm::ArrayRef<uint8_t>(m_data_sp->GetBytes(),
@@ -480,4 +447,110 @@ MinidumpParser::GetMemoryRegionInfo(lldb::addr_t load_addr) {
   // space, so if you're walking a stack that has kernel frames, the stack may
   // appear truncated.
   return info;
+}
+
+Status MinidumpParser::Initialize() {
+  Status error;
+
+  lldbassert(m_directory_map.empty());
+
+  llvm::ArrayRef<uint8_t> header_data(m_data_sp->GetBytes(),
+                                      sizeof(MinidumpHeader));
+  const MinidumpHeader *header = MinidumpHeader::Parse(header_data);
+  if (header == nullptr) {
+    error.SetErrorString("invalid minidump: can't parse the header");
+    return error;
+  }
+
+  // A minidump without at least one stream is clearly ill-formed
+  if (header->streams_count == 0) {
+    error.SetErrorString("invalid minidump: no streams present");
+    return error;
+  }
+
+  struct FileRange {
+    uint32_t offset = 0;
+    uint32_t size = 0;
+
+    FileRange(uint32_t offset, uint32_t size) : offset(offset), size(size) {}
+    uint32_t end() const { return offset + size; }
+  };
+
+  const uint32_t file_size = m_data_sp->GetByteSize();
+
+  // Build a global minidump file map, checking for:
+  // - overlapping streams/data structures
+  // - truncation (streams pointing past the end of file)
+  std::vector<FileRange> minidump_map;
+
+  // Add the minidump header to the file map
+  if (sizeof(MinidumpHeader) > file_size) {
+    error.SetErrorString("invalid minidump: truncated header");
+    return error;
+  }
+  minidump_map.emplace_back( 0, sizeof(MinidumpHeader) );
+
+  // Add the directory entries to the file map
+  FileRange directory_range(header->stream_directory_rva,
+                            header->streams_count *
+                                sizeof(MinidumpDirectory));
+  if (directory_range.end() > file_size) {
+    error.SetErrorString("invalid minidump: truncated streams directory");
+    return error;
+  }
+  minidump_map.push_back(directory_range);
+
+  // Parse stream directory entries
+  llvm::ArrayRef<uint8_t> directory_data(
+      m_data_sp->GetBytes() + directory_range.offset, directory_range.size);
+  for (uint32_t i = 0; i < header->streams_count; ++i) {
+    const MinidumpDirectory *directory_entry = nullptr;
+    error = consumeObject(directory_data, directory_entry);
+    if (error.Fail())
+      return error;
+    if (directory_entry->stream_type == 0) {
+      // Ignore dummy streams (technically ill-formed, but a number of
+      // existing minidumps seem to contain such streams)
+      if (directory_entry->location.data_size == 0)
+        continue;
+      error.SetErrorString("invalid minidump: bad stream type");
+      return error;
+    }
+    // Update the streams map, checking for duplicate stream types
+    if (!m_directory_map
+             .insert({directory_entry->stream_type, directory_entry->location})
+             .second) {
+      error.SetErrorString("invalid minidump: duplicate stream type");
+      return error;
+    }
+    // Ignore the zero-length streams for layout checks
+    if (directory_entry->location.data_size != 0) {
+      minidump_map.emplace_back(directory_entry->location.rva,
+                                directory_entry->location.data_size);
+    }
+  }
+
+  // Sort the file map ranges by start offset
+  std::sort(minidump_map.begin(), minidump_map.end(),
+            [](const FileRange &a, const FileRange &b) {
+              return a.offset < b.offset;
+            });
+
+  // Check for overlapping streams/data structures
+  for (size_t i = 1; i < minidump_map.size(); ++i) {
+    const auto &prev_range = minidump_map[i - 1];
+    if (prev_range.end() > minidump_map[i].offset) {
+      error.SetErrorString("invalid minidump: overlapping streams");
+      return error;
+    }
+  }
+
+  // Check for streams past the end of file
+  const auto &last_range = minidump_map.back();
+  if (last_range.end() > file_size) {
+    error.SetErrorString("invalid minidump: truncated stream");
+    return error;
+  }
+
+  return error;
 }

@@ -27,6 +27,14 @@
 # RUN: llvm-ar p %t.a > %t6
 # RUN: cmp %t2 %t6
 
+# RUN: cp %t %t7
+# RUN: llvm-strip -strip-all %t7
+# RUN: cmp %t2 %t7
+
+# RUN: cp %t %t8
+# RUN: llvm-strip --strip-all %t8
+# RUN: cmp %t2 %t8
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

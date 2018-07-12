@@ -59,13 +59,13 @@ define i1 @masked_or_allones(i32 %A) {
 
 define i1 @masked_and_notA(i32 %A) {
 ; CHECK-LABEL: @masked_and_notA(
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 39
+; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 78
 ; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[MASK2]], [[A]]
 ; CHECK-NEXT:    ret i1 [[TST2]]
 ;
-  %mask1 = and i32 %A, 7
+  %mask1 = and i32 %A, 14
   %tst1 = icmp ne i32 %mask1, %A
-  %mask2 = and i32 %A, 39
+  %mask2 = and i32 %A, 78
   %tst2 = icmp ne i32 %mask2, %A
   %res = and i1 %tst1, %tst2
   ret i1 %res
@@ -88,15 +88,13 @@ define i1 @masked_and_notA_slightly_optimized(i32 %A) {
 
 define i1 @masked_or_A(i32 %A) {
 ; CHECK-LABEL: @masked_or_A(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
+; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 78
 ; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[TMP1]], [[TST2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 [[TST2]]
 ;
-  %mask1 = and i32 %A, 7
+  %mask1 = and i32 %A, 14
   %tst1 = icmp eq i32 %mask1, %A
-  %mask2 = and i32 %A, 39
+  %mask2 = and i32 %A, 78
   %tst2 = icmp eq i32 %mask2, %A
   %res = or i1 %tst1, %tst2
   ret i1 %res

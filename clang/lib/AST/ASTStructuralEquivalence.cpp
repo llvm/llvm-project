@@ -955,6 +955,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!D1 || !D2)
     return true;
 
+  // If any of the records has external storage and we do a minimal check (or
+  // AST import) we assmue they are equivalent. (If we didn't have this
+  // assumption then `RecordDecl::LoadFieldsFromExternalStorage` could trigger
+  // another AST import which in turn would call the structural equivalency
+  // check again and finally we'd have an improper result.)
+  if (Context.EqKind == StructuralEquivalenceKind::Minimal)
+    if (D1->hasExternalLexicalStorage() || D2->hasExternalLexicalStorage())
+      return true;
+
   if (auto *D1CXX = dyn_cast<CXXRecordDecl>(D1)) {
     if (auto *D2CXX = dyn_cast<CXXRecordDecl>(D2)) {
       if (D1CXX->hasExternalLexicalStorage() &&

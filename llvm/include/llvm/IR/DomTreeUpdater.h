@@ -46,8 +46,11 @@ public:
 
   ~DomTreeUpdater() { flush(); }
 
-  /// Returns the UpdateStrategy of the class instance.
-  UpdateStrategy getUpdateStrategy() const { return Strategy; };
+  /// Returns true if the current strategy is Lazy.
+  bool isLazy() const { return Strategy == UpdateStrategy::Lazy; };
+
+  /// Returns true if the current strategy is Eager.
+  bool isEager() const { return Strategy == UpdateStrategy::Eager; };
 
   /// Returns true if it holds a DominatorTree.
   bool hasDomTree() const { return DT != nullptr; }

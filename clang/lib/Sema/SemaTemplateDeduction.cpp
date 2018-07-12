@@ -1645,6 +1645,9 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
         }
       }
       // FIXME: Detect non-deduced exception specification mismatches?
+      //
+      // Careful about [temp.deduct.call] and [temp.deduct.conv], which allow
+      // top-level differences in noexcept-specifications.
 
       return Sema::TDK_Success;
     }

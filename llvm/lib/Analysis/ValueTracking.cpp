@@ -4511,6 +4511,26 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
+bool llvm::isKnownNegation(const Value *X, const Value *Y) {
+  assert(X && Y && "Invalid operand");
+
+  // X = sub (0, Y)
+  if (match(X, m_Neg(m_Specific(Y))))
+    return true;
+
+  // Y = sub (0, X)
+  if (match(Y, m_Neg(m_Specific(X))))
+    return true;
+
+  // X = sub (A, B), Y = sub (B, A)
+  Value *A, *B;
+  if (match(X, m_Sub(m_Value(A), m_Value(B))) &&
+      match(Y, m_Sub(m_Specific(B), m_Specific(A))))
+    return true;
+
+  return false;
+}
+
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               FastMathFlags FMF,
                                               Value *CmpLHS, Value *CmpRHS,

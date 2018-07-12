@@ -50,8 +50,6 @@ public:
   void checkEndFunction(CheckerContext &C) const;
 };
 
-llvm::ImmutableListFactory<const FieldRegion *> Factory;
-
 /// Represents a field chain. A field chain is a vector of fields where the
 /// first element of the chain is the object under checking (not stored), and
 /// every other element is a field, and the element that precedes it is the
@@ -205,32 +203,37 @@ private:
   // TODO: Add a support for nonloc::LocAsInteger.
 };
 
+} // end of anonymous namespace
+
+// Static variable instantionations.
+
+static llvm::ImmutableListFactory<const FieldRegion *> Factory;
+
 // Utility function declarations.
 
 /// Returns the object that was constructed by CtorDecl, or None if that isn't
 /// possible.
-Optional<nonloc::LazyCompoundVal>
+static Optional<nonloc::LazyCompoundVal>
 getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context);
 
 /// Checks whether the constructor under checking is called by another
 /// constructor.
-bool isCalledByConstructor(const CheckerContext &Context);
+static bool isCalledByConstructor(const CheckerContext &Context);
 
 /// Returns whether FD can be (transitively) dereferenced to a void pointer type
 /// (void*, void**, ...). The type of the region behind a void pointer isn't
 /// known, and thus FD can not be analyzed.
-bool isVoidPointer(const FieldDecl *FD);
+static bool isVoidPointer(const FieldDecl *FD);
 
 /// Returns true if T is a primitive type. We'll call a type primitive if it's
 /// either a BuiltinType or an EnumeralType.
-bool isPrimitiveType(const QualType &T) {
+static bool isPrimitiveType(const QualType &T) {
   return T->isBuiltinType() || T->isEnumeralType();
 }
 
 /// Constructs a note message for a given FieldChainInfo object.
-void printNoteMessage(llvm::raw_ostream &Out, const FieldChainInfo &Chain);
-
-} // end of anonymous namespace
+static void printNoteMessage(llvm::raw_ostream &Out,
+                             const FieldChainInfo &Chain);
 
 //===----------------------------------------------------------------------===//
 //                  Methods for UninitializedObjectChecker.
@@ -638,9 +641,7 @@ void FieldChainInfo::printTail(
 //                           Utility functions.
 //===----------------------------------------------------------------------===//
 
-namespace {
-
-bool isVoidPointer(const FieldDecl *FD) {
+static bool isVoidPointer(const FieldDecl *FD) {
   QualType T = FD->getType();
 
   while (!T.isNull()) {
@@ -651,7 +652,7 @@ bool isVoidPointer(const FieldDecl *FD) {
   return false;
 }
 
-Optional<nonloc::LazyCompoundVal>
+static Optional<nonloc::LazyCompoundVal>
 getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context) {
 
   Loc ThisLoc = Context.getSValBuilder().getCXXThis(CtorDecl->getParent(),
@@ -668,7 +669,7 @@ getObjectVal(const CXXConstructorDecl *CtorDecl, CheckerContext &Context) {
 // TODO: We should also check that if the constructor was called by another
 // constructor, whether those two are in any relation to one another. In it's
 // current state, this introduces some false negatives.
-bool isCalledByConstructor(const CheckerContext &Context) {
+static bool isCalledByConstructor(const CheckerContext &Context) {
   const LocationContext *LC = Context.getLocationContext()->getParent();
 
   while (LC) {
@@ -680,7 +681,8 @@ bool isCalledByConstructor(const CheckerContext &Context) {
   return false;
 }
 
-void printNoteMessage(llvm::raw_ostream &Out, const FieldChainInfo &Chain) {
+static void printNoteMessage(llvm::raw_ostream &Out,
+                             const FieldChainInfo &Chain) {
   if (Chain.isPointer()) {
     if (Chain.isDereferenced())
       Out << "uninitialized pointee 'this->";
@@ -691,8 +693,6 @@ void printNoteMessage(llvm::raw_ostream &Out, const FieldChainInfo &Chain) {
   Chain.print(Out);
   Out << "'";
 }
-
-} // end of anonymous namespace
 
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   auto Chk = Mgr.registerChecker<UninitializedObjectChecker>();

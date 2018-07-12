@@ -3859,6 +3859,10 @@ template<typename Derived>
 bool TreeTransform<Derived>::TransformTemplateArgument(
                                          const TemplateArgumentLoc &Input,
                                          TemplateArgumentLoc &Output, bool Uneval) {
+  EnterExpressionEvaluationContext EEEC(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      /*LambdaContextDecl=*/nullptr, /*ExprContext=*/
+      Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
   const TemplateArgument &Arg = Input.getArgument();
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
@@ -5494,7 +5498,7 @@ QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
   // decltype expressions are not potentially evaluated contexts
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
-      /*IsDecltype=*/true);
+      Sema::ExpressionEvaluationContextRecord::EK_Decltype);
 
   ExprResult E = getDerived().TransformExpr(T->getUnderlyingExpr());
   if (E.isInvalid())

@@ -85,6 +85,33 @@ set(XRAY_IMPL_HEADERS
   xray_utils.h
   xray_x86_64.inc)
 
+# Create list of all source files for
+# consumption by tests.
+set(XRAY_ALL_SOURCE_FILES
+  ${XRAY_SOURCES}
+  ${XRAY_FDR_MODE_SOURCES}
+  ${XRAY_BASIC_MODE_SOURCES}
+  ${XRAY_PROFILING_MODE_SOURCES}
+  ${x86_64_SOURCES}
+  ${arm_SOURCES}
+  ${armhf_SOURCES}
+  ${mips_SOURCES}
+  ${mipsel_SOURCES}
+  ${mips64_SOURCES}
+  ${mips64el_SOURCES}
+  ${powerpc64le_SOURCES}
+  ${XRAY_IMPL_HEADERS}
+)
+list(REMOVE_DUPLICATES XRAY_ALL_SOURCE_FILES)
+# Make list that uses absolute paths
+set(XRAY_ALL_SOURCE_FILES_ABS_PATHS "")
+foreach (src_file ${XRAY_ALL_SOURCE_FILES})
+  list(APPEND
+    XRAY_ALL_SOURCE_FILES_ABS_PATHS
+    "${CMAKE_CURRENT_SOURCE_DIR}/${src_file}")
+endforeach()
+
+
 # Now put it all together...
 include_directories(..)
 include_directories(../../include)

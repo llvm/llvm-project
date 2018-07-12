@@ -104,3 +104,13 @@ void* operator new(mysize_t);
 void* operator new[](mysize_t);
 void* operator new[](mysize_t) throw(std::bad_alloc);
 
+template<bool X> void equivalent() noexcept (X);
+template<bool X> void equivalent() noexcept (X);
+
+template<bool X, bool Y> void not_equivalent() noexcept (X); // expected-note {{previous}}
+template<bool X, bool Y> void not_equivalent() noexcept (Y); // expected-error {{does not match}}
+
+template<bool X> void missing() noexcept (X); // expected-note {{previous}}
+// FIXME: The missing exception specification that we report here doesn't make
+// sense in the context of this declaration.
+template<bool P> void missing(); // expected-error {{missing exception specification 'noexcept(X)'}}

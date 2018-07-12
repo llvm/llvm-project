@@ -13,6 +13,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
@@ -35,21 +36,11 @@ const char *debugType(const char *Filename);
 void log(Logger::Level, const llvm::formatv_object_base &);
 
 // We often want to consume llvm::Errors by value when passing them to log().
-// This is tricky because the logging infrastructure must mark them as handled.
-// When forwarding argument to formatv, we wrap Errors-by-value in this type
-// whose destructor handles the cleanup.
-// FIXME: simplify after D49170 lands.
-struct WrappedError {
-  llvm::Error E;
-  WrappedError(WrappedError &&) = default;
-  ~WrappedError() { consumeError(std::move(E)); }
-};
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const WrappedError &Err) {
-  return OS << Err.E;
-}
+// We automatically wrap them in llvm::fmt_consume() as formatv requires.
 template <typename T> T &&wrap(T &&V) { return std::forward<T>(V); }
-inline WrappedError wrap(llvm::Error &&V) { return WrappedError{std::move(V)}; }
+inline decltype(fmt_consume(llvm::Error::success())) wrap(llvm::Error &&V) {
+  return fmt_consume(std::move(V));
+}
 template <typename... Ts>
 void log(Logger::Level L, const char *Fmt, Ts &&... Vals) {
   detail::log(L, llvm::formatv(Fmt, detail::wrap(std::forward<Ts>(Vals))...));
