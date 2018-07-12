@@ -1026,7 +1026,7 @@ Examples:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
-  bool DoExecute(const char *raw_command,
+  bool DoExecute(llvm::StringRef raw_command,
                  CommandReturnObject &result) override {
     auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
     m_option_group.NotifyOptionParsingStarting(
@@ -1046,7 +1046,7 @@ protected:
 
     // If no argument is present, issue an error message.  There's no way to
     // set a watchpoint.
-    if (llvm::StringRef(raw_command).trim().empty()) {
+    if (raw_command.trim().empty()) {
       result.GetErrorStream().Printf("error: required argument missing; "
                                      "specify an expression to evaulate into "
                                      "the address to watch for\n");
