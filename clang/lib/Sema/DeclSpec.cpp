@@ -186,7 +186,6 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   I.Kind                        = Function;
   I.Loc                         = LocalRangeBegin;
   I.EndLoc                      = LocalRangeEnd;
-  I.Fun.AttrList                = nullptr;
   I.Fun.hasPrototype            = hasProto;
   I.Fun.isVariadic              = EllipsisLoc.isValid();
   I.Fun.isAmbiguous             = isAmbiguous;
@@ -995,15 +994,7 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
   writtenBS.Width = getTypeSpecWidth();
   writtenBS.Type = getTypeSpecType();
   // Search the list of attributes for the presence of a mode attribute.
-  writtenBS.ModeAttr = false;
-  AttributeList* attrs = getAttributes().getList();
-  while (attrs) {
-    if (attrs->getKind() == AttributeList::AT_Mode) {
-      writtenBS.ModeAttr = true;
-      break;
-    }
-    attrs = attrs->getNext();
-  }
+  writtenBS.ModeAttr = getAttributes().hasAttribute(AttributeList::AT_Mode);
 }
 
 /// Finish - This does final analysis of the declspec, rejecting things like

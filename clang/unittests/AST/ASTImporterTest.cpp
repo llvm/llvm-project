@@ -301,14 +301,25 @@ class ASTImporterTestBase : public ParameterizedTestsFixture {
       Unit->enableSourceFileDiagnostics();
     }
 
-    Decl *import(ASTUnit *ToAST, Decl *FromDecl) {
+    void lazyInitImporter(ASTUnit *ToAST) {
       assert(ToAST);
       if (!Importer) {
         Importer.reset(new ASTImporter(
             ToAST->getASTContext(), ToAST->getFileManager(),
             Unit->getASTContext(), Unit->getFileManager(), false));
       }
+      assert(&ToAST->getASTContext() == &Importer->getToContext());
+      createVirtualFileIfNeeded(ToAST, FileName, Code);
+    }
+
+    Decl *import(ASTUnit *ToAST, Decl *FromDecl) {
+      lazyInitImporter(ToAST);
       return Importer->Import(FromDecl);
+     }
+
+    QualType import(ASTUnit *ToAST, QualType FromType) {
+      lazyInitImporter(ToAST);
+      return Importer->Import(FromType);
     }
   };
 
@@ -320,6 +331,26 @@ class ASTImporterTestBase : public ParameterizedTestsFixture {
   // references in the AST. By using a vector a move could happen when the
   // vector is expanding, with the list we won't have these issues.
   std::list<TU> FromTUs;
+
+  void lazyInitToAST(Language ToLang) {
+    if (ToAST)
+      return;
+    ArgVector ToArgs = getArgVectorForLanguage(ToLang);
+    // Build the AST from an empty file.
+    ToAST = tooling::buildASTFromCodeWithArgs(/*Code=*/"", ToArgs, "empty.cc");
+    ToAST->enableSourceFileDiagnostics();
+  }
+
+  TU *findFromTU(Decl *From) {
+    // Create a virtual file in the To Ctx which corresponds to the file from
+    // which we want to import the `From` Decl. Without this source locations
+    // will be invalid in the ToCtx.
+    auto It = std::find_if(FromTUs.begin(), FromTUs.end(), [From](const TU &E) {
+      return E.TUDecl == From->getTranslationUnitDecl();
+    });
+    assert(It != FromTUs.end());
+    return &*It;
+  }
 
 public:
   // We may have several From context but only one To context.
@@ -394,25 +425,16 @@ public:
   // May be called several times in a given test.
   // The different instances of the param From may have different ASTContext.
   Decl *Import(Decl *From, Language ToLang) {
-    if (!ToAST) {
-      ArgVector ToArgs = getArgVectorForLanguage(ToLang);
-      // Build the AST from an empty file.
-      ToAST =
-          tooling::buildASTFromCodeWithArgs(/*Code=*/"", ToArgs, "empty.cc");
-      ToAST->enableSourceFileDiagnostics();
-    }
-
-    // Create a virtual file in the To Ctx which corresponds to the file from
-    // which we want to import the `From` Decl. Without this source locations
-    // will be invalid in the ToCtx.
-    auto It = std::find_if(FromTUs.begin(), FromTUs.end(), [From](const TU &E) {
-      return E.TUDecl == From->getTranslationUnitDecl();
-    });
-    assert(It != FromTUs.end());
-    createVirtualFileIfNeeded(ToAST.get(), It->FileName, It->Code);
-
-    return It->import(ToAST.get(), From);
+    lazyInitToAST(ToLang);
+    TU *FromTU = findFromTU(From);
+    return FromTU->import(ToAST.get(), From);
   }
+
+  QualType ImportType(QualType FromType, Decl *TUDecl, Language ToLang) {
+    lazyInitToAST(ToLang);
+    TU *FromTU = findFromTU(TUDecl);
+    return FromTU->import(ToAST.get(), FromType);
+   }
 
   ~ASTImporterTestBase() {
     if (!::testing::Test::HasFailure()) return;
@@ -941,6 +963,44 @@ TEST_P(ImportExpr, ImportTypeTraitExprValDep) {
       classTemplateDecl(has(cxxRecordDecl(has(
           functionDecl(hasDescendant(
               typeTraitExpr(hasType(booleanType())))))))));
+}
+
+TEST_P(ImportDecl, ImportRecordDeclInFunc) {
+  MatchVerifier<Decl> Verifier;
+  testImport("int declToImport() { "
+             "  struct data_t {int a;int b;};"
+             "  struct data_t d;"
+             "  return 0;"
+             "}",
+             Lang_C, "", Lang_C, Verifier,
+             functionDecl(hasBody(compoundStmt(
+                 has(declStmt(hasSingleDecl(varDecl(hasName("d")))))))));
+}
+
+TEST_P(ASTImporterTestBase, ImportRecordTypeInFunc) {
+  Decl *FromTU = getTuDecl("int declToImport() { "
+                           "  struct data_t {int a;int b;};"
+                           "  struct data_t d;"
+                           "  return 0;"
+                           "}",
+                           Lang_C, "input.c");
+  auto FromVar =
+      FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("d")));
+  ASSERT_TRUE(FromVar);
+  auto ToType =
+      ImportType(FromVar->getType().getCanonicalType(), FromVar, Lang_C);
+  EXPECT_FALSE(ToType.isNull());
+}
+
+TEST_P(ASTImporterTestBase, ImportRecordDeclInFuncParams) {
+  // This construct is not supported by ASTImporter.
+  Decl *FromTU =
+      getTuDecl("int declToImport(struct data_t{int a;int b;} *d){ return 0; }",
+                Lang_C, "input.c");
+  auto From = FirstDeclMatcher<FunctionDecl>().match(FromTU, functionDecl());
+  ASSERT_TRUE(From);
+  auto To = Import(From, Lang_C);
+  EXPECT_EQ(To, nullptr);
 }
 
 const internal::VariadicDynCastAllOfMatcher<Expr, CXXPseudoDestructorExpr>
