@@ -1032,133 +1032,133 @@ namespace serialization {
     /// AST. Note that DeclCode values share this code space.
     enum TypeCode {
       /// An ExtQualType record.
-      TYPE_EXT_QUAL                 = 1,
+      TYPE_EXT_QUAL = 1,
 
       /// A ComplexType record.
-      TYPE_COMPLEX                  = 3,
+      TYPE_COMPLEX = 3,
 
       /// A PointerType record.
-      TYPE_POINTER                  = 4,
+      TYPE_POINTER = 4,
 
       /// A BlockPointerType record.
-      TYPE_BLOCK_POINTER            = 5,
+      TYPE_BLOCK_POINTER = 5,
 
       /// An LValueReferenceType record.
-      TYPE_LVALUE_REFERENCE         = 6,
+      TYPE_LVALUE_REFERENCE = 6,
 
       /// An RValueReferenceType record.
-      TYPE_RVALUE_REFERENCE         = 7,
+      TYPE_RVALUE_REFERENCE = 7,
 
       /// A MemberPointerType record.
-      TYPE_MEMBER_POINTER           = 8,
+      TYPE_MEMBER_POINTER = 8,
 
       /// A ConstantArrayType record.
-      TYPE_CONSTANT_ARRAY           = 9,
+      TYPE_CONSTANT_ARRAY = 9,
 
       /// An IncompleteArrayType record.
-      TYPE_INCOMPLETE_ARRAY         = 10,
+      TYPE_INCOMPLETE_ARRAY = 10,
 
       /// A VariableArrayType record.
-      TYPE_VARIABLE_ARRAY           = 11,
+      TYPE_VARIABLE_ARRAY = 11,
 
       /// A VectorType record.
-      TYPE_VECTOR                   = 12,
+      TYPE_VECTOR = 12,
 
       /// An ExtVectorType record.
-      TYPE_EXT_VECTOR               = 13,
+      TYPE_EXT_VECTOR = 13,
 
       /// A FunctionNoProtoType record.
-      TYPE_FUNCTION_NO_PROTO        = 14,
+      TYPE_FUNCTION_NO_PROTO = 14,
 
       /// A FunctionProtoType record.
-      TYPE_FUNCTION_PROTO           = 15,
+      TYPE_FUNCTION_PROTO = 15,
 
       /// A TypedefType record.
-      TYPE_TYPEDEF                  = 16,
+      TYPE_TYPEDEF = 16,
 
       /// A TypeOfExprType record.
-      TYPE_TYPEOF_EXPR              = 17,
+      TYPE_TYPEOF_EXPR = 17,
 
       /// A TypeOfType record.
-      TYPE_TYPEOF                   = 18,
+      TYPE_TYPEOF = 18,
 
       /// A RecordType record.
-      TYPE_RECORD                   = 19,
+      TYPE_RECORD = 19,
 
       /// An EnumType record.
-      TYPE_ENUM                     = 20,
+      TYPE_ENUM = 20,
 
       /// An ObjCInterfaceType record.
-      TYPE_OBJC_INTERFACE           = 21,
+      TYPE_OBJC_INTERFACE = 21,
 
       /// An ObjCObjectPointerType record.
-      TYPE_OBJC_OBJECT_POINTER      = 22,
+      TYPE_OBJC_OBJECT_POINTER = 22,
 
       /// a DecltypeType record.
-      TYPE_DECLTYPE                 = 23,
+      TYPE_DECLTYPE = 23,
 
       /// An ElaboratedType record.
-      TYPE_ELABORATED               = 24,
+      TYPE_ELABORATED = 24,
 
       /// A SubstTemplateTypeParmType record.
       TYPE_SUBST_TEMPLATE_TYPE_PARM = 25,
 
       /// An UnresolvedUsingType record.
-      TYPE_UNRESOLVED_USING         = 26,
+      TYPE_UNRESOLVED_USING = 26,
 
       /// An InjectedClassNameType record.
-      TYPE_INJECTED_CLASS_NAME      = 27,
+      TYPE_INJECTED_CLASS_NAME = 27,
 
       /// An ObjCObjectType record.
-      TYPE_OBJC_OBJECT              = 28,
+      TYPE_OBJC_OBJECT = 28,
 
       /// An TemplateTypeParmType record.
-      TYPE_TEMPLATE_TYPE_PARM       = 29,
+      TYPE_TEMPLATE_TYPE_PARM = 29,
 
       /// An TemplateSpecializationType record.
-      TYPE_TEMPLATE_SPECIALIZATION  = 30,
+      TYPE_TEMPLATE_SPECIALIZATION = 30,
 
       /// A DependentNameType record.
-      TYPE_DEPENDENT_NAME           = 31,
+      TYPE_DEPENDENT_NAME = 31,
 
       /// A DependentTemplateSpecializationType record.
       TYPE_DEPENDENT_TEMPLATE_SPECIALIZATION = 32,
 
       /// A DependentSizedArrayType record.
-      TYPE_DEPENDENT_SIZED_ARRAY    = 33,
+      TYPE_DEPENDENT_SIZED_ARRAY = 33,
 
       /// A ParenType record.
-      TYPE_PAREN                    = 34,
+      TYPE_PAREN = 34,
 
       /// A PackExpansionType record.
-      TYPE_PACK_EXPANSION           = 35,
+      TYPE_PACK_EXPANSION = 35,
 
       /// An AttributedType record.
-      TYPE_ATTRIBUTED               = 36,
+      TYPE_ATTRIBUTED = 36,
 
       /// A SubstTemplateTypeParmPackType record.
       TYPE_SUBST_TEMPLATE_TYPE_PARM_PACK = 37,
 
       /// A AutoType record.
-      TYPE_AUTO                  = 38,
+      TYPE_AUTO = 38,
 
       /// A UnaryTransformType record.
-      TYPE_UNARY_TRANSFORM       = 39,
+      TYPE_UNARY_TRANSFORM = 39,
 
       /// An AtomicType record.
-      TYPE_ATOMIC                = 40,
+      TYPE_ATOMIC = 40,
 
       /// A DecayedType record.
-      TYPE_DECAYED               = 41,
+      TYPE_DECAYED = 41,
 
       /// An AdjustedType record.
-      TYPE_ADJUSTED              = 42,
+      TYPE_ADJUSTED = 42,
 
       /// A PipeType record.
-      TYPE_PIPE                  = 43,
+      TYPE_PIPE = 43,
 
       /// An ObjCTypeParamType record.
-      TYPE_OBJC_TYPE_PARAM       = 44,
+      TYPE_OBJC_TYPE_PARAM = 44,
 
       /// A DeducedTemplateSpecializationType record.
       TYPE_DEDUCED_TEMPLATE_SPECIALIZATION = 45,
@@ -1167,7 +1167,10 @@ namespace serialization {
       TYPE_DEPENDENT_SIZED_EXT_VECTOR = 46,
 
       /// A DependentAddressSpaceType record.
-      TYPE_DEPENDENT_ADDRESS_SPACE = 47
+      TYPE_DEPENDENT_ADDRESS_SPACE = 47,
+
+      /// A dependentSizedVectorType record.
+      TYPE_DEPENDENT_SIZED_VECTOR = 48
     };
 
     /// The type IDs for special types constructed by semantic

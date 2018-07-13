@@ -43,7 +43,7 @@ void RetireStage::cycleStart() {
 }
 
 void RetireStage::notifyInstructionRetired(const InstRef &IR) {
-  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: #" << IR << '\n');
   SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
 

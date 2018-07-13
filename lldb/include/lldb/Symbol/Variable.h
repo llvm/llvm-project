@@ -17,6 +17,7 @@
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Declaration.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
@@ -103,8 +104,7 @@ public:
       ValueObjectList &valobj_list);
 
   static size_t AutoComplete(const ExecutionContext &exe_ctx,
-                             llvm::StringRef name, StringList &matches,
-                             bool &word_complete);
+                             CompletionRequest &request);
 
   CompilerDeclContext GetDeclContext();
 

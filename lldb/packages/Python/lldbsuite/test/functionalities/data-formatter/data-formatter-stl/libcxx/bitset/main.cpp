@@ -1,4 +1,5 @@
 #include <bitset>
+#include <stdio.h>
 
 template<std::size_t N>
 void fill(std::bitset<N> &b) {
@@ -10,11 +11,19 @@ void fill(std::bitset<N> &b) {
   }
 }
 
+template<std::size_t N>
+void by_ref_and_ptr(std::bitset<N> &ref, std::bitset<N> *ptr) {
+    // Check ref and ptr
+    return;
+}
+
 int main() {
   std::bitset<0> empty;
   std::bitset<13> small;
   fill(small);
   std::bitset<200> large;
   fill(large);
-  return 0; // break here
+  by_ref_and_ptr(small, &small); // break here
+  by_ref_and_ptr(large, &large);
+  return 0;
 }

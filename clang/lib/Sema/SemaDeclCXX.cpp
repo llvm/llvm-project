@@ -2300,10 +2300,10 @@ Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
 
   // We do not support any C++11 attributes on base-specifiers yet.
   // Diagnose any attributes we see.
-  for (const AttributeList &AL : Attributes) {
-    if (AL.isInvalid() || AL.getKind() == AttributeList::IgnoredAttribute)
+  for (const ParsedAttr &AL : Attributes) {
+    if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
       continue;
-    Diag(AL.getLoc(), AL.getKind() == AttributeList::UnknownAttribute
+    Diag(AL.getLoc(), AL.getKind() == ParsedAttr::UnknownAttribute
                           ? diag::warn_unknown_attribute_ignored
                           : diag::err_base_specifier_attribute)
         << AL.getName();
@@ -2816,10 +2816,9 @@ static bool InitializationHasSideEffects(const FieldDecl &FD) {
   return false;
 }
 
-static const AttributeList *
-getMSPropertyAttr(const ParsedAttributesView &list) {
+static const ParsedAttr *getMSPropertyAttr(const ParsedAttributesView &list) {
   ParsedAttributesView::const_iterator Itr =
-      llvm::find_if(list, [](const AttributeList &AL) {
+      llvm::find_if(list, [](const ParsedAttr &AL) {
         return AL.isDeclspecPropertyAttribute();
       });
   if (Itr != list.end())
@@ -2902,7 +2901,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   assert(!DS.isFriendSpecified());
 
   bool isFunc = D.isDeclarationOfFunction();
-  const AttributeList *MSPropertyAttr =
+  const ParsedAttr *MSPropertyAttr =
       getMSPropertyAttr(D.getDeclSpec().getAttributes());
 
   if (cast<CXXRecordDecl>(CurContext)->isInterface()) {
@@ -7815,8 +7814,8 @@ void Sema::ActOnFinishCXXMemberSpecification(
 
   AdjustDeclIfTemplate(TagDecl);
 
-  for (const AttributeList &AL : AttrList) {
-    if (AL.getKind() != AttributeList::AT_Visibility)
+  for (const ParsedAttr &AL : AttrList) {
+    if (AL.getKind() != ParsedAttr::AT_Visibility)
       continue;
     AL.setInvalid();
     Diag(AL.getLoc(), diag::warn_attribute_after_definition_ignored)
@@ -15388,7 +15387,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
                                        Expr *BitWidth,
                                        InClassInitStyle InitStyle,
                                        AccessSpecifier AS,
-                                       const AttributeList &MSPropertyAttr) {
+                                       const ParsedAttr &MSPropertyAttr) {
   IdentifierInfo *II = D.getIdentifier();
   if (!II) {
     Diag(DeclStart, diag::err_anonymous_property);
@@ -15451,7 +15450,7 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
     PrevDecl = nullptr;
 
   SourceLocation TSSL = D.getLocStart();
-  const AttributeList::PropertyData &Data = MSPropertyAttr.getPropertyData();
+  const ParsedAttr::PropertyData &Data = MSPropertyAttr.getPropertyData();
   MSPropertyDecl *NewPD = MSPropertyDecl::Create(
       Context, Record, Loc, II, T, TInfo, TSSL, Data.GetterId, Data.SetterId);
   ProcessDeclAttributes(TUScope, NewPD, D);

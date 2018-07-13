@@ -1109,10 +1109,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   // after '(...)'. nvcc doesn't accept this.
   auto WarnIfHasCUDATargetAttr = [&] {
     if (getLangOpts().CUDA)
-      for (const AttributeList &A : Attr)
-        if (A.getKind() == AttributeList::AT_CUDADevice ||
-            A.getKind() == AttributeList::AT_CUDAHost ||
-            A.getKind() == AttributeList::AT_CUDAGlobal)
+      for (const ParsedAttr &A : Attr)
+        if (A.getKind() == ParsedAttr::AT_CUDADevice ||
+            A.getKind() == ParsedAttr::AT_CUDAHost ||
+            A.getKind() == ParsedAttr::AT_CUDAGlobal)
           Diag(A.getLoc(), diag::warn_cuda_attr_lambda_position)
               << A.getName()->getName();
   };

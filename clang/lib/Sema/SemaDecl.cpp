@@ -4447,7 +4447,7 @@ Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS, DeclSpec &DS,
         TypeSpecType == DeclSpec::TST_interface ||
         TypeSpecType == DeclSpec::TST_union ||
         TypeSpecType == DeclSpec::TST_enum) {
-      for (const AttributeList &AL : DS.getAttributes())
+      for (const ParsedAttr &AL : DS.getAttributes())
         Diag(AL.getLoc(), diag::warn_declspec_attribute_ignored)
             << AL.getName() << GetDiagnosticTypeSpecifierID(TypeSpecType);
     }
@@ -6204,7 +6204,7 @@ static bool shouldConsiderLinkage(const FunctionDecl *FD) {
 }
 
 static bool hasParsedAttr(Scope *S, const Declarator &PD,
-                          AttributeList::Kind Kind) {
+                          ParsedAttr::Kind Kind) {
   // Check decl attributes on the DeclSpec.
   if (PD.getDeclSpec().getAttributes().hasAttribute(Kind))
     return true;
@@ -6372,8 +6372,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // dllimport globals without explicit storage class are treated as extern. We
   // have to change the storage class this early to get the right DeclContext.
   if (SC == SC_None && !DC->isRecord() &&
-      hasParsedAttr(S, D, AttributeList::AT_DLLImport) &&
-      !hasParsedAttr(S, D, AttributeList::AT_DLLExport))
+      hasParsedAttr(S, D, ParsedAttr::AT_DLLImport) &&
+      !hasParsedAttr(S, D, ParsedAttr::AT_DLLExport))
     SC = SC_Extern;
 
   DeclContext *OriginalDC = DC;

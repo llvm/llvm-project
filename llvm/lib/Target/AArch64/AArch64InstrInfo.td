@@ -1442,7 +1442,9 @@ def : Pat<(AArch64call texternalsym:$func), (BL texternalsym:$func)>;
 //===----------------------------------------------------------------------===//
 // Exception generation instructions.
 //===----------------------------------------------------------------------===//
+let isTrap = 1 in {
 def BRK   : ExceptionGeneration<0b001, 0b00, "brk">;
+}
 def DCPS1 : ExceptionGeneration<0b101, 0b01, "dcps1">;
 def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;
 def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">;
@@ -2432,19 +2434,19 @@ defm STURBB : StoreUnscaled<0b00, 0, 0b00, GPR32z, "sturb",
 
 // Armv8.4 LDAPR & STLR with Immediate Offset instruction
 let Predicates = [HasV8_4a] in {
-defm STLURB     : BaseLoadStoreUnscaleV84<"stlurb",   0b00, 0b00, GPR32>;
-defm STLURH     : BaseLoadStoreUnscaleV84<"stlurh",   0b01, 0b00, GPR32>;
-defm STLUR      : BaseLoadStoreUnscaleV84<"stlur",    0b10, 0b00, GPR32>;
-defm STLUR64    : BaseLoadStoreUnscaleV84<"stlur",    0b11, 0b00, GPR64>;
-defm LDAPURB    : BaseLoadStoreUnscaleV84<"ldapurb",  0b00, 0b01, GPR32>;
-defm LDAPURSB   : BaseLoadStoreUnscaleV84<"ldapursb", 0b00, 0b11, GPR32>;
-defm LDAPURSB64 : BaseLoadStoreUnscaleV84<"ldapursb", 0b00, 0b10, GPR64>;
-defm LDAPURH    : BaseLoadStoreUnscaleV84<"ldapurh",  0b01, 0b01, GPR32>;
-defm LDAPURSH   : BaseLoadStoreUnscaleV84<"ldapursh", 0b01, 0b11, GPR32>;
-defm LDAPURSH64 : BaseLoadStoreUnscaleV84<"ldapursh", 0b01, 0b10, GPR64>;
-defm LDAPUR     : BaseLoadStoreUnscaleV84<"ldapur",   0b10, 0b01, GPR32>;
-defm LDAPURSW   : BaseLoadStoreUnscaleV84<"ldapursw", 0b10, 0b10, GPR64>;
-defm LDAPUR64   : BaseLoadStoreUnscaleV84<"ldapur",   0b11, 0b01, GPR64>;
+defm STLURB     : BaseStoreUnscaleV84<"stlurb",  0b00, 0b00, GPR32>;
+defm STLURH     : BaseStoreUnscaleV84<"stlurh",  0b01, 0b00, GPR32>;
+defm STLURW     : BaseStoreUnscaleV84<"stlur",   0b10, 0b00, GPR32>;
+defm STLURX     : BaseStoreUnscaleV84<"stlur",   0b11, 0b00, GPR64>;
+defm LDAPURB    : BaseLoadUnscaleV84<"ldapurb",  0b00, 0b01, GPR32>;
+defm LDAPURSBW  : BaseLoadUnscaleV84<"ldapursb", 0b00, 0b11, GPR32>;
+defm LDAPURSBX  : BaseLoadUnscaleV84<"ldapursb", 0b00, 0b10, GPR64>;
+defm LDAPURH    : BaseLoadUnscaleV84<"ldapurh",  0b01, 0b01, GPR32>;
+defm LDAPURSHW  : BaseLoadUnscaleV84<"ldapursh", 0b01, 0b11, GPR32>;
+defm LDAPURSHX  : BaseLoadUnscaleV84<"ldapursh", 0b01, 0b10, GPR64>;
+defm LDAPUR     : BaseLoadUnscaleV84<"ldapur",   0b10, 0b01, GPR32>;
+defm LDAPURSW   : BaseLoadUnscaleV84<"ldapursw", 0b10, 0b10, GPR64>;
+defm LDAPURX    : BaseLoadUnscaleV84<"ldapur",   0b11, 0b01, GPR64>;
 }
 
 // Match all store 64 bits width whose type is compatible with FPR64

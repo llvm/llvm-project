@@ -509,7 +509,7 @@ class TargetSpecificAttr<TargetSpec target> {
   // "exists" for a given target. So two target-specific attributes can share
   // the same name when they exist in different targets. To support this, a
   // Kind can be explicitly specified for a target-specific attribute. This
-  // corresponds to the AttributeList::AT_* enum that is generated and it
+  // corresponds to the ParsedAttr::AT_* enum that is generated and it
   // should contain a shared value between the attributes.
   //
   // Target-specific attributes which use this feature should ensure that the

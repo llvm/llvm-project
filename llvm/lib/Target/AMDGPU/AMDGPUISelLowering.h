@@ -122,8 +122,11 @@ protected:
   SDValue LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const;
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &Results) const;
-  void analyzeFormalArgumentsCompute(CCState &State,
-                              const SmallVectorImpl<ISD::InputArg> &Ins) const;
+
+  void analyzeFormalArgumentsCompute(
+    CCState &State,
+    const SmallVectorImpl<ISD::InputArg> &Ins) const;
+
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
 

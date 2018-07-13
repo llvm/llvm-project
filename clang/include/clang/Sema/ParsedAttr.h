@@ -1,4 +1,4 @@
-//===- AttributeList.h - Parsed attribute sets ------------------*- C++ -*-===//
+//======- ParsedAttr.h - Parsed attribute sets ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the AttributeList class, which is used to collect
+// This file defines the ParsedAttr class, which is used to collect
 // parsed attributes.
 //
 //===----------------------------------------------------------------------===//
@@ -60,7 +60,7 @@ enum AvailabilitySlot {
   IntroducedSlot, DeprecatedSlot, ObsoletedSlot, NumAvailabilitySlots
 };
 
-/// Describes the trailing object for Availability attribute in AttributeList.
+/// Describes the trailing object for Availability attribute in ParsedAttr.
 struct AvailabilityData {
   AvailabilityChange Changes[NumAvailabilitySlots];
   SourceLocation StrictLoc;
@@ -89,11 +89,11 @@ struct IdentifierLoc {
 };
 
 /// A union of the various pointer types that can be passed to an
-/// AttributeList as an argument.
+/// ParsedAttr as an argument.
 using ArgsUnion = llvm::PointerUnion<Expr *, IdentifierLoc *>;
 using ArgsVector = llvm::SmallVector<ArgsUnion, 12U>;
 
-/// AttributeList - Represents a syntactic attribute.
+/// ParsedAttr - Represents a syntactic attribute.
 ///
 /// For a GNU attribute, there are four forms of this construct:
 ///
@@ -102,7 +102,7 @@ using ArgsVector = llvm::SmallVector<ArgsUnion, 12U>;
 /// 3: __attribute__(( format(printf, 1, 2) )). ParmName/Args/NumArgs all used.
 /// 4: __attribute__(( aligned(16) )). ParmName is unused, Args/Num used.
 ///
-class AttributeList { // TODO: This should really be called ParsedAttribute
+class ParsedAttr { // TODO: This should really be called ParsedAttribute
 public:
   /// The style used to specify an attribute.
   enum Syntax {
@@ -215,10 +215,10 @@ private:
   friend class AttributePool;
 
   /// Constructor for attributes with expression arguments.
-  AttributeList(IdentifierInfo *attrName, SourceRange attrRange,
-                IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                ArgsUnion *args, unsigned numArgs,
-                Syntax syntaxUsed, SourceLocation ellipsisLoc)
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             ArgsUnion *args, unsigned numArgs, Syntax syntaxUsed,
+             SourceLocation ellipsisLoc)
       : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
         ScopeLoc(scopeLoc), EllipsisLoc(ellipsisLoc), NumArgs(numArgs),
         SyntaxUsed(syntaxUsed), Invalid(false), UsedAsTypeAttr(false),
@@ -229,15 +229,13 @@ private:
   }
 
   /// Constructor for availability attributes.
-  AttributeList(IdentifierInfo *attrName, SourceRange attrRange,
-                IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                IdentifierLoc *Parm, const AvailabilityChange &introduced,
-                const AvailabilityChange &deprecated,
-                const AvailabilityChange &obsoleted,
-                SourceLocation unavailable, 
-                const Expr *messageExpr,
-                Syntax syntaxUsed, SourceLocation strict,
-                const Expr *replacementExpr)
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             IdentifierLoc *Parm, const AvailabilityChange &introduced,
+             const AvailabilityChange &deprecated,
+             const AvailabilityChange &obsoleted, SourceLocation unavailable,
+             const Expr *messageExpr, Syntax syntaxUsed, SourceLocation strict,
+             const Expr *replacementExpr)
       : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
         ScopeLoc(scopeLoc), NumArgs(1), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(true),
@@ -252,12 +250,10 @@ private:
   }
 
   /// Constructor for objc_bridge_related attributes.
-  AttributeList(IdentifierInfo *attrName, SourceRange attrRange,
-                IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                IdentifierLoc *Parm1,
-                IdentifierLoc *Parm2,
-                IdentifierLoc *Parm3,
-                Syntax syntaxUsed)
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             IdentifierLoc *Parm1, IdentifierLoc *Parm2, IdentifierLoc *Parm3,
+             Syntax syntaxUsed)
       : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
         ScopeLoc(scopeLoc), NumArgs(3), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
@@ -271,10 +267,10 @@ private:
   }
   
   /// Constructor for type_tag_for_datatype attribute.
-  AttributeList(IdentifierInfo *attrName, SourceRange attrRange,
-                IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                IdentifierLoc *ArgKind, ParsedType matchingCType,
-                bool layoutCompatible, bool mustBeNull, Syntax syntaxUsed)
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             IdentifierLoc *ArgKind, ParsedType matchingCType,
+             bool layoutCompatible, bool mustBeNull, Syntax syntaxUsed)
       : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
         ScopeLoc(scopeLoc), NumArgs(1), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
@@ -290,9 +286,9 @@ private:
   }
 
   /// Constructor for attributes with a single type argument.
-  AttributeList(IdentifierInfo *attrName, SourceRange attrRange,
-                IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                ParsedType typeArg, Syntax syntaxUsed)
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             ParsedType typeArg, Syntax syntaxUsed)
       : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
         ScopeLoc(scopeLoc), NumArgs(0), SyntaxUsed(syntaxUsed), Invalid(false),
         UsedAsTypeAttr(false), IsAvailability(false),
@@ -303,13 +299,13 @@ private:
   }
 
   /// Constructor for microsoft __declspec(property) attribute.
-  AttributeList(IdentifierInfo *attrName, SourceRange attrRange,
-                IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                IdentifierInfo *getterId, IdentifierInfo *setterId,
-                Syntax syntaxUsed)
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             IdentifierInfo *getterId, IdentifierInfo *setterId,
+             Syntax syntaxUsed)
       : AttrName(attrName), ScopeName(scopeName), AttrRange(attrRange),
-        ScopeLoc(scopeLoc), NumArgs(0), SyntaxUsed(syntaxUsed),
-        Invalid(false), UsedAsTypeAttr(false), IsAvailability(false),
+        ScopeLoc(scopeLoc), NumArgs(0), SyntaxUsed(syntaxUsed), Invalid(false),
+        UsedAsTypeAttr(false), IsAvailability(false),
         IsTypeTagForDatatype(false), IsProperty(true), HasParsedType(false),
         HasProcessingCache(false) {
     new (&getPropertyDataBuffer()) PropertyData(getterId, setterId);
@@ -350,9 +346,9 @@ private:
   size_t allocated_size() const;
 
 public:
-  AttributeList(const AttributeList &) = delete;
-  AttributeList &operator=(const AttributeList &) = delete;
-  ~AttributeList() = delete;
+  ParsedAttr(const ParsedAttr &) = delete;
+  ParsedAttr &operator=(const ParsedAttr &) = delete;
+  ~ParsedAttr() = delete;
 
   void operator delete(void *) = delete;
 
@@ -559,18 +555,17 @@ public:
     /// The required allocation size of an availability attribute,
     /// which we want to ensure is a multiple of sizeof(void*).
     AvailabilityAllocSize =
-      sizeof(AttributeList)
-      + ((sizeof(AvailabilityData) + sizeof(void*) + sizeof(ArgsUnion) - 1)
-         / sizeof(void*) * sizeof(void*)),
-    TypeTagForDatatypeAllocSize =
-      sizeof(AttributeList)
-      + (sizeof(AttributeList::TypeTagForDatatypeData) + sizeof(void *) +
-         sizeof(ArgsUnion) - 1)
-        / sizeof(void*) * sizeof(void*),
+        sizeof(ParsedAttr) +
+        ((sizeof(AvailabilityData) + sizeof(void *) + sizeof(ArgsUnion) - 1) /
+         sizeof(void *) * sizeof(void *)),
+    TypeTagForDatatypeAllocSize = sizeof(ParsedAttr) +
+                                  (sizeof(ParsedAttr::TypeTagForDatatypeData) +
+                                   sizeof(void *) + sizeof(ArgsUnion) - 1) /
+                                      sizeof(void *) * sizeof(void *),
     PropertyAllocSize =
-      sizeof(AttributeList)
-      + (sizeof(AttributeList::PropertyData) + sizeof(void *) - 1)
-        / sizeof(void*) * sizeof(void*)
+        sizeof(ParsedAttr) +
+        (sizeof(ParsedAttr::PropertyData) + sizeof(void *) - 1) /
+            sizeof(void *) * sizeof(void *)
   };
 
 private:
@@ -581,15 +576,14 @@ private:
     /// attribute that needs more than that; on x86-64 you'd need 10
     /// expression arguments, and on i386 you'd need 19.
     InlineFreeListsCapacity =
-      1 + (AvailabilityAllocSize - sizeof(AttributeList)) / sizeof(void*)
+        1 + (AvailabilityAllocSize - sizeof(ParsedAttr)) / sizeof(void *)
   };
 
   llvm::BumpPtrAllocator Alloc;
 
   /// Free lists.  The index is determined by the following formula:
-  ///   (size - sizeof(AttributeList)) / sizeof(void*)
-  SmallVector<SmallVector<AttributeList *, 8>, InlineFreeListsCapacity>
-      FreeLists;
+  ///   (size - sizeof(ParsedAttr)) / sizeof(void*)
+  SmallVector<SmallVector<ParsedAttr *, 8>, InlineFreeListsCapacity> FreeLists;
 
   // The following are the private interface used by AttributePool.
   friend class AttributePool;
@@ -597,7 +591,7 @@ private:
   /// Allocate an attribute of the given size.
   void *allocate(size_t size);
 
-  void deallocate(AttributeList *AL);
+  void deallocate(ParsedAttr *AL);
 
   /// Reclaim all the attributes in the given pool chain, which is
   /// non-empty.  Note that the current implementation is safe
@@ -614,18 +608,18 @@ public:
 class AttributePool {
   friend class AttributeFactory;
   AttributeFactory &Factory;
-  llvm::TinyPtrVector<AttributeList *> Attrs;
+  llvm::TinyPtrVector<ParsedAttr *> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
   }
 
-  AttributeList *add(AttributeList *attr) {
+  ParsedAttr *add(ParsedAttr *attr) {
     Attrs.push_back(attr);
     return attr;
   }
 
-  void remove(AttributeList *attr) {
+  void remove(ParsedAttr *attr) {
     assert(llvm::is_contained(Attrs, attr) &&
            "Can't take attribute from a pool that doesn't own it!");
     Attrs.erase(llvm::find(Attrs, attr));
@@ -657,97 +651,93 @@ public:
     pool.Attrs.clear();
   }
 
-  AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
-                        IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        ArgsUnion *args, unsigned numArgs,
-                        AttributeList::Syntax syntax,
-                        SourceLocation ellipsisLoc = SourceLocation()) {
-    void *memory =
-        allocate(sizeof(AttributeList) + numArgs * sizeof(ArgsUnion));
-    return add(new (memory)
-                   AttributeList(attrName, attrRange, scopeName, scopeLoc, args,
-                                 numArgs, syntax, ellipsisLoc));
+  ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     ArgsUnion *args, unsigned numArgs,
+                     ParsedAttr::Syntax syntax,
+                     SourceLocation ellipsisLoc = SourceLocation()) {
+    void *memory = allocate(sizeof(ParsedAttr) + numArgs * sizeof(ArgsUnion));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       args, numArgs, syntax, ellipsisLoc));
   }
 
-  AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
-                        IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        IdentifierLoc *Param,
-                        const AvailabilityChange &introduced,
-                        const AvailabilityChange &deprecated,
-                        const AvailabilityChange &obsoleted,
-                        SourceLocation unavailable, const Expr *MessageExpr,
-                        AttributeList::Syntax syntax, SourceLocation strict,
-                        const Expr *ReplacementExpr) {
+  ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     IdentifierLoc *Param, const AvailabilityChange &introduced,
+                     const AvailabilityChange &deprecated,
+                     const AvailabilityChange &obsoleted,
+                     SourceLocation unavailable, const Expr *MessageExpr,
+                     ParsedAttr::Syntax syntax, SourceLocation strict,
+                     const Expr *ReplacementExpr) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
-    return add(new (memory) AttributeList(
+    return add(new (memory) ParsedAttr(
         attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
         obsoleted, unavailable, MessageExpr, syntax, strict, ReplacementExpr));
   }
 
-  AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
-                        IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        IdentifierLoc *Param1, IdentifierLoc *Param2,
-                        IdentifierLoc *Param3, AttributeList::Syntax syntax) {
-    size_t size = sizeof(AttributeList) + 3 * sizeof(ArgsUnion);
+  ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     IdentifierLoc *Param1, IdentifierLoc *Param2,
+                     IdentifierLoc *Param3, ParsedAttr::Syntax syntax) {
+    size_t size = sizeof(ParsedAttr) + 3 * sizeof(ArgsUnion);
     void *memory = allocate(size);
-    return add(new (memory)
-                   AttributeList(attrName, attrRange, scopeName, scopeLoc,
-                                 Param1, Param2, Param3, syntax));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       Param1, Param2, Param3, syntax));
   }
 
-  AttributeList *
+  ParsedAttr *
   createTypeTagForDatatype(IdentifierInfo *attrName, SourceRange attrRange,
                            IdentifierInfo *scopeName, SourceLocation scopeLoc,
                            IdentifierLoc *argumentKind,
                            ParsedType matchingCType, bool layoutCompatible,
-                           bool mustBeNull, AttributeList::Syntax syntax) {
+                           bool mustBeNull, ParsedAttr::Syntax syntax) {
     void *memory = allocate(AttributeFactory::TypeTagForDatatypeAllocSize);
-    return add(new (memory) AttributeList(
-        attrName, attrRange, scopeName, scopeLoc, argumentKind, matchingCType,
-        layoutCompatible, mustBeNull, syntax));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       argumentKind, matchingCType,
+                                       layoutCompatible, mustBeNull, syntax));
   }
 
-  AttributeList *
-  createTypeAttribute(IdentifierInfo *attrName, SourceRange attrRange,
-                      IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                      ParsedType typeArg, AttributeList::Syntax syntaxUsed) {
-    void *memory = allocate(sizeof(AttributeList) + sizeof(void *));
-    return add(new (memory) AttributeList(attrName, attrRange, scopeName,
-                                          scopeLoc, typeArg, syntaxUsed));
+  ParsedAttr *createTypeAttribute(IdentifierInfo *attrName,
+                                  SourceRange attrRange,
+                                  IdentifierInfo *scopeName,
+                                  SourceLocation scopeLoc, ParsedType typeArg,
+                                  ParsedAttr::Syntax syntaxUsed) {
+    void *memory = allocate(sizeof(ParsedAttr) + sizeof(void *));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       typeArg, syntaxUsed));
   }
 
-  AttributeList *
+  ParsedAttr *
   createPropertyAttribute(IdentifierInfo *attrName, SourceRange attrRange,
                           IdentifierInfo *scopeName, SourceLocation scopeLoc,
                           IdentifierInfo *getterId, IdentifierInfo *setterId,
-                          AttributeList::Syntax syntaxUsed) {
+                          ParsedAttr::Syntax syntaxUsed) {
     void *memory = allocate(AttributeFactory::PropertyAllocSize);
-    return add(new (memory)
-                   AttributeList(attrName, attrRange, scopeName, scopeLoc,
-                                 getterId, setterId, syntaxUsed));
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       getterId, setterId, syntaxUsed));
   }
 };
 
 class ParsedAttributesView {
-  using VecTy = llvm::TinyPtrVector<AttributeList *>;
+  using VecTy = llvm::TinyPtrVector<ParsedAttr *>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
 public:
   bool empty() const { return AttrList.empty(); }
   SizeType size() const { return AttrList.size(); }
-  AttributeList &operator[](SizeType pos) { return *AttrList[pos]; }
-  const AttributeList &operator[](SizeType pos) const { return *AttrList[pos]; }
+  ParsedAttr &operator[](SizeType pos) { return *AttrList[pos]; }
+  const ParsedAttr &operator[](SizeType pos) const { return *AttrList[pos]; }
 
-  void addAtStart(AttributeList *newAttr) {
+  void addAtStart(ParsedAttr *newAttr) {
     assert(newAttr);
     AttrList.insert(AttrList.begin(), newAttr);
   }
-  void addAtEnd(AttributeList *newAttr) {
+  void addAtEnd(ParsedAttr *newAttr) {
     assert(newAttr);
     AttrList.push_back(newAttr);
   }
 
-  void remove(AttributeList *ToBeRemoved) {
+  void remove(ParsedAttr *ToBeRemoved) {
     assert(is_contained(AttrList, ToBeRemoved) &&
            "Cannot remove attribute that isn't in the list");
     AttrList.erase(llvm::find(AttrList, ToBeRemoved));
@@ -757,7 +747,7 @@ public:
 
   struct iterator : llvm::iterator_adaptor_base<iterator, VecTy::iterator,
                                                 std::random_access_iterator_tag,
-                                                AttributeList> {
+                                                ParsedAttr> {
     iterator() : iterator_adaptor_base(nullptr) {}
     iterator(VecTy::iterator I) : iterator_adaptor_base(I) {}
     reference operator*() { return **I; }
@@ -766,7 +756,7 @@ public:
   struct const_iterator
       : llvm::iterator_adaptor_base<const_iterator, VecTy::const_iterator,
                                     std::random_access_iterator_tag,
-                                    AttributeList> {
+                                    ParsedAttr> {
     const_iterator() : iterator_adaptor_base(nullptr) {}
     const_iterator(VecTy::const_iterator I) : iterator_adaptor_base(I) {}
 
@@ -795,9 +785,9 @@ public:
   iterator end() { return iterator(AttrList.end()); }
   const_iterator end() const { return const_iterator(AttrList.end()); }
 
-  bool hasAttribute(AttributeList::Kind K) const {
+  bool hasAttribute(ParsedAttr::Kind K) const {
     return llvm::any_of(
-        AttrList, [K](const AttributeList *AL) { return AL->getKind() == K; });
+        AttrList, [K](const ParsedAttr *AL) { return AL->getKind() == K; });
   }
 
 private:
@@ -829,86 +819,76 @@ public:
   }
 
   /// Add attribute with expression arguments.
-  AttributeList *addNew(IdentifierInfo *attrName, SourceRange attrRange,
-                        IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        ArgsUnion *args, unsigned numArgs,
-                        AttributeList::Syntax syntax,
-                        SourceLocation ellipsisLoc = SourceLocation()) {
-    AttributeList *attr =
-      pool.create(attrName, attrRange, scopeName, scopeLoc, args, numArgs,
-                  syntax, ellipsisLoc);
+  ParsedAttr *addNew(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     ArgsUnion *args, unsigned numArgs,
+                     ParsedAttr::Syntax syntax,
+                     SourceLocation ellipsisLoc = SourceLocation()) {
+    ParsedAttr *attr = pool.create(attrName, attrRange, scopeName, scopeLoc,
+                                   args, numArgs, syntax, ellipsisLoc);
     addAtStart(attr);
     return attr;
   }
 
   /// Add availability attribute.
-  AttributeList *addNew(IdentifierInfo *attrName, SourceRange attrRange,
-                        IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        IdentifierLoc *Param,
-                        const AvailabilityChange &introduced,
-                        const AvailabilityChange &deprecated,
-                        const AvailabilityChange &obsoleted,
-                        SourceLocation unavailable,
-                        const Expr *MessageExpr,
-                        AttributeList::Syntax syntax,
-                        SourceLocation strict, const Expr *ReplacementExpr) {
-    AttributeList *attr =
-      pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
-                  deprecated, obsoleted, unavailable, MessageExpr, syntax,
-                  strict, ReplacementExpr);
+  ParsedAttr *addNew(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     IdentifierLoc *Param, const AvailabilityChange &introduced,
+                     const AvailabilityChange &deprecated,
+                     const AvailabilityChange &obsoleted,
+                     SourceLocation unavailable, const Expr *MessageExpr,
+                     ParsedAttr::Syntax syntax, SourceLocation strict,
+                     const Expr *ReplacementExpr) {
+    ParsedAttr *attr = pool.create(
+        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
+        obsoleted, unavailable, MessageExpr, syntax, strict, ReplacementExpr);
     addAtStart(attr);
     return attr;
   }
 
   /// Add objc_bridge_related attribute.
-  AttributeList *addNew(IdentifierInfo *attrName, SourceRange attrRange,
-                        IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        IdentifierLoc *Param1,
-                        IdentifierLoc *Param2,
-                        IdentifierLoc *Param3,
-                        AttributeList::Syntax syntax) {
-    AttributeList *attr =
-      pool.create(attrName, attrRange, scopeName, scopeLoc,
-                  Param1, Param2, Param3, syntax);
+  ParsedAttr *addNew(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     IdentifierLoc *Param1, IdentifierLoc *Param2,
+                     IdentifierLoc *Param3, ParsedAttr::Syntax syntax) {
+    ParsedAttr *attr = pool.create(attrName, attrRange, scopeName, scopeLoc,
+                                   Param1, Param2, Param3, syntax);
     addAtStart(attr);
     return attr;
   }
 
   /// Add type_tag_for_datatype attribute.
-  AttributeList *addNewTypeTagForDatatype(
-                        IdentifierInfo *attrName, SourceRange attrRange,
-                        IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        IdentifierLoc *argumentKind, ParsedType matchingCType,
-                        bool layoutCompatible, bool mustBeNull,
-                        AttributeList::Syntax syntax) {
-    AttributeList *attr =
-      pool.createTypeTagForDatatype(attrName, attrRange,
-                                    scopeName, scopeLoc,
-                                    argumentKind, matchingCType,
-                                    layoutCompatible, mustBeNull, syntax);
+  ParsedAttr *
+  addNewTypeTagForDatatype(IdentifierInfo *attrName, SourceRange attrRange,
+                           IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                           IdentifierLoc *argumentKind,
+                           ParsedType matchingCType, bool layoutCompatible,
+                           bool mustBeNull, ParsedAttr::Syntax syntax) {
+    ParsedAttr *attr = pool.createTypeTagForDatatype(
+        attrName, attrRange, scopeName, scopeLoc, argumentKind, matchingCType,
+        layoutCompatible, mustBeNull, syntax);
     addAtStart(attr);
     return attr;
   }
 
   /// Add an attribute with a single type argument.
-  AttributeList *
-  addNewTypeAttr(IdentifierInfo *attrName, SourceRange attrRange,
-                 IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                 ParsedType typeArg, AttributeList::Syntax syntaxUsed) {
-    AttributeList *attr =
-        pool.createTypeAttribute(attrName, attrRange, scopeName, scopeLoc,
-                                 typeArg, syntaxUsed);
+  ParsedAttr *addNewTypeAttr(IdentifierInfo *attrName, SourceRange attrRange,
+                             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                             ParsedType typeArg,
+                             ParsedAttr::Syntax syntaxUsed) {
+    ParsedAttr *attr = pool.createTypeAttribute(attrName, attrRange, scopeName,
+                                                scopeLoc, typeArg, syntaxUsed);
     addAtStart(attr);
     return attr;
   }
 
   /// Add microsoft __delspec(property) attribute.
-  AttributeList *
+  ParsedAttr *
   addNewPropertyAttr(IdentifierInfo *attrName, SourceRange attrRange,
-                 IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                 IdentifierInfo *getterId, IdentifierInfo *setterId,
-                 AttributeList::Syntax syntaxUsed) {
-    AttributeList *attr =
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     IdentifierInfo *getterId, IdentifierInfo *setterId,
+                     ParsedAttr::Syntax syntaxUsed) {
+    ParsedAttr *attr =
         pool.createPropertyAttribute(attrName, attrRange, scopeName, scopeLoc,
                                      getterId, setterId, syntaxUsed);
     addAtStart(attr);

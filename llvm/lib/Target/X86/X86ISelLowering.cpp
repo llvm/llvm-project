@@ -33462,7 +33462,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       if (AddOp1 && (AddOp2.getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
                      AddOp2.getOpcode() == ISD::CTTZ)) {
         APInt Diff = Cnst->getAPIntValue() - AddOp1->getAPIntValue();
-        if (CC == X86::COND_NE) {
+        if (CC == X86::COND_E) {
           Add = DAG.getNode(X86ISD::CMOV, DL, Add.getValueType(), AddOp2,
                             DAG.getConstant(Diff, DL, Add.getValueType()),
                             DAG.getConstant(CC, DL, MVT::i8), Cond);

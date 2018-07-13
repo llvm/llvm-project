@@ -1942,7 +1942,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
                             ArgsUnion(Hint.ValueExpr)};
     TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
                      Hint.PragmaNameLoc->Loc, ArgHints, 4,
-                     AttributeList::AS_Pragma);
+                     ParsedAttr::AS_Pragma);
   }
 
   // Get the next statement.
@@ -2267,7 +2267,7 @@ bool Parser::ParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs) {
   if (Attrs.empty())
     return true;
 
-  if (Attrs.begin()->getKind() != AttributeList::AT_OpenCLUnrollHint)
+  if (Attrs.begin()->getKind() != ParsedAttr::AT_OpenCLUnrollHint)
     return true;
 
   if (!(Tok.is(tok::kw_for) || Tok.is(tok::kw_while) || Tok.is(tok::kw_do))) {

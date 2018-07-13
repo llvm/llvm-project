@@ -287,7 +287,7 @@ define i64 @cttz_64_eq_select(i64 %v) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bsfq %rdi, %rcx
 ; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    addq $6, %rax
 ; CHECK-NEXT:    retq
 
@@ -295,7 +295,7 @@ define i64 @cttz_64_eq_select(i64 %v) nounwind {
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntq %rdi, %rcx
 ; BMI-NEXT:    movq $-1, %rax
-; BMI-NEXT:    cmovbq %rcx, %rax
+; BMI-NEXT:    cmovaeq %rcx, %rax
 ; BMI-NEXT:    addq $6, %rax
 ; BMI-NEXT:    retq
   %cnt = tail call i64 @llvm.cttz.i64(i64 %v, i1 true)
@@ -310,7 +310,7 @@ define i64 @cttz_64_ne_select(i64 %v) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bsfq %rdi, %rcx
 ; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    addq $6, %rax
 ; CHECK-NEXT:    retq
 
@@ -318,7 +318,7 @@ define i64 @cttz_64_ne_select(i64 %v) nounwind {
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntq %rdi, %rcx
 ; BMI-NEXT:    movq $-1, %rax
-; BMI-NEXT:    cmovbq %rcx, %rax
+; BMI-NEXT:    cmovaeq %rcx, %rax
 ; BMI-NEXT:    addq $6, %rax
 ; BMI-NEXT:    retq
   %cnt = tail call i64 @llvm.cttz.i64(i64 %v, i1 true)
@@ -334,7 +334,7 @@ define i32 @cttz_32_eq_select(i32 %v) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bsfl %edi, %ecx
 ; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    addl $6, %eax
 ; CHECK-NEXT:    retq
 
@@ -342,7 +342,7 @@ define i32 @cttz_32_eq_select(i32 %v) nounwind {
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntl %edi, %ecx
 ; BMI-NEXT:    movl $-1, %eax
-; BMI-NEXT:    cmovbl %ecx, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
 ; BMI-NEXT:    addl $6, %eax
 ; BMI-NEXT:    retq
   %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)
@@ -357,7 +357,7 @@ define i32 @cttz_32_ne_select(i32 %v) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bsfl %edi, %ecx
 ; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    addl $6, %eax
 ; CHECK-NEXT:    retq
 
@@ -365,7 +365,7 @@ define i32 @cttz_32_ne_select(i32 %v) nounwind {
 ; BMI:       # %bb.0:
 ; BMI-NEXT:    tzcntl %edi, %ecx
 ; BMI-NEXT:    movl $-1, %eax
-; BMI-NEXT:    cmovbl %ecx, %eax
+; BMI-NEXT:    cmovael %ecx, %eax
 ; BMI-NEXT:    addl $6, %eax
 ; BMI-NEXT:    retq
   %cnt = tail call i32 @llvm.cttz.i32(i32 %v, i1 true)

@@ -895,8 +895,8 @@ def : Pat<(or (zext32 GR32:$src), imm64hf32:$imm),
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
   // Addition of a register.
   let isCommutable = 1 in {
-    defm AR : BinaryRRAndK<"ar", 0x1A, 0xB9F8, z_saddo, GR32, GR32>;
-    defm AGR : BinaryRREAndK<"agr", 0xB908, 0xB9E8, z_saddo, GR64, GR64>;
+    defm AR : BinaryRRAndK<"ar", 0x1A, 0xB9F8, z_sadd, GR32, GR32>;
+    defm AGR : BinaryRREAndK<"agr", 0xB908, 0xB9E8, z_sadd, GR64, GR64>;
   }
   def AGFR : BinaryRRE<"agfr", 0xB918, null_frag, GR64, GR32>;
 
@@ -907,38 +907,38 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
               Requires<[FeatureHighWord]>;
 
   // Addition of signed 16-bit immediates.
-  defm AHIMux : BinaryRIAndKPseudo<"ahimux", z_saddo, GRX32, imm32sx16>;
-  defm AHI  : BinaryRIAndK<"ahi",  0xA7A, 0xECD8, z_saddo, GR32, imm32sx16>;
-  defm AGHI : BinaryRIAndK<"aghi", 0xA7B, 0xECD9, z_saddo, GR64, imm64sx16>;
+  defm AHIMux : BinaryRIAndKPseudo<"ahimux", z_sadd, GRX32, imm32sx16>;
+  defm AHI  : BinaryRIAndK<"ahi",  0xA7A, 0xECD8, z_sadd, GR32, imm32sx16>;
+  defm AGHI : BinaryRIAndK<"aghi", 0xA7B, 0xECD9, z_sadd, GR64, imm64sx16>;
 
   // Addition of signed 32-bit immediates.
-  def AFIMux : BinaryRIPseudo<z_saddo, GRX32, simm32>,
+  def AFIMux : BinaryRIPseudo<z_sadd, GRX32, simm32>,
                Requires<[FeatureHighWord]>;
-  def AFI  : BinaryRIL<"afi",  0xC29, z_saddo, GR32, simm32>;
-  def AIH  : BinaryRIL<"aih",  0xCC8, z_saddo, GRH32, simm32>,
+  def AFI  : BinaryRIL<"afi",  0xC29, z_sadd, GR32, simm32>;
+  def AIH  : BinaryRIL<"aih",  0xCC8, z_sadd, GRH32, simm32>,
              Requires<[FeatureHighWord]>;
-  def AGFI : BinaryRIL<"agfi", 0xC28, z_saddo, GR64, imm64sx32>;
+  def AGFI : BinaryRIL<"agfi", 0xC28, z_sadd, GR64, imm64sx32>;
 
   // Addition of memory.
-  defm AH  : BinaryRXPair<"ah", 0x4A, 0xE37A, z_saddo, GR32, asextloadi16, 2>;
-  defm A   : BinaryRXPair<"a",  0x5A, 0xE35A, z_saddo, GR32, load, 4>;
-  def  AGH : BinaryRXY<"agh", 0xE338, z_saddo, GR64, asextloadi16, 2>,
+  defm AH  : BinaryRXPair<"ah", 0x4A, 0xE37A, z_sadd, GR32, asextloadi16, 2>;
+  defm A   : BinaryRXPair<"a",  0x5A, 0xE35A, z_sadd, GR32, load, 4>;
+  def  AGH : BinaryRXY<"agh", 0xE338, z_sadd, GR64, asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
-  def  AGF : BinaryRXY<"agf", 0xE318, z_saddo, GR64, asextloadi32, 4>;
-  def  AG  : BinaryRXY<"ag",  0xE308, z_saddo, GR64, load, 8>;
+  def  AGF : BinaryRXY<"agf", 0xE318, z_sadd, GR64, asextloadi32, 4>;
+  def  AG  : BinaryRXY<"ag",  0xE308, z_sadd, GR64, load, 8>;
 
   // Addition to memory.
-  def ASI  : BinarySIY<"asi",  0xEB6A, null_frag, imm32sx8>;
-  def AGSI : BinarySIY<"agsi", 0xEB7A, null_frag, imm64sx8>;
+  def ASI  : BinarySIY<"asi",  0xEB6A, add, imm32sx8>;
+  def AGSI : BinarySIY<"agsi", 0xEB7A, add, imm64sx8>;
 }
-defm : SXB<z_saddo, GR64, AGFR>;
+defm : SXB<z_sadd, GR64, AGFR>;
 
 // Addition producing a carry.
 let Defs = [CC] in {
   // Addition of a register.
   let isCommutable = 1 in {
-    defm ALR : BinaryRRAndK<"alr", 0x1E, 0xB9FA, z_uaddo, GR32, GR32>;
-    defm ALGR : BinaryRREAndK<"algr", 0xB90A, 0xB9EA, z_uaddo, GR64, GR64>;
+    defm ALR : BinaryRRAndK<"alr", 0x1E, 0xB9FA, z_uadd, GR32, GR32>;
+    defm ALGR : BinaryRREAndK<"algr", 0xB90A, 0xB9EA, z_uadd, GR64, GR64>;
   }
   def ALGFR : BinaryRRE<"algfr", 0xB91A, null_frag, GR64, GR32>;
 
@@ -949,29 +949,29 @@ let Defs = [CC] in {
                Requires<[FeatureHighWord]>;
 
   // Addition of signed 16-bit immediates.
-  def ALHSIK  : BinaryRIE<"alhsik",  0xECDA, z_uaddo, GR32, imm32sx16>,
+  def ALHSIK  : BinaryRIE<"alhsik",  0xECDA, z_uadd, GR32, imm32sx16>,
                 Requires<[FeatureDistinctOps]>;
-  def ALGHSIK : BinaryRIE<"alghsik", 0xECDB, z_uaddo, GR64, imm64sx16>,
+  def ALGHSIK : BinaryRIE<"alghsik", 0xECDB, z_uadd, GR64, imm64sx16>,
                 Requires<[FeatureDistinctOps]>;
 
   // Addition of unsigned 32-bit immediates.
-  def ALFI  : BinaryRIL<"alfi",  0xC2B, z_uaddo, GR32, uimm32>;
-  def ALGFI : BinaryRIL<"algfi", 0xC2A, z_uaddo, GR64, imm64zx32>;
+  def ALFI  : BinaryRIL<"alfi",  0xC2B, z_uadd, GR32, uimm32>;
+  def ALGFI : BinaryRIL<"algfi", 0xC2A, z_uadd, GR64, imm64zx32>;
 
   // Addition of signed 32-bit immediates.
   def ALSIH : BinaryRIL<"alsih", 0xCCA, null_frag, GRH32, simm32>,
               Requires<[FeatureHighWord]>;
 
   // Addition of memory.
-  defm AL   : BinaryRXPair<"al", 0x5E, 0xE35E, z_uaddo, GR32, load, 4>;
-  def  ALGF : BinaryRXY<"algf", 0xE31A, z_uaddo, GR64, azextloadi32, 4>;
-  def  ALG  : BinaryRXY<"alg",  0xE30A, z_uaddo, GR64, load, 8>;
+  defm AL   : BinaryRXPair<"al", 0x5E, 0xE35E, z_uadd, GR32, load, 4>;
+  def  ALGF : BinaryRXY<"algf", 0xE31A, z_uadd, GR64, azextloadi32, 4>;
+  def  ALG  : BinaryRXY<"alg",  0xE30A, z_uadd, GR64, load, 8>;
 
   // Addition to memory.
   def ALSI  : BinarySIY<"alsi",  0xEB6E, null_frag, imm32sx8>;
   def ALGSI : BinarySIY<"algsi", 0xEB7E, null_frag, imm64sx8>;
 }
-defm : ZXB<z_uaddo, GR64, ALGFR>;
+defm : ZXB<z_uadd, GR64, ALGFR>;
 
 // Addition producing and using a carry.
 let Defs = [CC], Uses = [CC] in {
@@ -988,54 +988,6 @@ let Defs = [CC], Uses = [CC] in {
 def ALSIHN : BinaryRIL<"alsihn", 0xCCB, null_frag, GRH32, simm32>,
              Requires<[FeatureHighWord]>;
 
-// Map plain addition to either arithmetic or logical operation.
-
-def : Pat<(add GR32:$src1, GR32:$src2),
-          (AR GR32:$src1, GR32:$src2)>;
-def : Pat<(add GR64:$src1, GR64:$src2),
-          (AGR GR64:$src1, GR64:$src2)>;
-defm : SXB<add, GR64, AGFR>;
-defm : ZXB<add, GR64, ALGFR>;
-
-def : Pat<(add GRX32:$src1, imm32sx16:$src2),
-          (AHIMux GRX32:$src1, imm32sx16:$src2)>, Requires<[FeatureHighWord]>;
-def : Pat<(add GR32:$src1, imm32sx16:$src2),
-          (AHI GR32:$src1, imm32sx16:$src2)>;
-def : Pat<(add GR64:$src1, imm64sx16:$src2),
-          (AGHI GR64:$src1, imm64sx16:$src2)>;
-def : Pat<(add GRX32:$src1, simm32:$src2),
-          (AFIMux GRX32:$src1, simm32:$src2)>, Requires<[FeatureHighWord]>;
-def : Pat<(add GR32:$src1, simm32:$src2),
-          (AFI GR32:$src1, simm32:$src2)>;
-def : Pat<(add GRH32:$src1, simm32:$src2),
-          (AIH GRH32:$src1, simm32:$src2)>, Requires<[FeatureHighWord]>;
-def : Pat<(add GR64:$src1, imm64sx32:$src2),
-          (AGFI GR64:$src1, imm64sx32:$src2)>;
-def : Pat<(add GR64:$src1, imm64zx32:$src2),
-          (ALGFI GR64:$src1, imm64zx32:$src2)>;
-
-def : Pat<(add GR32:$src1, (asextloadi16 bdxaddr12pair:$addr)),
-          (AH GR32:$src1, bdxaddr12pair:$addr)>;
-def : Pat<(add GR32:$src1, (asextloadi16 bdxaddr20pair:$addr)),
-          (AHY GR32:$src1, bdxaddr20pair:$addr)>;
-def : Pat<(add GR32:$src1, (load bdxaddr12pair:$addr)),
-          (A GR32:$src1, bdxaddr12pair:$addr)>;
-def : Pat<(add GR32:$src1, (load bdxaddr20pair:$addr)),
-          (AY GR32:$src1, bdxaddr20pair:$addr)>;
-def : Pat<(add GR64:$src1, (asextloadi16 bdxaddr20only:$addr)),
-          (AGH GR64:$src1, bdxaddr20only:$addr)>,
-      Requires<[FeatureMiscellaneousExtensions2]>;
-def : Pat<(add GR64:$src1, (asextloadi32 bdxaddr20only:$addr)),
-          (AGF GR64:$src1, bdxaddr20only:$addr)>;
-def : Pat<(add GR64:$src1, (azextloadi32 bdxaddr20only:$addr)),
-          (ALGF GR64:$src1, bdxaddr20only:$addr)>;
-def : Pat<(add GR64:$src1, (load bdxaddr20only:$addr)),
-          (AG GR64:$src1, bdxaddr20only:$addr)>;
-
-def : Pat<(store (add (load bdaddr20only:$addr), imm32sx8:$src2), bdaddr20only:$addr),
-          (ASI bdaddr20only:$addr, imm32sx8:$src2)>;
-def : Pat<(store (add (load bdaddr20only:$addr), imm64sx8:$src2), bdaddr20only:$addr),
-          (AGSI bdaddr20only:$addr, imm64sx8:$src2)>;
 
 //===----------------------------------------------------------------------===//
 // Subtraction
@@ -1044,9 +996,9 @@ def : Pat<(store (add (load bdaddr20only:$addr), imm64sx8:$src2), bdaddr20only:$
 // Subtraction producing a signed overflow flag.
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
   // Subtraction of a register.
-  defm SR : BinaryRRAndK<"sr", 0x1B, 0xB9F9, z_ssubo, GR32, GR32>;
+  defm SR : BinaryRRAndK<"sr", 0x1B, 0xB9F9, z_ssub, GR32, GR32>;
   def SGFR : BinaryRRE<"sgfr", 0xB919, null_frag, GR64, GR32>;
-  defm SGR : BinaryRREAndK<"sgr", 0xB909, 0xB9E9, z_ssubo, GR64, GR64>;
+  defm SGR : BinaryRREAndK<"sgr", 0xB909, 0xB9E9, z_ssub, GR64, GR64>;
 
   // Subtraction from a high register.
   def SHHHR : BinaryRRFa<"shhhr", 0xB9C9, null_frag, GRH32, GRH32, GRH32>,
@@ -1055,39 +1007,39 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
               Requires<[FeatureHighWord]>;
 
   // Subtraction of memory.
-  defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, z_ssubo, GR32, asextloadi16, 2>;
-  defm S   : BinaryRXPair<"s", 0x5B, 0xE35B, z_ssubo, GR32, load, 4>;
-  def  SGH : BinaryRXY<"sgh", 0xE339, z_ssubo, GR64, asextloadi16, 2>,
+  defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, z_ssub, GR32, asextloadi16, 2>;
+  defm S   : BinaryRXPair<"s", 0x5B, 0xE35B, z_ssub, GR32, load, 4>;
+  def  SGH : BinaryRXY<"sgh", 0xE339, z_ssub, GR64, asextloadi16, 2>,
              Requires<[FeatureMiscellaneousExtensions2]>;
-  def  SGF : BinaryRXY<"sgf", 0xE319, z_ssubo, GR64, asextloadi32, 4>;
-  def  SG  : BinaryRXY<"sg",  0xE309, z_ssubo, GR64, load, 8>;
+  def  SGF : BinaryRXY<"sgf", 0xE319, z_ssub, GR64, asextloadi32, 4>;
+  def  SG  : BinaryRXY<"sg",  0xE309, z_ssub, GR64, load, 8>;
 }
-defm : SXB<z_ssubo, GR64, SGFR>;
+defm : SXB<z_ssub, GR64, SGFR>;
 
 // Subtracting an immediate is the same as adding the negated immediate.
 let AddedComplexity = 1 in {
-  def : Pat<(z_ssubo GR32:$src1, imm32sx16n:$src2),
+  def : Pat<(z_ssub GR32:$src1, imm32sx16n:$src2),
             (AHIMux GR32:$src1, imm32sx16n:$src2)>,
         Requires<[FeatureHighWord]>;
-  def : Pat<(z_ssubo GR32:$src1, simm32n:$src2),
+  def : Pat<(z_ssub GR32:$src1, simm32n:$src2),
             (AFIMux GR32:$src1, simm32n:$src2)>,
         Requires<[FeatureHighWord]>;
-  def : Pat<(z_ssubo GR32:$src1, imm32sx16n:$src2),
+  def : Pat<(z_ssub GR32:$src1, imm32sx16n:$src2),
             (AHI GR32:$src1, imm32sx16n:$src2)>;
-  def : Pat<(z_ssubo GR32:$src1, simm32n:$src2),
+  def : Pat<(z_ssub GR32:$src1, simm32n:$src2),
             (AFI GR32:$src1, simm32n:$src2)>;
-  def : Pat<(z_ssubo GR64:$src1, imm64sx16n:$src2),
+  def : Pat<(z_ssub GR64:$src1, imm64sx16n:$src2),
             (AGHI GR64:$src1, imm64sx16n:$src2)>;
-  def : Pat<(z_ssubo GR64:$src1, imm64sx32n:$src2),
+  def : Pat<(z_ssub GR64:$src1, imm64sx32n:$src2),
             (AGFI GR64:$src1, imm64sx32n:$src2)>;
 }
 
 // Subtraction producing a carry.
 let Defs = [CC] in {
   // Subtraction of a register.
-  defm SLR : BinaryRRAndK<"slr", 0x1F, 0xB9FB, z_usubo, GR32, GR32>;
+  defm SLR : BinaryRRAndK<"slr", 0x1F, 0xB9FB, z_usub, GR32, GR32>;
   def SLGFR : BinaryRRE<"slgfr", 0xB91B, null_frag, GR64, GR32>;
-  defm SLGR : BinaryRREAndK<"slgr", 0xB90B, 0xB9EB, z_usubo, GR64, GR64>;
+  defm SLGR : BinaryRREAndK<"slgr", 0xB90B, 0xB9EB, z_usub, GR64, GR64>;
 
   // Subtraction from a high register.
   def SLHHHR : BinaryRRFa<"slhhhr", 0xB9CB, null_frag, GRH32, GRH32, GRH32>,
@@ -1096,25 +1048,29 @@ let Defs = [CC] in {
                Requires<[FeatureHighWord]>;
 
   // Subtraction of unsigned 32-bit immediates.
-  def SLFI  : BinaryRIL<"slfi",  0xC25, z_usubo, GR32, uimm32>;
-  def SLGFI : BinaryRIL<"slgfi", 0xC24, z_usubo, GR64, imm64zx32>;
+  def SLFI  : BinaryRIL<"slfi",  0xC25, z_usub, GR32, uimm32>;
+  def SLGFI : BinaryRIL<"slgfi", 0xC24, z_usub, GR64, imm64zx32>;
 
   // Subtraction of memory.
-  defm SL   : BinaryRXPair<"sl", 0x5F, 0xE35F, z_usubo, GR32, load, 4>;
-  def  SLGF : BinaryRXY<"slgf", 0xE31B, z_usubo, GR64, azextloadi32, 4>;
-  def  SLG  : BinaryRXY<"slg",  0xE30B, z_usubo, GR64, load, 8>;
+  defm SL   : BinaryRXPair<"sl", 0x5F, 0xE35F, z_usub, GR32, load, 4>;
+  def  SLGF : BinaryRXY<"slgf", 0xE31B, z_usub, GR64, azextloadi32, 4>;
+  def  SLG  : BinaryRXY<"slg",  0xE30B, z_usub, GR64, load, 8>;
 }
-defm : ZXB<z_usubo, GR64, SLGFR>;
+defm : ZXB<z_usub, GR64, SLGFR>;
 
 // Subtracting an immediate is the same as adding the negated immediate.
 let AddedComplexity = 1 in {
-  def : Pat<(z_usubo GR32:$src1, imm32sx16n:$src2),
+  def : Pat<(z_usub GR32:$src1, imm32sx16n:$src2),
             (ALHSIK GR32:$src1, imm32sx16n:$src2)>,
         Requires<[FeatureDistinctOps]>;
-  def : Pat<(z_usubo GR64:$src1, imm64sx16n:$src2),
+  def : Pat<(z_usub GR64:$src1, imm64sx16n:$src2),
             (ALGHSIK GR64:$src1, imm64sx16n:$src2)>,
         Requires<[FeatureDistinctOps]>;
 }
+
+// And vice versa in one special case (but we prefer addition).
+def : Pat<(add GR64:$src1, imm64zx32n:$src2),
+          (SLGFI GR64:$src1, imm64zx32n:$src2)>;
 
 // Subtraction producing and using a carry.
 let Defs = [CC], Uses = [CC] in {
@@ -1127,35 +1083,6 @@ let Defs = [CC], Uses = [CC] in {
   def SLBG : BinaryRXY<"slbg", 0xE389, z_subcarry, GR64, load, 8>;
 }
 
-// Map plain subtraction to either arithmetic or logical operation.
-
-def : Pat<(sub GR32:$src1, GR32:$src2),
-          (SR GR32:$src1, GR32:$src2)>;
-def : Pat<(sub GR64:$src1, GR64:$src2),
-          (SGR GR64:$src1, GR64:$src2)>;
-defm : SXB<sub, GR64, SGFR>;
-defm : ZXB<sub, GR64, SLGFR>;
-
-def : Pat<(add GR64:$src1, imm64zx32n:$src2),
-          (SLGFI GR64:$src1, imm64zx32n:$src2)>;
-
-def : Pat<(sub GR32:$src1, (asextloadi16 bdxaddr12pair:$addr)),
-          (SH GR32:$src1, bdxaddr12pair:$addr)>;
-def : Pat<(sub GR32:$src1, (asextloadi16 bdxaddr20pair:$addr)),
-          (SHY GR32:$src1, bdxaddr20pair:$addr)>;
-def : Pat<(sub GR32:$src1, (load bdxaddr12pair:$addr)),
-          (S GR32:$src1, bdxaddr12pair:$addr)>;
-def : Pat<(sub GR32:$src1, (load bdxaddr20pair:$addr)),
-          (SY GR32:$src1, bdxaddr20pair:$addr)>;
-def : Pat<(sub GR64:$src1, (asextloadi16 bdxaddr20only:$addr)),
-          (SGH GR64:$src1, bdxaddr20only:$addr)>,
-      Requires<[FeatureMiscellaneousExtensions2]>;
-def : Pat<(sub GR64:$src1, (asextloadi32 bdxaddr20only:$addr)),
-          (SGF GR64:$src1, bdxaddr20only:$addr)>;
-def : Pat<(sub GR64:$src1, (azextloadi32 bdxaddr20only:$addr)),
-          (SLGF GR64:$src1, bdxaddr20only:$addr)>;
-def : Pat<(sub GR64:$src1, (load bdxaddr20only:$addr)),
-          (SG GR64:$src1, bdxaddr20only:$addr)>;
 
 //===----------------------------------------------------------------------===//
 // AND

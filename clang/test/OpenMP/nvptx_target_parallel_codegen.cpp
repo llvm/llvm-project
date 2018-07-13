@@ -60,6 +60,7 @@ int bar(int n){
   // CHECK: [[AA:%.+]] = load i16*, i16** [[AA_ADDR]], align
   // CHECK: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
   // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXEC:.+]]
   //
   // CHECK: [[EXEC]]
@@ -102,6 +103,7 @@ int bar(int n){
   // CHECK: [[B:%.+]] = load [10 x i32]*, [10 x i32]** [[B_ADDR]], align
   // CHECK: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
   // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+  // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
   // CHECK: br label {{%?}}[[EXEC:.+]]
   //
   // CHECK: [[EXEC]]

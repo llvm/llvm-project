@@ -993,6 +993,12 @@ DEF_TRAVERSE_TYPE(DependentAddressSpaceType, {
   TRY_TO(TraverseType(T->getPointeeType()));
 })
 
+DEF_TRAVERSE_TYPE(DependentVectorType, {
+  if (T->getSizeExpr())
+    TRY_TO(TraverseStmt(T->getSizeExpr()));
+  TRY_TO(TraverseType(T->getElementType()));
+})
+
 DEF_TRAVERSE_TYPE(DependentSizedExtVectorType, {
   if (T->getSizeExpr())
     TRY_TO(TraverseStmt(T->getSizeExpr()));
@@ -1218,6 +1224,12 @@ DEF_TRAVERSE_TYPELOC(DependentSizedExtVectorType, {
 
 // FIXME: VectorTypeLoc is unfinished
 DEF_TRAVERSE_TYPELOC(VectorType, {
+  TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
+})
+
+DEF_TRAVERSE_TYPELOC(DependentVectorType, {
+  if (TL.getTypePtr()->getSizeExpr())
+    TRY_TO(TraverseStmt(TL.getTypePtr()->getSizeExpr()));
   TRY_TO(TraverseType(TL.getTypePtr()->getElementType()));
 })
 

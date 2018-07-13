@@ -1164,8 +1164,8 @@ SDValue SITargetLowering::lowerKernargMemParameter(
   // Try to avoid using an extload by loading earlier than the argument address,
   // and extracting the relevant bits. The load should hopefully be merged with
   // the previous argument.
-  if (Align < 4) {
-    assert(MemVT.getStoreSize() < 4);
+  if (MemVT.getStoreSize() < 4 && Align < 4) {
+    // TODO: Handle align < 4 and size >= 4 (can happen with packed structs).
     int64_t AlignDownOffset = alignDown(Offset, 4);
     int64_t OffsetDiff = Offset - AlignDownOffset;
 
@@ -1265,36 +1265,51 @@ static void processShaderInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
                                    FunctionType *FType,
                                    SIMachineFunctionInfo *Info) {
   for (unsigned I = 0, E = Ins.size(), PSInputNum = 0; I != E; ++I) {
-    const ISD::InputArg &Arg = Ins[I];
+    const ISD::InputArg *Arg = &Ins[I];
 
     // First check if it's a PS input addr.
-    if (CallConv == CallingConv::AMDGPU_PS && !Arg.Flags.isInReg() &&
-        !Arg.Flags.isByVal() && PSInputNum <= 15) {
+    if (CallConv == CallingConv::AMDGPU_PS &&
+        !Arg->Flags.isInReg() && !Arg->Flags.isByVal() && PSInputNum <= 15) {
 
-      if (!Arg.Used && !Info->isPSInputAllocated(PSInputNum)) {
+      bool SkipArg = !Arg->Used && !Info->isPSInputAllocated(PSInputNum);
+
+      // Inconveniently only the first part of the split is marked as isSplit,
+      // so skip to the end. We only want to increment PSInputNum once for the
+      // entire split argument.
+      if (Arg->Flags.isSplit()) {
+        while (!Arg->Flags.isSplitEnd()) {
+          assert(!Arg->VT.isVector() &&
+                 "unexpected vector split in ps argument type");
+          if (!SkipArg)
+            Splits.push_back(*Arg);
+          Arg = &Ins[++I];
+        }
+      }
+
+      if (SkipArg) {
         // We can safely skip PS inputs.
-        Skipped.set(I);
+        Skipped.set(Arg->getOrigArgIndex());
         ++PSInputNum;
         continue;
       }
 
       Info->markPSInputAllocated(PSInputNum);
-      if (Arg.Used)
+      if (Arg->Used)
         Info->markPSInputEnabled(PSInputNum);
 
       ++PSInputNum;
     }
 
     // Second split vertices into their elements.
-    if (Arg.VT.isVector()) {
-      ISD::InputArg NewArg = Arg;
+    if (Arg->VT.isVector()) {
+      ISD::InputArg NewArg = *Arg;
       NewArg.Flags.setSplit();
-      NewArg.VT = Arg.VT.getVectorElementType();
+      NewArg.VT = Arg->VT.getVectorElementType();
 
       // We REALLY want the ORIGINAL number of vertex elements here, e.g. a
       // three or five element vertex only needs three or five registers,
       // NOT four or eight.
-      Type *ParamType = FType->getParamType(Arg.getOrigArgIndex());
+      Type *ParamType = FType->getParamType(Arg->getOrigArgIndex());
       unsigned NumElements = ParamType->getVectorNumElements();
 
       for (unsigned J = 0; J != NumElements; ++J) {
@@ -1302,7 +1317,7 @@ static void processShaderInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
         NewArg.PartOffset += NewArg.VT.getStoreSize();
       }
     } else {
-      Splits.push_back(Arg);
+      Splits.push_back(*Arg);
     }
   }
 }
@@ -1781,11 +1796,10 @@ SDValue SITargetLowering::LowerFormalArguments(
   // FIXME: Alignment of explicit arguments totally broken with non-0 explicit
   // kern arg offset.
   const unsigned KernelArgBaseAlign = 16;
-  const unsigned ExplicitOffset = Subtarget->getExplicitKernelArgOffset(Fn);
 
    for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
     const ISD::InputArg &Arg = Ins[i];
-    if (Skipped[i]) {
+    if (Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
       continue;
     }
@@ -1797,11 +1811,9 @@ SDValue SITargetLowering::LowerFormalArguments(
       VT = Ins[i].VT;
       EVT MemVT = VA.getLocVT();
 
-      const uint64_t Offset = ExplicitOffset + VA.getLocMemOffset();
+      const uint64_t Offset = VA.getLocMemOffset();
       unsigned Align = MinAlign(KernelArgBaseAlign, Offset);
 
-      // The first 36 bytes of the input buffer contains information about
-      // thread group and global sizes for clover.
       SDValue Arg = lowerKernargMemParameter(
         DAG, VT, MemVT, DL, Chain, Offset, Align, Ins[i].Flags.isSExt(), &Ins[i]);
       Chains.push_back(Arg.getValue(1));
