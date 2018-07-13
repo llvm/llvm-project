@@ -116,7 +116,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   if (Attrs.empty() || Res.isInvalid())
     return Res;
 
-  return Actions.ProcessStmtAttributes(Res.get(), Attrs.getList(), Attrs.Range);
+  return Actions.ProcessStmtAttributes(Res.get(), Attrs, Attrs.Range);
 }
 
 namespace {
@@ -610,8 +610,8 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributesWithRange &attrs) {
           Stmts, /*Allowed=*/ACK_StatementsOpenMPNonStandalone, nullptr,
           TempAttrs);
       if (!TempAttrs.empty() && !SubStmt.isInvalid())
-        SubStmt = Actions.ProcessStmtAttributes(
-            SubStmt.get(), TempAttrs.getList(), TempAttrs.Range);
+        SubStmt = Actions.ProcessStmtAttributes(SubStmt.get(), TempAttrs,
+                                                TempAttrs.Range);
     } else {
       Diag(Tok, diag::err_expected_after) << "__attribute__" << tok::semi;
     }
@@ -627,10 +627,8 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributesWithRange &attrs) {
 
   LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
                                               IdentTok.getLocation());
-  if (AttributeList *Attrs = attrs.getList()) {
-    Actions.ProcessDeclAttributeList(Actions.CurScope, LD, Attrs);
-    attrs.clear();
-  }
+  Actions.ProcessDeclAttributeList(Actions.CurScope, LD, attrs);
+  attrs.clear();
 
   return Actions.ActOnLabelStmt(IdentTok.getLocation(), LD, ColonLoc,
                                 SubStmt.get());
@@ -2269,7 +2267,7 @@ bool Parser::ParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs) {
   if (Attrs.empty())
     return true;
 
-  if (Attrs.getList()->getKind() != AttributeList::AT_OpenCLUnrollHint)
+  if (Attrs.begin()->getKind() != AttributeList::AT_OpenCLUnrollHint)
     return true;
 
   if (!(Tok.is(tok::kw_for) || Tok.is(tok::kw_while) || Tok.is(tok::kw_do))) {

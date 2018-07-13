@@ -8,7 +8,7 @@
 // RUN:     XRAY_PROFILING_OPTIONS=no_flush=1 %run %t
 // RUN: XRAY_OPTIONS=verbosity=1 %run %t
 // RUN: PROFILES=`ls xray-log.profiling-multi-* | wc -l`
-// RUN: [ $PROFILES -eq 1 ]
+// RUN: [ $PROFILES -ge 1 ]
 // RUN: rm -f xray-log.profiling-multi-*
 //
 // REQUIRES: x86_64-target-arch

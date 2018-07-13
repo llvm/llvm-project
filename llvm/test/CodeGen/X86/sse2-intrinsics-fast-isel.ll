@@ -4896,10 +4896,15 @@ define <2 x double> @test_mm_sqrt_sd(<2 x double> %a0, <2 x double> %a1) nounwin
 ; SSE-NEXT:    movapd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x28,0xc1]
 ; SSE-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
-; AVX-LABEL: test_mm_sqrt_sd:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtsd %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf3,0x51,0xc0]
-; AVX-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+; AVX1-LABEL: test_mm_sqrt_sd:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vsqrtsd %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf3,0x51,0xc0]
+; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+;
+; AVX512-LABEL: test_mm_sqrt_sd:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vsqrtsd %xmm0, %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf3,0x51,0xc0]
+; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %ext = extractelement <2 x double> %a0, i32 0
   %sqrt = call double @llvm.sqrt.f64(double %ext)
   %ins = insertelement <2 x double> %a1, double %sqrt, i32 0

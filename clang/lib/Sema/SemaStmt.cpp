@@ -4283,7 +4283,7 @@ void Sema::ActOnCapturedRegionError() {
 
   SmallVector<Decl*, 4> Fields(Record->fields());
   ActOnFields(/*Scope=*/nullptr, Record->getLocation(), Record, Fields,
-              SourceLocation(), SourceLocation(), /*AttributeList=*/nullptr);
+              SourceLocation(), SourceLocation(), ParsedAttributesView());
 
   PopDeclContext();
   PopFunctionScopeInfo();

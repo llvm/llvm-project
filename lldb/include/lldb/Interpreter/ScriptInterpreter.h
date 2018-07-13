@@ -96,13 +96,13 @@ public:
   virtual bool Interrupt() { return false; }
 
   virtual bool ExecuteOneLine(
-      const char *command, CommandReturnObject *result,
+      llvm::StringRef command, CommandReturnObject *result,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) = 0;
 
   virtual void ExecuteInterpreterLoop() = 0;
 
   virtual bool ExecuteOneLineWithReturn(
-      const char *in_string, ScriptReturnType return_type, void *ret_value,
+      llvm::StringRef in_string, ScriptReturnType return_type, void *ret_value,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) {
     return true;
   }
@@ -343,7 +343,7 @@ public:
   }
 
   virtual bool
-  RunScriptBasedCommand(const char *impl_function, const char *args,
+  RunScriptBasedCommand(const char *impl_function, llvm::StringRef args,
                         ScriptedCommandSynchronicity synchronicity,
                         lldb_private::CommandReturnObject &cmd_retobj,
                         Status &error,
@@ -351,12 +351,11 @@ public:
     return false;
   }
 
-  virtual bool
-  RunScriptBasedCommand(StructuredData::GenericSP impl_obj_sp, const char *args,
-                        ScriptedCommandSynchronicity synchronicity,
-                        lldb_private::CommandReturnObject &cmd_retobj,
-                        Status &error,
-                        const lldb_private::ExecutionContext &exe_ctx) {
+  virtual bool RunScriptBasedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef args,
+      ScriptedCommandSynchronicity synchronicity,
+      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
+      const lldb_private::ExecutionContext &exe_ctx) {
     return false;
   }
 

@@ -5820,8 +5820,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   if (AL.getKind() == AttributeList::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
     S.Diag(AL.getLoc(), AL.isDeclspecAttribute()
-                              ? diag::warn_unhandled_ms_attribute_ignored
-                              : diag::warn_unknown_attribute_ignored)
+                            ? diag::warn_unhandled_ms_attribute_ignored
+                            : diag::warn_unknown_attribute_ignored)
         << AL.getName();
     return;
   }
@@ -5992,8 +5992,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
                                                                         AL);
     break;
   case AttributeList::AT_CUDAHost:
-    handleSimpleAttributeWithExclusions<CUDAHostAttr, CUDAGlobalAttr>(S, D,
-                                                                      AL);
+    handleSimpleAttributeWithExclusions<CUDAHostAttr, CUDAGlobalAttr>(S, D, AL);
     break;
   case AttributeList::AT_GNUInline:
     handleGNUInlineAttr(S, D, AL);
@@ -6095,8 +6094,8 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleObjCRuntimeName(S, D, AL);
     break;
    case AttributeList::AT_ObjCRuntimeVisible:
-    handleSimpleAttribute<ObjCRuntimeVisibleAttr>(S, D, AL);
-    break;
+     handleSimpleAttribute<ObjCRuntimeVisibleAttr>(S, D, AL);
+     break;
   case AttributeList::AT_ObjCBoxable:
     handleObjCBoxable(S, D, AL);
     break;
@@ -6177,12 +6176,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttribute<ReturnsTwiceAttr>(S, D, AL);
     break;
   case AttributeList::AT_NotTailCalled:
-    handleSimpleAttributeWithExclusions<NotTailCalledAttr,
-                                        AlwaysInlineAttr>(S, D, AL);
+    handleSimpleAttributeWithExclusions<NotTailCalledAttr, AlwaysInlineAttr>(
+        S, D, AL);
     break;
   case AttributeList::AT_DisableTailCalls:
-    handleSimpleAttributeWithExclusions<DisableTailCallsAttr,
-                                        NakedAttr>(S, D, AL);
+    handleSimpleAttributeWithExclusions<DisableTailCallsAttr, NakedAttr>(S, D,
+                                                                         AL);
     break;
   case AttributeList::AT_Used:
     handleSimpleAttribute<UsedAttr>(S, D, AL);
@@ -6458,18 +6457,21 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 /// ProcessDeclAttributeList - Apply all the decl attributes in the specified
 /// attribute list to the specified decl, ignoring any type attributes.
 void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
-                                    const AttributeList *AttrList,
+                                    const ParsedAttributesView &AttrList,
                                     bool IncludeCXX11Attributes) {
-  for (const AttributeList* l = AttrList; l; l = l->getNext())
-    ProcessDeclAttribute(*this, S, D, *l, IncludeCXX11Attributes);
+  if (AttrList.empty())
+    return;
+
+  for (const AttributeList &AL : AttrList)
+    ProcessDeclAttribute(*this, S, D, AL, IncludeCXX11Attributes);
 
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
   // static int a9 __attribute__((weakref));
   // but that looks really pointless. We reject it.
   if (D->hasAttr<WeakRefAttr>() && !D->hasAttr<AliasAttr>()) {
-    Diag(AttrList->getLoc(), diag::err_attribute_weakref_without_alias)
-      << cast<NamedDecl>(D);
+    Diag(AttrList.begin()->getLoc(), diag::err_attribute_weakref_without_alias)
+        << cast<NamedDecl>(D);
     D->dropAttr<WeakRefAttr>();
     return;
   }
@@ -6517,44 +6519,46 @@ void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
 }
 
 // Helper for delayed processing TransparentUnion attribute.
-void Sema::ProcessDeclAttributeDelayed(Decl *D, const AttributeList *AttrList) {
-  for (const AttributeList *AL = AttrList; AL; AL = AL->getNext())
-    if (AL->getKind() == AttributeList::AT_TransparentUnion) {
-      handleTransparentUnionAttr(*this, D, *AL);
+void Sema::ProcessDeclAttributeDelayed(Decl *D,
+                                       const ParsedAttributesView &AttrList) {
+  for (const AttributeList &AL : AttrList)
+    if (AL.getKind() == AttributeList::AT_TransparentUnion) {
+      handleTransparentUnionAttr(*this, D, AL);
       break;
     }
 }
 
 // Annotation attributes are the only attributes allowed after an access
 // specifier.
-bool Sema::ProcessAccessDeclAttributeList(AccessSpecDecl *ASDecl,
-                                          const AttributeList *AttrList) {
-  for (const AttributeList* l = AttrList; l; l = l->getNext()) {
-    if (l->getKind() == AttributeList::AT_Annotate) {
-      ProcessDeclAttribute(*this, nullptr, ASDecl, *l, l->isCXX11Attribute());
+bool Sema::ProcessAccessDeclAttributeList(
+    AccessSpecDecl *ASDecl, const ParsedAttributesView &AttrList) {
+  for (const AttributeList &AL : AttrList) {
+    if (AL.getKind() == AttributeList::AT_Annotate) {
+      ProcessDeclAttribute(*this, nullptr, ASDecl, AL, AL.isCXX11Attribute());
     } else {
-      Diag(l->getLoc(), diag::err_only_annotate_after_access_spec);
+      Diag(AL.getLoc(), diag::err_only_annotate_after_access_spec);
       return true;
     }
   }
-
   return false;
 }
 
 /// checkUnusedDeclAttributes - Check a list of attributes to see if it
 /// contains any decl attributes that we should warn about.
-static void checkUnusedDeclAttributes(Sema &S, const AttributeList *A) {
-  for ( ; A; A = A->getNext()) {
+static void checkUnusedDeclAttributes(Sema &S, const ParsedAttributesView &A) {
+  for (const AttributeList &AL : A) {
     // Only warn if the attribute is an unignored, non-type attribute.
-    if (A->isUsedAsTypeAttr() || A->isInvalid()) continue;
-    if (A->getKind() == AttributeList::IgnoredAttribute) continue;
+    if (AL.isUsedAsTypeAttr() || AL.isInvalid())
+      continue;
+    if (AL.getKind() == AttributeList::IgnoredAttribute)
+      continue;
 
-    if (A->getKind() == AttributeList::UnknownAttribute) {
-      S.Diag(A->getLoc(), diag::warn_unknown_attribute_ignored)
-        << A->getName() << A->getRange();
+    if (AL.getKind() == AttributeList::UnknownAttribute) {
+      S.Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
+          << AL.getName() << AL.getRange();
     } else {
-      S.Diag(A->getLoc(), diag::warn_attribute_not_on_decl)
-        << A->getName() << A->getRange();
+      S.Diag(AL.getLoc(), diag::warn_attribute_not_on_decl)
+          << AL.getName() << AL.getRange();
     }
   }
 }
@@ -6563,7 +6567,7 @@ static void checkUnusedDeclAttributes(Sema &S, const AttributeList *A) {
 /// used to build a declaration, complain about any decl attributes
 /// which might be lying around on it.
 void Sema::checkUnusedDeclAttributes(Declarator &D) {
-  ::checkUnusedDeclAttributes(*this, D.getDeclSpec().getAttributes().getList());
+  ::checkUnusedDeclAttributes(*this, D.getDeclSpec().getAttributes());
   ::checkUnusedDeclAttributes(*this, D.getAttributes());
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i)
     ::checkUnusedDeclAttributes(*this, D.getTypeObject(i).getAttrs());
@@ -6670,20 +6674,19 @@ void Sema::ProcessPragmaWeak(Scope *S, Decl *D) {
 /// specified in many different places, and we need to find and apply them all.
 void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
   // Apply decl attributes from the DeclSpec if present.
-  if (const AttributeList *Attrs = PD.getDeclSpec().getAttributes().getList())
-    ProcessDeclAttributeList(S, D, Attrs);
+  if (!PD.getDeclSpec().getAttributes().empty())
+    ProcessDeclAttributeList(S, D, PD.getDeclSpec().getAttributes());
 
   // Walk the declarator structure, applying decl attributes that were in a type
   // position to the decl itself.  This handles cases like:
   //   int *__attr__(x)** D;
   // when X is a decl attribute.
   for (unsigned i = 0, e = PD.getNumTypeObjects(); i != e; ++i)
-    if (const AttributeList *Attrs = PD.getTypeObject(i).getAttrs())
-      ProcessDeclAttributeList(S, D, Attrs, /*IncludeCXX11Attributes=*/false);
+    ProcessDeclAttributeList(S, D, PD.getTypeObject(i).getAttrs(),
+                             /*IncludeCXX11Attributes=*/false);
 
   // Finally, apply any attributes on the decl itself.
-  if (const AttributeList *Attrs = PD.getAttributes())
-    ProcessDeclAttributeList(S, D, Attrs);
+  ProcessDeclAttributeList(S, D, PD.getAttributes());
 
   // Apply additional attributes specified by '#pragma clang attribute'.
   AddPragmaAttributes(S, D);

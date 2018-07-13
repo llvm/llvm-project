@@ -89,7 +89,7 @@ void ExecuteStage::issueReadyInstructions() {
 // Notifications are issued to this stage's listeners when instructions are
 // moved between the HWS's queues.  In particular, when an instruction becomes
 // ready or executed.
-void ExecuteStage::preExecute(const InstRef &Unused) {
+void ExecuteStage::cycleStart() {
   reclaimSchedulerResources();
   updateSchedulerQueues();
   issueReadyInstructions();

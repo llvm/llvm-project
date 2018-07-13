@@ -11481,37 +11481,37 @@ multiclass AVX512_scalar_math_fp_patterns<SDNode Op, string OpcPrefix, SDNode Mo
                                            X86VectorVTInfo _, PatLeaf ZeroFP> {
   let Predicates = [HasAVX512] in {
     // extracted scalar math op with insert via movss
-    def : Pat<(_.VT (MoveNode (_.VT VR128X:$dst), (_.VT (scalar_to_vector
-          (Op (_.EltVT (extractelt (_.VT VR128X:$dst), (iPTR 0))),
-          _.FRC:$src))))),
-      (!cast<I>("V"#OpcPrefix#Zrr_Int) _.VT:$dst,
-          (COPY_TO_REGCLASS _.FRC:$src, VR128X))>;
-
-    // vector math op with insert via movss
-    def : Pat<(_.VT (MoveNode (_.VT VR128X:$dst),
-          (Op (_.VT VR128X:$dst), (_.VT VR128X:$src)))),
-      (!cast<I>("V"#OpcPrefix#Zrr_Int) _.VT:$dst, _.VT:$src)>;
+    def : Pat<(MoveNode
+               (_.VT VR128X:$dst),
+               (_.VT (scalar_to_vector
+                      (Op (_.EltVT (extractelt (_.VT VR128X:$dst), (iPTR 0))),
+                          _.FRC:$src)))),
+              (!cast<Instruction>("V"#OpcPrefix#Zrr_Int) _.VT:$dst,
+               (COPY_TO_REGCLASS _.FRC:$src, VR128X))>;
 
     // extracted masked scalar math op with insert via movss
     def : Pat<(MoveNode (_.VT VR128X:$src1),
                (scalar_to_vector
                 (X86selects VK1WM:$mask,
-                            (Op (_.EltVT (extractelt (_.VT VR128X:$src1), (iPTR 0))),
+                            (Op (_.EltVT
+                                 (extractelt (_.VT VR128X:$src1), (iPTR 0))),
                                 _.FRC:$src2),
                             _.FRC:$src0))),
-      (!cast<I>("V"#OpcPrefix#Zrr_Intk) (COPY_TO_REGCLASS _.FRC:$src0, VR128X),
-          VK1WM:$mask, _.VT:$src1,
-          (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
-    
+              (!cast<Instruction>("V"#OpcPrefix#Zrr_Intk)
+               (COPY_TO_REGCLASS _.FRC:$src0, VR128X),
+               VK1WM:$mask, _.VT:$src1,
+               (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
+
     // extracted masked scalar math op with insert via movss
     def : Pat<(MoveNode (_.VT VR128X:$src1),
                (scalar_to_vector
                 (X86selects VK1WM:$mask,
-                            (Op (_.EltVT (extractelt (_.VT VR128X:$src1), (iPTR 0))),
+                            (Op (_.EltVT
+                                 (extractelt (_.VT VR128X:$src1), (iPTR 0))),
                                 _.FRC:$src2), (_.EltVT ZeroFP)))),
-      (!cast<I>("V"#OpcPrefix#Zrr_Intkz) 
-          VK1WM:$mask, _.VT:$src1,
-          (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
+              (!cast<Instruction>("V"#OpcPrefix#Zrr_Intkz)
+               VK1WM:$mask, _.VT:$src1,
+               (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
   }
 }
 
@@ -11525,6 +11525,37 @@ defm : AVX512_scalar_math_fp_patterns<fsub, "SUBSD", X86Movsd, v2f64x_info, fp64
 defm : AVX512_scalar_math_fp_patterns<fmul, "MULSD", X86Movsd, v2f64x_info, fp64imm0>;
 defm : AVX512_scalar_math_fp_patterns<fdiv, "DIVSD", X86Movsd, v2f64x_info, fp64imm0>;
 
+multiclass AVX512_scalar_unary_math_patterns<SDNode OpNode, string OpcPrefix,
+                                             SDNode Move, X86VectorVTInfo _> {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(_.VT (Move _.VT:$dst,
+                     (scalar_to_vector (OpNode (extractelt _.VT:$src, 0))))),
+              (!cast<Instruction>("V"#OpcPrefix#Zr_Int) _.VT:$dst, _.VT:$src)>;
+  }
+}
+
+defm : AVX512_scalar_unary_math_patterns<fsqrt, "SQRTSS", X86Movss, v4f32x_info>;
+defm : AVX512_scalar_unary_math_patterns<fsqrt, "SQRTSD", X86Movsd, v2f64x_info>;
+
+multiclass AVX512_scalar_unary_math_imm_patterns<SDNode OpNode, string OpcPrefix,
+                                                 SDNode Move, X86VectorVTInfo _,
+                                                 bits<8> ImmV> {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(_.VT (Move _.VT:$dst,
+                     (scalar_to_vector (OpNode (extractelt _.VT:$src, 0))))),
+              (!cast<Instruction>("V"#OpcPrefix#Zr_Int) _.VT:$dst, _.VT:$src,
+                                                        (i32 ImmV))>;
+  }
+}
+
+defm : AVX512_scalar_unary_math_imm_patterns<ffloor, "RNDSCALESS", X86Movss,
+                                             v4f32x_info, 0x01>;
+defm : AVX512_scalar_unary_math_imm_patterns<fceil, "RNDSCALESS", X86Movss,
+                                             v4f32x_info, 0x02>;
+defm : AVX512_scalar_unary_math_imm_patterns<ffloor, "RNDSCALESD", X86Movsd,
+                                             v2f64x_info, 0x01>;
+defm : AVX512_scalar_unary_math_imm_patterns<fceil, "RNDSCALESD", X86Movsd,
+                                             v2f64x_info, 0x02>;
 
 //===----------------------------------------------------------------------===//
 // AES instructions

@@ -1696,8 +1696,15 @@ public:
   ///     A byte buffer that is at least \a size bytes long that
   ///     will receive the memory bytes.
   ///
+  /// @param[out] error
+  ///     An error that indicates the success or failure of this
+  ///     operation. If error indicates success (error.Success()),
+  ///     then the value returned can be trusted, otherwise zero
+  ///     will be returned.
+  ///
   /// @return
   ///     The number of bytes that were actually read into \a buf.
+  ///     Zero is returned in the case of an error.
   //------------------------------------------------------------------
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                               Status &error) = 0;
@@ -1723,12 +1730,18 @@ public:
   /// @param[in] size
   ///     The number of bytes to read.
   ///
+  /// @param[out] error
+  ///     An error that indicates the success or failure of this
+  ///     operation. If error indicates success (error.Success()),
+  ///     then the value returned can be trusted, otherwise zero
+  ///     will be returned.
+  ///
   /// @return
   ///     The number of bytes that were actually read into \a buf. If
   ///     the returned number is greater than zero, yet less than \a
   ///     size, then this function will get called again with \a
   ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
-  ///     returned to indicate an error.
+  ///     returned in the case of an error.
   //------------------------------------------------------------------
   virtual size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                             Status &error);

@@ -23,23 +23,18 @@ using namespace clang;
 
 /// Parse a template declaration, explicit instantiation, or
 /// explicit specialization.
-Decl *
-Parser::ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
-                                             SourceLocation &DeclEnd,
-                                             AccessSpecifier AS,
-                                             AttributeList *AccessAttrs) {
+Decl *Parser::ParseDeclarationStartingWithTemplate(
+    DeclaratorContext Context, SourceLocation &DeclEnd,
+    ParsedAttributes &AccessAttrs, AccessSpecifier AS) {
   ObjCDeclContextSwitch ObjCDC(*this);
   
   if (Tok.is(tok::kw_template) && NextToken().isNot(tok::less)) {
-    return ParseExplicitInstantiation(Context,
-                                      SourceLocation(), ConsumeToken(),
-                                      DeclEnd, AS);
+    return ParseExplicitInstantiation(Context, SourceLocation(), ConsumeToken(),
+                                      DeclEnd, AccessAttrs, AS);
   }
-  return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AS,
-                                                  AccessAttrs);
+  return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AccessAttrs,
+                                                  AS);
 }
-
-
 
 /// Parse a template declaration or an explicit specialization.
 ///
@@ -56,11 +51,9 @@ Parser::ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
 ///
 ///       explicit-specialization: [ C++ temp.expl.spec]
 ///         'template' '<' '>' declaration
-Decl *
-Parser::ParseTemplateDeclarationOrSpecialization(DeclaratorContext Context,
-                                                 SourceLocation &DeclEnd,
-                                                 AccessSpecifier AS,
-                                                 AttributeList *AccessAttrs) {
+Decl *Parser::ParseTemplateDeclarationOrSpecialization(
+    DeclaratorContext Context, SourceLocation &DeclEnd,
+    ParsedAttributes &AccessAttrs, AccessSpecifier AS) {
   assert(Tok.isOneOf(tok::kw_export, tok::kw_template) &&
          "Token does not start a template declaration.");
 
@@ -149,12 +142,10 @@ Parser::ParseTemplateDeclarationOrSpecialization(DeclaratorContext Context,
   ParseScopeFlags TemplateScopeFlags(this, NewFlags, isSpecialization);
 
   // Parse the actual template declaration.
-  return ParseSingleDeclarationAfterTemplate(Context,
-                                             ParsedTemplateInfo(&ParamLists,
-                                                             isSpecialization,
-                                                         LastParamListWasEmpty),
-                                             ParsingTemplateParams,
-                                             DeclEnd, AS, AccessAttrs);
+  return ParseSingleDeclarationAfterTemplate(
+      Context,
+      ParsedTemplateInfo(&ParamLists, isSpecialization, LastParamListWasEmpty),
+      ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
 }
 
 /// Parse a single declaration that declares a template,
@@ -167,14 +158,10 @@ Parser::ParseTemplateDeclarationOrSpecialization(DeclaratorContext Context,
 /// declaration. Will be AS_none for namespace-scope declarations.
 ///
 /// \returns the new declaration.
-Decl *
-Parser::ParseSingleDeclarationAfterTemplate(
-                                       DeclaratorContext Context,
-                                       const ParsedTemplateInfo &TemplateInfo,
-                                       ParsingDeclRAIIObject &DiagsFromTParams,
-                                       SourceLocation &DeclEnd,
-                                       AccessSpecifier AS,
-                                       AttributeList *AccessAttrs) {
+Decl *Parser::ParseSingleDeclarationAfterTemplate(
+    DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
+    ParsingDeclRAIIObject &DiagsFromTParams, SourceLocation &DeclEnd,
+    ParsedAttributes &AccessAttrs, AccessSpecifier AS) {
   assert(TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
          "Template information required");
 
@@ -1342,16 +1329,15 @@ Decl *Parser::ParseExplicitInstantiation(DeclaratorContext Context,
                                          SourceLocation ExternLoc,
                                          SourceLocation TemplateLoc,
                                          SourceLocation &DeclEnd,
+                                         ParsedAttributes &AccessAttrs,
                                          AccessSpecifier AS) {
   // This isn't really required here.
   ParsingDeclRAIIObject
     ParsingTemplateParams(*this, ParsingDeclRAIIObject::NoParent);
 
-  return ParseSingleDeclarationAfterTemplate(Context,
-                                             ParsedTemplateInfo(ExternLoc,
-                                                                TemplateLoc),
-                                             ParsingTemplateParams,
-                                             DeclEnd, AS);
+  return ParseSingleDeclarationAfterTemplate(
+      Context, ParsedTemplateInfo(ExternLoc, TemplateLoc),
+      ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
 }
 
 SourceRange Parser::ParsedTemplateInfo::getSourceRange() const {

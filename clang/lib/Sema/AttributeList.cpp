@@ -60,56 +60,41 @@ static size_t getFreeListIndexForSize(size_t size) {
 void *AttributeFactory::allocate(size_t size) {
   // Check for a previously reclaimed attribute.
   size_t index = getFreeListIndexForSize(size);
-  if (index < FreeLists.size()) {
-    if (AttributeList *attr = FreeLists[index]) {
-      FreeLists[index] = attr->NextInPool;
-      return attr;
-    }
+  if (index < FreeLists.size() && !FreeLists[index].empty()) {
+    AttributeList *attr = FreeLists[index].back();
+    FreeLists[index].pop_back();
+    return attr;
   }
 
   // Otherwise, allocate something new.
   return Alloc.Allocate(size, alignof(AttributeFactory));
 }
 
-void AttributeFactory::reclaimPool(AttributeList *cur) {
-  assert(cur && "reclaiming empty pool!");
-  do {
-    // Read this here, because we're going to overwrite NextInPool
-    // when we toss 'cur' into the appropriate queue.
-    AttributeList *next = cur->NextInPool;
+void AttributeFactory::deallocate(AttributeList *Attr) {
+  size_t size = Attr->allocated_size();
+  size_t freeListIndex = getFreeListIndexForSize(size);
 
-    size_t size = cur->allocated_size();
-    size_t freeListIndex = getFreeListIndexForSize(size);
+  // Expand FreeLists to the appropriate size, if required.
+  if (freeListIndex >= FreeLists.size())
+    FreeLists.resize(freeListIndex + 1);
 
-    // Expand FreeLists to the appropriate size, if required.
-    if (freeListIndex >= FreeLists.size())
-      FreeLists.resize(freeListIndex+1);
+#if !NDEBUG
+  // In debug mode, zero out the attribute to help find memory overwriting.
+  memset(Attr, 0, size);
+#endif
 
-    // Add 'cur' to the appropriate free-list.
-    cur->NextInPool = FreeLists[freeListIndex];
-    FreeLists[freeListIndex] = cur;
-    
-    cur = next;
-  } while (cur);
+  // Add 'Attr' to the appropriate free-list.
+  FreeLists[freeListIndex].push_back(Attr);
 }
 
-void AttributePool::takePool(AttributeList *pool) {
-  assert(pool);
+void AttributeFactory::reclaimPool(AttributePool &cur) {
+  for (AttributeList *AL : cur.Attrs)
+    deallocate(AL);
+}
 
-  // Fast path:  this pool is empty.
-  if (!Head) {
-    Head = pool;
-    return;
-  }
-
-  // Reverse the pool onto the current head.  This optimizes for the
-  // pattern of pulling a lot of pools into a single pool.
-  do {
-    AttributeList *next = pool->NextInPool;
-    pool->NextInPool = Head;
-    Head = pool;
-    pool = next;
-  } while (pool);
+void AttributePool::takePool(AttributePool &pool) {
+  Attrs.insert(Attrs.end(), pool.Attrs.begin(), pool.Attrs.end());
+  pool.Attrs.clear();
 }
 
 #include "clang/Sema/AttrParsedAttrKinds.inc"

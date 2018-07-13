@@ -1126,7 +1126,9 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool Changed = SimplifyAssociativeOrCommutative(I);
+  if (SimplifyAssociativeOrCommutative(I))
+    return &I;
+
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -1367,6 +1369,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   // TODO(jingyue): Consider willNotOverflowSignedAdd and
   // willNotOverflowUnsignedAdd to reduce the number of invocations of
   // computeKnownBits.
+  bool Changed = false;
   if (!I.hasNoSignedWrap() && willNotOverflowSignedAdd(LHS, RHS, I)) {
     Changed = true;
     I.setHasNoSignedWrap(true);
@@ -1388,7 +1391,9 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool Changed = SimplifyAssociativeOrCommutative(I);
+  if (SimplifyAssociativeOrCommutative(I))
+    return &I;
+
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -1471,7 +1476,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
       return replaceInstUsesWith(I, V);
   }
 
-  return Changed ? &I : nullptr;
+  return nullptr;
 }
 
 /// Optimize pointer differences into the same array into a size.  Consider:

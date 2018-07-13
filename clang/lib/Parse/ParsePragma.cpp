@@ -1410,26 +1410,26 @@ void Parser::HandlePragmaAttribute() {
     return;
   }
 
-  if (!Attrs.getList() || Attrs.getList()->isInvalid()) {
+  if (Attrs.empty() || Attrs.begin()->isInvalid()) {
     SkipToEnd();
     return;
   }
 
   // Ensure that we don't have more than one attribute.
-  if (Attrs.getList()->getNext()) {
-    SourceLocation Loc = Attrs.getList()->getNext()->getLoc();
+  if (Attrs.size() > 1) {
+    SourceLocation Loc = Attrs[1].getLoc();
     Diag(Loc, diag::err_pragma_attribute_multiple_attributes);
     SkipToEnd();
     return;
   }
 
-  if (!Attrs.getList()->isSupportedByPragmaAttribute()) {
+  AttributeList &Attribute = *Attrs.begin();
+  if (!Attribute.isSupportedByPragmaAttribute()) {
     Diag(PragmaLoc, diag::err_pragma_attribute_unsupported_attribute)
-        << Attrs.getList()->getName();
+        << Attribute.getName();
     SkipToEnd();
     return;
   }
-  AttributeList &Attribute = *Attrs.getList();
 
   // Parse the subject-list.
   if (!TryConsumeToken(tok::comma)) {

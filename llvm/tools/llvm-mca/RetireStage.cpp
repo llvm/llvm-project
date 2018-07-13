@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace mca {
 
-void RetireStage::preExecute(const InstRef &IR) {
+void RetireStage::cycleStart() {
   if (RCU.isEmpty())
     return;
 

@@ -76,26 +76,27 @@ public:
   bool hasPendingUpdates() const;
 
   /// Returns true if there are DominatorTree updates queued.
-  /// Returns false under Eager UpdateStrategy.
+  /// Returns false under Eager UpdateStrategy or DT is nullptr.
   bool hasPendingDomTreeUpdates() const;
 
   /// Returns true if there are PostDominatorTree updates queued.
-  /// Returns false under Eager UpdateStrategy.
+  /// Returns false under Eager UpdateStrategy or PDT is nullptr.
   bool hasPendingPostDomTreeUpdates() const;
 
   /// Apply updates on all available trees. Under Eager UpdateStrategy with
   /// ForceRemoveDuplicates enabled or under Lazy UpdateStrategy, it will
-  /// discard duplicated updates and self-dominance updates. The Eager
-  /// Strategy applies the updates immediately while the Lazy Strategy
-  /// queues the updates. It is required for the state of
-  /// the LLVM IR to be updated *before* applying the Updates because the
-  /// internal update routine will analyze the current state of the relationship
-  /// between a pair of (From, To) BasicBlocks to determine whether a single
-  /// update needs to be discarded.
+  /// discard duplicated updates and self-dominance updates. If both DT and PDT
+  /// are nullptrs, this function discards all updates. The Eager Strategy
+  /// applies the updates immediately while the Lazy Strategy queues the
+  /// updates. It is required for the state of the LLVM IR to be updated
+  /// *before* applying the Updates because the internal update routine will
+  /// analyze the current state of the relationship between a pair of (From, To)
+  /// BasicBlocks to determine whether a single update needs to be discarded.
   void applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates,
                     bool ForceRemoveDuplicates = false);
 
-  /// Notify all available trees on an edge insertion. Under either Strategy,
+  /// Notify all available trees on an edge insertion. If both DT and PDT are
+  /// nullptrs, this function discards the update. Under either Strategy,
   /// self-dominance update will be removed. The Eager Strategy applies
   /// the update immediately while the Lazy Strategy queues the update.
   /// It is recommended to only use this method when you have exactly one
@@ -106,17 +107,18 @@ public:
   void insertEdge(BasicBlock *From, BasicBlock *To);
 
   /// Notify all available trees on an edge insertion.
-  /// Under either Strategy, these updates will be discard silently in the
-  /// following sequence
+  /// Under either Strategy, the following updates will be discard silently
   /// 1. Invalid - Inserting an edge that does not exist in the CFG.
   /// 2. Self-dominance update.
+  /// 3. Both DT and PDT are nullptrs.
   /// The Eager Strategy applies the update immediately while the Lazy Strategy
   /// queues the update. It is recommended to only use this method when you have
   /// exactly one insertion (and no deletions) and want to discard an invalid
-  /// update. Returns true if the update is valid.
-  bool insertEdgeRelaxed(BasicBlock *From, BasicBlock *To);
+  /// update.
+  void insertEdgeRelaxed(BasicBlock *From, BasicBlock *To);
 
-  /// Notify all available trees on an edge deletion. Under either Strategy,
+  /// Notify all available trees on an edge deletion. If both DT and PDT are
+  /// nullptrs, this function discards the update. Under either Strategy,
   /// self-dominance update will be removed. The Eager Strategy applies
   /// the update immediately while the Lazy Strategy queues the update.
   /// It is recommended to only use this method when you have exactly one
@@ -127,21 +129,22 @@ public:
   void deleteEdge(BasicBlock *From, BasicBlock *To);
 
   /// Notify all available trees on an edge deletion.
-  /// Under either Strategy, these updates will be discard silently in the
-  /// following sequence:
+  /// Under either Strategy, the following updates will be discard silently
   /// 1. Invalid - Deleting an edge that still exists in the CFG.
   /// 2. Self-dominance update.
+  /// 3. Both DT and PDT are nullptrs.
   /// The Eager Strategy applies the update immediately while the Lazy Strategy
   /// queues the update. It is recommended to only use this method when you have
   /// exactly one deletion (and no insertions) and want to discard an invalid
-  /// update. Returns true if the update is valid.
-  bool deleteEdgeRelaxed(BasicBlock *From, BasicBlock *To);
+  /// update.
+  void deleteEdgeRelaxed(BasicBlock *From, BasicBlock *To);
 
   /// Delete DelBB. DelBB will be removed from its Parent and
   /// erased from available trees if it exists and finally get deleted.
   /// Under Eager UpdateStrategy, DelBB will be processed immediately.
   /// Under Lazy UpdateStrategy, DelBB will be queued until a flush event and
-  /// all available trees are up-to-date.
+  /// all available trees are up-to-date. When both DT and PDT are nullptrs,
+  /// DelBB will be queued until flush() is called.
   void deleteBB(BasicBlock *DelBB);
 
   /// Delete DelBB. DelBB will be removed from its Parent and

@@ -93,7 +93,7 @@ public:
   // The retire stage, which controls the RCU, might have items to complete but
   // RetireStage::hasWorkToComplete will check for that case.
   virtual bool hasWorkToComplete() const override final { return false; }
-  virtual void preExecute(const InstRef &IR) override final;
+  virtual void cycleStart() override final;
   virtual bool execute(InstRef &IR) override final;
   void notifyDispatchStall(const InstRef &IR, unsigned EventType);
 

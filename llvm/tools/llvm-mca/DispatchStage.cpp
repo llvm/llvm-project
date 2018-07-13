@@ -129,7 +129,7 @@ void DispatchStage::dispatch(InstRef IR) {
   notifyInstructionDispatched(IR, RegisterFiles);
 }
 
-void DispatchStage::preExecute(const InstRef &IR) {
+void DispatchStage::cycleStart() {
   AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
   CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
 }

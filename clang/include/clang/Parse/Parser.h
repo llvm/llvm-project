@@ -1361,11 +1361,11 @@ private:
   };
 
   NamedDecl *ParseCXXInlineMethodDef(AccessSpecifier AS,
-                                AttributeList *AccessAttrs,
-                                ParsingDeclarator &D,
-                                const ParsedTemplateInfo &TemplateInfo,
-                                const VirtSpecifiers& VS,
-                                SourceLocation PureSpecLoc);
+                                     ParsedAttributes &AccessAttrs,
+                                     ParsingDeclarator &D,
+                                     const ParsedTemplateInfo &TemplateInfo,
+                                     const VirtSpecifiers &VS,
+                                     SourceLocation PureSpecLoc);
   void ParseCXXNonStaticMemberInitializer(Decl *VarD);
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
@@ -1401,6 +1401,15 @@ private:
 
     void clear() {
       ParsedAttributes::clear();
+      Range = SourceRange();
+    }
+
+    SourceRange Range;
+  };
+  struct ParsedAttributesViewWithRange : ParsedAttributesView {
+    ParsedAttributesViewWithRange() : ParsedAttributesView() {}
+    void clearListOnly() {
+      ParsedAttributesView::clearListOnly();
       Range = SourceRange();
     }
 
@@ -1921,7 +1930,8 @@ private:
   void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
   void ParseMicrosoftIfExistsExternalDeclaration();
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,
-                                              AccessSpecifier& CurAS);
+                                              ParsedAttributes &AccessAttrs,
+                                              AccessSpecifier &CurAS);
   bool ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
                                               bool &InitExprsOk);
   bool ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
@@ -2310,14 +2320,23 @@ private:
                                       DeclSpec &DS, Sema::TagUseKind TUK);
   
   // FixItLoc = possible correct location for the attributes
-  void ProhibitAttributes(ParsedAttributesWithRange &attrs,
+  void ProhibitAttributes(ParsedAttributesWithRange &Attrs,
                           SourceLocation FixItLoc = SourceLocation()) {
-    if (!attrs.Range.isValid()) return;
-    DiagnoseProhibitedAttributes(attrs, FixItLoc);
-    attrs.clear();
+    if (Attrs.Range.isInvalid())
+      return;
+    DiagnoseProhibitedAttributes(Attrs.Range, FixItLoc);
+    Attrs.clear();
   }
-  void DiagnoseProhibitedAttributes(ParsedAttributesWithRange &attrs, 
-    SourceLocation FixItLoc);
+
+  void ProhibitAttributes(ParsedAttributesViewWithRange &Attrs,
+                          SourceLocation FixItLoc = SourceLocation()) {
+    if (Attrs.Range.isInvalid())
+      return;
+    DiagnoseProhibitedAttributes(Attrs.Range, FixItLoc);
+    Attrs.clearListOnly();
+  }
+  void DiagnoseProhibitedAttributes(const SourceRange &Range,
+                                    SourceLocation FixItLoc);
 
   // Forbid C++11 and C2x attributes that appear on certain syntactic locations
   // which standard permits but we don't supported yet, for example, attributes
@@ -2694,7 +2713,7 @@ private:
   void MaybeParseAndDiagnoseDeclSpecAfterCXX11VirtSpecifierSeq(Declarator &D,
                                                                VirtSpecifiers &VS);
   DeclGroupPtrTy ParseCXXClassMemberDeclaration(
-      AccessSpecifier AS, AttributeList *Attr,
+      AccessSpecifier AS, ParsedAttributes &Attr,
       const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
       ParsingDeclRAIIObject *DiagsFromTParams = nullptr);
   DeclGroupPtrTy ParseCXXClassMemberDeclarationWithPragmas(
@@ -2851,20 +2870,17 @@ private:
 
   // C++ 14.1: Template Parameters [temp.param]
   Decl *ParseDeclarationStartingWithTemplate(DeclaratorContext Context,
-                                          SourceLocation &DeclEnd,
-                                          AccessSpecifier AS = AS_none,
-                                          AttributeList *AccessAttrs = nullptr);
+                                             SourceLocation &DeclEnd,
+                                             ParsedAttributes &AccessAttrs,
+                                             AccessSpecifier AS = AS_none);
   Decl *ParseTemplateDeclarationOrSpecialization(DeclaratorContext Context,
                                                  SourceLocation &DeclEnd,
-                                                 AccessSpecifier AS,
-                                                 AttributeList *AccessAttrs);
+                                                 ParsedAttributes &AccessAttrs,
+                                                 AccessSpecifier AS);
   Decl *ParseSingleDeclarationAfterTemplate(
-                                       DeclaratorContext Context,
-                                       const ParsedTemplateInfo &TemplateInfo,
-                                       ParsingDeclRAIIObject &DiagsFromParams,
-                                       SourceLocation &DeclEnd,
-                                       AccessSpecifier AS=AS_none,
-                                       AttributeList *AccessAttrs = nullptr);
+      DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
+      ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,
+      ParsedAttributes &AccessAttrs, AccessSpecifier AS = AS_none);
   bool ParseTemplateParameters(unsigned Depth,
                                SmallVectorImpl<NamedDecl *> &TemplateParams,
                                SourceLocation &LAngleLoc,
@@ -2907,6 +2923,7 @@ private:
                                    SourceLocation ExternLoc,
                                    SourceLocation TemplateLoc,
                                    SourceLocation &DeclEnd,
+                                   ParsedAttributes &AccessAttrs,
                                    AccessSpecifier AS = AS_none);
 
   //===--------------------------------------------------------------------===//
