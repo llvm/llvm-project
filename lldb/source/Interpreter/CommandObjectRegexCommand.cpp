@@ -95,15 +95,8 @@ bool CommandObjectRegexCommand::AddRegexCommand(const char *re_cstr,
 
 int CommandObjectRegexCommand::HandleCompletion(CompletionRequest &request) {
   if (m_completion_type_mask) {
-    std::string completion_str(
-        request.GetParsedLine().GetArgumentAtIndex(request.GetCursorIndex()),
-        request.GetCursorCharPosition());
-    bool word_complete = request.GetWordComplete();
     CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), m_completion_type_mask, completion_str.c_str(),
-        request.GetMatchStartPoint(), request.GetMaxReturnElements(), nullptr,
-        word_complete, request.GetMatches());
-    request.SetWordComplete(word_complete);
+        GetCommandInterpreter(), m_completion_type_mask, request, nullptr);
     return request.GetMatches().GetSize();
   } else {
     request.GetMatches().Clear();

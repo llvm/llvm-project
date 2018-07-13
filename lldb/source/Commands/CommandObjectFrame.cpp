@@ -467,16 +467,9 @@ public:
       CompletionRequest &request,
       OptionElementVector &opt_element_vector) override {
     // Arguments are the standard source file completer.
-    auto completion_str = request.GetParsedLine()[request.GetCursorIndex()].ref;
-    completion_str = completion_str.take_front(request.GetCursorCharPosition());
-
-    bool word_complete = request.GetWordComplete();
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eVariablePathCompletion,
-        completion_str, request.GetMatchStartPoint(),
-        request.GetMaxReturnElements(), nullptr, word_complete,
-        request.GetMatches());
-    request.SetWordComplete(word_complete);
+        request, nullptr);
     return request.GetMatches().GetSize();
   }
 

@@ -103,8 +103,7 @@ public:
       ValueObjectList &valobj_list);
 
   static size_t AutoComplete(const ExecutionContext &exe_ctx,
-                             llvm::StringRef name, StringList &matches,
-                             bool &word_complete);
+                             CompletionRequest &request);
 
   CompilerDeclContext GetDeclContext();
 

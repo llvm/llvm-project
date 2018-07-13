@@ -68,16 +68,15 @@ lldb::OptionValueSP OptionValueUUID::DeepCopy() const {
 }
 
 size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
-                                     llvm::StringRef s, int match_start_point,
-                                     int max_return_elements,
-                                     bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+                                     CompletionRequest &request) {
+  request.SetWordComplete(false);
+  request.GetMatches().Clear();
   ExecutionContext exe_ctx(interpreter.GetExecutionContext());
   Target *target = exe_ctx.GetTargetPtr();
   if (target) {
+    auto prefix = request.GetCursorArgumentPrefix();
     llvm::SmallVector<uint8_t, 20> uuid_bytes;
-    if (UUID::DecodeUUIDBytesFromString(s, uuid_bytes).empty()) {
+    if (UUID::DecodeUUIDBytesFromString(prefix, uuid_bytes).empty()) {
       const size_t num_modules = target->GetImages().GetSize();
       for (size_t i = 0; i < num_modules; ++i) {
         ModuleSP module_sp(target->GetImages().GetModuleAtIndex(i));
@@ -87,12 +86,12 @@ size_t OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
             llvm::ArrayRef<uint8_t> module_bytes = module_uuid.GetBytes();
             if (module_bytes.size() >= uuid_bytes.size() &&
                 module_bytes.take_front(uuid_bytes.size()).equals(uuid_bytes)) {
-              matches.AppendString(module_uuid.GetAsString());
+              request.GetMatches().AppendString(module_uuid.GetAsString());
             }
           }
         }
       }
     }
   }
-  return matches.GetSize();
+  return request.GetMatches().GetSize();
 }
