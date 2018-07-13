@@ -12,6 +12,7 @@
 
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/CompletionRequest.h"
 
 namespace lldb_private {
 

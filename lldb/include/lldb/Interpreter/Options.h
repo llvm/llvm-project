@@ -18,6 +18,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private.h"
