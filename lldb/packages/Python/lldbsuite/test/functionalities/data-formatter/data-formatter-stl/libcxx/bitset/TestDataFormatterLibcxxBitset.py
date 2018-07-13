@@ -35,7 +35,7 @@ class TestDataFormatterLibcxxBitset(TestBase):
                     "variable: %s, index: %d"%(name, size))
 
     @add_test_categories(["libc++"])
-    def test(self):
+    def test_value(self):
         """Test that std::bitset is displayed correctly"""
         self.build()
         lldbutil.run_to_source_breakpoint(self, '// break here',
@@ -44,3 +44,18 @@ class TestDataFormatterLibcxxBitset(TestBase):
         self.check("empty", 0)
         self.check("small", 13)
         self.check("large", 200)
+
+    def test_ptr_and_ref(self):
+        """Test that ref and ptr to std::bitset is displayed correctly"""
+        self.build()
+        (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+                'Check ref and ptr',
+                lldb.SBFileSpec("main.cpp", False))
+
+        self.check("ref", 13)
+        self.check("ptr", 13)
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+        
+        self.check("ref", 200)
+        self.check("ptr", 200)
