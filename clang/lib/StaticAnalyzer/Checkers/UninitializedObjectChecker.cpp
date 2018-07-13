@@ -131,12 +131,10 @@ private:
   //     - a non-union record
   //     - a pointer/reference
   //     - an array
-  //     - of a member pointer type
-  //     - of a primitive type, which we'll define as either a BuiltinType or
-  //       EnumeralType.
+  //     - of a primitive type, which we'll define later in a helper function.
   //   * the parent of each node is the object that contains it
-  //   * every leaf is an array, a primitive object, a member pointer, a nullptr
-  //     or an undefined pointer.
+  //   * every leaf is an array, a primitive object, a nullptr or an undefined
+  //   pointer.
   //
   // Example:
   //
@@ -163,8 +161,8 @@ private:
   //
   // From this we'll construct a vector of fieldchains, where each fieldchain
   // represents an uninitialized field. An uninitialized field may be a
-  // primitive object, a member pointer, a pointer, a pointee or a union without
-  // a single initialized field.
+  // primitive object, a pointer, a pointee or a union without a single
+  // initialized field.
   // In the above example, for the default constructor call we'll end up with
   // these fieldchains:
   //
@@ -188,10 +186,6 @@ private:
   /// is uninitialized.
   bool isPointerOrReferenceUninit(const FieldRegion *FR,
                                   FieldChainInfo LocalChain);
-
-  /// This method checks a region of MemberPointerType, and returns true if the
-  /// the pointer is uninitialized.
-  bool isMemberPointerUninit(const FieldRegion *FR, FieldChainInfo LocalChain);
 
   /// This method returns true if the value of a primitive object is
   /// uninitialized.
@@ -225,15 +219,22 @@ static bool isCalledByConstructor(const CheckerContext &Context);
 /// known, and thus FD can not be analyzed.
 static bool isVoidPointer(const FieldDecl *FD);
 
-/// Returns true if T is a primitive type. We'll call a type primitive if it's
-/// either a BuiltinType or an EnumeralType.
+/// Returns true if T is a primitive type. We defined this type so that for
+/// objects that we'd only like analyze as much as checking whether their
+/// value is undefined or not, such as ints and doubles, can be analyzed with
+/// ease. This also helps ensuring that every special field type is handled
+/// correctly.
 static bool isPrimitiveType(const QualType &T) {
-  return T->isBuiltinType() || T->isEnumeralType();
+  return T->isBuiltinType() || T->isEnumeralType() || T->isMemberPointerType();
 }
 
 /// Constructs a note message for a given FieldChainInfo object.
 static void printNoteMessage(llvm::raw_ostream &Out,
                              const FieldChainInfo &Chain);
+
+/// Returns with Field's name. This is a helper function to get the correct name
+/// even if Field is a captured lambda variable.
+static StringRef getVariableName(const FieldDecl *Field);
 
 //===----------------------------------------------------------------------===//
 //                  Methods for UninitializedObjectChecker.
@@ -392,13 +393,6 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
       continue;
     }
 
-    if (T->isMemberPointerType()) {
-      if (isMemberPointerUninit(FR, LocalChain))
-        ContainsUninitField = true;
-      continue;
-    }
-
-    // If this is a pointer or reference type.
     if (T->isPointerType() || T->isReferenceType()) {
       if (isPointerOrReferenceUninit(FR, LocalChain))
         ContainsUninitField = true;
@@ -542,14 +536,6 @@ bool FindUninitializedFields::isPointerOrReferenceUninit(
   return false;
 }
 
-bool FindUninitializedFields::isMemberPointerUninit(const FieldRegion *FR,
-                                                    FieldChainInfo LocalChain) {
-  assert(FR->getDecl()->getType()->isMemberPointerType() &&
-         "This function only checks regions that hold MemberPointerTypes!");
-  // TODO: Implement support for MemberPointerTypes.
-  return false;
-}
-
 bool FindUninitializedFields::isPrimitiveUninit(const SVal &V) {
   if (V.isUndef())
     return true;
@@ -599,22 +585,6 @@ const FieldDecl *FieldChainInfo::getEndOfChain() const {
 // "uninitialized field 'this->x'", but we can't refer to 'x' directly,
 // we need an explicit namespace resolution whether the uninit field was
 // 'D1::x' or 'D2::x'.
-//
-// TODO: If a field in the fieldchain is a captured lambda parameter, this
-// function constructs an empty string for it:
-//
-//   template <class Callable> struct A {
-//     Callable c;
-//     A(const Callable &c, int) : c(c) {}
-//   };
-//
-//   int b; // say that this isn't zero initialized
-//   auto alwaysTrue = [&b](int a) { return true; };
-//
-// A call with these parameters: A<decltype(alwaysTrue)>::A(alwaysTrue, int())
-// will emit a note with the message "uninitialized field: 'this->c.'". If
-// possible, the lambda parameter name should be retrieved or be replaced with a
-// "<lambda parameter>" or something similar.
 void FieldChainInfo::print(llvm::raw_ostream &Out) const {
   if (Chain.isEmpty())
     return;
@@ -622,7 +592,7 @@ void FieldChainInfo::print(llvm::raw_ostream &Out) const {
   const llvm::ImmutableListImpl<const FieldRegion *> *L =
       Chain.getInternalPointer();
   printTail(Out, L->getTail());
-  Out << L->getHead()->getDecl()->getNameAsString();
+  Out << getVariableName(L->getHead()->getDecl());
 }
 
 void FieldChainInfo::printTail(
@@ -633,7 +603,7 @@ void FieldChainInfo::printTail(
 
   printTail(Out, L->getTail());
   const FieldDecl *Field = L->getHead()->getDecl();
-  Out << Field->getNameAsString();
+  Out << getVariableName(Field);
   Out << (Field->getType()->isPointerType() ? "->" : ".");
 }
 
@@ -692,6 +662,21 @@ static void printNoteMessage(llvm::raw_ostream &Out,
     Out << "uninitialized field 'this->";
   Chain.print(Out);
   Out << "'";
+}
+
+static StringRef getVariableName(const FieldDecl *Field) {
+  // If Field is a captured lambda variable, Field->getName() will return with
+  // an empty string. We can however acquire it's name from the lambda's
+  // captures.
+  const auto *CXXParent = dyn_cast<CXXRecordDecl>(Field->getParent());
+
+  if (CXXParent && CXXParent->isLambda()) {
+    assert(CXXParent->captures_begin());
+    auto It = CXXParent->captures_begin() + Field->getFieldIndex();
+    return It->getCapturedVar()->getName();
+  }
+
+  return Field->getName();
 }
 
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {

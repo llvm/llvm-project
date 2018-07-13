@@ -77,6 +77,8 @@ int main()
         typedef std::vector<T> C;
         C::iterator i;
         C::const_iterator j;
+        (void) i;
+        (void) j;
     }
 #if TEST_STD_VER >= 11
     {
@@ -125,6 +127,8 @@ int main()
         typedef std::vector<T, min_allocator<T>> C;
         C::iterator i;
         C::const_iterator j;
+        (void) i;
+        (void) j;
     }
     {
         typedef A T;

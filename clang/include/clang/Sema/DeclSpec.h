@@ -29,8 +29,8 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Token.h"
-#include "clang/Sema/AttributeList.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2406,7 +2406,7 @@ public:
   /// Return a source range list of C++11 attributes associated
   /// with the declarator.
   void getCXX11AttributeRanges(SmallVectorImpl<SourceRange> &Ranges) {
-    for (const AttributeList &AL : Attrs)
+    for (const ParsedAttr &AL : Attrs)
       if (AL.isCXX11Attribute())
         Ranges.push_back(AL.getRange());
   }

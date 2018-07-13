@@ -162,14 +162,14 @@ void Parser::ParseGNUAttributes(ParsedAttributes &attrs,
 
       if (Tok.isNot(tok::l_paren)) {
         attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                     AttributeList::AS_GNU);
+                     ParsedAttr::AS_GNU);
         continue;
       }
 
       // Handle "parameterized" attributes
       if (!LateAttrs || !isAttributeLateParsed(*AttrName)) {
         ParseGNUAttributeArgs(AttrName, AttrNameLoc, attrs, endLoc, nullptr,
-                              SourceLocation(), AttributeList::AS_GNU, D);
+                              SourceLocation(), ParsedAttr::AS_GNU, D);
         continue;
       }
 
@@ -246,7 +246,7 @@ IdentifierLoc *Parser::ParseIdentifierLoc() {
 void Parser::ParseSwiftNewtypeAttribute(
     IdentifierInfo &SwiftNewtype, SourceLocation SwiftNewtypeLoc,
     ParsedAttributes &attrs, SourceLocation *endLoc, IdentifierInfo *ScopeName,
-    SourceLocation ScopeLoc, AttributeList::Syntax Syntax) {
+    SourceLocation ScopeLoc, ParsedAttr::Syntax Syntax) {
 
   BalancedDelimiterTracker Parens(*this, tok::l_paren);
   Parens.consumeOpen();
@@ -281,7 +281,7 @@ void Parser::ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
                                        SourceLocation *EndLoc,
                                        IdentifierInfo *ScopeName,
                                        SourceLocation ScopeLoc,
-                                       AttributeList::Syntax Syntax) {
+                                       ParsedAttr::Syntax Syntax) {
   BalancedDelimiterTracker Parens(*this, tok::l_paren);
   Parens.consumeOpen();
 
@@ -307,7 +307,7 @@ void Parser::ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
 unsigned Parser::ParseAttributeArgsCommon(
     IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
     ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
-    SourceLocation ScopeLoc, AttributeList::Syntax Syntax) {
+    SourceLocation ScopeLoc, ParsedAttr::Syntax Syntax) {
   // Ignore the left paren location for now.
   ConsumeParen();
 
@@ -315,13 +315,13 @@ unsigned Parser::ParseAttributeArgsCommon(
   if (Tok.is(tok::identifier)) {
     // If this attribute wants an 'identifier' argument, make it so.
     bool IsIdentifierArg = attributeHasIdentifierArg(*AttrName);
-    AttributeList::Kind AttrKind =
-        AttributeList::getKind(AttrName, ScopeName, Syntax);
+    ParsedAttr::Kind AttrKind =
+        ParsedAttr::getKind(AttrName, ScopeName, Syntax);
 
     // If we don't know how to parse this attribute, but this is the only
     // token in this argument, assume it's meant to be an identifier.
-    if (AttrKind == AttributeList::UnknownAttribute ||
-        AttrKind == AttributeList::IgnoredAttribute) {
+    if (AttrKind == ParsedAttr::UnknownAttribute ||
+        AttrKind == ParsedAttr::IgnoredAttribute) {
       const Token &Next = NextToken();
       IsIdentifierArg = Next.isOneOf(tok::r_paren, tok::comma);
     }
@@ -375,31 +375,31 @@ void Parser::ParseGNUAttributeArgs(IdentifierInfo *AttrName,
                                    SourceLocation *EndLoc,
                                    IdentifierInfo *ScopeName,
                                    SourceLocation ScopeLoc,
-                                   AttributeList::Syntax Syntax,
+                                   ParsedAttr::Syntax Syntax,
                                    Declarator *D) {
 
   assert(Tok.is(tok::l_paren) && "Attribute arg list not starting with '('");
 
-  AttributeList::Kind AttrKind =
-      AttributeList::getKind(AttrName, ScopeName, Syntax);
+  ParsedAttr::Kind AttrKind =
+      ParsedAttr::getKind(AttrName, ScopeName, Syntax);
 
-  if (AttrKind == AttributeList::AT_Availability) {
+  if (AttrKind == ParsedAttr::AT_Availability) {
     ParseAvailabilityAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
                                ScopeLoc, Syntax);
     return;
-  } else if (AttrKind == AttributeList::AT_ExternalSourceSymbol) {
+  } else if (AttrKind == ParsedAttr::AT_ExternalSourceSymbol) {
     ParseExternalSourceSymbolAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                        ScopeName, ScopeLoc, Syntax);
     return;
-  } else if (AttrKind == AttributeList::AT_ObjCBridgeRelated) {
+  } else if (AttrKind == ParsedAttr::AT_ObjCBridgeRelated) {
     ParseObjCBridgeRelatedAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                     ScopeName, ScopeLoc, Syntax);
     return;
-  } else if (AttrKind == AttributeList::AT_TypeTagForDatatype) {
+  } else if (AttrKind == ParsedAttr::AT_TypeTagForDatatype) {
     ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                      ScopeName, ScopeLoc, Syntax);
     return;
-  } else if (AttrKind == AttributeList::AT_SwiftNewtype) {
+  } else if (AttrKind == ParsedAttr::AT_SwiftNewtype) {
     ParseSwiftNewtypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                ScopeName, ScopeLoc, Syntax);
     return;
@@ -431,29 +431,29 @@ void Parser::ParseGNUAttributeArgs(IdentifierInfo *AttrName,
 unsigned Parser::ParseClangAttributeArgs(
     IdentifierInfo *AttrName, SourceLocation AttrNameLoc,
     ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
-    SourceLocation ScopeLoc, AttributeList::Syntax Syntax) {
+    SourceLocation ScopeLoc, ParsedAttr::Syntax Syntax) {
   assert(Tok.is(tok::l_paren) && "Attribute arg list not starting with '('");
 
-  AttributeList::Kind AttrKind =
-      AttributeList::getKind(AttrName, ScopeName, Syntax);
+  ParsedAttr::Kind AttrKind =
+      ParsedAttr::getKind(AttrName, ScopeName, Syntax);
 
   switch (AttrKind) {
   default:
     return ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc,
                                     ScopeName, ScopeLoc, Syntax);
-  case AttributeList::AT_ExternalSourceSymbol:
+  case ParsedAttr::AT_ExternalSourceSymbol:
     ParseExternalSourceSymbolAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                        ScopeName, ScopeLoc, Syntax);
     break;
-  case AttributeList::AT_Availability:
+  case ParsedAttr::AT_Availability:
     ParseAvailabilityAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
                                ScopeLoc, Syntax);
     break;
-  case AttributeList::AT_ObjCBridgeRelated:
+  case ParsedAttr::AT_ObjCBridgeRelated:
     ParseObjCBridgeRelatedAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                     ScopeName, ScopeLoc, Syntax);
     break;
-  case AttributeList::AT_TypeTagForDatatype:
+  case ParsedAttr::AT_TypeTagForDatatype:
     ParseTypeTagForDatatypeAttribute(*AttrName, AttrNameLoc, Attrs, EndLoc,
                                      ScopeName, ScopeLoc, Syntax);
     break;
@@ -585,14 +585,14 @@ bool Parser::ParseMicrosoftDeclSpecArgs(IdentifierInfo *AttrName,
     if (!HasInvalidAccessor)
       Attrs.addNewPropertyAttr(AttrName, AttrNameLoc, nullptr, SourceLocation(),
                                AccessorNames[AK_Get], AccessorNames[AK_Put],
-                               AttributeList::AS_Declspec);
+                               ParsedAttr::AS_Declspec);
     T.skipToEnd();
     return !HasInvalidAccessor;
   }
 
   unsigned NumArgs =
       ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, nullptr, nullptr,
-                               SourceLocation(), AttributeList::AS_Declspec);
+                               SourceLocation(), ParsedAttr::AS_Declspec);
 
   // If this attribute's args were parsed, and it was expected to have
   // arguments but none were provided, emit a diagnostic.
@@ -667,7 +667,7 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
 
       if (!AttrHandled)
         Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                     AttributeList::AS_Declspec);
+                     ParsedAttr::AS_Declspec);
     }
     T.consumeClose();
     if (End)
@@ -693,7 +693,7 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       SourceLocation AttrNameLoc = ConsumeToken();
       attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                   AttributeList::AS_Keyword);
+                   ParsedAttr::AS_Keyword);
       break;
     }
     default:
@@ -744,7 +744,7 @@ void Parser::ParseBorlandTypeAttributes(ParsedAttributes &attrs) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     SourceLocation AttrNameLoc = ConsumeToken();
     attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                 AttributeList::AS_Keyword);
+                 ParsedAttr::AS_Keyword);
   }
 }
 
@@ -754,7 +754,7 @@ void Parser::ParseOpenCLKernelAttributes(ParsedAttributes &attrs) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     SourceLocation AttrNameLoc = ConsumeToken();
     attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                 AttributeList::AS_Keyword);
+                 ParsedAttr::AS_Keyword);
   }
 }
 
@@ -762,7 +762,7 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   SourceLocation AttrNameLoc = Tok.getLocation();
   Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-               AttributeList::AS_Keyword);
+               ParsedAttr::AS_Keyword);
 }
 
 void Parser::ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs) {
@@ -778,7 +778,7 @@ void Parser::ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs) {
         Diag(AttrNameLoc, diag::ext_nullability)
           << AttrName;
       attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, 
-                   AttributeList::AS_Keyword);
+                   ParsedAttr::AS_Keyword);
       break;
     }
     default:
@@ -941,7 +941,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
                                         SourceLocation *endLoc,
                                         IdentifierInfo *ScopeName,
                                         SourceLocation ScopeLoc,
-                                        AttributeList::Syntax Syntax) {
+                                        ParsedAttr::Syntax Syntax) {
   enum { Introduced, Deprecated, Obsoleted, Unknown };
   AvailabilityChange Changes[Unknown];
   ExprResult MessageExpr, ReplacementExpr;
@@ -1173,7 +1173,7 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
 void Parser::ParseExternalSourceSymbolAttribute(
     IdentifierInfo &ExternalSourceSymbol, SourceLocation Loc,
     ParsedAttributes &Attrs, SourceLocation *EndLoc, IdentifierInfo *ScopeName,
-    SourceLocation ScopeLoc, AttributeList::Syntax Syntax) {
+    SourceLocation ScopeLoc, ParsedAttr::Syntax Syntax) {
   // Opening '('.
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.expectAndConsume())
@@ -1287,7 +1287,7 @@ void Parser::ParseObjCBridgeRelatedAttribute(IdentifierInfo &ObjCBridgeRelated,
                                 SourceLocation *endLoc,
                                 IdentifierInfo *ScopeName,
                                 SourceLocation ScopeLoc,
-                                AttributeList::Syntax Syntax) {
+                                ParsedAttr::Syntax Syntax) {
   // Opening '('.
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.consumeOpen()) {
@@ -1466,7 +1466,7 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
         Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
 
       ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, &endLoc,
-                            nullptr, SourceLocation(), AttributeList::AS_GNU,
+                            nullptr, SourceLocation(), ParsedAttr::AS_GNU,
                             nullptr);
 
       if (HasFunScope) {
@@ -1480,7 +1480,7 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
       // If there are multiple decls, then the decl cannot be within the
       // function scope.
       ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, &endLoc,
-                            nullptr, SourceLocation(), AttributeList::AS_GNU,
+                            nullptr, SourceLocation(), ParsedAttr::AS_GNU,
                             nullptr);
     }
   } else {
@@ -1510,7 +1510,7 @@ void Parser::ParseTypeTagForDatatypeAttribute(IdentifierInfo &AttrName,
                                               SourceLocation *EndLoc,
                                               IdentifierInfo *ScopeName,
                                               SourceLocation ScopeLoc,
-                                              AttributeList::Syntax Syntax) {
+                                              ParsedAttr::Syntax Syntax) {
   assert(Tok.is(tok::l_paren) && "Attribute arg list not starting with '('");
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -1632,10 +1632,10 @@ void Parser::DiagnoseProhibitedAttributes(
 
 void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
                                      unsigned DiagID) {
-  for (const AttributeList &AL : Attrs) {
+  for (const ParsedAttr &AL : Attrs) {
     if (!AL.isCXX11Attribute() && !AL.isC2xAttribute())
       continue;
-    if (AL.getKind() == AttributeList::UnknownAttribute)
+    if (AL.getKind() == ParsedAttr::UnknownAttribute)
       Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored) << AL.getName();
     else {
       Diag(AL.getLoc(), DiagID) << AL.getName();
@@ -1657,16 +1657,16 @@ void Parser::stripTypeAttributesOffDeclSpec(ParsedAttributesWithRange &Attrs,
   if (TUK == Sema::TUK_Reference)
     return;
 
-  llvm::SmallVector<AttributeList *, 1> ToBeMoved;
+  llvm::SmallVector<ParsedAttr *, 1> ToBeMoved;
 
-  for (AttributeList &AL : DS.getAttributes()) {
-    if ((AL.getKind() == AttributeList::AT_Aligned &&
+  for (ParsedAttr &AL : DS.getAttributes()) {
+    if ((AL.getKind() == ParsedAttr::AT_Aligned &&
          AL.isDeclspecAttribute()) ||
         AL.isMicrosoftAttribute())
       ToBeMoved.push_back(&AL);
   }
 
-  for (AttributeList *AL : ToBeMoved) {
+  for (ParsedAttr *AL : ToBeMoved) {
     DS.getAttributes().remove(AL);
     Attrs.addAtEnd(AL);
   }
@@ -2782,7 +2782,7 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   ArgsVector ArgExprs;
   ArgExprs.push_back(ArgExpr.get());
   Attrs.addNew(KWName, KWLoc, nullptr, KWLoc, ArgExprs.data(), 1,
-               AttributeList::AS_Keyword, EllipsisLoc);
+               ParsedAttr::AS_Keyword, EllipsisLoc);
 }
 
 /// Determine whether we're looking at something that might be a declarator
@@ -3372,7 +3372,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       SourceLocation AttrNameLoc = Tok.getLocation();
       DS.getAttributes().addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc,
-                                nullptr, 0, AttributeList::AS_Keyword);
+                                nullptr, 0, ParsedAttr::AS_Keyword);
       break;
     }
 
@@ -3415,7 +3415,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // Objective-C 'kindof' types.
     case tok::kw___kindof:
       DS.getAttributes().addNew(Tok.getIdentifierInfo(), Loc, nullptr, Loc,
-                                nullptr, 0, AttributeList::AS_Keyword);
+                                nullptr, 0, ParsedAttr::AS_Keyword);
       (void)ConsumeToken();
       continue;
 
@@ -5246,7 +5246,7 @@ void Parser::ParseTypeQualifierListOpt(
     // Objective-C 'kindof' types.
     case tok::kw___kindof:
       DS.getAttributes().addNew(Tok.getIdentifierInfo(), Loc, nullptr, Loc,
-                                nullptr, 0, AttributeList::AS_Keyword);
+                                nullptr, 0, ParsedAttr::AS_Keyword);
       (void)ConsumeToken();
       continue;
 

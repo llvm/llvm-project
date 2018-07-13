@@ -61,18 +61,18 @@ Sema::IdentifyCUDATarget(const ParsedAttributesView &Attrs) {
   bool HasDeviceAttr = false;
   bool HasGlobalAttr = false;
   bool HasInvalidTargetAttr = false;
-  for (const AttributeList &AL : Attrs) {
+  for (const ParsedAttr &AL : Attrs) {
     switch (AL.getKind()) {
-    case AttributeList::AT_CUDAGlobal:
+    case ParsedAttr::AT_CUDAGlobal:
       HasGlobalAttr = true;
       break;
-    case AttributeList::AT_CUDAHost:
+    case ParsedAttr::AT_CUDAHost:
       HasHostAttr = true;
       break;
-    case AttributeList::AT_CUDADevice:
+    case ParsedAttr::AT_CUDADevice:
       HasDeviceAttr = true;
       break;
-    case AttributeList::AT_CUDAInvalidTarget:
+    case ParsedAttr::AT_CUDAInvalidTarget:
       HasInvalidTargetAttr = true;
       break;
     default:

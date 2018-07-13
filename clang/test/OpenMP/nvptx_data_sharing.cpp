@@ -30,7 +30,7 @@ void test_ds(){
 /// ========= In the worker function ========= ///
 // CK1: {{.*}}define internal void @__omp_offloading{{.*}}test_ds{{.*}}_worker()
 // CK1: call void @llvm.nvvm.barrier0()
-// CK1: call void @__kmpc_data_sharing_init_stack
+// CK1-NOT: call void @__kmpc_data_sharing_init_stack
 
 /// ========= In the kernel function ========= ///
 
