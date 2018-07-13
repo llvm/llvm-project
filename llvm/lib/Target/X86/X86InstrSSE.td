@@ -2647,13 +2647,13 @@ multiclass scalar_math_patterns<SDNode Op, string OpcPrefix, SDNode Move,
     def : Pat<(VT (Move (VT VR128:$dst), (VT (scalar_to_vector
           (Op (EltTy (extractelt (VT VR128:$dst), (iPTR 0))),
           RC:$src))))),
-      (!cast<I>(OpcPrefix#rr_Int) VT:$dst,
+      (!cast<Instruction>(OpcPrefix#rr_Int) VT:$dst,
           (COPY_TO_REGCLASS RC:$src, VR128))>;
 
     // vector math op with insert via movss/movsd
     def : Pat<(VT (Move (VT VR128:$dst),
           (Op (VT VR128:$dst), (VT VR128:$src)))),
-      (!cast<I>(OpcPrefix#rr_Int) VT:$dst, VT:$src)>;
+      (!cast<Instruction>(OpcPrefix#rr_Int) VT:$dst, VT:$src)>;
    }
 
    // Repeat for AVX versions of the instructions.
@@ -2662,13 +2662,13 @@ multiclass scalar_math_patterns<SDNode Op, string OpcPrefix, SDNode Move,
     def : Pat<(VT (Move (VT VR128:$dst), (VT (scalar_to_vector
           (Op (EltTy (extractelt (VT VR128:$dst), (iPTR 0))),
           RC:$src))))),
-      (!cast<I>("V"#OpcPrefix#rr_Int) VT:$dst,
+      (!cast<Instruction>("V"#OpcPrefix#rr_Int) VT:$dst,
           (COPY_TO_REGCLASS RC:$src, VR128))>;
 
     // vector math op with insert via movss/movsd
     def : Pat<(VT (Move (VT VR128:$dst),
           (Op (VT VR128:$dst), (VT VR128:$src)))),
-      (!cast<I>("V"#OpcPrefix#rr_Int) VT:$dst, VT:$src)>;
+      (!cast<Instruction>("V"#OpcPrefix#rr_Int) VT:$dst, VT:$src)>;
    }
 }
 
@@ -2927,14 +2927,14 @@ multiclass scalar_unary_math_patterns<SDNode OpNode, string OpcPrefix, SDNode Mo
   let Predicates = [BasePredicate] in {
     def : Pat<(VT (Move VT:$dst, (scalar_to_vector
                                   (OpNode (extractelt VT:$src, 0))))),
-              (!cast<I>(OpcPrefix#r_Int) VT:$dst, VT:$src)>;
+              (!cast<Instruction>(OpcPrefix#r_Int) VT:$dst, VT:$src)>;
   }
 
   // Repeat for AVX versions of the instructions.
-  let Predicates = [HasAVX] in {
+  let Predicates = [UseAVX] in {
     def : Pat<(VT (Move VT:$dst, (scalar_to_vector
                                   (OpNode (extractelt VT:$src, 0))))),
-              (!cast<I>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src)>;
+              (!cast<Instruction>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src)>;
   }
 }
 
@@ -2944,14 +2944,14 @@ multiclass scalar_unary_math_imm_patterns<SDNode OpNode, string OpcPrefix, SDNod
   let Predicates = [BasePredicate] in {
     def : Pat<(VT (Move VT:$dst, (scalar_to_vector
                                   (OpNode (extractelt VT:$src, 0))))),
-              (!cast<Ii8>(OpcPrefix#r_Int) VT:$dst, VT:$src, (i32 ImmV))>;
+              (!cast<Instruction>(OpcPrefix#r_Int) VT:$dst, VT:$src, (i32 ImmV))>;
   }
 
   // Repeat for AVX versions of the instructions.
-  let Predicates = [HasAVX] in {
+  let Predicates = [UseAVX] in {
     def : Pat<(VT (Move VT:$dst, (scalar_to_vector
                                   (OpNode (extractelt VT:$src, 0))))),
-              (!cast<Ii8>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src, (i32 ImmV))>;
+              (!cast<Instruction>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src, (i32 ImmV))>;
   }
 }
 
@@ -2963,13 +2963,13 @@ multiclass scalar_unary_math_intr_patterns<Intrinsic Intr, string OpcPrefix,
                                            Predicate BasePredicate> {
   let Predicates = [BasePredicate] in {
     def : Pat<(VT (Move VT:$dst, (Intr VT:$src))),
-              (!cast<I>(OpcPrefix#r_Int) VT:$dst, VT:$src)>;
+              (!cast<Instruction>(OpcPrefix#r_Int) VT:$dst, VT:$src)>;
   }
 
   // Repeat for AVX versions of the instructions.
   let Predicates = [HasAVX] in {
     def : Pat<(VT (Move VT:$dst, (Intr VT:$src))),
-              (!cast<I>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src)>;
+              (!cast<Instruction>("V"#OpcPrefix#r_Int) VT:$dst, VT:$src)>;
   }
 }
 

@@ -27,7 +27,7 @@ ScriptInterpreterNone::ScriptInterpreterNone(CommandInterpreter &interpreter)
 
 ScriptInterpreterNone::~ScriptInterpreterNone() {}
 
-bool ScriptInterpreterNone::ExecuteOneLine(const char *command,
+bool ScriptInterpreterNone::ExecuteOneLine(llvm::StringRef command,
                                            CommandReturnObject *,
                                            const ExecuteScriptOptions &) {
   m_interpreter.GetDebugger().GetErrorFile()->PutCString(

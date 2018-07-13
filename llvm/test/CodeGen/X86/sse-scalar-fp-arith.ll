@@ -81,25 +81,15 @@ define <4 x float> @test_div_ss(<4 x float> %a, <4 x float> %b) {
 }
 
 define <4 x float> @test_sqrt_ss(<4 x float> %a) {
-; SSE2-LABEL: test_sqrt_ss:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    sqrtss %xmm0, %xmm0
-; SSE2-NEXT:    ret{{[l|q]}}
+; SSE-LABEL: test_sqrt_ss:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
 ;
-; SSE41-LABEL: test_sqrt_ss:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    sqrtss %xmm0, %xmm0
-; SSE41-NEXT:    ret{{[l|q]}}
-;
-; AVX1-LABEL: test_sqrt_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: test_sqrt_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: test_sqrt_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = extractelement <4 x float> %a, i32 0
   %2 = call float @llvm.sqrt.f32(float %1)
   %3 = insertelement <4 x float> %a, float %2, i32 0
@@ -176,25 +166,15 @@ define <2 x double> @test_div_sd(<2 x double> %a, <2 x double> %b) {
 }
 
 define <2 x double> @test_sqrt_sd(<2 x double> %a) {
-; SSE2-LABEL: test_sqrt_sd:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    sqrtsd %xmm0, %xmm0
-; SSE2-NEXT:    ret{{[l|q]}}
+; SSE-LABEL: test_sqrt_sd:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
+; SSE-NEXT:    ret{{[l|q]}}
 ;
-; SSE41-LABEL: test_sqrt_sd:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    sqrtsd %xmm0, %xmm0
-; SSE41-NEXT:    ret{{[l|q]}}
-;
-; AVX1-LABEL: test_sqrt_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: test_sqrt_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: test_sqrt_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = extractelement <2 x double> %a, i32 0
   %2 = call double @llvm.sqrt.f64(double %1)
   %3 = insertelement <2 x double> %a, double %2, i32 0
