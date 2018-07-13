@@ -47,6 +47,11 @@ bool Pipeline::executeStages(InstRef &IR) {
   return true;
 }
 
+void Pipeline::preExecuteStages(const InstRef &IR) {
+  for (const std::unique_ptr<Stage> &S : Stages)
+    S->preExecute(IR);
+}
+
 void Pipeline::postExecuteStages(const InstRef &IR) {
   for (const std::unique_ptr<Stage> &S : Stages)
     S->postExecute(IR);
@@ -63,12 +68,19 @@ void Pipeline::runCycle(unsigned Cycle) {
   // Update the stages before we do any processing for this cycle.
   InstRef IR;
   for (auto &S : Stages)
-    S->preExecute(IR);
+    S->cycleStart();
 
   // Continue executing this cycle until any stage claims it cannot make
   // progress.
-  while (executeStages(IR))
+  while (true) {
+    preExecuteStages(IR);
+    if (!executeStages(IR))
+      break;
     postExecuteStages(IR);
+  }
+
+  for (auto &S : Stages)
+    S->cycleEnd();
 
   notifyCycleEnd(Cycle);
 }

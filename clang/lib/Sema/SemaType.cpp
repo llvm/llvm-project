@@ -195,10 +195,10 @@ namespace {
       chunkIndex = idx;
     }
 
-    AttributeList *&getCurrentAttrListRef() const {
+    ParsedAttributesView &getCurrentAttributes() const {
       if (isProcessingDeclSpec())
-        return getMutableDeclSpec().getAttributes().getListRef();
-      return declarator.getTypeObject(chunkIndex).getAttrListRef();
+        return getMutableDeclSpec().getAttributes();
+      return declarator.getTypeObject(chunkIndex).getAttrs();
     }
 
     /// Save the current set of attributes on the DeclSpec.
@@ -207,9 +207,8 @@ namespace {
       if (hasSavedAttrs) return;
 
       DeclSpec &spec = getMutableDeclSpec();
-      for (AttributeList *attr = spec.getAttributes().getList(); attr;
-             attr = attr->getNext())
-        savedAttrs.push_back(attr);
+      for (AttributeList &AL : spec.getAttributes())
+        savedAttrs.push_back(&AL);
       trivial &= savedAttrs.empty();
       hasSavedAttrs = true;
     }
@@ -241,46 +240,18 @@ namespace {
     void restoreDeclSpecAttrs() {
       assert(hasSavedAttrs);
 
-      if (savedAttrs.empty()) {
-        getMutableDeclSpec().getAttributes().set(nullptr);
-        return;
-      }
-
-      getMutableDeclSpec().getAttributes().set(savedAttrs[0]);
-      for (unsigned i = 0, e = savedAttrs.size() - 1; i != e; ++i)
-        savedAttrs[i]->setNext(savedAttrs[i+1]);
-      savedAttrs.back()->setNext(nullptr);
+      getMutableDeclSpec().getAttributes().clearListOnly();
+      for (AttributeList *AL : savedAttrs)
+        getMutableDeclSpec().getAttributes().addAtStart(AL);
     }
   };
 } // end anonymous namespace
 
-static void spliceAttrIntoList(AttributeList &attr, AttributeList *&head) {
-  attr.setNext(head);
-  head = &attr;
-}
-
-static void spliceAttrOutOfList(AttributeList &attr, AttributeList *&head) {
-  if (head == &attr) {
-    head = attr.getNext();
-    return;
-  }
-
-  AttributeList *cur = head;
-  while (true) {
-    assert(cur && cur->getNext() && "ran out of attrs?");
-    if (cur->getNext() == &attr) {
-      cur->setNext(attr.getNext());
-      return;
-    }
-    cur = cur->getNext();
-  }
-}
-
 static void moveAttrFromListToList(AttributeList &attr,
-                                   AttributeList *&fromList,
-                                   AttributeList *&toList) {
-  spliceAttrOutOfList(attr, fromList);
-  spliceAttrIntoList(attr, toList);
+                                   ParsedAttributesView &fromList,
+                                   ParsedAttributesView &toList) {
+  fromList.remove(&attr);
+  toList.addAtStart(&attr);
 }
 
 /// The location of a type attribute.
@@ -293,9 +264,8 @@ enum TypeAttrLocation {
   TAL_DeclName
 };
 
-static void processTypeAttrs(TypeProcessingState &state,
-                             QualType &type, TypeAttrLocation TAL,
-                             AttributeList *attrs);
+static void processTypeAttrs(TypeProcessingState &state, QualType &type,
+                             TypeAttrLocation TAL, ParsedAttributesView &attrs);
 
 static bool handleFunctionTypeAttr(TypeProcessingState &state,
                                    AttributeList &attr,
@@ -416,8 +386,8 @@ static void distributeObjCPointerTypeAttr(TypeProcessingState &state,
                                             /*onlyBlockPointers=*/true);
       if (!destChunk) destChunk = &chunk;
 
-      moveAttrFromListToList(attr, state.getCurrentAttrListRef(),
-                             destChunk->getAttrListRef());
+      moveAttrFromListToList(attr, state.getCurrentAttributes(),
+                             destChunk->getAttrs());
       return;
     }
 
@@ -432,8 +402,8 @@ static void distributeObjCPointerTypeAttr(TypeProcessingState &state,
         if (DeclaratorChunk *dest = maybeMovePastReturnType(
                                       declarator, i,
                                       /*onlyBlockPointers=*/true)) {
-          moveAttrFromListToList(attr, state.getCurrentAttrListRef(),
-                                 dest->getAttrListRef());
+          moveAttrFromListToList(attr, state.getCurrentAttributes(),
+                                 dest->getAttrs());
           return;
         }
       }
@@ -493,8 +463,8 @@ distributeObjCPointerTypeAttrFromDeclarator(TypeProcessingState &state,
       // attribute from being applied multiple times and gives
       // the source-location-filler something to work with.
       state.saveDeclSpecAttrs();
-      moveAttrFromListToList(attr, declarator.getAttrListRef(),
-               declarator.getMutableDeclSpec().getAttributes().getListRef());
+      moveAttrFromListToList(attr, declarator.getAttributes(),
+                             declarator.getMutableDeclSpec().getAttributes());
       return;
     }
   }
@@ -502,13 +472,13 @@ distributeObjCPointerTypeAttrFromDeclarator(TypeProcessingState &state,
   // Otherwise, if we found an appropriate chunk, splice the attribute
   // into it.
   if (innermost != -1U) {
-    moveAttrFromListToList(attr, declarator.getAttrListRef(),
-                       declarator.getTypeObject(innermost).getAttrListRef());
+    moveAttrFromListToList(attr, declarator.getAttributes(),
+                           declarator.getTypeObject(innermost).getAttrs());
     return;
   }
 
   // Otherwise, diagnose when we're done building the type.
-  spliceAttrOutOfList(attr, declarator.getAttrListRef());
+  declarator.getAttributes().remove(&attr);
   state.addIgnoredTypeAttr(attr);
 }
 
@@ -527,8 +497,8 @@ static void distributeFunctionTypeAttr(TypeProcessingState &state,
     DeclaratorChunk &chunk = declarator.getTypeObject(i-1);
     switch (chunk.Kind) {
     case DeclaratorChunk::Function:
-      moveAttrFromListToList(attr, state.getCurrentAttrListRef(),
-                             chunk.getAttrListRef());
+      moveAttrFromListToList(attr, state.getCurrentAttributes(),
+                             chunk.getAttrs());
       return;
 
     case DeclaratorChunk::Paren:
@@ -548,11 +518,9 @@ static void distributeFunctionTypeAttr(TypeProcessingState &state,
 /// Try to distribute a function type attribute to the innermost
 /// function chunk or type.  Returns true if the attribute was
 /// distributed, false if no location was found.
-static bool
-distributeFunctionTypeAttrToInnermost(TypeProcessingState &state,
-                                      AttributeList &attr,
-                                      AttributeList *&attrList,
-                                      QualType &declSpecType) {
+static bool distributeFunctionTypeAttrToInnermost(
+    TypeProcessingState &state, AttributeList &attr,
+    ParsedAttributesView &attrList, QualType &declSpecType) {
   Declarator &declarator = state.getDeclarator();
 
   // Put it on the innermost function chunk, if there is one.
@@ -560,7 +528,7 @@ distributeFunctionTypeAttrToInnermost(TypeProcessingState &state,
     DeclaratorChunk &chunk = declarator.getTypeObject(i);
     if (chunk.Kind != DeclaratorChunk::Function) continue;
 
-    moveAttrFromListToList(attr, attrList, chunk.getAttrListRef());
+    moveAttrFromListToList(attr, attrList, chunk.getAttrs());
     return true;
   }
 
@@ -579,15 +547,14 @@ distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
   // the declarators. Move them straight there. We don't support the
   // 'put them wherever you like' semantics we allow for GNU attributes.
   if (attr.isCXX11Attribute()) {
-    moveAttrFromListToList(attr, state.getCurrentAttrListRef(),
-                           state.getDeclarator().getAttrListRef());
+    moveAttrFromListToList(attr, state.getCurrentAttributes(),
+                           state.getDeclarator().getAttributes());
     return;
   }
 
   // Try to distribute to the innermost.
-  if (distributeFunctionTypeAttrToInnermost(state, attr,
-                                            state.getCurrentAttrListRef(),
-                                            declSpecType))
+  if (distributeFunctionTypeAttrToInnermost(
+          state, attr, state.getCurrentAttributes(), declSpecType))
     return;
 
   // If that failed, diagnose the bad attribute when the declarator is
@@ -604,14 +571,13 @@ distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
   Declarator &declarator = state.getDeclarator();
 
   // Try to distribute to the innermost.
-  if (distributeFunctionTypeAttrToInnermost(state, attr,
-                                            declarator.getAttrListRef(),
-                                            declSpecType))
+  if (distributeFunctionTypeAttrToInnermost(
+          state, attr, declarator.getAttributes(), declSpecType))
     return;
 
   // If that failed, diagnose the bad attribute when the declarator is
   // fully built.
-  spliceAttrOutOfList(attr, declarator.getAttrListRef());
+  declarator.getAttributes().remove(&attr);
   state.addIgnoredTypeAttr(attr);
 }
 
@@ -627,24 +593,25 @@ distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
 static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
                                               QualType &declSpecType) {
   // Collect all the type attributes from the declarator itself.
-  assert(state.getDeclarator().getAttributes() && "declarator has no attrs!");
-  AttributeList *attr = state.getDeclarator().getAttributes();
-  AttributeList *next;
-  do {
-    next = attr->getNext();
-
+  assert(!state.getDeclarator().getAttributes().empty() &&
+         "declarator has no attrs!");
+  // The called functions in this loop actually remove things from the current
+  // list, so iterating over the existing list isn't possible.  Instead, make a
+  // non-owning copy and iterate over that.
+  ParsedAttributesView AttrsCopy{state.getDeclarator().getAttributes()};
+  for (AttributeList &attr : AttrsCopy) {
     // Do not distribute C++11 attributes. They have strict rules for what
     // they appertain to.
-    if (attr->isCXX11Attribute())
+    if (attr.isCXX11Attribute())
       continue;
 
-    switch (attr->getKind()) {
+    switch (attr.getKind()) {
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
-      distributeObjCPointerTypeAttrFromDeclarator(state, *attr, declSpecType);
+      distributeObjCPointerTypeAttrFromDeclarator(state, attr, declSpecType);
       break;
 
     FUNCTION_TYPE_ATTRS_CASELIST:
-      distributeFunctionTypeAttrFromDeclarator(state, *attr, declSpecType);
+      distributeFunctionTypeAttrFromDeclarator(state, attr, declSpecType);
       break;
 
     MS_TYPE_ATTRS_CASELIST:
@@ -661,7 +628,7 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
     default:
       break;
     }
-  } while ((attr = next));
+  }
 }
 
 /// Add a synthetic '()' to a block-literal declarator if it is
@@ -761,28 +728,18 @@ static bool checkOmittedBlockReturnType(Sema &S, Declarator &declarator,
     return false;
 
   // Warn if we see type attributes for omitted return type on a block literal.
-  AttributeList *&attrs =
-      declarator.getMutableDeclSpec().getAttributes().getListRef();
-  AttributeList *prev = nullptr;
-  for (AttributeList *cur = attrs; cur; cur = cur->getNext()) {
-    AttributeList &attr = *cur;
-    // Skip attributes that were marked to be invalid or non-type
-    // attributes.
-    if (attr.isInvalid() || !attr.isTypeAttr()) {
-      prev = cur;
+  SmallVector<AttributeList *, 2> ToBeRemoved;
+  for (AttributeList &AL : declarator.getMutableDeclSpec().getAttributes()) {
+    if (AL.isInvalid() || !AL.isTypeAttr())
       continue;
-    }
-    S.Diag(attr.getLoc(),
+    S.Diag(AL.getLoc(),
            diag::warn_block_literal_attributes_on_omitted_return_type)
-        << attr.getName();
-    // Remove cur from the list.
-    if (prev) {
-      prev->setNext(cur->getNext());
-      prev = cur;
-    } else {
-      attrs = cur->getNext();
-    }
+        << AL.getName();
+    ToBeRemoved.push_back(&AL);
   }
+  // Remove bad attributes from the list.
+  for (AttributeList *AL : ToBeRemoved)
+    declarator.getMutableDeclSpec().getAttributes().remove(AL);
 
   // Warn if we see type qualifiers for omitted return type on a block literal.
   const DeclSpec &DS = declarator.getDeclSpec();
@@ -1210,18 +1167,11 @@ TypeResult Sema::actOnObjCTypeArgsAndProtocolQualifiers(
   return CreateParsedType(Result, ResultTInfo);
 }
 
-static OpenCLAccessAttr::Spelling getImageAccess(const AttributeList *Attrs) {
-  if (Attrs) {
-    const AttributeList *Next = Attrs;
-    do {
-      const AttributeList &Attr = *Next;
-      Next = Attr.getNext();
-      if (Attr.getKind() == AttributeList::AT_OpenCLAccess) {
-        return static_cast<OpenCLAccessAttr::Spelling>(
-            Attr.getSemanticSpelling());
-      }
-    } while (Next);
-  }
+static OpenCLAccessAttr::Spelling
+getImageAccess(const ParsedAttributesView &Attrs) {
+  for (const AttributeList &AL : Attrs)
+    if (AL.getKind() == AttributeList::AT_OpenCLAccess)
+      return static_cast<OpenCLAccessAttr::Spelling>(AL.getSemanticSpelling());
   return OpenCLAccessAttr::Keyword_read_only;
 }
 
@@ -1237,7 +1187,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
 
   Sema &S = state.getSema();
   Declarator &declarator = state.getDeclarator();
-  const DeclSpec &DS = declarator.getDeclSpec();
+  DeclSpec &DS = declarator.getMutableDeclSpec();
   SourceLocation DeclLoc = declarator.getIdentifierLoc();
   if (DeclLoc.isInvalid())
     DeclLoc = DS.getLocStart();
@@ -1582,16 +1532,19 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
 
-#define GENERIC_IMAGE_TYPE(ImgType, Id) \
-  case DeclSpec::TST_##ImgType##_t: \
-    switch (getImageAccess(DS.getAttributes().getList())) { \
-    case OpenCLAccessAttr::Keyword_write_only: \
-      Result = Context.Id##WOTy; break; \
-    case OpenCLAccessAttr::Keyword_read_write: \
-      Result = Context.Id##RWTy; break; \
-    case OpenCLAccessAttr::Keyword_read_only: \
-      Result = Context.Id##ROTy; break; \
-    } \
+#define GENERIC_IMAGE_TYPE(ImgType, Id)                                        \
+  case DeclSpec::TST_##ImgType##_t:                                            \
+    switch (getImageAccess(DS.getAttributes())) {                              \
+    case OpenCLAccessAttr::Keyword_write_only:                                 \
+      Result = Context.Id##WOTy;                                               \
+      break;                                                                   \
+    case OpenCLAccessAttr::Keyword_read_write:                                 \
+      Result = Context.Id##RWTy;                                               \
+      break;                                                                   \
+    case OpenCLAccessAttr::Keyword_read_only:                                  \
+      Result = Context.Id##ROTy;                                               \
+      break;                                                                   \
+    }                                                                          \
     break;
 #include "clang/Basic/OpenCLImageTypes.def"
 
@@ -1644,7 +1597,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   // attributes are pushed around.
   // pipe attributes will be handled later ( at GetFullTypeForDeclarator )
   if (!DS.isTypeSpecPipe())
-      processTypeAttrs(state, Result, TAL_DeclSpec, DS.getAttributes().getList());
+    processTypeAttrs(state, Result, TAL_DeclSpec, DS.getAttributes());
 
   // Apply const/volatile/restrict qualifiers to T.
   if (unsigned TypeQuals = DS.getTypeQualifiers()) {
@@ -2646,9 +2599,8 @@ static void inferARCWriteback(TypeProcessingState &state,
     if (chunk.Kind != DeclaratorChunk::Pointer &&
         chunk.Kind != DeclaratorChunk::BlockPointer)
       return;
-    for (const AttributeList *attr = chunk.getAttrs(); attr;
-           attr = attr->getNext())
-      if (attr->getKind() == AttributeList::AT_ObjCOwnership)
+    for (const AttributeList &AL : chunk.getAttrs())
+      if (AL.getKind() == AttributeList::AT_ObjCOwnership)
         return;
 
     transferARCOwnershipToDeclaratorChunk(state, Qualifiers::OCL_Autoreleasing,
@@ -2813,7 +2765,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     // "void" instead.
     T = SemaRef.Context.VoidTy;
     processTypeAttrs(state, T, TAL_DeclSpec,
-                     D.getDeclSpec().getAttributes().getList());
+                     D.getMutableDeclSpec().getAttributes());
     break;
 
   case UnqualifiedIdKind::IK_DeductionGuideName:
@@ -2830,7 +2782,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     break;
   }
 
-  if (D.getAttributes())
+  if (!D.getAttributes().empty())
     distributeTypeAttrsFromDeclarator(state, T);
 
   // C++11 [dcl.spec.auto]p5: reject 'auto' if it is not in an allowed context.
@@ -3314,21 +3266,20 @@ static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
 /// this is the outermost chunk, then we can determine the CC from the
 /// declarator context.  If not, then this could be either a member function
 /// type or normal function type.
-static CallingConv
-getCCForDeclaratorChunk(Sema &S, Declarator &D,
-                        const DeclaratorChunk::FunctionTypeInfo &FTI,
-                        unsigned ChunkIndex) {
+static CallingConv getCCForDeclaratorChunk(
+    Sema &S, Declarator &D, const ParsedAttributesView &AttrList,
+    const DeclaratorChunk::FunctionTypeInfo &FTI, unsigned ChunkIndex) {
   assert(D.getTypeObject(ChunkIndex).Kind == DeclaratorChunk::Function);
 
   // Check for an explicit CC attribute.
-  for (auto Attr = FTI.AttrList; Attr; Attr = Attr->getNext()) {
-    switch (Attr->getKind()) {
-    CALLING_CONV_ATTRS_CASELIST: {
+  for (const AttributeList &AL : AttrList) {
+    switch (AL.getKind()) {
+    CALLING_CONV_ATTRS_CASELIST : {
       // Ignore attributes that don't validate or can't apply to the
       // function type.  We'll diagnose the failure to apply them in
       // handleFunctionTypeAttr.
       CallingConv CC;
-      if (!S.CheckCallingConvAttr(*Attr, CC) &&
+      if (!S.CheckCallingConvAttr(AL, CC) &&
           (!FTI.isVariadic || supportsVariadicCall(CC))) {
         return CC;
       }
@@ -3384,9 +3335,8 @@ getCCForDeclaratorChunk(Sema &S, Declarator &D,
   // convention attribute. This is the simplest place to infer
   // calling convention for OpenCL kernels.
   if (S.getLangOpts().OpenCL) {
-    for (const AttributeList *Attr = D.getDeclSpec().getAttributes().getList();
-         Attr; Attr = Attr->getNext()) {
-      if (Attr->getKind() == AttributeList::AT_OpenCLKernel) {
+    for (const AttributeList &AL : D.getDeclSpec().getAttributes()) {
+      if (AL.getKind() == AttributeList::AT_OpenCLKernel) {
         CC = CC_OpenCLKernel;
         break;
       }
@@ -3437,12 +3387,11 @@ IdentifierInfo *Sema::getNSErrorIdent() {
 
 /// Check whether there is a nullability attribute of any kind in the given
 /// attribute list.
-static bool hasNullabilityAttr(const AttributeList *attrs) {
-  for (const AttributeList *attr = attrs; attr;
-       attr = attr->getNext()) {
-    if (attr->getKind() == AttributeList::AT_TypeNonNull ||
-        attr->getKind() == AttributeList::AT_TypeNullable ||
-        attr->getKind() == AttributeList::AT_TypeNullUnspecified)
+static bool hasNullabilityAttr(const ParsedAttributesView &attrs) {
+  for (const AttributeList &AL : attrs) {
+    if (AL.getKind() == AttributeList::AT_TypeNonNull ||
+        AL.getKind() == AttributeList::AT_TypeNullable ||
+        AL.getKind() == AttributeList::AT_TypeNullUnspecified)
       return true;
   }
 
@@ -4044,19 +3993,16 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // On pointer-to-pointer parameters marked cf_returns_retained or
           // cf_returns_not_retained, if the outer pointer is explicit then
           // infer the inner pointer as _Nullable.
-          auto hasCFReturnsAttr = [](const AttributeList *NextAttr) -> bool {
-            while (NextAttr) {
-              if (NextAttr->getKind() == AttributeList::AT_CFReturnsRetained ||
-                  NextAttr->getKind() == AttributeList::AT_CFReturnsNotRetained)
-                return true;
-              NextAttr = NextAttr->getNext();
-            }
-            return false;
+          auto hasCFReturnsAttr =
+              [](const ParsedAttributesView &AttrList) -> bool {
+            return AttrList.hasAttribute(AttributeList::AT_CFReturnsRetained) ||
+                   AttrList.hasAttribute(
+                       AttributeList::AT_CFReturnsNotRetained);
           };
           if (const auto *InnermostChunk = D.getInnermostNonParenChunk()) {
             if (hasCFReturnsAttr(D.getAttributes()) ||
                 hasCFReturnsAttr(InnermostChunk->getAttrs()) ||
-                hasCFReturnsAttr(D.getDeclSpec().getAttributes().getList())) {
+                hasCFReturnsAttr(D.getDeclSpec().getAttributes())) {
               inferNullability = NullabilityKind::Nullable;
               inferNullabilityInnerOnly = true;
             }
@@ -4112,10 +4058,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // Local function that checks the nullability for a given pointer declarator.
   // Returns true if _Nonnull was inferred.
-  auto inferPointerNullability = [&](SimplePointerKind pointerKind,
-                                     SourceLocation pointerLoc,
-                                     SourceLocation pointerEndLoc,
-                                     AttributeList *&attrs) -> AttributeList * {
+  auto inferPointerNullability =
+      [&](SimplePointerKind pointerKind, SourceLocation pointerLoc,
+          SourceLocation pointerEndLoc,
+          ParsedAttributesView &attrs) -> AttributeList * {
     // We've seen a pointer.
     if (NumPointersRemaining > 0)
       --NumPointersRemaining;
@@ -4137,7 +4083,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                            nullptr, SourceLocation(),
                                            nullptr, 0, syntax);
 
-      spliceAttrIntoList(*nullabilityAttr, attrs);
+      attrs.addAtStart(nullabilityAttr);
 
       if (inferNullabilityCS) {
         state.getDeclarator().getMutableDeclSpec().getObjCQualifiers()
@@ -4192,9 +4138,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           pointerKind = SimplePointerKind::MemberPointer;
 
         if (auto *attr = inferPointerNullability(
-              pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
-              D.getDeclSpec().getLocEnd(),
-              D.getMutableDeclSpec().getAttributes().getListRef())) {
+                pointerKind, D.getDeclSpec().getTypeSpecTypeLoc(),
+                D.getDeclSpec().getLocEnd(),
+                D.getMutableDeclSpec().getAttributes())) {
           T = Context.getAttributedType(
                 AttributedType::getNullabilityAttrKind(*inferNullability),T,T);
           attr->setUsedAsTypeAttr();
@@ -4232,7 +4178,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::BlockPointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrListRef());
+                              DeclType.EndLoc, DeclType.getAttrs());
 
       T = S.BuildBlockPointerType(T, D.getIdentifierLoc(), Name);
       if (DeclType.Cls.TypeQuals || LangOpts.OpenCL) {
@@ -4254,7 +4200,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability
       inferPointerNullability(SimplePointerKind::Pointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrListRef());
+                              DeclType.EndLoc, DeclType.getAttrs());
 
       if (LangOpts.ObjC1 && T->getAs<ObjCObjectType>()) {
         T = Context.getObjCObjectPointerType(T);
@@ -4528,20 +4474,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         SourceLocation AttrLoc;
         if (chunkIndex + 1 < D.getNumTypeObjects()) {
           DeclaratorChunk ReturnTypeChunk = D.getTypeObject(chunkIndex + 1);
-          for (const AttributeList *Attr = ReturnTypeChunk.getAttrs();
-               Attr; Attr = Attr->getNext()) {
-            if (Attr->getKind() == AttributeList::AT_ObjCOwnership) {
-              AttrLoc = Attr->getLoc();
+          for (const AttributeList &AL : ReturnTypeChunk.getAttrs()) {
+            if (AL.getKind() == AttributeList::AT_ObjCOwnership) {
+              AttrLoc = AL.getLoc();
               break;
             }
           }
         }
         if (AttrLoc.isInvalid()) {
-          for (const AttributeList *Attr
-                 = D.getDeclSpec().getAttributes().getList();
-               Attr; Attr = Attr->getNext()) {
-            if (Attr->getKind() == AttributeList::AT_ObjCOwnership) {
-              AttrLoc = Attr->getLoc();
+          for (const AttributeList &AL : D.getDeclSpec().getAttributes()) {
+            if (AL.getKind() == AttributeList::AT_ObjCOwnership) {
+              AttrLoc = AL.getLoc();
               break;
             }
           }
@@ -4581,7 +4524,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (FTI.isAmbiguous)
         warnAboutAmbiguousFunction(S, D, DeclType, T);
 
-      FunctionType::ExtInfo EI(getCCForDeclaratorChunk(S, D, FTI, chunkIndex));
+      FunctionType::ExtInfo EI(
+          getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex));
 
       if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.CPlusPlus
                                             && !LangOpts.OpenCL) {
@@ -4591,19 +4535,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // We allow a zero-parameter variadic function in C if the
         // function is marked with the "overloadable" attribute. Scan
         // for this attribute now.
-        if (!FTI.NumParams && FTI.isVariadic && !LangOpts.CPlusPlus) {
-          bool Overloadable = false;
-          for (const AttributeList *Attrs = D.getAttributes();
-               Attrs; Attrs = Attrs->getNext()) {
-            if (Attrs->getKind() == AttributeList::AT_Overloadable) {
-              Overloadable = true;
-              break;
-            }
-          }
-
-          if (!Overloadable)
+        if (!FTI.NumParams && FTI.isVariadic && !LangOpts.CPlusPlus)
+          if (!D.getAttributes().hasAttribute(AttributeList::AT_Overloadable))
             S.Diag(FTI.getEllipsisLoc(), diag::err_ellipsis_first_param);
-        }
 
         if (FTI.NumParams && FTI.Params[0].Param == nullptr) {
           // C99 6.7.5.3p3: Reject int(x,y,z) when it's not a function
@@ -4758,7 +4692,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::MemberPointer, DeclType.Loc,
-                              DeclType.EndLoc, DeclType.getAttrListRef());
+                              DeclType.EndLoc, DeclType.getAttrs());
 
       if (SS.isInvalid()) {
         // Avoid emitting extra errors if we already errored on the scope.
@@ -4814,7 +4748,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::Pipe: {
       T = S.BuildReadPipeType(T, DeclType.Loc);
       processTypeAttrs(state, T, TAL_DeclSpec,
-                       D.getDeclSpec().getAttributes().getList());
+                       D.getMutableDeclSpec().getAttributes());
       break;
     }
     }
@@ -4825,8 +4759,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
 
     // See if there are any attributes on this declarator chunk.
-    processTypeAttrs(state, T, TAL_DeclChunk,
-                     const_cast<AttributeList *>(DeclType.getAttrs()));
+    processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs());
   }
 
   // GNU warning -Wstrict-prototypes
@@ -5091,10 +5024,8 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
 
   // Look for an explicit lifetime attribute.
   DeclaratorChunk &chunk = D.getTypeObject(chunkIndex);
-  for (const AttributeList *attr = chunk.getAttrs(); attr;
-         attr = attr->getNext())
-    if (attr->getKind() == AttributeList::AT_ObjCOwnership)
-      return;
+  if (chunk.getAttrs().hasAttribute(AttributeList::AT_ObjCOwnership))
+    return;
 
   const char *attrStr = nullptr;
   switch (ownership) {
@@ -5117,8 +5048,7 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
     .create(&S.Context.Idents.get("objc_ownership"), SourceLocation(),
             /*scope*/ nullptr, SourceLocation(),
             /*args*/ &Args, 1, AttributeList::AS_GNU);
-  spliceAttrIntoList(*attr, chunk.getAttrListRef());
-
+  chunk.getAttrs().addAtStart(attr);
   // TODO: mark whether we did this inference?
 }
 
@@ -5262,44 +5192,43 @@ static AttributeList::Kind getAttrListKind(AttributedType::Kind kind) {
   llvm_unreachable("unexpected attribute kind!");
 }
 
-static void fillAttributedTypeLoc(AttributedTypeLoc TL,
-                                  const AttributeList *attrs,
-                                  const AttributeList *DeclAttrs = nullptr) {
-  // DeclAttrs and attrs cannot be both empty.
-  assert((attrs || DeclAttrs) &&
-         "no type attributes in the expected location!");
-
-  AttributeList::Kind parsedKind = getAttrListKind(TL.getAttrKind());
-  // Try to search for an attribute of matching kind in attrs list.
-  while (attrs && attrs->getKind() != parsedKind)
-    attrs = attrs->getNext();
-  if (!attrs) {
-    // No matching type attribute in attrs list found.
-    // Try searching through C++11 attributes in the declarator attribute list.
-    while (DeclAttrs && (!DeclAttrs->isCXX11Attribute() ||
-                         DeclAttrs->getKind() != parsedKind))
-      DeclAttrs = DeclAttrs->getNext();
-    attrs = DeclAttrs;
-  }
-
-  assert(attrs && "no matching type attribute in expected location!");
-
-  TL.setAttrNameLoc(attrs->getLoc());
+static void setAttributedTypeLoc(AttributedTypeLoc TL,
+                                 const AttributeList &attr) {
+  TL.setAttrNameLoc(attr.getLoc());
   if (TL.hasAttrExprOperand()) {
-    assert(attrs->isArgExpr(0) && "mismatched attribute operand kind");
-    TL.setAttrExprOperand(attrs->getArgAsExpr(0));
+    assert(attr.isArgExpr(0) && "mismatched attribute operand kind");
+    TL.setAttrExprOperand(attr.getArgAsExpr(0));
   } else if (TL.hasAttrEnumOperand()) {
-    assert((attrs->isArgIdent(0) || attrs->isArgExpr(0)) &&
+    assert((attr.isArgIdent(0) || attr.isArgExpr(0)) &&
            "unexpected attribute operand kind");
-    if (attrs->isArgIdent(0))
-      TL.setAttrEnumOperandLoc(attrs->getArgAsIdent(0)->Loc);
+    if (attr.isArgIdent(0))
+      TL.setAttrEnumOperandLoc(attr.getArgAsIdent(0)->Loc);
     else
-      TL.setAttrEnumOperandLoc(attrs->getArgAsExpr(0)->getExprLoc());
+      TL.setAttrEnumOperandLoc(attr.getArgAsExpr(0)->getExprLoc());
   }
 
   // FIXME: preserve this information to here.
   if (TL.hasAttrOperand())
     TL.setAttrOperandParensRange(SourceRange());
+}
+
+static void fillAttributedTypeLoc(AttributedTypeLoc TL,
+                                  const ParsedAttributesView &Attrs,
+                                  const ParsedAttributesView &DeclAttrs) {
+  // DeclAttrs and Attrs cannot be both empty.
+  assert((!Attrs.empty() || !DeclAttrs.empty()) &&
+         "no type attributes in the expected location!");
+
+  AttributeList::Kind parsedKind = getAttrListKind(TL.getAttrKind());
+  // Try to search for an attribute of matching kind in Attrs list.
+  for (const AttributeList &AL : Attrs)
+    if (AL.getKind() == parsedKind)
+      return setAttributedTypeLoc(TL, AL);
+
+  for (const AttributeList &AL : DeclAttrs)
+    if (AL.isCXX11Attribute() || AL.getKind() == parsedKind)
+      return setAttributedTypeLoc(TL, AL);
+  llvm_unreachable("no matching type attribute in expected location!");
 }
 
 namespace {
@@ -5312,7 +5241,7 @@ namespace {
       : Context(Context), DS(DS) {}
 
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
-      fillAttributedTypeLoc(TL, DS.getAttributes().getList());
+      fillAttributedTypeLoc(TL, DS.getAttributes(), ParsedAttributesView{});
       Visit(TL.getModifiedLoc());
     }
     void VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
@@ -5484,7 +5413,7 @@ namespace {
     }
 
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
-      fillAttributedTypeLoc(TL, Chunk.getAttrs());
+      fillAttributedTypeLoc(TL, Chunk.getAttrs(), ParsedAttributesView{});
     }
     void VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
       // nothing
@@ -5617,16 +5546,20 @@ static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
   ATL.setParensRange(SourceRange());
 }
 
-static void fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL, 
-                                             const AttributeList *Attrs) {
-  while (Attrs && Attrs->getKind() != AttributeList::AT_AddressSpace)
-    Attrs = Attrs->getNext();
+static void
+fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
+                                 const ParsedAttributesView &Attrs) {
+  for (const AttributeList &AL : Attrs) {
+    if (AL.getKind() == AttributeList::AT_AddressSpace) {
+      DASTL.setAttrNameLoc(AL.getLoc());
+      DASTL.setAttrExprOperand(AL.getArgAsExpr(0));
+      DASTL.setAttrOperandParensRange(SourceRange());
+      return;
+    }
+  }
 
-  assert(Attrs && "no address_space attribute found at the expected location!");
-  
-  DASTL.setAttrNameLoc(Attrs->getLoc());
-  DASTL.setAttrExprOperand(Attrs->getArgAsExpr(0));
-  DASTL.setAttrOperandParensRange(SourceRange());
+  llvm_unreachable(
+      "no address_space attribute found at the expected location!");
 }
 
 /// Create and instantiate a TypeSourceInfo with type source information.
@@ -5642,7 +5575,6 @@ Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
                                      TypeSourceInfo *ReturnTypeInfo) {
   TypeSourceInfo *TInfo = Context.CreateTypeSourceInfo(T);
   UnqualTypeLoc CurrTL = TInfo->getTypeLoc().getUnqualifiedLoc();
-  const AttributeList *DeclAttrs = D.getAttributes();
 
   // Handle parameter packs whose type is a pack expansion.
   if (isa<PackExpansionType>(T)) {
@@ -5666,7 +5598,8 @@ Sema::GetTypeSourceInfoForDeclarator(Declarator &D, QualType T,
     }
 
     while (AttributedTypeLoc TL = CurrTL.getAs<AttributedTypeLoc>()) {
-      fillAttributedTypeLoc(TL, D.getTypeObject(i).getAttrs(), DeclAttrs);
+      fillAttributedTypeLoc(TL, D.getTypeObject(i).getAttrs(),
+                            D.getAttributes());
       CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
     }
 
@@ -6558,7 +6491,7 @@ static bool distributeNullabilityTypeAttr(TypeProcessingState &state,
   auto moveToChunk = [&](DeclaratorChunk &chunk, bool inFunction) -> bool {
     // If there is already a nullability attribute there, don't add
     // one.
-    if (hasNullabilityAttr(chunk.getAttrListRef()))
+    if (hasNullabilityAttr(chunk.getAttrs()))
       return false;
 
     // Complain about the nullability qualifier being in the wrong
@@ -6591,8 +6524,8 @@ static bool distributeNullabilityTypeAttr(TypeProcessingState &state,
                 " " + attr.getName()->getName().str() + " ");
     }
 
-    moveAttrFromListToList(attr, state.getCurrentAttrListRef(),
-                           chunk.getAttrListRef());
+    moveAttrFromListToList(attr, state.getCurrentAttributes(),
+                           chunk.getAttrs());
     return true;
   };
 
@@ -7239,16 +7172,18 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
 }
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
-                             TypeAttrLocation TAL, AttributeList *attrs) {
+                             TypeAttrLocation TAL,
+                             ParsedAttributesView &attrs) {
   // Scan through and apply attributes to this type where it makes sense.  Some
   // attributes (such as __address_space__, __vector_size__, etc) apply to the
   // type, but others can be present in the type specifiers even though they
   // apply to the decl.  Here we apply type attributes and ignore the rest.
 
-  while (attrs) {
-    AttributeList &attr = *attrs;
-    attrs = attr.getNext(); // reset to the next here due to early loop continue
-                            // stmts
+  // This loop modifies the list pretty frequently, but we still need to make
+  // sure we visit every element once. Copy the attributes list, and iterate
+  // over that.
+  ParsedAttributesView AttrsCopy{attrs};
+  for (AttributeList &attr : AttrsCopy) {
 
     // Skip attributes that were marked to be invalid.
     if (attr.isInvalid())

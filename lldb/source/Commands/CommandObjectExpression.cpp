@@ -318,7 +318,7 @@ CanBeUsedForElementCountPrinting(ValueObject &valobj) {
   return Status();
 }
 
-bool CommandObjectExpression::EvaluateExpression(const char *expr,
+bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
                                                  Stream *output_stream,
                                                  Stream *error_stream,
                                                  CommandReturnObject *result) {
@@ -508,19 +508,19 @@ void CommandObjectExpression::GetMultilineExpression() {
   debugger.PushIOHandler(io_handler_sp);
 }
 
-bool CommandObjectExpression::DoExecute(const char *command,
+bool CommandObjectExpression::DoExecute(llvm::StringRef command,
                                         CommandReturnObject &result) {
   m_fixed_expression.clear();
   auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
   m_option_group.NotifyOptionParsingStarting(&exe_ctx);
 
-  if (command[0] == '\0') {
+  if (command.empty()) {
     GetMultilineExpression();
     return result.Succeeded();
   }
 
   OptionsWithRaw args(command);
-  const char *expr = args.GetRawPart().c_str();
+  llvm::StringRef expr = args.GetRawPart();
 
   if (args.HasArgs()) {
     if (!ParseOptionsAndNotify(args.GetArgs(), result, m_option_group, exe_ctx))
@@ -584,7 +584,7 @@ bool CommandObjectExpression::DoExecute(const char *command,
       }
     }
     // No expression following options
-    else if (expr[0] == '\0') {
+    else if (expr.empty()) {
       GetMultilineExpression();
       return result.Succeeded();
     }

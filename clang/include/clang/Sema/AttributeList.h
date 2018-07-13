@@ -21,6 +21,7 @@
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
@@ -180,12 +181,6 @@ private:
   SourceLocation UnavailableLoc;
   
   const Expr *MessageExpr;
-
-  /// The next attribute in the current position.
-  AttributeList *NextInPosition = nullptr;
-
-  /// The next attribute allocated in the current Pool.
-  AttributeList *NextInPool = nullptr;
 
   /// Arguments, if any, are stored immediately following the object.
   ArgsUnion *getArgsBuffer() { return reinterpret_cast<ArgsUnion *>(this + 1); }
@@ -433,9 +428,6 @@ public:
   static Kind getKind(const IdentifierInfo *Name, const IdentifierInfo *Scope,
                       Syntax SyntaxUsed);
 
-  AttributeList *getNext() const { return NextInPosition; }
-  void setNext(AttributeList *N) { NextInPosition = N; }
-
   /// getNumArgs - Return the number of actual arguments to this attribute.
   unsigned getNumArgs() const { return NumArgs; }
 
@@ -555,6 +547,7 @@ public:
   unsigned getSemanticSpelling() const;
 };
 
+class AttributePool;
 /// A factory, from which one makes pools, from which one creates
 /// individual attributes which are deallocated with the pool.
 ///
@@ -595,7 +588,8 @@ private:
 
   /// Free lists.  The index is determined by the following formula:
   ///   (size - sizeof(AttributeList)) / sizeof(void*)
-  SmallVector<AttributeList*, InlineFreeListsCapacity> FreeLists;
+  SmallVector<SmallVector<AttributeList *, 8>, InlineFreeListsCapacity>
+      FreeLists;
 
   // The following are the private interface used by AttributePool.
   friend class AttributePool;
@@ -603,12 +597,14 @@ private:
   /// Allocate an attribute of the given size.
   void *allocate(size_t size);
 
+  void deallocate(AttributeList *AL);
+
   /// Reclaim all the attributes in the given pool chain, which is
   /// non-empty.  Note that the current implementation is safe
   /// against reclaiming things which were not actually allocated
   /// with the allocator, although of course it's important to make
   /// sure that their allocator lives at least as long as this one.
-  void reclaimPool(AttributeList *head);
+  void reclaimPool(AttributePool &head);
 
 public:
   AttributeFactory();
@@ -616,21 +612,26 @@ public:
 };
 
 class AttributePool {
+  friend class AttributeFactory;
   AttributeFactory &Factory;
-  AttributeList *Head = nullptr;
+  llvm::TinyPtrVector<AttributeList *> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
   }
 
   AttributeList *add(AttributeList *attr) {
-    // We don't care about the order of the pool.
-    attr->NextInPool = Head;
-    Head = attr;
+    Attrs.push_back(attr);
     return attr;
   }
 
-  void takePool(AttributeList *pool);
+  void remove(AttributeList *attr) {
+    assert(llvm::is_contained(Attrs, attr) &&
+           "Can't take attribute from a pool that doesn't own it!");
+    Attrs.erase(llvm::find(Attrs, attr));
+  }
+
+  void takePool(AttributePool &pool);
 
 public:
   /// Create a new pool for a factory.
@@ -638,30 +639,22 @@ public:
 
   AttributePool(const AttributePool &) = delete;
 
-  ~AttributePool() {
-    if (Head) Factory.reclaimPool(Head);
-  }
+  ~AttributePool() { Factory.reclaimPool(*this); }
 
   /// Move the given pool's allocations to this pool.
-  AttributePool(AttributePool &&pool) : Factory(pool.Factory), Head(pool.Head) {
-    pool.Head = nullptr;
-  }
+  AttributePool(AttributePool &&pool) = default;
 
   AttributeFactory &getFactory() const { return Factory; }
 
   void clear() {
-    if (Head) {
-      Factory.reclaimPool(Head);
-      Head = nullptr;
-    }
+    Factory.reclaimPool(*this);
+    Attrs.clear();
   }
 
   /// Take the given pool's allocations and add them to this pool.
   void takeAllFrom(AttributePool &pool) {
-    if (pool.Head) {
-      takePool(pool.Head);
-      pool.Head = nullptr;
-    }
+    takePool(pool);
+    pool.Attrs.clear();
   }
 
   AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -669,12 +662,11 @@ public:
                         ArgsUnion *args, unsigned numArgs,
                         AttributeList::Syntax syntax,
                         SourceLocation ellipsisLoc = SourceLocation()) {
-    void *memory = allocate(sizeof(AttributeList)
-                            + numArgs * sizeof(ArgsUnion));
-    return add(new (memory) AttributeList(attrName, attrRange,
-                                          scopeName, scopeLoc,
-                                          args, numArgs, syntax,
-                                          ellipsisLoc));
+    void *memory =
+        allocate(sizeof(AttributeList) + numArgs * sizeof(ArgsUnion));
+    return add(new (memory)
+                   AttributeList(attrName, attrRange, scopeName, scopeLoc, args,
+                                 numArgs, syntax, ellipsisLoc));
   }
 
   AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
@@ -683,67 +675,133 @@ public:
                         const AvailabilityChange &introduced,
                         const AvailabilityChange &deprecated,
                         const AvailabilityChange &obsoleted,
-                        SourceLocation unavailable,
-                        const Expr *MessageExpr,
-                        AttributeList::Syntax syntax,
-                        SourceLocation strict, const Expr *ReplacementExpr) {
+                        SourceLocation unavailable, const Expr *MessageExpr,
+                        AttributeList::Syntax syntax, SourceLocation strict,
+                        const Expr *ReplacementExpr) {
     void *memory = allocate(AttributeFactory::AvailabilityAllocSize);
-    return add(new (memory) AttributeList(attrName, attrRange,
-                                          scopeName, scopeLoc,
-                                          Param, introduced, deprecated,
-                                          obsoleted, unavailable, MessageExpr,
-                                          syntax, strict, ReplacementExpr));
+    return add(new (memory) AttributeList(
+        attrName, attrRange, scopeName, scopeLoc, Param, introduced, deprecated,
+        obsoleted, unavailable, MessageExpr, syntax, strict, ReplacementExpr));
   }
 
   AttributeList *create(IdentifierInfo *attrName, SourceRange attrRange,
                         IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                        IdentifierLoc *Param1,
-                        IdentifierLoc *Param2,
-                        IdentifierLoc *Param3,
-                        AttributeList::Syntax syntax) {
+                        IdentifierLoc *Param1, IdentifierLoc *Param2,
+                        IdentifierLoc *Param3, AttributeList::Syntax syntax) {
     size_t size = sizeof(AttributeList) + 3 * sizeof(ArgsUnion);
     void *memory = allocate(size);
-    return add(new (memory) AttributeList(attrName, attrRange,
-                                          scopeName, scopeLoc,
-                                          Param1, Param2, Param3,
-                                          syntax));
+    return add(new (memory)
+                   AttributeList(attrName, attrRange, scopeName, scopeLoc,
+                                 Param1, Param2, Param3, syntax));
   }
 
-  AttributeList *createTypeTagForDatatype(
-                    IdentifierInfo *attrName, SourceRange attrRange,
-                    IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                    IdentifierLoc *argumentKind, ParsedType matchingCType,
-                    bool layoutCompatible, bool mustBeNull,
-                    AttributeList::Syntax syntax) {
+  AttributeList *
+  createTypeTagForDatatype(IdentifierInfo *attrName, SourceRange attrRange,
+                           IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                           IdentifierLoc *argumentKind,
+                           ParsedType matchingCType, bool layoutCompatible,
+                           bool mustBeNull, AttributeList::Syntax syntax) {
     void *memory = allocate(AttributeFactory::TypeTagForDatatypeAllocSize);
-    return add(new (memory) AttributeList(attrName, attrRange,
-                                          scopeName, scopeLoc,
-                                          argumentKind, matchingCType,
-                                          layoutCompatible, mustBeNull,
-                                          syntax));
+    return add(new (memory) AttributeList(
+        attrName, attrRange, scopeName, scopeLoc, argumentKind, matchingCType,
+        layoutCompatible, mustBeNull, syntax));
   }
 
-  AttributeList *createTypeAttribute(
-                    IdentifierInfo *attrName, SourceRange attrRange,
-                    IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                    ParsedType typeArg, AttributeList::Syntax syntaxUsed) {
+  AttributeList *
+  createTypeAttribute(IdentifierInfo *attrName, SourceRange attrRange,
+                      IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                      ParsedType typeArg, AttributeList::Syntax syntaxUsed) {
     void *memory = allocate(sizeof(AttributeList) + sizeof(void *));
-    return add(new (memory) AttributeList(attrName, attrRange,
-                                          scopeName, scopeLoc,
-                                          typeArg, syntaxUsed));
+    return add(new (memory) AttributeList(attrName, attrRange, scopeName,
+                                          scopeLoc, typeArg, syntaxUsed));
   }
 
-  AttributeList *createPropertyAttribute(
-                    IdentifierInfo *attrName, SourceRange attrRange,
-                    IdentifierInfo *scopeName, SourceLocation scopeLoc,
-                    IdentifierInfo *getterId, IdentifierInfo *setterId,
-                    AttributeList::Syntax syntaxUsed) {
+  AttributeList *
+  createPropertyAttribute(IdentifierInfo *attrName, SourceRange attrRange,
+                          IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                          IdentifierInfo *getterId, IdentifierInfo *setterId,
+                          AttributeList::Syntax syntaxUsed) {
     void *memory = allocate(AttributeFactory::PropertyAllocSize);
-    return add(new (memory) AttributeList(attrName, attrRange,
-                                          scopeName, scopeLoc,
-                                          getterId, setterId,
-                                          syntaxUsed));
+    return add(new (memory)
+                   AttributeList(attrName, attrRange, scopeName, scopeLoc,
+                                 getterId, setterId, syntaxUsed));
   }
+};
+
+class ParsedAttributesView {
+  using VecTy = llvm::TinyPtrVector<AttributeList *>;
+  using SizeType = decltype(std::declval<VecTy>().size());
+
+public:
+  bool empty() const { return AttrList.empty(); }
+  SizeType size() const { return AttrList.size(); }
+  AttributeList &operator[](SizeType pos) { return *AttrList[pos]; }
+  const AttributeList &operator[](SizeType pos) const { return *AttrList[pos]; }
+
+  void addAtStart(AttributeList *newAttr) {
+    assert(newAttr);
+    AttrList.insert(AttrList.begin(), newAttr);
+  }
+  void addAtEnd(AttributeList *newAttr) {
+    assert(newAttr);
+    AttrList.push_back(newAttr);
+  }
+
+  void remove(AttributeList *ToBeRemoved) {
+    assert(is_contained(AttrList, ToBeRemoved) &&
+           "Cannot remove attribute that isn't in the list");
+    AttrList.erase(llvm::find(AttrList, ToBeRemoved));
+  }
+
+  void clearListOnly() { AttrList.clear(); }
+
+  struct iterator : llvm::iterator_adaptor_base<iterator, VecTy::iterator,
+                                                std::random_access_iterator_tag,
+                                                AttributeList> {
+    iterator() : iterator_adaptor_base(nullptr) {}
+    iterator(VecTy::iterator I) : iterator_adaptor_base(I) {}
+    reference operator*() { return **I; }
+    friend class ParsedAttributesView;
+  };
+  struct const_iterator
+      : llvm::iterator_adaptor_base<const_iterator, VecTy::const_iterator,
+                                    std::random_access_iterator_tag,
+                                    AttributeList> {
+    const_iterator() : iterator_adaptor_base(nullptr) {}
+    const_iterator(VecTy::const_iterator I) : iterator_adaptor_base(I) {}
+
+    reference operator*() const { return **I; }
+    friend class ParsedAttributesView;
+  };
+
+  void addAll(iterator B, iterator E) {
+    AttrList.insert(AttrList.begin(), B.I, E.I);
+  }
+
+  void addAll(const_iterator B, const_iterator E) {
+    AttrList.insert(AttrList.begin(), B.I, E.I);
+  }
+
+  void addAllAtEnd(iterator B, iterator E) {
+    AttrList.insert(AttrList.end(), B.I, E.I);
+  }
+
+  void addAllAtEnd(const_iterator B, const_iterator E) {
+    AttrList.insert(AttrList.end(), B.I, E.I);
+  }
+
+  iterator begin() { return iterator(AttrList.begin()); }
+  const_iterator begin() const { return const_iterator(AttrList.begin()); }
+  iterator end() { return iterator(AttrList.end()); }
+  const_iterator end() const { return const_iterator(AttrList.end()); }
+
+  bool hasAttribute(AttributeList::Kind K) const {
+    return llvm::any_of(
+        AttrList, [K](const AttributeList *AL) { return AL->getKind() == K; });
+  }
+
+private:
+  VecTy AttrList;
 };
 
 /// ParsedAttributes - A collection of parsed attributes.  Currently
@@ -752,64 +810,23 @@ public:
 ///
 /// Right now this is a very lightweight container, but the expectation
 /// is that this will become significantly more serious.
-class ParsedAttributes {
+class ParsedAttributes : public ParsedAttributesView {
 public:
   ParsedAttributes(AttributeFactory &factory) : pool(factory) {}
   ParsedAttributes(const ParsedAttributes &) = delete;
 
   AttributePool &getPool() const { return pool; }
 
-  bool empty() const { return list == nullptr; }
-
-  void add(AttributeList *newAttr) {
-    assert(newAttr);
-    assert(newAttr->getNext() == nullptr);
-    newAttr->setNext(list);
-    list = newAttr;
-  }
-
-  void addAll(AttributeList *newList) {
-    if (!newList) return;
-
-    AttributeList *lastInNewList = newList;
-    while (AttributeList *next = lastInNewList->getNext())
-      lastInNewList = next;
-
-    lastInNewList->setNext(list);
-    list = newList;
-  }
-
-  void addAllAtEnd(AttributeList *newList) {
-    if (!list) {
-      list = newList;
-      return;
-    }
-
-    AttributeList *lastInList = list;
-    while (AttributeList *next = lastInList->getNext())
-      lastInList = next;
-
-    lastInList->setNext(newList);
-  }
-
-  void set(AttributeList *newList) {
-    list = newList;
-  }
-
   void takeAllFrom(ParsedAttributes &attrs) {
-    addAll(attrs.list);
-    attrs.list = nullptr;
+    addAll(attrs.begin(), attrs.end());
+    attrs.clearListOnly();
     pool.takeAllFrom(attrs.pool);
   }
 
-  void clear() { list = nullptr; pool.clear(); }
-  AttributeList *getList() const { return list; }
-
-  void clearListOnly() { list = nullptr; }
-
-  /// Returns a reference to the attribute list.  Try not to introduce
-  /// dependencies on this method, it may not be long-lived.
-  AttributeList *&getListRef() { return list; }
+  void clear() {
+    clearListOnly();
+    pool.clear();
+  }
 
   /// Add attribute with expression arguments.
   AttributeList *addNew(IdentifierInfo *attrName, SourceRange attrRange,
@@ -820,7 +837,7 @@ public:
     AttributeList *attr =
       pool.create(attrName, attrRange, scopeName, scopeLoc, args, numArgs,
                   syntax, ellipsisLoc);
-    add(attr);
+    addAtStart(attr);
     return attr;
   }
 
@@ -839,7 +856,7 @@ public:
       pool.create(attrName, attrRange, scopeName, scopeLoc, Param, introduced,
                   deprecated, obsoleted, unavailable, MessageExpr, syntax,
                   strict, ReplacementExpr);
-    add(attr);
+    addAtStart(attr);
     return attr;
   }
 
@@ -853,7 +870,7 @@ public:
     AttributeList *attr =
       pool.create(attrName, attrRange, scopeName, scopeLoc,
                   Param1, Param2, Param3, syntax);
-    add(attr);
+    addAtStart(attr);
     return attr;
   }
 
@@ -869,7 +886,7 @@ public:
                                     scopeName, scopeLoc,
                                     argumentKind, matchingCType,
                                     layoutCompatible, mustBeNull, syntax);
-    add(attr);
+    addAtStart(attr);
     return attr;
   }
 
@@ -881,7 +898,7 @@ public:
     AttributeList *attr =
         pool.createTypeAttribute(attrName, attrRange, scopeName, scopeLoc,
                                  typeArg, syntaxUsed);
-    add(attr);
+    addAtStart(attr);
     return attr;
   }
 
@@ -894,13 +911,12 @@ public:
     AttributeList *attr =
         pool.createPropertyAttribute(attrName, attrRange, scopeName, scopeLoc,
                                      getterId, setterId, syntaxUsed);
-    add(attr);
+    addAtStart(attr);
     return attr;
   }
 
 private:
   mutable AttributePool pool;
-  AttributeList *list = nullptr;
 };
 
 /// These constants match the enumerated choices of

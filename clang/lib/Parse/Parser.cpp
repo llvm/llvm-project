@@ -698,9 +698,8 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     return nullptr;
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
-    SingleDecl = Actions.ActOnEmptyDeclaration(getCurScope(),
-                                               attrs.getList(),
-                                               Tok.getLocation());
+    SingleDecl =
+        Actions.ActOnEmptyDeclaration(getCurScope(), attrs, Tok.getLocation());
     ConsumeExtraSemi(OutsideFunction);
     break;
   case tok::r_brace:
@@ -829,8 +828,8 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
       return Actions.ConvertDeclToDeclGroup(
-                  ParseExplicitInstantiation(DeclaratorContext::FileContext,
-                                             ExternLoc, TemplateLoc, DeclEnd));
+          ParseExplicitInstantiation(DeclaratorContext::FileContext, ExternLoc,
+                                     TemplateLoc, DeclEnd, attrs));
     }
     goto dont_know;
 
@@ -1090,15 +1089,10 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Check to make sure that any normal attributes are allowed to be on
   // a definition.  Late parsed attributes are checked at the end.
   if (Tok.isNot(tok::equal)) {
-    AttributeList *DtorAttrs = D.getAttributes();
-    while (DtorAttrs) {
-      if (DtorAttrs->isKnownToGCC() &&
-          !DtorAttrs->isCXX11Attribute()) {
-        Diag(DtorAttrs->getLoc(), diag::warn_attribute_on_function_definition)
-          << DtorAttrs->getName();
-      }
-      DtorAttrs = DtorAttrs->getNext();
-    }
+    for (const AttributeList &AL : D.getAttributes())
+      if (AL.isKnownToGCC() && !AL.isCXX11Attribute())
+        Diag(AL.getLoc(), diag::warn_attribute_on_function_definition)
+            << AL.getName();
   }
 
   // In delayed template parsing mode, for function template we consume the

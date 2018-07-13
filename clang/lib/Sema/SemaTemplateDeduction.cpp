@@ -941,12 +941,6 @@ DeduceTemplateArguments(Sema &S,
                         SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                         unsigned TDF,
                         bool PartialOrdering = false) {
-  // Fast-path check to see if we have too many/too few arguments.
-  if (NumParams != NumArgs &&
-      !(NumParams && isa<PackExpansionType>(Params[NumParams - 1])) &&
-      !(NumArgs && isa<PackExpansionType>(Args[NumArgs - 1])))
-    return Sema::TDK_MiscellaneousDeductionFailure;
-
   // C++0x [temp.deduct.type]p10:
   //   Similarly, if P has a form that contains (T), then each parameter type
   //   Pi of the respective parameter-type- list of P is compared with the
@@ -983,13 +977,6 @@ DeduceTemplateArguments(Sema &S,
       continue;
     }
 
-    // C++0x [temp.deduct.type]p5:
-    //   The non-deduced contexts are:
-    //     - A function parameter pack that does not occur at the end of the
-    //       parameter-declaration-clause.
-    if (ParamIdx + 1 < NumParams)
-      return Sema::TDK_Success;
-
     // C++0x [temp.deduct.type]p10:
     //   If the parameter-declaration corresponding to Pi is a function
     //   parameter pack, then the type of its declarator- id is compared with
@@ -1000,15 +987,41 @@ DeduceTemplateArguments(Sema &S,
     QualType Pattern = Expansion->getPattern();
     PackDeductionScope PackScope(S, TemplateParams, Deduced, Info, Pattern);
 
-    for (; ArgIdx < NumArgs; ++ArgIdx) {
-      // Deduce template arguments from the pattern.
-      if (Sema::TemplateDeductionResult Result
-            = DeduceTemplateArgumentsByTypeMatch(S, TemplateParams, Pattern,
-                                                 Args[ArgIdx], Info, Deduced,
-                                                 TDF, PartialOrdering))
-        return Result;
+    if (ParamIdx + 1 == NumParams) {
+      for (; ArgIdx < NumArgs; ++ArgIdx) {
+        // Deduce template arguments from the pattern.
+        if (Sema::TemplateDeductionResult Result
+              = DeduceTemplateArgumentsByTypeMatch(S, TemplateParams, Pattern,
+                                                   Args[ArgIdx], Info, Deduced,
+                                                   TDF, PartialOrdering))
+          return Result;
 
-      PackScope.nextPackElement();
+        PackScope.nextPackElement();
+      }
+    } else {
+      // C++0x [temp.deduct.type]p5:
+      //   The non-deduced contexts are:
+      //     - A function parameter pack that does not occur at the end of the
+      //       parameter-declaration-clause.
+      //
+      // FIXME: There is no wording to say what we should do in this case. We
+      // choose to resolve this by applying the same rule that is applied for a
+      // function call: that is, deduce all contained packs to their
+      // explicitly-specified values (or to <> if there is no such value).
+      //
+      // This is seemingly-arbitrarily different from the case of a template-id
+      // with a non-trailing pack-expansion in its arguments, which renders the
+      // entire template-argument-list a non-deduced context.
+
+      // If the parameter type contains an explicitly-specified pack that we
+      // could not expand, skip the number of parameters notionally created
+      // by the expansion.
+      Optional<unsigned> NumExpansions = Expansion->getNumExpansions();
+      if (NumExpansions && !PackScope.isPartiallyExpanded()) {
+        for (unsigned I = 0; I != *NumExpansions && ArgIdx < NumArgs;
+             ++I, ++ArgIdx)
+          PackScope.nextPackElement();
+      }
     }
 
     // Build argument packs for each of the parameter packs expanded by this
@@ -2194,10 +2207,6 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
     //   comparison deduces template arguments for subsequent positions in the
     //   template parameter packs expanded by Pi.
     TemplateArgument Pattern = Params[ParamIdx].getPackExpansionPattern();
-
-    // FIXME: If there are no remaining arguments, we can bail out early
-    // and set any deduced parameter packs to an empty argument pack.
-    // The latter part of this is a (minor) correctness issue.
 
     // Prepare to deduce the packs within the pattern.
     PackDeductionScope PackScope(S, TemplateParams, Deduced, Info, Pattern);
@@ -5280,9 +5289,24 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     const FunctionProtoType *Proto = cast<FunctionProtoType>(T);
     MarkUsedTemplateParameters(Ctx, Proto->getReturnType(), OnlyDeduced, Depth,
                                Used);
-    for (unsigned I = 0, N = Proto->getNumParams(); I != N; ++I)
-      MarkUsedTemplateParameters(Ctx, Proto->getParamType(I), OnlyDeduced,
-                                 Depth, Used);
+    for (unsigned I = 0, N = Proto->getNumParams(); I != N; ++I) {
+      // C++17 [temp.deduct.type]p5:
+      //   The non-deduced contexts are: [...]
+      //   -- A function parameter pack that does not occur at the end of the
+      //      parameter-declaration-list.
+      if (!OnlyDeduced || I + 1 == N ||
+          !Proto->getParamType(I)->getAs<PackExpansionType>()) {
+        MarkUsedTemplateParameters(Ctx, Proto->getParamType(I), OnlyDeduced,
+                                   Depth, Used);
+      } else {
+        // FIXME: C++17 [temp.deduct.call]p1:
+        //   When a function parameter pack appears in a non-deduced context,
+        //   the type of that pack is never deduced.
+        //
+        // We should also track a set of "never deduced" parameters, and
+        // subtract that from the list of deduced parameters after marking.
+      }
+    }
     if (auto *E = Proto->getNoexceptExpr())
       MarkUsedTemplateParameters(Ctx, E, OnlyDeduced, Depth, Used);
     break;

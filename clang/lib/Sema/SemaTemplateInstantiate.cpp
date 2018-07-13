@@ -2125,7 +2125,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
   // Finish checking fields.
   ActOnFields(nullptr, Instantiation->getLocation(), Instantiation, Fields,
-              SourceLocation(), SourceLocation(), nullptr);
+              SourceLocation(), SourceLocation(), ParsedAttributesView());
   CheckCompletedCXXClass(Instantiation);
 
   // Default arguments are parsed, if not instantiated. We can go instantiate

@@ -53,7 +53,7 @@ TypeResult Parser::ParseTypeName(SourceRange *Range,
   // Parse the common declaration-specifiers piece.
   DeclSpec DS(AttrFactory);
   if (Attrs)
-    DS.addAttributes(Attrs->getList());
+    DS.addAttributes(*Attrs);
   ParseSpecifierQualifierList(DS, AS, DSC);
   if (OwnedType)
     *OwnedType = DS.isTypeSpecOwned() ? DS.getRepAsDecl() : nullptr;
@@ -422,7 +422,7 @@ unsigned Parser::ParseClangAttributeArgs(
                                      ScopeName, ScopeLoc, Syntax);
     break;
   }
-  return Attrs.getList() ? Attrs.getList()->getNumArgs() : 0;
+  return !Attrs.empty() ? Attrs.begin()->getNumArgs() : 0;
 }
 
 bool Parser::ParseMicrosoftDeclSpecArgs(IdentifierInfo *AttrName,
@@ -560,8 +560,7 @@ bool Parser::ParseMicrosoftDeclSpecArgs(IdentifierInfo *AttrName,
 
   // If this attribute's args were parsed, and it was expected to have
   // arguments but none were provided, emit a diagnostic.
-  const AttributeList *Attr = Attrs.getList();
-  if (Attr && Attr->getMaxArgs() && !NumArgs) {
+  if (!Attrs.empty() && Attrs.begin()->getMaxArgs() && !NumArgs) {
     Diag(OpenParenLoc, diag::err_attribute_requires_arguments) << AttrName;
     return false;
   }
@@ -1437,9 +1436,8 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
     Diag(Tok, diag::warn_attribute_no_decl) << LA.AttrName.getName();
   }
 
-  const AttributeList *AL = Attrs.getList();
-  if (OnDefinition && AL && !AL->isCXX11Attribute() &&
-      AL->isKnownToGCC())
+  if (OnDefinition && !Attrs.empty() && !Attrs.begin()->isCXX11Attribute() &&
+      Attrs.begin()->isKnownToGCC())
     Diag(Tok, diag::warn_attribute_on_function_definition)
       << &LA.AttrName;
 
@@ -1570,29 +1568,27 @@ void Parser::DiagnoseMisplacedCXX11Attribute(ParsedAttributesWithRange &Attrs,
     << FixItHint::CreateRemoval(AttrRange);
 }
 
-void Parser::DiagnoseProhibitedAttributes(ParsedAttributesWithRange &attrs,
-                                          const SourceLocation CorrectLocation) {
+void Parser::DiagnoseProhibitedAttributes(
+    const SourceRange &Range, const SourceLocation CorrectLocation) {
   if (CorrectLocation.isValid()) {
-    CharSourceRange AttrRange(attrs.Range, true);
+    CharSourceRange AttrRange(Range, true);
     Diag(CorrectLocation, diag::err_attributes_misplaced)
         << FixItHint::CreateInsertionFromRange(CorrectLocation, AttrRange)
         << FixItHint::CreateRemoval(AttrRange);
   } else
-    Diag(attrs.Range.getBegin(), diag::err_attributes_not_allowed) << attrs.Range;
+    Diag(Range.getBegin(), diag::err_attributes_not_allowed) << Range;
 }
 
 void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
                                      unsigned DiagID) {
-  for (AttributeList *Attr = Attrs.getList(); Attr; Attr = Attr->getNext()) {
-    if (!Attr->isCXX11Attribute() && !Attr->isC2xAttribute())
+  for (const AttributeList &AL : Attrs) {
+    if (!AL.isCXX11Attribute() && !AL.isC2xAttribute())
       continue;
-    if (Attr->getKind() == AttributeList::UnknownAttribute)
-      Diag(Attr->getLoc(), diag::warn_unknown_attribute_ignored)
-          << Attr->getName();
+    if (AL.getKind() == AttributeList::UnknownAttribute)
+      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored) << AL.getName();
     else {
-      Diag(Attr->getLoc(), DiagID)
-        << Attr->getName();
-      Attr->setInvalid();
+      Diag(AL.getLoc(), DiagID) << AL.getName();
+      AL.setInvalid();
     }
   }
 }
@@ -1610,47 +1606,19 @@ void Parser::stripTypeAttributesOffDeclSpec(ParsedAttributesWithRange &Attrs,
   if (TUK == Sema::TUK_Reference)
     return;
 
-  ParsedAttributes &PA = DS.getAttributes();
-  AttributeList *AL = PA.getList();
-  AttributeList *Prev = nullptr;
-  AttributeList *TypeAttrHead = nullptr;
-  AttributeList *TypeAttrTail = nullptr;
-  while (AL) {
-    AttributeList *Next = AL->getNext();
+  llvm::SmallVector<AttributeList *, 1> ToBeMoved;
 
-    if ((AL->getKind() == AttributeList::AT_Aligned &&
-         AL->isDeclspecAttribute()) ||
-        AL->isMicrosoftAttribute()) {
-      // Stitch the attribute into the tag's attribute list.
-      if (TypeAttrTail)
-        TypeAttrTail->setNext(AL);
-      else
-        TypeAttrHead = AL;
-      TypeAttrTail = AL;
-      TypeAttrTail->setNext(nullptr);
-
-      // Remove the attribute from the variable's attribute list.
-      if (Prev) {
-        // Set the last variable attribute's next attribute to be the attribute
-        // after the current one.
-        Prev->setNext(Next);
-      } else {
-        // Removing the head of the list requires us to reset the head to the
-        // next attribute.
-        PA.set(Next);
-      }
-    } else {
-      Prev = AL;
-    }
-
-    AL = Next;
+  for (AttributeList &AL : DS.getAttributes()) {
+    if ((AL.getKind() == AttributeList::AT_Aligned &&
+         AL.isDeclspecAttribute()) ||
+        AL.isMicrosoftAttribute())
+      ToBeMoved.push_back(&AL);
   }
 
-  // Find end of type attributes Attrs and add NewTypeAttributes in the same
-  // order they were in originally.  (Remember, in AttributeList things earlier
-  // in source order are later in the list, since new attributes are added to
-  // the front of the list.)
-  Attrs.addAllAtEnd(TypeAttrHead);
+  for (AttributeList *AL : ToBeMoved) {
+    DS.getAttributes().remove(AL);
+    Attrs.addAtEnd(AL);
+  }
 }
 
 /// ParseDeclaration - Parse a full 'declaration', which consists of
@@ -1682,7 +1650,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
   case tok::kw_template:
   case tok::kw_export:
     ProhibitAttributes(attrs);
-    SingleDecl = ParseDeclarationStartingWithTemplate(Context, DeclEnd);
+    SingleDecl = ParseDeclarationStartingWithTemplate(Context, DeclEnd, attrs);
     break;
   case tok::kw_inline:
     // Could be the start of an inline namespace. Allowed as an ext in C++03.
@@ -4075,10 +4043,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   // If attributes exist after struct contents, parse them.
   MaybeParseGNUAttributes(attrs);
 
-  Actions.ActOnFields(getCurScope(),
-                      RecordLoc, TagDecl, FieldDecls,
-                      T.getOpenLocation(), T.getCloseLocation(),
-                      attrs.getList());
+  Actions.ActOnFields(getCurScope(), RecordLoc, TagDecl, FieldDecls,
+                      T.getOpenLocation(), T.getCloseLocation(), attrs);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
 }
@@ -4389,8 +4355,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   unsigned DiagID;
   Decl *TagDecl = Actions.ActOnTag(
       getCurScope(), DeclSpec::TST_enum, TUK, StartLoc, SS, Name, NameLoc,
-      attrs.getList(), AS, DS.getModulePrivateSpecLoc(), TParams, Owned,
-      IsDependent, ScopedEnumKWLoc, IsScopedUsingClassTag, BaseType,
+      attrs, AS, DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
+      ScopedEnumKWLoc, IsScopedUsingClassTag, BaseType,
       DSC == DeclSpecContext::DSC_type_specifier,
       DSC == DeclSpecContext::DSC_template_param ||
           DSC == DeclSpecContext::DSC_template_type_arg,
@@ -4531,8 +4497,8 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
 
     // Install the enumerator constant into EnumDecl.
     Decl *EnumConstDecl = Actions.ActOnEnumConstant(
-        getCurScope(), EnumDecl, LastEnumConstDecl, IdentLoc, Ident,
-        attrs.getList(), EqualLoc, AssignedVal.get());
+        getCurScope(), EnumDecl, LastEnumConstDecl, IdentLoc, Ident, attrs,
+        EqualLoc, AssignedVal.get());
     EnumAvailabilityDiags.back().done();
 
     EnumConstantDecls.push_back(EnumConstDecl);
@@ -4584,10 +4550,8 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
   ParsedAttributes attrs(AttrFactory);
   MaybeParseGNUAttributes(attrs);
 
-  Actions.ActOnEnumBody(StartLoc, T.getRange(),
-                        EnumDecl, EnumConstantDecls,
-                        getCurScope(),
-                        attrs.getList());
+  Actions.ActOnEnumBody(StartLoc, T.getRange(), EnumDecl, EnumConstantDecls,
+                        getCurScope(), attrs);
 
   // Now handle enum constant availability diagnostics.
   assert(EnumConstantDecls.size() == EnumAvailabilityDiags.size());
@@ -5382,10 +5346,10 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
 
       // Sema will have to catch (syntactically invalid) pointers into global
       // scope. It has to catch pointers into namespace scope anyway.
-      D.AddTypeInfo(DeclaratorChunk::getMemberPointer(SS,DS.getTypeQualifiers(),
-                                                      DS.getLocEnd()),
-                    DS.getAttributes(),
-                    /* Don't replace range end. */SourceLocation());
+      D.AddTypeInfo(DeclaratorChunk::getMemberPointer(
+                        SS, DS.getTypeQualifiers(), DS.getLocEnd()),
+                    std::move(DS.getAttributes()),
+                    /* Don't replace range end. */ SourceLocation());
       return;
     }
   }
@@ -5398,7 +5362,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
 
     D.AddTypeInfo(
         DeclaratorChunk::getPipe(DS.getTypeQualifiers(), DS.getPipeLoc()),
-        DS.getAttributes(), SourceLocation());
+        std::move(DS.getAttributes()), SourceLocation());
   }
 
   // Not a pointer, C++ reference, or block.
@@ -5430,20 +5394,16 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     ParseDeclaratorInternal(D, DirectDeclParser);
     if (Kind == tok::star)
       // Remember that we parsed a pointer type, and remember the type-quals.
-      D.AddTypeInfo(DeclaratorChunk::getPointer(DS.getTypeQualifiers(), Loc,
-                                                DS.getConstSpecLoc(),
-                                                DS.getVolatileSpecLoc(),
-                                                DS.getRestrictSpecLoc(),
-                                                DS.getAtomicSpecLoc(),
-                                                DS.getUnalignedSpecLoc()),
-                    DS.getAttributes(),
-                    SourceLocation());
+      D.AddTypeInfo(DeclaratorChunk::getPointer(
+                        DS.getTypeQualifiers(), Loc, DS.getConstSpecLoc(),
+                        DS.getVolatileSpecLoc(), DS.getRestrictSpecLoc(),
+                        DS.getAtomicSpecLoc(), DS.getUnalignedSpecLoc()),
+                    std::move(DS.getAttributes()), SourceLocation());
     else
       // Remember that we parsed a Block type, and remember the type-quals.
-      D.AddTypeInfo(DeclaratorChunk::getBlockPointer(DS.getTypeQualifiers(),
-                                                     Loc),
-                    DS.getAttributes(),
-                    SourceLocation());
+      D.AddTypeInfo(
+          DeclaratorChunk::getBlockPointer(DS.getTypeQualifiers(), Loc),
+          std::move(DS.getAttributes()), SourceLocation());
   } else {
     // Is a reference
     DeclSpec DS(AttrFactory);
@@ -5498,8 +5458,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     // Remember that we parsed a reference type.
     D.AddTypeInfo(DeclaratorChunk::getReference(DS.getTypeQualifiers(), Loc,
                                                 Kind == tok::amp),
-                  DS.getAttributes(),
-                  SourceLocation());
+                  std::move(DS.getAttributes()), SourceLocation());
   }
 }
 
@@ -6007,9 +5966,9 @@ void Parser::ParseParenDeclarator(Declarator &D) {
     ParseDeclaratorInternal(D, &Parser::ParseDirectDeclarator);
     // Match the ')'.
     T.consumeClose();
-    D.AddTypeInfo(DeclaratorChunk::getParen(T.getOpenLocation(),
-                                            T.getCloseLocation()),
-                  attrs, T.getCloseLocation());
+    D.AddTypeInfo(
+        DeclaratorChunk::getParen(T.getOpenLocation(), T.getCloseLocation()),
+        std::move(attrs), T.getCloseLocation());
 
     D.setGroupingParens(hadGroupingParens);
 
@@ -6239,28 +6198,19 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   }
 
   // Remember that we parsed a function type, and remember the attributes.
-  D.AddTypeInfo(DeclaratorChunk::getFunction(HasProto,
-                                             IsAmbiguous,
-                                             LParenLoc,
-                                             ParamInfo.data(), ParamInfo.size(),
-                                             EllipsisLoc, RParenLoc,
-                                             DS.getTypeQualifiers(),
-                                             RefQualifierIsLValueRef,
-                                             RefQualifierLoc, ConstQualifierLoc,
-                                             VolatileQualifierLoc,
-                                             RestrictQualifierLoc,
-                                             /*MutableLoc=*/SourceLocation(),
-                                             ESpecType, ESpecRange,
-                                             DynamicExceptions.data(),
-                                             DynamicExceptionRanges.data(),
-                                             DynamicExceptions.size(),
-                                             NoexceptExpr.isUsable() ?
-                                               NoexceptExpr.get() : nullptr,
-                                             ExceptionSpecTokens,
-                                             DeclsInPrototype,
-                                             StartLoc, LocalEndLoc, D,
-                                             TrailingReturnType),
-                FnAttrs, EndLoc);
+  D.AddTypeInfo(DeclaratorChunk::getFunction(
+                    HasProto, IsAmbiguous, LParenLoc, ParamInfo.data(),
+                    ParamInfo.size(), EllipsisLoc, RParenLoc,
+                    DS.getTypeQualifiers(), RefQualifierIsLValueRef,
+                    RefQualifierLoc, ConstQualifierLoc, VolatileQualifierLoc,
+                    RestrictQualifierLoc,
+                    /*MutableLoc=*/SourceLocation(), ESpecType, ESpecRange,
+                    DynamicExceptions.data(), DynamicExceptionRanges.data(),
+                    DynamicExceptions.size(),
+                    NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
+                    ExceptionSpecTokens, DeclsInPrototype, StartLoc,
+                    LocalEndLoc, D, TrailingReturnType),
+                std::move(FnAttrs), EndLoc);
 }
 
 /// ParseRefQualifier - Parses a member function ref-qualifier. Returns
@@ -6582,7 +6532,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     D.AddTypeInfo(DeclaratorChunk::getArray(0, false, false, nullptr,
                                             T.getOpenLocation(),
                                             T.getCloseLocation()),
-                  attrs, T.getCloseLocation());
+                  std::move(attrs), T.getCloseLocation());
     return;
   } else if (Tok.getKind() == tok::numeric_constant &&
              GetLookAheadToken(1).is(tok::r_square)) {
@@ -6595,11 +6545,10 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     MaybeParseCXX11Attributes(attrs);
 
     // Remember that we parsed a array type, and remember its features.
-    D.AddTypeInfo(DeclaratorChunk::getArray(0, false, false,
-                                            ExprRes.get(),
+    D.AddTypeInfo(DeclaratorChunk::getArray(0, false, false, ExprRes.get(),
                                             T.getOpenLocation(),
                                             T.getCloseLocation()),
-                  attrs, T.getCloseLocation());
+                  std::move(attrs), T.getCloseLocation());
     return;
   } else if (Tok.getKind() == tok::code_completion) {
     Actions.CodeCompleteBracketDeclarator(getCurScope());
@@ -6672,12 +6621,11 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
   MaybeParseCXX11Attributes(DS.getAttributes());
 
   // Remember that we parsed a array type, and remember its features.
-  D.AddTypeInfo(DeclaratorChunk::getArray(DS.getTypeQualifiers(),
-                                          StaticLoc.isValid(), isStar,
-                                          NumElements.get(),
-                                          T.getOpenLocation(),
-                                          T.getCloseLocation()),
-                DS.getAttributes(), T.getCloseLocation());
+  D.AddTypeInfo(
+      DeclaratorChunk::getArray(DS.getTypeQualifiers(), StaticLoc.isValid(),
+                                isStar, NumElements.get(), T.getOpenLocation(),
+                                T.getCloseLocation()),
+      std::move(DS.getAttributes()), T.getCloseLocation());
 }
 
 /// Diagnose brackets before an identifier.
@@ -6729,18 +6677,15 @@ void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
 
   if (NeedParens) {
     // Create a DeclaratorChunk for the inserted parens.
-    ParsedAttributes attrs(AttrFactory);
     SourceLocation EndLoc = PP.getLocForEndOfToken(D.getLocEnd());
-    D.AddTypeInfo(DeclaratorChunk::getParen(SuggestParenLoc, EndLoc), attrs,
+    D.AddTypeInfo(DeclaratorChunk::getParen(SuggestParenLoc, EndLoc),
                   SourceLocation());
   }
 
   // Adding back the bracket info to the end of the Declarator.
   for (unsigned i = 0, e = TempDeclarator.getNumTypeObjects(); i < e; ++i) {
     const DeclaratorChunk &Chunk = TempDeclarator.getTypeObject(i);
-    ParsedAttributes attrs(AttrFactory);
-    attrs.set(Chunk.Common.AttrList);
-    D.AddTypeInfo(Chunk, attrs, SourceLocation());
+    D.AddTypeInfo(Chunk, SourceLocation());
   }
 
   // The missing identifier would have been diagnosed in ParseDirectDeclarator.

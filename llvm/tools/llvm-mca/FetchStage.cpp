@@ -29,15 +29,18 @@ bool FetchStage::execute(InstRef &IR) {
   return true;
 }
 
-void FetchStage::postExecute(const InstRef &IR) {
+void FetchStage::postExecute(const InstRef &IR) { SM.updateNext(); }
+
+void FetchStage::cycleEnd() {
   // Find the first instruction which hasn't been retired.
   const InstMap::iterator It =
       llvm::find_if(Instructions, [](const InstMap::value_type &KeyValuePair) {
         return !KeyValuePair.second->isRetired();
       });
+
+  // Erase instructions up to the first that hasn't been retired.
   if (It != Instructions.begin())
     Instructions.erase(Instructions.begin(), It);
-  SM.updateNext();
 }
 
 } // namespace mca

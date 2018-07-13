@@ -948,16 +948,14 @@ static bool checkTypeParamListConsistency(Sema &S,
   return false;
 }
 
-Decl *Sema::
-ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
-                         IdentifierInfo *ClassName, SourceLocation ClassLoc,
-                         ObjCTypeParamList *typeParamList,
-                         IdentifierInfo *SuperName, SourceLocation SuperLoc,
-                         ArrayRef<ParsedType> SuperTypeArgs,
-                         SourceRange SuperTypeArgsRange,
-                         Decl * const *ProtoRefs, unsigned NumProtoRefs,
-                         const SourceLocation *ProtoLocs, 
-                         SourceLocation EndProtoLoc, AttributeList *AttrList) {
+Decl *Sema::ActOnStartClassInterface(
+    Scope *S, SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
+    IdentifierInfo *SuperName, SourceLocation SuperLoc,
+    ArrayRef<ParsedType> SuperTypeArgs, SourceRange SuperTypeArgsRange,
+    Decl *const *ProtoRefs, unsigned NumProtoRefs,
+    const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
+    const ParsedAttributesView &AttrList) {
   assert(ClassName && "Missing class identifier");
 
   // Check for another declaration kind with the same name.
@@ -1042,9 +1040,8 @@ ActOnStartClassInterface(Scope *S, SourceLocation AtInterfaceLoc,
       IDecl->setInvalidDecl();
     }
   }
-  
-  if (AttrList)
-    ProcessDeclAttributeList(TUScope, IDecl, AttrList);
+
+  ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   AddPragmaAttributes(TUScope, IDecl);
   PushOnScopeChains(IDecl, TUScope);
 
@@ -1183,15 +1180,11 @@ bool Sema::CheckForwardProtocolDeclarationForCircularDependency(
   return res;
 }
 
-Decl *
-Sema::ActOnStartProtocolInterface(SourceLocation AtProtoInterfaceLoc,
-                                  IdentifierInfo *ProtocolName,
-                                  SourceLocation ProtocolLoc,
-                                  Decl * const *ProtoRefs,
-                                  unsigned NumProtoRefs,
-                                  const SourceLocation *ProtoLocs,
-                                  SourceLocation EndProtoLoc,
-                                  AttributeList *AttrList) {
+Decl *Sema::ActOnStartProtocolInterface(
+    SourceLocation AtProtoInterfaceLoc, IdentifierInfo *ProtocolName,
+    SourceLocation ProtocolLoc, Decl *const *ProtoRefs, unsigned NumProtoRefs,
+    const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
+    const ParsedAttributesView &AttrList) {
   bool err = false;
   // FIXME: Deal with AttrList.
   assert(ProtocolName && "Missing protocol identifier");
@@ -1234,9 +1227,8 @@ Sema::ActOnStartProtocolInterface(SourceLocation AtProtoInterfaceLoc,
     PushOnScopeChains(PDecl, TUScope);
     PDecl->startDefinition();
   }
-  
-  if (AttrList)
-    ProcessDeclAttributeList(TUScope, PDecl, AttrList);
+
+  ProcessDeclAttributeList(TUScope, PDecl, AttrList);
   AddPragmaAttributes(TUScope, PDecl);
 
   // Merge attributes from previous declarations.
@@ -1567,14 +1559,12 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     // add the '*'.
     if (type->getAs<ObjCInterfaceType>()) {
       SourceLocation starLoc = getLocForEndOfToken(loc);
-      ParsedAttributes parsedAttrs(attrFactory);
       D.AddTypeInfo(DeclaratorChunk::getPointer(/*typeQuals=*/0, starLoc,
                                                 SourceLocation(),
                                                 SourceLocation(),
                                                 SourceLocation(),
                                                 SourceLocation(),
                                                 SourceLocation()),
-                                                parsedAttrs,
                                                 starLoc);
 
       // Diagnose the missing '*'.
@@ -1752,7 +1742,7 @@ void Sema::DiagnoseClassExtensionDupMethods(ObjCCategoryDecl *CAT,
 Sema::DeclGroupPtrTy
 Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
                                       ArrayRef<IdentifierLocPair> IdentList,
-                                      AttributeList *attrList) {
+                                      const ParsedAttributesView &attrList) {
   SmallVector<Decl *, 8> DeclsInGroup;
   for (const IdentifierLocPair &IdentPair : IdentList) {
     IdentifierInfo *Ident = IdentPair.first;
@@ -1765,9 +1755,8 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
         
     PushOnScopeChains(PDecl, TUScope);
     CheckObjCDeclScope(PDecl);
-    
-    if (attrList)
-      ProcessDeclAttributeList(TUScope, PDecl, attrList);
+
+    ProcessDeclAttributeList(TUScope, PDecl, attrList);
     AddPragmaAttributes(TUScope, PDecl);
 
     if (PrevDecl)
@@ -1779,17 +1768,13 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
   return BuildDeclaratorGroup(DeclsInGroup);
 }
 
-Decl *Sema::
-ActOnStartCategoryInterface(SourceLocation AtInterfaceLoc,
-                            IdentifierInfo *ClassName, SourceLocation ClassLoc,
-                            ObjCTypeParamList *typeParamList,
-                            IdentifierInfo *CategoryName,
-                            SourceLocation CategoryLoc,
-                            Decl * const *ProtoRefs,
-                            unsigned NumProtoRefs,
-                            const SourceLocation *ProtoLocs,
-                            SourceLocation EndProtoLoc,
-                            AttributeList *AttrList) {
+Decl *Sema::ActOnStartCategoryInterface(
+    SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
+    IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
+    Decl *const *ProtoRefs, unsigned NumProtoRefs,
+    const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
+    const ParsedAttributesView &AttrList) {
   ObjCCategoryDecl *CDecl;
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
 
@@ -1858,8 +1843,7 @@ ActOnStartCategoryInterface(SourceLocation AtInterfaceLoc,
   // Process the attributes before looking at protocols to ensure that the
   // availability attribute is attached to the category to provide availability
   // checking for protocol uses.
-  if (AttrList)
-    ProcessDeclAttributeList(TUScope, CDecl, AttrList);
+  ProcessDeclAttributeList(TUScope, CDecl, AttrList);
   AddPragmaAttributes(TUScope, CDecl);
 
   if (NumProtoRefs) {
@@ -4516,17 +4500,14 @@ static void checkObjCMethodX86VectorTypes(Sema &SemaRef,
 }
 
 Decl *Sema::ActOnMethodDeclaration(
-    Scope *S,
-    SourceLocation MethodLoc, SourceLocation EndLoc,
-    tok::TokenKind MethodType, 
-    ObjCDeclSpec &ReturnQT, ParsedType ReturnType,
-    ArrayRef<SourceLocation> SelectorLocs,
-    Selector Sel,
+    Scope *S, SourceLocation MethodLoc, SourceLocation EndLoc,
+    tok::TokenKind MethodType, ObjCDeclSpec &ReturnQT, ParsedType ReturnType,
+    ArrayRef<SourceLocation> SelectorLocs, Selector Sel,
     // optional arguments. The number of types/arguments is obtained
     // from the Sel.getNumArgs().
-    ObjCArgInfo *ArgInfo,
-    DeclaratorChunk::ParamInfo *CParamInfo, unsigned CNumArgs, // c-style args
-    AttributeList *AttrList, tok::ObjCKeywordKind MethodDeclKind,
+    ObjCArgInfo *ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
+    unsigned CNumArgs, // c-style args
+    const ParsedAttributesView &AttrList, tok::ObjCKeywordKind MethodDeclKind,
     bool isVariadic, bool MethodDefinition) {
   // Make sure we can establish a context for the method.
   if (!CurContext->isObjCContainer()) {
@@ -4634,8 +4615,7 @@ Decl *Sema::ActOnMethodDeclaration(
   ObjCMethod->setObjCDeclQualifier(
     CvtQTToAstBitMask(ReturnQT.getObjCDeclQualifier()));
 
-  if (AttrList)
-    ProcessDeclAttributeList(TUScope, ObjCMethod, AttrList);
+  ProcessDeclAttributeList(TUScope, ObjCMethod, AttrList);
   AddPragmaAttributes(TUScope, ObjCMethod);
 
   // Add the method now.
