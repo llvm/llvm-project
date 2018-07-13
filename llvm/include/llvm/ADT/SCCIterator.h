@@ -90,7 +90,6 @@ class scc_iterator : public iterator_facade_base<
   /// Compute the next SCC using the DFS traversal.
   void GetNextSCC();
 
-public:
   scc_iterator(NodeRef entryN) : visitNum(0) {
     DFSVisitOne(entryN);
     GetNextSCC();
@@ -98,6 +97,12 @@ public:
 
   /// End is when the DFS stack is empty.
   scc_iterator() = default;
+
+public:
+  static scc_iterator begin(const GraphT &G) {
+    return scc_iterator(GT::getEntryNode(G));
+  }
+  static scc_iterator end(const GraphT &) { return scc_iterator(); }
 
   /// Direct loop termination test which is more efficient than
   /// comparison with \c end().
@@ -217,24 +222,15 @@ bool scc_iterator<GraphT, GT>::hasLoop() const {
     return false;
   }
 
-/// Construct the begin iterator for a deduced graph type T, starting from its
-/// entry node.
+/// Construct the begin iterator for a deduced graph type T.
 template <class T> scc_iterator<T> scc_begin(const T &G) {
-  return scc_iterator<T>(GraphTraits<T>::getEntryNode(G));
+  return scc_iterator<T>::begin(G);
 }
 
-/// Construct the begin iterator for a graph type T, starting from the specified
-/// node.
-template <class T, class U = GraphTraits<T>>
-scc_iterator<T, U> scc_begin(typename U::NodeRef N) {
-  return scc_iterator<T>(N);
-}
-
-  /// Construct the end iterator for a deduced graph type T.
+/// Construct the end iterator for a deduced graph type T.
 template <class T> scc_iterator<T> scc_end(const T &G) {
-  return scc_iterator<T>();
+  return scc_iterator<T>::end(G);
 }
-
 
 } // end namespace llvm
 

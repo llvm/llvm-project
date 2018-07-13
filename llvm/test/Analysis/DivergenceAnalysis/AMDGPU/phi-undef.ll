@@ -2,9 +2,12 @@
 
 ; CHECK-LABEL: 'test1':
 ; CHECK-NEXT: DIVERGENT: i32 %bound
+; CHECK: {{^  *}}%counter =
 ; CHECK-NEXT: DIVERGENT: %break = icmp sge i32 %counter, %bound
 ; CHECK-NEXT: DIVERGENT: br i1 %break, label %footer, label %body
-; CHECK-NEXT: DIVERGENT: br i1 %break, label %end, label %header
+; CHECK: {{^  *}}%counter.next =
+; CHECK: {{^  *}}%counter.footer =
+; CHECK: DIVERGENT: br i1 %break, label %end, label %header
 ; Note: %counter is not divergent!
 define amdgpu_ps void @test1(i32 %bound) {
 entry:

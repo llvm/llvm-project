@@ -376,10 +376,10 @@ static void addContextSensitiveTypeNullability(Parser &P,
                                                SourceLocation nullabilityLoc,
                                                bool &addedToDeclSpec) {
   // Create the attribute.
-  auto getNullabilityAttr = [&](AttributePool &Pool) -> AttributeList * {
+  auto getNullabilityAttr = [&](AttributePool &Pool) -> ParsedAttr * {
     return Pool.create(P.getNullabilityKeyword(nullability),
                        SourceRange(nullabilityLoc), nullptr, SourceLocation(),
-                       nullptr, 0, AttributeList::AS_ContextSensitiveKeyword);
+                       nullptr, 0, ParsedAttr::AS_ContextSensitiveKeyword);
   };
 
   if (D.getNumTypeObjects() > 0) {

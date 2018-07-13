@@ -2480,8 +2480,6 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       Is64BitLI = Opc != PPC::RLDICL_32;
       NewImm = InVal.getSExtValue();
       SetCR = Opc == PPC::RLDICLo;
-      if (SetCR && (SExtImm & NewImm) != NewImm)
-        return false;
       break;
     }
     return false;
@@ -2495,7 +2493,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     int64_t ME = MI.getOperand(4).getImm();
     APInt InVal(32, SExtImm, true);
     InVal = InVal.rotl(SH);
-    // Set the bits (        MB + 32       ) to (        ME + 32       ).
+    // Set the bits (        MB + 32        ) to (        ME + 32        ).
     uint64_t Mask = ((1LLU << (32 - MB)) - 1) & ~((1LLU << (31 - ME)) - 1);
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
@@ -2509,8 +2507,6 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
       Is64BitLI = Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8o;
       NewImm = InVal.getSExtValue();
       SetCR = Opc == PPC::RLWINMo || Opc == PPC::RLWINM8o;
-      if (SetCR && (SExtImm & NewImm) != NewImm)
-        return false;
       break;
     }
     return false;
@@ -2536,6 +2532,33 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   }
 
   if (ReplaceWithLI) {
+    // We need to be careful with CR-setting instructions we're replacing.
+    if (SetCR) {
+      // We don't know anything about uses when we're out of SSA, so only
+      // replace if the new immediate will be reproduced.
+      bool ImmChanged = (SExtImm & NewImm) != NewImm;
+      if (PostRA && ImmChanged)
+        return false;
+
+      if (!PostRA) {
+        // If the defining load-immediate has no other uses, we can just replace
+        // the immediate with the new immediate.
+        if (MRI->hasOneUse(DefMI->getOperand(0).getReg()))
+          DefMI->getOperand(1).setImm(NewImm);
+
+        // If we're not using the GPR result of the CR-setting instruction, we
+        // just need to and with zero/non-zero depending on the new immediate.
+        else if (MRI->use_empty(MI.getOperand(0).getReg())) {
+          if (NewImm) {
+            assert(Immediate && "Transformation converted zero to non-zero?");
+            NewImm = Immediate;
+          }
+        }
+        else if (ImmChanged)
+          return false;
+      }
+    }
+
     LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
     LLVM_DEBUG(MI.dump());
     LLVM_DEBUG(dbgs() << "Fed by:\n");

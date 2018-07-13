@@ -245,17 +245,22 @@ struct ArchDefinition {
   const char *name;
 };
 
-size_t ArchSpec::AutoComplete(llvm::StringRef name, StringList &matches) {
-  if (!name.empty()) {
+void ArchSpec::ListSupportedArchNames(StringList &list) {
+  for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
+    list.AppendString(g_core_definitions[i].name);
+}
+
+size_t ArchSpec::AutoComplete(CompletionRequest &request) {
+  if (!request.GetCursorArgumentPrefix().empty()) {
     for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
-      if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith, name))
-        matches.AppendString(g_core_definitions[i].name);
+      if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith,
+                      request.GetCursorArgumentPrefix()))
+        request.GetMatches().AppendString(g_core_definitions[i].name);
     }
   } else {
-    for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
-      matches.AppendString(g_core_definitions[i].name);
+    ListSupportedArchNames(request.GetMatches());
   }
-  return matches.GetSize();
+  return request.GetMatches().GetSize();
 }
 
 #define CPU_ANY (UINT32_MAX)

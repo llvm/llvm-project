@@ -130,10 +130,6 @@ namespace {
       return VarMapEntry-1;
     }
 
-    /// GetInstPatternNode - Get the pattern for an instruction.
-    const TreePatternNode *GetInstPatternNode(const DAGInstruction &Ins,
-                                              const TreePatternNode *N);
-
     void EmitResultOperand(const TreePatternNode *N,
                            SmallVectorImpl<unsigned> &ResultOps);
     void EmitResultOfNamedOperand(const TreePatternNode *N,
@@ -661,28 +657,6 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
   N->dump();
 }
 
-/// GetInstPatternNode - Get the pattern for an instruction.
-///
-const TreePatternNode *MatcherGen::
-GetInstPatternNode(const DAGInstruction &Inst, const TreePatternNode *N) {
-  const TreePattern *InstPat = Inst.getPattern();
-
-  // FIXME2?: Assume actual pattern comes before "implicit".
-  TreePatternNode *InstPatNode;
-  if (InstPat)
-    InstPatNode = InstPat->getTree(0).get();
-  else if (/*isRoot*/ N == Pattern.getDstPattern())
-    InstPatNode = Pattern.getSrcPattern();
-  else
-    return nullptr;
-
-  if (InstPatNode && !InstPatNode->isLeaf() &&
-      InstPatNode->getOperator()->getName() == "set")
-    InstPatNode = InstPatNode->getChild(InstPatNode->getNumChildren()-1);
-
-  return InstPatNode;
-}
-
 static bool
 mayInstNodeLoadOrStore(const TreePatternNode *N,
                        const CodeGenDAGPatterns &CGP) {
@@ -719,25 +693,6 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
   const CodeGenTarget &CGT = CGP.getTargetInfo();
   CodeGenInstruction &II = CGT.getInstruction(Op);
   const DAGInstruction &Inst = CGP.getInstruction(Op);
-
-  // If we can, get the pattern for the instruction we're generating. We derive
-  // a variety of information from this pattern, such as whether it has a chain.
-  //
-  // FIXME2: This is extremely dubious for several reasons, not the least of
-  // which it gives special status to instructions with patterns that Pat<>
-  // nodes can't duplicate.
-  const TreePatternNode *InstPatNode = GetInstPatternNode(Inst, N);
-
-  // NodeHasChain - Whether the instruction node we're creating takes chains.
-  bool NodeHasChain = InstPatNode &&
-                      InstPatNode->TreeHasProperty(SDNPHasChain, CGP);
-
-  // Instructions which load and store from memory should have a chain,
-  // regardless of whether they happen to have an internal pattern saying so.
-  if (Pattern.getSrcPattern()->TreeHasProperty(SDNPHasChain, CGP) &&
-      (II.hasCtrlDep || II.mayLoad || II.mayStore || II.canFoldAsLoad ||
-       II.hasSideEffects))
-    NodeHasChain = true;
 
   bool isRoot = N == Pattern.getDstPattern();
 
@@ -890,6 +845,26 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
     NodeHasMemRefs =
       NodeIsUniqueLoadOrStore || (isRoot && (mayInstNodeLoadOrStore(N, CGP) ||
                                              NumNodesThatLoadOrStore != 1));
+  }
+
+  // Determine whether we need to attach a chain to this node.
+  bool NodeHasChain = false;
+  if (Pattern.getSrcPattern()->TreeHasProperty(SDNPHasChain, CGP)) {
+    // For some instructions, we were able to infer from the pattern whether
+    // they should have a chain.  Otherwise, attach the chain to the root.
+    //
+    // FIXME2: This is extremely dubious for several reasons, not the least of
+    // which it gives special status to instructions with patterns that Pat<>
+    // nodes can't duplicate.
+    if (II.hasChain_Inferred)
+      NodeHasChain = II.hasChain;
+    else
+      NodeHasChain = isRoot;
+    // Instructions which load and store from memory should have a chain,
+    // regardless of whether they happen to have a pattern saying so.
+    if (II.hasCtrlDep || II.mayLoad || II.mayStore || II.canFoldAsLoad ||
+        II.hasSideEffects)
+      NodeHasChain = true;
   }
 
   assert((!ResultVTs.empty() || TreeHasOutGlue || NodeHasChain) &&

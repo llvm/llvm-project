@@ -244,6 +244,21 @@ public:
                    Addr.getAlignment().alignmentAtOffset(Offset));
   }
 
+  using CGBuilderBaseTy::CreateConstInBoundsGEP2_32;
+  Address CreateConstInBoundsGEP2_32(Address Addr, unsigned Idx0,
+                                      unsigned Idx1, const llvm::DataLayout &DL,
+                                      const llvm::Twine &Name = "") {
+    auto *GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
+        Addr.getElementType(), Addr.getPointer(), Idx0, Idx1, Name));
+    llvm::APInt Offset(
+        DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
+        /*IsSigned=*/true);
+    if (!GEP->accumulateConstantOffset(DL, Offset))
+      llvm_unreachable("offset of GEP with constants is always computable");
+    return Address(GEP, Addr.getAlignment().alignmentAtOffset(
+                            CharUnits::fromQuantity(Offset.getSExtValue())));
+  }
+
   llvm::Value *CreateConstInBoundsByteGEP(llvm::Value *Ptr, CharUnits Offset,
                                           const llvm::Twine &Name = "") {
     assert(Ptr->getType()->getPointerElementType() == TypeCache.Int8Ty);

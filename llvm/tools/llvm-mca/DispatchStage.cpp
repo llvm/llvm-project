@@ -29,7 +29,7 @@ namespace mca {
 
 void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
                                                 ArrayRef<unsigned> UsedRegs) {
-  LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: #" << IR << '\n');
   notifyEvent<HWInstructionEvent>(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
@@ -73,8 +73,6 @@ void DispatchStage::updateRAWDependencies(ReadState &RS,
 
   collectWrites(DependentWrites, RS.getRegisterID());
   RS.setDependentWrites(DependentWrites.size());
-  LLVM_DEBUG(dbgs() << "Found " << DependentWrites.size()
-                    << " dependent writes\n");
   // We know that this read depends on all the writes in DependentWrites.
   // For each write, check if we have ReadAdvance information, and use it
   // to figure out in how many cycles this read becomes available.

@@ -51,7 +51,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
 /// Determine structural equivalence of two expressions.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     Expr *E1, Expr *E2) {
+                                     const Expr *E1, const Expr *E2) {
   if (!E1 || !E2)
     return E1 == E2;
 
@@ -399,6 +399,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::DependentSizedExtVector: {
     const auto *Vec1 = cast<DependentSizedExtVectorType>(T1);
     const auto *Vec2 = cast<DependentSizedExtVectorType>(T2);
+    if (!IsStructurallyEquivalent(Context, Vec1->getSizeExpr(),
+                                  Vec2->getSizeExpr()))
+      return false;
+    if (!IsStructurallyEquivalent(Context, Vec1->getElementType(),
+                                  Vec2->getElementType()))
+      return false;
+    break;
+  }
+
+  case Type::DependentVector: {
+    const auto *Vec1 = cast<DependentVectorType>(T1);
+    const auto *Vec2 = cast<DependentVectorType>(T2);
+    if (Vec1->getVectorKind() != Vec2->getVectorKind())
+      return false;
     if (!IsStructurallyEquivalent(Context, Vec1->getSizeExpr(),
                                   Vec2->getSizeExpr()))
       return false;

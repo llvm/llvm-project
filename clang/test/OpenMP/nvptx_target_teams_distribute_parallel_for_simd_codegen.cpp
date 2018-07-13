@@ -22,7 +22,7 @@ tx ftemplate(int n) {
   tx a[N];
   short aa[N];
   tx b[10];
-  tx c[M][M];  
+  tx c[M][M];
   tx f = n;
   tx l;
   int k;
@@ -47,7 +47,7 @@ tx ftemplate(int n) {
   for(int i = 0; i < M; i++) {
     for(int j = 0; j < M; j++) {
       k = M;
-      c[i][j] = i+j*f+k;      
+      c[i][j] = i+j*f+k;
     }
   }
 
@@ -65,6 +65,7 @@ int bar(int n){
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL1:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
@@ -79,6 +80,7 @@ int bar(int n){
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92,
 // CHECK: {{call|invoke}} void [[OUTL2:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
@@ -93,6 +95,7 @@ int bar(int n){
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92,
 // CHECK: {{call|invoke}} void [[OUTL3:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
@@ -108,6 +111,7 @@ int bar(int n){
 // CHECK: store {{.+}} [[F_IN]], {{.+}}* {{.+}},
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]],
+// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: store {{.+}} 99, {{.+}}* [[COMB_UB:%.+]], align
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 92, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
 // CHECK: {{call|invoke}} void [[OUTL4:@.+]](

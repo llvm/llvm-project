@@ -76,7 +76,7 @@ namespace clang {
   class ASTReader;
   class ASTWriter;
   class ArrayType;
-  class AttributeList;
+  class ParsedAttr;
   class BindingDecl;
   class BlockDecl;
   class CapturedDecl;
@@ -494,7 +494,7 @@ public:
   /// \#pragma clang attribute.
   struct PragmaAttributeEntry {
     SourceLocation Loc;
-    AttributeList *Attribute;
+    ParsedAttr *Attribute;
     SmallVector<attr::SubjectMatchRule, 4> MatchRules;
     bool IsUsed;
   };
@@ -1377,6 +1377,7 @@ public:
   QualType BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
                           Expr *ArraySize, unsigned Quals,
                           SourceRange Brackets, DeclarationName Entity);
+  QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
   QualType BuildExtVectorType(QualType T, Expr *ArraySize,
                               SourceLocation AttrLoc);
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
@@ -2224,7 +2225,7 @@ public:
                                    Expr *BitfieldWidth,
                                    InClassInitStyle InitStyle,
                                    AccessSpecifier AS,
-                                   const AttributeList &MSPropertyAttr);
+                                   const ParsedAttr &MSPropertyAttr);
 
   FieldDecl *CheckFieldDecl(DeclarationName Name, QualType T,
                             TypeSourceInfo *TInfo,
@@ -3321,11 +3322,10 @@ public:
   // Helper for delayed processing of attributes.
   void ProcessDeclAttributeDelayed(Decl *D,
                                    const ParsedAttributesView &AttrList);
-  void ProcessDeclAttributeList(Scope *S, Decl *D,
-                                const ParsedAttributesView &AL,
-                                bool IncludeCXX11Attributes = true);
+  void ProcessDeclAttributeList(Scope *S, Decl *D, const ParsedAttributesView &AL,
+                             bool IncludeCXX11Attributes = true);
   bool ProcessAccessDeclAttributeList(AccessSpecDecl *ASDecl,
-                                      const ParsedAttributesView &AttrList);
+                                   const ParsedAttributesView &AttrList);
 
   void checkUnusedDeclAttributes(Declarator &D);
 
@@ -3335,13 +3335,13 @@ public:
   /// type as valid.
   bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 
-  bool CheckRegparmAttr(const AttributeList &attr, unsigned &value);
-  bool CheckCallingConvAttr(const AttributeList &attr, CallingConv &CC,
+  bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
+  bool CheckCallingConvAttr(const ParsedAttr &attr, CallingConv &CC,
                             const FunctionDecl *FD = nullptr);
-  bool CheckAttrTarget(const AttributeList &CurrAttr);
-  bool CheckAttrNoArgs(const AttributeList &CurrAttr);
-  bool checkStringLiteralArgumentAttr(const AttributeList &Attr,
-                                      unsigned ArgNum, StringRef &Str,
+  bool CheckAttrTarget(const ParsedAttr &CurrAttr);
+  bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
+  bool checkStringLiteralArgumentAttr(const ParsedAttr &Attr, unsigned ArgNum,
+                                      StringRef &Str,
                                       SourceLocation *ArgLocation = nullptr);
   bool checkSectionName(SourceLocation LiteralLoc, StringRef Str);
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
@@ -8446,8 +8446,7 @@ public:
   void AddCFAuditedAttribute(Decl *D);
 
   /// Called on well-formed '\#pragma clang attribute push'.
-  void ActOnPragmaAttributePush(AttributeList &Attribute,
-                                SourceLocation PragmaLoc,
+  void ActOnPragmaAttributePush(ParsedAttr &Attribute, SourceLocation PragmaLoc,
                                 attr::ParsedSubjectMatchRuleSet Rules);
 
   /// Called on well-formed '\#pragma clang attribute pop'.

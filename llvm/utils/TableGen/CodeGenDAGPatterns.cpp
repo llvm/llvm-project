@@ -808,7 +808,7 @@ TypeSetByHwMode TypeInfer::getLegalTypes() {
 
 #ifndef NDEBUG
 TypeInfer::ValidateOnExit::~ValidateOnExit() {
-  if (!VTS.validate()) {
+  if (Infer.Validate && !VTS.validate()) {
     dbgs() << "Type set is empty for each HW mode:\n"
               "possible type contradiction in the pattern below "
               "(use -print-records with llvm-tblgen to see all "
@@ -1663,21 +1663,31 @@ static unsigned GetNumNodeResults(Record *Operator, CodeGenDAGPatterns &CDP) {
   if (Operator->isSubClassOf("SDNode"))
     return CDP.getSDNodeInfo(Operator).getNumResults();
 
-  if (Operator->isSubClassOf("PatFrag")) {
+  if (Operator->isSubClassOf("PatFrags")) {
     // If we've already parsed this pattern fragment, get it.  Otherwise, handle
     // the forward reference case where one pattern fragment references another
     // before it is processed.
-    if (TreePattern *PFRec = CDP.getPatternFragmentIfRead(Operator))
-      return PFRec->getOnlyTree()->getNumTypes();
+    if (TreePattern *PFRec = CDP.getPatternFragmentIfRead(Operator)) {
+      // The number of results of a fragment with alternative records is the
+      // maximum number of results across all alternatives.
+      unsigned NumResults = 0;
+      for (auto T : PFRec->getTrees())
+        NumResults = std::max(NumResults, T->getNumTypes());
+      return NumResults;
+    }
 
-    // Get the result tree.
-    DagInit *Tree = Operator->getValueAsDag("Fragment");
-    Record *Op = nullptr;
-    if (Tree)
-      if (DefInit *DI = dyn_cast<DefInit>(Tree->getOperator()))
-        Op = DI->getDef();
-    assert(Op && "Invalid Fragment");
-    return GetNumNodeResults(Op, CDP);
+    ListInit *LI = Operator->getValueAsListInit("Fragments");
+    assert(LI && "Invalid Fragment");
+    unsigned NumResults = 0;
+    for (Init *I : LI->getValues()) {
+      Record *Op = nullptr;
+      if (DagInit *Dag = dyn_cast<DagInit>(I))
+        if (DefInit *DI = dyn_cast<DefInit>(Dag->getOperator()))
+          Op = DI->getDef();
+      assert(Op && "Invalid Fragment");
+      NumResults = std::max(NumResults, GetNumNodeResults(Op, CDP));
+    }
+    return NumResults;
   }
 
   if (Operator->isSubClassOf("Instruction")) {
@@ -1843,30 +1853,81 @@ void TreePatternNode::SubstituteFormalArguments(
 
 
 /// InlinePatternFragments - If this pattern refers to any pattern
-/// fragments, inline them into place, giving us a pattern without any
-/// PatFrag references.
-TreePatternNodePtr TreePatternNode::InlinePatternFragments(TreePatternNodePtr T,
-                                                           TreePattern &TP) {
-  if (TP.hasError())
-    return nullptr;
+/// fragments, return the set of inlined versions (this can be more than
+/// one if a PatFrags record has multiple alternatives).
+void TreePatternNode::InlinePatternFragments(
+  TreePatternNodePtr T, TreePattern &TP,
+  std::vector<TreePatternNodePtr> &OutAlternatives) {
 
-  if (isLeaf())
-    return T; // nothing to do.
+  if (TP.hasError())
+    return;
+
+  if (isLeaf()) {
+    OutAlternatives.push_back(T);  // nothing to do.
+    return;
+  }
+
   Record *Op = getOperator();
 
-  if (!Op->isSubClassOf("PatFrag")) {
-    // Just recursively inline children nodes.
+  if (!Op->isSubClassOf("PatFrags")) {
+    if (getNumChildren() == 0) {
+      OutAlternatives.push_back(T);
+      return;
+    }
+
+    // Recursively inline children nodes.
+    std::vector<std::vector<TreePatternNodePtr> > ChildAlternatives;
+    ChildAlternatives.resize(getNumChildren());
     for (unsigned i = 0, e = getNumChildren(); i != e; ++i) {
       TreePatternNodePtr Child = getChildShared(i);
-      TreePatternNodePtr NewChild = Child->InlinePatternFragments(Child, TP);
+      Child->InlinePatternFragments(Child, TP, ChildAlternatives[i]);
+      // If there are no alternatives for any child, there are no
+      // alternatives for this expression as whole.
+      if (ChildAlternatives[i].empty())
+        return;
 
-      assert((Child->getPredicateFns().empty() ||
-              NewChild->getPredicateFns() == Child->getPredicateFns()) &&
-             "Non-empty child predicate clobbered!");
-
-      setChild(i, std::move(NewChild));
+      for (auto NewChild : ChildAlternatives[i])
+        assert((Child->getPredicateFns().empty() ||
+                NewChild->getPredicateFns() == Child->getPredicateFns()) &&
+               "Non-empty child predicate clobbered!");
     }
-    return T;
+
+    // The end result is an all-pairs construction of the resultant pattern.
+    std::vector<unsigned> Idxs;
+    Idxs.resize(ChildAlternatives.size());
+    bool NotDone;
+    do {
+      // Create the variant and add it to the output list.
+      std::vector<TreePatternNodePtr> NewChildren;
+      for (unsigned i = 0, e = ChildAlternatives.size(); i != e; ++i)
+        NewChildren.push_back(ChildAlternatives[i][Idxs[i]]);
+      TreePatternNodePtr R = std::make_shared<TreePatternNode>(
+          getOperator(), NewChildren, getNumTypes());
+
+      // Copy over properties.
+      R->setName(getName());
+      R->setPredicateFns(getPredicateFns());
+      R->setTransformFn(getTransformFn());
+      for (unsigned i = 0, e = getNumTypes(); i != e; ++i)
+        R->setType(i, getExtType(i));
+
+      // Register alternative.
+      OutAlternatives.push_back(R);
+
+      // Increment indices to the next permutation by incrementing the
+      // indices from last index backward, e.g., generate the sequence
+      // [0, 0], [0, 1], [1, 0], [1, 1].
+      int IdxsIdx;
+      for (IdxsIdx = Idxs.size() - 1; IdxsIdx >= 0; --IdxsIdx) {
+        if (++Idxs[IdxsIdx] == ChildAlternatives[IdxsIdx].size())
+          Idxs[IdxsIdx] = 0;
+        else
+          break;
+      }
+      NotDone = (IdxsIdx >= 0);
+    } while (NotDone);
+
+    return;
   }
 
   // Otherwise, we found a reference to a fragment.  First, look up its
@@ -1877,38 +1938,42 @@ TreePatternNodePtr TreePatternNode::InlinePatternFragments(TreePatternNodePtr T,
   if (Frag->getNumArgs() != Children.size()) {
     TP.error("'" + Op->getName() + "' fragment requires " +
              Twine(Frag->getNumArgs()) + " operands!");
-    return {nullptr};
+    return;
   }
 
-  TreePatternNodePtr FragTree = Frag->getOnlyTree()->clone();
-
-  TreePredicateFn PredFn(Frag);
-  if (!PredFn.isAlwaysTrue())
-    FragTree->addPredicateFn(PredFn);
-
-  // Resolve formal arguments to their actual value.
-  if (Frag->getNumArgs()) {
-    // Compute the map of formal to actual arguments.
-    std::map<std::string, TreePatternNodePtr> ArgMap;
-    for (unsigned i = 0, e = Frag->getNumArgs(); i != e; ++i) {
-      const TreePatternNodePtr &Child = getChildShared(i);
-      ArgMap[Frag->getArgName(i)] = Child->InlinePatternFragments(Child, TP);
-    }
-
-    FragTree->SubstituteFormalArguments(ArgMap);
+  // Compute the map of formal to actual arguments.
+  std::map<std::string, TreePatternNodePtr> ArgMap;
+  for (unsigned i = 0, e = Frag->getNumArgs(); i != e; ++i) {
+    const TreePatternNodePtr &Child = getChildShared(i);
+    ArgMap[Frag->getArgName(i)] = Child;
   }
 
-  FragTree->setName(getName());
-  for (unsigned i = 0, e = Types.size(); i != e; ++i)
-    FragTree->UpdateNodeType(i, getExtType(i), TP);
+  // Loop over all fragment alternatives.
+  for (auto Alternative : Frag->getTrees()) {
+    TreePatternNodePtr FragTree = Alternative->clone();
 
-  // Transfer in the old predicates.
-  for (const TreePredicateFn &Pred : getPredicateFns())
-    FragTree->addPredicateFn(Pred);
+    TreePredicateFn PredFn(Frag);
+    if (!PredFn.isAlwaysTrue())
+      FragTree->addPredicateFn(PredFn);
 
-  // The fragment we inlined could have recursive inlining that is needed.  See
-  // if there are any pattern fragments in it and inline them as needed.
-  return FragTree->InlinePatternFragments(FragTree, TP);
+    // Resolve formal arguments to their actual value.
+    if (Frag->getNumArgs())
+      FragTree->SubstituteFormalArguments(ArgMap);
+
+    // Transfer types.  Note that the resolved alternative may have fewer
+    // (but not more) results than the PatFrags node.
+    FragTree->setName(getName());
+    for (unsigned i = 0, e = FragTree->getNumTypes(); i != e; ++i)
+      FragTree->UpdateNodeType(i, getExtType(i), TP);
+
+    // Transfer in the old predicates.
+    for (const TreePredicateFn &Pred : getPredicateFns())
+      FragTree->addPredicateFn(Pred);
+
+    // The fragment we inlined could have recursive inlining that is needed.  See
+    // if there are any pattern fragments in it and inline them as needed.
+    FragTree->InlinePatternFragments(FragTree, TP, OutAlternatives);
+  }
 }
 
 /// getImplicitType - Check to see if the specified record has an implicit
@@ -1955,7 +2020,7 @@ static TypeSetByHwMode getImplicitType(Record *R, unsigned ResNo,
     return TypeSetByHwMode(T.getRegisterClass(R).getValueTypes());
   }
 
-  if (R->isSubClassOf("PatFrag")) {
+  if (R->isSubClassOf("PatFrags")) {
     assert(ResNo == 0 && "FIXME: PatFrag with multiple results?");
     // Pattern fragment types will be resolved when they are inlined.
     return TypeSetByHwMode(); // Unknown.
@@ -2205,35 +2270,6 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
     }
 
     return false;
-  }
-
-  // special handling for set, which isn't really an SDNode.
-  if (getOperator()->getName() == "set") {
-    assert(getNumTypes() == 0 && "Set doesn't produce a value");
-    assert(getNumChildren() >= 2 && "Missing RHS of a set?");
-    unsigned NC = getNumChildren();
-
-    TreePatternNode *SetVal = getChild(NC-1);
-    bool MadeChange = SetVal->ApplyTypeConstraints(TP, NotRegisters);
-
-    for (unsigned i = 0; i < NC-1; ++i) {
-      TreePatternNode *Child = getChild(i);
-      MadeChange |= Child->ApplyTypeConstraints(TP, NotRegisters);
-
-      // Types of operands must match.
-      MadeChange |= Child->UpdateNodeType(0, SetVal->getExtType(i), TP);
-      MadeChange |= SetVal->UpdateNodeType(i, Child->getExtType(0), TP);
-    }
-    return MadeChange;
-  }
-
-  if (getOperator()->getName() == "implicit") {
-    assert(getNumTypes() == 0 && "Node doesn't produce a value");
-
-    bool MadeChange = false;
-    for (unsigned i = 0; i < getNumChildren(); ++i)
-      MadeChange |= getChild(i)->ApplyTypeConstraints(TP, NotRegisters);
-    return MadeChange;
   }
 
   if (const CodeGenIntrinsic *Int = getIntrinsicInfo(CDP)) {
@@ -2546,7 +2582,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     // Direct reference to a leaf DagNode or PatFrag?  Turn it into a
     // TreePatternNode of its own.  For example:
     ///   (foo GPR, imm) -> (foo GPR, (imm))
-    if (R->isSubClassOf("SDNode") || R->isSubClassOf("PatFrag"))
+    if (R->isSubClassOf("SDNode") || R->isSubClassOf("PatFrags"))
       return ParseTreePattern(
         DagInit::get(DI, nullptr,
                      std::vector<std::pair<Init*, StringInit*> >()),
@@ -2619,7 +2655,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
   }
 
   // Verify that this is something that makes sense for an operator.
-  if (!Operator->isSubClassOf("PatFrag") &&
+  if (!Operator->isSubClassOf("PatFrags") &&
       !Operator->isSubClassOf("SDNode") &&
       !Operator->isSubClassOf("Instruction") &&
       !Operator->isSubClassOf("SDNodeXForm") &&
@@ -2941,17 +2977,17 @@ void CodeGenDAGPatterns::ParseComplexPatterns() {
 /// inside a pattern fragment to a pattern fragment.
 ///
 void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
-  std::vector<Record*> Fragments = Records.getAllDerivedDefinitions("PatFrag");
+  std::vector<Record*> Fragments = Records.getAllDerivedDefinitions("PatFrags");
 
   // First step, parse all of the fragments.
   for (Record *Frag : Fragments) {
     if (OutFrags != Frag->isSubClassOf("OutPatFrag"))
       continue;
 
-    DagInit *Tree = Frag->getValueAsDag("Fragment");
+    ListInit *LI = Frag->getValueAsListInit("Fragments");
     TreePattern *P =
         (PatternFragments[Frag] = llvm::make_unique<TreePattern>(
-             Frag, Tree, !Frag->isSubClassOf("OutPatFrag"),
+             Frag, LI, !Frag->isSubClassOf("OutPatFrag"),
              *this)).get();
 
     // Validate the argument list, converting it to set, to discard duplicates.
@@ -2999,13 +3035,15 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     // this fragment uses it.
     TreePredicateFn PredFn(P);
     if (!PredFn.isAlwaysTrue())
-      P->getOnlyTree()->addPredicateFn(PredFn);
+      for (auto T : P->getTrees())
+        T->addPredicateFn(PredFn);
 
     // If there is a node transformation corresponding to this, keep track of
     // it.
     Record *Transform = Frag->getValueAsDef("OperandTransform");
     if (!getSDNodeTransform(Transform).second.empty())    // not noop xform?
-      P->getOnlyTree()->setTransformFn(Transform);
+      for (auto T : P->getTrees())
+        T->setTransformFn(Transform);
   }
 
   // Now that we've parsed all of the tree fragments, do a closure on them so
@@ -3018,9 +3056,15 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     ThePat.InlinePatternFragments();
 
     // Infer as many types as possible.  Don't worry about it if we don't infer
-    // all of them, some may depend on the inputs of the pattern.
-    ThePat.InferAllTypes();
-    ThePat.resetError();
+    // all of them, some may depend on the inputs of the pattern.  Also, don't
+    // validate type sets; validation may cause spurious failures e.g. if a
+    // fragment needs floating-point types but the current target does not have
+    // any (this is only an error if that fragment is ever used!).
+    {
+      TypeInfer::SuppressValidation SV(ThePat.getInfer());
+      ThePat.InferAllTypes();
+      ThePat.resetError();
+    }
 
     // If debugging, print out the pattern fragment result.
     LLVM_DEBUG(ThePat.dump());
@@ -3117,6 +3161,9 @@ static bool HandleUse(TreePattern &I, TreePatternNodePtr Pat,
   // Ensure that the inputs agree if we've already seen this input.
   if (Rec != SlotRec)
     I.error("All $" + Pat->getName() + " inputs must agree with each other");
+  // Ensure that the types can agree as well.
+  Slot->UpdateNodeType(0, Pat->getExtType(0), I);
+  Pat->UpdateNodeType(0, Slot->getExtType(0), I);
   if (Slot->getExtTypes() != Pat->getExtTypes())
     I.error("All $" + Pat->getName() + " inputs must agree with each other");
   return true;
@@ -3130,6 +3177,17 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     std::map<std::string, TreePatternNodePtr> &InstInputs,
     std::map<std::string, TreePatternNodePtr> &InstResults,
     std::vector<Record *> &InstImpResults) {
+
+  // The instruction pattern still has unresolved fragments.  For *named*
+  // nodes we must resolve those here.  This may not result in multiple
+  // alternatives.
+  if (!Pat->getName().empty()) {
+    TreePattern SrcPattern(I.getRecord(), Pat, true, *this);
+    SrcPattern.InlinePatternFragments();
+    SrcPattern.InferAllTypes();
+    Pat = SrcPattern.getOnlyTree();
+  }
+
   if (Pat->isLeaf()) {
     bool isUse = HandleUse(I, Pat, InstInputs);
     if (!isUse && Pat->getTransformFn())
@@ -3181,6 +3239,12 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
   unsigned NumDests = Pat->getNumChildren()-1;
   for (unsigned i = 0; i != NumDests; ++i) {
     TreePatternNodePtr Dest = Pat->getChildShared(i);
+    // For set destinations we also must resolve fragments here.
+    TreePattern DestPattern(I.getRecord(), Dest, false, *this);
+    DestPattern.InlinePatternFragments();
+    DestPattern.InferAllTypes();
+    Dest = DestPattern.getOnlyTree();
+
     if (!Dest->isLeaf())
       I.error("set destination should be a register!");
 
@@ -3223,18 +3287,17 @@ public:
   bool mayLoad;
   bool isBitcast;
   bool isVariadic;
+  bool hasChain;
 
   InstAnalyzer(const CodeGenDAGPatterns &cdp)
     : CDP(cdp), hasSideEffects(false), mayStore(false), mayLoad(false),
-      isBitcast(false), isVariadic(false) {}
-
-  void Analyze(const TreePattern *Pat) {
-    // Assume only the first tree is the pattern. The others are clobber nodes.
-    AnalyzeNode(Pat->getTree(0).get());
-  }
+      isBitcast(false), isVariadic(false), hasChain(false) {}
 
   void Analyze(const PatternToMatch &Pat) {
-    AnalyzeNode(Pat.getSrcPattern());
+    const TreePatternNode *N = Pat.getSrcPattern();
+    AnalyzeNode(N);
+    // These properties are detected only on the root node.
+    isBitcast = IsNodeBitcast(N);
   }
 
 private:
@@ -3242,20 +3305,12 @@ private:
     if (hasSideEffects || mayLoad || mayStore || isVariadic)
       return false;
 
-    if (N->getNumChildren() != 2)
+    if (N->isLeaf())
+      return false;
+    if (N->getNumChildren() != 1 || !N->getChild(0)->isLeaf())
       return false;
 
-    const TreePatternNode *N0 = N->getChild(0);
-    if (!N0->isLeaf() || !isa<DefInit>(N0->getLeafValue()))
-      return false;
-
-    const TreePatternNode *N1 = N->getChild(1);
-    if (N1->isLeaf())
-      return false;
-    if (N1->getNumChildren() != 1 || !N1->getChild(0)->isLeaf())
-      return false;
-
-    const SDNodeInfo &OpInfo = CDP.getSDNodeInfo(N1->getOperator());
+    const SDNodeInfo &OpInfo = CDP.getSDNodeInfo(N->getOperator());
     if (OpInfo.getNumResults() != 1 || OpInfo.getNumOperands() != 1)
       return false;
     return OpInfo.getEnumName() == "ISD::BITCAST";
@@ -3281,17 +3336,12 @@ public:
     for (unsigned i = 0, e = N->getNumChildren(); i != e; ++i)
       AnalyzeNode(N->getChild(i));
 
-    // Ignore set nodes, which are not SDNodes.
-    if (N->getOperator()->getName() == "set") {
-      isBitcast = IsNodeBitcast(N);
-      return;
-    }
-
     // Notice properties of the node.
     if (N->NodeHasProperty(SDNPMayStore, CDP)) mayStore = true;
     if (N->NodeHasProperty(SDNPMayLoad, CDP)) mayLoad = true;
     if (N->NodeHasProperty(SDNPSideEffect, CDP)) hasSideEffects = true;
     if (N->NodeHasProperty(SDNPVariadic, CDP)) isVariadic = true;
+    if (N->NodeHasProperty(SDNPHasChain, CDP)) hasChain = true;
 
     if (const CodeGenIntrinsic *IntInfo = N->getIntrinsicInfo(CDP)) {
       // If this is an intrinsic, analyze it.
@@ -3354,7 +3404,13 @@ static bool InferFromPattern(CodeGenInstruction &InstInfo,
   InstInfo.mayLoad |= PatInfo.mayLoad;
 
   // These flags are silently added without any verification.
-  InstInfo.isBitcast |= PatInfo.isBitcast;
+  // FIXME: To match historical behavior of TableGen, for now add those flags
+  // only when we're inferring from the primary instruction pattern.
+  if (PatDef->isSubClassOf("Instruction")) {
+    InstInfo.isBitcast |= PatInfo.isBitcast;
+    InstInfo.hasChain |= PatInfo.hasChain;
+    InstInfo.hasChain_Inferred = true;
+  }
 
   // Don't infer isVariadic. This flag means something different on SDNodes and
   // instructions. For example, a CALL SDNode is variadic because it has the
@@ -3425,20 +3481,13 @@ static bool checkOperandClass(CGIOperandList::OperandInfo &OI,
   return false;
 }
 
-const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
+void CodeGenDAGPatterns::parseInstructionPattern(
     CodeGenInstruction &CGI, ListInit *Pat, DAGInstMap &DAGInsts) {
 
   assert(!DAGInsts.count(CGI.TheDef) && "Instruction already parsed!");
 
   // Parse the instruction.
-  auto I = llvm::make_unique<TreePattern>(CGI.TheDef, Pat, true, *this);
-  // Inline pattern fragments into it.
-  I->InlinePatternFragments();
-
-  // Infer as many types as possible.  If we cannot infer all of them, we can
-  // never do anything with this instruction pattern: report it to the user.
-  if (!I->InferAllTypes())
-    I->error("Could not infer all types in pattern!");
+  TreePattern I(CGI.TheDef, Pat, true, *this);
 
   // InstInputs - Keep track of all of the inputs of the instruction, along
   // with the record they are declared as.
@@ -3453,9 +3502,9 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
   // Verify that the top-level forms in the instruction are of void type, and
   // fill in the InstResults map.
   SmallString<32> TypesString;
-  for (unsigned j = 0, e = I->getNumTrees(); j != e; ++j) {
+  for (unsigned j = 0, e = I.getNumTrees(); j != e; ++j) {
     TypesString.clear();
-    TreePatternNodePtr Pat = I->getTree(j);
+    TreePatternNodePtr Pat = I.getTree(j);
     if (Pat->getNumTypes() != 0) {
       raw_svector_ostream OS(TypesString);
       for (unsigned k = 0, ke = Pat->getNumTypes(); k != ke; ++k) {
@@ -3463,13 +3512,13 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
           OS << ", ";
         Pat->getExtType(k).writeToStream(OS);
       }
-      I->error("Top-level forms in instruction pattern should have"
+      I.error("Top-level forms in instruction pattern should have"
                " void types, has types " +
                OS.str());
     }
 
     // Find inputs and outputs, and verify the structure of the uses/defs.
-    FindPatternInputsAndOutputs(*I, Pat, InstInputs, InstResults,
+    FindPatternInputsAndOutputs(I, Pat, InstInputs, InstResults,
                                 InstImpResults);
   }
 
@@ -3479,31 +3528,31 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
   unsigned NumResults = InstResults.size();
 
   // Parse the operands list from the (ops) list, validating it.
-  assert(I->getArgList().empty() && "Args list should still be empty here!");
+  assert(I.getArgList().empty() && "Args list should still be empty here!");
 
   // Check that all of the results occur first in the list.
   std::vector<Record*> Results;
   SmallVector<TreePatternNodePtr, 2> ResNodes;
   for (unsigned i = 0; i != NumResults; ++i) {
     if (i == CGI.Operands.size())
-      I->error("'" + InstResults.begin()->first +
+      I.error("'" + InstResults.begin()->first +
                "' set but does not appear in operand list!");
     const std::string &OpName = CGI.Operands[i].Name;
 
     // Check that it exists in InstResults.
     TreePatternNodePtr RNode = InstResults[OpName];
     if (!RNode)
-      I->error("Operand $" + OpName + " does not exist in operand list!");
+      I.error("Operand $" + OpName + " does not exist in operand list!");
 
 
     Record *R = cast<DefInit>(RNode->getLeafValue())->getDef();
     ResNodes.push_back(std::move(RNode));
     if (!R)
-      I->error("Operand $" + OpName + " should be a set destination: all "
+      I.error("Operand $" + OpName + " should be a set destination: all "
                "outputs must occur before inputs in operand list!");
 
     if (!checkOperandClass(CGI.Operands[i], R))
-      I->error("Operand $" + OpName + " class mismatch!");
+      I.error("Operand $" + OpName + " class mismatch!");
 
     // Remember the return type.
     Results.push_back(CGI.Operands[i].Rec);
@@ -3522,7 +3571,7 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
     CGIOperandList::OperandInfo &Op = CGI.Operands[i];
     const std::string &OpName = Op.Name;
     if (OpName.empty())
-      I->error("Operand #" + Twine(i) + " in operands list has no name!");
+      I.error("Operand #" + Twine(i) + " in operands list has no name!");
 
     if (!InstInputsCheck.count(OpName)) {
       // If this is an operand with a DefaultOps set filled in, we can ignore
@@ -3533,7 +3582,7 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
         if (!getDefaultOperand(Op.Rec).DefaultOps.empty())
           continue;
       }
-      I->error("Operand $" + OpName +
+      I.error("Operand $" + OpName +
                " does not appear in the instruction pattern");
     }
     TreePatternNodePtr InVal = InstInputsCheck[OpName];
@@ -3542,7 +3591,7 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
     if (InVal->isLeaf() && isa<DefInit>(InVal->getLeafValue())) {
       Record *InRec = static_cast<DefInit*>(InVal->getLeafValue())->getDef();
       if (!checkOperandClass(Op, InRec))
-        I->error("Operand $" + OpName + "'s register class disagrees"
+        I.error("Operand $" + OpName + "'s register class disagrees"
                  " between the operand and pattern");
     }
     Operands.push_back(Op.Rec);
@@ -3566,36 +3615,37 @@ const DAGInstruction &CodeGenDAGPatterns::parseInstructionPattern(
   }
 
   if (!InstInputsCheck.empty())
-    I->error("Input operand $" + InstInputsCheck.begin()->first +
-             " occurs in pattern but not in operands list!");
+    I.error("Input operand $" + InstInputsCheck.begin()->first +
+            " occurs in pattern but not in operands list!");
 
   TreePatternNodePtr ResultPattern = std::make_shared<TreePatternNode>(
-      I->getRecord(), ResultNodeOperands,
-      GetNumNodeResults(I->getRecord(), *this));
+      I.getRecord(), ResultNodeOperands,
+      GetNumNodeResults(I.getRecord(), *this));
   // Copy fully inferred output node types to instruction result pattern.
   for (unsigned i = 0; i != NumResults; ++i) {
     assert(ResNodes[i]->getNumTypes() == 1 && "FIXME: Unhandled");
     ResultPattern->setType(i, ResNodes[i]->getExtType(0));
   }
 
+  // FIXME: Assume only the first tree is the pattern. The others are clobber
+  // nodes.
+  TreePatternNodePtr Pattern = I.getTree(0);
+  TreePatternNodePtr SrcPattern;
+  if (Pattern->getOperator()->getName() == "set") {
+    SrcPattern = Pattern->getChild(Pattern->getNumChildren()-1)->clone();
+  } else{
+    // Not a set (store or something?)
+    SrcPattern = Pattern;
+  }
+
   // Create and insert the instruction.
   // FIXME: InstImpResults should not be part of DAGInstruction.
-  Record *R = I->getRecord();
-  DAGInstruction &TheInst =
-      DAGInsts.emplace(std::piecewise_construct, std::forward_as_tuple(R),
-                       std::forward_as_tuple(std::move(I), Results, Operands,
-                                             InstImpResults)).first->second;
+  Record *R = I.getRecord();
+  DAGInsts.emplace(std::piecewise_construct, std::forward_as_tuple(R),
+                   std::forward_as_tuple(Results, Operands, InstImpResults,
+                                         SrcPattern, ResultPattern));
 
-  // Use a temporary tree pattern to infer all types and make sure that the
-  // constructed result is correct.  This depends on the instruction already
-  // being inserted into the DAGInsts map.
-  TreePattern Temp(TheInst.getPattern()->getRecord(), ResultPattern, false,
-                   *this);
-  Temp.InferAllTypes(&TheInst.getPattern()->getNamedNodesMap());
-
-  TheInst.setResultPattern(Temp.getOnlyTree());
-
-  return TheInst;
+  LLVM_DEBUG(I.dump());
 }
 
 /// ParseInstructions - Parse all of the instructions, inlining and resolving
@@ -3635,44 +3685,26 @@ void CodeGenDAGPatterns::ParseInstructions() {
       // Create and insert the instruction.
       std::vector<Record*> ImpResults;
       Instructions.insert(std::make_pair(Instr,
-                          DAGInstruction(nullptr, Results, Operands, ImpResults)));
+                            DAGInstruction(Results, Operands, ImpResults)));
       continue;  // no pattern.
     }
 
     CodeGenInstruction &CGI = Target.getInstruction(Instr);
-    const DAGInstruction &DI = parseInstructionPattern(CGI, LI, Instructions);
-
-    (void)DI;
-    LLVM_DEBUG(DI.getPattern()->dump());
+    parseInstructionPattern(CGI, LI, Instructions);
   }
 
   // If we can, convert the instructions to be patterns that are matched!
   for (auto &Entry : Instructions) {
-    DAGInstruction &TheInst = Entry.second;
-    TreePattern *I = TheInst.getPattern();
-    if (!I) continue;  // No pattern.
-
-    if (PatternRewriter)
-      PatternRewriter(I);
-    // FIXME: Assume only the first tree is the pattern. The others are clobber
-    // nodes.
-    TreePatternNodePtr Pattern = I->getTree(0);
-    TreePatternNodePtr SrcPattern;
-    if (Pattern->getOperator()->getName() == "set") {
-      SrcPattern = Pattern->getChild(Pattern->getNumChildren()-1)->clone();
-    } else{
-      // Not a set (store or something?)
-      SrcPattern = Pattern;
-    }
-
     Record *Instr = Entry.first;
-    ListInit *Preds = Instr->getValueAsListInit("Predicates");
-    int Complexity = Instr->getValueAsInt("AddedComplexity");
-    AddPatternToMatch(
-        I,
-        PatternToMatch(Instr, makePredList(Preds), SrcPattern,
-                       TheInst.getResultPattern(), TheInst.getImpResults(),
-                       Complexity, Instr->getID()));
+    DAGInstruction &TheInst = Entry.second;
+    TreePatternNodePtr SrcPattern = TheInst.getSrcPattern();
+    TreePatternNodePtr ResultPattern = TheInst.getResultPattern();
+
+    if (SrcPattern && ResultPattern) {
+      TreePattern Pattern(Instr, SrcPattern, true, *this);
+      TreePattern Result(Instr, ResultPattern, false, *this);
+      ParseOnePattern(Instr, Pattern, Result, TheInst.getImpResults());
+    }
   }
 }
 
@@ -3758,27 +3790,11 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
   ArrayRef<const CodeGenInstruction*> Instructions =
     Target.getInstructionsByEnumValue();
 
-  // First try to infer flags from the primary instruction pattern, if any.
-  SmallVector<CodeGenInstruction*, 8> Revisit;
   unsigned Errors = 0;
-  for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
-    CodeGenInstruction &InstInfo =
-      const_cast<CodeGenInstruction &>(*Instructions[i]);
 
-    // Get the primary instruction pattern.
-    const TreePattern *Pattern = getInstruction(InstInfo.TheDef).getPattern();
-    if (!Pattern) {
-      if (InstInfo.hasUndefFlags())
-        Revisit.push_back(&InstInfo);
-      continue;
-    }
-    InstAnalyzer PatInfo(*this);
-    PatInfo.Analyze(Pattern);
-    Errors += InferFromPattern(InstInfo, PatInfo, InstInfo.TheDef);
-  }
-
-  // Second, look for single-instruction patterns defined outside the
-  // instruction.
+  // Try to infer flags from all patterns in PatternToMatch.  These include
+  // both the primary instruction patterns (which always come first) and
+  // patterns defined outside the instruction.
   for (const PatternToMatch &PTM : ptms()) {
     // We can only infer from single-instruction patterns, otherwise we won't
     // know which instruction should get the flags.
@@ -3802,9 +3818,11 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
   if (Errors)
     PrintFatalError("pattern conflicts");
 
-  // Revisit instructions with undefined flags and no pattern.
+  // If requested by the target, guess any undefined properties.
   if (Target.guessInstructionProperties()) {
-    for (CodeGenInstruction *InstInfo : Revisit) {
+    for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
+      CodeGenInstruction *InstInfo =
+        const_cast<CodeGenInstruction *>(Instructions[i]);
       if (InstInfo->InferredFrom)
         continue;
       // The mayLoad and mayStore flags default to false.
@@ -3816,7 +3834,9 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
   }
 
   // Complain about any flags that are still undefined.
-  for (CodeGenInstruction *InstInfo : Revisit) {
+  for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
+    CodeGenInstruction *InstInfo =
+      const_cast<CodeGenInstruction *>(Instructions[i]);
     if (InstInfo->InferredFrom)
       continue;
     if (InstInfo->hasSideEffects_Unset)
@@ -3928,6 +3948,122 @@ static bool ForceArbitraryInstResultType(TreePatternNode *N, TreePattern &TP) {
   return false;
 }
 
+void CodeGenDAGPatterns::ParseOnePattern(Record *TheDef,
+       TreePattern &Pattern, TreePattern &Result,
+       const std::vector<Record *> &InstImpResults) {
+
+  // Inline pattern fragments and expand multiple alternatives.
+  Pattern.InlinePatternFragments();
+  Result.InlinePatternFragments();
+
+  if (Result.getNumTrees() != 1)
+    Result.error("Cannot use multi-alternative fragments in result pattern!");
+
+  // Infer types.
+  bool IterateInference;
+  bool InferredAllPatternTypes, InferredAllResultTypes;
+  do {
+    // Infer as many types as possible.  If we cannot infer all of them, we
+    // can never do anything with this pattern: report it to the user.
+    InferredAllPatternTypes =
+        Pattern.InferAllTypes(&Pattern.getNamedNodesMap());
+
+    // Infer as many types as possible.  If we cannot infer all of them, we
+    // can never do anything with this pattern: report it to the user.
+    InferredAllResultTypes =
+        Result.InferAllTypes(&Pattern.getNamedNodesMap());
+
+    IterateInference = false;
+
+    // Apply the type of the result to the source pattern.  This helps us
+    // resolve cases where the input type is known to be a pointer type (which
+    // is considered resolved), but the result knows it needs to be 32- or
+    // 64-bits.  Infer the other way for good measure.
+    for (auto T : Pattern.getTrees())
+      for (unsigned i = 0, e = std::min(Result.getOnlyTree()->getNumTypes(),
+                                        T->getNumTypes());
+         i != e; ++i) {
+        IterateInference |= T->UpdateNodeType(
+            i, Result.getOnlyTree()->getExtType(i), Result);
+        IterateInference |= Result.getOnlyTree()->UpdateNodeType(
+            i, T->getExtType(i), Result);
+      }
+
+    // If our iteration has converged and the input pattern's types are fully
+    // resolved but the result pattern is not fully resolved, we may have a
+    // situation where we have two instructions in the result pattern and
+    // the instructions require a common register class, but don't care about
+    // what actual MVT is used.  This is actually a bug in our modelling:
+    // output patterns should have register classes, not MVTs.
+    //
+    // In any case, to handle this, we just go through and disambiguate some
+    // arbitrary types to the result pattern's nodes.
+    if (!IterateInference && InferredAllPatternTypes &&
+        !InferredAllResultTypes)
+      IterateInference =
+          ForceArbitraryInstResultType(Result.getTree(0).get(), Result);
+  } while (IterateInference);
+
+  // Verify that we inferred enough types that we can do something with the
+  // pattern and result.  If these fire the user has to add type casts.
+  if (!InferredAllPatternTypes)
+    Pattern.error("Could not infer all types in pattern!");
+  if (!InferredAllResultTypes) {
+    Pattern.dump();
+    Result.error("Could not infer all types in pattern result!");
+  }
+
+  // Promote the xform function to be an explicit node if set.
+  const TreePatternNodePtr &DstPattern = Result.getOnlyTree();
+  std::vector<TreePatternNodePtr> ResultNodeOperands;
+  for (unsigned ii = 0, ee = DstPattern->getNumChildren(); ii != ee; ++ii) {
+    TreePatternNodePtr OpNode = DstPattern->getChildShared(ii);
+    if (Record *Xform = OpNode->getTransformFn()) {
+      OpNode->setTransformFn(nullptr);
+      std::vector<TreePatternNodePtr> Children;
+      Children.push_back(OpNode);
+      OpNode = std::make_shared<TreePatternNode>(Xform, Children,
+                                                 OpNode->getNumTypes());
+    }
+    ResultNodeOperands.push_back(OpNode);
+  }
+
+  TreePatternNodePtr DstShared =
+      DstPattern->isLeaf()
+          ? DstPattern
+          : std::make_shared<TreePatternNode>(DstPattern->getOperator(),
+                                              ResultNodeOperands,
+                                              DstPattern->getNumTypes());
+
+  for (unsigned i = 0, e = Result.getOnlyTree()->getNumTypes(); i != e; ++i)
+    DstShared->setType(i, Result.getOnlyTree()->getExtType(i));
+
+  TreePattern Temp(Result.getRecord(), DstShared, false, *this);
+  Temp.InferAllTypes();
+
+  ListInit *Preds = TheDef->getValueAsListInit("Predicates");
+  int Complexity = TheDef->getValueAsInt("AddedComplexity");
+
+  if (PatternRewriter)
+    PatternRewriter(&Pattern);
+
+  // A pattern may end up with an "impossible" type, i.e. a situation
+  // where all types have been eliminated for some node in this pattern.
+  // This could occur for intrinsics that only make sense for a specific
+  // value type, and use a specific register class. If, for some mode,
+  // that register class does not accept that type, the type inference
+  // will lead to a contradiction, which is not an error however, but
+  // a sign that this pattern will simply never match.
+  if (Temp.getOnlyTree()->hasPossibleType())
+    for (auto T : Pattern.getTrees())
+      if (T->hasPossibleType())
+        AddPatternToMatch(&Pattern,
+                          PatternToMatch(TheDef, makePredList(Preds),
+                                         T, Temp.getOnlyTree(),
+                                         InstImpResults, Complexity,
+                                         TheDef->getID()));
+}
+
 void CodeGenDAGPatterns::ParsePatterns() {
   std::vector<Record*> Patterns = Records.getAllDerivedDefinitions("Pattern");
 
@@ -3940,73 +4076,15 @@ void CodeGenDAGPatterns::ParsePatterns() {
 
     TreePattern Pattern(CurPattern, Tree, true, *this);
 
-    // Inline pattern fragments into it.
-    Pattern.InlinePatternFragments();
-
     ListInit *LI = CurPattern->getValueAsListInit("ResultInstrs");
     if (LI->empty()) continue;  // no pattern.
 
     // Parse the instruction.
     TreePattern Result(CurPattern, LI, false, *this);
 
-    // Inline pattern fragments into it.
-    Result.InlinePatternFragments();
-
     if (Result.getNumTrees() != 1)
       Result.error("Cannot handle instructions producing instructions "
                    "with temporaries yet!");
-
-    bool IterateInference;
-    bool InferredAllPatternTypes, InferredAllResultTypes;
-    do {
-      // Infer as many types as possible.  If we cannot infer all of them, we
-      // can never do anything with this pattern: report it to the user.
-      InferredAllPatternTypes =
-          Pattern.InferAllTypes(&Pattern.getNamedNodesMap());
-
-      // Infer as many types as possible.  If we cannot infer all of them, we
-      // can never do anything with this pattern: report it to the user.
-      InferredAllResultTypes =
-          Result.InferAllTypes(&Pattern.getNamedNodesMap());
-
-      IterateInference = false;
-
-      // Apply the type of the result to the source pattern.  This helps us
-      // resolve cases where the input type is known to be a pointer type (which
-      // is considered resolved), but the result knows it needs to be 32- or
-      // 64-bits.  Infer the other way for good measure.
-      for (unsigned i = 0, e = std::min(Result.getTree(0)->getNumTypes(),
-                                        Pattern.getTree(0)->getNumTypes());
-           i != e; ++i) {
-        IterateInference = Pattern.getTree(0)->UpdateNodeType(
-            i, Result.getTree(0)->getExtType(i), Result);
-        IterateInference |= Result.getTree(0)->UpdateNodeType(
-            i, Pattern.getTree(0)->getExtType(i), Result);
-      }
-
-      // If our iteration has converged and the input pattern's types are fully
-      // resolved but the result pattern is not fully resolved, we may have a
-      // situation where we have two instructions in the result pattern and
-      // the instructions require a common register class, but don't care about
-      // what actual MVT is used.  This is actually a bug in our modelling:
-      // output patterns should have register classes, not MVTs.
-      //
-      // In any case, to handle this, we just go through and disambiguate some
-      // arbitrary types to the result pattern's nodes.
-      if (!IterateInference && InferredAllPatternTypes &&
-          !InferredAllResultTypes)
-        IterateInference =
-            ForceArbitraryInstResultType(Result.getTree(0).get(), Result);
-    } while (IterateInference);
-
-    // Verify that we inferred enough types that we can do something with the
-    // pattern and result.  If these fire the user has to add type casts.
-    if (!InferredAllPatternTypes)
-      Pattern.error("Could not infer all types in pattern!");
-    if (!InferredAllResultTypes) {
-      Pattern.dump();
-      Result.error("Could not infer all types in pattern result!");
-    }
 
     // Validate that the input pattern is correct.
     std::map<std::string, TreePatternNodePtr> InstInputs;
@@ -4016,53 +4094,7 @@ void CodeGenDAGPatterns::ParsePatterns() {
       FindPatternInputsAndOutputs(Pattern, Pattern.getTree(j), InstInputs,
                                   InstResults, InstImpResults);
 
-    // Promote the xform function to be an explicit node if set.
-    const TreePatternNodePtr &DstPattern = Result.getOnlyTree();
-    std::vector<TreePatternNodePtr> ResultNodeOperands;
-    for (unsigned ii = 0, ee = DstPattern->getNumChildren(); ii != ee; ++ii) {
-      TreePatternNodePtr OpNode = DstPattern->getChildShared(ii);
-      if (Record *Xform = OpNode->getTransformFn()) {
-        OpNode->setTransformFn(nullptr);
-        std::vector<TreePatternNodePtr> Children;
-        Children.push_back(OpNode);
-        OpNode = std::make_shared<TreePatternNode>(Xform, Children,
-                                                   OpNode->getNumTypes());
-      }
-      ResultNodeOperands.push_back(OpNode);
-    }
-
-    TreePatternNodePtr DstShared =
-        DstPattern->isLeaf()
-            ? DstPattern
-            : std::make_shared<TreePatternNode>(DstPattern->getOperator(),
-                                                ResultNodeOperands,
-                                                DstPattern->getNumTypes());
-
-    for (unsigned i = 0, e = Result.getOnlyTree()->getNumTypes(); i != e; ++i)
-      DstShared->setType(i, Result.getOnlyTree()->getExtType(i));
-
-    TreePattern Temp(Result.getRecord(), DstShared, false, *this);
-    Temp.InferAllTypes();
-
-    // A pattern may end up with an "impossible" type, i.e. a situation
-    // where all types have been eliminated for some node in this pattern.
-    // This could occur for intrinsics that only make sense for a specific
-    // value type, and use a specific register class. If, for some mode,
-    // that register class does not accept that type, the type inference
-    // will lead to a contradiction, which is not an error however, but
-    // a sign that this pattern will simply never match.
-    if (Pattern.getTree(0)->hasPossibleType() &&
-        Temp.getOnlyTree()->hasPossibleType()) {
-      ListInit *Preds = CurPattern->getValueAsListInit("Predicates");
-      int Complexity = CurPattern->getValueAsInt("AddedComplexity");
-      if (PatternRewriter)
-        PatternRewriter(&Pattern);
-      AddPatternToMatch(&Pattern,
-                        PatternToMatch(CurPattern, makePredList(Preds),
-                                       Pattern.getTree(0), Temp.getOnlyTree(),
-                                       std::move(InstImpResults), Complexity,
-                                       CurPattern->getID()));
-    }
+    ParseOnePattern(CurPattern, Pattern, Result, InstImpResults);
   }
 }
 

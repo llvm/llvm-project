@@ -12,8 +12,8 @@
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Sema/AttributeList.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/ParsedAttr.h"
 
 namespace clang {
 

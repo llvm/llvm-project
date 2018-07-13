@@ -135,7 +135,7 @@ bool ExecuteStage::execute(InstRef &IR) {
   if (!HWS.issueImmediately(IR))
     return true;
 
-  LLVM_DEBUG(dbgs() << "[SCHEDULER] Instruction " << IR
+  LLVM_DEBUG(dbgs() << "[SCHEDULER] Instruction #" << IR
                     << " issued immediately\n");
 
   // Issue IR.  The resources for this issuance will be placed in 'Used.'
@@ -153,14 +153,14 @@ bool ExecuteStage::execute(InstRef &IR) {
 
 void ExecuteStage::notifyInstructionExecuted(const InstRef &IR) {
   HWS.onInstructionExecuted(IR);
-  LLVM_DEBUG(dbgs() << "[E] Instruction Executed: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Executed: #" << IR << '\n');
   notifyEvent<HWInstructionEvent>(
       HWInstructionEvent(HWInstructionEvent::Executed, IR));
   RCU.onInstructionExecuted(IR.getInstruction()->getRCUTokenID());
 }
 
 void ExecuteStage::notifyInstructionReady(const InstRef &IR) {
-  LLVM_DEBUG(dbgs() << "[E] Instruction Ready: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Ready: #" << IR << '\n');
   notifyEvent<HWInstructionEvent>(
       HWInstructionEvent(HWInstructionEvent::Ready, IR));
 }
@@ -175,11 +175,11 @@ void ExecuteStage::notifyResourceAvailable(const ResourceRef &RR) {
 void ExecuteStage::notifyInstructionIssued(
     const InstRef &IR, ArrayRef<std::pair<ResourceRef, double>> Used) {
   LLVM_DEBUG({
-    dbgs() << "[E] Instruction Issued: " << IR << '\n';
+    dbgs() << "[E] Instruction Issued: #" << IR << '\n';
     for (const std::pair<ResourceRef, unsigned> &Resource : Used) {
       dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
-             << Resource.first.second << "]\n";
-      dbgs() << "           cycles: " << Resource.second << '\n';
+             << Resource.first.second << "], ";
+      dbgs() << "cycles: " << Resource.second << '\n';
     }
   });
   notifyEvent<HWInstructionEvent>(HWInstructionIssuedEvent(IR, Used));

@@ -994,7 +994,7 @@ void DeclSpec::SaveWrittenBuiltinSpecs() {
   writtenBS.Width = getTypeSpecWidth();
   writtenBS.Type = getTypeSpecType();
   // Search the list of attributes for the presence of a mode attribute.
-  writtenBS.ModeAttr = getAttributes().hasAttribute(AttributeList::AT_Mode);
+  writtenBS.ModeAttr = getAttributes().hasAttribute(ParsedAttr::AT_Mode);
 }
 
 /// Finish - This does final analysis of the declspec, rejecting things like

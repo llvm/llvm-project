@@ -1089,7 +1089,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Check to make sure that any normal attributes are allowed to be on
   // a definition.  Late parsed attributes are checked at the end.
   if (Tok.isNot(tok::equal)) {
-    for (const AttributeList &AL : D.getAttributes())
+    for (const ParsedAttr &AL : D.getAttributes())
       if (AL.isKnownToGCC() && !AL.isCXX11Attribute())
         Diag(AL.getLoc(), diag::warn_attribute_on_function_definition)
             << AL.getName();

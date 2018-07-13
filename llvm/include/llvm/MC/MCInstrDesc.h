@@ -149,7 +149,8 @@ enum Flag {
   ExtractSubreg,
   InsertSubreg,
   Convergent,
-  Add
+  Add,
+  Trap
 };
 }
 
@@ -244,6 +245,9 @@ public:
 
   /// Return true if the instruction is an add instruction.
   bool isAdd() const { return Flags & (1ULL << MCID::Add); }
+
+  /// Return true if this instruction is a trap.
+  bool isTrap() const { return Flags & (1ULL << MCID::Trap); }
 
   /// Return true if the instruction is a register to register move.
   bool isMoveReg() const { return Flags & (1ULL << MCID::MoveReg); }

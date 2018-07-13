@@ -64,13 +64,17 @@ static bool isOmittedBlockReturnType(const Declarator &D) {
 
 /// diagnoseBadTypeAttribute - Diagnoses a type attribute which
 /// doesn't apply to the given type.
-static void diagnoseBadTypeAttribute(Sema &S, const AttributeList &attr,
+static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
                                      QualType type) {
   TypeDiagSelector WhichType;
   bool useExpansionLoc = true;
   switch (attr.getKind()) {
-  case AttributeList::AT_ObjCGC:        WhichType = TDS_Pointer; break;
-  case AttributeList::AT_ObjCOwnership: WhichType = TDS_ObjCObjOrBlock; break;
+  case ParsedAttr::AT_ObjCGC:
+    WhichType = TDS_Pointer;
+    break;
+  case ParsedAttr::AT_ObjCOwnership:
+    WhichType = TDS_ObjCObjOrBlock;
+    break;
   default:
     // Assume everything else was a function attribute.
     WhichType = TDS_Function;
@@ -98,48 +102,48 @@ static void diagnoseBadTypeAttribute(Sema &S, const AttributeList &attr,
 
 // objc_gc applies to Objective-C pointers or, otherwise, to the
 // smallest available pointer type (i.e. 'void*' in 'void**').
-#define OBJC_POINTER_TYPE_ATTRS_CASELIST \
-    case AttributeList::AT_ObjCGC: \
-    case AttributeList::AT_ObjCOwnership
+#define OBJC_POINTER_TYPE_ATTRS_CASELIST                                       \
+  case ParsedAttr::AT_ObjCGC:                                                  \
+  case ParsedAttr::AT_ObjCOwnership
 
 // Calling convention attributes.
-#define CALLING_CONV_ATTRS_CASELIST \
-    case AttributeList::AT_CDecl: \
-    case AttributeList::AT_FastCall: \
-    case AttributeList::AT_StdCall: \
-    case AttributeList::AT_ThisCall: \
-    case AttributeList::AT_RegCall: \
-    case AttributeList::AT_Pascal: \
-    case AttributeList::AT_SwiftCall: \
-    case AttributeList::AT_VectorCall: \
-    case AttributeList::AT_MSABI: \
-    case AttributeList::AT_SysVABI: \
-    case AttributeList::AT_Pcs: \
-    case AttributeList::AT_IntelOclBicc: \
-    case AttributeList::AT_PreserveMost: \
-    case AttributeList::AT_PreserveAll
+#define CALLING_CONV_ATTRS_CASELIST                                            \
+  case ParsedAttr::AT_CDecl:                                                   \
+  case ParsedAttr::AT_FastCall:                                                \
+  case ParsedAttr::AT_StdCall:                                                 \
+  case ParsedAttr::AT_ThisCall:                                                \
+  case ParsedAttr::AT_RegCall:                                                 \
+  case ParsedAttr::AT_Pascal:                                                  \
+  case ParsedAttr::AT_SwiftCall:                                               \
+  case ParsedAttr::AT_VectorCall:                                              \
+  case ParsedAttr::AT_MSABI:                                                   \
+  case ParsedAttr::AT_SysVABI:                                                 \
+  case ParsedAttr::AT_Pcs:                                                     \
+  case ParsedAttr::AT_IntelOclBicc:                                            \
+  case ParsedAttr::AT_PreserveMost:                                            \
+  case ParsedAttr::AT_PreserveAll
 
 // Function type attributes.
-#define FUNCTION_TYPE_ATTRS_CASELIST \
-  case AttributeList::AT_NSReturnsRetained: \
-  case AttributeList::AT_NoReturn: \
-  case AttributeList::AT_Regparm: \
-  case AttributeList::AT_AnyX86NoCallerSavedRegisters: \
-  case AttributeList::AT_AnyX86NoCfCheck: \
+#define FUNCTION_TYPE_ATTRS_CASELIST                                           \
+  case ParsedAttr::AT_NSReturnsRetained:                                       \
+  case ParsedAttr::AT_NoReturn:                                                \
+  case ParsedAttr::AT_Regparm:                                                 \
+  case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
+  case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
     CALLING_CONV_ATTRS_CASELIST
 
 // Microsoft-specific type qualifiers.
-#define MS_TYPE_ATTRS_CASELIST  \
-    case AttributeList::AT_Ptr32: \
-    case AttributeList::AT_Ptr64: \
-    case AttributeList::AT_SPtr: \
-    case AttributeList::AT_UPtr
+#define MS_TYPE_ATTRS_CASELIST                                                 \
+  case ParsedAttr::AT_Ptr32:                                                   \
+  case ParsedAttr::AT_Ptr64:                                                   \
+  case ParsedAttr::AT_SPtr:                                                    \
+  case ParsedAttr::AT_UPtr
 
 // Nullability qualifiers.
-#define NULLABILITY_TYPE_ATTRS_CASELIST         \
-    case AttributeList::AT_TypeNonNull:         \
-    case AttributeList::AT_TypeNullable:        \
-    case AttributeList::AT_TypeNullUnspecified
+#define NULLABILITY_TYPE_ATTRS_CASELIST                                        \
+  case ParsedAttr::AT_TypeNonNull:                                             \
+  case ParsedAttr::AT_TypeNullable:                                            \
+  case ParsedAttr::AT_TypeNullUnspecified
 
 namespace {
   /// An object which stores processing state for the entire
@@ -162,11 +166,11 @@ namespace {
     bool hasSavedAttrs;
 
     /// The original set of attributes on the DeclSpec.
-    SmallVector<AttributeList*, 2> savedAttrs;
+    SmallVector<ParsedAttr *, 2> savedAttrs;
 
     /// A list of attributes to diagnose the uselessness of when the
     /// processing is complete.
-    SmallVector<AttributeList*, 2> ignoredTypeAttrs;
+    SmallVector<ParsedAttr *, 2> ignoredTypeAttrs;
 
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
@@ -207,7 +211,7 @@ namespace {
       if (hasSavedAttrs) return;
 
       DeclSpec &spec = getMutableDeclSpec();
-      for (AttributeList &AL : spec.getAttributes())
+      for (ParsedAttr &AL : spec.getAttributes())
         savedAttrs.push_back(&AL);
       trivial &= savedAttrs.empty();
       hasSavedAttrs = true;
@@ -215,7 +219,7 @@ namespace {
 
     /// Record that we had nowhere to put the given type attribute.
     /// We will diagnose such attributes later.
-    void addIgnoredTypeAttr(AttributeList &attr) {
+    void addIgnoredTypeAttr(ParsedAttr &attr) {
       ignoredTypeAttrs.push_back(&attr);
     }
 
@@ -241,13 +245,13 @@ namespace {
       assert(hasSavedAttrs);
 
       getMutableDeclSpec().getAttributes().clearListOnly();
-      for (AttributeList *AL : savedAttrs)
+      for (ParsedAttr *AL : savedAttrs)
         getMutableDeclSpec().getAttributes().addAtStart(AL);
     }
   };
 } // end anonymous namespace
 
-static void moveAttrFromListToList(AttributeList &attr,
+static void moveAttrFromListToList(ParsedAttr &attr,
                                    ParsedAttributesView &fromList,
                                    ParsedAttributesView &toList) {
   fromList.remove(&attr);
@@ -267,25 +271,23 @@ enum TypeAttrLocation {
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL, ParsedAttributesView &attrs);
 
-static bool handleFunctionTypeAttr(TypeProcessingState &state,
-                                   AttributeList &attr,
+static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type);
 
 static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &state,
-                                             AttributeList &attr,
-                                             QualType &type);
+                                             ParsedAttr &attr, QualType &type);
 
-static bool handleObjCGCTypeAttr(TypeProcessingState &state,
-                                 AttributeList &attr, QualType &type);
+static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
+                                 QualType &type);
 
 static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
-                                       AttributeList &attr, QualType &type);
+                                        ParsedAttr &attr, QualType &type);
 
 static bool handleObjCPointerTypeAttr(TypeProcessingState &state,
-                                      AttributeList &attr, QualType &type) {
-  if (attr.getKind() == AttributeList::AT_ObjCGC)
+                                      ParsedAttr &attr, QualType &type) {
+  if (attr.getKind() == ParsedAttr::AT_ObjCGC)
     return handleObjCGCTypeAttr(state, attr, type);
-  assert(attr.getKind() == AttributeList::AT_ObjCOwnership);
+  assert(attr.getKind() == ParsedAttr::AT_ObjCOwnership);
   return handleObjCOwnershipTypeAttr(state, attr, type);
 }
 
@@ -367,8 +369,7 @@ static DeclaratorChunk *maybeMovePastReturnType(Declarator &declarator,
 /// didn't apply in whatever position it was written in, try to move
 /// it to a more appropriate position.
 static void distributeObjCPointerTypeAttr(TypeProcessingState &state,
-                                          AttributeList &attr,
-                                          QualType type) {
+                                          ParsedAttr &attr, QualType type) {
   Declarator &declarator = state.getDeclarator();
 
   // Move it to the outermost normal or block pointer declarator.
@@ -381,7 +382,7 @@ static void distributeObjCPointerTypeAttr(TypeProcessingState &state,
       // of a block.
       DeclaratorChunk *destChunk = nullptr;
       if (state.isProcessingDeclSpec() &&
-          attr.getKind() == AttributeList::AT_ObjCOwnership)
+          attr.getKind() == ParsedAttr::AT_ObjCOwnership)
         destChunk = maybeMovePastReturnType(declarator, i - 1,
                                             /*onlyBlockPointers=*/true);
       if (!destChunk) destChunk = &chunk;
@@ -398,7 +399,7 @@ static void distributeObjCPointerTypeAttr(TypeProcessingState &state,
     // We may be starting at the return type of a block.
     case DeclaratorChunk::Function:
       if (state.isProcessingDeclSpec() &&
-          attr.getKind() == AttributeList::AT_ObjCOwnership) {
+          attr.getKind() == ParsedAttr::AT_ObjCOwnership) {
         if (DeclaratorChunk *dest = maybeMovePastReturnType(
                                       declarator, i,
                                       /*onlyBlockPointers=*/true)) {
@@ -423,10 +424,8 @@ static void distributeObjCPointerTypeAttr(TypeProcessingState &state,
 
 /// Distribute an objc_gc type attribute that was written on the
 /// declarator.
-static void
-distributeObjCPointerTypeAttrFromDeclarator(TypeProcessingState &state,
-                                            AttributeList &attr,
-                                            QualType &declSpecType) {
+static void distributeObjCPointerTypeAttrFromDeclarator(
+    TypeProcessingState &state, ParsedAttr &attr, QualType &declSpecType) {
   Declarator &declarator = state.getDeclarator();
 
   // objc_gc goes on the innermost pointer to something that's not a
@@ -487,8 +486,7 @@ distributeObjCPointerTypeAttrFromDeclarator(TypeProcessingState &state,
 /// that it didn't apply in whatever position it was written in, try
 /// to move it to a more appropriate position.
 static void distributeFunctionTypeAttr(TypeProcessingState &state,
-                                       AttributeList &attr,
-                                       QualType type) {
+                                       ParsedAttr &attr, QualType type) {
   Declarator &declarator = state.getDeclarator();
 
   // Try to push the attribute from the return type of a function to
@@ -519,7 +517,7 @@ static void distributeFunctionTypeAttr(TypeProcessingState &state,
 /// function chunk or type.  Returns true if the attribute was
 /// distributed, false if no location was found.
 static bool distributeFunctionTypeAttrToInnermost(
-    TypeProcessingState &state, AttributeList &attr,
+    TypeProcessingState &state, ParsedAttr &attr,
     ParsedAttributesView &attrList, QualType &declSpecType) {
   Declarator &declarator = state.getDeclarator();
 
@@ -537,10 +535,9 @@ static bool distributeFunctionTypeAttrToInnermost(
 
 /// A function type attribute was written in the decl spec.  Try to
 /// apply it somewhere.
-static void
-distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
-                                       AttributeList &attr,
-                                       QualType &declSpecType) {
+static void distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
+                                                   ParsedAttr &attr,
+                                                   QualType &declSpecType) {
   state.saveDeclSpecAttrs();
 
   // C++11 attributes before the decl specifiers actually appertain to
@@ -564,10 +561,9 @@ distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
 
 /// A function type attribute was written on the declarator.  Try to
 /// apply it somewhere.
-static void
-distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
-                                         AttributeList &attr,
-                                         QualType &declSpecType) {
+static void distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
+                                                     ParsedAttr &attr,
+                                                     QualType &declSpecType) {
   Declarator &declarator = state.getDeclarator();
 
   // Try to distribute to the innermost.
@@ -599,7 +595,7 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
   // list, so iterating over the existing list isn't possible.  Instead, make a
   // non-owning copy and iterate over that.
   ParsedAttributesView AttrsCopy{state.getDeclarator().getAttributes()};
-  for (AttributeList &attr : AttrsCopy) {
+  for (ParsedAttr &attr : AttrsCopy) {
     // Do not distribute C++11 attributes. They have strict rules for what
     // they appertain to.
     if (attr.isCXX11Attribute())
@@ -622,7 +618,7 @@ static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
       // Nullability specifiers cannot go after the declarator-id.
 
     // Objective-C __kindof does not get distributed.
-    case AttributeList::AT_ObjCKindOf:
+    case ParsedAttr::AT_ObjCKindOf:
       continue;
 
     default:
@@ -728,8 +724,8 @@ static bool checkOmittedBlockReturnType(Sema &S, Declarator &declarator,
     return false;
 
   // Warn if we see type attributes for omitted return type on a block literal.
-  SmallVector<AttributeList *, 2> ToBeRemoved;
-  for (AttributeList &AL : declarator.getMutableDeclSpec().getAttributes()) {
+  SmallVector<ParsedAttr *, 2> ToBeRemoved;
+  for (ParsedAttr &AL : declarator.getMutableDeclSpec().getAttributes()) {
     if (AL.isInvalid() || !AL.isTypeAttr())
       continue;
     S.Diag(AL.getLoc(),
@@ -738,7 +734,7 @@ static bool checkOmittedBlockReturnType(Sema &S, Declarator &declarator,
     ToBeRemoved.push_back(&AL);
   }
   // Remove bad attributes from the list.
-  for (AttributeList *AL : ToBeRemoved)
+  for (ParsedAttr *AL : ToBeRemoved)
     declarator.getMutableDeclSpec().getAttributes().remove(AL);
 
   // Warn if we see type qualifiers for omitted return type on a block literal.
@@ -1169,8 +1165,8 @@ TypeResult Sema::actOnObjCTypeArgsAndProtocolQualifiers(
 
 static OpenCLAccessAttr::Spelling
 getImageAccess(const ParsedAttributesView &Attrs) {
-  for (const AttributeList &AL : Attrs)
-    if (AL.getKind() == AttributeList::AT_OpenCLAccess)
+  for (const ParsedAttr &AL : Attrs)
+    if (AL.getKind() == ParsedAttr::AT_OpenCLAccess)
       return static_cast<OpenCLAccessAttr::Spelling>(AL.getSemanticSpelling());
   return OpenCLAccessAttr::Keyword_read_only;
 }
@@ -2247,6 +2243,58 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   return T;
 }
 
+QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
+                               SourceLocation AttrLoc) {
+  // The base type must be integer (not Boolean or enumeration) or float, and
+  // can't already be a vector.
+  if (!CurType->isDependentType() &&
+      (!CurType->isBuiltinType() || CurType->isBooleanType() ||
+       (!CurType->isIntegerType() && !CurType->isRealFloatingType()))) {
+    Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << CurType;
+    return QualType();
+  }
+
+  if (SizeExpr->isTypeDependent() || SizeExpr->isValueDependent())
+    return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
+                                               VectorType::GenericVector);
+
+  llvm::APSInt VecSize(32);
+  if (!SizeExpr->isIntegerConstantExpr(VecSize, Context)) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "vector_size" << AANT_ArgumentIntegerConstant
+        << SizeExpr->getSourceRange();
+    return QualType();
+  }
+
+  if (CurType->isDependentType())
+    return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
+                                               VectorType::GenericVector);
+
+  unsigned VectorSize = static_cast<unsigned>(VecSize.getZExtValue() * 8);
+  unsigned TypeSize = static_cast<unsigned>(Context.getTypeSize(CurType));
+
+  if (VectorSize == 0) {
+    Diag(AttrLoc, diag::err_attribute_zero_size) << SizeExpr->getSourceRange();
+    return QualType();
+  }
+
+  // vecSize is specified in bytes - convert to bits.
+  if (VectorSize % TypeSize) {
+    Diag(AttrLoc, diag::err_attribute_invalid_size)
+        << SizeExpr->getSourceRange();
+    return QualType();
+  }
+
+  if (VectorType::isVectorSizeTooLarge(VectorSize / TypeSize)) {
+    Diag(AttrLoc, diag::err_attribute_size_too_large)
+        << SizeExpr->getSourceRange();
+    return QualType();
+  }
+
+  return Context.getVectorType(CurType, VectorSize / TypeSize,
+                               VectorType::GenericVector);
+}
+
 /// Build an ext-vector type.
 ///
 /// Run the required checks for the extended vector type.
@@ -2599,8 +2647,8 @@ static void inferARCWriteback(TypeProcessingState &state,
     if (chunk.Kind != DeclaratorChunk::Pointer &&
         chunk.Kind != DeclaratorChunk::BlockPointer)
       return;
-    for (const AttributeList &AL : chunk.getAttrs())
-      if (AL.getKind() == AttributeList::AT_ObjCOwnership)
+    for (const ParsedAttr &AL : chunk.getAttrs())
+      if (AL.getKind() == ParsedAttr::AT_ObjCOwnership)
         return;
 
     transferARCOwnershipToDeclaratorChunk(state, Qualifiers::OCL_Autoreleasing,
@@ -3272,7 +3320,7 @@ static CallingConv getCCForDeclaratorChunk(
   assert(D.getTypeObject(ChunkIndex).Kind == DeclaratorChunk::Function);
 
   // Check for an explicit CC attribute.
-  for (const AttributeList &AL : AttrList) {
+  for (const ParsedAttr &AL : AttrList) {
     switch (AL.getKind()) {
     CALLING_CONV_ATTRS_CASELIST : {
       // Ignore attributes that don't validate or can't apply to the
@@ -3335,8 +3383,8 @@ static CallingConv getCCForDeclaratorChunk(
   // convention attribute. This is the simplest place to infer
   // calling convention for OpenCL kernels.
   if (S.getLangOpts().OpenCL) {
-    for (const AttributeList &AL : D.getDeclSpec().getAttributes()) {
-      if (AL.getKind() == AttributeList::AT_OpenCLKernel) {
+    for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
+      if (AL.getKind() == ParsedAttr::AT_OpenCLKernel) {
         CC = CC_OpenCLKernel;
         break;
       }
@@ -3388,10 +3436,10 @@ IdentifierInfo *Sema::getNSErrorIdent() {
 /// Check whether there is a nullability attribute of any kind in the given
 /// attribute list.
 static bool hasNullabilityAttr(const ParsedAttributesView &attrs) {
-  for (const AttributeList &AL : attrs) {
-    if (AL.getKind() == AttributeList::AT_TypeNonNull ||
-        AL.getKind() == AttributeList::AT_TypeNullable ||
-        AL.getKind() == AttributeList::AT_TypeNullUnspecified)
+  for (const ParsedAttr &AL : attrs) {
+    if (AL.getKind() == ParsedAttr::AT_TypeNonNull ||
+        AL.getKind() == ParsedAttr::AT_TypeNullable ||
+        AL.getKind() == ParsedAttr::AT_TypeNullUnspecified)
       return true;
   }
 
@@ -3995,9 +4043,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // infer the inner pointer as _Nullable.
           auto hasCFReturnsAttr =
               [](const ParsedAttributesView &AttrList) -> bool {
-            return AttrList.hasAttribute(AttributeList::AT_CFReturnsRetained) ||
-                   AttrList.hasAttribute(
-                       AttributeList::AT_CFReturnsNotRetained);
+            return AttrList.hasAttribute(ParsedAttr::AT_CFReturnsRetained) ||
+                   AttrList.hasAttribute(ParsedAttr::AT_CFReturnsNotRetained);
           };
           if (const auto *InnermostChunk = D.getInnermostNonParenChunk()) {
             if (hasCFReturnsAttr(D.getAttributes()) ||
@@ -4061,7 +4108,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   auto inferPointerNullability =
       [&](SimplePointerKind pointerKind, SourceLocation pointerLoc,
           SourceLocation pointerEndLoc,
-          ParsedAttributesView &attrs) -> AttributeList * {
+          ParsedAttributesView &attrs) -> ParsedAttr * {
     // We've seen a pointer.
     if (NumPointersRemaining > 0)
       --NumPointersRemaining;
@@ -4072,16 +4119,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
     // If we're supposed to infer nullability, do so now.
     if (inferNullability && !inferNullabilityInnerOnlyComplete) {
-      AttributeList::Syntax syntax
-        = inferNullabilityCS ? AttributeList::AS_ContextSensitiveKeyword
-                             : AttributeList::AS_Keyword;
-      AttributeList *nullabilityAttr = state.getDeclarator().getAttributePool()
-                                         .create(
-                                           S.getNullabilityKeyword(
-                                             *inferNullability),
-                                           SourceRange(pointerLoc),
-                                           nullptr, SourceLocation(),
-                                           nullptr, 0, syntax);
+      ParsedAttr::Syntax syntax = inferNullabilityCS
+                                      ? ParsedAttr::AS_ContextSensitiveKeyword
+                                      : ParsedAttr::AS_Keyword;
+      ParsedAttr *nullabilityAttr =
+          state.getDeclarator().getAttributePool().create(
+              S.getNullabilityKeyword(*inferNullability),
+              SourceRange(pointerLoc), nullptr, SourceLocation(), nullptr, 0,
+              syntax);
 
       attrs.addAtStart(nullabilityAttr);
 
@@ -4474,16 +4519,16 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         SourceLocation AttrLoc;
         if (chunkIndex + 1 < D.getNumTypeObjects()) {
           DeclaratorChunk ReturnTypeChunk = D.getTypeObject(chunkIndex + 1);
-          for (const AttributeList &AL : ReturnTypeChunk.getAttrs()) {
-            if (AL.getKind() == AttributeList::AT_ObjCOwnership) {
+          for (const ParsedAttr &AL : ReturnTypeChunk.getAttrs()) {
+            if (AL.getKind() == ParsedAttr::AT_ObjCOwnership) {
               AttrLoc = AL.getLoc();
               break;
             }
           }
         }
         if (AttrLoc.isInvalid()) {
-          for (const AttributeList &AL : D.getDeclSpec().getAttributes()) {
-            if (AL.getKind() == AttributeList::AT_ObjCOwnership) {
+          for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
+            if (AL.getKind() == ParsedAttr::AT_ObjCOwnership) {
               AttrLoc = AL.getLoc();
               break;
             }
@@ -4536,7 +4581,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // function is marked with the "overloadable" attribute. Scan
         // for this attribute now.
         if (!FTI.NumParams && FTI.isVariadic && !LangOpts.CPlusPlus)
-          if (!D.getAttributes().hasAttribute(AttributeList::AT_Overloadable))
+          if (!D.getAttributes().hasAttribute(ParsedAttr::AT_Overloadable))
             S.Diag(FTI.getEllipsisLoc(), diag::err_ellipsis_first_param);
 
         if (FTI.NumParams && FTI.Params[0].Param == nullptr) {
@@ -5024,7 +5069,7 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
 
   // Look for an explicit lifetime attribute.
   DeclaratorChunk &chunk = D.getTypeObject(chunkIndex);
-  if (chunk.getAttrs().hasAttribute(AttributeList::AT_ObjCOwnership))
+  if (chunk.getAttrs().hasAttribute(ParsedAttr::AT_ObjCOwnership))
     return;
 
   const char *attrStr = nullptr;
@@ -5044,10 +5089,10 @@ static void transferARCOwnershipToDeclaratorChunk(TypeProcessingState &state,
 
   // If there wasn't one, add one (with an invalid source location
   // so that we don't make an AttributedType for it).
-  AttributeList *attr = D.getAttributePool()
-    .create(&S.Context.Idents.get("objc_ownership"), SourceLocation(),
-            /*scope*/ nullptr, SourceLocation(),
-            /*args*/ &Args, 1, AttributeList::AS_GNU);
+  ParsedAttr *attr = D.getAttributePool().create(
+      &S.Context.Idents.get("objc_ownership"), SourceLocation(),
+      /*scope*/ nullptr, SourceLocation(),
+      /*args*/ &Args, 1, ParsedAttr::AS_GNU);
   chunk.getAttrs().addAtStart(attr);
   // TODO: mark whether we did this inference?
 }
@@ -5119,81 +5164,80 @@ TypeSourceInfo *Sema::GetTypeForDeclaratorCast(Declarator &D, QualType FromTy) {
   return GetFullTypeForDeclarator(state, declSpecTy, ReturnTypeInfo);
 }
 
-/// Map an AttributedType::Kind to an AttributeList::Kind.
-static AttributeList::Kind getAttrListKind(AttributedType::Kind kind) {
+/// Map an AttributedType::Kind to an ParsedAttr::Kind.
+static ParsedAttr::Kind getAttrListKind(AttributedType::Kind kind) {
   switch (kind) {
   case AttributedType::attr_address_space:
-    return AttributeList::AT_AddressSpace;
+    return ParsedAttr::AT_AddressSpace;
   case AttributedType::attr_regparm:
-    return AttributeList::AT_Regparm;
+    return ParsedAttr::AT_Regparm;
   case AttributedType::attr_vector_size:
-    return AttributeList::AT_VectorSize;
+    return ParsedAttr::AT_VectorSize;
   case AttributedType::attr_neon_vector_type:
-    return AttributeList::AT_NeonVectorType;
+    return ParsedAttr::AT_NeonVectorType;
   case AttributedType::attr_neon_polyvector_type:
-    return AttributeList::AT_NeonPolyVectorType;
+    return ParsedAttr::AT_NeonPolyVectorType;
   case AttributedType::attr_objc_gc:
-    return AttributeList::AT_ObjCGC;
+    return ParsedAttr::AT_ObjCGC;
   case AttributedType::attr_objc_ownership:
   case AttributedType::attr_objc_inert_unsafe_unretained:
-    return AttributeList::AT_ObjCOwnership;
+    return ParsedAttr::AT_ObjCOwnership;
   case AttributedType::attr_noreturn:
-    return AttributeList::AT_NoReturn;
+    return ParsedAttr::AT_NoReturn;
   case AttributedType::attr_nocf_check:
-    return AttributeList::AT_AnyX86NoCfCheck;
+    return ParsedAttr::AT_AnyX86NoCfCheck;
   case AttributedType::attr_cdecl:
-    return AttributeList::AT_CDecl;
+    return ParsedAttr::AT_CDecl;
   case AttributedType::attr_fastcall:
-    return AttributeList::AT_FastCall;
+    return ParsedAttr::AT_FastCall;
   case AttributedType::attr_stdcall:
-    return AttributeList::AT_StdCall;
+    return ParsedAttr::AT_StdCall;
   case AttributedType::attr_thiscall:
-    return AttributeList::AT_ThisCall;
+    return ParsedAttr::AT_ThisCall;
   case AttributedType::attr_regcall:
-    return AttributeList::AT_RegCall;
+    return ParsedAttr::AT_RegCall;
   case AttributedType::attr_pascal:
-    return AttributeList::AT_Pascal;
+    return ParsedAttr::AT_Pascal;
   case AttributedType::attr_swiftcall:
-    return AttributeList::AT_SwiftCall;
+    return ParsedAttr::AT_SwiftCall;
   case AttributedType::attr_vectorcall:
-    return AttributeList::AT_VectorCall;
+    return ParsedAttr::AT_VectorCall;
   case AttributedType::attr_pcs:
   case AttributedType::attr_pcs_vfp:
-    return AttributeList::AT_Pcs;
+    return ParsedAttr::AT_Pcs;
   case AttributedType::attr_inteloclbicc:
-    return AttributeList::AT_IntelOclBicc;
+    return ParsedAttr::AT_IntelOclBicc;
   case AttributedType::attr_ms_abi:
-    return AttributeList::AT_MSABI;
+    return ParsedAttr::AT_MSABI;
   case AttributedType::attr_sysv_abi:
-    return AttributeList::AT_SysVABI;
+    return ParsedAttr::AT_SysVABI;
   case AttributedType::attr_preserve_most:
-    return AttributeList::AT_PreserveMost;
+    return ParsedAttr::AT_PreserveMost;
   case AttributedType::attr_preserve_all:
-    return AttributeList::AT_PreserveAll;
+    return ParsedAttr::AT_PreserveAll;
   case AttributedType::attr_ptr32:
-    return AttributeList::AT_Ptr32;
+    return ParsedAttr::AT_Ptr32;
   case AttributedType::attr_ptr64:
-    return AttributeList::AT_Ptr64;
+    return ParsedAttr::AT_Ptr64;
   case AttributedType::attr_sptr:
-    return AttributeList::AT_SPtr;
+    return ParsedAttr::AT_SPtr;
   case AttributedType::attr_uptr:
-    return AttributeList::AT_UPtr;
+    return ParsedAttr::AT_UPtr;
   case AttributedType::attr_nonnull:
-    return AttributeList::AT_TypeNonNull;
+    return ParsedAttr::AT_TypeNonNull;
   case AttributedType::attr_nullable:
-    return AttributeList::AT_TypeNullable;
+    return ParsedAttr::AT_TypeNullable;
   case AttributedType::attr_null_unspecified:
-    return AttributeList::AT_TypeNullUnspecified;
+    return ParsedAttr::AT_TypeNullUnspecified;
   case AttributedType::attr_objc_kindof:
-    return AttributeList::AT_ObjCKindOf;
+    return ParsedAttr::AT_ObjCKindOf;
   case AttributedType::attr_ns_returns_retained:
-    return AttributeList::AT_NSReturnsRetained;
+    return ParsedAttr::AT_NSReturnsRetained;
   }
   llvm_unreachable("unexpected attribute kind!");
 }
 
-static void setAttributedTypeLoc(AttributedTypeLoc TL,
-                                 const AttributeList &attr) {
+static void setAttributedTypeLoc(AttributedTypeLoc TL, const ParsedAttr &attr) {
   TL.setAttrNameLoc(attr.getLoc());
   if (TL.hasAttrExprOperand()) {
     assert(attr.isArgExpr(0) && "mismatched attribute operand kind");
@@ -5219,13 +5263,13 @@ static void fillAttributedTypeLoc(AttributedTypeLoc TL,
   assert((!Attrs.empty() || !DeclAttrs.empty()) &&
          "no type attributes in the expected location!");
 
-  AttributeList::Kind parsedKind = getAttrListKind(TL.getAttrKind());
+  ParsedAttr::Kind parsedKind = getAttrListKind(TL.getAttrKind());
   // Try to search for an attribute of matching kind in Attrs list.
-  for (const AttributeList &AL : Attrs)
+  for (const ParsedAttr &AL : Attrs)
     if (AL.getKind() == parsedKind)
       return setAttributedTypeLoc(TL, AL);
 
-  for (const AttributeList &AL : DeclAttrs)
+  for (const ParsedAttr &AL : DeclAttrs)
     if (AL.isCXX11Attribute() || AL.getKind() == parsedKind)
       return setAttributedTypeLoc(TL, AL);
   llvm_unreachable("no matching type attribute in expected location!");
@@ -5549,8 +5593,8 @@ static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
 static void
 fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
                                  const ParsedAttributesView &Attrs) {
-  for (const AttributeList &AL : Attrs) {
-    if (AL.getKind() == AttributeList::AT_AddressSpace) {
+  for (const ParsedAttr &AL : Attrs) {
+    if (AL.getKind() == ParsedAttr::AT_AddressSpace) {
       DASTL.setAttrNameLoc(AL.getLoc());
       DASTL.setAttrExprOperand(AL.getArgAsExpr(0));
       DASTL.setAttrOperandParensRange(SourceRange());
@@ -5755,7 +5799,7 @@ QualType Sema::BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
 /// specified type.  The attribute contains 1 argument, the id of the address
 /// space for the type.
 static void HandleAddressSpaceTypeAttribute(QualType &Type,
-                                            const AttributeList &Attr, Sema &S){
+                                            const ParsedAttr &Attr, Sema &S) {
   // ISO/IEC TR 18037 S5.3 (amending C99 6.7.3): "A function type shall not be
   // qualified by an address-space qualifier."
   if (Type->isFunctionType()) {
@@ -5765,7 +5809,7 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
   }
 
   LangAS ASIdx;
-  if (Attr.getKind() == AttributeList::AT_AddressSpace) {
+  if (Attr.getKind() == ParsedAttr::AT_AddressSpace) {
 
     // Check the attribute arguments.
     if (Attr.getNumArgs() != 1) {
@@ -5804,15 +5848,15 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
   } else {
     // The keyword-based type attributes imply which address space to use.
     switch (Attr.getKind()) {
-    case AttributeList::AT_OpenCLGlobalAddressSpace:
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
       ASIdx = LangAS::opencl_global; break;
-    case AttributeList::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_OpenCLLocalAddressSpace:
       ASIdx = LangAS::opencl_local; break;
-    case AttributeList::AT_OpenCLConstantAddressSpace:
+    case ParsedAttr::AT_OpenCLConstantAddressSpace:
       ASIdx = LangAS::opencl_constant; break;
-    case AttributeList::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_OpenCLGenericAddressSpace:
       ASIdx = LangAS::opencl_generic; break;
-    case AttributeList::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
       ASIdx = LangAS::opencl_private; break;
     default:
       llvm_unreachable("Invalid address space");
@@ -5872,8 +5916,7 @@ static bool hasDirectOwnershipQualifier(QualType type) {
 ///
 /// Returns 'true' if the attribute was handled.
 static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
-                                       AttributeList &attr,
-                                       QualType &type) {
+                                        ParsedAttr &attr, QualType &type) {
   bool NonObjCPointer = false;
 
   if (!type->isDependentType() && !type->isUndeducedType()) {
@@ -6058,8 +6101,7 @@ static bool handleObjCOwnershipTypeAttr(TypeProcessingState &state,
 /// attribute on the specified type.  Returns true to indicate that
 /// the attribute was handled, false to indicate that the type does
 /// not permit the attribute.
-static bool handleObjCGCTypeAttr(TypeProcessingState &state,
-                                 AttributeList &attr,
+static bool handleObjCGCTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                  QualType &type) {
   Sema &S = state.getSema();
 
@@ -6251,11 +6293,10 @@ namespace {
 } // end anonymous namespace
 
 static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
-                                             AttributeList &Attr,
-                                             QualType &Type) {
+                                             ParsedAttr &Attr, QualType &Type) {
   Sema &S = State.getSema();
 
-  AttributeList::Kind Kind = Attr.getKind();
+  ParsedAttr::Kind Kind = Attr.getKind();
   QualType Desugared = Type;
   const AttributedType *AT = dyn_cast<AttributedType>(Type);
   while (AT) {
@@ -6272,16 +6313,16 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
     // You cannot have both __sptr and __uptr on the same type, nor can you
     // have __ptr32 and __ptr64.
     if ((CurAttrKind == AttributedType::attr_ptr32 &&
-         Kind == AttributeList::AT_Ptr64) ||
+         Kind == ParsedAttr::AT_Ptr64) ||
         (CurAttrKind == AttributedType::attr_ptr64 &&
-         Kind == AttributeList::AT_Ptr32)) {
+         Kind == ParsedAttr::AT_Ptr32)) {
       S.Diag(Attr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__ptr32'" << "'__ptr64'";
       return true;
     } else if ((CurAttrKind == AttributedType::attr_sptr &&
-                Kind == AttributeList::AT_UPtr) ||
+                Kind == ParsedAttr::AT_UPtr) ||
                (CurAttrKind == AttributedType::attr_uptr &&
-                Kind == AttributeList::AT_SPtr)) {
+                Kind == ParsedAttr::AT_SPtr)) {
       S.Diag(Attr.getLoc(), diag::err_attributes_are_not_compatible)
         << "'__sptr'" << "'__uptr'";
       return true;
@@ -6306,10 +6347,18 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   AttributedType::Kind TAK;
   switch (Kind) {
   default: llvm_unreachable("Unknown attribute kind");
-  case AttributeList::AT_Ptr32: TAK = AttributedType::attr_ptr32; break;
-  case AttributeList::AT_Ptr64: TAK = AttributedType::attr_ptr64; break;
-  case AttributeList::AT_SPtr: TAK = AttributedType::attr_sptr; break;
-  case AttributeList::AT_UPtr: TAK = AttributedType::attr_uptr; break;
+  case ParsedAttr::AT_Ptr32:
+    TAK = AttributedType::attr_ptr32;
+    break;
+  case ParsedAttr::AT_Ptr64:
+    TAK = AttributedType::attr_ptr64;
+    break;
+  case ParsedAttr::AT_SPtr:
+    TAK = AttributedType::attr_sptr;
+    break;
+  case ParsedAttr::AT_UPtr:
+    TAK = AttributedType::attr_uptr;
+    break;
   }
 
   Type = S.Context.getAttributedType(TAK, Type, Type);
@@ -6460,15 +6509,15 @@ bool Sema::checkObjCKindOfType(QualType &type, SourceLocation loc) {
 }
 
 /// Map a nullability attribute kind to a nullability kind.
-static NullabilityKind mapNullabilityAttrKind(AttributeList::Kind kind) {
+static NullabilityKind mapNullabilityAttrKind(ParsedAttr::Kind kind) {
   switch (kind) {
-  case AttributeList::AT_TypeNonNull:
+  case ParsedAttr::AT_TypeNonNull:
     return NullabilityKind::NonNull;
 
-  case AttributeList::AT_TypeNullable:
+  case ParsedAttr::AT_TypeNullable:
     return NullabilityKind::Nullable;
 
-  case AttributeList::AT_TypeNullUnspecified:
+  case ParsedAttr::AT_TypeNullUnspecified:
     return NullabilityKind::Unspecified;
 
   default:
@@ -6483,8 +6532,7 @@ static NullabilityKind mapNullabilityAttrKind(AttributeList::Kind kind) {
 /// \returns true if the nullability annotation was distributed, false
 /// otherwise.
 static bool distributeNullabilityTypeAttr(TypeProcessingState &state,
-                                          QualType type,
-                                          AttributeList &attr) {
+                                          QualType type, ParsedAttr &attr) {
   Declarator &declarator = state.getDeclarator();
 
   /// Attempt to move the attribute to the specified chunk.
@@ -6564,28 +6612,28 @@ static bool distributeNullabilityTypeAttr(TypeProcessingState &state,
   return false;
 }
 
-static AttributedType::Kind getCCTypeAttrKind(AttributeList &Attr) {
+static AttributedType::Kind getCCTypeAttrKind(ParsedAttr &Attr) {
   assert(!Attr.isInvalid());
   switch (Attr.getKind()) {
   default:
     llvm_unreachable("not a calling convention attribute");
-  case AttributeList::AT_CDecl:
+  case ParsedAttr::AT_CDecl:
     return AttributedType::attr_cdecl;
-  case AttributeList::AT_FastCall:
+  case ParsedAttr::AT_FastCall:
     return AttributedType::attr_fastcall;
-  case AttributeList::AT_StdCall:
+  case ParsedAttr::AT_StdCall:
     return AttributedType::attr_stdcall;
-  case AttributeList::AT_ThisCall:
+  case ParsedAttr::AT_ThisCall:
     return AttributedType::attr_thiscall;
-  case AttributeList::AT_RegCall:
+  case ParsedAttr::AT_RegCall:
     return AttributedType::attr_regcall;
-  case AttributeList::AT_Pascal:
+  case ParsedAttr::AT_Pascal:
     return AttributedType::attr_pascal;
-  case AttributeList::AT_SwiftCall:
+  case ParsedAttr::AT_SwiftCall:
     return AttributedType::attr_swiftcall;
-  case AttributeList::AT_VectorCall:
+  case ParsedAttr::AT_VectorCall:
     return AttributedType::attr_vectorcall;
-  case AttributeList::AT_Pcs: {
+  case ParsedAttr::AT_Pcs: {
     // The attribute may have had a fixit applied where we treated an
     // identifier as a string literal.  The contents of the string are valid,
     // but the form may not be.
@@ -6598,15 +6646,15 @@ static AttributedType::Kind getCCTypeAttrKind(AttributeList &Attr) {
         .Case("aapcs", AttributedType::attr_pcs)
         .Case("aapcs-vfp", AttributedType::attr_pcs_vfp);
   }
-  case AttributeList::AT_IntelOclBicc:
+  case ParsedAttr::AT_IntelOclBicc:
     return AttributedType::attr_inteloclbicc;
-  case AttributeList::AT_MSABI:
+  case ParsedAttr::AT_MSABI:
     return AttributedType::attr_ms_abi;
-  case AttributeList::AT_SysVABI:
+  case ParsedAttr::AT_SysVABI:
     return AttributedType::attr_sysv_abi;
-  case AttributeList::AT_PreserveMost:
+  case ParsedAttr::AT_PreserveMost:
     return AttributedType::attr_preserve_most;
-  case AttributeList::AT_PreserveAll:
+  case ParsedAttr::AT_PreserveAll:
     return AttributedType::attr_preserve_all;
   }
   llvm_unreachable("unexpected attribute kind!");
@@ -6614,14 +6662,13 @@ static AttributedType::Kind getCCTypeAttrKind(AttributeList &Attr) {
 
 /// Process an individual function attribute.  Returns true to
 /// indicate that the attribute was handled, false if it wasn't.
-static bool handleFunctionTypeAttr(TypeProcessingState &state,
-                                   AttributeList &attr,
+static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type) {
   Sema &S = state.getSema();
 
   FunctionTypeUnwrapper unwrapped(S, type);
 
-  if (attr.getKind() == AttributeList::AT_NoReturn) {
+  if (attr.getKind() == ParsedAttr::AT_NoReturn) {
     if (S.CheckAttrNoArgs(attr))
       return true;
 
@@ -6637,7 +6684,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state,
 
   // ns_returns_retained is not always a type attribute, but if we got
   // here, we're treating it as one right now.
-  if (attr.getKind() == AttributeList::AT_NSReturnsRetained) {
+  if (attr.getKind() == ParsedAttr::AT_NSReturnsRetained) {
     if (attr.getNumArgs()) return true;
 
     // Delay if this is not a function type.
@@ -6661,7 +6708,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state,
     return true;
   }
 
-  if (attr.getKind() == AttributeList::AT_AnyX86NoCallerSavedRegisters) {
+  if (attr.getKind() == ParsedAttr::AT_AnyX86NoCallerSavedRegisters) {
     if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
       return true;
 
@@ -6675,7 +6722,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state,
     return true;
   }
 
-  if (attr.getKind() == AttributeList::AT_AnyX86NoCfCheck) {
+  if (attr.getKind() == ParsedAttr::AT_AnyX86NoCfCheck) {
     if (!S.getLangOpts().CFProtectionBranch) {
       S.Diag(attr.getLoc(), diag::warn_nocf_check_attribute_ignored);
       attr.setInvalid();
@@ -6696,7 +6743,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state,
     return true;
   }
 
-  if (attr.getKind() == AttributeList::AT_Regparm) {
+  if (attr.getKind() == ParsedAttr::AT_Regparm) {
     unsigned value;
     if (S.CheckRegparmAttr(attr, value))
       return true;
@@ -6853,7 +6900,7 @@ void Sema::adjustMemberFunctionCC(QualType &T, bool IsStatic, bool IsCtorOrDtor,
 /// The raw attribute should contain precisely 1 argument, the vector size for
 /// the variable, measured in bytes. If curType and rawAttr are well formed,
 /// this routine will return a new vector type.
-static void HandleVectorSizeAttr(QualType& CurType, const AttributeList &Attr,
+static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
                                  Sema &S) {
   // Check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
@@ -6862,58 +6909,35 @@ static void HandleVectorSizeAttr(QualType& CurType, const AttributeList &Attr,
     Attr.setInvalid();
     return;
   }
-  Expr *sizeExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
-  llvm::APSInt vecSize(32);
-  if (sizeExpr->isTypeDependent() || sizeExpr->isValueDependent() ||
-      !sizeExpr->isIntegerConstantExpr(vecSize, S.Context)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_argument_type)
-      << Attr.getName() << AANT_ArgumentIntegerConstant
-      << sizeExpr->getSourceRange();
-    Attr.setInvalid();
-    return;
-  }
-  // The base type must be integer (not Boolean or enumeration) or float, and
-  // can't already be a vector.
-  if (!CurType->isBuiltinType() || CurType->isBooleanType() ||
-      (!CurType->isIntegerType() && !CurType->isRealFloatingType())) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_invalid_vector_type) << CurType;
-    Attr.setInvalid();
-    return;
-  }
-  unsigned typeSize = static_cast<unsigned>(S.Context.getTypeSize(CurType));
-  // vecSize is specified in bytes - convert to bits.
-  unsigned vectorSize = static_cast<unsigned>(vecSize.getZExtValue() * 8);
 
-  // the vector size needs to be an integral multiple of the type size.
-  if (vectorSize % typeSize) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_invalid_size)
-      << sizeExpr->getSourceRange();
-    Attr.setInvalid();
-    return;
-  }
-  if (VectorType::isVectorSizeTooLarge(vectorSize / typeSize)) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_size_too_large)
-      << sizeExpr->getSourceRange();
-    Attr.setInvalid();
-    return;
-  }
-  if (vectorSize == 0) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_zero_size)
-      << sizeExpr->getSourceRange();
-    Attr.setInvalid();
-    return;
+  Expr *SizeExpr;
+  // Special case where the argument is a template id.
+  if (Attr.isArgIdent(0)) {
+    CXXScopeSpec SS;
+    SourceLocation TemplateKWLoc;
+    UnqualifiedId Id;
+    Id.setIdentifier(Attr.getArgAsIdent(0)->Ident, Attr.getLoc());
+
+    ExprResult Size = S.ActOnIdExpression(S.getCurScope(), SS, TemplateKWLoc,
+                                          Id, false, false);
+
+    if (Size.isInvalid())
+      return;
+    SizeExpr = Size.get();
+  } else {
+    SizeExpr = Attr.getArgAsExpr(0);
   }
 
-  // Success! Instantiate the vector type, the number of elements is > 0, and
-  // not required to be a power of 2, unlike GCC.
-  CurType = S.Context.getVectorType(CurType, vectorSize/typeSize,
-                                    VectorType::GenericVector);
+  QualType T = S.BuildVectorType(CurType, SizeExpr, Attr.getLoc());
+  if (!T.isNull())
+    CurType = T;
+  else
+    Attr.setInvalid();
 }
 
 /// Process the OpenCL-like ext_vector_type attribute when it occurs on
 /// a type.
-static void HandleExtVectorTypeAttr(QualType &CurType,
-                                    const AttributeList &Attr,
+static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                     Sema &S) {
   // check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
@@ -7002,9 +7026,8 @@ static bool isPermittedNeonBaseType(QualType &Ty,
 /// the argument to these Neon attributes is the number of vector elements,
 /// not the vector size in bytes.  The vector width and element type must
 /// match one of the standard Neon vector types.
-static void HandleNeonVectorTypeAttr(QualType& CurType,
-                                     const AttributeList &Attr, Sema &S,
-                                     VectorType::VectorKind VecKind) {
+static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
+                                     Sema &S, VectorType::VectorKind VecKind) {
   // Target must have NEON
   if (!S.Context.getTargetInfo().hasFeature("neon")) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr.getName();
@@ -7050,7 +7073,7 @@ static void HandleNeonVectorTypeAttr(QualType& CurType,
 }
 
 /// Handle OpenCL Access Qualifier Attribute.
-static void HandleOpenCLAccessAttr(QualType &CurType, const AttributeList &Attr,
+static void HandleOpenCLAccessAttr(QualType &CurType, const ParsedAttr &Attr,
                                    Sema &S) {
   // OpenCL v2.0 s6.6 - Access qualifier can be used only for image and pipe type.
   if (!(CurType->isImageType() || CurType->isPipeType())) {
@@ -7183,7 +7206,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
   // sure we visit every element once. Copy the attributes list, and iterate
   // over that.
   ParsedAttributesView AttrsCopy{attrs};
-  for (AttributeList &attr : AttrsCopy) {
+  for (ParsedAttr &attr : AttrsCopy) {
 
     // Skip attributes that were marked to be invalid.
     if (attr.isInvalid())
@@ -7224,27 +7247,27 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       }
       break;
 
-    case AttributeList::UnknownAttribute:
+    case ParsedAttr::UnknownAttribute:
       if (attr.isCXX11Attribute() && TAL == TAL_DeclChunk)
         state.getSema().Diag(attr.getLoc(),
                              diag::warn_unknown_attribute_ignored)
           << attr.getName();
       break;
 
-    case AttributeList::IgnoredAttribute:
+    case ParsedAttr::IgnoredAttribute:
       break;
 
-    case AttributeList::AT_MayAlias:
+    case ParsedAttr::AT_MayAlias:
       // FIXME: This attribute needs to actually be handled, but if we ignore
       // it it breaks large amounts of Linux software.
       attr.setUsedAsTypeAttr();
       break;
-    case AttributeList::AT_OpenCLPrivateAddressSpace:
-    case AttributeList::AT_OpenCLGlobalAddressSpace:
-    case AttributeList::AT_OpenCLLocalAddressSpace:
-    case AttributeList::AT_OpenCLConstantAddressSpace:
-    case AttributeList::AT_OpenCLGenericAddressSpace:
-    case AttributeList::AT_AddressSpace:
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_OpenCLConstantAddressSpace:
+    case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_AddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
@@ -7253,25 +7276,25 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         distributeObjCPointerTypeAttr(state, attr, type);
       attr.setUsedAsTypeAttr();
       break;
-    case AttributeList::AT_VectorSize:
+    case ParsedAttr::AT_VectorSize:
       HandleVectorSizeAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
-    case AttributeList::AT_ExtVectorType:
+    case ParsedAttr::AT_ExtVectorType:
       HandleExtVectorTypeAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
-    case AttributeList::AT_NeonVectorType:
+    case ParsedAttr::AT_NeonVectorType:
       HandleNeonVectorTypeAttr(type, attr, state.getSema(),
                                VectorType::NeonVector);
       attr.setUsedAsTypeAttr();
       break;
-    case AttributeList::AT_NeonPolyVectorType:
+    case ParsedAttr::AT_NeonPolyVectorType:
       HandleNeonVectorTypeAttr(type, attr, state.getSema(),
                                VectorType::NeonPolyVector);
       attr.setUsedAsTypeAttr();
       break;
-    case AttributeList::AT_OpenCLAccess:
+    case ParsedAttr::AT_OpenCLAccess:
       HandleOpenCLAccessAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
@@ -7310,7 +7333,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       }
       break;
 
-    case AttributeList::AT_ObjCKindOf:
+    case ParsedAttr::AT_ObjCKindOf:
       // '__kindof' must be part of the decl-specifiers.
       switch (TAL) {
       case TAL_DeclSpec:

@@ -9,13 +9,13 @@ endif()
 
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
-  AttributeList.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
   IdentifierResolver.cpp
   JumpDiagnostics.cpp
   MultiplexExternalSemaSource.cpp
+  ParsedAttr.cpp
   Scope.cpp
   ScopeInfo.cpp
   Sema.cpp

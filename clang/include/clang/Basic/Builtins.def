@@ -1412,6 +1412,8 @@ BUILTIN(__builtin_dump_struct, "ivC*v*", "tn")
 
 // Safestack builtins
 BUILTIN(__builtin___get_unsafe_stack_start, "v*", "Fn")
+BUILTIN(__builtin___get_unsafe_stack_bottom, "v*", "Fn")
+BUILTIN(__builtin___get_unsafe_stack_top, "v*", "Fn")
 BUILTIN(__builtin___get_unsafe_stack_ptr, "v*", "Fn")
 
 // Nontemporal loads/stores builtins

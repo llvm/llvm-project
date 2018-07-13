@@ -75,20 +75,6 @@ append_rtti_flag(OFF ASAN_CFLAGS)
 
 set(ASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
-if(ANDROID)
-# On Android, -z global does not do what it is documented to do.
-# On Android, -z global moves the library ahead in the lookup order,
-# placing it right after the LD_PRELOADs. This is used to compensate for the fact
-# that Android linker does not look at the dependencies of the main executable
-# that aren't dependencies of the current DSO when resolving symbols from said DSO.
-# As a net result, this allows running ASan executables without LD_PRELOAD-ing the
-# ASan runtime library.
-# The above is applicable to L MR1 or newer.
-  if (COMPILER_RT_HAS_Z_GLOBAL)
-    list(APPEND ASAN_DYNAMIC_LINK_FLAGS -Wl,-z,global)
-  endif()
-endif()
-
 set(ASAN_DYNAMIC_DEFINITIONS
   ${ASAN_COMMON_DEFINITIONS} ASAN_DYNAMIC=1)
 append_list_if(WIN32 INTERCEPTION_DYNAMIC_CRT ASAN_DYNAMIC_DEFINITIONS)

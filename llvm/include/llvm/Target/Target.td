@@ -448,6 +448,7 @@ class Instruction {
   bit isBarrier    = 0;     // Can control flow fall through this instruction?
   bit isCall       = 0;     // Is this instruction a call instruction?
   bit isAdd        = 0;     // Is this instruction an add instruction?
+  bit isTrap       = 0;     // Is this instruction a trap instruction?
   bit canFoldAsLoad = 0;    // Can this be folded as a simple memory operand?
   bit mayLoad      = ?;     // Is it possible for this inst to read memory?
   bit mayStore     = ?;     // Is it possible for this inst to write memory?

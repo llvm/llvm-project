@@ -2344,12 +2344,12 @@ static void AddMatches(const FormatEntity::Entry::Definition *def,
   }
 }
 
-size_t FormatEntity::AutoComplete(llvm::StringRef str, int match_start_point,
-                                  int max_return_elements, bool &word_complete,
-                                  StringList &matches) {
-  word_complete = false;
-  str = str.drop_front(match_start_point);
-  matches.Clear();
+size_t FormatEntity::AutoComplete(CompletionRequest &request) {
+  llvm::StringRef str = request.GetCursorArgumentPrefix().str();
+
+  request.SetWordComplete(false);
+  str = str.drop_front(request.GetMatchStartPoint());
+  request.GetMatches().Clear();
 
   const size_t dollar_pos = str.rfind('$');
   if (dollar_pos == llvm::StringRef::npos)
@@ -2359,7 +2359,7 @@ size_t FormatEntity::AutoComplete(llvm::StringRef str, int match_start_point,
   if (dollar_pos == str.size() - 1) {
     std::string match = str.str();
     match.append("{");
-    matches.AppendString(match);
+    request.GetMatches().AppendString(match);
     return 1;
   }
 
@@ -2377,8 +2377,8 @@ size_t FormatEntity::AutoComplete(llvm::StringRef str, int match_start_point,
   llvm::StringRef partial_variable(str.substr(dollar_pos + 2));
   if (partial_variable.empty()) {
     // Suggest all top level entites as we are just past "${"
-    AddMatches(&g_root, str, llvm::StringRef(), matches);
-    return matches.GetSize();
+    AddMatches(&g_root, str, llvm::StringRef(), request.GetMatches());
+    return request.GetMatches().GetSize();
   }
 
   // We have a partially specified variable, find it
@@ -2394,19 +2394,19 @@ size_t FormatEntity::AutoComplete(llvm::StringRef str, int match_start_point,
     // Exact match
     if (n > 0) {
       // "${thread.info" <TAB>
-      matches.AppendString(MakeMatch(str, "."));
+      request.GetMatches().AppendString(MakeMatch(str, "."));
     } else {
       // "${thread.id" <TAB>
-      matches.AppendString(MakeMatch(str, "}"));
-      word_complete = true;
+      request.GetMatches().AppendString(MakeMatch(str, "}"));
+      request.SetWordComplete(true);
     }
   } else if (remainder.equals(".")) {
     // "${thread." <TAB>
-    AddMatches(entry_def, str, llvm::StringRef(), matches);
+    AddMatches(entry_def, str, llvm::StringRef(), request.GetMatches());
   } else {
     // We have a partial match
     // "${thre" <TAB>
-    AddMatches(entry_def, str, remainder, matches);
+    AddMatches(entry_def, str, remainder, request.GetMatches());
   }
-  return matches.GetSize();
+  return request.GetMatches().GetSize();
 }

@@ -18,6 +18,7 @@
 // Project includes
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/lldb-forward.h"
 
 namespace lldb_private {

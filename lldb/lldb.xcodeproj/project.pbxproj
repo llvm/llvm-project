@@ -570,6 +570,7 @@
 		260CC65415D0440D002BF2E0 /* OptionValueUUID.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260CC64715D0440D002BF2E0 /* OptionValueUUID.cpp */; };
 		2689008613353E2200698AC0 /* Options.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8610F1B85900F91463 /* Options.cpp */; };
 		4C562CC71CC07DF700C52EAC /* PDBASTParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */; };
+		4CA0C6CC20F929C700CFE6BB /* PDBLocationToDWARFExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */; };
 		268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 495BBACB119A0DBE00418BEA /* PathMappingList.cpp */; };
 		2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */; };
 		25420ED21A649D88009ADBCB /* PipeBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 25420ED11A649D88009ADBCB /* PipeBase.cpp */; };
@@ -2355,6 +2356,8 @@
 		26BC7D6D10F1B77400F91463 /* Options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Options.h; path = include/lldb/Interpreter/Options.h; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
+		4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBLocationToDWARFExpression.cpp; path = PDB/PDBLocationToDWARFExpression.cpp; sourceTree = "<group>"; };
+		4CA0C6CB20F929C700CFE6BB /* PDBLocationToDWARFExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBLocationToDWARFExpression.h; path = PDB/PDBLocationToDWARFExpression.h; sourceTree = "<group>"; };
 		AF3F54B21B3BA5D500186E73 /* POSIXStopInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = POSIXStopInfo.cpp; sourceTree = "<group>"; };
 		AF3F54B31B3BA5D500186E73 /* POSIXStopInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = POSIXStopInfo.h; sourceTree = "<group>"; };
 		495BBACB119A0DBE00418BEA /* PathMappingList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingList.cpp; path = source/Target/PathMappingList.cpp; sourceTree = "<group>"; };
@@ -6717,6 +6720,8 @@
 			children = (
 				4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */,
 				4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */,
+				4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */,
+				4CA0C6CB20F929C700CFE6BB /* PDBLocationToDWARFExpression.h */,
 				AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */,
 				AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */,
 			);
@@ -8191,6 +8196,7 @@
 				94CB255E16B069770059775D /* FormatManager.cpp in Sources */,
 				94CB256616B096F10059775D /* TypeCategory.cpp in Sources */,
 				945261C81B9A14D300BF138D /* CXXFunctionPointer.cpp in Sources */,
+				4CA0C6CC20F929C700CFE6BB /* PDBLocationToDWARFExpression.cpp in Sources */,
 				94CB256716B096F10059775D /* TypeCategoryMap.cpp in Sources */,
 				94CB257016B0A4270059775D /* TypeFormat.cpp in Sources */,
 				238F2B9E1D2C82D0001FF92A /* StructuredDataPlugin.cpp in Sources */,

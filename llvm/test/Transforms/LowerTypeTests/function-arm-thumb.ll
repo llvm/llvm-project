@@ -22,6 +22,12 @@ define void @h2() "target-features"="-thumb-mode" !type !1 {
   ret void
 }
 
+declare void @takeaddr(void()*, void()*, void()*, void()*, void()*)
+define void @addrtaken() {
+  call void @takeaddr(void()* @f1, void()* @g1, void()* @f2, void()* @g2, void()* @h2)
+  ret void
+}
+
 !0 = !{i32 0, !"typeid1"}
 !1 = !{i32 0, !"typeid2"}
 

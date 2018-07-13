@@ -1206,7 +1206,7 @@ void Parser::ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs) {
     IdentifierInfo *AttrName = Tok.getIdentifierInfo();
     SourceLocation AttrNameLoc = ConsumeToken();
     attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                 AttributeList::AS_Keyword);
+                 ParsedAttr::AS_Keyword);
   }
 }
 
@@ -2284,7 +2284,7 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     if (!VS.isUnset()) {
       // If we saw any GNU-style attributes that are known to GCC followed by a
       // virt-specifier, issue a GCC-compat warning.
-      for (const AttributeList &AL : DeclaratorInfo.getAttributes())
+      for (const ParsedAttr &AL : DeclaratorInfo.getAttributes())
         if (AL.isKnownToGCC() && !AL.isCXX11Attribute())
           Diag(AL.getLoc(), diag::warn_gcc_attribute_location);
 
@@ -3803,16 +3803,15 @@ IdentifierInfo *Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc) {
 
 static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
                                               IdentifierInfo *ScopeName) {
-  switch (AttributeList::getKind(AttrName, ScopeName,
-                                 AttributeList::AS_CXX11)) {
-  case AttributeList::AT_CarriesDependency:
-  case AttributeList::AT_Deprecated:
-  case AttributeList::AT_FallThrough:
-  case AttributeList::AT_CXX11NoReturn:
+  switch (ParsedAttr::getKind(AttrName, ScopeName, ParsedAttr::AS_CXX11)) {
+  case ParsedAttr::AT_CarriesDependency:
+  case ParsedAttr::AT_Deprecated:
+  case ParsedAttr::AT_FallThrough:
+  case ParsedAttr::AT_CXX11NoReturn:
     return true;
-  case AttributeList::AT_WarnUnusedResult:
+  case ParsedAttr::AT_WarnUnusedResult:
     return !ScopeName && AttrName->getName().equals("nodiscard");
-  case AttributeList::AT_Unused:
+  case ParsedAttr::AT_Unused:
     return !ScopeName && AttrName->getName().equals("maybe_unused");
   default:
     return false;
@@ -3842,8 +3841,8 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
   assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
   SourceLocation LParenLoc = Tok.getLocation();
   const LangOptions &LO = getLangOpts();
-  AttributeList::Syntax Syntax =
-      LO.CPlusPlus ? AttributeList::AS_CXX11 : AttributeList::AS_C2x;
+  ParsedAttr::Syntax Syntax =
+      LO.CPlusPlus ? ParsedAttr::AS_CXX11 : ParsedAttr::AS_C2x;
 
   // If the attribute isn't known, we will not attempt to parse any
   // arguments.
@@ -3876,7 +3875,7 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
 
   if (!Attrs.empty() &&
       IsBuiltInOrStandardCXX11Attribute(AttrName, ScopeName)) {
-    AttributeList &Attr = *Attrs.begin();
+    ParsedAttr &Attr = *Attrs.begin();
     // If the attribute is a standard or built-in attribute and we are
     // parsing an argument list, we need to determine whether this attribute
     // was allowed to have an argument list (such as [[deprecated]]), and how
@@ -4012,8 +4011,7 @@ void Parser::ParseCXX11AttributeSpecifier(ParsedAttributes &attrs,
           AttrName,
           SourceRange(ScopeLoc.isValid() ? ScopeLoc : AttrLoc, AttrLoc),
           ScopeName, ScopeLoc, nullptr, 0,
-          getLangOpts().CPlusPlus ? AttributeList::AS_CXX11
-                                  : AttributeList::AS_C2x);
+          getLangOpts().CPlusPlus ? ParsedAttr::AS_CXX11 : ParsedAttr::AS_C2x);
 
     if (TryConsumeToken(tok::ellipsis))
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis)
@@ -4165,7 +4163,7 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   if (!T.consumeClose()) {
     Attrs.addNew(UuidIdent, SourceRange(UuidLoc, T.getCloseLocation()), nullptr,
                  SourceLocation(), ArgExprs.data(), ArgExprs.size(),
-                 AttributeList::AS_Microsoft);
+                 ParsedAttr::AS_Microsoft);
   }
 }
 

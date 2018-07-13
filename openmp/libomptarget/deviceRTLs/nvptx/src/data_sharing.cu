@@ -44,7 +44,7 @@ __device__ static bool IsWarpMasterActiveThread() {
 }
 // Return true if this is the master thread.
 __device__ static bool IsMasterThread() {
-  return getMasterThreadId() == getThreadId();
+  return !isSPMDMode() && getMasterThreadId() == getThreadId();
 }
 
 /// Return the provided size aligned to the size of a pointer.
@@ -330,39 +330,40 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
 // Runtime functions for trunk data sharing scheme.
 ////////////////////////////////////////////////////////////////////////////////
 
+INLINE void data_sharing_init_stack_common() {
+  omptarget_nvptx_TeamDescr *teamDescr =
+      &omptarget_nvptx_threadPrivateContext->TeamContext();
+
+  for (int WID = 0; WID < WARPSIZE; WID++) {
+    __kmpc_data_sharing_slot *RootS = teamDescr->GetPreallocatedSlotAddr(WID);
+    DataSharingState.SlotPtr[WID] = RootS;
+    DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
+  }
+}
+
 // Initialize data sharing data structure. This function needs to be called
 // once at the beginning of a data sharing context (coincides with the kernel
-// initialization).
+// initialization). This function is called only by the MASTER thread of each
+// team in non-SPMD mode.
 EXTERN void __kmpc_data_sharing_init_stack() {
   // This function initializes the stack pointer with the pointer to the
   // statically allocated shared memory slots. The size of a shared memory
   // slot is pre-determined to be 256 bytes.
+  data_sharing_init_stack_common();
+  omptarget_nvptx_globalArgs.Init();
+}
 
-  // Initialize the data sharing structures. This section should only be
-  // executed by the warp active master threads.
-  if (IsWarpMasterActiveThread()) {
-    unsigned WID = getWarpId();
-    omptarget_nvptx_TeamDescr *teamDescr =
-        &omptarget_nvptx_threadPrivateContext->TeamContext();
-    __kmpc_data_sharing_slot *RootS = teamDescr->RootS(WID, IsMasterThread());
+// Initialize data sharing data structure. This function needs to be called
+// once at the beginning of a data sharing context (coincides with the kernel
+// initialization). This function is called in SPMD mode only.
+EXTERN void __kmpc_data_sharing_init_stack_spmd() {
+  // This function initializes the stack pointer with the pointer to the
+  // statically allocated shared memory slots. The size of a shared memory
+  // slot is pre-determined to be 256 bytes.
+  if (threadIdx.x == 0)
+    data_sharing_init_stack_common();
 
-    // If a valid address has been returned then proceed with the initalization.
-    // Otherwise the initialization of the slot has already happened in a
-    // previous call to this function.
-    if (RootS) {
-      DataSharingState.SlotPtr[WID] = RootS;
-      DataSharingState.TailPtr[WID] = RootS;
-      DataSharingState.StackPtr[WID] = (void *)&RootS->Data[0];
-    }
-  }
-
-  // Currently we only support the sharing of variables between master and
-  // workers. The list of references to shared variables exists only for
-  // the master thread.
-  if (IsMasterThread()) {
-    // Initialize the list of references to arguments.
-    omptarget_nvptx_globalArgs.Init();
-  }
+  __threadfence_block();
 }
 
 // Called at the time of the kernel initialization. This is used to initilize
@@ -372,8 +373,6 @@ EXTERN void __kmpc_data_sharing_init_stack() {
 // By default the globalized variables are stored in global memory. If the
 // UseSharedMemory is set to true, the runtime will attempt to use shared memory
 // as long as the size requested fits the pre-allocated size.
-//
-// Called by: master, TODO: call by workers
 EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
     int16_t UseSharedMemory) {
   // Frame pointer must be visible to all workers in the same warp.
@@ -385,7 +384,6 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
     // SlotP will point to either the shared memory slot or an existing
     // global memory slot.
     __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
-    __kmpc_data_sharing_slot *&TailSlotP = DataSharingState.TailPtr[WID];
     void *&StackP = DataSharingState.StackPtr[WID];
 
     // Compute the total memory footprint of the requested data.
@@ -405,62 +403,31 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
     // of the slot then we need to either re-use the next slot, if one exists,
     // or create a new slot.
     if (EndAddress < RequestedEndAddress) {
+      __kmpc_data_sharing_slot *NewSlot = 0;
       size_t NewSize = PushSize;
 
-      // The new or reused slot for holding the data being pushed.
-      __kmpc_data_sharing_slot *NewSlot = 0;
+      // Allocate at least the default size for each type of slot.
+      // Master is a special case and even though there is only one thread,
+      // it can share more things with the workers. For uniformity, it uses
+      // the full size of a worker warp slot.
+      size_t DefaultSlotSize = DS_Worker_Warp_Slot_Size;
+      if (DefaultSlotSize > NewSize)
+        NewSize = DefaultSlotSize;
+      NewSlot = (__kmpc_data_sharing_slot *) SafeMalloc(
+          sizeof(__kmpc_data_sharing_slot) + NewSize,
+          "Global memory slot allocation.");
 
-      // Check if there is a next slot.
-      if (__kmpc_data_sharing_slot *ExistingSlot = SlotP->Next) {
-        // Attempt to reuse an existing slot provided the data fits in the slot.
-        // The leftover data space will not be used.
-        ptrdiff_t ExistingSlotSize = (uintptr_t)ExistingSlot->DataEnd -
-                                     (uintptr_t)(&ExistingSlot->Data[0]);
+      NewSlot->Next = 0;
+      NewSlot->Prev = SlotP;
+      NewSlot->PrevSlotStackPtr = StackP;
+      NewSlot->DataEnd = &NewSlot->Data[0] + NewSize;
 
-        // Try to add the data in the next available slot. Search for a slot
-        // with enough space.
-        while (ExistingSlotSize < NewSize) {
-          SlotP->Next = ExistingSlot->Next;
-          SlotP->Next->Prev = ExistingSlot->Prev;
-          free(ExistingSlot);
-          ExistingSlot = SlotP->Next;
-          if (!ExistingSlot)
-            break;
-          ExistingSlotSize = (uintptr_t)ExistingSlot->DataEnd -
-                             (uintptr_t)(&ExistingSlot->Data[0]);
-        }
-
-        // Check if a slot has been found.
-        if (ExistingSlotSize >= NewSize) {
-          NewSlot = ExistingSlot;
-          NewSlot->PrevSlotStackPtr = StackP;
-        }
-      }
-
-      if (!NewSlot) {
-        // Allocate at least the default size for each type of slot.
-        size_t DefaultSlotSize =
-            IsMasterThread() ? DS_Slot_Size : DS_Worker_Warp_Slot_Size;
-        if (DefaultSlotSize > NewSize)
-          NewSize = DefaultSlotSize;
-        NewSlot = (__kmpc_data_sharing_slot *)malloc(
-            sizeof(__kmpc_data_sharing_slot) + NewSize);
-        NewSlot->Next = 0;
-        NewSlot->Prev = SlotP;
-        NewSlot->PrevSlotStackPtr = StackP;
-        NewSlot->DataEnd = &NewSlot->Data[NewSize];
-
-        // Newly allocated slots are also tail slots.
-        TailSlotP = NewSlot;
-
-        // Make previous slot point to the newly allocated slot.
-        SlotP->Next = NewSlot;
-      }
-
+      // Make previous slot point to the newly allocated slot.
+      SlotP->Next = NewSlot;
       // The current slot becomes the new slot.
       SlotP = NewSlot;
       // The stack pointer always points to the next free stack frame.
-      StackP = &NewSlot->Data[PushSize];
+      StackP = &NewSlot->Data[0] + PushSize;
       // The frame pointer always points to the beginning of the frame.
       FrameP = &NewSlot->Data[0];
     } else {
@@ -489,37 +456,27 @@ EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
   if (IsWarpMasterActiveThread()) {
     unsigned WID = getWarpId();
 
+    // Current slot
     __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
+
+    // Pointer to next available stack.
     void *&StackP = DataSharingState.StackPtr[WID];
 
-    // Pop current frame from slot.
+    // If the current slot is empty, we need to free the slot after the
+    // pop.
+    bool SlotEmpty = (StackP == &SlotP->Data[0]);
+
+    // Pop the frame.
     StackP = FrameStart;
 
-    // If we try to pop the last frame of the current slot we need to
-    // move to the previous slot if there is one.
-    const uintptr_t StartAddress = (uintptr_t)FrameStart;
-    if (StartAddress == (uintptr_t)&SlotP->Data[0]) {
-      if (SlotP->Prev) {
-        // The new stack pointer is the end of the data field of the
-        // previous slot. This will allow the stack pointer to be
-        // used in the computation of the remaining data space in
-        // the current slot.
-        StackP = SlotP->PrevSlotStackPtr;
-        // Reset SlotP to previous slot.
-        SlotP = SlotP->Prev;
-      }
+    if (SlotEmpty && SlotP->Prev) {
+      // Before removing the slot we need to reset StackP.
+      StackP = SlotP->PrevSlotStackPtr;
 
-      // If this will "pop" the last global memory node then it is likely
-      // that we are at the end of the data sharing region and we can
-      // de-allocate any existing global memory slots.
-      if (!SlotP->Prev) {
-        __kmpc_data_sharing_slot *Tail = DataSharingState.TailPtr[WID];
-        while(Tail->Prev) {
-          Tail = Tail->Prev;
-          free(Tail->Next);
-        }
-        Tail->Next=0;
-      }
+      // Remove the slot.
+      SlotP = SlotP->Prev;
+      SafeFree(SlotP->Next, "Free slot.");
+      SlotP->Next = 0;
     }
   }
 

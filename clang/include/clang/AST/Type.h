@@ -1590,6 +1590,7 @@ protected:
 
   class VectorTypeBitfields {
     friend class VectorType;
+    friend class DependentVectorType;
 
     unsigned : NumTypeBits;
 
@@ -3077,6 +3078,51 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == Vector || T->getTypeClass() == ExtVector;
   }
+};
+
+/// Represents a vector type where either the type or size is dependent.
+////
+/// For example:
+/// \code
+/// template<typename T, int Size>
+/// class vector {
+///   typedef T __attribute__((vector_size(Size))) type;
+/// }
+/// \endcode
+class DependentVectorType : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext;
+
+  const ASTContext &Context;
+  QualType ElementType;
+  Expr *SizeExpr;
+  SourceLocation Loc;
+
+  DependentVectorType(const ASTContext &Context, QualType ElementType,
+                           QualType CanonType, Expr *SizeExpr,
+                           SourceLocation Loc, VectorType::VectorKind vecKind);
+
+public:
+  Expr *getSizeExpr() const { return SizeExpr; }
+  QualType getElementType() const { return ElementType; }
+  SourceLocation getAttributeLoc() const { return Loc; }
+  VectorType::VectorKind getVectorKind() const {
+    return VectorType::VectorKind(VectorTypeBits.VecKind);
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == DependentVector;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, Context, getElementType(), getSizeExpr(), getVectorKind());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+                      QualType ElementType, const Expr *SizeExpr,
+                      VectorType::VectorKind VecKind);
 };
 
 /// ExtVectorType - Extended vector type. This type is created using

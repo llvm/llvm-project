@@ -363,7 +363,7 @@ void Scheduler::updateIssuedQueue(SmallVectorImpl<InstRef> &Executed) {
       ++I;
       IssuedQueue.erase(ToRemove);
     } else {
-      LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction " << Entry.first
+      LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << Entry.first
                         << " is still executing.\n");
       ++I;
     }
@@ -382,7 +382,7 @@ bool Scheduler::reserveResources(InstRef &IR) {
   // If necessary, reserve queue entries in the load-store unit (LSU).
   const bool Reserved = LSU->reserve(IR);
   if (!IR.getInstruction()->isReady() || (Reserved && !LSU->isReady(IR))) {
-    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding " << IR << " to the Wait Queue\n");
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the Wait Queue\n");
     WaitQueue[IR.getSourceIndex()] = IR.getInstruction();
     return false;
   }
@@ -392,7 +392,7 @@ bool Scheduler::reserveResources(InstRef &IR) {
 bool Scheduler::issueImmediately(InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   if (!Desc.isZeroLatency() && !Resources->mustIssueImmediately(Desc)) {
-    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding " << IR
+    LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
                       << " to the Ready Queue\n");
     ReadyQueue[IR.getSourceIndex()] = IR.getInstruction();
     return false;

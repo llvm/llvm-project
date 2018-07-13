@@ -6,7 +6,6 @@
 
 pcmpeqb   %mm2, %mm2
 pcmpeqd   %mm2, %mm2
-# pcmpeqq %mm2, %mm2 # invalid operand for instruction
 pcmpeqw   %mm2, %mm2
 
 pcmpeqb   %xmm2, %xmm2

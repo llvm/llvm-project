@@ -56,8 +56,8 @@ bool DomTreeUpdater::isSelfDominance(
 
 bool DomTreeUpdater::applyLazyUpdate(DominatorTree::UpdateKind Kind,
                                      BasicBlock *From, BasicBlock *To) {
-  assert(DT ||
-         PDT && "Call applyLazyUpdate() when both DT and PDT are nullptrs.");
+  assert((DT || PDT) &&
+         "Call applyLazyUpdate() when both DT and PDT are nullptrs.");
   assert(Strategy == DomTreeUpdater::UpdateStrategy::Lazy &&
          "Call applyLazyUpdate() with Eager strategy error");
   // Analyze pending updates to determine if the update is unnecessary.
