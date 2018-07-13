@@ -122,7 +122,6 @@ enum DATA_SHARING_SIZES {
 struct DataSharingStateTy {
   __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
   void *StackPtr[DS_Max_Warp_Number];
-  __kmpc_data_sharing_slot *TailPtr[DS_Max_Warp_Number];
   void *FramePtr[DS_Max_Warp_Number];
   int32_t ActiveThreads[DS_Max_Warp_Number];
 };
@@ -302,6 +301,16 @@ public:
     return (__kmpc_data_sharing_slot *)&worker_rootS[wid];
   }
 
+  INLINE __kmpc_data_sharing_slot *GetPreallocatedSlotAddr(int wid) {
+    worker_rootS[wid].DataEnd =
+        &worker_rootS[wid].Data[0] + DS_Worker_Warp_Slot_Size;
+    // We currently do not have a next slot.
+    worker_rootS[wid].Next = 0;
+    worker_rootS[wid].Prev = 0;
+    worker_rootS[wid].PrevSlotStackPtr = 0;
+    return (__kmpc_data_sharing_slot *)&worker_rootS[wid];
+  }
+
 private:
   omptarget_nvptx_TaskDescr
       levelZeroTaskDescr; // icv for team master initial thread
@@ -311,7 +320,7 @@ private:
   uint64_t lastprivateIterBuffer;
 
   __align__(16)
-      __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE - 1];
+      __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE];
   __align__(16) __kmpc_data_sharing_master_slot_static master_rootS[1];
 };
 
