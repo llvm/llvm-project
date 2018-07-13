@@ -1024,7 +1024,7 @@ template <unsigned> struct __static_assert_check {};
 #endif
 
 #ifndef _LIBCPP_CONSTEXPR_IF_NODEBUG
-#if defined(_LIBCPP_DEBUG) || _LIBCPP_HAS_NO_CXX14_CONSTEXPR
+#if defined(_LIBCPP_DEBUG) || defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
 #define _LIBCPP_CONSTEXPR_IF_NODEBUG
 #else
 #define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
