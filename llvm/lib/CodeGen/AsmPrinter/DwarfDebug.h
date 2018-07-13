@@ -405,6 +405,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Emit address ranges into a debug ranges section.
   void emitDebugRanges();
 
+  /// Emit range lists into a DWARF v5 debug rnglists section.
+  void emitDebugRnglists();
+
   /// Emit macros into a debug macinfo section.
   void emitDebugMacinfo();
   void emitMacro(DIMacro &M);

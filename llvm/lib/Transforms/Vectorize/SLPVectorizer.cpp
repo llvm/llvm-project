@@ -353,26 +353,16 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if (llvm::any_of(VL, [](Value *V) { return !isa<Instruction>(V); }))
     return InstructionsState(VL[BaseIndex], nullptr, nullptr);
 
-  bool IsCastOp = isa<CastInst>(VL[BaseIndex]);
   bool IsBinOp = isa<BinaryOperator>(VL[BaseIndex]);
   unsigned Opcode = cast<Instruction>(VL[BaseIndex])->getOpcode();
   unsigned AltOpcode = Opcode;
   unsigned AltIndex = BaseIndex;
 
   // Check for one alternate opcode from another BinaryOperator.
-  // TODO - generalize to support all operators (types, calls etc.).
+  // TODO - can we support other operators (casts etc.)?
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
     unsigned InstOpcode = cast<Instruction>(VL[Cnt])->getOpcode();
     if (InstOpcode != Opcode && InstOpcode != AltOpcode) {
-      if (Opcode == AltOpcode && IsCastOp && isa<CastInst>(VL[Cnt])) {
-        Type *Ty0 = cast<Instruction>(VL[BaseIndex])->getOperand(0)->getType();
-        Type *Ty1 = cast<Instruction>(VL[Cnt])->getOperand(0)->getType();
-        if (Ty0 == Ty1) {
-          AltOpcode = InstOpcode;
-          AltIndex = Cnt;
-          continue;
-        }
-      }
       if (Opcode == AltOpcode && IsBinOp && isa<BinaryOperator>(VL[Cnt])) {
         AltOpcode = InstOpcode;
         AltIndex = Cnt;
@@ -2373,45 +2363,32 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
       return ReuseShuffleCost + VecCallCost - ScalarCallCost;
     }
     case Instruction::ShuffleVector: {
-      assert(S.isAltShuffle() &&
-             ((Instruction::isBinaryOp(S.getOpcode()) &&
-               Instruction::isBinaryOp(S.getAltOpcode())) ||
-              (Instruction::isCast(S.getOpcode()) &&
-               Instruction::isCast(S.getAltOpcode()))) &&
+      assert(S.isAltShuffle() && Instruction::isBinaryOp(S.getOpcode()) &&
+             Instruction::isBinaryOp(S.getAltOpcode()) &&
              "Invalid Shuffle Vector Operand");
       int ScalarCost = 0;
       if (NeedToShuffleReuses) {
         for (unsigned Idx : E->ReuseShuffleIndices) {
           Instruction *I = cast<Instruction>(VL[Idx]);
-          ReuseShuffleCost -= TTI->getInstructionCost(
-              I, TargetTransformInfo::TCK_RecipThroughput);
+          ReuseShuffleCost -=
+              TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy);
         }
         for (Value *V : VL) {
           Instruction *I = cast<Instruction>(V);
-          ReuseShuffleCost += TTI->getInstructionCost(
-              I, TargetTransformInfo::TCK_RecipThroughput);
+          ReuseShuffleCost +=
+              TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy);
         }
       }
       int VecCost = 0;
       for (Value *i : VL) {
         Instruction *I = cast<Instruction>(i);
         assert(S.isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
-        ScalarCost += TTI->getInstructionCost(
-            I, TargetTransformInfo::TCK_RecipThroughput);
+        ScalarCost += TTI->getArithmeticInstrCost(I->getOpcode(), ScalarTy);
       }
       // VecCost is equal to sum of the cost of creating 2 vectors
       // and the cost of creating shuffle.
-      if (Instruction::isBinaryOp(S.getOpcode())) {
-        VecCost = TTI->getArithmeticInstrCost(S.getOpcode(), VecTy);
-        VecCost += TTI->getArithmeticInstrCost(S.getAltOpcode(), VecTy);
-      } else {
-        Type *Src0SclTy = S.MainOp->getOperand(0)->getType();
-        Type *Src1SclTy = S.AltOp->getOperand(0)->getType();
-        VectorType *Src0Ty = VectorType::get(Src0SclTy, VL.size());
-        VectorType *Src1Ty = VectorType::get(Src1SclTy, VL.size());
-        VecCost = TTI->getCastInstrCost(S.getOpcode(), VecTy, Src0Ty);
-        VecCost += TTI->getCastInstrCost(S.getAltOpcode(), VecTy, Src1Ty);
-      }
+      VecCost = TTI->getArithmeticInstrCost(S.getOpcode(), VecTy);
+      VecCost += TTI->getArithmeticInstrCost(S.getAltOpcode(), VecTy);
       VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, 0);
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
@@ -3493,47 +3470,30 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::ShuffleVector: {
       ValueList LHSVL, RHSVL;
-      assert(S.isAltShuffle() &&
-             ((Instruction::isBinaryOp(S.getOpcode()) &&
-               Instruction::isBinaryOp(S.getAltOpcode())) ||
-              (Instruction::isCast(S.getOpcode()) &&
-               Instruction::isCast(S.getAltOpcode()))) &&
+      assert(S.isAltShuffle() && Instruction::isBinaryOp(S.getOpcode()) &&
+             Instruction::isBinaryOp(S.getAltOpcode()) &&
              "Invalid Shuffle Vector Operand");
+      reorderAltShuffleOperands(S, E->Scalars, LHSVL, RHSVL);
+      setInsertPointAfterBundle(E->Scalars, S);
 
-      Value *LHS, *RHS;
-      if (Instruction::isBinaryOp(S.getOpcode())) {
-        reorderAltShuffleOperands(S, E->Scalars, LHSVL, RHSVL);
-        setInsertPointAfterBundle(E->Scalars, S);
-        LHS = vectorizeTree(LHSVL);
-        RHS = vectorizeTree(RHSVL);
-      } else {
-        ValueList INVL;
-        for (Value *V : E->Scalars)
-          INVL.push_back(cast<Instruction>(V)->getOperand(0));
-        setInsertPointAfterBundle(E->Scalars, S);
-        LHS = vectorizeTree(INVL);
-      }
+      Value *LHS = vectorizeTree(LHSVL);
+      Value *RHS = vectorizeTree(RHSVL);
 
       if (E->VectorizedValue) {
         LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
         return E->VectorizedValue;
       }
 
-      Value *V0, *V1;
-      if (Instruction::isBinaryOp(S.getOpcode())) {
-        V0 = Builder.CreateBinOp(
+      // Create a vector of LHS op1 RHS
+      Value *V0 = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(S.getOpcode()), LHS, RHS);
-        V1 = Builder.CreateBinOp(
+
+      // Create a vector of LHS op2 RHS
+      Value *V1 = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(S.getAltOpcode()), LHS, RHS);
-      } else {
-        V0 = Builder.CreateCast(
-            static_cast<Instruction::CastOps>(S.getOpcode()), LHS, VecTy);
-        V1 = Builder.CreateCast(
-            static_cast<Instruction::CastOps>(S.getAltOpcode()), LHS, VecTy);
-      }
 
       // Create shuffle to take alternate operations from the vector.
-      // Also, gather up main and alt scalar ops to propagate IR flags to
+      // Also, gather up odd and even scalar ops to propagate IR flags to
       // each vector operation.
       ValueList OpScalars, AltScalars;
       unsigned e = E->Scalars.size();

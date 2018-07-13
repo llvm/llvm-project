@@ -331,7 +331,7 @@ void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<MemoryAccess *> &Vars) {
     auto DefIter = NewDef->getDefsIterator();
 
     // The temporary Phi is being fixed, unmark it for not to optimize.
-    if (MemoryPhi *Phi = dyn_cast_or_null<MemoryPhi>(NewDef))
+    if (MemoryPhi *Phi = dyn_cast<MemoryPhi>(NewDef))
       NonOptPhis.erase(Phi);
 
     // If there is a local def after us, we only have to rename that.
@@ -395,7 +395,7 @@ void MemorySSAUpdater::moveTo(MemoryUseOrDef *What, BasicBlock *BB,
                               WhereType Where) {
   // Mark MemoryPhi users of What not to be optimized.
   for (auto *U : What->users())
-    if (MemoryPhi *PhiUser = dyn_cast_or_null<MemoryPhi>(U))
+    if (MemoryPhi *PhiUser = dyn_cast<MemoryPhi>(U))
       NonOptPhis.insert(PhiUser);
 
   // Replace all our users with our defining access.

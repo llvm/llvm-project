@@ -19,8 +19,7 @@ using namespace llvm;
 
 namespace mca {
 
-void RetireControlUnitStatistics::onInstructionEvent(
-    const HWInstructionEvent &Event) {
+void RetireControlUnitStatistics::onEvent(const HWInstructionEvent &Event) {
   if (Event.Type == HWInstructionEvent::Retired)
     ++NumRetired;
 }

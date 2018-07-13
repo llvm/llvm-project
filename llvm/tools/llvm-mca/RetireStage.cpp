@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace mca {
 
-void RetireStage::preExecute(const InstRef &IR) {
+void RetireStage::cycleStart() {
   if (RCU.isEmpty())
     return;
 
@@ -49,7 +49,7 @@ void RetireStage::notifyInstructionRetired(const InstRef &IR) {
 
   for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
     PRF.removeRegisterWrite(*WS.get(), FreedRegs, !Desc.isZeroLatency());
-  notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
+  notifyEvent<HWInstructionEvent>(HWInstructionRetiredEvent(IR, FreedRegs));
 }
 
 } // namespace mca

@@ -11,6 +11,9 @@ defm output : Eq<"o">,
               MetaVarName<"output">,
               HelpText<"Write output to <file>">;
 
+def strip_all : Flag<["-", "--"], "strip-all">,
+                HelpText<"Remove non-allocated sections other than .gnu.warning* sections">;
+
 def strip_debug : Flag<["-", "--"], "strip-debug">,
                   HelpText<"Remove debugging symbols only">;
 

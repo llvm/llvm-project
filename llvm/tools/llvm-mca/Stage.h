@@ -41,21 +41,35 @@ public:
   /// retire.
   virtual bool hasWorkToComplete() const = 0;
 
-  /// Called as a setup phase to prepare for the main stage execution.
+  /// Called once at the start of each cycle.  This can be used as a setup
+  /// phase to prepare for the executions during the cycle.
+  virtual void cycleStart() {}
+
+  /// Called once at the end of each cycle.
+  virtual void cycleEnd() {}
+
+  /// Called prior to executing the list of stages.
+  /// This can be called multiple times per cycle.
   virtual void preExecute(const InstRef &IR) {}
 
-  /// Called as a cleanup and finalization phase after main stage execution.
+  /// Called as a cleanup and finalization phase after each execution.
+  /// This will only be called if all stages return a success from their
+  /// execute callback.  This can be called multiple times per cycle.
   virtual void postExecute(const InstRef &IR) {}
 
   /// The primary action that this stage performs.
   /// Returning false prevents successor stages from having their 'execute'
-  /// routine called.
+  /// routine called.  This can be called multiple times during a single cycle.
   virtual bool execute(InstRef &IR) = 0;
 
   /// Add a listener to receive callbacks during the execution of this stage.
   void addListener(HWEventListener *Listener);
 
-  virtual void notifyInstructionEvent(const HWInstructionEvent &Event);
+  /// Notify listeners of a particular hardware event.
+  template <typename EventT> void notifyEvent(const EventT &Event) {
+    for (HWEventListener *Listener : Listeners)
+      Listener->onEvent(Event);
+  }
 };
 
 } // namespace mca

@@ -89,7 +89,7 @@ void ExecuteStage::issueReadyInstructions() {
 // Notifications are issued to this stage's listeners when instructions are
 // moved between the HWS's queues.  In particular, when an instruction becomes
 // ready or executed.
-void ExecuteStage::preExecute(const InstRef &Unused) {
+void ExecuteStage::cycleStart() {
   reclaimSchedulerResources();
   updateSchedulerQueues();
   issueReadyInstructions();
@@ -154,13 +154,15 @@ bool ExecuteStage::execute(InstRef &IR) {
 void ExecuteStage::notifyInstructionExecuted(const InstRef &IR) {
   HWS.onInstructionExecuted(IR);
   LLVM_DEBUG(dbgs() << "[E] Instruction Executed: " << IR << '\n');
-  notifyInstructionEvent(HWInstructionEvent(HWInstructionEvent::Executed, IR));
+  notifyEvent<HWInstructionEvent>(
+      HWInstructionEvent(HWInstructionEvent::Executed, IR));
   RCU.onInstructionExecuted(IR.getInstruction()->getRCUTokenID());
 }
 
 void ExecuteStage::notifyInstructionReady(const InstRef &IR) {
   LLVM_DEBUG(dbgs() << "[E] Instruction Ready: " << IR << '\n');
-  notifyInstructionEvent(HWInstructionEvent(HWInstructionEvent::Ready, IR));
+  notifyEvent<HWInstructionEvent>(
+      HWInstructionEvent(HWInstructionEvent::Ready, IR));
 }
 
 void ExecuteStage::notifyResourceAvailable(const ResourceRef &RR) {
@@ -180,7 +182,7 @@ void ExecuteStage::notifyInstructionIssued(
       dbgs() << "           cycles: " << Resource.second << '\n';
     }
   });
-  notifyInstructionEvent(HWInstructionIssuedEvent(IR, Used));
+  notifyEvent<HWInstructionEvent>(HWInstructionIssuedEvent(IR, Used));
 }
 
 void ExecuteStage::notifyReservedBuffers(ArrayRef<uint64_t> Buffers) {

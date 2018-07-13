@@ -1765,3 +1765,12 @@ void DwarfUnit::addStringOffsetsStart() {
                   DU->getStringOffsetsStartSym(),
                   TLOF.getDwarfStrOffSection()->getBeginSymbol());
 }
+
+void DwarfUnit::addRnglistsBase() {
+  assert(DD->getDwarfVersion() >= 5 &&
+         "DW_AT_rnglists_base requires DWARF version 5 or later");
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
+  addSectionLabel(getUnitDie(), dwarf::DW_AT_rnglists_base,
+                  DU->getRnglistsTableBaseSym(),
+                  TLOF.getDwarfRnglistsSection()->getBeginSymbol());
+}

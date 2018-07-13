@@ -95,6 +95,16 @@ OPTIONS
 
  Show the version number of this program.
 
+.. option:: -v
+
+  Print directive pattern matches.
+
+.. option:: -vv
+
+  Print information helpful in diagnosing internal FileCheck issues, such as
+  discarded overlapping ``CHECK-DAG:`` matches, implicit EOF pattern matches,
+  and ``CHECK-NOT:`` patterns that do not have matches.  Implies ``-v``.
+
 .. option:: --allow-deprecated-dag-overlap
 
   Enable overlapping among matches in a group of consecutive ``CHECK-DAG:``

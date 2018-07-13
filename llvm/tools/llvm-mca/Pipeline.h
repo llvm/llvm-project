@@ -59,21 +59,20 @@ class Pipeline {
   std::set<HWEventListener *> Listeners;
   unsigned Cycles;
 
+  void preExecuteStages(const InstRef &IR);
   bool executeStages(InstRef &IR);
   void postExecuteStages(const InstRef &IR);
+  void runCycle();
+
   bool hasWorkToProcess();
-  void runCycle(unsigned Cycle);
+  void notifyCycleBegin();
+  void notifyCycleEnd();
 
 public:
-  Pipeline(unsigned DispatchWidth = 0, unsigned RegisterFileSize = 0,
-           unsigned LoadQueueSize = 0, unsigned StoreQueueSize = 0,
-           bool AssumeNoAlias = false)
-      : Cycles(0) {}
+  Pipeline() : Cycles(0) {}
   void appendStage(std::unique_ptr<Stage> S) { Stages.push_back(std::move(S)); }
   void run();
   void addEventListener(HWEventListener *Listener);
-  void notifyCycleBegin(unsigned Cycle);
-  void notifyCycleEnd(unsigned Cycle);
 };
 } // namespace mca
 

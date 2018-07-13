@@ -1,5 +1,6 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -enable-ppc-quad-precision -verify-machineinstrs < %s | FileCheck %s
+; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
+; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s
 
 @a_qp = common global fp128 0xL00000000000000000000000000000000, align 16
 @b_qp = common global fp128 0xL00000000000000000000000000000000, align 16
@@ -14,7 +15,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: greater_qp
 ; CHECK: xscmpuqp
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, 1
+; CHECK: isel r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}, gt
 ; CHECK: blr
 }
 
@@ -28,7 +29,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: less_qp
 ; CHECK: xscmpuqp
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, 0
+; CHECK: isel r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}, lt
 ; CHECK: blr
 }
 
@@ -42,8 +43,8 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: greater_eq_qp
 ; CHECK: xscmpuqp
-; CHECK: cror [[REG:[0-9]+]], {{[0-9]+}}, 0
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; CHECK: cror 4*cr[[REG:[0-9]+]]+lt, un, lt
+; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, 4*cr[[REG]]+lt
 ; CHECK: blr
 }
 
@@ -57,8 +58,8 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: less_eq_qp
 ; CHECK: xscmpuqp
-; CHECK: cror [[REG:[0-9]+]], {{[0-9]+}}, 1
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; CHECK: cror 4*cr[[REG:[0-9]+]]+lt, un, gt
+; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, 4*cr[[REG]]+lt
 ; CHECK: blr
 }
 
@@ -72,7 +73,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: equal_qp
 ; CHECK: xscmpuqp
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, 2
+; CHECK: isel r{{[0-9]+}}, r{{[0-9]+}}, r{{[0-9]+}}, eq
 ; CHECK: blr
 }
 
@@ -87,7 +88,7 @@ entry:
   ret i32 %lnot.ext
 ; CHECK-LABEL: not_greater_qp
 ; CHECK: xscmpuqp
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, 1
+; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, gt
 ; CHECK: blr
 }
 
@@ -102,7 +103,7 @@ entry:
   ret i32 %lnot.ext
 ; CHECK-LABEL: not_less_qp
 ; CHECK: xscmpuqp
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, 0
+; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, lt
 ; CHECK: blr
 }
 
@@ -117,8 +118,8 @@ entry:
   ret i32 %lnot.ext
 ; CHECK-LABEL: not_greater_eq_qp
 ; CHECK: xscmpuqp
-; CHECK: crnor [[REG:[0-9]+]], 0, {{[0-9]+}}
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; CHECK: crnor 4*cr[[REG:[0-9]+]]+lt, lt, un
+; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, 4*cr[[REG]]+lt
 ; CHECK: blr
 }
 
@@ -133,8 +134,8 @@ entry:
   ret i32 %lnot.ext
 ; CHECK-LABEL: not_less_eq_qp
 ; CHECK: xscmpuqp
-; CHECK: crnor [[REG:[0-9]+]], 1, {{[0-9]+}}
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, [[REG]]
+; CHECK: crnor 4*cr[[REG:[0-9]+]]+lt, gt, un
+; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, 4*cr[[REG]]+lt
 ; CHECK: blr
 }
 
@@ -148,7 +149,7 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: not_equal_qp
 ; CHECK: xscmpuqp
-; CHECK: isel {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}, 2
+; CHECK: isel r{{[0-9]+}}, 0, r{{[0-9]+}}, eq
 ; CHECK: blr
 }
 
@@ -161,8 +162,8 @@ entry:
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
 ; CHECK-LABEL: greater_sel_qp
-; CHECK: xscmpuqp [[REG:[0-9]+]]
-; CHECK: bgtlr [[REG]]
+; CHECK: xscmpuqp cr[[REG:[0-9]+]]
+; CHECK: bgtlr cr[[REG]]
 ; CHECK: blr
 }
 
@@ -175,8 +176,8 @@ entry:
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
 ; CHECK-LABEL: less_sel_qp
-; CHECK: xscmpuqp [[REG:[0-9]+]]
-; CHECK: bltlr [[REG]]
+; CHECK: xscmpuqp cr[[REG:[0-9]+]]
+; CHECK: bltlr cr[[REG]]
 ; CHECK: blr
 }
 
@@ -190,8 +191,8 @@ entry:
   ret fp128 %cond
 ; CHECK-LABEL: greater_eq_sel_qp
 ; CHECK: xscmpuqp
-; CHECK: crnor [[REG:[0-9]+]], {{[0-9]+}}, 0
-; CHECK: bclr {{[0-9]+}}, [[REG]]
+; CHECK: crnor 4*cr[[REG:[0-9]+]]+lt, un, lt
+; CHECK: bclr {{[0-9]+}}, 4*cr[[REG]]+lt, 0
 ; CHECK: blr
 }
 
@@ -205,8 +206,8 @@ entry:
   ret fp128 %cond
 ; CHECK-LABEL: less_eq_sel_qp
 ; CHECK: xscmpuqp
-; CHECK: crnor [[REG:[0-9]+]], {{[0-9]+}}, 1
-; CHECK: bclr {{[0-9]+}}, [[REG]]
+; CHECK: crnor 4*cr[[REG:[0-9]+]]+lt, un, gt
+; CHECK: bclr {{[0-9]+}}, 4*cr[[REG]]+lt, 0
 ; CHECK: blr
 }
 
@@ -219,7 +220,7 @@ entry:
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
 ; CHECK-LABEL: equal_sel_qp
-; CHECK: xscmpuqp [[REG:[0-9]+]]
-; CHECK: beqlr [[REG]]
+; CHECK: xscmpuqp cr[[REG:[0-9]+]]
+; CHECK: beqlr cr[[REG]]
 ; CHECK: blr
 }

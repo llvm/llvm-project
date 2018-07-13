@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
@@ -43,6 +44,11 @@ namespace {
           AbortOnFailedISel(AbortOnFailedISel) {}
 
     StringRef getPassName() const override { return "ResetMachineFunction"; }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<StackProtector>();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
       // No matter what happened, whether we successfully selected the function

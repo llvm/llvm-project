@@ -2,9 +2,8 @@
 
 ; CHECK-LABEL: define void @checkNonnullLaunder()
 define void @checkNonnullLaunder() {
-; CHECK:   %p = call i8* @llvm.launder.invariant.group.p0i8(i8* nonnull %0)
-; CHECK:   %p2 = call i8* @llvm.launder.invariant.group.p0i8(i8* nonnull %p)
-; CHECK:   call void @use(i8* nonnull %p2)
+; CHECK:   %[[p:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nonnull %0)
+; CHECK:   call void @use(i8* nonnull %[[p]])
 entry:
   %0 = alloca i8, align 8
 
@@ -17,9 +16,8 @@ entry:
 
 ; CHECK-LABEL: define void @checkNonnullStrip()
 define void @checkNonnullStrip() {
-; CHECK:   %p = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull %0)
-; CHECK:   %p2 = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull %p)
-; CHECK:   call void @use(i8* nonnull %p2)
+; CHECK:   %[[p:.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* nonnull %0)
+; CHECK:   call void @use(i8* nonnull %[[p]])
 entry:
   %0 = alloca i8, align 8
 
