@@ -659,6 +659,25 @@ void MachineBasicBlock::addSuccessorWithoutProb(MachineBasicBlock *Succ) {
   Succ->addPredecessor(this);
 }
 
+void MachineBasicBlock::splitSuccessor(MachineBasicBlock *Old,
+                                       MachineBasicBlock *New,
+                                       bool NormalizeSuccProbs) {
+  succ_iterator OldI = llvm::find(successors(), Old);
+  assert(OldI != succ_end() && "Old is not a successor of this block!");
+  assert(llvm::find(successors(), New) == succ_end() &&
+         "New is already a successor of this block!");
+
+  // Add a new successor with equal probability as the original one. Note
+  // that we directly copy the probability using the iterator rather than
+  // getting a potentially synthetic probability computed when unknown. This
+  // preserves the probabilities as-is and then we can renormalize them and
+  // query them effectively afterward.
+  addSuccessor(New, Probs.empty() ? BranchProbability::getUnknown()
+                                  : *getProbabilityIterator(OldI));
+  if (NormalizeSuccProbs)
+    normalizeSuccProbs();
+}
+
 void MachineBasicBlock::removeSuccessor(MachineBasicBlock *Succ,
                                         bool NormalizeSuccProbs) {
   succ_iterator I = find(Successors, Succ);

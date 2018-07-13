@@ -2,6 +2,8 @@
 
 void consistentFunction(int a, int b, int c);
 void consistentFunction(int a, int b, int c);
+void consistentFunction(int prefixA, int b, int cSuffix);
+void consistentFunction(int a, int b, int c);
 void consistentFunction(int a, int b, int /*c*/);
 void consistentFunction(int /*c*/, int /*c*/, int /*c*/);
 

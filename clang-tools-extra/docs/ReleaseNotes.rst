@@ -79,6 +79,9 @@ Improvements to clang-tidy
   Diagnoses comparisons that appear to be incorrectly placed in the argument to
   the ``TEMP_FAILURE_RETRY`` macro.
 
+- New :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone-exception-escape>` check
+
 - New :doc:`bugprone-parent-virtual-call
   <clang-tidy/checks/bugprone-parent-virtual-call>` check.
 

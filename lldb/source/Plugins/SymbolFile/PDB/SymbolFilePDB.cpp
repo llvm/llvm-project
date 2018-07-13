@@ -47,6 +47,7 @@
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"
+#include "Plugins/SymbolFile/PDB/PDBLocationToDWARFExpression.h"
 
 #include <regex>
 
@@ -869,11 +870,14 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
   auto mangled = GetMangledForPDBData(pdb_data);
   auto mangled_cstr = mangled.empty() ? nullptr : mangled.c_str();
 
-  DWARFExpression location(nullptr);
+  bool is_constant;
+  DWARFExpression location = ConvertPDBLocationToDWARFExpression(
+      GetObjectFile()->GetModule(), pdb_data, is_constant);
 
   var_sp = std::make_shared<Variable>(
       var_uid, var_name.c_str(), mangled_cstr, type_sp, scope, context_scope,
       ranges, &decl, location, is_external, is_artificial, is_static_member);
+  var_sp->SetLocationIsConstantValueData(is_constant);
 
   m_variables.insert(std::make_pair(var_uid, var_sp));
   return var_sp;
