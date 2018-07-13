@@ -303,8 +303,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::aff)> &fn) const;
   static inline isl::aff_list from_aff(isl::aff el);
   inline isl::aff get_aff(int index) const;
+  inline isl::aff get_at(int index) const;
   inline isl::aff_list insert(unsigned int pos, isl::aff el) const;
   inline int n_aff() const;
+  inline int size() const;
   inline isl::aff_list set_aff(int index, isl::aff el) const;
 };
 
@@ -439,8 +441,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::ast_expr)> &fn) const;
   static inline isl::ast_expr_list from_ast_expr(isl::ast_expr el);
   inline isl::ast_expr get_ast_expr(int index) const;
+  inline isl::ast_expr get_at(int index) const;
   inline isl::ast_expr_list insert(unsigned int pos, isl::ast_expr el) const;
   inline int n_ast_expr() const;
+  inline int size() const;
   inline isl::ast_expr_list set_ast_expr(int index, isl::ast_expr el) const;
 };
 
@@ -526,8 +530,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::ast_node)> &fn) const;
   static inline isl::ast_node_list from_ast_node(isl::ast_node el);
   inline isl::ast_node get_ast_node(int index) const;
+  inline isl::ast_node get_at(int index) const;
   inline isl::ast_node_list insert(unsigned int pos, isl::ast_node el) const;
   inline int n_ast_node() const;
+  inline int size() const;
   inline isl::ast_node_list set_ast_node(int index, isl::ast_node el) const;
 };
 
@@ -698,9 +704,11 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::basic_map)> &fn) const;
   static inline isl::basic_map_list from_basic_map(isl::basic_map el);
   inline isl::basic_map get_basic_map(int index) const;
+  inline isl::basic_map get_at(int index) const;
   inline isl::basic_map_list insert(unsigned int pos, isl::basic_map el) const;
   inline isl::basic_map intersect() const;
   inline int n_basic_map() const;
+  inline int size() const;
   inline isl::basic_map_list set_basic_map(int index, isl::basic_map el) const;
 };
 
@@ -842,9 +850,11 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::basic_set)> &fn) const;
   static inline isl::basic_set_list from_basic_set(isl::basic_set el);
   inline isl::basic_set get_basic_set(int index) const;
+  inline isl::basic_set get_at(int index) const;
   inline isl::basic_set_list insert(unsigned int pos, isl::basic_set el) const;
   inline isl::basic_set intersect() const;
   inline int n_basic_set() const;
+  inline int size() const;
   inline isl::basic_set_list set_basic_set(int index, isl::basic_set el) const;
 };
 
@@ -931,8 +941,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::constraint)> &fn) const;
   static inline isl::constraint_list from_constraint(isl::constraint el);
   inline isl::constraint get_constraint(int index) const;
+  inline isl::constraint get_at(int index) const;
   inline isl::constraint_list insert(unsigned int pos, isl::constraint el) const;
   inline int n_constraint() const;
+  inline int size() const;
   inline isl::constraint_list set_constraint(int index, isl::constraint el) const;
 };
 
@@ -1004,8 +1016,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::id)> &fn) const;
   static inline isl::id_list from_id(isl::id el);
   inline isl::id get_id(int index) const;
+  inline isl::id get_at(int index) const;
   inline isl::id_list insert(unsigned int pos, isl::id el) const;
   inline int n_id() const;
+  inline int size() const;
   inline isl::id_list set_id(int index, isl::id el) const;
 };
 
@@ -1331,8 +1345,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::map)> &fn) const;
   static inline isl::map_list from_map(isl::map el);
   inline isl::map get_map(int index) const;
+  inline isl::map get_at(int index) const;
   inline isl::map_list insert(unsigned int pos, isl::map el) const;
   inline int n_map() const;
+  inline int size() const;
   inline isl::map_list set_map(int index, isl::map el) const;
 };
 
@@ -1451,6 +1467,7 @@ public:
   static inline isl::multi_aff from_aff_list(isl::space space, isl::aff_list list);
   inline isl::multi_aff from_range() const;
   inline isl::aff get_aff(int pos) const;
+  inline isl::aff get_at(int pos) const;
   inline isl::id get_dim_id(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline isl::space get_space() const;
@@ -1549,6 +1566,7 @@ public:
   inline isl::space get_domain_space() const;
   inline uint32_t get_hash() const;
   inline isl::pw_aff get_pw_aff(int pos) const;
+  inline isl::pw_aff get_at(int pos) const;
   inline isl::space get_space() const;
   inline isl::id get_tuple_id(isl::dim type) const;
   inline std::string get_tuple_name(isl::dim type) const;
@@ -1652,6 +1670,7 @@ public:
   inline isl::id get_tuple_id(isl::dim type) const;
   inline std::string get_tuple_name(isl::dim type) const;
   inline isl::union_pw_aff get_union_pw_aff(int pos) const;
+  inline isl::union_pw_aff get_at(int pos) const;
   inline isl::multi_union_pw_aff gist(isl::union_set context) const;
   inline isl::multi_union_pw_aff gist_params(isl::set context) const;
   inline isl::boolean has_tuple_id(isl::dim type) const;
@@ -1735,6 +1754,7 @@ public:
   inline isl::id get_tuple_id(isl::dim type) const;
   inline std::string get_tuple_name(isl::dim type) const;
   inline isl::val get_val(int pos) const;
+  inline isl::val get_at(int pos) const;
   inline isl::boolean has_tuple_id(isl::dim type) const;
   inline isl::multi_val insert_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline isl::boolean involves_dims(isl::dim type, unsigned int first, unsigned int n) const;
@@ -1949,6 +1969,7 @@ public:
   static inline isl::pw_aff_list from_pw_aff(isl::pw_aff el);
   inline isl::set ge_set(isl::pw_aff_list list2) const;
   inline isl::pw_aff get_pw_aff(int index) const;
+  inline isl::pw_aff get_at(int index) const;
   inline isl::set gt_set(isl::pw_aff_list list2) const;
   inline isl::pw_aff_list insert(unsigned int pos, isl::pw_aff el) const;
   inline isl::set le_set(isl::pw_aff_list list2) const;
@@ -1956,6 +1977,7 @@ public:
   inline isl::pw_aff max() const;
   inline isl::pw_aff min() const;
   inline int n_pw_aff() const;
+  inline int size() const;
   inline isl::set ne_set(isl::pw_aff_list list2) const;
   inline isl::pw_aff_list set_pw_aff(int index, isl::pw_aff el) const;
 };
@@ -2012,6 +2034,7 @@ public:
   inline std::string get_dim_name(isl::dim type, unsigned int pos) const;
   inline isl::space get_domain_space() const;
   inline isl::pw_aff get_pw_aff(int pos) const;
+  inline isl::pw_aff get_at(int pos) const;
   inline isl::space get_space() const;
   inline isl::id get_tuple_id(isl::dim type) const;
   inline std::string get_tuple_name(isl::dim type) const;
@@ -2579,8 +2602,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::set)> &fn) const;
   static inline isl::set_list from_set(isl::set el);
   inline isl::set get_set(int index) const;
+  inline isl::set get_at(int index) const;
   inline isl::set_list insert(unsigned int pos, isl::set el) const;
   inline int n_set() const;
+  inline int size() const;
   inline isl::set_list set_set(int index, isl::set el) const;
   inline isl::set unite() const;
 };
@@ -2956,8 +2981,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::union_map)> &fn) const;
   static inline isl::union_map_list from_union_map(isl::union_map el);
   inline isl::union_map get_union_map(int index) const;
+  inline isl::union_map get_at(int index) const;
   inline isl::union_map_list insert(unsigned int pos, isl::union_map el) const;
   inline int n_union_map() const;
+  inline int size() const;
   inline isl::union_map_list set_union_map(int index, isl::union_map el) const;
 };
 
@@ -3061,8 +3088,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::union_pw_aff)> &fn) const;
   static inline isl::union_pw_aff_list from_union_pw_aff(isl::union_pw_aff el);
   inline isl::union_pw_aff get_union_pw_aff(int index) const;
+  inline isl::union_pw_aff get_at(int index) const;
   inline isl::union_pw_aff_list insert(unsigned int pos, isl::union_pw_aff el) const;
   inline int n_union_pw_aff() const;
+  inline int size() const;
   inline isl::union_pw_aff_list set_union_pw_aff(int index, isl::union_pw_aff el) const;
 };
 
@@ -3116,6 +3145,7 @@ public:
   static inline isl::union_pw_multi_aff from_union_set(isl::union_set uset);
   inline isl::space get_space() const;
   inline isl::union_pw_aff get_union_pw_aff(int pos) const;
+  inline isl::union_pw_aff get_at(int pos) const;
   inline isl::union_pw_multi_aff gist(isl::union_set context) const;
   inline isl::union_pw_multi_aff gist_params(isl::set context) const;
   inline isl::union_pw_multi_aff intersect_domain(isl::union_set uset) const;
@@ -3169,8 +3199,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::union_pw_multi_aff)> &fn) const;
   static inline isl::union_pw_multi_aff_list from_union_pw_multi_aff(isl::union_pw_multi_aff el);
   inline isl::union_pw_multi_aff get_union_pw_multi_aff(int index) const;
+  inline isl::union_pw_multi_aff get_at(int index) const;
   inline isl::union_pw_multi_aff_list insert(unsigned int pos, isl::union_pw_multi_aff el) const;
   inline int n_union_pw_multi_aff() const;
+  inline int size() const;
   inline isl::union_pw_multi_aff_list set_union_pw_multi_aff(int index, isl::union_pw_multi_aff el) const;
 };
 
@@ -3358,8 +3390,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::union_set)> &fn) const;
   static inline isl::union_set_list from_union_set(isl::union_set el);
   inline isl::union_set get_union_set(int index) const;
+  inline isl::union_set get_at(int index) const;
   inline isl::union_set_list insert(unsigned int pos, isl::union_set el) const;
   inline int n_union_set() const;
+  inline int size() const;
   inline isl::union_set_list set_union_set(int index, isl::union_set el) const;
   inline isl::union_set unite() const;
 };
@@ -3483,8 +3517,10 @@ public:
   inline isl::stat foreach(const std::function<isl::stat(isl::val)> &fn) const;
   static inline isl::val_list from_val(isl::val el);
   inline isl::val get_val(int index) const;
+  inline isl::val get_at(int index) const;
   inline isl::val_list insert(unsigned int pos, isl::val el) const;
   inline int n_val() const;
+  inline int size() const;
   inline isl::val_list set_val(int index, isl::val el) const;
 };
 
@@ -4148,6 +4184,7 @@ isl::aff_list aff_list::from_aff(isl::aff el)
   return manage(res);
 }
 
+isl::aff aff_list::get_at(int index) const { return get_aff(index); }
 isl::aff aff_list::get_aff(int index) const
 {
   auto res = isl_aff_list_get_aff(get(), index);
@@ -4160,6 +4197,7 @@ isl::aff_list aff_list::insert(unsigned int pos, isl::aff el) const
   return manage(res);
 }
 
+int aff_list::size() const { return n_aff(); }
 int aff_list::n_aff() const
 {
   auto res = isl_aff_list_n_aff(get());
@@ -4651,6 +4689,9 @@ isl::ast_expr_list ast_expr_list::from_ast_expr(isl::ast_expr el)
   return manage(res);
 }
 
+isl::ast_expr ast_expr_list::get_at(int index) const {
+  return get_ast_expr(index);
+}
 isl::ast_expr ast_expr_list::get_ast_expr(int index) const
 {
   auto res = isl_ast_expr_list_get_ast_expr(get(), index);
@@ -4663,6 +4704,7 @@ isl::ast_expr_list ast_expr_list::insert(unsigned int pos, isl::ast_expr el) con
   return manage(res);
 }
 
+int ast_expr_list::size() const { return n_ast_expr(); }
 int ast_expr_list::n_ast_expr() const
 {
   auto res = isl_ast_expr_list_n_ast_expr(get());
@@ -4968,6 +5010,9 @@ isl::ast_node_list ast_node_list::from_ast_node(isl::ast_node el)
   return manage(res);
 }
 
+isl::ast_node ast_node_list::get_at(int index) const {
+  return get_ast_node(index);
+}
 isl::ast_node ast_node_list::get_ast_node(int index) const
 {
   auto res = isl_ast_node_list_get_ast_node(get(), index);
@@ -4980,6 +5025,7 @@ isl::ast_node_list ast_node_list::insert(unsigned int pos, isl::ast_node el) con
   return manage(res);
 }
 
+int ast_node_list::size() const { return n_ast_node(); }
 int ast_node_list::n_ast_node() const
 {
   auto res = isl_ast_node_list_n_ast_node(get());
@@ -5802,6 +5848,9 @@ isl::basic_map_list basic_map_list::from_basic_map(isl::basic_map el)
   return manage(res);
 }
 
+isl::basic_map basic_map_list::get_at(int index) const {
+  return get_basic_map(index);
+}
 isl::basic_map basic_map_list::get_basic_map(int index) const
 {
   auto res = isl_basic_map_list_get_basic_map(get(), index);
@@ -5820,6 +5869,7 @@ isl::basic_map basic_map_list::intersect() const
   return manage(res);
 }
 
+int basic_map_list::size() const { return n_basic_map(); }
 int basic_map_list::n_basic_map() const
 {
   auto res = isl_basic_map_list_n_basic_map(get());
@@ -6475,6 +6525,9 @@ isl::basic_set_list basic_set_list::from_basic_set(isl::basic_set el)
   return manage(res);
 }
 
+isl::basic_set basic_set_list::get_at(int index) const {
+  return get_basic_set(index);
+}
 isl::basic_set basic_set_list::get_basic_set(int index) const
 {
   auto res = isl_basic_set_list_get_basic_set(get(), index);
@@ -6493,6 +6546,7 @@ isl::basic_set basic_set_list::intersect() const
   return manage(res);
 }
 
+int basic_set_list::size() const { return n_basic_set(); }
 int basic_set_list::n_basic_set() const
 {
   auto res = isl_basic_set_list_n_basic_set(get());
@@ -6800,6 +6854,9 @@ isl::constraint_list constraint_list::from_constraint(isl::constraint el)
   return manage(res);
 }
 
+isl::constraint constraint_list::get_at(int index) const {
+  return get_constraint(index);
+}
 isl::constraint constraint_list::get_constraint(int index) const
 {
   auto res = isl_constraint_list_get_constraint(get(), index);
@@ -6812,6 +6869,7 @@ isl::constraint_list constraint_list::insert(unsigned int pos, isl::constraint e
   return manage(res);
 }
 
+int constraint_list::size() const { return n_constraint(); }
 int constraint_list::n_constraint() const
 {
   auto res = isl_constraint_list_n_constraint(get());
@@ -7032,6 +7090,7 @@ isl::id_list id_list::from_id(isl::id el)
   return manage(res);
 }
 
+isl::id id_list::get_at(int index) const { return get_id(index); }
 isl::id id_list::get_id(int index) const
 {
   auto res = isl_id_list_get_id(get(), index);
@@ -7044,6 +7103,7 @@ isl::id_list id_list::insert(unsigned int pos, isl::id el) const
   return manage(res);
 }
 
+int id_list::size() const { return n_id(); }
 int id_list::n_id() const
 {
   auto res = isl_id_list_n_id(get());
@@ -8585,6 +8645,7 @@ isl::map_list map_list::from_map(isl::map el)
   return manage(res);
 }
 
+isl::map map_list::get_at(int index) const { return get_map(index); }
 isl::map map_list::get_map(int index) const
 {
   auto res = isl_map_list_get_map(get(), index);
@@ -8597,6 +8658,7 @@ isl::map_list map_list::insert(unsigned int pos, isl::map el) const
   return manage(res);
 }
 
+int map_list::size() const { return n_map(); }
 int map_list::n_map() const
 {
   auto res = isl_map_list_n_map(get());
@@ -11444,6 +11506,7 @@ isl::set pw_aff_list::ge_set(isl::pw_aff_list list2) const
   return manage(res);
 }
 
+isl::pw_aff pw_aff_list::get_at(int index) const { return get_pw_aff(index); }
 isl::pw_aff pw_aff_list::get_pw_aff(int index) const
 {
   auto res = isl_pw_aff_list_get_pw_aff(get(), index);
@@ -11486,6 +11549,7 @@ isl::pw_aff pw_aff_list::min() const
   return manage(res);
 }
 
+int pw_aff_list::size() const { return n_pw_aff(); }
 int pw_aff_list::n_pw_aff() const
 {
   auto res = isl_pw_aff_list_n_pw_aff(get());
@@ -14428,6 +14492,7 @@ isl::set_list set_list::from_set(isl::set el)
   return manage(res);
 }
 
+isl::set set_list::get_at(int index) const { return get_set(index); }
 isl::set set_list::get_set(int index) const
 {
   auto res = isl_set_list_get_set(get(), index);
@@ -14440,6 +14505,7 @@ isl::set_list set_list::insert(unsigned int pos, isl::set el) const
   return manage(res);
 }
 
+int set_list::size() const { return n_set(); }
 int set_list::n_set() const
 {
   auto res = isl_set_list_n_set(get());
@@ -16065,6 +16131,9 @@ isl::union_map_list union_map_list::from_union_map(isl::union_map el)
   return manage(res);
 }
 
+isl::union_map union_map_list::get_at(int index) const {
+  return get_union_map(index);
+}
 isl::union_map union_map_list::get_union_map(int index) const
 {
   auto res = isl_union_map_list_get_union_map(get(), index);
@@ -16077,6 +16146,7 @@ isl::union_map_list union_map_list::insert(unsigned int pos, isl::union_map el) 
   return manage(res);
 }
 
+int union_map_list::size() const { return n_union_map(); }
 int union_map_list::n_union_map() const
 {
   auto res = isl_union_map_list_n_union_map(get());
@@ -16493,6 +16563,9 @@ isl::union_pw_aff_list union_pw_aff_list::from_union_pw_aff(isl::union_pw_aff el
   return manage(res);
 }
 
+isl::union_pw_aff union_pw_aff_list::get_at(int index) const {
+  return get_union_pw_aff(index);
+}
 isl::union_pw_aff union_pw_aff_list::get_union_pw_aff(int index) const
 {
   auto res = isl_union_pw_aff_list_get_union_pw_aff(get(), index);
@@ -16505,6 +16578,7 @@ isl::union_pw_aff_list union_pw_aff_list::insert(unsigned int pos, isl::union_pw
   return manage(res);
 }
 
+int union_pw_aff_list::size() const { return n_union_pw_aff(); }
 int union_pw_aff_list::n_union_pw_aff() const
 {
   auto res = isl_union_pw_aff_list_n_union_pw_aff(get());
@@ -16937,6 +17011,9 @@ isl::union_pw_multi_aff_list union_pw_multi_aff_list::from_union_pw_multi_aff(is
   return manage(res);
 }
 
+isl::union_pw_multi_aff union_pw_multi_aff_list::get_at(int index) const {
+  return get_union_pw_multi_aff(index);
+}
 isl::union_pw_multi_aff union_pw_multi_aff_list::get_union_pw_multi_aff(int index) const
 {
   auto res = isl_union_pw_multi_aff_list_get_union_pw_multi_aff(get(), index);
@@ -16949,6 +17026,7 @@ isl::union_pw_multi_aff_list union_pw_multi_aff_list::insert(unsigned int pos, i
   return manage(res);
 }
 
+int union_pw_multi_aff_list::size() const { return n_union_pw_multi_aff(); }
 int union_pw_multi_aff_list::n_union_pw_multi_aff() const
 {
   auto res = isl_union_pw_multi_aff_list_n_union_pw_multi_aff(get());
@@ -17779,6 +17857,9 @@ isl::union_set_list union_set_list::from_union_set(isl::union_set el)
   return manage(res);
 }
 
+isl::union_set union_set_list::get_at(int index) const {
+  return get_union_set(index);
+}
 isl::union_set union_set_list::get_union_set(int index) const
 {
   auto res = isl_union_set_list_get_union_set(get(), index);
@@ -17791,6 +17872,7 @@ isl::union_set_list union_set_list::insert(unsigned int pos, isl::union_set el) 
   return manage(res);
 }
 
+int union_set_list::size() const { return n_union_set(); }
 int union_set_list::n_union_set() const
 {
   auto res = isl_union_set_list_n_union_set(get());
@@ -18320,6 +18402,7 @@ isl::val_list val_list::from_val(isl::val el)
   return manage(res);
 }
 
+isl::val val_list::get_at(int index) const { return get_val(index); }
 isl::val val_list::get_val(int index) const
 {
   auto res = isl_val_list_get_val(get(), index);
@@ -18332,6 +18415,7 @@ isl::val_list val_list::insert(unsigned int pos, isl::val el) const
   return manage(res);
 }
 
+int val_list::size() const { return n_val(); }
 int val_list::n_val() const
 {
   auto res = isl_val_list_n_val(get());

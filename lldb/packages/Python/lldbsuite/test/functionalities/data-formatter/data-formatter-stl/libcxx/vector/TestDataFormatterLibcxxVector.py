@@ -17,10 +17,6 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(["libc++"])
-    @skipIf(debug_info="gmodules",
-            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
-
     def check_numbers(self, var_name):
         self.expect("frame variable " + var_name,
                     substrs=[var_name + ' = size=7',
@@ -54,6 +50,9 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.expect("frame variable " + var_name + "[3]",
                     substrs=['1234'])
 
+    @add_test_categories(["libc++"])
+    @skipIf(debug_info="gmodules",
+            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -180,6 +179,9 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.expect("frame variable strings",
                     substrs=['vector has 0 items'])
 
+    @add_test_categories(["libc++"])
+    @skipIf(debug_info="gmodules",
+            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
     def test_ref_and_ptr(self):
         """Test that that file and class static variables display correctly."""
         self.build()
