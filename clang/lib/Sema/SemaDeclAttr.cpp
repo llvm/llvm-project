@@ -4788,7 +4788,7 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
       Attrs.getRange(), S.Context, Attrs.getAttributeSpellingListIndex()));
 }
 
-static void handleNSErrorDomain(Sema &S, Decl *D, const AttributeList &Attr) {
+static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
   if (!isa<TagDecl>(D)) {
     S.Diag(D->getLocStart(), diag::err_nserrordomain_not_tagdecl)
         << S.getLangOpts().CPlusPlus;
@@ -5229,7 +5229,7 @@ bool Sema::DiagnoseSwiftName(Decl *D, StringRef Name,
   return true;
 }
 
-static void handleSwiftName(Sema &S, Decl *D, const AttributeList &Attr) {
+static void handleSwiftName(Sema &S, Decl *D, const ParsedAttr &Attr) {
   StringRef Name;
   SourceLocation ArgLoc;
   if (!S.checkStringLiteralArgumentAttr(Attr, 0, Name, &ArgLoc))
@@ -5266,7 +5266,7 @@ static bool isErrorParameter(Sema &S, QualType paramType) {
   return false;
 }
 
-static void handleSwiftError(Sema &S, Decl *D, const AttributeList &attr) {
+static void handleSwiftError(Sema &S, Decl *D, const ParsedAttr &attr) {
   SwiftErrorAttr::ConventionKind convention;
   IdentifierLoc *conventionLoc = attr.getArgAsIdent(0);
   StringRef conventionStr = conventionLoc->Ident->getName();
@@ -5343,7 +5343,7 @@ static void handleSwiftError(Sema &S, Decl *D, const AttributeList &attr) {
                             attr.getAttributeSpellingListIndex()));
 }
 
-static void handleSwiftBridgeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+static void handleSwiftBridgeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
   // Make sure that there is a string literal as the annotation's single
   // argument.
   StringRef Str;
@@ -5361,7 +5361,7 @@ static void handleSwiftBridgeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
                              Attr.getAttributeSpellingListIndex()));
 }
 
-static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const AttributeList &Attr) {
+static void handleSwiftNewtypeAttr(Sema &S, Decl *D, const ParsedAttr &Attr) {
   // Make sure that there is an identifier as the annotation's single
   // argument.
   if (Attr.getNumArgs() != 1) {
@@ -6553,7 +6553,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_ObjCBoxable:
     handleObjCBoxable(S, D, AL);
     break;
-  case AttributeList::AT_NSErrorDomain:
+  case ParsedAttr::AT_NSErrorDomain:
     handleNSErrorDomain(S, D, AL);
     break;
   case ParsedAttr::AT_CFAuditedTransfer:
@@ -6620,7 +6620,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_ObjCSubclassingRestricted:
     handleSimpleAttribute<ObjCSubclassingRestrictedAttr>(S, D, AL);
     break;
-  case AttributeList::AT_ObjCCompleteDefinition:
+  case ParsedAttr::AT_ObjCCompleteDefinition:
     handleSimpleAttribute<ObjCCompleteDefinitionAttr>(S, D, AL);
     break;
   case ParsedAttr::AT_ObjCExplicitProtocolImpl:
@@ -6905,25 +6905,25 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     handleSimpleAttribute<RenderScriptKernelAttr>(S, D, AL);
     break;
   // Swift attributes.
-  case AttributeList::AT_SwiftPrivate:
+  case ParsedAttr::AT_SwiftPrivate:
     handleSimpleAttribute<SwiftPrivateAttr>(S, D, AL);
     break;
-  case AttributeList::AT_SwiftName:
+  case ParsedAttr::AT_SwiftName:
     handleSwiftName(S, D, AL);
     break;
-  case AttributeList::AT_SwiftError:
+  case ParsedAttr::AT_SwiftError:
     handleSwiftError(S, D, AL);
     break;
-  case AttributeList::AT_SwiftBridge:
+  case ParsedAttr::AT_SwiftBridge:
     handleSwiftBridgeAttr(S, D, AL);
     break;
-  case AttributeList::AT_SwiftBridgedTypedef:
+  case ParsedAttr::AT_SwiftBridgedTypedef:
     handleSimpleAttribute<SwiftBridgedTypedefAttr>(S, D, AL);
     break;
-  case AttributeList::AT_SwiftObjCMembers:
+  case ParsedAttr::AT_SwiftObjCMembers:
     handleSimpleAttribute<SwiftObjCMembersAttr>(S, D, AL);
     break;
-  case AttributeList::AT_SwiftNewtype:
+  case ParsedAttr::AT_SwiftNewtype:
     handleSwiftNewtypeAttr(S, D, AL);
     break;
   // XRay attributes.
