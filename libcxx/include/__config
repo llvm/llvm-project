@@ -1023,6 +1023,14 @@ template <unsigned> struct __static_assert_check {};
 #  define _LIBCPP_EXPLICIT_MOVE(x) (x)
 #endif
 
+#ifndef _LIBCPP_CONSTEXPR_IF_NODEBUG
+#if !defined(_LIBCPP_DEBUG) && _LIBCPP_STD_VER >= 14
+#define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
+#else
+#define _LIBCPP_CONSTEXPR_IF_NODEBUG
+#endif
+#endif
+
 #ifndef _LIBCPP_HAS_NO_ASAN
 _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
   const void *, const void *, const void *, const void *);

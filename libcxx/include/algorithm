@@ -1708,7 +1708,7 @@ __unwrap_iter(move_iterator<_Tp*> __i)
 #if _LIBCPP_DEBUG_LEVEL < 2
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1722,7 +1722,7 @@ __unwrap_iter(__wrap_iter<_Tp*> __i)
 #else
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
