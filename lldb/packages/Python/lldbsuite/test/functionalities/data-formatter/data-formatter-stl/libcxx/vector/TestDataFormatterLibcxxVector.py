@@ -20,21 +20,45 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(debug_info="gmodules",
             bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
+
+    def check_numbers(self, var_name):
+        self.expect("frame variable " + var_name,
+                    substrs=[var_name + ' = size=7',
+                             '[0] = 1',
+                             '[1] = 12',
+                             '[2] = 123',
+                             '[3] = 1234',
+                             '[4] = 12345',
+                             '[5] = 123456',
+                             '[6] = 1234567',
+                             '}'])
+
+        self.expect("p " + var_name,
+                    substrs=['$', 'size=7',
+                             '[0] = 1',
+                             '[1] = 12',
+                             '[2] = 123',
+                             '[3] = 1234',
+                             '[4] = 12345',
+                             '[5] = 123456',
+                             '[6] = 1234567',
+                             '}'])
+
+        # check access-by-index
+        self.expect("frame variable " + var_name + "[0]",
+                    substrs=['1'])
+        self.expect("frame variable " + var_name + "[1]",
+                    substrs=['12'])
+        self.expect("frame variable " + var_name + "[2]",
+                    substrs=['123'])
+        self.expect("frame variable " + var_name + "[3]",
+                    substrs=['1234'])
+
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        bkpt = self.target().FindBreakpointByID(
-            lldbutil.run_break_set_by_source_regexp(
-                self, "break here"))
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False))
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -54,7 +78,7 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.expect("frame variable numbers",
                     substrs=['numbers = size=0'])
 
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+        lldbutil.continue_to_breakpoint(process, bkpt)
 
         # first value added
         self.expect("frame variable numbers",
@@ -63,7 +87,7 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                              '}'])
 
         # add some more data
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+        lldbutil.continue_to_breakpoint(process, bkpt)
 
         self.expect("frame variable numbers",
                     substrs=['numbers = size=4',
@@ -96,47 +120,17 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.runCmd("type summary delete int_vect")
 
         # add some more data
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+        lldbutil.continue_to_breakpoint(process, bkpt)
 
-        self.expect("frame variable numbers",
-                    substrs=['numbers = size=7',
-                             '[0] = 1',
-                             '[1] = 12',
-                             '[2] = 123',
-                             '[3] = 1234',
-                             '[4] = 12345',
-                             '[5] = 123456',
-                             '[6] = 1234567',
-                             '}'])
-
-        self.expect("p numbers",
-                    substrs=['$', 'size=7',
-                             '[0] = 1',
-                             '[1] = 12',
-                             '[2] = 123',
-                             '[3] = 1234',
-                             '[4] = 12345',
-                             '[5] = 123456',
-                             '[6] = 1234567',
-                             '}'])
-
-        # check access-by-index
-        self.expect("frame variable numbers[0]",
-                    substrs=['1'])
-        self.expect("frame variable numbers[1]",
-                    substrs=['12'])
-        self.expect("frame variable numbers[2]",
-                    substrs=['123'])
-        self.expect("frame variable numbers[3]",
-                    substrs=['1234'])
+        self.check_numbers("numbers")
 
         # clear out the vector and see that we do the right thing once again
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+        lldbutil.continue_to_breakpoint(process, bkpt)
 
         self.expect("frame variable numbers",
                     substrs=['numbers = size=0'])
 
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+        lldbutil.continue_to_breakpoint(process, bkpt)
 
         # first value added
         self.expect("frame variable numbers",
@@ -170,7 +164,7 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                              'is',
                              'smart'])
 
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+        lldbutil.continue_to_breakpoint(process, bkpt)
 
         self.expect("frame variable strings",
                     substrs=['vector has 4 items'])
@@ -181,7 +175,22 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.expect("frame variable strings[1]",
                     substrs=['is'])
 
-        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+        lldbutil.continue_to_breakpoint(process, bkpt)
 
         self.expect("frame variable strings",
                     substrs=['vector has 0 items'])
+
+    def test_ref_and_ptr(self):
+        """Test that that file and class static variables display correctly."""
+        self.build()
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Stop here to check by ref", lldb.SBFileSpec("main.cpp", False))
+
+        # The reference should display the same was as the value did
+        self.check_numbers("ref")
+
+        # The pointer should just show the right number of elements:
+        
+        self.expect("frame variable ptr", substrs=['ptr =', ' size=7'])
+
+        self.expect("p ptr", substrs=['$', 'size=7'])

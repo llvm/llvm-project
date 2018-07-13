@@ -273,9 +273,17 @@ public:
       return true;
 
     // ... or if any of its super classes are a subset of RHS.
-    for (const ClassInfo *CI : SuperClasses)
-      if (CI->isSubsetOf(RHS))
+    SmallVector<const ClassInfo *, 16> Worklist(SuperClasses.begin(),
+                                                SuperClasses.end());
+    SmallPtrSet<const ClassInfo *, 16> Visited;
+    while (!Worklist.empty()) {
+      auto *CI = Worklist.pop_back_val();
+      if (CI == &RHS)
         return true;
+      for (auto *Super : CI->SuperClasses)
+        if (Visited.insert(Super).second)
+          Worklist.push_back(Super);
+    }
 
     return false;
   }

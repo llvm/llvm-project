@@ -646,6 +646,20 @@ def z_inegabs64 : PatFrag<(ops node:$src), (ineg (z_iabs64 node:$src))>;
 def z_muladd : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                        (add (mul node:$src1, node:$src2), node:$src3)>;
 
+// Alternatives to match operations with or without an overflow CC result.
+def z_sadd : PatFrags<(ops node:$src1, node:$src2),
+                      [(z_saddo node:$src1, node:$src2),
+                       (add node:$src1, node:$src2)]>;
+def z_uadd : PatFrags<(ops node:$src1, node:$src2),
+                      [(z_uaddo node:$src1, node:$src2),
+                       (add node:$src1, node:$src2)]>;
+def z_ssub : PatFrags<(ops node:$src1, node:$src2),
+                      [(z_ssubo node:$src1, node:$src2),
+                       (sub node:$src1, node:$src2)]>;
+def z_usub : PatFrags<(ops node:$src1, node:$src2),
+                      [(z_usubo node:$src1, node:$src2),
+                       (sub node:$src1, node:$src2)]>;
+
 // Fused multiply-subtract, using the natural operand order.
 def fms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                   (fma node:$src1, node:$src2, (fneg node:$src3))>;

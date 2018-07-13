@@ -140,14 +140,18 @@ public:
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override {
-    if (Inst.getNumOperands() == 0 ||
-        Info->get(Inst.getOpcode()).OpInfo[0].OperandType !=
-            MCOI::OPERAND_PCREL)
-      return false;
-
-    int64_t Imm = Inst.getOperand(0).getImm() * 4;
-    Target = Addr + Imm;
-    return true;
+    // Search for a PC-relative argument.
+    // This will handle instructions like bcc (where the first argument is the
+    // condition code) and cbz (where it is a register).
+    const auto &Desc = Info->get(Inst.getOpcode());
+    for (unsigned i = 0, e = Inst.getNumOperands(); i != e; i++) {
+      if (Desc.OpInfo[i].OperandType == MCOI::OPERAND_PCREL) {
+        int64_t Imm = Inst.getOperand(i).getImm() * 4;
+        Target = Addr + Imm;
+        return true;
+      }
+    }
+    return false;
   }
 };
 

@@ -499,11 +499,9 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
 
           // Now insert the cmovs to implement the checks.
           auto InsertPt = CheckingMBB.begin();
-          assert(
-              InsertPt == CheckingMBB.end() ||
-              !InsertPt->isPHI() &&
-                  "Should never have a PHI in the initial checking block as it "
-                  "always has a single predecessor!");
+          assert((InsertPt == CheckingMBB.end() || !InsertPt->isPHI()) &&
+                 "Should never have a PHI in the initial checking block as it "
+                 "always has a single predecessor!");
 
           // We will wire each cmov to each other, but need to start with the
           // incoming pred state.

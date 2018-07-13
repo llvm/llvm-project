@@ -242,6 +242,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::RValueReference:
     case Type::MemberPointer:
     case Type::DependentAddressSpace:
+    case Type::DependentVector:
     case Type::DependentSizedExtVector:
     case Type::Vector:
     case Type::ExtVector:
@@ -640,7 +641,55 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
 
 void TypePrinter::printVectorAfter(const VectorType *T, raw_ostream &OS) {
   printAfter(T->getElementType(), OS);
-} 
+}
+
+void TypePrinter::printDependentVectorBefore(
+    const DependentVectorType *T, raw_ostream &OS) {
+  switch (T->getVectorKind()) {
+  case VectorType::AltiVecPixel:
+    OS << "__vector __pixel ";
+    break;
+  case VectorType::AltiVecBool:
+    OS << "__vector __bool ";
+    printBefore(T->getElementType(), OS);
+    break;
+  case VectorType::AltiVecVector:
+    OS << "__vector ";
+    printBefore(T->getElementType(), OS);
+    break;
+  case VectorType::NeonVector:
+    OS << "__attribute__((neon_vector_type(";
+    if (T->getSizeExpr())
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+    OS << "))) ";
+    printBefore(T->getElementType(), OS);
+    break;
+  case VectorType::NeonPolyVector:
+    OS << "__attribute__((neon_polyvector_type(";
+    if (T->getSizeExpr())
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+    OS << "))) ";
+    printBefore(T->getElementType(), OS);
+    break;
+  case VectorType::GenericVector: {
+    // FIXME: We prefer to print the size directly here, but have no way
+    // to get the size of the type.
+    OS << "__attribute__((__vector_size__(";
+    if (T->getSizeExpr())
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+    OS << " * sizeof(";
+    print(T->getElementType(), OS, StringRef());
+    OS << ")))) ";
+    printBefore(T->getElementType(), OS);
+    break;
+  }
+  }
+}
+
+void TypePrinter::printDependentVectorAfter(
+    const DependentVectorType *T, raw_ostream &OS) {
+  printAfter(T->getElementType(), OS);
+}
 
 void TypePrinter::printExtVectorBefore(const ExtVectorType *T,
                                        raw_ostream &OS) { 

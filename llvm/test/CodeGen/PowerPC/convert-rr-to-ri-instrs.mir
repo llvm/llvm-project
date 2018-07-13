@@ -3982,7 +3982,8 @@ body:             |
     %1 = COPY $x4
     %0 = LI8 200
     %2 = RLDICLo %0, 61, 3, implicit-def $cr0
-    ; CHECK-NOT: ANDI
+    ; CHECK: LI8 25
+    ; CHECK: ANDIo8 %0, 25
     ; CHECK-LATE-NOT: andi.
     %3 = COPY killed $cr0
     %4 = ISEL8 %1, %2, %3.sub_eq
@@ -4298,7 +4299,8 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = LI -22
     %4 = RLWINMo %3, 0, 24, 31, implicit-def $cr0
-    ; CHECK: ANDIo %3, 234
+    ; CHECK: LI -22
+    ; CHECK: ANDIo %3, 65514
     ; CHECK-LATE: li 3, -22
     ; CHECK-LATE: andi. 5, 3, 234
     %5 = COPY killed $cr0
@@ -4362,7 +4364,8 @@ body:             |
     %2 = COPY %1.sub_32
     %3 = LI -22
     %4 = RLWINMo %3, 5, 24, 31, implicit-def $cr0
-    ; CHECK-NOT: ANDI
+    ; CHECK: LI -22
+    ; CHECK-NOT: ANDIo8 %3, 65514
     ; CHECK-LATE-NOT: andi.
     %5 = COPY killed $cr0
     %6 = ISEL %2, %3, %5.sub_eq

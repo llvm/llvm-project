@@ -110,9 +110,11 @@ struct PatternSortingPredicate {
     if (LHSPatSize < RHSPatSize) return true;
     if (LHSPatSize > RHSPatSize) return false;
 
-    // Sort based on the UID of the pattern, giving us a deterministic ordering
-    // if all other sorting conditions fail.
-    assert(LHS == RHS || LHS->ID != RHS->ID);
+    // Sort based on the UID of the pattern, to reflect source order.
+    // Note that this is not guaranteed to be unique, since a single source
+    // pattern may have been resolved into multiple match patterns due to
+    // alternative fragments.  To ensure deterministic output, always use
+    // std::stable_sort with this predicate.
     return LHS->ID < RHS->ID;
   }
 };
@@ -156,7 +158,8 @@ void DAGISelEmitter::run(raw_ostream &OS) {
 
   // We want to process the matches in order of minimal cost.  Sort the patterns
   // so the least cost one is at the start.
-  llvm::sort(Patterns.begin(), Patterns.end(), PatternSortingPredicate(CGP));
+  std::stable_sort(Patterns.begin(), Patterns.end(),
+                   PatternSortingPredicate(CGP));
 
 
   // Convert each variant of each pattern into a Matcher.

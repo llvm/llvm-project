@@ -1128,6 +1128,13 @@ static amd_element_byte_size_t getElementByteSizeValue(unsigned Size) {
 void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
                                         const SIProgramInfo &CurrentProgramInfo,
                                         const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+
+  // Avoid asserting on erroneous cases.
+  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
+      F.getCallingConv() != CallingConv::SPIR_KERNEL)
+    return;
+
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
 
@@ -1174,9 +1181,8 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   if (STM.isXNACKEnabled())
     Out.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;
 
-  // FIXME: Should use getKernArgSize
-  Out.kernarg_segment_byte_size =
-    STM.getKernArgSegmentSize(MF.getFunction(), MFI->getExplicitKernArgSize());
+  unsigned MaxKernArgAlign;
+  Out.kernarg_segment_byte_size = STM.getKernArgSegmentSize(F, MaxKernArgAlign);
   Out.wavefront_sgpr_count = CurrentProgramInfo.NumSGPR;
   Out.workitem_vgpr_count = CurrentProgramInfo.NumVGPR;
   Out.workitem_private_segment_byte_size = CurrentProgramInfo.ScratchSize;
@@ -1185,7 +1191,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
   // These alignment values are specified in powers of two, so alignment =
   // 2^n.  The minimum alignment is 2^4 = 16.
   Out.kernarg_segment_alignment = std::max((size_t)4,
-      countTrailingZeros(MFI->getMaxKernArgAlign()));
+      countTrailingZeros(MaxKernArgAlign));
 
   if (STM.debuggerEmitPrologue()) {
     Out.debug_wavefront_private_segment_offset_sgpr =

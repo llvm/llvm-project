@@ -17,6 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/RegularExpression.h"
 
 namespace lldb_private {

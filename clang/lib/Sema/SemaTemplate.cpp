@@ -5341,6 +5341,11 @@ bool UnnamedLocalNoLinkageFinder::VisitVectorType(const VectorType* T) {
   return Visit(T->getElementType());
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitDependentVectorType(
+    const DependentVectorType *T) {
+  return Visit(T->getElementType());
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitExtVectorType(const ExtVectorType* T) {
   return Visit(T->getElementType());
 }
@@ -8599,8 +8604,8 @@ DeclResult Sema::ActOnExplicitInstantiation(
 
   if (TSK == TSK_ExplicitInstantiationDeclaration) {
     // Check for dllexport class template instantiation declarations.
-    for (const AttributeList &AL : Attr) {
-      if (AL.getKind() == AttributeList::AT_DLLExport) {
+    for (const ParsedAttr &AL : Attr) {
+      if (AL.getKind() == ParsedAttr::AT_DLLExport) {
         Diag(ExternLoc,
              diag::warn_attribute_dllexport_explicit_instantiation_decl);
         Diag(AL.getLoc(), diag::note_attribute);
@@ -8623,10 +8628,10 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // Check for dllimport class template instantiation definitions.
     bool DLLImport =
         ClassTemplate->getTemplatedDecl()->getAttr<DLLImportAttr>();
-    for (const AttributeList &AL : Attr) {
-      if (AL.getKind() == AttributeList::AT_DLLImport)
+    for (const ParsedAttr &AL : Attr) {
+      if (AL.getKind() == ParsedAttr::AT_DLLImport)
         DLLImport = true;
-      if (AL.getKind() == AttributeList::AT_DLLExport) {
+      if (AL.getKind() == ParsedAttr::AT_DLLExport) {
         // dllexport trumps dllimport here.
         DLLImport = false;
         break;

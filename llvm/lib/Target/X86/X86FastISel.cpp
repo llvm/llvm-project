@@ -2417,8 +2417,9 @@ bool X86FastISel::X86SelectSIToFP(const Instruction *I) {
   if (!Subtarget->hasAVX())
     return false;
 
-  Type *InTy = I->getOperand(0)->getType();
-  if (!InTy->isIntegerTy(32) && !InTy->isIntegerTy(64))
+  // TODO: We could sign extend narrower types.
+  MVT SrcVT = TLI.getSimpleValueType(DL, I->getOperand(0)->getType());
+  if (SrcVT != MVT::i32 && SrcVT != MVT::i64)
     return false;
 
   // Select integer to float/double conversion.
@@ -2426,20 +2427,28 @@ bool X86FastISel::X86SelectSIToFP(const Instruction *I) {
   if (OpReg == 0)
     return false;
 
-  const TargetRegisterClass *RC = nullptr;
   unsigned Opcode;
+
+  static const uint16_t CvtOpc[2][2][2] = {
+    { { X86::VCVTSI2SSrr,  X86::VCVTSI642SSrr },
+      { X86::VCVTSI2SDrr,  X86::VCVTSI642SDrr } },
+    { { X86::VCVTSI2SSZrr, X86::VCVTSI642SSZrr },
+      { X86::VCVTSI2SDZrr, X86::VCVTSI642SDZrr } },
+  };
+  bool HasAVX512 = Subtarget->hasAVX512();
+  bool Is64Bit = SrcVT == MVT::i64;
 
   if (I->getType()->isDoubleTy()) {
     // sitofp int -> double
-    Opcode = InTy->isIntegerTy(64) ? X86::VCVTSI642SDrr : X86::VCVTSI2SDrr;
-    RC = &X86::FR64RegClass;
+    Opcode = CvtOpc[HasAVX512][1][Is64Bit];
   } else if (I->getType()->isFloatTy()) {
     // sitofp int -> float
-    Opcode = InTy->isIntegerTy(64) ? X86::VCVTSI642SSrr : X86::VCVTSI2SSrr;
-    RC = &X86::FR32RegClass;
+    Opcode = CvtOpc[HasAVX512][0][Is64Bit];
   } else
     return false;
 
+  MVT DstVT = TLI.getValueType(DL, I->getType()).getSimpleVT();
+  const TargetRegisterClass *RC = TLI.getRegClassFor(DstVT);
   unsigned ImplicitDefReg = createResultReg(RC);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
           TII.get(TargetOpcode::IMPLICIT_DEF), ImplicitDefReg);

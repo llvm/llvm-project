@@ -74,13 +74,11 @@ lldb::OptionValueSP OptionValueArch::DeepCopy() const {
 }
 
 size_t OptionValueArch::AutoComplete(CommandInterpreter &interpreter,
-                                     llvm::StringRef s, int match_start_point,
-                                     int max_return_elements,
-                                     bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+                                     CompletionRequest &request) {
+  request.SetWordComplete(false);
+  request.GetMatches().Clear();
   CommandCompletions::InvokeCommonCompletionCallbacks(
-      interpreter, CommandCompletions::eArchitectureCompletion, s,
-      match_start_point, max_return_elements, nullptr, word_complete, matches);
-  return matches.GetSize();
+      interpreter, CommandCompletions::eArchitectureCompletion, request,
+      nullptr);
+  return request.GetMatches().GetSize();
 }

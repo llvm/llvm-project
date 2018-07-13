@@ -209,15 +209,16 @@ Kernel::CodeProps::Metadata MetadataStreamer::getHSACodeProps(
   const Function &F = MF.getFunction();
 
   // Avoid asserting on erroneous cases.
-  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
+  if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL &&
+      F.getCallingConv() != CallingConv::SPIR_KERNEL)
     return HSACodeProps;
 
-  HSACodeProps.mKernargSegmentSize =
-      STM.getKernArgSegmentSize(F, MFI.getExplicitKernArgSize());
+  unsigned MaxKernArgAlign;
+  HSACodeProps.mKernargSegmentSize = STM.getKernArgSegmentSize(F,
+                                                               MaxKernArgAlign);
   HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
   HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
-  HSACodeProps.mKernargSegmentAlign =
-      std::max(uint32_t(4), MFI.getMaxKernArgAlign());
+  HSACodeProps.mKernargSegmentAlign = std::max(MaxKernArgAlign, 4u);
   HSACodeProps.mWavefrontSize = STM.getWavefrontSize();
   HSACodeProps.mNumSGPRs = ProgramInfo.NumSGPR;
   HSACodeProps.mNumVGPRs = ProgramInfo.NumVGPR;

@@ -564,6 +564,19 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return InlineCodeString(Val);
   case DW_AT_ordering:
     return ArrayOrderString(Val);
+  case DW_AT_APPLE_runtime_class:
+    return LanguageString(Val);
+  }
+
+  return StringRef();
+}
+
+StringRef llvm::dwarf::AtomValueString(uint16_t Atom, unsigned Val) {
+  switch (Atom) {
+  case DW_ATOM_null:
+    return "NULL";
+  case DW_ATOM_die_tag:
+    return TagString(Val);
   }
 
   return StringRef();
