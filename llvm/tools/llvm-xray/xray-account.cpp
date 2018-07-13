@@ -476,9 +476,9 @@ static CommandRegistration Unused(&Account, []() -> Error {
     errs()
         << "Error processing record: "
         << llvm::formatv(
-               R"({{type: {0}; cpu: {1}; record-type: {2}; function-id: {3}; tsc: {4}; thread-id: {5}}})",
+               R"({{type: {0}; cpu: {1}; record-type: {2}; function-id: {3}; tsc: {4}; thread-id: {5}; process-id: {6}}})",
                Record.RecordType, Record.CPU, Record.Type, Record.FuncId,
-               Record.TId)
+               Record.TSC, Record.TId, Record.PId)
         << '\n';
     for (const auto &ThreadStack : FCA.getPerThreadFunctionStack()) {
       errs() << "Thread ID: " << ThreadStack.first << "\n";

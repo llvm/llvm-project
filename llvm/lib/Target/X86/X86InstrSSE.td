@@ -191,8 +191,9 @@ multiclass sse12_move_rr<SDNode OpNode, ValueType vt,
 
 multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                       X86MemOperand x86memop, string OpcodeStr,
-                      Domain d, string Name> {
+                      Domain d, string Name, Predicate pred> {
   // AVX
+  let Predicates = [UseAVX, OptForSize] in
   defm V#NAME : sse12_move_rr<OpNode, vt, x86memop, OpcodeStr,
                               "\t{$src2, $src1, $dst|$dst, $src1, $src2}", d,
                               "V"#Name>,
@@ -204,6 +205,7 @@ multiclass sse12_move<RegisterClass RC, SDNode OpNode, ValueType vt,
                      VEX, VEX_LIG, Sched<[WriteFStore]>, VEX_WIG;
   // SSE1 & 2
   let Constraints = "$src1 = $dst" in {
+    let Predicates = [pred, NoSSE41_Or_OptForSize] in
     defm NAME : sse12_move_rr<OpNode, vt, x86memop, OpcodeStr,
                               "\t{$src2, $dst|$dst, $src2}", d, Name>;
   }
@@ -235,9 +237,9 @@ multiclass sse12_move_rm<RegisterClass RC, X86MemOperand x86memop,
 }
 
 defm MOVSS : sse12_move<FR32, X86Movss, v4f32, f32mem, "movss",
-                        SSEPackedSingle, "MOVSS">, XS;
+                        SSEPackedSingle, "MOVSS", UseSSE1>, XS;
 defm MOVSD : sse12_move<FR64, X86Movsd, v2f64, f64mem, "movsd",
-                        SSEPackedDouble, "MOVSD">, XD;
+                        SSEPackedDouble, "MOVSD", UseSSE2>, XD;
 
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
   defm MOVSS : sse12_move_rm<FR32, f32mem, loadf32, "movss",
@@ -295,8 +297,17 @@ let Predicates = [UseAVX] in {
             (VMOVSDrr VR128:$src1, VR128:$src2)>;
 }
 
+let Predicates = [UseAVX, OptForSize] in {
+  // Move scalar to XMM zero-extended, zeroing a VR128 then do a
+  // MOVSS to the lower bits.
+  def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
+            (VMOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
+  def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
+            (VMOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
+}
+
 let Predicates = [UseSSE1] in {
-  let Predicates = [NoSSE41] in {
+  let Predicates = [UseSSE1, NoSSE41_Or_OptForSize] in {
   // Move scalar to XMM zero-extended, zeroing a VR128 then do a
   // MOVSS to the lower bits.
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
@@ -6380,16 +6391,26 @@ let Predicates = [HasAVX2] in {
             (VPBLENDVBYrr VR256:$src2, VR256:$src1, VR256:$mask)>;
 }
 
-// Patterns
-// FIXME: Prefer a movss or movsd over a blendps when optimizing for size or
-// on targets where they have equal performance. These were changed to use
-// blends because blends have better throughput on SandyBridge and Haswell, but
-// movs[s/d] are 1-2 byte shorter instructions.
+// Prefer a movss or movsd over a blendps when optimizing for size. these were
+// changed to use blends because blends have better throughput on sandybridge
+// and haswell, but movs[s/d] are 1-2 byte shorter instructions.
 let Predicates = [UseAVX] in {
+  let Predicates = [UseAVX, OptForSpeed] in {
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
             (VBLENDPSrri (v4f32 (V_SET0)), VR128:$src, (i8 1))>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
             (VPBLENDWrri (v4i32 (V_SET0)), VR128:$src, (i8 3))>;
+
+  def : Pat<(v4f32 (X86Movss VR128:$src1, VR128:$src2)),
+            (VBLENDPSrri VR128:$src1, VR128:$src2, (i8 1))>;
+  def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
+            (VPBLENDWrri VR128:$src1, VR128:$src2, (i8 3))>;
+
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+            (VBLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+            (VPBLENDWrri VR128:$src1, VR128:$src2, (i8 0xf))>;
+  }
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),
@@ -6408,16 +6429,25 @@ let Predicates = [UseAVX] in {
             (VBLENDPDYrri (v4i64 (AVX_SET0)), VR256:$src, (i8 1))>;
 }
 
-// FIXME: Prefer a movss or movsd over a blendps when optimizing for size or
-// on targets where they have equal performance. These were changed to use
-// blends because blends have better throughput on SandyBridge and Haswell, but
-// movs[s/d] are 1-2 byte shorter instructions.
-let Predicates = [UseSSE41] in {
+// Prefer a movss or movsd over a blendps when optimizing for size. these were
+// changed to use blends because blends have better throughput on sandybridge
+// and haswell, but movs[s/d] are 1-2 byte shorter instructions.
+let Predicates = [UseSSE41, OptForSpeed] in {
   // With SSE41 we can use blends for these patterns.
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
             (BLENDPSrri (v4f32 (V_SET0)), VR128:$src, (i8 1))>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
             (PBLENDWrri (v4i32 (V_SET0)), VR128:$src, (i8 3))>;
+
+  def : Pat<(v4f32 (X86Movss VR128:$src1, VR128:$src2)),
+            (BLENDPSrri VR128:$src1, VR128:$src2, (i8 1))>;
+  def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
+            (PBLENDWrri VR128:$src1, VR128:$src2, (i8 3))>;
+
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+            (BLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+            (PBLENDWrri VR128:$src1, VR128:$src2, (i8 0xf))>;
 }
 
 

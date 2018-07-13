@@ -40,9 +40,7 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
       SM, Opts.LoadQueueSize, Opts.StoreQueueSize, Opts.AssumeNoAlias);
 
   // Create the pipeline and its stages.
-  auto P = llvm::make_unique<Pipeline>(
-      Opts.DispatchWidth, Opts.RegisterFileSize, Opts.LoadQueueSize,
-      Opts.StoreQueueSize, Opts.AssumeNoAlias);
+  auto P = llvm::make_unique<Pipeline>();
   auto F = llvm::make_unique<FetchStage>(IB, SrcMgr);
   auto D = llvm::make_unique<DispatchStage>(
       STI, MRI, Opts.RegisterFileSize, Opts.DispatchWidth, *RCU, *PRF, *HWS);

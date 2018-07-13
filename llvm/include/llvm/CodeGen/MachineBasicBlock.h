@@ -477,6 +477,11 @@ public:
   /// probabilities may need to be normalized.
   void copySuccessor(MachineBasicBlock *Orig, succ_iterator I);
 
+  /// Split the old successor into old plus new and updates the probability
+  /// info.
+  void splitSuccessor(MachineBasicBlock *Old, MachineBasicBlock *New,
+                      bool NormalizeSuccProbs = false);
+
   /// Transfers all the successors from MBB to this machine basic block (i.e.,
   /// copies all the successors FromMBB and remove all the successors from
   /// FromMBB).

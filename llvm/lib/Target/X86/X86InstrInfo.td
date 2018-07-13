@@ -944,6 +944,8 @@ let RecomputePerFunction = 1 in {
   def OptForSpeed  : Predicate<"!MF->getFunction().optForSize()">;
   def UseIncDec : Predicate<"!Subtarget->slowIncDec() || "
                             "MF->getFunction().optForSize()">;
+  def NoSSE41_Or_OptForSize : Predicate<"MF->getFunction().optForSize() || "
+                                        "!Subtarget->hasSSE41()">;
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;

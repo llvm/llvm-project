@@ -125,9 +125,9 @@ static ThreadLocalData &getThreadLocalData() {
   return TLD;
 }
 
-static void writeNewBufferPreamble(tid_t Tid,
-                                   timespec TS) XRAY_NEVER_INSTRUMENT {
-  static constexpr int InitRecordsCount = 2;
+static void writeNewBufferPreamble(tid_t Tid, timespec TS,
+                                   pid_t Pid) XRAY_NEVER_INSTRUMENT {
+  static constexpr int InitRecordsCount = 3;
   auto &TLD = getThreadLocalData();
   MetadataRecord Metadata[InitRecordsCount];
   {
@@ -161,6 +161,16 @@ static void writeNewBufferPreamble(tid_t Tid,
                     sizeof(Micros));
   }
 
+  // Also write the Pid record.
+  {
+    // Write out a MetadataRecord that contains the current pid
+    auto &PidMetadata = Metadata[2];
+    PidMetadata.Type = uint8_t(RecordType::Metadata);
+    PidMetadata.RecordKind = uint8_t(MetadataRecord::RecordKinds::Pid);
+    int32_t pid = static_cast<int32_t>(Pid);
+    internal_memcpy(&PidMetadata.Data, &pid, sizeof(pid));
+  }
+
   TLD.NumConsecutiveFnEnters = 0;
   TLD.NumTailCalls = 0;
   if (TLD.BQ == nullptr || TLD.BQ->finalizing())
@@ -180,9 +190,10 @@ static void setupNewBuffer(int (*wall_clock_reader)(
   TLD.RecordPtr = static_cast<char *>(B.Data);
   tid_t Tid = GetTid();
   timespec TS{0, 0};
+  pid_t Pid = internal_getpid();
   // This is typically clock_gettime, but callers have injection ability.
   wall_clock_reader(CLOCK_MONOTONIC, &TS);
-  writeNewBufferPreamble(Tid, TS);
+  writeNewBufferPreamble(Tid, TS, Pid);
   TLD.NumConsecutiveFnEnters = 0;
   TLD.NumTailCalls = 0;
 }
@@ -663,7 +674,8 @@ static XRayFileHeader &fdrCommonHeaderInfo() {
     XRayFileHeader &H = reinterpret_cast<XRayFileHeader &>(HStorage);
     // Version 2 of the log writes the extents of the buffer, instead of
     // relying on an end-of-buffer record.
-    H.Version = 2;
+    // Version 3 includes PID metadata record
+    H.Version = 3;
     H.Type = FileTypes::FDR_LOG;
 
     // Test for required CPU features and cache the cycle frequency

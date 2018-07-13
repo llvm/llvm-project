@@ -90,10 +90,20 @@ bool checkIfFixItHintIsApplicable(
   return true;
 }
 
+bool nameMatch(StringRef L, StringRef R, bool Strict) {
+  if (Strict)
+    return L.empty() || R.empty() || L == R;
+  // We allow two names if one is a prefix/suffix of the other, ignoring case.
+  // Important special case: this is true if either parameter has no name!
+  return L.startswith_lower(R) || R.startswith_lower(L) ||
+         L.endswith_lower(R) || R.endswith_lower(L);
+}
+
 DifferingParamsContainer
 findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
                                  const FunctionDecl *OtherDeclaration,
-                                 const FunctionDecl *OriginalDeclaration) {
+                                 const FunctionDecl *OriginalDeclaration,
+                                 bool Strict) {
   DifferingParamsContainer DifferingParams;
 
   auto SourceParamIt = ParameterSourceDeclaration->param_begin();
@@ -106,8 +116,7 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
 
     // FIXME: Provide a way to extract commented out parameter name from comment
     // next to it.
-    if (!SourceParamName.empty() && !OtherParamName.empty() &&
-        SourceParamName != OtherParamName) {
+    if (!nameMatch(SourceParamName, OtherParamName, Strict)) {
       SourceRange OtherParamNameRange =
           DeclarationNameInfo((*OtherParamIt)->getDeclName(),
                               (*OtherParamIt)->getLocation())
@@ -128,9 +137,9 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
 }
 
 InconsistentDeclarationsContainer
-findInconsitentDeclarations(const FunctionDecl *OriginalDeclaration,
+findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
                             const FunctionDecl *ParameterSourceDeclaration,
-                            SourceManager &SM) {
+                            SourceManager &SM, bool Strict) {
   InconsistentDeclarationsContainer InconsistentDeclarations;
   SourceLocation ParameterSourceLocation =
       ParameterSourceDeclaration->getLocation();
@@ -141,7 +150,7 @@ findInconsitentDeclarations(const FunctionDecl *OriginalDeclaration,
       DifferingParamsContainer DifferingParams =
           findDifferingParamsInDeclaration(ParameterSourceDeclaration,
                                            OtherDeclaration,
-                                           OriginalDeclaration);
+                                           OriginalDeclaration, Strict);
       if (!DifferingParams.empty()) {
         InconsistentDeclarations.emplace_back(OtherDeclaration->getLocation(),
                                               std::move(DifferingParams));
@@ -284,6 +293,7 @@ void formatDiagnostics(
 void InconsistentDeclarationParameterNameCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  Options.store(Opts, "Strict", Strict);
 }
 
 void InconsistentDeclarationParameterNameCheck::registerMatchers(
@@ -305,9 +315,9 @@ void InconsistentDeclarationParameterNameCheck::check(
       getParameterSourceDeclaration(OriginalDeclaration);
 
   InconsistentDeclarationsContainer InconsistentDeclarations =
-      findInconsitentDeclarations(OriginalDeclaration,
-                                  ParameterSourceDeclaration,
-                                  *Result.SourceManager);
+      findInconsistentDeclarations(OriginalDeclaration,
+                                   ParameterSourceDeclaration,
+                                   *Result.SourceManager, Strict);
   if (InconsistentDeclarations.empty()) {
     // Avoid unnecessary further visits.
     markRedeclarationsAsVisited(OriginalDeclaration);

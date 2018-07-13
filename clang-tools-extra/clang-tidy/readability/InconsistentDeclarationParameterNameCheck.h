@@ -28,7 +28,8 @@ public:
   InconsistentDeclarationParameterNameCheck(StringRef Name,
                                             ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", 1) != 0) {}
+        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", 1) != 0),
+        Strict(Options.getLocalOrGlobal("Strict", 0) != 0) {}
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
@@ -39,6 +40,7 @@ private:
 
   llvm::DenseSet<const FunctionDecl *> VisitedDeclarations;
   const bool IgnoreMacros;
+  const bool Strict;
 };
 
 } // namespace readability
