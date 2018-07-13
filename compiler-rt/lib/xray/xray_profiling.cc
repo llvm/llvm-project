@@ -277,7 +277,7 @@ profilingLoggingInit(size_t BufferSize, size_t BufferMax, void *Options,
   // We need to reset the profile data collection implementation now.
   profileCollectorService::reset();
 
-  // We need to set up the at-thread-exit handler.
+  // We need to set up the exit handlers.
   static pthread_once_t Once = PTHREAD_ONCE_INIT;
   pthread_once(&Once, +[] {
     pthread_key_create(&ProfilingKey, +[](void *P) {
@@ -287,6 +287,19 @@ profilingLoggingInit(size_t BufferSize, size_t BufferMax, void *Options,
         return;
 
       postCurrentThreadFCT(TLD);
+    });
+
+    // We also need to set up an exit handler, so that we can get the profile
+    // information at exit time. We use the C API to do this, to not rely on C++
+    // ABI functions for registering exit handlers.
+    Atexit(+[] {
+      // Finalize and flush.
+      if (profilingFinalize() != XRAY_LOG_FINALIZED)
+        return;
+      if (profilingFlush() != XRAY_LOG_FLUSHED)
+        return;
+      if (Verbosity())
+        Report("XRay Profile flushed at exit.");
     });
   });
 
@@ -321,13 +334,16 @@ bool profilingDynamicInitializer() XRAY_NEVER_INSTRUMENT {
       profilingFlush,
   };
   auto RegistrationResult = __xray_log_register_mode("xray-profiling", Impl);
-  if (RegistrationResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK &&
-      Verbosity())
-    Report("Cannot register XRay Profiling mode to 'xray-profiling'; error = "
-           "%d\n",
-           RegistrationResult);
+  if (RegistrationResult != XRayLogRegisterStatus::XRAY_REGISTRATION_OK) {
+    if (Verbosity())
+      Report("Cannot register XRay Profiling mode to 'xray-profiling'; error = "
+             "%d\n",
+             RegistrationResult);
+    return false;
+  }
+
   if (!internal_strcmp(flags()->xray_mode, "xray-profiling"))
-    __xray_set_log_impl(Impl);
+    __xray_log_select_mode("xray_profiling");
   return true;
 }
 

@@ -20,7 +20,7 @@ XRAY_FLAG(uptr, global_allocator_max, 2 << 24,
           "Maximum size of the global allocator for profile storage.")
 XRAY_FLAG(uptr, stack_allocator_max, 2 << 24,
           "Maximum size of the traversal stack allocator.")
-XRAY_FLAG(int, grace_period_ms, 100,
+XRAY_FLAG(int, grace_period_ms, 1,
           "Profile collection will wait this much time in milliseconds before "
           "resetting the global state. This gives a chance to threads to "
           "notice that the profiler has been finalized and clean up.")
