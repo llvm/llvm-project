@@ -16,6 +16,7 @@
 #include "BoolPointerImplicitConversionCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "DanglingHandleCheck.h"
+#include "ExceptionEscapeCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
@@ -67,6 +68,8 @@ public:
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
+    CheckFactories.registerCheck<ExceptionEscapeCheck>(
+        "bugprone-exception-escape");
     CheckFactories.registerCheck<FoldInitTypeCheck>(
         "bugprone-fold-init-type");
     CheckFactories.registerCheck<ForwardDeclarationNamespaceCheck>(

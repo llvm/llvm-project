@@ -24,6 +24,7 @@ Clang-Tidy Checks
    bugprone-bool-pointer-implicit-conversion
    bugprone-copy-constructor-init
    bugprone-dangling-handle
+   bugprone-exception-escape
    bugprone-fold-init-type
    bugprone-forward-declaration-namespace
    bugprone-forwarding-reference-overload
