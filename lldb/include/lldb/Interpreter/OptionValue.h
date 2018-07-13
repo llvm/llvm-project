@@ -15,6 +15,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
@@ -100,9 +101,7 @@ public:
   virtual lldb::OptionValueSP DeepCopy() const = 0;
 
   virtual size_t AutoComplete(CommandInterpreter &interpreter,
-                              llvm::StringRef s, int match_start_point,
-                              int max_return_elements, bool &word_complete,
-                              StringList &matches);
+                              CompletionRequest &request);
 
   //-----------------------------------------------------------------
   // Subclasses can override these functions

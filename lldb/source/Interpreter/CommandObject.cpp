@@ -279,14 +279,8 @@ int CommandObject::HandleCompletion(CompletionRequest &request) {
       opt_element_vector = cur_options->ParseForCompletion(
           request.GetParsedLine(), request.GetCursorIndex());
 
-      bool handled_by_options;
-      bool word_complete = request.GetWordComplete();
-      handled_by_options = cur_options->HandleOptionCompletion(
-          request.GetParsedLine(), opt_element_vector, request.GetCursorIndex(),
-          request.GetCursorCharPosition(), request.GetMatchStartPoint(),
-          request.GetMaxReturnElements(), GetCommandInterpreter(),
-          word_complete, request.GetMatches());
-      request.SetWordComplete(word_complete);
+      bool handled_by_options = cur_options->HandleOptionCompletion(
+          request, opt_element_vector, GetCommandInterpreter());
       if (handled_by_options)
         return request.GetMatches().GetSize();
     }
@@ -1015,7 +1009,8 @@ static llvm::StringRef arch_helper() {
   static StreamString g_archs_help;
   if (g_archs_help.Empty()) {
     StringList archs;
-    ArchSpec::AutoComplete(llvm::StringRef(), archs);
+
+    ArchSpec::ListSupportedArchNames(archs);
     g_archs_help.Printf("These are the supported architecture names:\n");
     archs.Join("\n", g_archs_help);
   }

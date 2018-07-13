@@ -573,12 +573,10 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
 }
 
 size_t OptionValue::AutoComplete(CommandInterpreter &interpreter,
-                                 llvm::StringRef s, int match_start_point,
-                                 int max_return_elements, bool &word_complete,
-                                 StringList &matches) {
-  word_complete = false;
-  matches.Clear();
-  return matches.GetSize();
+                                 CompletionRequest &request) {
+  request.SetWordComplete(false);
+  request.GetMatches().Clear();
+  return request.GetMatches().GetSize();
 }
 
 Status OptionValue::SetValueFromString(llvm::StringRef value,

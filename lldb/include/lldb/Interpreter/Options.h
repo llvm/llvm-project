@@ -18,6 +18,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private.h"
@@ -176,29 +177,11 @@ public:
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
-  /// @param[in] input
-  ///    The command line parsed into words
-  ///
-  /// @param[in] cursor_index
-  ///     The index in \ainput of the word in which the cursor lies.
-  ///
-  /// @param[in] char_pos
-  ///     The character position of the cursor in its argument word.
-  ///
-  /// @param[in] match_start_point
-  /// @param[in] match_return_elements
-  ///     See CommandObject::HandleCompletions for a description of
-  ///     how these work.
+  /// @param[in/out] request
+  ///    The completion request that we need to act upon.
   ///
   /// @param[in] interpreter
   ///     The interpreter that's doing the completing.
-  ///
-  /// @param[out] word_complete
-  ///     \btrue if this is a complete option value (a space will be
-  ///     inserted after the completion.) \b false otherwise.
-  ///
-  /// @param[out] matches
-  ///     The array of matches returned.
   ///
   /// FIXME: This is the wrong return value, since we also need to
   /// make a distinction between total number of matches, and the window the
@@ -207,50 +190,19 @@ public:
   /// @return
   ///     \btrue if we were in an option, \bfalse otherwise.
   //------------------------------------------------------------------
-  bool HandleOptionCompletion(Args &input, OptionElementVector &option_map,
-                              int cursor_index, int char_pos,
-                              int match_start_point, int max_return_elements,
-                              CommandInterpreter &interpreter,
-                              bool &word_complete,
-                              lldb_private::StringList &matches);
+  bool HandleOptionCompletion(lldb_private::CompletionRequest &request,
+                              OptionElementVector &option_map,
+                              CommandInterpreter &interpreter);
 
   //------------------------------------------------------------------
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
+  /// @param[in/out] request
+  ///    The completion request that we need to act upon.
+  ///
   /// @param[in] interpreter
   ///    The command interpreter doing the completion.
-  ///
-  /// @param[in] input
-  ///    The command line parsed into words
-  ///
-  /// @param[in] cursor_index
-  ///     The index in \ainput of the word in which the cursor lies.
-  ///
-  /// @param[in] char_pos
-  ///     The character position of the cursor in its argument word.
-  ///
-  /// @param[in] opt_element_vector
-  ///     The results of the options parse of \a input.
-  ///
-  /// @param[in] opt_element_index
-  ///     The position in \a opt_element_vector of the word in \a
-  ///     input containing the cursor.
-  ///
-  /// @param[in] match_start_point
-  /// @param[in] match_return_elements
-  ///     See CommandObject::HandleCompletions for a description of
-  ///     how these work.
-  ///
-  /// @param[in] interpreter
-  ///     The command interpreter in which we're doing completion.
-  ///
-  /// @param[out] word_complete
-  ///     \btrue if this is a complete option value (a space will
-  ///     be inserted after the completion.) \bfalse otherwise.
-  ///
-  /// @param[out] matches
-  ///     The array of matches returned.
   ///
   /// FIXME: This is the wrong return value, since we also need to
   /// make a distinction between total number of matches, and the window the
@@ -260,12 +212,10 @@ public:
   ///     \btrue if we were in an option, \bfalse otherwise.
   //------------------------------------------------------------------
   virtual bool
-  HandleOptionArgumentCompletion(Args &input, int cursor_index, int char_pos,
+  HandleOptionArgumentCompletion(lldb_private::CompletionRequest &request,
                                  OptionElementVector &opt_element_vector,
-                                 int opt_element_index, int match_start_point,
-                                 int max_return_elements,
-                                 CommandInterpreter &interpreter,
-                                 bool &word_complete, StringList &matches);
+                                 int opt_element_index,
+                                 CommandInterpreter &interpreter);
 
 protected:
   // This is a set of options expressed as indexes into the options table for

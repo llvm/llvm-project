@@ -16,8 +16,6 @@
 #include <string>
 #include <vector>
 
-#include "lldb/Utility/CompletionRequest.h"
-
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Utility/Flags.h"
@@ -26,6 +24,7 @@
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private.h"
 

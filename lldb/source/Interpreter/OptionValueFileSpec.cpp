@@ -99,15 +99,13 @@ lldb::OptionValueSP OptionValueFileSpec::DeepCopy() const {
   return OptionValueSP(new OptionValueFileSpec(*this));
 }
 
-size_t OptionValueFileSpec::AutoComplete(
-    CommandInterpreter &interpreter, llvm::StringRef s, int match_start_point,
-    int max_return_elements, bool &word_complete, StringList &matches) {
-  word_complete = false;
-  matches.Clear();
+size_t OptionValueFileSpec::AutoComplete(CommandInterpreter &interpreter,
+                                         CompletionRequest &request) {
+  request.SetWordComplete(false);
+  request.GetMatches().Clear();
   CommandCompletions::InvokeCommonCompletionCallbacks(
-      interpreter, m_completion_mask, s, match_start_point, max_return_elements,
-      nullptr, word_complete, matches);
-  return matches.GetSize();
+      interpreter, m_completion_mask, request, nullptr);
+  return request.GetMatches().GetSize();
 }
 
 const lldb::DataBufferSP &OptionValueFileSpec::GetFileContents() {

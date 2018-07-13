@@ -257,6 +257,16 @@ __attribute__((section(".preinit_array"),
 #endif
 
 extern "C"
+    __attribute__((visibility("default"))) void *__get_unsafe_stack_bottom() {
+  return unsafe_stack_start;
+}
+
+extern "C"
+    __attribute__((visibility("default"))) void *__get_unsafe_stack_top() {
+  return (char*)unsafe_stack_start + unsafe_stack_size;
+}
+
+extern "C"
     __attribute__((visibility("default"))) void *__get_unsafe_stack_start() {
   return unsafe_stack_start;
 }
