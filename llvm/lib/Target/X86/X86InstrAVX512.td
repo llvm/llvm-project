@@ -11481,37 +11481,37 @@ multiclass AVX512_scalar_math_fp_patterns<SDNode Op, string OpcPrefix, SDNode Mo
                                            X86VectorVTInfo _, PatLeaf ZeroFP> {
   let Predicates = [HasAVX512] in {
     // extracted scalar math op with insert via movss
-    def : Pat<(_.VT (MoveNode (_.VT VR128X:$dst), (_.VT (scalar_to_vector
-          (Op (_.EltVT (extractelt (_.VT VR128X:$dst), (iPTR 0))),
-          _.FRC:$src))))),
-      (!cast<Instruction>("V"#OpcPrefix#Zrr_Int) _.VT:$dst,
-          (COPY_TO_REGCLASS _.FRC:$src, VR128X))>;
-
-    // vector math op with insert via movss
-    def : Pat<(_.VT (MoveNode (_.VT VR128X:$dst),
-          (Op (_.VT VR128X:$dst), (_.VT VR128X:$src)))),
-      (!cast<Instruction>("V"#OpcPrefix#Zrr_Int) _.VT:$dst, _.VT:$src)>;
+    def : Pat<(MoveNode
+               (_.VT VR128X:$dst),
+               (_.VT (scalar_to_vector
+                      (Op (_.EltVT (extractelt (_.VT VR128X:$dst), (iPTR 0))),
+                          _.FRC:$src)))),
+              (!cast<Instruction>("V"#OpcPrefix#Zrr_Int) _.VT:$dst,
+               (COPY_TO_REGCLASS _.FRC:$src, VR128X))>;
 
     // extracted masked scalar math op with insert via movss
     def : Pat<(MoveNode (_.VT VR128X:$src1),
                (scalar_to_vector
                 (X86selects VK1WM:$mask,
-                            (Op (_.EltVT (extractelt (_.VT VR128X:$src1), (iPTR 0))),
+                            (Op (_.EltVT
+                                 (extractelt (_.VT VR128X:$src1), (iPTR 0))),
                                 _.FRC:$src2),
                             _.FRC:$src0))),
-      (!cast<Instruction>("V"#OpcPrefix#Zrr_Intk) (COPY_TO_REGCLASS _.FRC:$src0, VR128X),
-          VK1WM:$mask, _.VT:$src1,
-          (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
+              (!cast<Instruction>("V"#OpcPrefix#Zrr_Intk)
+               (COPY_TO_REGCLASS _.FRC:$src0, VR128X),
+               VK1WM:$mask, _.VT:$src1,
+               (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
 
     // extracted masked scalar math op with insert via movss
     def : Pat<(MoveNode (_.VT VR128X:$src1),
                (scalar_to_vector
                 (X86selects VK1WM:$mask,
-                            (Op (_.EltVT (extractelt (_.VT VR128X:$src1), (iPTR 0))),
+                            (Op (_.EltVT
+                                 (extractelt (_.VT VR128X:$src1), (iPTR 0))),
                                 _.FRC:$src2), (_.EltVT ZeroFP)))),
-      (!cast<Instruction>("V"#OpcPrefix#Zrr_Intkz) 
-          VK1WM:$mask, _.VT:$src1,
-          (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
+              (!cast<Instruction>("V"#OpcPrefix#Zrr_Intkz)
+               VK1WM:$mask, _.VT:$src1,
+               (COPY_TO_REGCLASS _.FRC:$src2, VR128X))>;
   }
 }
 

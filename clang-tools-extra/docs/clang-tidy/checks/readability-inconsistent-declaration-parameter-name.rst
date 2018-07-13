@@ -29,6 +29,15 @@ function declarations, for example:
   void foo(int a);
   void foo(int); // no warning
 
+One name is also allowed to be a case-insensitive prefix/suffix of the other:
+
+.. code-block:: c++
+
+  void foo(int count);
+  void foo(int count_input) { // no warning
+    int count = adjustCount(count_input);
+  }
+
 To help with refactoring, in some cases fix-it hints are generated to align
 parameter names to a single naming convention. This works with the assumption
 that the function definition is the most up-to-date version, as it directly
@@ -47,3 +56,8 @@ the definition or the first declaration seen in a translation unit.
 
    If this option is set to non-zero (default is `1`), the check will not warn
    about names declared inside macros.
+
+.. option:: Strict
+
+   If this option is set to non-zero (default is `0`), then names must match
+   exactly (or be absent).

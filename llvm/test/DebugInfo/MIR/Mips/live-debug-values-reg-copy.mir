@@ -1,0 +1,241 @@
+# RUN: llc -run-pass=livedebugvalues %s -o - | FileCheck %s
+#
+# This test tests tracking variables value transferring from one register to another.
+# This example is altered additionally in order to test transferring from one float register
+# to another. The altered instructions are labeled below.
+#
+# CHECK: ![[ARG1:.*]] = !DILocalVariable(name: "arg1"
+# CHECK: ![[ARG2:.*]] = !DILocalVariable(name: "arg2"
+# CHECK: DBG_VALUE debug-use $s0_64, debug-use $noreg, ![[ARG2]], !DIExpression(), debug-location
+# CHECK: $s1_64 = OR64 killed $s0_64, $zero_64, debug-location
+# CHECK-NEXT: DBG_VALUE debug-use $s1_64, debug-use $noreg, ![[ARG2]], !DIExpression(), debug-location
+# CHECK: DBG_VALUE debug-use $f24, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK: $f26 = FMOV_S killed $f24, debug-location
+# CHECK-NEXT: DBG_VALUE debug-use $f26, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+
+--- |
+  ; ModuleID = 'live-debug-values-reg-copy.ll'
+  source_filename = "live-debug-values-reg-copy.c"
+  target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
+  target triple = "mips64-octeon-linux"
+
+  define float @foo(float %arg1, i32 signext %arg2) local_unnamed_addr !dbg !8 {
+  entry:
+    call void @llvm.dbg.value(metadata float %arg1, metadata !14, metadata !DIExpression()), !dbg !19
+    call void @llvm.dbg.value(metadata i32 %arg2, metadata !15, metadata !DIExpression()), !dbg !19
+    %conv = fpext float %arg1 to double, !dbg !19
+    %cmp = fcmp ogt double %conv, 1.012310e+01, !dbg !19
+    br i1 %cmp, label %if.then, label %if.else, !dbg !19
+
+  if.then:                                          ; preds = %entry
+    %call = tail call float @externFunc(float %arg1), !dbg !19
+    %call5 = tail call i32 @externFunc3(i32 signext %arg2), !dbg !19
+    %conv6 = sitofp i32 %call5 to float, !dbg !19
+    %add7 = fadd float %conv6, 0x3FF522D0E0000000, !dbg !19
+    br label %if.end, !dbg !19
+
+  if.else:                                          ; preds = %entry
+    %add8 = fadd float %arg1, 1.000000e+01, !dbg !19
+    call void @llvm.dbg.value(metadata float %add8, metadata !14, metadata !DIExpression()), !dbg !19
+    %call9 = tail call float @externFunc2(float %add8), !dbg !19
+    %call10 = tail call i32 @externFunc4(i32 signext %arg2), !dbg !19
+    %conv11 = sitofp i32 %call10 to float, !dbg !19
+    %add12 = fadd float %call9, %conv11, !dbg !19
+    %call14 = tail call float @externFunc(float %add8), !dbg !19
+    br label %if.end
+
+  if.end:                                           ; preds = %if.else, %if.then
+    %local.0 = phi float [ %add7, %if.then ], [ %add12, %if.else ]
+    ret float %local.0, !dbg !19
+  }
+
+  declare float @externFunc(float) local_unnamed_addr
+
+  declare i32 @externFunc3(i32 signext) local_unnamed_addr
+
+  declare float @externFunc2(float) local_unnamed_addr
+
+  declare i32 @externFunc4(i32 signext) local_unnamed_addr
+
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #1
+
+  attributes #0 = { nounwind readnone speculatable }
+  attributes #1 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 7.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "live-debug-values-reg-copy.c", directory: "/")
+  !2 = !{}
+  !3 = !{i32 2, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 7, !"PIC Level", i32 2}
+  !7 = !{!"clang version 7.0.0 "}
+  !8 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 6, type: !9, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !13)
+  !9 = !DISubroutineType(types: !10)
+  !10 = !{!11, !11, !12}
+  !11 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !{!14, !15}
+  !14 = !DILocalVariable(name: "arg1", arg: 1, scope: !8, file: !1, line: 6, type: !11)
+  !15 = !DILocalVariable(name: "arg2", arg: 2, scope: !8, file: !1, line: 6, type: !12)
+  !19 = !DILocation(line: 6, column: 17, scope: !8)
+
+...
+---
+name:            foo
+alignment:       3
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: false
+registers:
+liveins:
+  - { reg: '$f12', virtual-reg: '' }
+  - { reg: '$a1_64', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$d25_64', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$d24_64', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$ra_64', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8,
+      stack-id: 0, callee-saved-register: '$s0_64', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:
+  - id:              0
+    value:           'double 1.012310e+01'
+    alignment:       8
+    isTargetSpecific: false
+  - id:              1
+    value:           'float 1.000000e+01'
+    alignment:       4
+    isTargetSpecific: false
+  - id:              2
+    value:           float 0x3FF522D0E0000000
+    alignment:       4
+    isTargetSpecific: false
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    $sp_64 = DADDiu $sp_64, -32
+    CFI_INSTRUCTION def_cfa_offset 32
+    SDC164 killed $d25_64, $sp_64, 24 :: (store 8 into %stack.0)
+    SDC164 killed $d24_64, $sp_64, 16 :: (store 8 into %stack.1)
+    SD killed $ra_64, $sp_64, 8 :: (store 8 into %stack.2)
+    SD killed $s0_64, $sp_64, 0 :: (store 8 into %stack.3)
+    CFI_INSTRUCTION offset $d26_64, -8
+    CFI_INSTRUCTION offset $d25_64, -4
+    CFI_INSTRUCTION offset $d25_64, -16
+    CFI_INSTRUCTION offset $d24_64, -12
+    CFI_INSTRUCTION offset $ra_64, -24
+    CFI_INSTRUCTION offset $s0_64, -32
+    DBG_VALUE debug-use $f12, debug-use $noreg, !14, !DIExpression(), debug-location !19
+    DBG_VALUE debug-use $a1_64, debug-use $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE debug-use $s0, debug-use $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE debug-use $s0_64, debug-use $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE debug-use $f12, debug-use $noreg, !14, !DIExpression(), debug-location !19
+    renamable $d0_64 = CVT_D64_S renamable $f12, debug-location !19
+    renamable $at_64 = LUi64 target-flags(mips-highest) %const.0
+    renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-higher) %const.0
+    renamable $at_64 = DSLL killed renamable $at_64, 16
+    renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.0
+    renamable $at_64 = DSLL killed renamable $at_64, 16
+    renamable $d1_64 = LDC164 killed renamable $at_64, target-flags(mips-abs-lo) %const.0, debug-location !19 :: (load 8 from constant-pool)
+    FCMP_D64 killed renamable $d0_64, killed renamable $d1_64, 7, implicit-def $fcc0, debug-location !19
+    BC1T killed $fcc0, %bb.2, implicit-def $at, debug-location !19 {
+      $s0_64 = OR64 $a1_64, $zero_64
+    }
+
+  bb.1.if.then:
+    successors: %bb.3(0x80000000)
+
+    JAL @externFunc, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def dead $f0, debug-location !19 {
+      NOP debug-location !19
+    }
+    JAL @externFunc3, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0, debug-location !19 {
+      renamable $a0_64 = SLL64_32 renamable $s0, implicit $s0_64, debug-location !19
+    }
+    $f0 = MTC1 killed $v0, debug-location !19
+    $f0 = CVT_S_W killed $f0, debug-location !19
+    ; This instruction is inserted additionally in order to test moving from one register to another
+    $s1_64 = OR64 killed $s0_64, $zero_64, debug-location !19
+    renamable $at_64 = LUi64 target-flags(mips-highest) %const.2
+    renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-higher) %const.2
+    renamable $at_64 = DSLL killed renamable $at_64, 16
+    renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.2
+    renamable $at_64 = DSLL killed renamable $at_64, 16
+    renamable $f1 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.2, debug-location !19 :: (load 4 from constant-pool)
+    J %bb.3, implicit-def dead $at, debug-location !19 {
+      renamable $f0 = FADD_S killed renamable $f0, killed renamable $f1, debug-location !19
+    }
+
+  bb.2.if.else:
+    successors: %bb.3(0x80000000)
+
+    renamable $at_64 = LUi64 target-flags(mips-highest) %const.1
+    renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-higher) %const.1
+    renamable $at_64 = DSLL killed renamable $at_64, 16
+    renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.1
+    renamable $at_64 = DSLL killed renamable $at_64, 16
+    renamable $f0 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.1, debug-location !19 :: (load 4 from constant-pool)
+    renamable $f24 = FADD_S killed renamable $f12, killed renamable $f0, debug-location !19
+    DBG_VALUE debug-use $f24, debug-use $noreg, !14, !DIExpression(), debug-location !19
+    JAL @externFunc2, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def $f0, debug-location !19 {
+      $f12 = FMOV_S $f24, debug-location !19
+    }
+    $f25 = FMOV_S $f0, debug-location !19
+    JAL @externFunc4, csr_n64, implicit-def dead $ra, implicit $a0_64, implicit-def $sp, implicit-def $v0, debug-location !19 {
+      renamable $a0_64 = SLL64_32 renamable $s0, implicit killed $s0_64, debug-location !19
+    }
+    $s0 = OR $v0, $zero, debug-location !19
+    JAL @externFunc, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def dead $f0, debug-location !19 {
+      $f12 = FMOV_S $f24, debug-location !19
+    }
+    $f0 = MTC1 killed $s0, debug-location !19
+    $f0 = CVT_S_W killed $f0, debug-location !19
+    renamable $f0 = FADD_S renamable $f25, killed renamable $f0, debug-location !19
+    ; This instruction is inserted additionally in order to test moving variable's value from one float register to another.
+    $f26 = FMOV_S killed $f24, debug-location !19
+
+  bb.3.if.end:
+    $s0_64 = LD $sp_64, 0, debug-location !19 :: (load 8 from %stack.3)
+    $ra_64 = LD $sp_64, 8, debug-location !19 :: (load 8 from %stack.2)
+    $d24_64 = LDC164 $sp_64, 16, debug-location !19 :: (load 8 from %stack.1)
+    $d25_64 = LDC164 $sp_64, 24, debug-location !19 :: (load 8 from %stack.0)
+    PseudoReturn64 undef $ra_64, implicit $f0, debug-location !19 {
+      $sp_64 = DADDiu $sp_64, 32
+    }
+
+...

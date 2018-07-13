@@ -34,5 +34,5 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK: records:
-// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], kind: function-exit, tsc: {{[0-9]+}} }
+// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
+// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-exit, tsc: {{[0-9]+}} }

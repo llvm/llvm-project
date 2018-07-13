@@ -19,6 +19,7 @@
 
 namespace llvm {
 
+class AnalysisUsage;
 class MachineFunction;
 class MachineInstr;
 class MachineOperand;
@@ -102,5 +103,10 @@ MachineInstr *getOpcodeDef(unsigned Opcode, unsigned Reg,
 
 /// Returns an APFloat from Val converted to the appropriate size.
 APFloat getAPFloatFromSize(double Val, unsigned Size);
+
+/// Modify analysis usage so it preserves passes required for the SelectionDAG
+/// fallback.
+void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
+
 } // End namespace llvm.
 #endif

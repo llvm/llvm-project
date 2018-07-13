@@ -416,14 +416,12 @@ struct UsefulFunctions {
 
 #ifdef PEDANTIC
 struct PointerToMemberFunctionTest1 {
-  // TODO: we'd expect the note {{uninitialized field 'this->f'}}
-  void (UsefulFunctions::*f)(void); // no-note
+  void (UsefulFunctions::*f)(void); // expected-note{{uninitialized field 'this->f'}}
   PointerToMemberFunctionTest1() {}
 };
 
 void fPointerToMemberFunctionTest1() {
-  // TODO: we'd expect the warning {{1 uninitialized field}}
-  PointerToMemberFunctionTest1(); // no-warning
+  PointerToMemberFunctionTest1(); // expected-warning{{1 uninitialized field}}
 }
 
 struct PointerToMemberFunctionTest2 {
@@ -460,14 +458,12 @@ void fMultiPointerToMemberFunctionTest2() {
 }
 
 struct PointerToMemberDataTest1 {
-  // TODO: we'd expect the note {{uninitialized field 'this->f'}}
-  int UsefulFunctions::*d; // no-note
+  int UsefulFunctions::*d; // expected-note{{uninitialized field 'this->d'}}
   PointerToMemberDataTest1() {}
 };
 
 void fPointerToMemberDataTest1() {
-  // TODO: we'd expect the warning {{1 uninitialized field}}
-  PointerToMemberDataTest1(); // no-warning
+  PointerToMemberDataTest1(); // expected-warning{{1 uninitialized field}}
 }
 
 struct PointerToMemberDataTest2 {
