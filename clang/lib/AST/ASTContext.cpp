@@ -3035,6 +3035,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::Builtin:
   case Type::Complex:
   case Type::Vector:
+  case Type::DependentVector:
   case Type::ExtVector:
   case Type::DependentSizedExtVector:
   case Type::DependentAddressSpace:
@@ -3309,6 +3310,45 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
   auto *New = new (*this, TypeAlignment)
     VectorType(vecType, NumElts, Canonical, VecKind);
   VectorTypes.InsertNode(New, InsertPos);
+  Types.push_back(New);
+  return QualType(New, 0);
+}
+
+QualType
+ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
+                                   SourceLocation AttrLoc,
+                                   VectorType::VectorKind VecKind) const {
+  llvm::FoldingSetNodeID ID;
+  DependentVectorType::Profile(ID, *this, getCanonicalType(VecType), SizeExpr,
+                               VecKind);
+  void *InsertPos = nullptr;
+  DependentVectorType *Canon =
+      DependentVectorTypes.FindNodeOrInsertPos(ID, InsertPos);
+  DependentVectorType *New;
+
+  if (Canon) {
+    New = new (*this, TypeAlignment) DependentVectorType(
+        *this, VecType, QualType(Canon, 0), SizeExpr, AttrLoc, VecKind);
+  } else {
+    QualType CanonVecTy = getCanonicalType(VecType);
+    if (CanonVecTy == VecType) {
+      New = new (*this, TypeAlignment) DependentVectorType(
+          *this, VecType, QualType(), SizeExpr, AttrLoc, VecKind);
+
+      DependentVectorType *CanonCheck =
+          DependentVectorTypes.FindNodeOrInsertPos(ID, InsertPos);
+      assert(!CanonCheck &&
+             "Dependent-sized vector_size canonical type broken");
+      (void)CanonCheck;
+      DependentVectorTypes.InsertNode(New, InsertPos);
+    } else {
+      QualType Canon = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
+                                                      SourceLocation());
+      New = new (*this, TypeAlignment) DependentVectorType(
+          *this, VecType, Canon, SizeExpr, AttrLoc, VecKind);
+    }
+  }
+
   Types.push_back(New);
   return QualType(New, 0);
 }

@@ -888,15 +888,17 @@ static bool canEmitInitWithFewStoresAfterMemset(llvm::Constant *Init,
 /// emitStoresForInitAfterMemset - For inits that
 /// canEmitInitWithFewStoresAfterMemset returned true for, emit the scalar
 /// stores that would be required.
-static void emitStoresForInitAfterMemset(llvm::Constant *Init, llvm::Value *Loc,
-                                         bool isVolatile, CGBuilderTy &Builder) {
+static void emitStoresForInitAfterMemset(CodeGenModule &CGM,
+                                         llvm::Constant *Init, Address Loc,
+                                         bool isVolatile,
+                                         CGBuilderTy &Builder) {
   assert(!Init->isNullValue() && !isa<llvm::UndefValue>(Init) &&
          "called emitStoresForInitAfterMemset for zero or undef value.");
 
   if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
       isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
       isa<llvm::ConstantExpr>(Init)) {
-    Builder.CreateDefaultAlignedStore(Init, Loc, isVolatile);
+    Builder.CreateStore(Init, Loc, isVolatile);
     return;
   }
 
@@ -908,7 +910,8 @@ static void emitStoresForInitAfterMemset(llvm::Constant *Init, llvm::Value *Loc,
       // If necessary, get a pointer to the element and emit it.
       if (!Elt->isNullValue() && !isa<llvm::UndefValue>(Elt))
         emitStoresForInitAfterMemset(
-            Elt, Builder.CreateConstGEP2_32(Init->getType(), Loc, 0, i),
+            CGM, Elt,
+            Builder.CreateConstInBoundsGEP2_32(Loc, 0, i, CGM.getDataLayout()),
             isVolatile, Builder);
     }
     return;
@@ -923,7 +926,8 @@ static void emitStoresForInitAfterMemset(llvm::Constant *Init, llvm::Value *Loc,
     // If necessary, get a pointer to the element and emit it.
     if (!Elt->isNullValue() && !isa<llvm::UndefValue>(Elt))
       emitStoresForInitAfterMemset(
-          Elt, Builder.CreateConstGEP2_32(Init->getType(), Loc, 0, i),
+          CGM, Elt,
+          Builder.CreateConstInBoundsGEP2_32(Loc, 0, i, CGM.getDataLayout()),
           isVolatile, Builder);
   }
 }
@@ -1411,8 +1415,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     if (!constant->isNullValue() && !isa<llvm::UndefValue>(constant)) {
       Loc = Builder.CreateBitCast(Loc,
         constant->getType()->getPointerTo(Loc.getAddressSpace()));
-      emitStoresForInitAfterMemset(constant, Loc.getPointer(),
-                                   isVolatile, Builder);
+      emitStoresForInitAfterMemset(CGM, constant, Loc, isVolatile, Builder);
     }
   } else {
     // Otherwise, create a temporary global with the initializer then

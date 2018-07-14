@@ -734,7 +734,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
 
   if (!hadError && saw_fixed_point_suffix) {
     assert(isFract || isAccum);
-    assert(radix == 16 || radix == 10);
+    //assert(radix == 16 || radix == 10);
   }
 }
 
