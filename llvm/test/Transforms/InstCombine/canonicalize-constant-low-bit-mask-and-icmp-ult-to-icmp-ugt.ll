@@ -4,7 +4,7 @@
 ; https://bugs.llvm.org/show_bug.cgi?id=38123
 
 ; Pattern:
-;   x & C != x
+;   x & C u< x
 ; Should be transformed into:
 ;   x u> C
 ; Iff: isPowerOf2(C + 1)
@@ -19,7 +19,7 @@ define i1 @p0(i8 %x) {
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %tmp0 = and i8 %x, 3
-  %ret = icmp ne i8 %tmp0, %x
+  %ret = icmp ult i8 %tmp0, %x
   ret i1 %ret
 }
 
@@ -31,7 +31,7 @@ define i1 @pv(i8 %x, i8 %y) {
 ;
   %tmp0 = lshr i8 -1, %y
   %tmp1 = and i8 %tmp0, %x
-  %ret = icmp ne i8 %tmp1, %x
+  %ret = icmp ult i8 %tmp1, %x
   ret i1 %ret
 }
 
@@ -45,7 +45,7 @@ define <2 x i1> @p1_vec_splat(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 3>
-  %ret = icmp ne <2 x i8> %tmp0, %x
+  %ret = icmp ult <2 x i8> %tmp0, %x
   ret <2 x i1> %ret
 }
 
@@ -55,7 +55,7 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 15> ; doesn't have to be splat.
-  %ret = icmp ne <2 x i8> %tmp0, %x
+  %ret = icmp ult <2 x i8> %tmp0, %x
   ret <2 x i1> %ret
 }
 
@@ -65,7 +65,7 @@ define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
 ; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 3>
-  %ret = icmp ne <3 x i8> %tmp0, %x
+  %ret = icmp ult <3 x i8> %tmp0, %x
   ret <3 x i1> %ret
 }
 
@@ -75,15 +75,15 @@ define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
 
 declare i8 @gen8()
 
+; The pattern is not commutative. instsimplify will already take care of it.
 define i1 @c0() {
 ; CHECK-LABEL: @c0(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], 3
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = call i8 @gen8()
   %tmp0 = and i8 %x, 3
-  %ret = icmp ne i8 %x, %tmp0 ; swapped order
+  %ret = icmp ult i8 %x, %tmp0 ; swapped order
   ret i1 %ret
 }
 
@@ -101,35 +101,31 @@ define i1 @cv0(i8 %y) {
   %x = call i8 @gen8()
   %tmp0 = lshr i8 -1, %y
   %tmp1 = and i8 %x, %tmp0 ; swapped order
-  %ret = icmp ne i8 %tmp1, %x
+  %ret = icmp ult i8 %tmp1, %x
   ret i1 %ret
 }
 
 define i1 @cv1(i8 %y) {
 ; CHECK-LABEL: @cv1(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = call i8 @gen8()
   %tmp0 = lshr i8 -1, %y
   %tmp1 = and i8 %tmp0, %x
-  %ret = icmp ne i8 %x, %tmp1 ; swapped order
+  %ret = icmp ult i8 %x, %tmp1 ; swapped order
   ret i1 %ret
 }
 
 define i1 @cv2(i8 %y) {
 ; CHECK-LABEL: @cv2(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = call i8 @gen8()
   %tmp0 = lshr i8 -1, %y
   %tmp1 = and i8 %x, %tmp0 ; swapped order
-  %ret = icmp ne i8 %x, %tmp1 ; swapped order
+  %ret = icmp ult i8 %x, %tmp1 ; swapped order
   ret i1 %ret
 }
 
@@ -148,7 +144,7 @@ define i1 @oneuse0(i8 %x) {
 ;
   %tmp0 = and i8 %x, 3
   call void @use8(i8 %tmp0)
-  %ret = icmp ne i8 %tmp0, %x
+  %ret = icmp ult i8 %tmp0, %x
   ret i1 %ret
 }
 
@@ -159,32 +155,32 @@ define i1 @oneuse0(i8 %x) {
 define i1 @n0(i8 %x) {
 ; CHECK-LABEL: @n0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[TMP0]], [[X]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 4 ; power-of-two, but invalid.
-  %ret = icmp ne i8 %tmp0, %x
+  %ret = icmp ult i8 %tmp0, %x
   ret i1 %ret
 }
 
 define i1 @n1(i8 %x, i8 %y, i8 %notx) {
 ; CHECK-LABEL: @n1(
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i8 [[TMP0]], [[NOTX:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i8 [[TMP0]], [[NOTX:%.*]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 3
-  %ret = icmp ne i8 %tmp0, %notx ; not %x
+  %ret = icmp ult i8 %tmp0, %notx ; not %x
   ret i1 %ret
 }
 
 define <2 x i1> @n2(<2 x i8> %x) {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 16>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult <2 x i8> [[TMP0]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 16> ; only the first one is valid.
-  %ret = icmp ne <2 x i8> %tmp0, %x
+  %ret = icmp ult <2 x i8> %tmp0, %x
   ret <2 x i1> %ret
 }
