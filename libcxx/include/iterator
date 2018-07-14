@@ -1374,7 +1374,8 @@ public:
     }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG __wrap_iter  operator++(int) _NOEXCEPT_DEBUG
         {__wrap_iter __tmp(*this); ++(*this); return __tmp;}
-    _LIBCPP_INLINE_VISIBILITY __wrap_iter& operator--() _NOEXCEPT_DEBUG
+
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG __wrap_iter& operator--() _NOEXCEPT_DEBUG
     {
 #if _LIBCPP_DEBUG_LEVEL >= 2
         _LIBCPP_ASSERT(__get_const_db()->__decrementable(this),
