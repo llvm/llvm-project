@@ -134,6 +134,8 @@ private:
   bool X86SelectFPExt(const Instruction *I);
   bool X86SelectFPTrunc(const Instruction *I);
   bool X86SelectSIToFP(const Instruction *I);
+  bool X86SelectUIToFP(const Instruction *I);
+  bool X86SelectIntToFP(const Instruction *I, bool IsSigned);
 
   const X86InstrInfo *getInstrInfo() const {
     return Subtarget->getInstrInfo();
@@ -2410,11 +2412,14 @@ bool X86FastISel::X86SelectSelect(const Instruction *I) {
   return false;
 }
 
-bool X86FastISel::X86SelectSIToFP(const Instruction *I) {
+// Common code for X86SelectSIToFP and X86SelectUIToFP.
+bool X86FastISel::X86SelectIntToFP(const Instruction *I, bool IsSigned) {
   // The target-independent selection algorithm in FastISel already knows how
   // to select a SINT_TO_FP if the target is SSE but not AVX.
   // Early exit if the subtarget doesn't have AVX.
-  if (!Subtarget->hasAVX())
+  // Unsigned conversion requires avx512.
+  bool HasAVX512 = Subtarget->hasAVX512();
+  if (!Subtarget->hasAVX() || (!IsSigned && !HasAVX512))
     return false;
 
   // TODO: We could sign extend narrower types.
@@ -2429,21 +2434,24 @@ bool X86FastISel::X86SelectSIToFP(const Instruction *I) {
 
   unsigned Opcode;
 
-  static const uint16_t CvtOpc[2][2][2] = {
+  static const uint16_t SCvtOpc[2][2][2] = {
     { { X86::VCVTSI2SSrr,  X86::VCVTSI642SSrr },
       { X86::VCVTSI2SDrr,  X86::VCVTSI642SDrr } },
     { { X86::VCVTSI2SSZrr, X86::VCVTSI642SSZrr },
       { X86::VCVTSI2SDZrr, X86::VCVTSI642SDZrr } },
   };
-  bool HasAVX512 = Subtarget->hasAVX512();
+  static const uint16_t UCvtOpc[2][2] = {
+    { X86::VCVTUSI2SSZrr, X86::VCVTUSI642SSZrr },
+    { X86::VCVTUSI2SDZrr, X86::VCVTUSI642SDZrr },
+  };
   bool Is64Bit = SrcVT == MVT::i64;
 
   if (I->getType()->isDoubleTy()) {
-    // sitofp int -> double
-    Opcode = CvtOpc[HasAVX512][1][Is64Bit];
+    // s/uitofp int -> double
+    Opcode = IsSigned ? SCvtOpc[HasAVX512][1][Is64Bit] : UCvtOpc[1][Is64Bit];
   } else if (I->getType()->isFloatTy()) {
-    // sitofp int -> float
-    Opcode = CvtOpc[HasAVX512][0][Is64Bit];
+    // s/uitofp int -> float
+    Opcode = IsSigned ? SCvtOpc[HasAVX512][0][Is64Bit] : UCvtOpc[0][Is64Bit];
   } else
     return false;
 
@@ -2456,6 +2464,14 @@ bool X86FastISel::X86SelectSIToFP(const Instruction *I) {
       fastEmitInst_rr(Opcode, RC, ImplicitDefReg, true, OpReg, false);
   updateValueMap(I, ResultReg);
   return true;
+}
+
+bool X86FastISel::X86SelectSIToFP(const Instruction *I) {
+  return X86SelectIntToFP(I, /*IsSigned*/true);
+}
+
+bool X86FastISel::X86SelectUIToFP(const Instruction *I) {
+  return X86SelectIntToFP(I, /*IsSigned*/false);
 }
 
 // Helper method used by X86SelectFPExt and X86SelectFPTrunc.
@@ -3632,6 +3648,8 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
     return X86SelectFPTrunc(I);
   case Instruction::SIToFP:
     return X86SelectSIToFP(I);
+  case Instruction::UIToFP:
+    return X86SelectUIToFP(I);
   case Instruction::IntToPtr: // Deliberate fall-through.
   case Instruction::PtrToInt: {
     EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());

@@ -948,7 +948,7 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
     if (DoneLinkingBodies)
       return nullptr;
 
-    NewGV = copyGlobalValueProto(SGV, ShouldLink);
+    NewGV = copyGlobalValueProto(SGV, ShouldLink || ForAlias);
     if (ShouldLink || !ForAlias)
       forceRenaming(NewGV, SGV->getName());
   }

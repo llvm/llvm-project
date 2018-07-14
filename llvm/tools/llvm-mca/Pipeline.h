@@ -59,9 +59,9 @@ class Pipeline {
   std::set<HWEventListener *> Listeners;
   unsigned Cycles;
 
-  void preExecuteStages(const InstRef &IR);
+  void preExecuteStages();
   bool executeStages(InstRef &IR);
-  void postExecuteStages(const InstRef &IR);
+  void postExecuteStages();
   void runCycle();
 
   bool hasWorkToProcess();

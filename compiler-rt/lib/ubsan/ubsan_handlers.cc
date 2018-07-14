@@ -156,6 +156,9 @@ static void handleNegateOverflowImpl(OverflowData *Data, ValueHandle OldVal,
   if (ignoreReport(Loc, Opts, ET))
     return;
 
+  if (!IsSigned && flags()->silence_unsigned_overflow)
+    return;
+
   ScopedReport R(Opts, Loc, ET);
 
   if (IsSigned)

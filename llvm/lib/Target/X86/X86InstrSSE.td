@@ -6408,7 +6408,7 @@ let Predicates = [UseAVX] in {
 
   def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VBLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+  def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VPBLENDWrri VR128:$src1, VR128:$src2, (i8 0xf))>;
   }
 
@@ -6446,7 +6446,7 @@ let Predicates = [UseSSE41, OptForSpeed] in {
 
   def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
             (BLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+  def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (PBLENDWrri VR128:$src1, VR128:$src2, (i8 0xf))>;
 }
 

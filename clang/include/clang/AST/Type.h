@@ -2253,7 +2253,9 @@ public:
 #include "clang/AST/BuiltinTypes.def"
   };
 
-public:
+private:
+  friend class ASTContext; // ASTContext creates these.
+
   BuiltinType(Kind K)
       : Type(Builtin, QualType(), /*Dependent=*/(K == Dependent),
              /*InstantiationDependent=*/(K == Dependent),
@@ -2262,6 +2264,7 @@ public:
     BuiltinTypeBits.Kind = K;
   }
 
+public:
   Kind getKind() const { return static_cast<Kind>(BuiltinTypeBits.Kind); }
   StringRef getName(const PrintingPolicy &Policy) const;
 

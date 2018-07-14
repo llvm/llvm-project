@@ -50,12 +50,12 @@ public:
 
   /// Called prior to executing the list of stages.
   /// This can be called multiple times per cycle.
-  virtual void preExecute(const InstRef &IR) {}
+  virtual void preExecute() {}
 
   /// Called as a cleanup and finalization phase after each execution.
   /// This will only be called if all stages return a success from their
   /// execute callback.  This can be called multiple times per cycle.
-  virtual void postExecute(const InstRef &IR) {}
+  virtual void postExecute() {}
 
   /// The primary action that this stage performs.
   /// Returning false prevents successor stages from having their 'execute'
