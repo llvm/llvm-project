@@ -55,30 +55,31 @@ ExprResult Sema::ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                        /*IsExecConfig=*/true);
 }
 
-Sema::CUDAFunctionTarget Sema::IdentifyCUDATarget(const AttributeList *Attr) {
+Sema::CUDAFunctionTarget
+Sema::IdentifyCUDATarget(const ParsedAttributesView &Attrs) {
   bool HasHostAttr = false;
   bool HasDeviceAttr = false;
   bool HasGlobalAttr = false;
   bool HasInvalidTargetAttr = false;
-  while (Attr) {
-    switch(Attr->getKind()){
-    case AttributeList::AT_CUDAGlobal:
+  for (const ParsedAttr &AL : Attrs) {
+    switch (AL.getKind()) {
+    case ParsedAttr::AT_CUDAGlobal:
       HasGlobalAttr = true;
       break;
-    case AttributeList::AT_CUDAHost:
+    case ParsedAttr::AT_CUDAHost:
       HasHostAttr = true;
       break;
-    case AttributeList::AT_CUDADevice:
+    case ParsedAttr::AT_CUDADevice:
       HasDeviceAttr = true;
       break;
-    case AttributeList::AT_CUDAInvalidTarget:
+    case ParsedAttr::AT_CUDAInvalidTarget:
       HasInvalidTargetAttr = true;
       break;
     default:
       break;
     }
-    Attr = Attr->getNext();
   }
+
   if (HasInvalidTargetAttr)
     return CFT_InvalidTarget;
 

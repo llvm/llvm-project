@@ -51,7 +51,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
 /// Determine structural equivalence of two expressions.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     Expr *E1, Expr *E2) {
+                                     const Expr *E1, const Expr *E2) {
   if (!E1 || !E2)
     return E1 == E2;
 
@@ -399,6 +399,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::DependentSizedExtVector: {
     const auto *Vec1 = cast<DependentSizedExtVectorType>(T1);
     const auto *Vec2 = cast<DependentSizedExtVectorType>(T2);
+    if (!IsStructurallyEquivalent(Context, Vec1->getSizeExpr(),
+                                  Vec2->getSizeExpr()))
+      return false;
+    if (!IsStructurallyEquivalent(Context, Vec1->getElementType(),
+                                  Vec2->getElementType()))
+      return false;
+    break;
+  }
+
+  case Type::DependentVector: {
+    const auto *Vec1 = cast<DependentVectorType>(T1);
+    const auto *Vec2 = cast<DependentVectorType>(T2);
+    if (Vec1->getVectorKind() != Vec2->getVectorKind())
+      return false;
     if (!IsStructurallyEquivalent(Context, Vec1->getSizeExpr(),
                                   Vec2->getSizeExpr()))
       return false;
@@ -954,6 +968,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   D2 = D2->getDefinition();
   if (!D1 || !D2)
     return true;
+
+  // If any of the records has external storage and we do a minimal check (or
+  // AST import) we assmue they are equivalent. (If we didn't have this
+  // assumption then `RecordDecl::LoadFieldsFromExternalStorage` could trigger
+  // another AST import which in turn would call the structural equivalency
+  // check again and finally we'd have an improper result.)
+  if (Context.EqKind == StructuralEquivalenceKind::Minimal)
+    if (D1->hasExternalLexicalStorage() || D2->hasExternalLexicalStorage())
+      return true;
 
   if (auto *D1CXX = dyn_cast<CXXRecordDecl>(D1)) {
     if (auto *D2CXX = dyn_cast<CXXRecordDecl>(D2)) {

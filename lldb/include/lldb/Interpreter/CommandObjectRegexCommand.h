@@ -17,6 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/RegularExpression.h"
 
 namespace lldb_private {
@@ -43,7 +44,7 @@ public:
   int HandleCompletion(CompletionRequest &request) override;
 
 protected:
-  bool DoExecute(const char *command, CommandReturnObject &result) override;
+  bool DoExecute(llvm::StringRef command, CommandReturnObject &result) override;
 
   struct Entry {
     RegularExpression regex;

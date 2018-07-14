@@ -228,6 +228,7 @@ int bar(int n){
 
 // CHECK: define weak void @__omp_offloading_{{.*}}ftemplate{{.*}}_l37(
 // CHECK: call void @__kmpc_spmd_kernel_init(
+// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: call i8* @__kmpc_data_sharing_push_stack(
 // CHECK-NOT: call void @__kmpc_serialized_parallel(
 // CHECK: call void [[L0:@.+]](i32* %{{.+}}, i32* %{{.+}}, i16* %{{.*}})

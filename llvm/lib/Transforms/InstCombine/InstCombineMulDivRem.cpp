@@ -130,7 +130,9 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool Changed = SimplifyAssociativeOrCommutative(I);
+  if (SimplifyAssociativeOrCommutative(I))
+    return &I;
+
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -393,6 +395,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
   }
 
+  bool Changed = false;
   if (!I.hasNoSignedWrap() && willNotOverflowSignedMul(Op0, Op1, I)) {
     Changed = true;
     I.setHasNoSignedWrap(true);
@@ -412,7 +415,9 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
                                   SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool Changed = SimplifyAssociativeOrCommutative(I);
+  if (SimplifyAssociativeOrCommutative(I))
+    return &I;
+
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -542,7 +547,7 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     }
   }
 
-  return Changed ? &I : nullptr;
+  return nullptr;
 }
 
 /// Fold a divide or remainder with a select instruction divisor when one of the

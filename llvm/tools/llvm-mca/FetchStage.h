@@ -36,7 +36,8 @@ public:
 
   bool hasWorkToComplete() const override final;
   bool execute(InstRef &IR) override final;
-  void postExecute(const InstRef &IR) override final;
+  void postExecute() override final;
+  void cycleEnd() override final;
 };
 
 } // namespace mca

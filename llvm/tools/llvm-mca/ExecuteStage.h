@@ -45,7 +45,7 @@ public:
   // execute(), so it is never left in a 'to-be-processed' state.
   virtual bool hasWorkToComplete() const override final { return false; }
 
-  virtual void preExecute(const InstRef &IR) override final;
+  virtual void cycleStart() override final;
   virtual bool execute(InstRef &IR) override final;
 
   void

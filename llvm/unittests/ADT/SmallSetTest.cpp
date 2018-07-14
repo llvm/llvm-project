@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "gtest/gtest.h"
-#include <string>
 
 using namespace llvm;
 
@@ -68,58 +67,4 @@ TEST(SmallSetTest, Erase) {
   }
 
   EXPECT_EQ(0u, s1.count(8));
-}
-
-TEST(SmallSetTest, IteratorInt) {
-  SmallSet<int, 4> s1;
-
-  // Test the 'small' case.
-  for (int i = 0; i < 3; i++)
-    s1.insert(i);
-
-  std::vector<int> V(s1.begin(), s1.end());
-  // Make sure the elements are in the expected order.
-  std::sort(V.begin(), V.end());
-  for (int i = 0; i < 3; i++)
-    EXPECT_EQ(i, V[i]);
-
-  // Test the 'big' case by adding a few more elements to switch to std::set
-  // internally.
-  for (int i = 3; i < 6; i++)
-    s1.insert(i);
-
-  V.assign(s1.begin(), s1.end());
-  // Make sure the elements are in the expected order.
-  std::sort(V.begin(), V.end());
-  for (int i = 0; i < 6; i++)
-    EXPECT_EQ(i, V[i]);
-}
-
-TEST(SmallSetTest, IteratorString) {
-  // Test SmallSetIterator for SmallSet with a type with non-trivial
-  // ctors/dtors.
-  SmallSet<std::string, 2> s1;
-
-  s1.insert("str 1");
-  s1.insert("str 2");
-  s1.insert("str 1");
-
-  std::vector<std::string> V(s1.begin(), s1.end());
-  std::sort(V.begin(), V.end());
-  EXPECT_EQ(2u, s1.size());
-  EXPECT_EQ("str 1", V[0]);
-  EXPECT_EQ("str 2", V[1]);
-
-  s1.insert("str 4");
-  s1.insert("str 0");
-  s1.insert("str 4");
-
-  V.assign(s1.begin(), s1.end());
-  // Make sure the elements are in the expected order.
-  std::sort(V.begin(), V.end());
-  EXPECT_EQ(4u, s1.size());
-  EXPECT_EQ("str 0", V[0]);
-  EXPECT_EQ("str 1", V[1]);
-  EXPECT_EQ("str 2", V[2]);
-  EXPECT_EQ("str 4", V[3]);
 }

@@ -98,6 +98,7 @@ constexpr llvm::StringLiteral DefaultSpecialAcronyms[] = {
     "SC",
     "SDK",
     "SHA",
+    "SQL",
     "SSO",
     "TCP",
     "TIFF",

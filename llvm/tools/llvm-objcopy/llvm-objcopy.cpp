@@ -655,6 +655,7 @@ CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
 
   Config.DiscardAll = InputArgs.hasArg(STRIP_discard_all);
   Config.StripUnneeded = InputArgs.hasArg(STRIP_strip_unneeded);
+  Config.StripAll = InputArgs.hasArg(STRIP_strip_all);
 
   if (!Config.StripDebug && !Config.StripUnneeded && !Config.DiscardAll)
     Config.StripAll = true;

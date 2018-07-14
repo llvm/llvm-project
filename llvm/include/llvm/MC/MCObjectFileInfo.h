@@ -116,6 +116,11 @@ protected:
   /// The DWARF v5 string offset and address table sections.
   MCSection *DwarfStrOffSection;
   MCSection *DwarfAddrSection;
+  /// The DWARF v5 range list section.
+  MCSection *DwarfRnglistsSection;
+
+  /// The DWARF v5 range list section for fission.
+  MCSection *DwarfRnglistsDWOSection;
 
   // These are for Fission DWP files.
   MCSection *DwarfCUIndexSection;
@@ -256,6 +261,7 @@ public:
   MCSection *getDwarfLocSection() const { return DwarfLocSection; }
   MCSection *getDwarfARangesSection() const { return DwarfARangesSection; }
   MCSection *getDwarfRangesSection() const { return DwarfRangesSection; }
+  MCSection *getDwarfRnglistsSection() const { return DwarfRnglistsSection; }
   MCSection *getDwarfMacinfoSection() const { return DwarfMacinfoSection; }
 
   MCSection *getDwarfDebugNamesSection() const {
@@ -281,6 +287,9 @@ public:
   MCSection *getDwarfStrOffDWOSection() const { return DwarfStrOffDWOSection; }
   MCSection *getDwarfStrOffSection() const { return DwarfStrOffSection; }
   MCSection *getDwarfAddrSection() const { return DwarfAddrSection; }
+  MCSection *getDwarfRnglistsDWOSection() const {
+    return DwarfRnglistsDWOSection;
+  }
   MCSection *getDwarfCUIndexSection() const { return DwarfCUIndexSection; }
   MCSection *getDwarfTUIndexSection() const { return DwarfTUIndexSection; }
   MCSection *getDwarfSwiftASTSection() const { return DwarfSwiftASTSection; }

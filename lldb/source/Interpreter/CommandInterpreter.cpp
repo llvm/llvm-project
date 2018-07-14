@@ -1697,14 +1697,10 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // We didn't find the first command object, so complete the first argument.
     Args command_args(command_string);
     StringList matches;
-    int cursor_index = 0;
-    int cursor_char_position = strlen(command_args.GetArgumentAtIndex(0));
-    bool word_complete = true;
-    CompletionRequest request(command_line, cursor_char_position, command_args,
-                              cursor_index, cursor_char_position, 0, -1,
-                              word_complete, matches);
+    unsigned cursor_char_position = strlen(command_args.GetArgumentAtIndex(0));
+    CompletionRequest request(command_line, cursor_char_position, 0, -1,
+                              matches);
     int num_matches = HandleCompletionMatches(request);
-    word_complete = request.GetWordComplete();
 
     if (num_matches > 0) {
       std::string error_msg;
@@ -1791,89 +1787,42 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
 int CommandInterpreter::HandleCompletion(
     const char *current_line, const char *cursor, const char *last_char,
     int match_start_point, int max_return_elements, StringList &matches) {
-  // We parse the argument up to the cursor, so the last argument in
-  // parsed_line is the one containing the cursor, and the cursor is after the
-  // last character.
 
   llvm::StringRef command_line(current_line, last_char - current_line);
-  Args parsed_line(command_line);
-  Args partial_parsed_line(
-      llvm::StringRef(current_line, cursor - current_line));
+  CompletionRequest request(command_line, cursor - current_line,
+                            match_start_point, max_return_elements, matches);
 
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
-  const char *first_arg = parsed_line.GetArgumentAtIndex(0);
+  const char *first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
   if (first_arg) {
     if (first_arg[0] == m_comment_char)
       return 0;
     else if (first_arg[0] == CommandHistory::g_repeat_char) {
       if (auto hist_str = m_command_history.FindString(first_arg)) {
-        matches.Clear();
-        matches.InsertStringAtIndex(0, *hist_str);
+        request.GetMatches().Clear();
+        request.GetMatches().InsertStringAtIndex(0, *hist_str);
         return -2;
       } else
         return 0;
     }
   }
 
-  int num_args = partial_parsed_line.GetArgumentCount();
-  int cursor_index = partial_parsed_line.GetArgumentCount() - 1;
-  int cursor_char_position;
-
-  if (cursor_index == -1)
-    cursor_char_position = 0;
-  else
-    cursor_char_position =
-        strlen(partial_parsed_line.GetArgumentAtIndex(cursor_index));
-
-  if (cursor > current_line && cursor[-1] == ' ') {
-    // We are just after a space.  If we are in an argument, then we will
-    // continue parsing, but if we are between arguments, then we have to
-    // complete whatever the next element would be. We can distinguish the two
-    // cases because if we are in an argument (e.g. because the space is
-    // protected by a quote) then the space will also be in the parsed
-    // argument...
-
-    const char *current_elem =
-        partial_parsed_line.GetArgumentAtIndex(cursor_index);
-    if (cursor_char_position == 0 ||
-        current_elem[cursor_char_position - 1] != ' ') {
-      parsed_line.InsertArgumentAtIndex(cursor_index + 1, llvm::StringRef(),
-                                        '\0');
-      cursor_index++;
-      cursor_char_position = 0;
-    }
-  }
-
-  int num_command_matches;
-
-  matches.Clear();
-
   // Only max_return_elements == -1 is supported at present:
   lldbassert(max_return_elements == -1);
-  bool word_complete = false;
 
-  CompletionRequest request(command_line, cursor - current_line, parsed_line,
-                            cursor_index, cursor_char_position,
-                            match_start_point, max_return_elements,
-                            word_complete, matches);
-
-  num_command_matches = HandleCompletionMatches(request);
-  word_complete = request.GetWordComplete();
+  int num_command_matches = HandleCompletionMatches(request);
 
   if (num_command_matches <= 0)
     return num_command_matches;
 
-  if (num_args == 0) {
+  if (request.GetParsedLine().GetArgumentCount() == 0) {
     // If we got an empty string, insert nothing.
     matches.InsertStringAtIndex(0, "");
   } else {
     // Now figure out if there is a common substring, and if so put that in
     // element 0, otherwise put an empty string in element 0.
-    std::string command_partial_str;
-    if (cursor_index >= 0)
-      command_partial_str =
-          parsed_line[cursor_index].ref.take_front(cursor_char_position);
+    std::string command_partial_str = request.GetCursorArgumentPrefix().str();
 
     std::string common_prefix;
     matches.LongestCommonPrefix(common_prefix);
@@ -1882,15 +1831,15 @@ int CommandInterpreter::HandleCompletion(
 
     // If we matched a unique single command, add a space... Only do this if
     // the completer told us this was a complete word, however...
-    if (num_command_matches == 1 && word_complete) {
-      char quote_char = parsed_line[cursor_index].quote;
+    if (num_command_matches == 1 && request.GetWordComplete()) {
+      char quote_char = request.GetParsedLine()[request.GetCursorIndex()].quote;
       common_prefix =
           Args::EscapeLLDBCommandArgument(common_prefix, quote_char);
       if (quote_char != '\0')
         common_prefix.push_back(quote_char);
       common_prefix.push_back(' ');
     }
-    matches.InsertStringAtIndex(0, common_prefix.c_str());
+    request.GetMatches().InsertStringAtIndex(0, common_prefix.c_str());
   }
   return num_command_matches;
 }

@@ -540,6 +540,10 @@ bool isValidFormForVersion(Form F, unsigned Version, bool ExtensionsOk = true);
 /// for attribute Attr.
 StringRef AttributeValueString(uint16_t Attr, unsigned Val);
 
+/// Returns the symbolic string representing Val when used as a value
+/// for atom Atom.
+StringRef AtomValueString(uint16_t Atom, unsigned Val);
+
 /// Describes an entry of the various gnu_pub* debug sections.
 ///
 /// The gnu_pub* kind looks like:

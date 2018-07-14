@@ -122,7 +122,6 @@ enum DATA_SHARING_SIZES {
 struct DataSharingStateTy {
   __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
   void *StackPtr[DS_Max_Warp_Number];
-  __kmpc_data_sharing_slot *TailPtr[DS_Max_Warp_Number];
   void *FramePtr[DS_Max_Warp_Number];
   int32_t ActiveThreads[DS_Max_Warp_Number];
 };
@@ -192,6 +191,8 @@ public:
   INLINE void CopyFromWorkDescr(omptarget_nvptx_TaskDescr *workTaskDescr);
   INLINE void CopyConvergentParent(omptarget_nvptx_TaskDescr *parentTaskDescr,
                                    uint16_t tid, uint16_t tnum);
+  INLINE void SaveLoopData();
+  INLINE void RestoreLoopData() const;
 
 private:
   // bits for flags: (7 used, 1 free)
@@ -206,6 +207,14 @@ private:
   static const uint8_t TaskDescr_InPar = 0x10;
   static const uint8_t TaskDescr_IsParConstr = 0x20;
   static const uint8_t TaskDescr_InParL2P = 0x40;
+
+  struct SavedLoopDescr_items {
+    int64_t loopUpperBound;
+    int64_t nextLowerBound;
+    int64_t chunk;
+    int64_t stride;
+    kmp_sched_t schedule;
+  } loopData;
 
   struct TaskDescr_items {
     uint8_t flags; // 6 bit used (see flag above)
@@ -292,6 +301,16 @@ public:
     return (__kmpc_data_sharing_slot *)&worker_rootS[wid];
   }
 
+  INLINE __kmpc_data_sharing_slot *GetPreallocatedSlotAddr(int wid) {
+    worker_rootS[wid].DataEnd =
+        &worker_rootS[wid].Data[0] + DS_Worker_Warp_Slot_Size;
+    // We currently do not have a next slot.
+    worker_rootS[wid].Next = 0;
+    worker_rootS[wid].Prev = 0;
+    worker_rootS[wid].PrevSlotStackPtr = 0;
+    return (__kmpc_data_sharing_slot *)&worker_rootS[wid];
+  }
+
 private:
   omptarget_nvptx_TaskDescr
       levelZeroTaskDescr; // icv for team master initial thread
@@ -301,7 +320,7 @@ private:
   uint64_t lastprivateIterBuffer;
 
   __align__(16)
-      __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE - 1];
+      __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE];
   __align__(16) __kmpc_data_sharing_master_slot_static master_rootS[1];
 };
 
@@ -335,16 +354,8 @@ public:
   INLINE kmp_sched_t &ScheduleType(int tid) { return schedule[tid]; }
   INLINE int64_t &Chunk(int tid) { return chunk[tid]; }
   INLINE int64_t &LoopUpperBound(int tid) { return loopUpperBound[tid]; }
-  // state for dispatch with dyn/guided
-  INLINE Counter &CurrentEvent(int tid) {
-    return currEvent_or_nextLowerBound[tid];
-  }
-  INLINE Counter &EventsNumber(int tid) { return eventsNum_or_stride[tid]; }
-  // state for dispatch with static
-  INLINE Counter &NextLowerBound(int tid) {
-    return currEvent_or_nextLowerBound[tid];
-  }
-  INLINE Counter &Stride(int tid) { return eventsNum_or_stride[tid]; }
+  INLINE int64_t &NextLowerBound(int tid) { return nextLowerBound[tid]; }
+  INLINE int64_t &Stride(int tid) { return stride[tid]; }
 
   INLINE omptarget_nvptx_TeamDescr &TeamContext() { return teamContext; }
 
@@ -373,8 +384,8 @@ private:
   int64_t chunk[MAX_THREADS_PER_TEAM];
   int64_t loopUpperBound[MAX_THREADS_PER_TEAM];
   // state for dispatch with dyn/guided OR static (never use both at a time)
-  Counter currEvent_or_nextLowerBound[MAX_THREADS_PER_TEAM];
-  Counter eventsNum_or_stride[MAX_THREADS_PER_TEAM];
+  int64_t nextLowerBound[MAX_THREADS_PER_TEAM];
+  int64_t stride[MAX_THREADS_PER_TEAM];
   // Queue to which this object must be returned.
   uint64_t SourceQueue;
 };

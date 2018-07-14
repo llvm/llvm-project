@@ -363,23 +363,29 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   // TODO - generalize to support all operators (types, calls etc.).
   for (int Cnt = 0, E = VL.size(); Cnt < E; Cnt++) {
     unsigned InstOpcode = cast<Instruction>(VL[Cnt])->getOpcode();
-    if (InstOpcode != Opcode && InstOpcode != AltOpcode) {
-      if (Opcode == AltOpcode && IsCastOp && isa<CastInst>(VL[Cnt])) {
-        Type *Ty0 = cast<Instruction>(VL[BaseIndex])->getOperand(0)->getType();
-        Type *Ty1 = cast<Instruction>(VL[Cnt])->getOperand(0)->getType();
-        if (Ty0 == Ty1) {
+    if (IsBinOp && isa<BinaryOperator>(VL[Cnt])) {
+      if (InstOpcode == Opcode || InstOpcode == AltOpcode)
+        continue;
+      if (Opcode == AltOpcode) {
+        AltOpcode = InstOpcode;
+        AltIndex = Cnt;
+        continue;
+      }
+    } else if (IsCastOp && isa<CastInst>(VL[Cnt])) {
+      Type *Ty0 = cast<Instruction>(VL[BaseIndex])->getOperand(0)->getType();
+      Type *Ty1 = cast<Instruction>(VL[Cnt])->getOperand(0)->getType();
+      if (Ty0 == Ty1) {
+        if (InstOpcode == Opcode || InstOpcode == AltOpcode)
+          continue;
+        if (Opcode == AltOpcode) {
           AltOpcode = InstOpcode;
           AltIndex = Cnt;
           continue;
         }
       }
-      if (Opcode == AltOpcode && IsBinOp && isa<BinaryOperator>(VL[Cnt])) {
-        AltOpcode = InstOpcode;
-        AltIndex = Cnt;
-        continue;
-      }
-      return InstructionsState(VL[BaseIndex], nullptr, nullptr);
-    }
+    } else if (InstOpcode == Opcode || InstOpcode == AltOpcode)
+      continue;
+    return InstructionsState(VL[BaseIndex], nullptr, nullptr);
   }
 
   return InstructionsState(VL[BaseIndex], cast<Instruction>(VL[BaseIndex]),

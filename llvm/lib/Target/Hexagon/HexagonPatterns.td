@@ -258,7 +258,7 @@ class Not2<PatFrag P>
   : PatFrag<(ops node:$A, node:$B), (P node:$A, (not node:$B))>;
 
 class Su<PatFrag Op>
-  : PatFrag<Op.Operands, Op.Fragment, [{ return hasOneUse(N); }],
+  : PatFrag<Op.Operands, !head(Op.Fragments), [{ return hasOneUse(N); }],
             Op.OperandTransform>;
 
 // Main selection macros.
@@ -538,7 +538,7 @@ def: Pat<(i1 (setult I32:$Rs, u32_0ImmPred:$u9)),
 // Patfrag to convert the usual comparison patfrags (e.g. setlt) to ones
 // that reverse the order of the operands.
 class RevCmp<PatFrag F>
-  : PatFrag<(ops node:$rhs, node:$lhs), F.Fragment, F.PredicateCode,
+  : PatFrag<(ops node:$rhs, node:$lhs), !head(F.Fragments), F.PredicateCode,
             F.OperandTransform>;
 
 def: OpR_RR_pat<C2_cmpeq,     seteq,          i1,   I32>;
@@ -2190,7 +2190,7 @@ class Stoream_pat<PatFrag Store, PatFrag Value, PatFrag Addr, PatFrag ValueMod,
 // swapped. This relies on the knowledge that the F.Fragment uses names
 // "ptr" and "val".
 class AtomSt<PatFrag F>
-  : PatFrag<(ops node:$val, node:$ptr), F.Fragment, F.PredicateCode,
+  : PatFrag<(ops node:$val, node:$ptr), !head(F.Fragments), F.PredicateCode,
             F.OperandTransform> {
   let IsAtomic = F.IsAtomic;
   let MemoryVT = F.MemoryVT;

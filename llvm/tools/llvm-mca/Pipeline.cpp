@@ -47,40 +47,52 @@ bool Pipeline::executeStages(InstRef &IR) {
   return true;
 }
 
-void Pipeline::postExecuteStages(const InstRef &IR) {
+void Pipeline::preExecuteStages() {
   for (const std::unique_ptr<Stage> &S : Stages)
-    S->postExecute(IR);
+    S->preExecute();
+}
+
+void Pipeline::postExecuteStages() {
+  for (const std::unique_ptr<Stage> &S : Stages)
+    S->postExecute();
 }
 
 void Pipeline::run() {
-  while (hasWorkToProcess())
-    runCycle(Cycles++);
+  while (hasWorkToProcess()) {
+    notifyCycleBegin();
+    runCycle();
+    notifyCycleEnd();
+    ++Cycles;
+  }
 }
 
-void Pipeline::runCycle(unsigned Cycle) {
-  notifyCycleBegin(Cycle);
-
+void Pipeline::runCycle() {
   // Update the stages before we do any processing for this cycle.
   InstRef IR;
   for (auto &S : Stages)
-    S->preExecute(IR);
+    S->cycleStart();
 
   // Continue executing this cycle until any stage claims it cannot make
   // progress.
-  while (executeStages(IR))
-    postExecuteStages(IR);
+  while (true) {
+    preExecuteStages();
+    if (!executeStages(IR))
+      break;
+    postExecuteStages();
+  }
 
-  notifyCycleEnd(Cycle);
+  for (auto &S : Stages)
+    S->cycleEnd();
 }
 
-void Pipeline::notifyCycleBegin(unsigned Cycle) {
-  LLVM_DEBUG(dbgs() << "[E] Cycle begin: " << Cycle << '\n');
+void Pipeline::notifyCycleBegin() {
+  LLVM_DEBUG(dbgs() << "[E] Cycle begin: " << Cycles << '\n');
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleBegin();
 }
 
-void Pipeline::notifyCycleEnd(unsigned Cycle) {
-  LLVM_DEBUG(dbgs() << "[E] Cycle end: " << Cycle << "\n\n");
+void Pipeline::notifyCycleEnd() {
+  LLVM_DEBUG(dbgs() << "[E] Cycle end: " << Cycles << "\n\n");
   for (HWEventListener *Listener : Listeners)
     Listener->onCycleEnd();
 }

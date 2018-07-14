@@ -316,10 +316,3 @@ define void @outer14() {
   call void @inner14()
   ret void
 }
-
-define internal i32 @outer15() {
-; CHECK-LABEL: @outer15
-; CHECK: ret i32 1
-  %res = call i32 @inner1()
-  ret i32 %res
-}

@@ -134,21 +134,13 @@ entry:
 
 ; This should not be matched to fmsubadd because the mul is on the wrong side of the fsub.
 define <2 x double> @mul_subadd_bad_commute(<2 x double> %A, <2 x double> %B, <2 x double> %C) #0 {
-; FMA3_256-LABEL: mul_subadd_bad_commute:
-; FMA3_256:       # %bb.0: # %entry
-; FMA3_256-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA3_256-NEXT:    vsubpd %xmm0, %xmm2, %xmm1
-; FMA3_256-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
-; FMA3_256-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; FMA3_256-NEXT:    retq
-;
-; FMA3_512-LABEL: mul_subadd_bad_commute:
-; FMA3_512:       # %bb.0: # %entry
-; FMA3_512-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
-; FMA3_512-NEXT:    vsubpd %xmm0, %xmm2, %xmm1
-; FMA3_512-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
-; FMA3_512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; FMA3_512-NEXT:    retq
+; FMA3-LABEL: mul_subadd_bad_commute:
+; FMA3:       # %bb.0: # %entry
+; FMA3-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; FMA3-NEXT:    vsubpd %xmm0, %xmm2, %xmm1
+; FMA3-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
+; FMA3-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: mul_subadd_bad_commute:
 ; FMA4:       # %bb.0: # %entry

@@ -3336,7 +3336,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
 
     // Connect the flag usage to the last instruction created.
-    ReplaceUses(SDValue(Node, 2), SDValue(CNode, 0));
+    ReplaceUses(SDValue(Node, 2), SDValue(CNode, 1));
     CurDAG->RemoveDeadNode(Node);
     return;
   }

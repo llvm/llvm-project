@@ -239,26 +239,21 @@ int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
         matches);
 
   case Completion::Expression: {
-    bool word_complete = false;
-    const char *word_start = cursor;
-    if (cursor > current_line)
-      --word_start;
-    while (word_start > current_line && !isspace(*word_start))
-      --word_start;
+    CompletionRequest request(current_line, current_line - cursor,
+                              skip_first_n_matches, max_matches, matches);
     CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
-        CommandCompletions::eVariablePathCompletion, word_start,
-        skip_first_n_matches, max_matches, nullptr, word_complete, matches);
+        CommandCompletions::eVariablePathCompletion, request, nullptr);
 
-    size_t num_matches = matches.GetSize();
+    size_t num_matches = request.GetMatches().GetSize();
     if (num_matches > 0) {
       std::string common_prefix;
-      matches.LongestCommonPrefix(common_prefix);
-      const size_t partial_name_len = strlen(word_start);
+      request.GetMatches().LongestCommonPrefix(common_prefix);
+      const size_t partial_name_len = request.GetCursorArgumentPrefix().size();
 
       // If we matched a unique single command, add a space... Only do this if
       // the completer told us this was a complete word, however...
-      if (num_matches == 1 && word_complete) {
+      if (num_matches == 1 && request.GetWordComplete()) {
         common_prefix.push_back(' ');
       }
       common_prefix.erase(0, partial_name_len);

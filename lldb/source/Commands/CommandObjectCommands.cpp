@@ -238,16 +238,9 @@ public:
   int HandleArgumentCompletion(
       CompletionRequest &request,
       OptionElementVector &opt_element_vector) override {
-    auto completion_str = request.GetParsedLine()[request.GetCursorIndex()].ref;
-    completion_str = completion_str.take_front(request.GetCursorCharPosition());
-
-    bool word_complete = request.GetWordComplete();
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        completion_str, request.GetMatchStartPoint(),
-        request.GetMaxReturnElements(), nullptr, word_complete,
-        request.GetMatches());
-    request.SetWordComplete(word_complete);
+        request, nullptr);
     return request.GetMatches().GetSize();
   }
 
@@ -543,9 +536,9 @@ rather than using a positional placeholder:"
   ~CommandObjectCommandsAlias() override = default;
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
-    if (!raw_command_line || !raw_command_line[0]) {
+    if (raw_command_line.empty()) {
       result.AppendError("'command alias' requires at least two arguments");
       return false;
     }
@@ -1275,7 +1268,7 @@ public:
   }
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
@@ -1364,7 +1357,7 @@ public:
   }
 
 protected:
-  bool DoExecute(const char *raw_command_line,
+  bool DoExecute(llvm::StringRef raw_command_line,
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = m_interpreter.GetScriptInterpreter();
 
@@ -1433,17 +1426,9 @@ public:
   int HandleArgumentCompletion(
       CompletionRequest &request,
       OptionElementVector &opt_element_vector) override {
-    llvm::StringRef completion_str =
-        request.GetParsedLine()[request.GetCursorIndex()].ref;
-    completion_str = completion_str.take_front(request.GetCursorCharPosition());
-
-    bool word_complete = request.GetWordComplete();
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        completion_str, request.GetMatchStartPoint(),
-        request.GetMaxReturnElements(), nullptr, word_complete,
-        request.GetMatches());
-    request.SetWordComplete(word_complete);
+        request, nullptr);
     return request.GetMatches().GetSize();
   }
 

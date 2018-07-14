@@ -737,6 +737,22 @@ void fMemsetTest2() {
 //===----------------------------------------------------------------------===//
 
 template <class Callable>
+struct LambdaThisTest {
+  Callable functor;
+
+  LambdaThisTest(const Callable &functor, int) : functor(functor) {
+    // All good!
+  }
+};
+
+struct HasCapturableThis {
+  void fLambdaThisTest() {
+    auto isEven = [this](int a) { return a % 2 == 0; }; // no-crash
+    LambdaThisTest<decltype(isEven)>(isEven, int());
+  }
+};
+
+template <class Callable>
 struct LambdaTest1 {
   Callable functor;
 
@@ -760,7 +776,7 @@ struct LambdaTest2 {
 
 void fLambdaTest2() {
   int b;
-  auto equals = [&b](int a) { return a == b; }; // expected-note{{uninitialized field 'this->functor.'}}
+  auto equals = [&b](int a) { return a == b; }; // expected-note{{uninitialized field 'this->functor.b'}}
   LambdaTest2<decltype(equals)>(equals, int());
 }
 #else
@@ -782,8 +798,8 @@ void fLambdaTest2() {
 namespace LT3Detail {
 
 struct RecordType {
-  int x; // expected-note{{uninitialized field 'this->functor..x'}}
-  int y; // expected-note{{uninitialized field 'this->functor..y'}}
+  int x; // expected-note{{uninitialized field 'this->functor.rec1.x'}}
+  int y; // expected-note{{uninitialized field 'this->functor.rec1.y'}}
 };
 
 } // namespace LT3Detail
@@ -825,6 +841,35 @@ void fLambdaTest3() {
   LambdaTest3<decltype(equals)>(equals, int());
 }
 #endif //PEDANTIC
+
+template <class Callable>
+struct MultipleLambdaCapturesTest1 {
+  Callable functor;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  MultipleLambdaCapturesTest1(const Callable &functor, int) : functor(functor) {} // expected-warning{{2 uninitialized field}}
+};
+
+void fMultipleLambdaCapturesTest1() {
+  int b1, b2 = 3, b3;
+  auto equals = [&b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized field 'this->functor.b1'}}
+  // expected-note@-1{{uninitialized field 'this->functor.b3'}}
+  MultipleLambdaCapturesTest1<decltype(equals)>(equals, int());
+}
+
+template <class Callable>
+struct MultipleLambdaCapturesTest2 {
+  Callable functor;
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  MultipleLambdaCapturesTest2(const Callable &functor, int) : functor(functor) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fMultipleLambdaCapturesTest2() {
+  int b1, b2 = 3, b3;
+  auto equals = [b1, &b2, &b3](int a) { return a == b1 == b2 == b3; }; // expected-note{{uninitialized field 'this->functor.b3'}}
+  MultipleLambdaCapturesTest2<decltype(equals)>(equals, int());
+}
 
 //===----------------------------------------------------------------------===//
 // System header tests.

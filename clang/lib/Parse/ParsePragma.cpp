@@ -1271,7 +1271,7 @@ getAttributeSubjectRulesRecoveryPointForToken(const Token &Tok) {
 /// suggests the possible attribute subject rules in a fix-it together with
 /// any other missing tokens.
 DiagnosticBuilder createExpectedAttributeSubjectRulesTokenDiagnostic(
-    unsigned DiagID, AttributeList &Attribute,
+    unsigned DiagID, ParsedAttr &Attribute,
     MissingAttributeSubjectRulesRecoveryPoint Point, Parser &PRef) {
   SourceLocation Loc = PRef.getEndOfPreviousToken();
   if (Loc.isInvalid())
@@ -1371,12 +1371,11 @@ void Parser::HandlePragmaAttribute() {
 
     if (Tok.isNot(tok::l_paren))
       Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                   AttributeList::AS_GNU);
+                   ParsedAttr::AS_GNU);
     else
       ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,
                             /*ScopeName=*/nullptr,
-                            /*ScopeLoc=*/SourceLocation(),
-                            AttributeList::AS_GNU,
+                            /*ScopeLoc=*/SourceLocation(), ParsedAttr::AS_GNU,
                             /*Declarator=*/nullptr);
 
     if (ExpectAndConsume(tok::r_paren))
@@ -1390,9 +1389,9 @@ void Parser::HandlePragmaAttribute() {
     if (Tok.getIdentifierInfo()) {
       // If we suspect that this is an attribute suggest the use of
       // '__attribute__'.
-      if (AttributeList::getKind(Tok.getIdentifierInfo(), /*ScopeName=*/nullptr,
-                                 AttributeList::AS_GNU) !=
-          AttributeList::UnknownAttribute) {
+      if (ParsedAttr::getKind(Tok.getIdentifierInfo(), /*ScopeName=*/nullptr,
+                              ParsedAttr::AS_GNU) !=
+          ParsedAttr::UnknownAttribute) {
         SourceLocation InsertStartLoc = Tok.getLocation();
         ConsumeToken();
         if (Tok.is(tok::l_paren)) {
@@ -1410,26 +1409,26 @@ void Parser::HandlePragmaAttribute() {
     return;
   }
 
-  if (!Attrs.getList() || Attrs.getList()->isInvalid()) {
+  if (Attrs.empty() || Attrs.begin()->isInvalid()) {
     SkipToEnd();
     return;
   }
 
   // Ensure that we don't have more than one attribute.
-  if (Attrs.getList()->getNext()) {
-    SourceLocation Loc = Attrs.getList()->getNext()->getLoc();
+  if (Attrs.size() > 1) {
+    SourceLocation Loc = Attrs[1].getLoc();
     Diag(Loc, diag::err_pragma_attribute_multiple_attributes);
     SkipToEnd();
     return;
   }
 
-  if (!Attrs.getList()->isSupportedByPragmaAttribute()) {
+  ParsedAttr &Attribute = *Attrs.begin();
+  if (!Attribute.isSupportedByPragmaAttribute()) {
     Diag(PragmaLoc, diag::err_pragma_attribute_unsupported_attribute)
-        << Attrs.getList()->getName();
+        << Attribute.getName();
     SkipToEnd();
     return;
   }
-  AttributeList &Attribute = *Attrs.getList();
 
   // Parse the subject-list.
   if (!TryConsumeToken(tok::comma)) {

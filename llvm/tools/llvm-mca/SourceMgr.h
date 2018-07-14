@@ -40,7 +40,7 @@ public:
   unsigned size() const { return Sequence.size(); }
   const InstVec &getSequence() const { return Sequence; }
 
-  bool hasNext() { return Current < (Iterations * size()); }
+  bool hasNext() const { return Current < (Iterations * size()); }
   void updateNext() { Current++; }
 
   const SourceRef peekNext() const {

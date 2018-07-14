@@ -3132,7 +3132,7 @@ static void emitArgInfo(const Record &R, raw_ostream &OS) {
 }
 
 static void GenerateDefaultAppertainsTo(raw_ostream &OS) {
-  OS << "static bool defaultAppertainsTo(Sema &, const AttributeList &,";
+  OS << "static bool defaultAppertainsTo(Sema &, const ParsedAttr &,";
   OS << "const Decl *) {\n";
   OS << "  return true;\n";
   OS << "}\n\n";
@@ -3270,7 +3270,7 @@ static std::string GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // name of that check to the caller.
   std::string FnName = "check" + Attr.getName().str() + "AppertainsTo";
   std::stringstream SS;
-  SS << "static bool " << FnName << "(Sema &S, const AttributeList &Attr, ";
+  SS << "static bool " << FnName << "(Sema &S, const ParsedAttr &Attr, ";
   SS << "const Decl *D) {\n";
   SS << "  if (";
   for (auto I = Subjects.begin(), E = Subjects.end(); I != E; ++I) {
@@ -3342,7 +3342,7 @@ emitAttributeMatchRules(PragmaClangAttributeSupport &PragmaAttributeSupport,
 
 static void GenerateDefaultLangOptRequirements(raw_ostream &OS) {
   OS << "static bool defaultDiagnoseLangOpts(Sema &, ";
-  OS << "const AttributeList &) {\n";
+  OS << "const ParsedAttr &) {\n";
   OS << "  return true;\n";
   OS << "}\n\n";
 }
@@ -3381,7 +3381,7 @@ static std::string GenerateLangOptRequirements(const Record &R,
   if (I != CustomLangOptsSet.end())
     return *I;
 
-  OS << "static bool " << FnName << "(Sema &S, const AttributeList &Attr) {\n";
+  OS << "static bool " << FnName << "(Sema &S, const ParsedAttr &Attr) {\n";
   OS << "  if (" << Test << ")\n";
   OS << "    return true;\n\n";
   OS << "  S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) ";
@@ -3414,7 +3414,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
   // If there are other attributes which share the same parsed attribute kind,
   // such as target-specific attributes with a shared spelling, collapse the
   // duplicate architectures. This is required because a shared target-specific
-  // attribute has only one AttributeList::Kind enumeration value, but it
+  // attribute has only one ParsedAttr::Kind enumeration value, but it
   // applies to multiple target architectures. In order for the attribute to be
   // considered valid, all of its architectures need to be included.
   if (!Attr.isValueUnset("ParseKind")) {
@@ -3451,7 +3451,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
 
 static void GenerateDefaultSpellingIndexToSemanticSpelling(raw_ostream &OS) {
   OS << "static unsigned defaultSpellingIndexToSemanticSpelling("
-     << "const AttributeList &Attr) {\n";
+     << "const ParsedAttr &Attr) {\n";
   OS << "  return UINT_MAX;\n";
   OS << "}\n\n";
 }
@@ -3474,7 +3474,7 @@ static std::string GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
   std::string Enum = CreateSemanticSpellings(Spellings, SemanticToSyntacticMap);
   std::string Name = Attr.getName().str() + "AttrSpellingMap";
 
-  OS << "static unsigned " << Name << "(const AttributeList &Attr) {\n";
+  OS << "static unsigned " << Name << "(const ParsedAttr &Attr) {\n";
   OS << Enum;
   OS << "  unsigned Idx = Attr.getAttributeSpellingListIndex();\n";
   WriteSemanticSpellingSwitch("Idx", SemanticToSyntacticMap, OS);
@@ -3524,7 +3524,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     // the spellings are identical, and custom parsing rules match, etc.
 
     // We need to generate struct instances based off ParsedAttrInfo from
-    // AttributeList.cpp.
+    // ParsedAttr.cpp.
     SS << "  { ";
     emitArgInfo(*I->second, SS);
     SS << ", " << I->second->getValueAsBit("HasCustomParsing");
@@ -3549,7 +3549,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     SS << "  // AT_" << I->first << "\n";
   }
 
-  OS << "static const ParsedAttrInfo AttrInfoMap[AttributeList::UnknownAttribute + 1] = {\n";
+  OS << "static const ParsedAttrInfo AttrInfoMap[ParsedAttr::UnknownAttribute "
+        "+ 1] = {\n";
   OS << SS.str();
   OS << "};\n\n";
 
@@ -3577,7 +3578,7 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
       // specific attribute, or MSP430-specific attribute. Additionally, an
       // attribute can be spelled GNU<"dllexport"> and Declspec<"dllexport">
       // for the same semantic attribute. Ultimately, we need to map each of
-      // these to a single AttributeList::Kind value, but the StringMatcher
+      // these to a single ParsedAttr::Kind value, but the StringMatcher
       // class cannot handle duplicate match strings. So we generate a list of
       // string to match based on the syntax, and emit multiple string matchers
       // depending on the syntax used.
@@ -3624,34 +3625,34 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
           Spelling += RawSpelling;
 
         if (SemaHandler)
-          Matches->push_back(StringMatcher::StringPair(Spelling,
-                              "return AttributeList::AT_" + AttrName + ";"));
+          Matches->push_back(StringMatcher::StringPair(
+              Spelling, "return ParsedAttr::AT_" + AttrName + ";"));
         else
-          Matches->push_back(StringMatcher::StringPair(Spelling,
-                              "return AttributeList::IgnoredAttribute;"));
+          Matches->push_back(StringMatcher::StringPair(
+              Spelling, "return ParsedAttr::IgnoredAttribute;"));
       }
     }
   }
-  
-  OS << "static AttributeList::Kind getAttrKind(StringRef Name, ";
-  OS << "AttributeList::Syntax Syntax) {\n";
-  OS << "  if (AttributeList::AS_GNU == Syntax) {\n";
+
+  OS << "static ParsedAttr::Kind getAttrKind(StringRef Name, ";
+  OS << "ParsedAttr::Syntax Syntax) {\n";
+  OS << "  if (ParsedAttr::AS_GNU == Syntax) {\n";
   StringMatcher("Name", GNU, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Declspec == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Declspec == Syntax) {\n";
   StringMatcher("Name", Declspec, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Microsoft == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Microsoft == Syntax) {\n";
   StringMatcher("Name", Microsoft, OS).Emit();
-  OS << "  } else if (AttributeList::AS_CXX11 == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_CXX11 == Syntax) {\n";
   StringMatcher("Name", CXX11, OS).Emit();
-  OS << "  } else if (AttributeList::AS_C2x == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_C2x == Syntax) {\n";
   StringMatcher("Name", C2x, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Keyword == Syntax || ";
-  OS << "AttributeList::AS_ContextSensitiveKeyword == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Keyword == Syntax || ";
+  OS << "ParsedAttr::AS_ContextSensitiveKeyword == Syntax) {\n";
   StringMatcher("Name", Keywords, OS).Emit();
-  OS << "  } else if (AttributeList::AS_Pragma == Syntax) {\n";
+  OS << "  } else if (ParsedAttr::AS_Pragma == Syntax) {\n";
   StringMatcher("Name", Pragma, OS).Emit();
   OS << "  }\n";
-  OS << "  return AttributeList::UnknownAttribute;\n"
+  OS << "  return ParsedAttr::UnknownAttribute;\n"
      << "}\n";
 }
 

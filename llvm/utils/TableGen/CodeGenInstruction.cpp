@@ -312,6 +312,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isBarrier    = R->getValueAsBit("isBarrier");
   isCall       = R->getValueAsBit("isCall");
   isAdd        = R->getValueAsBit("isAdd");
+  isTrap       = R->getValueAsBit("isTrap");
   canFoldAsLoad = R->getValueAsBit("canFoldAsLoad");
   isPredicable = Operands.isPredicable || R->getValueAsBit("isPredicable");
   isConvertibleToThreeAddress = R->getValueAsBit("isConvertibleToThreeAddress");
@@ -345,6 +346,10 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isPseudo = R->getValueAsBit("isPseudo");
   ImplicitDefs = R->getValueAsListOfDefs("Defs");
   ImplicitUses = R->getValueAsListOfDefs("Uses");
+
+  // This flag is only inferred from the pattern.
+  hasChain = false;
+  hasChain_Inferred = false;
 
   // Parse Constraints.
   ParseConstraints(R->getValueAsString("Constraints"), Operands);

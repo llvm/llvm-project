@@ -10,7 +10,7 @@
 ; CHECK-NEXT:   Binding: Global
 ; CHECK-NEXT:   Type: Function
 ; CHECK-NEXT:   Other: 0
-; CHECK-NEXT:   Section: .text.foo
+; CHECK-NEXT:   Section: .text
 ; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

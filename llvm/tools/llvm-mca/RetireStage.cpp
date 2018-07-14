@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace mca {
 
-void RetireStage::preExecute(const InstRef &IR) {
+void RetireStage::cycleStart() {
   if (RCU.isEmpty())
     return;
 
@@ -43,13 +43,13 @@ void RetireStage::preExecute(const InstRef &IR) {
 }
 
 void RetireStage::notifyInstructionRetired(const InstRef &IR) {
-  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: " << IR << '\n');
+  LLVM_DEBUG(dbgs() << "[E] Instruction Retired: #" << IR << '\n');
   SmallVector<unsigned, 4> FreedRegs(PRF.getNumRegisterFiles());
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
 
   for (const std::unique_ptr<WriteState> &WS : IR.getInstruction()->getDefs())
     PRF.removeRegisterWrite(*WS.get(), FreedRegs, !Desc.isZeroLatency());
-  notifyInstructionEvent(HWInstructionRetiredEvent(IR, FreedRegs));
+  notifyEvent<HWInstructionEvent>(HWInstructionRetiredEvent(IR, FreedRegs));
 }
 
 } // namespace mca

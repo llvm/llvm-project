@@ -1,3 +1,6 @@
+# XFAIL: windows
+# -> llvm.org/pr24452
+#
 # RUN: %cc -o %t %p/inputs/main.c %p/inputs/symbol-list-lines.c %p/inputs/list-lines-helper.c -g
 # RUN: %lldbmi %t < %s | FileCheck %s
 

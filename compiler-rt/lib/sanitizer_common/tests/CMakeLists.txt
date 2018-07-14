@@ -41,7 +41,7 @@ set(SANITIZER_TEST_HEADERS
   sanitizer_pthread_wrappers.h
   sanitizer_test_config.h
   sanitizer_test_utils.h)
-foreach(header ${SANITIZER_HEADERS})
+foreach(header ${SANITIZER_IMPL_HEADERS})
   list(APPEND SANITIZER_TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
 

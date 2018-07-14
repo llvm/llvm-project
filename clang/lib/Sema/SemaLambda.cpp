@@ -1170,7 +1170,7 @@ void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
   Class->setInvalidDecl();
   SmallVector<Decl*, 4> Fields(Class->fields());
   ActOnFields(nullptr, Class->getLocation(), Class, Fields, SourceLocation(),
-              SourceLocation(), nullptr);
+              SourceLocation(), ParsedAttributesView());
   CheckCompletedCXXClass(Class);
 
   PopFunctionScopeInfo();
@@ -1608,7 +1608,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     // Finalize the lambda class.
     SmallVector<Decl*, 4> Fields(Class->fields());
     ActOnFields(nullptr, Class->getLocation(), Class, Fields, SourceLocation(),
-                SourceLocation(), nullptr);
+                SourceLocation(), ParsedAttributesView());
     CheckCompletedCXXClass(Class);
   }
 

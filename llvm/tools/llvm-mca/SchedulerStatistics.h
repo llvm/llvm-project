@@ -65,9 +65,9 @@ class SchedulerStatistics : public View {
 
 public:
   SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
-      : SM(STI.getSchedModel()), NumIssued(0), NumCycles(0) { }
+      : SM(STI.getSchedModel()), NumIssued(0), NumCycles(0) {}
 
-  void onInstructionEvent(const HWInstructionEvent &Event) override;
+  void onEvent(const HWInstructionEvent &Event) override;
 
   void onCycleBegin() override { NumCycles++; }
 

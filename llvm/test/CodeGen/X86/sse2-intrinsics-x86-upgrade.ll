@@ -34,10 +34,15 @@ define <2 x double> @test_x86_sse2_sqrt_sd(<2 x double> %a0) {
 ; SSE-NEXT:    sqrtsd %xmm0, %xmm0 ## encoding: [0xf2,0x0f,0x51,0xc0]
 ; SSE-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
 ;
-; AVX-LABEL: test_x86_sse2_sqrt_sd:
-; AVX:       ## %bb.0:
-; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x51,0xc0]
-; AVX-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+; AVX1-LABEL: test_x86_sse2_sqrt_sd:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x51,0xc0]
+; AVX1-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
+;
+; AVX512-LABEL: test_x86_sse2_sqrt_sd:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x51,0xc0]
+; AVX512-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %a0) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
@@ -63,7 +68,7 @@ define <2 x double> @test_x86_sse2_sqrt_sd_vec_load(<2 x double>* %a0) {
 ; X86-AVX512:       ## %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vmovapd (%eax), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0x00]
-; X86-AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x51,0xc0]
+; X86-AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x51,0xc0]
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_x86_sse2_sqrt_sd_vec_load:
@@ -81,7 +86,7 @@ define <2 x double> @test_x86_sse2_sqrt_sd_vec_load(<2 x double>* %a0) {
 ; X64-AVX512-LABEL: test_x86_sse2_sqrt_sd_vec_load:
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vmovapd (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0x07]
-; X64-AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xfb,0x51,0xc0]
+; X64-AVX512-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x51,0xc0]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %a1 = load <2 x double>, <2 x double>* %a0, align 16
   %res = call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %a1) ; <<2 x double>> [#uses=1]
@@ -771,8 +776,8 @@ define <2 x double> @test_x86_sse2_cvtss2sd_load(<2 x double> %a0, <4 x float>* 
 ; X86-AVX512-NEXT:    vmovss (%eax), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x08]
 ; X86-AVX512-NEXT:    ## xmm1 = mem[0],zero,zero,zero
 ; X86-AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf2,0x5a,0xc9]
-; X86-AVX512-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0xc1]
-; X86-AVX512-NEXT:    ## xmm0 = xmm1[0],xmm0[1]
+; X86-AVX512-NEXT:    vblendps $3, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x03]
+; X86-AVX512-NEXT:    ## xmm0 = xmm1[0,1],xmm0[2,3]
 ; X86-AVX512-NEXT:    retl ## encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_x86_sse2_cvtss2sd_load:
@@ -798,8 +803,8 @@ define <2 x double> @test_x86_sse2_cvtss2sd_load(<2 x double> %a0, <4 x float>* 
 ; X64-AVX512-NEXT:    vmovss (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x0f]
 ; X64-AVX512-NEXT:    ## xmm1 = mem[0],zero,zero,zero
 ; X64-AVX512-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf2,0x5a,0xc9]
-; X64-AVX512-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0xc1]
-; X64-AVX512-NEXT:    ## xmm0 = xmm1[0],xmm0[1]
+; X64-AVX512-NEXT:    vblendps $3, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x03]
+; X64-AVX512-NEXT:    ## xmm0 = xmm1[0,1],xmm0[2,3]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %a1 = load <4 x float>, <4 x float>* %p1
   %res = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> %a0, <4 x float> %a1) ; <<2 x double>> [#uses=1]

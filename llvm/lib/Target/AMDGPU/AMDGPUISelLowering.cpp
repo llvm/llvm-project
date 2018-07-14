@@ -3021,7 +3021,7 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
   // Equivalent of above for accessing the high element of a vector as an
   // integer operation.
   // trunc (srl (bitcast (build_vector x, y))), 16 -> trunc (bitcast y)
-  if (Src.getOpcode() == ISD::SRL) {
+  if (Src.getOpcode() == ISD::SRL && !VT.isVector()) {
     if (auto K = isConstOrConstSplat(Src.getOperand(1))) {
       if (2 * K->getZExtValue() == Src.getValueType().getScalarSizeInBits()) {
         SDValue BV = stripBitcast(Src.getOperand(0));

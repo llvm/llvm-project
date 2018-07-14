@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -232,4 +233,8 @@ APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
   APFloat APF(Val);
   APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
   return APF;
+}
+
+void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {
+  AU.addPreserved<StackProtector>();
 }

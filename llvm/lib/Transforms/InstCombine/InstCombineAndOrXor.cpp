@@ -1405,7 +1405,9 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool Changed = SimplifyAssociativeOrCommutative(I);
+  if (SimplifyAssociativeOrCommutative(I))
+    return &I;
+
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -1648,7 +1650,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Op0, Constant::getNullValue(I.getType()));
 
-  return Changed ? &I : nullptr;
+  return nullptr;
 }
 
 /// Given an OR instruction, check to see if this is a bswap idiom. If so,
@@ -2020,7 +2022,9 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
                                 SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool Changed = SimplifyAssociativeOrCommutative(I);
+  if (SimplifyAssociativeOrCommutative(I))
+    return &I;
+
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -2287,7 +2291,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     }
   }
 
-  return Changed ? &I : nullptr;
+  return nullptr;
 }
 
 /// A ^ B can be specified using other logic ops in a variety of patterns. We
@@ -2474,7 +2478,9 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  bool Changed = SimplifyAssociativeOrCommutative(I);
+  if (SimplifyAssociativeOrCommutative(I))
+    return &I;
+
   if (Instruction *X = foldShuffledBinop(I))
     return X;
 
@@ -2785,5 +2791,5 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
   }
 
-  return Changed ? &I : nullptr;
+  return nullptr;
 }

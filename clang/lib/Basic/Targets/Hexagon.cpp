@@ -131,6 +131,10 @@ const Builtin::Info HexagonTargetInfo::BuiltinInfo[] = {
 };
 
 bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
+  std::string VS = "hvxv" + HVXVersion;
+  if (Feature == VS)
+    return true;
+
   return llvm::StringSwitch<bool>(Feature)
       .Case("hexagon", true)
       .Case("hvx", HasHVX)

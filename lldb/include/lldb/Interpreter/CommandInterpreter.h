@@ -24,6 +24,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"

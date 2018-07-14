@@ -183,12 +183,18 @@ bool AppleAcceleratorTable::dumpName(ScopedPrinter &W,
     ListScope DataScope(W, ("Data " + Twine(Data)).str());
     unsigned i = 0;
     for (auto &Atom : AtomForms) {
-      W.startLine() << format("Atom[%d]: ", i++);
-      if (Atom.extractValue(AccelSection, DataOffset, FormParams))
+      W.startLine() << format("Atom[%d]: ", i);
+      if (Atom.extractValue(AccelSection, DataOffset, FormParams)) {
         Atom.dump(W.getOStream());
-      else
+        if (Optional<uint64_t> Val = Atom.getAsUnsignedConstant()) {
+          StringRef Str = dwarf::AtomValueString(HdrData.Atoms[i].first, *Val);
+          if (!Str.empty())
+            W.getOStream() << " (" << Str << ")";
+        }
+      } else
         W.getOStream() << "Error extracting the value";
       W.getOStream() << "\n";
+      i++;
     }
   }
   return true; // more entries follow

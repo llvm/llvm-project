@@ -33,7 +33,7 @@ class Type;
 /// run the verifier after parsing the file to check that it is okay.
 /// Parse LLVM Assembly from a file
 /// \param Filename The name of the file to parse
-/// \param Error Error result info.
+/// \param Err Error result info.
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
@@ -53,7 +53,7 @@ parseAssemblyFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
 /// run the verifier after parsing the file to check that it is okay.
 /// Parse LLVM Assembly from a string
 /// \param AsmString The string containing assembly
-/// \param Error Error result info.
+/// \param Err Error result info.
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
@@ -83,7 +83,7 @@ struct ParsedModuleAndIndex {
 /// run the verifier after parsing the file to check that they are okay.
 /// Parse LLVM Assembly from a file
 /// \param Filename The name of the file to parse
-/// \param Error Error result info.
+/// \param Err Error result info.
 /// \param Context Context in which to allocate globals info.
 /// \param Slots The optional slot mapping that will be initialized during
 ///              parsing.
@@ -104,7 +104,7 @@ parseAssemblyFileWithIndex(StringRef Filename, SMDiagnostic &Err,
 /// should run the verifier after parsing the file to check that it is okay.
 /// Parse LLVM Assembly Index from a file
 /// \param Filename The name of the file to parse
-/// \param Error Error result info.
+/// \param Err Error result info.
 std::unique_ptr<ModuleSummaryIndex>
 parseSummaryIndexAssemblyFile(StringRef Filename, SMDiagnostic &Err);
 

@@ -29,13 +29,8 @@ namespace mca {
 
 void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
                                                 ArrayRef<unsigned> UsedRegs) {
-  LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: " << IR << '\n');
-  notifyInstructionEvent(HWInstructionDispatchedEvent(IR, UsedRegs));
-}
-
-void DispatchStage::notifyStallEvent(const HWStallEvent &Event) {
-  for (HWEventListener *Listener : getListeners())
-    Listener->onStallEvent(Event);
+  LLVM_DEBUG(dbgs() << "[E] Instruction Dispatched: #" << IR << '\n');
+  notifyEvent<HWInstructionEvent>(HWInstructionDispatchedEvent(IR, UsedRegs));
 }
 
 bool DispatchStage::checkPRF(const InstRef &IR) {
@@ -47,7 +42,8 @@ bool DispatchStage::checkPRF(const InstRef &IR) {
   const unsigned RegisterMask = PRF.isAvailable(RegDefs);
   // A mask with all zeroes means: register files are available.
   if (RegisterMask) {
-    notifyStallEvent(HWStallEvent(HWStallEvent::RegisterFileStall, IR));
+    notifyEvent<HWStallEvent>(
+        HWStallEvent(HWStallEvent::RegisterFileStall, IR));
     return false;
   }
 
@@ -58,7 +54,8 @@ bool DispatchStage::checkRCU(const InstRef &IR) {
   const unsigned NumMicroOps = IR.getInstruction()->getDesc().NumMicroOps;
   if (RCU.isAvailable(NumMicroOps))
     return true;
-  notifyStallEvent(HWStallEvent(HWStallEvent::RetireControlUnitStall, IR));
+  notifyEvent<HWStallEvent>(
+      HWStallEvent(HWStallEvent::RetireControlUnitStall, IR));
   return false;
 }
 
@@ -66,7 +63,7 @@ bool DispatchStage::checkScheduler(const InstRef &IR) {
   HWStallEvent::GenericEventType Event;
   const bool Ready = SC.canBeDispatched(IR, Event);
   if (!Ready)
-    notifyStallEvent(HWStallEvent(Event, IR));
+    notifyEvent<HWStallEvent>(HWStallEvent(Event, IR));
   return Ready;
 }
 
@@ -76,8 +73,6 @@ void DispatchStage::updateRAWDependencies(ReadState &RS,
 
   collectWrites(DependentWrites, RS.getRegisterID());
   RS.setDependentWrites(DependentWrites.size());
-  LLVM_DEBUG(dbgs() << "Found " << DependentWrites.size()
-                    << " dependent writes\n");
   // We know that this read depends on all the writes in DependentWrites.
   // For each write, check if we have ReadAdvance information, and use it
   // to figure out in how many cycles this read becomes available.
@@ -132,7 +127,7 @@ void DispatchStage::dispatch(InstRef IR) {
   notifyInstructionDispatched(IR, RegisterFiles);
 }
 
-void DispatchStage::preExecute(const InstRef &IR) {
+void DispatchStage::cycleStart() {
   AvailableEntries = CarryOver >= DispatchWidth ? 0 : DispatchWidth - CarryOver;
   CarryOver = CarryOver >= DispatchWidth ? CarryOver - DispatchWidth : 0U;
 }

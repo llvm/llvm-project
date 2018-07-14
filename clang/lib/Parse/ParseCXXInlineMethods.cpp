@@ -22,12 +22,10 @@ using namespace clang;
 /// ParseCXXInlineMethodDef - We parsed and verified that the specified
 /// Declarator is a well formed C++ inline method definition. Now lex its body
 /// and store its tokens for parsing after the C++ class is complete.
-NamedDecl *Parser::ParseCXXInlineMethodDef(AccessSpecifier AS,
-                                      AttributeList *AccessAttrs,
-                                      ParsingDeclarator &D,
-                                      const ParsedTemplateInfo &TemplateInfo,
-                                      const VirtSpecifiers& VS,
-                                      SourceLocation PureSpecLoc) {
+NamedDecl *Parser::ParseCXXInlineMethodDef(
+    AccessSpecifier AS, ParsedAttributes &AccessAttrs, ParsingDeclarator &D,
+    const ParsedTemplateInfo &TemplateInfo, const VirtSpecifiers &VS,
+    SourceLocation PureSpecLoc) {
   assert(D.isFunctionDeclarator() && "This isn't a function declarator!");
   assert(Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::equal) &&
          "Current token not a '{', ':', '=', or 'try'!");

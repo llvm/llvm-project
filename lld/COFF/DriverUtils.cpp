@@ -821,6 +821,10 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
 
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
     warn("ignoring unknown argument: " + Arg->getSpelling());
+
+  if (Args.hasArg(OPT_lib))
+    warn("ignoring /lib since it's not the first argument");
+
   return Args;
 }
 

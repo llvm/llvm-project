@@ -90,6 +90,14 @@ static cl::opt<bool> AllowDeprecatedDagOverlap(
              "provided for convenience as old tests are migrated to the new\n"
              "non-overlapping CHECK-DAG implementation.\n"));
 
+static cl::opt<bool> Verbose("v", cl::init(false),
+                             cl::desc("Print directive pattern matches.\n"));
+
+static cl::opt<bool> VerboseVerbose(
+    "vv", cl::init(false),
+    cl::desc("Print information helpful in diagnosing internal FileCheck\n"
+             "issues.  Implies -v.\n"));
+
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
 //===----------------------------------------------------------------------===//
@@ -154,8 +162,11 @@ public:
                     unsigned LineNumber);
   size_t Match(StringRef Buffer, size_t &MatchLen,
                StringMap<StringRef> &VariableTable) const;
-  void PrintFailureInfo(const SourceMgr &SM, StringRef Buffer,
-                        const StringMap<StringRef> &VariableTable) const;
+  void PrintVariableUses(const SourceMgr &SM, StringRef Buffer,
+                         const StringMap<StringRef> &VariableTable,
+                         SMRange MatchRange = None) const;
+  void PrintFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
+                       const StringMap<StringRef> &VariableTable) const;
 
   bool hasVariable() const {
     return !(VariableUses.empty() && VariableDefs.empty());
@@ -484,8 +495,12 @@ size_t Pattern::Match(StringRef Buffer, size_t &MatchLen,
     VariableTable[VariableDef.first] = MatchInfo[VariableDef.second];
   }
 
-  MatchLen = FullMatch.size();
-  return FullMatch.data() - Buffer.data();
+  // Like CHECK-NEXT, CHECK-EMPTY's match range is considered to start after
+  // the required preceding newline, which is consumed by the pattern in the
+  // case of CHECK-EMPTY but not CHECK-NEXT.
+  size_t MatchStartSkip = CheckTy == Check::CheckEmpty;
+  MatchLen = FullMatch.size() - MatchStartSkip;
+  return FullMatch.data() - Buffer.data() + MatchStartSkip;
 }
 
 
@@ -511,11 +526,9 @@ Pattern::ComputeMatchDistance(StringRef Buffer,
   return BufferPrefix.edit_distance(ExampleString);
 }
 
-/// Prints additional information about a failure to match involving this
-/// pattern.
-void Pattern::PrintFailureInfo(
-    const SourceMgr &SM, StringRef Buffer,
-    const StringMap<StringRef> &VariableTable) const {
+void Pattern::PrintVariableUses(const SourceMgr &SM, StringRef Buffer,
+                                const StringMap<StringRef> &VariableTable,
+                                SMRange MatchRange) const {
   // If this was a regular expression using variables, print the current
   // variable values.
   if (!VariableUses.empty()) {
@@ -547,11 +560,19 @@ void Pattern::PrintFailureInfo(
         }
       }
 
-      SM.PrintMessage(SMLoc::getFromPointer(Buffer.data()), SourceMgr::DK_Note,
-                      OS.str());
+      if (MatchRange.isValid())
+        SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note, OS.str(),
+                        {MatchRange});
+      else
+        SM.PrintMessage(SMLoc::getFromPointer(Buffer.data()),
+                        SourceMgr::DK_Note, OS.str());
     }
   }
+}
 
+void Pattern::PrintFuzzyMatch(
+    const SourceMgr &SM, StringRef Buffer,
+    const StringMap<StringRef> &VariableTable) const {
   // Attempt to find the closest/best fuzzy match.  Usually an error happens
   // because some string in the output didn't exactly match. In these cases, we
   // would like to show the user a best guess at what "should have" matched, to
@@ -739,6 +760,33 @@ static size_t CheckTypeSize(Check::CheckType Ty) {
   }
 
   llvm_unreachable("Bad check type");
+}
+
+// Get a description of the type.
+static std::string CheckTypeName(StringRef Prefix, Check::CheckType Ty) {
+  switch (Ty) {
+  case Check::CheckNone:
+    return "invalid";
+  case Check::CheckPlain:
+    return Prefix;
+  case Check::CheckNext:
+    return Prefix.str() + "-NEXT";
+  case Check::CheckSame:
+    return Prefix.str() + "-SAME";
+  case Check::CheckNot:
+    return Prefix.str() + "-NOT";
+  case Check::CheckDAG:
+    return Prefix.str() + "-DAG";
+  case Check::CheckLabel:
+    return Prefix.str() + "-LABEL";
+  case Check::CheckEmpty:
+    return Prefix.str() + "-EMPTY";
+  case Check::CheckEOF:
+    return "implicit EOF";
+  case Check::CheckBadNot:
+    return "bad NOT";
+  }
+  llvm_unreachable("unknown CheckType");
 }
 
 static Check::CheckType FindCheckType(StringRef Buffer, StringRef Prefix) {
@@ -990,12 +1038,49 @@ static bool ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
   return false;
 }
 
-static void PrintCheckFailed(const SourceMgr &SM, SMLoc Loc, const Pattern &Pat,
-                             StringRef Buffer,
-                             StringMap<StringRef> &VariableTable) {
+static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
+                       StringRef Prefix, SMLoc Loc, const Pattern &Pat,
+                       StringRef Buffer, StringMap<StringRef> &VariableTable,
+                       size_t MatchPos, size_t MatchLen) {
+  if (ExpectedMatch) {
+    if (!Verbose)
+      return;
+    if (!VerboseVerbose && Pat.getCheckTy() == Check::CheckEOF)
+      return;
+  }
+  SMLoc MatchStart = SMLoc::getFromPointer(Buffer.data() + MatchPos);
+  SMLoc MatchEnd = SMLoc::getFromPointer(Buffer.data() + MatchPos + MatchLen);
+  SMRange MatchRange(MatchStart, MatchEnd);
+  SM.PrintMessage(
+      Loc, ExpectedMatch ? SourceMgr::DK_Remark : SourceMgr::DK_Error,
+      CheckTypeName(Prefix, Pat.getCheckTy()) + ": " +
+          (ExpectedMatch ? "expected" : "excluded") +
+          " string found in input");
+  SM.PrintMessage(MatchStart, SourceMgr::DK_Note, "found here", {MatchRange});
+  Pat.PrintVariableUses(SM, Buffer, VariableTable, MatchRange);
+}
+
+static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
+                       const CheckString &CheckStr, StringRef Buffer,
+                       StringMap<StringRef> &VariableTable, size_t MatchPos,
+                       size_t MatchLen) {
+  PrintMatch(ExpectedMatch, SM, CheckStr.Prefix, CheckStr.Loc, CheckStr.Pat,
+             Buffer, VariableTable, MatchPos, MatchLen);
+}
+
+static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
+                         StringRef Prefix, SMLoc Loc, const Pattern &Pat,
+                         StringRef Buffer,
+                         StringMap<StringRef> &VariableTable) {
+  if (!ExpectedMatch && !VerboseVerbose)
+    return;
+
   // Otherwise, we have an error, emit an error message.
-  SM.PrintMessage(Loc, SourceMgr::DK_Error,
-                  "expected string not found in input");
+  SM.PrintMessage(Loc,
+                  ExpectedMatch ? SourceMgr::DK_Error : SourceMgr::DK_Remark,
+                  CheckTypeName(Prefix, Pat.getCheckTy()) + ": " +
+                      (ExpectedMatch ? "expected" : "excluded") +
+                      " string not found in input");
 
   // Print the "scanning from here" line.  If the current position is at the
   // end of a line, advance to the start of the next line.
@@ -1005,13 +1090,16 @@ static void PrintCheckFailed(const SourceMgr &SM, SMLoc Loc, const Pattern &Pat,
                   "scanning from here");
 
   // Allow the pattern to print additional information if desired.
-  Pat.PrintFailureInfo(SM, Buffer, VariableTable);
+  Pat.PrintVariableUses(SM, Buffer, VariableTable);
+  if (ExpectedMatch)
+    Pat.PrintFuzzyMatch(SM, Buffer, VariableTable);
 }
 
-static void PrintCheckFailed(const SourceMgr &SM, const CheckString &CheckStr,
-                             StringRef Buffer,
-                             StringMap<StringRef> &VariableTable) {
-  PrintCheckFailed(SM, CheckStr.Loc, CheckStr.Pat, Buffer, VariableTable);
+static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
+                         const CheckString &CheckStr, StringRef Buffer,
+                         StringMap<StringRef> &VariableTable) {
+  PrintNoMatch(ExpectedMatch, SM, CheckStr.Prefix, CheckStr.Loc, CheckStr.Pat,
+               Buffer, VariableTable);
 }
 
 /// Count the number of newlines in the specified range.
@@ -1059,9 +1147,10 @@ size_t CheckString::Check(const SourceMgr &SM, StringRef Buffer,
   StringRef MatchBuffer = Buffer.substr(LastPos);
   size_t MatchPos = Pat.Match(MatchBuffer, MatchLen, VariableTable);
   if (MatchPos == StringRef::npos) {
-    PrintCheckFailed(SM, *this, MatchBuffer, VariableTable);
+    PrintNoMatch(true, SM, *this, MatchBuffer, VariableTable);
     return StringRef::npos;
   }
+  PrintMatch(true, SM, *this, MatchBuffer, VariableTable, MatchPos, MatchLen);
 
   // Similar to the above, in "label-scan mode" we can't yet handle CHECK-NEXT
   // or CHECK-NOT
@@ -1106,11 +1195,6 @@ bool CheckString::CheckNext(const SourceMgr &SM, StringRef Buffer) const {
 
   const char *FirstNewLine = nullptr;
   unsigned NumNewLines = CountNumNewlinesBetween(Buffer, FirstNewLine);
-
-  // For CHECK-EMPTY, the preceding new line is consumed by the pattern, so
-  // this needs to be re-added.
-  if (Pat.getCheckTy() == Check::CheckEmpty)
-    ++NumNewLines;
 
   if (NumNewLines == 0) {
     SM.PrintMessage(Loc, SourceMgr::DK_Error,
@@ -1177,13 +1261,15 @@ bool CheckString::CheckNot(const SourceMgr &SM, StringRef Buffer,
     size_t MatchLen = 0;
     size_t Pos = Pat->Match(Buffer, MatchLen, VariableTable);
 
-    if (Pos == StringRef::npos)
+    if (Pos == StringRef::npos) {
+      PrintNoMatch(false, SM, Prefix, Pat->getLoc(), *Pat, Buffer,
+                   VariableTable);
       continue;
+    }
 
-    SM.PrintMessage(SMLoc::getFromPointer(Buffer.data() + Pos),
-                    SourceMgr::DK_Error, Prefix + "-NOT: string occurred!");
-    SM.PrintMessage(Pat->getLoc(), SourceMgr::DK_Note,
-                    Prefix + "-NOT: pattern specified here");
+    PrintMatch(false, SM, Prefix, Pat->getLoc(), *Pat, Buffer, VariableTable,
+               Pos, MatchLen);
+
     return true;
   }
 
@@ -1230,11 +1316,15 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
       // With a group of CHECK-DAGs, a single mismatching means the match on
       // that group of CHECK-DAGs fails immediately.
       if (MatchPosBuf == StringRef::npos) {
-        PrintCheckFailed(SM, Pat.getLoc(), Pat, MatchBuffer, VariableTable);
+        PrintNoMatch(true, SM, Prefix, Pat.getLoc(), Pat, MatchBuffer,
+                     VariableTable);
         return StringRef::npos;
       }
       // Re-calc it as the offset relative to the start of the original string.
       MatchPos += MatchPosBuf;
+      if (VerboseVerbose)
+        PrintMatch(true, SM, Prefix, Pat.getLoc(), Pat, Buffer, VariableTable,
+                   MatchPos, MatchLen);
       if (AllowDeprecatedDagOverlap)
         break;
       // Iterate previous matches until overlapping match or insertion point.
@@ -1253,8 +1343,19 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
         Matches.insert(MI, M);
         break;
       }
+      if (VerboseVerbose) {
+        SMLoc OldStart = SMLoc::getFromPointer(Buffer.data() + MI->Pos);
+        SMLoc OldEnd = SMLoc::getFromPointer(Buffer.data() + MI->End);
+        SMRange OldRange(OldStart, OldEnd);
+        SM.PrintMessage(OldStart, SourceMgr::DK_Note,
+                        "match discarded, overlaps earlier DAG match here",
+                        {OldRange});
+      }
       MatchPos = MI->End;
     }
+    if (!VerboseVerbose)
+      PrintMatch(true, SM, Prefix, Pat.getLoc(), Pat, Buffer, VariableTable,
+                 MatchPos, MatchLen);
 
     if (!NotStrings.empty()) {
       if (MatchPos < LastPos) {
@@ -1454,6 +1555,9 @@ int main(int argc, char **argv) {
            << REError << "\n";
     return 2;
   }
+
+  if (VerboseVerbose)
+    Verbose = true;
 
   SourceMgr SM;
 

@@ -818,6 +818,15 @@ public:
   QualType RebuildVectorType(QualType ElementType, unsigned NumElements,
                              VectorType::VectorKind VecKind);
 
+  /// Build a new potentially dependently-sized extended vector type
+  /// given the element type and number of elements.
+  ///
+  /// By default, performs semantic analysis when building the vector type.
+  /// Subclasses may override this routine to provide different behavior.
+  QualType RebuildDependentVectorType(QualType ElementType, Expr *SizeExpr,
+                                           SourceLocation AttributeLoc,
+                                           VectorType::VectorKind);
+
   /// Build a new extended vector type given the element type and
   /// number of elements.
   ///
@@ -3859,6 +3868,10 @@ template<typename Derived>
 bool TreeTransform<Derived>::TransformTemplateArgument(
                                          const TemplateArgumentLoc &Input,
                                          TemplateArgumentLoc &Output, bool Uneval) {
+  EnterExpressionEvaluationContext EEEC(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      /*LambdaContextDecl=*/nullptr, /*ExprContext=*/
+      Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
   const TemplateArgument &Arg = Input.getArgument();
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
@@ -4746,6 +4759,44 @@ TreeTransform<Derived>::TransformDependentSizedArrayType(TypeLocBuilder &TLB,
   return Result;
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformDependentVectorType(
+    TypeLocBuilder &TLB, DependentVectorTypeLoc TL) {
+  const DependentVectorType *T = TL.getTypePtr();
+  QualType ElementType = getDerived().TransformType(T->getElementType());
+  if (ElementType.isNull())
+    return QualType();
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Size = getDerived().TransformExpr(T->getSizeExpr());
+  Size = SemaRef.ActOnConstantExpression(Size);
+  if (Size.isInvalid())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || ElementType != T->getElementType() ||
+      Size.get() != T->getSizeExpr()) {
+    Result = getDerived().RebuildDependentVectorType(
+        ElementType, Size.get(), T->getAttributeLoc(), T->getVectorKind());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  // Result might be dependent or not.
+  if (isa<DependentVectorType>(Result)) {
+    DependentVectorTypeLoc NewTL =
+        TLB.push<DependentVectorTypeLoc>(Result);
+    NewTL.setNameLoc(TL.getNameLoc());
+  } else {
+    VectorTypeLoc NewTL = TLB.push<VectorTypeLoc>(Result);
+    NewTL.setNameLoc(TL.getNameLoc());
+  }
+
+  return Result;
+}
+
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
                                       TypeLocBuilder &TLB,
@@ -5494,7 +5545,7 @@ QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
   // decltype expressions are not potentially evaluated contexts
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
-      /*IsDecltype=*/true);
+      Sema::ExpressionEvaluationContextRecord::EK_Decltype);
 
   ExprResult E = getDerived().TransformExpr(T->getUnderlyingExpr());
   if (E.isInvalid())
@@ -12375,6 +12426,13 @@ TreeTransform<Derived>::RebuildVectorType(QualType ElementType,
                                           VectorType::VectorKind VecKind) {
   // FIXME: semantic checking!
   return SemaRef.Context.getVectorType(ElementType, NumElements, VecKind);
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildDependentVectorType(
+    QualType ElementType, Expr *SizeExpr, SourceLocation AttributeLoc,
+    VectorType::VectorKind VecKind) {
+  return SemaRef.BuildVectorType(ElementType, SizeExpr, AttributeLoc);
 }
 
 template<typename Derived>

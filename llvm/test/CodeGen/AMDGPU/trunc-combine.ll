@@ -53,3 +53,30 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
   %add = add i16 %trunc, 4
   ret i16 %add
 }
+
+; GCN-LABEL: {{^}}truncate_high_elt_extract_vector:
+; GCN: s_load_dword s
+; GCN: s_load_dword s
+; GCN: s_sext_i32_i16
+; GCN: s_sext_i32_i16
+; GCN: v_mul_i32_i24
+; GCN: v_lshrrev_b32_e32
+define amdgpu_kernel void @truncate_high_elt_extract_vector(<2 x i16> addrspace(1)* nocapture readonly %arg, <2 x i16> addrspace(1)* nocapture readonly %arg1, <2 x i16> addrspace(1)* nocapture %arg2) local_unnamed_addr {
+bb:
+  %tmp = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %arg, i64 undef
+  %tmp3 = load <2 x i16>, <2 x i16> addrspace(1)* %tmp, align 4
+  %tmp4 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %arg1, i64 undef
+  %tmp5 = load <2 x i16>, <2 x i16> addrspace(1)* %tmp4, align 4
+  %tmp6 = sext <2 x i16> %tmp3 to <2 x i32>
+  %tmp7 = sext <2 x i16> %tmp5 to <2 x i32>
+  %tmp8 = extractelement <2 x i32> %tmp6, i64 0
+  %tmp9 = extractelement <2 x i32> %tmp7, i64 0
+  %tmp10 = mul nsw i32 %tmp9, %tmp8
+  %tmp11 = insertelement <2 x i32> undef, i32 %tmp10, i32 0
+  %tmp12 = insertelement <2 x i32> %tmp11, i32 undef, i32 1
+  %tmp13 = lshr <2 x i32> %tmp12, <i32 16, i32 16>
+  %tmp14 = trunc <2 x i32> %tmp13 to <2 x i16>
+  %tmp15 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %arg2, i64 undef
+  store <2 x i16> %tmp14, <2 x i16> addrspace(1)* %tmp15, align 4
+  ret void
+}

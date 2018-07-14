@@ -213,7 +213,7 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
   LLVM_DEBUG({
     for (const WriteRef &WR : Writes) {
       const WriteState &WS = *WR.getWriteState();
-      dbgs() << "Found a dependent use of Register "
+      dbgs() << "[PRF] Found a dependent use of Register "
              << MRI.getName(WS.getRegisterID()) << " (defined by intruction #"
              << WR.getSourceIndex() << ")\n";
     }

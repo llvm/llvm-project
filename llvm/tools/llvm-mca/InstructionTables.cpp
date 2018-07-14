@@ -39,9 +39,8 @@ void InstructionTables::run() {
       if (!Resource.second.size())
         continue;
       double Cycles = static_cast<double>(Resource.second.size());
-      unsigned Index =
-          std::distance(Masks.begin(), std::find(Masks.begin(), Masks.end(),
-                                                 Resource.first));
+      unsigned Index = std::distance(
+          Masks.begin(), std::find(Masks.begin(), Masks.end(), Resource.first));
       const MCProcResourceDesc &ProcResource = *SM.getProcResource(Index);
       unsigned NumUnits = ProcResource.NumUnits;
       if (!ProcResource.SubUnitsIdxBegin) {
@@ -73,7 +72,7 @@ void InstructionTables::run() {
     InstRef IR(SR.first, Inst.get());
     HWInstructionIssuedEvent Event(IR, UsedResources);
     for (std::unique_ptr<View> &Listener : Views)
-      Listener->onInstructionEvent(Event);
+      Listener->onEvent(Event);
     S.updateNext();
   }
 }
