@@ -63,6 +63,10 @@ public:
     return true;
   }
 
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+        unsigned SubReg, const TargetRegisterClass *DstRC, unsigned DstSubReg,
+        const TargetRegisterClass *NewRC, LiveIntervals &LIS) const override;
+
   // Debug information queries.
   unsigned getRARegister() const;
   unsigned getFrameRegister(const MachineFunction &MF) const override;

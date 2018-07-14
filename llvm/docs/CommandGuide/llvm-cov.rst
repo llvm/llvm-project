@@ -327,8 +327,8 @@ the binaries *BIN*,... using the profile data *PROFILE*. It can optionally be
 filtered to only show the coverage for the files listed in *SOURCES*.
 
 If no source files are provided, a summary line is printed for each file in the
-coverage data. If any files are provided, summaries are shown for each function
-in the listed files instead.
+coverage data. If any files are provided, summaries can be shown for each
+function in the listed files if the ``-show-functions`` option is enabled.
 
 For information on compiling programs for coverage and generating profile data,
 see :ref:`llvm-cov-show`.

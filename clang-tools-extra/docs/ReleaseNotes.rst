@@ -82,6 +82,9 @@ Improvements to clang-tidy
 - New :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone-exception-escape>` check
 
+  Finds functions which may throw an exception directly or indirectly, but they
+  should not.
+
 - New :doc:`bugprone-parent-virtual-call
   <clang-tidy/checks/bugprone-parent-virtual-call>` check.
 

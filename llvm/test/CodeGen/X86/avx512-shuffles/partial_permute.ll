@@ -2852,7 +2852,7 @@ define <4 x float> @test_8xfloat_to_4xfloat_perm_mask3(<8 x float> %vec) {
 ; CHECK-LABEL: test_8xfloat_to_4xfloat_perm_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,1,2]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -2863,7 +2863,7 @@ define <4 x float> @test_masked_8xfloat_to_4xfloat_perm_mask3(<8 x float> %vec, 
 ; CHECK-LABEL: test_masked_8xfloat_to_4xfloat_perm_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm3[0],xmm0[1]
+; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm3[0],xmm0[1]
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqps %xmm3, %xmm2, %k1
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm1 {%k1} = xmm0[3,3,1,2]
@@ -2880,7 +2880,7 @@ define <4 x float> @test_masked_z_8xfloat_to_4xfloat_perm_mask3(<8 x float> %vec
 ; CHECK-LABEL: test_masked_z_8xfloat_to_4xfloat_perm_mask3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqps %xmm2, %xmm1, %k1
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 {%k1} {z} = xmm0[3,3,1,2]
@@ -3801,7 +3801,7 @@ define <2 x double> @test_4xdouble_to_2xdouble_perm_mem_mask0(<4 x double>* %vp)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovapd (%rdi), %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %vec = load <4 x double>, <4 x double>* %vp
@@ -3813,7 +3813,7 @@ define <2 x double> @test_masked_4xdouble_to_2xdouble_perm_mem_mask0(<4 x double
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovapd (%rdi), %ymm2
 ; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm2 = xmm3[0],xmm2[1]
+; CHECK-NEXT:    vblendpd {{.*#+}} xmm2 = xmm3[0],xmm2[1]
 ; CHECK-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm0 {%k1}
@@ -3831,7 +3831,7 @@ define <2 x double> @test_masked_z_4xdouble_to_2xdouble_perm_mem_mask0(<4 x doub
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovapd (%rdi), %ymm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; CHECK-NEXT:    vblendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm0, %k1
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 {%k1} {z}

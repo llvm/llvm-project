@@ -800,9 +800,9 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
     // By default, assume that the load will immediately leak.
     return false;
 
-    // On x86 it is believed that imul is constant time w.r.t. the loaded data.
-    // However, they set flags and are perhaps the most surprisingly constant
-    // time operations so we call them out here separately.
+  // On x86 it is believed that imul is constant time w.r.t. the loaded data.
+  // However, they set flags and are perhaps the most surprisingly constant
+  // time operations so we call them out here separately.
   case X86::IMUL16rm:
   case X86::IMUL16rmi8:
   case X86::IMUL16rmi:
@@ -813,10 +813,29 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
   case X86::IMUL64rmi32:
   case X86::IMUL64rmi8:
 
-    // Bitfield and bit scanning instructions that are somewhat surprisingly
-    // constant time as they scan across bits and do other fairly complex
-    // operations like popcnt, but are believed to be constant time on x86.
-    // However, these set flags.
+  // Bit scanning and counting instructions that are somewhat surprisingly
+  // constant time as they scan across bits and do other fairly complex
+  // operations like popcnt, but are believed to be constant time on x86.
+  // However, these set flags.
+  case X86::BSF16rm:
+  case X86::BSF32rm:
+  case X86::BSF64rm:
+  case X86::BSR16rm:
+  case X86::BSR32rm:
+  case X86::BSR64rm:
+  case X86::LZCNT16rm:
+  case X86::LZCNT32rm:
+  case X86::LZCNT64rm:
+  case X86::POPCNT16rm:
+  case X86::POPCNT32rm:
+  case X86::POPCNT64rm:
+  case X86::TZCNT16rm:
+  case X86::TZCNT32rm:
+  case X86::TZCNT64rm:
+
+  // Bit manipulation instructions are effectively combinations of basic
+  // arithmetic ops, and should still execute in constant time. These also
+  // set flags.
   case X86::BLCFILL32rm:
   case X86::BLCFILL64rm:
   case X86::BLCI32rm:
@@ -837,21 +856,19 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
   case X86::BLSMSK64rm:
   case X86::BLSR32rm:
   case X86::BLSR64rm:
-  case X86::BZHI32rm:
-  case X86::BZHI64rm:
-  case X86::LZCNT16rm:
-  case X86::LZCNT32rm:
-  case X86::LZCNT64rm:
-  case X86::POPCNT16rm:
-  case X86::POPCNT32rm:
-  case X86::POPCNT64rm:
-  case X86::TZCNT16rm:
-  case X86::TZCNT32rm:
-  case X86::TZCNT64rm:
   case X86::TZMSK32rm:
   case X86::TZMSK64rm:
 
-    // Basic arithmetic is constant time on the input but does set flags.
+  // Bit extracting and clearing instructions should execute in constant time,
+  // and set flags.
+  case X86::BEXTR32rm:
+  case X86::BEXTR64rm:
+  case X86::BEXTRI32mi:
+  case X86::BEXTRI64mi:
+  case X86::BZHI32rm:
+  case X86::BZHI64rm:
+
+  // Basic arithmetic is constant time on the input but does set flags.
   case X86::ADC8rm:
   case X86::ADC16rm:
   case X86::ADC32rm:
@@ -870,12 +887,6 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
   case X86::AND64rm:
   case X86::ANDN32rm:
   case X86::ANDN64rm:
-  case X86::BSF16rm:
-  case X86::BSF32rm:
-  case X86::BSF64rm:
-  case X86::BSR16rm:
-  case X86::BSR32rm:
-  case X86::BSR64rm:
   case X86::OR8rm:
   case X86::OR16rm:
   case X86::OR32rm:
@@ -892,10 +903,6 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
   case X86::XOR16rm:
   case X86::XOR32rm:
   case X86::XOR64rm:
-  case X86::BEXTR32rm:
-  case X86::BEXTR64rm:
-  case X86::BEXTRI32mi:
-  case X86::BEXTRI64mi:
     // Check whether the EFLAGS implicit-def is dead. We assume that this will
     // always find the implicit-def because this code should only be reached
     // for instructions that do in fact implicitly def this.
@@ -910,17 +917,13 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
     // don't set EFLAGS.
     LLVM_FALLTHROUGH;
 
-    // Integer multiply w/o affecting flags is still believed to be constant
-    // time on x86. Called out separately as this is among the most surprising
-    // instructions to exhibit that behavior.
+  // Integer multiply w/o affecting flags is still believed to be constant
+  // time on x86. Called out separately as this is among the most surprising
+  // instructions to exhibit that behavior.
   case X86::MULX32rm:
   case X86::MULX64rm:
 
-    // Arithmetic instructions that are both constant time and don't set flags.
-  case X86::PDEP32rm:
-  case X86::PDEP64rm:
-  case X86::PEXT32rm:
-  case X86::PEXT64rm:
+  // Arithmetic instructions that are both constant time and don't set flags.
   case X86::RORX32mi:
   case X86::RORX64mi:
   case X86::SARX32rm:
@@ -930,22 +933,28 @@ static bool isDataInvariantLoad(MachineInstr &MI) {
   case X86::SHRX32rm:
   case X86::SHRX64rm:
 
-    // Conversions are believed to be constant time and don't set flags.
-    // FIXME: Add AVX versions.
-  case X86::CVTSD2SI64rm_Int:
-  case X86::CVTSD2SIrm_Int:
-  case X86::CVTSS2SI64rm_Int:
-  case X86::CVTSS2SIrm_Int:
-  case X86::CVTTSD2SI64rm:
-  case X86::CVTTSD2SI64rm_Int:
-  case X86::CVTTSD2SIrm:
-  case X86::CVTTSD2SIrm_Int:
-  case X86::CVTTSS2SI64rm:
-  case X86::CVTTSS2SI64rm_Int:
-  case X86::CVTTSS2SIrm:
-  case X86::CVTTSS2SIrm_Int:
+  // Conversions are believed to be constant time and don't set flags.
+  case X86::CVTTSD2SI64rm: case X86::VCVTTSD2SI64rm: case X86::VCVTTSD2SI64Zrm:
+  case X86::CVTTSD2SIrm:   case X86::VCVTTSD2SIrm:   case X86::VCVTTSD2SIZrm:
+  case X86::CVTTSS2SI64rm: case X86::VCVTTSS2SI64rm: case X86::VCVTTSS2SI64Zrm:
+  case X86::CVTTSS2SIrm:   case X86::VCVTTSS2SIrm:   case X86::VCVTTSS2SIZrm:
+  case X86::CVTSI2SDrm:    case X86::VCVTSI2SDrm:    case X86::VCVTSI2SDZrm:
+  case X86::CVTSI2SSrm:    case X86::VCVTSI2SSrm:    case X86::VCVTSI2SSZrm:
+  case X86::CVTSI642SDrm:  case X86::VCVTSI642SDrm:  case X86::VCVTSI642SDZrm:
+  case X86::CVTSI642SSrm:  case X86::VCVTSI642SSrm:  case X86::VCVTSI642SSZrm:
+  case X86::CVTSS2SDrm:    case X86::VCVTSS2SDrm:    case X86::VCVTSS2SDZrm:
+  case X86::CVTSD2SSrm:    case X86::VCVTSD2SSrm:    case X86::VCVTSD2SSZrm:
+  // AVX512 added unsigned integer conversions.
+  case X86::VCVTTSD2USI64Zrm:
+  case X86::VCVTTSD2USIZrm:
+  case X86::VCVTTSS2USI64Zrm:
+  case X86::VCVTTSS2USIZrm:
+  case X86::VCVTUSI2SDZrm:
+  case X86::VCVTUSI642SDZrm:
+  case X86::VCVTUSI2SSZrm:
+  case X86::VCVTUSI642SSZrm:
 
-    // Loads to register don't set flags.
+  // Loads to register don't set flags.
   case X86::MOV8rm:
   case X86::MOV8rm_NOREX:
   case X86::MOV16rm:
@@ -1523,6 +1532,14 @@ void X86SpeculativeLoadHardeningPass::hardenPostLoad(
 
   unsigned OrOpCodes[] = {X86::OR8rr, X86::OR16rr, X86::OR32rr, X86::OR64rr};
   unsigned OrOpCode = OrOpCodes[Log2_32(DefRegBytes)];
+
+#ifndef NDEBUG
+  const TargetRegisterClass *OrRegClasses[] = {
+      &X86::GR8RegClass, &X86::GR16RegClass, &X86::GR32RegClass,
+      &X86::GR64RegClass};
+  assert(DefRC->hasSuperClassEq(OrRegClasses[Log2_32(DefRegBytes)]) &&
+         "Cannot define this register with OR instruction!");
+#endif
 
   unsigned SubRegImms[] = {X86::sub_8bit, X86::sub_16bit, X86::sub_32bit};
 

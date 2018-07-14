@@ -2677,7 +2677,7 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
   // Check to see if this bitfield fits into an existing allocation.  Note:
   // MSVC refuses to pack bitfields of formal types with different sizes
   // into the same allocation.
-  if (!IsUnion && LastFieldIsNonZeroWidthBitfield &&
+  if (!UseExternalLayout && !IsUnion && LastFieldIsNonZeroWidthBitfield &&
       CurrentBitfieldSize == Info.Size && Width <= RemainingBitsInField) {
     placeFieldAtBitOffset(Context.toBits(Size) - RemainingBitsInField);
     RemainingBitsInField -= Width;
@@ -2689,6 +2689,14 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
     placeFieldAtOffset(CharUnits::Zero());
     Size = std::max(Size, Info.Size);
     // TODO: Add a Sema warning that MS ignores bitfield alignment in unions.
+  } else if (UseExternalLayout) {
+    auto FieldBitOffset = External.getExternalFieldOffset(FD);
+    placeFieldAtBitOffset(FieldBitOffset);
+    auto NewSize = Context.toCharUnitsFromBits(
+        llvm::alignTo(FieldBitOffset + Width, Context.getCharWidth()));
+    assert(NewSize >= Size && "bit field offset already allocated");
+    Size = NewSize;
+    Alignment = std::max(Alignment, Info.Alignment);
   } else {
     // Allocate a new block of memory and place the bitfield in it.
     CharUnits FieldOffset = Size.alignTo(Info.Alignment);

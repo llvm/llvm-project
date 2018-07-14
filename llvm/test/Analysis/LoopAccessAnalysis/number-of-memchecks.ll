@@ -251,10 +251,10 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:         Member: {((2 * %offset) + %a)<nsw>,+,2}<nsw><%for.body>
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (10000 + %a))
-; CHECK-NEXT:         Member: {%a,+,2}<%for.body>
+; CHECK-NEXT:         Member: {%a,+,2}<nw><%for.body>
 ; CHECK-NEXT:     Group {{.*}}[[TWO]]:
 ; CHECK-NEXT:       (Low: (20000 + %a) High: (30000 + %a))
-; CHECK-NEXT:         Member: {(20000 + %a),+,2}<%for.body>
+; CHECK-NEXT:         Member: {(20000 + %a),+,2}<nw><%for.body>
 
 define void @testi(i16* %a,
                    i64 %offset) {
