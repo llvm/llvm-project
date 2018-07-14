@@ -1534,11 +1534,11 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
     auto *DIExpr = DII->getExpression();
     assert(DIVar && "Missing variable");
     DIExpr = DIExpression::prepend(DIExpr, DerefBefore, Offset, DerefAfter);
-    // Insert llvm.dbg.declare immediately after InsertBefore, and remove old
+    // Insert llvm.dbg.declare immediately before InsertBefore, and remove old
     // llvm.dbg.declare.
     Builder.insertDeclare(NewAddress, DIVar, DIExpr, Loc, InsertBefore);
     if (DII == InsertBefore)
-      InsertBefore = &*std::next(InsertBefore->getIterator());
+      InsertBefore = InsertBefore->getNextNode();
     DII->eraseFromParent();
   }
   return !DbgAddrs.empty();

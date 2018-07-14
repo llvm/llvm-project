@@ -576,6 +576,7 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   if (Inst.isMoveReg)          OS << "|(1ULL<<MCID::MoveReg)";
   if (Inst.isBitcast)          OS << "|(1ULL<<MCID::Bitcast)";
   if (Inst.isAdd)              OS << "|(1ULL<<MCID::Add)";
+  if (Inst.isTrap)             OS << "|(1ULL<<MCID::Trap)";
   if (Inst.isSelect)           OS << "|(1ULL<<MCID::Select)";
   if (Inst.isBarrier)          OS << "|(1ULL<<MCID::Barrier)";
   if (Inst.hasDelaySlot)       OS << "|(1ULL<<MCID::DelaySlot)";

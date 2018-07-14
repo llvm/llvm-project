@@ -2291,7 +2291,7 @@ define <2 x i64> @test_v8i64_2_5 (<8 x i64> %v) {
 ; ALL-LABEL: test_v8i64_2_5:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; ALL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; ALL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,1,2,3]
 ; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; ALL-NEXT:    vzeroupper

@@ -1265,36 +1265,51 @@ static void processShaderInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
                                    FunctionType *FType,
                                    SIMachineFunctionInfo *Info) {
   for (unsigned I = 0, E = Ins.size(), PSInputNum = 0; I != E; ++I) {
-    const ISD::InputArg &Arg = Ins[I];
+    const ISD::InputArg *Arg = &Ins[I];
 
     // First check if it's a PS input addr.
-    if (CallConv == CallingConv::AMDGPU_PS && !Arg.Flags.isInReg() &&
-        !Arg.Flags.isByVal() && PSInputNum <= 15) {
+    if (CallConv == CallingConv::AMDGPU_PS &&
+        !Arg->Flags.isInReg() && !Arg->Flags.isByVal() && PSInputNum <= 15) {
 
-      if (!Arg.Used && !Info->isPSInputAllocated(PSInputNum)) {
+      bool SkipArg = !Arg->Used && !Info->isPSInputAllocated(PSInputNum);
+
+      // Inconveniently only the first part of the split is marked as isSplit,
+      // so skip to the end. We only want to increment PSInputNum once for the
+      // entire split argument.
+      if (Arg->Flags.isSplit()) {
+        while (!Arg->Flags.isSplitEnd()) {
+          assert(!Arg->VT.isVector() &&
+                 "unexpected vector split in ps argument type");
+          if (!SkipArg)
+            Splits.push_back(*Arg);
+          Arg = &Ins[++I];
+        }
+      }
+
+      if (SkipArg) {
         // We can safely skip PS inputs.
-        Skipped.set(I);
+        Skipped.set(Arg->getOrigArgIndex());
         ++PSInputNum;
         continue;
       }
 
       Info->markPSInputAllocated(PSInputNum);
-      if (Arg.Used)
+      if (Arg->Used)
         Info->markPSInputEnabled(PSInputNum);
 
       ++PSInputNum;
     }
 
     // Second split vertices into their elements.
-    if (Arg.VT.isVector()) {
-      ISD::InputArg NewArg = Arg;
+    if (Arg->VT.isVector()) {
+      ISD::InputArg NewArg = *Arg;
       NewArg.Flags.setSplit();
-      NewArg.VT = Arg.VT.getVectorElementType();
+      NewArg.VT = Arg->VT.getVectorElementType();
 
       // We REALLY want the ORIGINAL number of vertex elements here, e.g. a
       // three or five element vertex only needs three or five registers,
       // NOT four or eight.
-      Type *ParamType = FType->getParamType(Arg.getOrigArgIndex());
+      Type *ParamType = FType->getParamType(Arg->getOrigArgIndex());
       unsigned NumElements = ParamType->getVectorNumElements();
 
       for (unsigned J = 0; J != NumElements; ++J) {
@@ -1302,7 +1317,7 @@ static void processShaderInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
         NewArg.PartOffset += NewArg.VT.getStoreSize();
       }
     } else {
-      Splits.push_back(Arg);
+      Splits.push_back(*Arg);
     }
   }
 }
@@ -1785,7 +1800,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
    for (unsigned i = 0, e = Ins.size(), ArgIdx = 0; i != e; ++i) {
     const ISD::InputArg &Arg = Ins[i];
-    if (Skipped[i]) {
+    if (Arg.isOrigArg() && Skipped[Arg.getOrigArgIndex()]) {
       InVals.push_back(DAG.getUNDEF(Arg.VT));
       continue;
     }

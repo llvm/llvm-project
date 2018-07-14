@@ -3936,6 +3936,7 @@ def : InstAlias<"vmovd\t{$src, $dst|$dst, $src}",
 
 multiclass avx512_move_scalar<string asm, SDNode OpNode,
                               X86VectorVTInfo _> {
+  let Predicates = [HasAVX512, OptForSize] in
   def rr : AVX512PI<0x10, MRMSrcReg, (outs _.RC:$dst),
              (ins _.RC:$src1, _.RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
@@ -4324,7 +4325,7 @@ def : InstAlias<"vmovsd.s\t{$src2, $src1, $dst {${mask}} {z}|"#
                 (VMOVSDZrrkz_REV VR128X:$dst, VK1WM:$mask,
                                  VR128X:$src1, VR128X:$src2), 0>;
 
-let Predicates = [HasAVX512] in {
+let Predicates = [HasAVX512, OptForSize] in {
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128X:$src))),
             (VMOVSSZrr (v4f32 (AVX512_128_SET0)), VR128X:$src)>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128X:$src))),
@@ -4339,6 +4340,17 @@ let Predicates = [HasAVX512] in {
             (SUBREG_TO_REG (i32 0),
              (VMOVSSZrr (v4i32 (AVX512_128_SET0)),
               (EXTRACT_SUBREG (v8i32 VR256X:$src), sub_xmm)), sub_xmm)>;
+
+  def : Pat<(v4f64 (X86vzmovl (v4f64 VR256X:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VMOVSDZrr (v2f64 (AVX512_128_SET0)),
+                       (EXTRACT_SUBREG (v4f64 VR256X:$src), sub_xmm)), sub_xmm)>;
+  def : Pat<(v4i64 (X86vzmovl (v4i64 VR256X:$src))),
+            (SUBREG_TO_REG (i32 0), (VMOVSDZrr (v2i64 (AVX512_128_SET0)),
+                       (EXTRACT_SUBREG (v4i64 VR256X:$src), sub_xmm)), sub_xmm)>;
+}
+
+let Predicates = [HasAVX512] in {
   def : Pat<(v16f32 (X86vzmovl (v16f32 VR512:$src))),
             (SUBREG_TO_REG (i32 0),
              (VMOVSSZrr (v4f32 (AVX512_128_SET0)),
@@ -4405,18 +4417,11 @@ let Predicates = [HasAVX512] in {
             (SUBREG_TO_REG (i64 0), (VMOVQI2PQIZrm addr:$src), sub_xmm)>;
 
   // Move low f64 and clear high bits.
-  def : Pat<(v4f64 (X86vzmovl (v4f64 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0),
-             (VMOVSDZrr (v2f64 (AVX512_128_SET0)),
-                       (EXTRACT_SUBREG (v4f64 VR256X:$src), sub_xmm)), sub_xmm)>;
   def : Pat<(v8f64 (X86vzmovl (v8f64 VR512:$src))),
             (SUBREG_TO_REG (i32 0),
              (VMOVSDZrr (v2f64 (AVX512_128_SET0)),
                        (EXTRACT_SUBREG (v8f64 VR512:$src), sub_xmm)), sub_xmm)>;
 
-  def : Pat<(v4i64 (X86vzmovl (v4i64 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0), (VMOVSDZrr (v2i64 (AVX512_128_SET0)),
-                       (EXTRACT_SUBREG (v4i64 VR256X:$src), sub_xmm)), sub_xmm)>;
   def : Pat<(v8i64 (X86vzmovl (v8i64 VR512:$src))),
             (SUBREG_TO_REG (i32 0), (VMOVSDZrr (v2i64 (AVX512_128_SET0)),
                        (EXTRACT_SUBREG (v8i64 VR512:$src), sub_xmm)), sub_xmm)>;
@@ -4425,7 +4430,9 @@ let Predicates = [HasAVX512] in {
   def : Pat<(store (f32 (extractelt (v4f32 VR128X:$src), (iPTR 0))),
                    addr:$dst),
             (VMOVSSZmr addr:$dst, (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X))>;
+}
 
+let Predicates = [HasAVX512, OptForSize] in {
   // Shuffle with VMOVSS
   def : Pat<(v4i32 (X86Movss VR128X:$src1, VR128X:$src2)),
             (VMOVSSZrr (v4i32 VR128X:$src1), VR128X:$src2)>;

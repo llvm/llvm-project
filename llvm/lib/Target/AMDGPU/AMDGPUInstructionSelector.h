@@ -68,6 +68,8 @@ private:
   bool selectG_GEP(MachineInstr &I) const;
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+  bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I,
+                                        CodeGenCoverage &CoverageInfo) const;
   bool hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const;
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
                        SmallVectorImpl<GEPInfo> &AddrInfo) const;

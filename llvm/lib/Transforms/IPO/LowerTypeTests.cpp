@@ -1750,26 +1750,54 @@ bool LowerTypeTestsModule::lower() {
   unsigned CurUniqueId = 0;
   SmallVector<MDNode *, 2> Types;
 
+  // Cross-DSO CFI emits jumptable entries for exported functions as well as
+  // address taken functions in case they are address taken in other modules.
+  const bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
+
   struct ExportedFunctionInfo {
     CfiFunctionLinkage Linkage;
     MDNode *FuncMD; // {name, linkage, type[, type...]}
   };
   DenseMap<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
+    // A set of all functions that are address taken by a live global object.
+    DenseSet<GlobalValue::GUID> AddressTaken;
+    for (auto &I : *ExportSummary)
+      for (auto &GVS : I.second.SummaryList)
+        if (GVS->isLive())
+          for (auto &Ref : GVS->refs())
+            AddressTaken.insert(Ref.getGUID());
+
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
       for (auto FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
             cast<MDString>(FuncMD->getOperand(0))->getString();
-        if (!ExportSummary->isGUIDLive(GlobalValue::getGUID(
-                GlobalValue::dropLLVMManglingEscape(FunctionName))))
-          continue;
         CfiFunctionLinkage Linkage = static_cast<CfiFunctionLinkage>(
             cast<ConstantAsMetadata>(FuncMD->getOperand(1))
                 ->getValue()
                 ->getUniqueInteger()
                 .getZExtValue());
+        const GlobalValue::GUID GUID = GlobalValue::getGUID(
+                GlobalValue::dropLLVMManglingEscape(FunctionName));
+        // Do not emit jumptable entries for functions that are not-live and
+        // have no live references (and are not exported with cross-DSO CFI.)
+        if (!ExportSummary->isGUIDLive(GUID))
+          continue;
+        if (!AddressTaken.count(GUID)) {
+          if (!CrossDsoCfi || Linkage != CFL_Definition)
+            continue;
+
+          bool Exported = false;
+          if (auto VI = ExportSummary->getValueInfo(GUID))
+            for (auto &GVS : VI.getSummaryList())
+              if (GVS->isLive() && !GlobalValue::isLocalLinkage(GVS->linkage()))
+                Exported = true;
+
+          if (!Exported)
+            continue;
+        }
         auto P = ExportedFunctions.insert({FunctionName, {Linkage, FuncMD}});
         if (!P.second && P.first->second.Linkage != CFL_Definition)
           P.first->second = {Linkage, FuncMD};
@@ -1829,9 +1857,18 @@ bool LowerTypeTestsModule::lower() {
 
     bool IsDefinition = !GO.isDeclarationForLinker();
     bool IsExported = false;
-    if (isa<Function>(GO) && ExportedFunctions.count(GO.getName())) {
-      IsDefinition |= ExportedFunctions[GO.getName()].Linkage == CFL_Definition;
-      IsExported = true;
+    if (Function *F = dyn_cast<Function>(&GO)) {
+      if (ExportedFunctions.count(F->getName())) {
+        IsDefinition |= ExportedFunctions[F->getName()].Linkage == CFL_Definition;
+        IsExported = true;
+      // TODO: The logic here checks only that the function is address taken,
+      // not that the address takers are live. This can be updated to check
+      // their liveness and emit fewer jumptable entries once monolithic LTO
+      // builds also emit summaries.
+      } else if (!F->hasAddressTaken()) {
+        if (!CrossDsoCfi || !IsDefinition || F->hasLocalLinkage())
+          continue;
+      }
     }
 
     auto *GTM =

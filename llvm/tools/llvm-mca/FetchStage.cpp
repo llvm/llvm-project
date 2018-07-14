@@ -29,7 +29,7 @@ bool FetchStage::execute(InstRef &IR) {
   return true;
 }
 
-void FetchStage::postExecute(const InstRef &IR) { SM.updateNext(); }
+void FetchStage::postExecute() { SM.updateNext(); }
 
 void FetchStage::cycleEnd() {
   // Find the first instruction which hasn't been retired.

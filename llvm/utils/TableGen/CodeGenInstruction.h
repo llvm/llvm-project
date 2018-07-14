@@ -232,6 +232,7 @@ template <typename T> class ArrayRef;
     bool isBarrier : 1;
     bool isCall : 1;
     bool isAdd : 1;
+    bool isTrap : 1;
     bool canFoldAsLoad : 1;
     bool mayLoad : 1;
     bool mayLoad_Unset : 1;
@@ -260,6 +261,8 @@ template <typename T> class ArrayRef;
     bool isConvergent : 1;
     bool hasNoSchedulingInfo : 1;
     bool FastISelShouldIgnore : 1;
+    bool hasChain : 1;
+    bool hasChain_Inferred : 1;
 
     std::string DeprecatedReason;
     bool HasComplexDeprecationPredicate;

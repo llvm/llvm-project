@@ -208,7 +208,8 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     }
     Write.IsOptionalDef = false;
     LLVM_DEBUG({
-      dbgs() << "\t\tOpIdx=" << Write.OpIndex << ", Latency=" << Write.Latency
+      dbgs() << "\t\t[Def] OpIdx=" << Write.OpIndex
+             << ", Latency=" << Write.Latency
              << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
     });
     CurrentDef++;
@@ -239,10 +240,12 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
 
     Write.IsOptionalDef = false;
     assert(Write.RegisterID != 0 && "Expected a valid phys register!");
-    LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Write.OpIndex << ", PhysReg="
-                      << Write.RegisterID << ", Latency=" << Write.Latency
-                      << ", WriteResourceID=" << Write.SClassOrWriteResourceID
-                      << '\n');
+    LLVM_DEBUG({
+      dbgs() << "\t\t[Def] OpIdx=" << Write.OpIndex
+             << ", PhysReg=" << MRI.getName(Write.RegisterID)
+             << ", Latency=" << Write.Latency
+             << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
+    });
   }
 
   if (MCDesc.hasOptionalDef()) {
@@ -297,7 +300,8 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.OpIndex = i + CurrentUse;
     Read.UseIndex = CurrentUse;
     Read.SchedClassID = SchedClassID;
-    LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex);
+    LLVM_DEBUG(dbgs() << "\t\t[Use] OpIdx=" << Read.OpIndex
+                      << ", UseIndex=" << Read.UseIndex << '\n');
   }
 
   for (unsigned CurrentUse = 0; CurrentUse < NumImplicitUses; ++CurrentUse) {
@@ -306,8 +310,8 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.UseIndex = NumExplicitUses + CurrentUse;
     Read.RegisterID = MCDesc.getImplicitUses()[CurrentUse];
     Read.SchedClassID = SchedClassID;
-    LLVM_DEBUG(dbgs() << "\t\tOpIdx=" << Read.OpIndex
-                      << ", RegisterID=" << Read.RegisterID << '\n');
+    LLVM_DEBUG(dbgs() << "\t\t[Use] OpIdx=" << Read.OpIndex << ", RegisterID="
+                      << MRI.getName(Read.RegisterID) << '\n');
   }
 }
 

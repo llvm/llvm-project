@@ -316,7 +316,7 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress,
 /// DW_OP_deref is prepended to the expression. If Offset is non-zero,
 /// a constant displacement is added to the expression (between the
 /// optional Deref operations). Offset can be negative. The new
-/// llvm.dbg.declare is inserted immediately before AI.
+/// llvm.dbg.declare is inserted immediately after AI.
 bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                 DIBuilder &Builder, bool DerefBefore,
                                 int Offset, bool DerefAfter);

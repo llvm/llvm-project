@@ -36,6 +36,8 @@ def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
 def implib  : P<"implib", "Import library name">;
+def lib : F<"lib">,
+    HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;
 def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
 def lldltocache : P<"lldltocache", "Path to ThinLTO cached object file directory">;

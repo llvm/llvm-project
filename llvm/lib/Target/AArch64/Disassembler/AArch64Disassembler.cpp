@@ -1185,11 +1185,11 @@ static DecodeStatus DecodeSignedLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::LDRWpost:
   case AArch64::STLURBi:
   case AArch64::STLURHi:
-  case AArch64::STLURi:
+  case AArch64::STLURWi:
   case AArch64::LDAPURBi:
-  case AArch64::LDAPURSBi:
+  case AArch64::LDAPURSBWi:
   case AArch64::LDAPURHi:
-  case AArch64::LDAPURSHi:
+  case AArch64::LDAPURSHWi:
   case AArch64::LDAPURi:
     DecodeGPR32RegisterClass(Inst, Rt, Addr, Decoder);
     break;
@@ -1214,10 +1214,10 @@ static DecodeStatus DecodeSignedLdStInstruction(MCInst &Inst, uint32_t insn,
   case AArch64::LDRSWpost:
   case AArch64::LDRXpost:
   case AArch64::LDAPURSWi:
-  case AArch64::LDAPURSH64i:
-  case AArch64::LDAPURSB64i:
-  case AArch64::STLUR64i:
-  case AArch64::LDAPUR64i:
+  case AArch64::LDAPURSHXi:
+  case AArch64::LDAPURSBXi:
+  case AArch64::STLURXi:
+  case AArch64::LDAPURXi:
     DecodeGPR64RegisterClass(Inst, Rt, Addr, Decoder);
     break;
   case AArch64::LDURQi:

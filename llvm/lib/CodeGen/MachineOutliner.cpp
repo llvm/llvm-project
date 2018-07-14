@@ -1309,7 +1309,7 @@ bool MachineOutliner::outline(
       // First inst in outlined range <-- Anything that's defined in this
       // ...                           .. range has to be added as an implicit
       // Last inst in outlined range  <-- def to the call instruction.
-      std::for_each(CallInst, EndIt, CopyDefs);
+      std::for_each(CallInst, std::next(EndIt), CopyDefs);
     }
 
     // Erase from the point after where the call was inserted up to, and

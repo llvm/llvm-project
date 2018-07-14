@@ -1,0 +1,3 @@
+# RUN: llvm-lib /? | FileCheck %s
+
+CHECK: OVERVIEW: LLVM Lib

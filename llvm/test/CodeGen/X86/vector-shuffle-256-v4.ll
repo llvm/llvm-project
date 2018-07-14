@@ -1372,19 +1372,12 @@ define <4 x i64> @insert_mem_and_zero_v4i64(i64* %ptr) {
 }
 
 define <4 x double> @insert_reg_and_zero_v4f64(double %a) {
-; AVX1OR2-LABEL: insert_reg_and_zero_v4f64:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
-; AVX1OR2-NEXT:    retq
-;
-; AVX512VL-LABEL: insert_reg_and_zero_v4f64:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512VL-NEXT:    retq
+; ALL-LABEL: insert_reg_and_zero_v4f64:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; ALL-NEXT:    retq
   %v = insertelement <4 x double> undef, double %a, i32 0
   %shuffle = shufflevector <4 x double> %v, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x double> %shuffle
