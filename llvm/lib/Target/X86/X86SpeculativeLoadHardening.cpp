@@ -367,9 +367,9 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     ++NumLFENCEsInserted;
   }
 
-  // If we have no conditionals to protect in blocks, then all we needed to do
-  // was protect the entry and so we're done.
-  if (Infos.empty())
+  // If we guarded the entry with an LFENCE and have no conditionals to protect
+  // in blocks, then we're done.
+  if (FenceCallAndRet && Infos.empty())
     // We may have changed the function's code at this point to insert fences.
     return true;
 
