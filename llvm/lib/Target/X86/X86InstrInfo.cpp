@@ -6365,7 +6365,7 @@ static bool AdjustBlendMask(unsigned OldMask, unsigned OldWidth,
 
 uint16_t X86InstrInfo::getExecutionDomainCustom(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
-  unsigned NumOperands = MI.getNumOperands();
+  unsigned NumOperands = MI.getDesc().getNumOperands();
 
   auto GetBlendDomains = [&](unsigned ImmWidth, bool Is256) {
     uint16_t validDomains = 0;
@@ -6421,7 +6421,7 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
   assert(dom && "Not an SSE instruction");
 
   unsigned Opcode = MI.getOpcode();
-  unsigned NumOperands = MI.getNumOperands();
+  unsigned NumOperands = MI.getDesc().getNumOperands();
 
   auto SetBlendDomain = [&](unsigned ImmWidth, bool Is256) {
     if (MI.getOperand(NumOperands - 1).isImm()) {
