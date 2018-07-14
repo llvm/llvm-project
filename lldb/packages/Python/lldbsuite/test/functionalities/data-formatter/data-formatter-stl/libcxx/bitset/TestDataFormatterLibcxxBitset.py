@@ -45,6 +45,7 @@ class TestDataFormatterLibcxxBitset(TestBase):
         self.check("small", 13)
         self.check("large", 200)
 
+    @add_test_categories(["libc++"])
     def test_ptr_and_ref(self):
         """Test that ref and ptr to std::bitset is displayed correctly"""
         self.build()

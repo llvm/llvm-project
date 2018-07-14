@@ -34,18 +34,11 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X64-SSE-NEXT:    movapd %xmm1, (%rdi)
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX1-LABEL: test1:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
-; X64-AVX1-NEXT:    vmovaps %xmm0, (%rdi)
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX512-LABEL: test1:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovapd (%rsi), %xmm1
-; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; X64-AVX512-NEXT:    vmovapd %xmm0, (%rdi)
-; X64-AVX512-NEXT:    retq
+; X64-AVX-LABEL: test1:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; X64-AVX-NEXT:    vmovaps %xmm0, (%rdi)
+; X64-AVX-NEXT:    retq
 	%tmp3 = load <2 x double>, <2 x double>* %A, align 16
 	%tmp7 = insertelement <2 x double> undef, double %B, i32 0
 	%tmp9 = shufflevector <2 x double> %tmp3, <2 x double> %tmp7, <2 x i32> < i32 2, i32 1 >
@@ -422,10 +415,10 @@ define void @test12() nounwind {
 ;
 ; AVX512-LABEL: test12:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovapd 0, %xmm0
+; AVX512-NEXT:    vmovaps 0, %xmm0
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
+; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
 ; AVX512-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vmovaps %xmm0, 0

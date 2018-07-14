@@ -31,15 +31,10 @@ define <2 x double> @test_mm_blend_pd(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: test_mm_blend_pd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: test_mm_blend_pd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: test_mm_blend_pd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %res = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %res
 }

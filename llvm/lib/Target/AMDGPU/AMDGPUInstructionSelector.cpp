@@ -186,6 +186,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I,
   switch (IntrinsicID) {
   default:
     break;
+  case Intrinsic::maxnum:
+  case Intrinsic::minnum:
   case Intrinsic::amdgcn_cvt_pkrtz:
     return selectImpl(I, CoverageInfo);
 

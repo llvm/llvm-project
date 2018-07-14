@@ -667,17 +667,11 @@ define <4 x float> @insert_test_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_add_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_add_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_add_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <4 x float> %a, %b
   %2 = shufflevector <4 x float> %1, <4 x float> %a, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -699,17 +693,11 @@ define <4 x float> @insert_test_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_sub_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_sub_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_sub_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <4 x float> %a, %b
   %2 = shufflevector <4 x float> %1, <4 x float> %a, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -728,17 +716,11 @@ define <4 x float> @insert_test_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_mul_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_mul_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_mul_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <4 x float> %a, %b
   %2 = shufflevector <4 x float> %1, <4 x float> %a, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -760,17 +742,11 @@ define <4 x float> @insert_test_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_div_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_div_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_div_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <4 x float> %a, %b
   %2 = shufflevector <4 x float> %1, <4 x float> %a, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -789,17 +765,11 @@ define <2 x double> @insert_test_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_add_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_add_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_add_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <2 x double> %a, %b
   %2 = shufflevector <2 x double> %1, <2 x double> %a, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -821,17 +791,11 @@ define <2 x double> @insert_test_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_sub_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_sub_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_sub_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <2 x double> %a, %b
   %2 = shufflevector <2 x double> %1, <2 x double> %a, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -850,17 +814,11 @@ define <2 x double> @insert_test_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_mul_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_mul_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_mul_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <2 x double> %a, %b
   %2 = shufflevector <2 x double> %1, <2 x double> %a, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -882,17 +840,11 @@ define <2 x double> @insert_test_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test_div_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test_div_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test_div_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <2 x double> %a, %b
   %2 = shufflevector <2 x double> %1, <2 x double> %a, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -912,17 +864,11 @@ define <4 x float> @insert_test2_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_add_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_add_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_add_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <4 x float> %b, %a
   %2 = shufflevector <4 x float> %1, <4 x float> %b, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -945,17 +891,11 @@ define <4 x float> @insert_test2_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_sub_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_sub_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_sub_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <4 x float> %b, %a
   %2 = shufflevector <4 x float> %1, <4 x float> %b, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -975,17 +915,11 @@ define <4 x float> @insert_test2_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_mul_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_mul_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_mul_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <4 x float> %b, %a
   %2 = shufflevector <4 x float> %1, <4 x float> %b, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -1008,17 +942,11 @@ define <4 x float> @insert_test2_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_div_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_div_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_div_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <4 x float> %b, %a
   %2 = shufflevector <4 x float> %1, <4 x float> %b, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %2
@@ -1038,17 +966,11 @@ define <2 x double> @insert_test2_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_add_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_add_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_add_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <2 x double> %b, %a
   %2 = shufflevector <2 x double> %1, <2 x double> %b, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -1071,17 +993,11 @@ define <2 x double> @insert_test2_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_sub_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_sub_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_sub_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <2 x double> %b, %a
   %2 = shufflevector <2 x double> %1, <2 x double> %b, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -1101,17 +1017,11 @@ define <2 x double> @insert_test2_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_mul_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_mul_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_mul_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <2 x double> %b, %a
   %2 = shufflevector <2 x double> %1, <2 x double> %b, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -1134,17 +1044,11 @@ define <2 x double> @insert_test2_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test2_div_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test2_div_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test2_div_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <2 x double> %b, %a
   %2 = shufflevector <2 x double> %1, <2 x double> %b, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %2
@@ -1163,17 +1067,11 @@ define <4 x float> @insert_test3_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_add_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_add_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_add_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <4 x float> %a, %b
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %a, <4 x float> %1
   ret <4 x float> %2
@@ -1195,17 +1093,11 @@ define <4 x float> @insert_test3_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_sub_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_sub_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_sub_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <4 x float> %a, %b
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %a, <4 x float> %1
   ret <4 x float> %2
@@ -1224,17 +1116,11 @@ define <4 x float> @insert_test3_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_mul_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_mul_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_mul_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <4 x float> %a, %b
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %a, <4 x float> %1
   ret <4 x float> %2
@@ -1256,17 +1142,11 @@ define <4 x float> @insert_test3_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_div_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_div_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_div_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <4 x float> %a, %b
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %a, <4 x float> %1
   ret <4 x float> %2
@@ -1285,17 +1165,11 @@ define <2 x double> @insert_test3_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_add_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_add_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_add_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <2 x double> %a, %b
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %a, <2 x double> %1
   ret <2 x double> %2
@@ -1317,17 +1191,11 @@ define <2 x double> @insert_test3_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_sub_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_sub_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_sub_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <2 x double> %a, %b
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %a, <2 x double> %1
   ret <2 x double> %2
@@ -1346,17 +1214,11 @@ define <2 x double> @insert_test3_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_mul_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_mul_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_mul_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <2 x double> %a, %b
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %a, <2 x double> %1
   ret <2 x double> %2
@@ -1378,17 +1240,11 @@ define <2 x double> @insert_test3_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test3_div_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivpd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test3_div_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivpd %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test3_div_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivpd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <2 x double> %a, %b
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %a, <2 x double> %1
   ret <2 x double> %2
@@ -1408,17 +1264,11 @@ define <4 x float> @insert_test4_add_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_add_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_add_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_add_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <4 x float> %b, %a
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %b, <4 x float> %1
   ret <4 x float> %2
@@ -1441,17 +1291,11 @@ define <4 x float> @insert_test4_sub_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_sub_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_sub_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_sub_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <4 x float> %b, %a
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %b, <4 x float> %1
   ret <4 x float> %2
@@ -1471,17 +1315,11 @@ define <4 x float> @insert_test4_mul_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_mul_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_mul_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_mul_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <4 x float> %b, %a
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %b, <4 x float> %1
   ret <4 x float> %2
@@ -1504,17 +1342,11 @@ define <4 x float> @insert_test4_div_ss(<4 x float> %a, <4 x float> %b) {
 ; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_div_ss:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivps %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_div_ss:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivps %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_div_ss:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <4 x float> %b, %a
   %2 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %b, <4 x float> %1
   ret <4 x float> %2
@@ -1534,17 +1366,11 @@ define <2 x double> @insert_test4_add_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_add_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_add_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_add_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fadd <2 x double> %b, %a
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %b, <2 x double> %1
   ret <2 x double> %2
@@ -1567,17 +1393,11 @@ define <2 x double> @insert_test4_sub_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_sub_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_sub_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_sub_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fsub <2 x double> %b, %a
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %b, <2 x double> %1
   ret <2 x double> %2
@@ -1597,17 +1417,11 @@ define <2 x double> @insert_test4_mul_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_mul_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmulpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_mul_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_mul_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmulpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fmul <2 x double> %b, %a
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %b, <2 x double> %1
   ret <2 x double> %2
@@ -1630,17 +1444,11 @@ define <2 x double> @insert_test4_div_sd(<2 x double> %a, <2 x double> %b) {
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    ret{{[l|q]}}
 ;
-; AVX1-LABEL: insert_test4_div_sd:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX1-NEXT:    ret{{[l|q]}}
-;
-; AVX512-LABEL: insert_test4_div_sd:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vdivpd %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; AVX512-NEXT:    ret{{[l|q]}}
+; AVX-LABEL: insert_test4_div_sd:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vdivpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    ret{{[l|q]}}
   %1 = fdiv <2 x double> %b, %a
   %2 = select <2 x i1> <i1 false, i1 true>, <2 x double> %b, <2 x double> %1
   ret <2 x double> %2

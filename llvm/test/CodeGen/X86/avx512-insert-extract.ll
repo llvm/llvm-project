@@ -24,7 +24,7 @@ define <8 x double> @test2(<8 x double> %x, double* %br, double %y) nounwind {
 ; CHECK-NEXT:    vmovhpd {{.*#+}} xmm2 = xmm0[0],mem[0]
 ; CHECK-NEXT:    vinsertf32x4 $0, %xmm2, %zmm0, %zmm2
 ; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; CHECK-NEXT:    vinsertf32x4 $3, %xmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %rrr = load double, double* %br

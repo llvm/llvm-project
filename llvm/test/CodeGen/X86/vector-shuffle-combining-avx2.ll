@@ -520,29 +520,17 @@ define <4 x i64> @combine_pshufb_as_zext128(<32 x i8> %a0) {
 }
 
 define <4 x double> @combine_pshufb_as_vzmovl_64(<4 x double> %a0) {
-; X32-AVX2-LABEL: combine_pshufb_as_vzmovl_64:
-; X32-AVX2:       # %bb.0:
-; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
-; X32-AVX2-NEXT:    retl
+; X32-LABEL: combine_pshufb_as_vzmovl_64:
+; X32:       # %bb.0:
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; X32-NEXT:    retl
 ;
-; X32-AVX512-LABEL: combine_pshufb_as_vzmovl_64:
-; X32-AVX512:       # %bb.0:
-; X32-AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X32-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; X32-AVX512-NEXT:    retl
-;
-; X64-AVX2-LABEL: combine_pshufb_as_vzmovl_64:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512-LABEL: combine_pshufb_as_vzmovl_64:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
-; X64-AVX512-NEXT:    retq
+; X64-LABEL: combine_pshufb_as_vzmovl_64:
+; X64:       # %bb.0:
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; X64-NEXT:    retq
   %1 = bitcast <4 x double> %a0 to <32 x i8>
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
   %3 = bitcast <32 x i8> %2 to <4 x double>
@@ -550,29 +538,17 @@ define <4 x double> @combine_pshufb_as_vzmovl_64(<4 x double> %a0) {
 }
 
 define <8 x float> @combine_pshufb_as_vzmovl_32(<8 x float> %a0) {
-; X32-AVX2-LABEL: combine_pshufb_as_vzmovl_32:
-; X32-AVX2:       # %bb.0:
-; X32-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
-; X32-AVX2-NEXT:    retl
+; X32-LABEL: combine_pshufb_as_vzmovl_32:
+; X32:       # %bb.0:
+; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X32-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
+; X32-NEXT:    retl
 ;
-; X32-AVX512-LABEL: combine_pshufb_as_vzmovl_32:
-; X32-AVX512:       # %bb.0:
-; X32-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X32-AVX512-NEXT:    retl
-;
-; X64-AVX2-LABEL: combine_pshufb_as_vzmovl_32:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512-LABEL: combine_pshufb_as_vzmovl_32:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X64-AVX512-NEXT:    retq
+; X64-LABEL: combine_pshufb_as_vzmovl_32:
+; X64:       # %bb.0:
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1,2,3,4,5,6,7]
+; X64-NEXT:    retq
   %1 = bitcast <8 x float> %a0 to <32 x i8>
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
   %3 = bitcast <32 x i8> %2 to <8 x float>

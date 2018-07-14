@@ -2445,9 +2445,9 @@ public:
                                       bool StackValue = false);
 
   /// Convert \p DIExpr into a stack value if it isn't one already by appending
-  /// DW_OP_deref if needed, and applying \p Ops to the resulting expression.
-  /// If \p DIExpr is a fragment, the returned expression will contain the same
-  /// fragment.
+  /// DW_OP_deref if needed, and appending \p Ops to the resulting expression.
+  /// If \p DIExpr describes a fragment, the returned expression will describe
+  /// the same fragment.
   static DIExpression *appendToStack(const DIExpression *Expr,
                                      ArrayRef<uint64_t> Ops);
 

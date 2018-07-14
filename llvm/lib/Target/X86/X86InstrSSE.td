@@ -6394,8 +6394,7 @@ let Predicates = [HasAVX2] in {
 // Prefer a movss or movsd over a blendps when optimizing for size. these were
 // changed to use blends because blends have better throughput on sandybridge
 // and haswell, but movs[s/d] are 1-2 byte shorter instructions.
-let Predicates = [UseAVX] in {
-  let Predicates = [UseAVX, OptForSpeed] in {
+let Predicates = [HasAVX, OptForSpeed] in {
   def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
             (VBLENDPSrri (v4f32 (V_SET0)), VR128:$src, (i8 1))>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
@@ -6408,9 +6407,8 @@ let Predicates = [UseAVX] in {
 
   def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VBLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+  def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (VPBLENDWrri VR128:$src1, VR128:$src2, (i8 0xf))>;
-  }
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),
@@ -6446,7 +6444,7 @@ let Predicates = [UseSSE41, OptForSpeed] in {
 
   def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
             (BLENDPDrri VR128:$src1, VR128:$src2, (i8 1))>;
-  def : Pat<(v2f64 (X86Movsd VR128:$src1, VR128:$src2)),
+  def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (PBLENDWrri VR128:$src1, VR128:$src2, (i8 0xf))>;
 }
 
