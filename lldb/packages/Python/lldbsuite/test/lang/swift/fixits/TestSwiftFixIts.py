@@ -68,7 +68,7 @@ class TestSwiftFixIts(TestBase):
 
         # First make sure the expression fails with no fixits:
         value = frame.EvaluateExpression(
-            "var $tmp : Int = does_have.could_be", options)
+            "var $tmp : Int = does_have.could_be!!", options)
         self.assertTrue(value.GetError().Fail())
         self.assertTrue(
             value.GetError().GetError() != 0x1001,
@@ -77,7 +77,7 @@ class TestSwiftFixIts(TestBase):
         # Now turn on auto apply:
         options.SetAutoApplyFixIts(True)
         value = frame.EvaluateExpression(
-            "var $tmp : Int = does_have.could_be", options)
+            "var $tmp : Int = does_have.could_be!!", options)
         self.assertTrue(value.GetError().Fail(),
                         "There's no result so this is counted a fail.")
         self.assertTrue(
