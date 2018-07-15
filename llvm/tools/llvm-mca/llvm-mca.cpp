@@ -24,6 +24,7 @@
 #include "CodeRegion.h"
 #include "Context.h"
 #include "DispatchStatistics.h"
+#include "FetchStage.h"
 #include "InstructionInfoView.h"
 #include "InstructionTables.h"
 #include "Pipeline.h"
@@ -489,16 +490,21 @@ int main(int argc, char **argv) {
                      PrintInstructionTables ? 1 : Iterations);
 
     if (PrintInstructionTables) {
-      mca::InstructionTables IT(SM, IB, S);
+      //  Create a pipeline, stages, and a printer.
+      auto P = llvm::make_unique<mca::Pipeline>();
+      P->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
+      P->appendStage(llvm::make_unique<mca::InstructionTables>(SM, IB));
+      mca::PipelinePrinter Printer(*P);
 
+      // Create the views for this pipeline, execute, and emit a report.
       if (PrintInstructionInfoView) {
-        IT.addView(
+        Printer.addView(
             llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));
       }
-
-      IT.addView(llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, S));
-      IT.run();
-      IT.printReport(TOF->os());
+      Printer.addView(
+          llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, S));
+      P->run();
+      Printer.printReport(TOF->os());
       continue;
     }
 

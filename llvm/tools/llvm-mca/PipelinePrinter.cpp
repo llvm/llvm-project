@@ -14,7 +14,6 @@
 
 #include "PipelinePrinter.h"
 #include "View.h"
-#include "llvm/CodeGen/TargetSchedule.h"
 
 namespace mca {
 
