@@ -304,6 +304,25 @@ let Predicates = [UseAVX, OptForSize] in {
             (VMOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
             (VMOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
+
+  // Move low f32 and clear high bits.
+  def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VMOVSSrr (v4f32 (V_SET0)),
+              (EXTRACT_SUBREG (v8f32 VR256:$src), sub_xmm)), sub_xmm)>;
+  def : Pat<(v8i32 (X86vzmovl (v8i32 VR256:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VMOVSSrr (v4i32 (V_SET0)),
+              (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm)), sub_xmm)>;
+
+  def : Pat<(v4f64 (X86vzmovl (v4f64 VR256:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VMOVSDrr (v2f64 (V_SET0)),
+                       (EXTRACT_SUBREG (v4f64 VR256:$src), sub_xmm)), sub_xmm)>;
+  def : Pat<(v4i64 (X86vzmovl (v4i64 VR256:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VMOVSDrr (v2i64 (V_SET0)),
+                       (EXTRACT_SUBREG (v4i64 VR256:$src), sub_xmm)), sub_xmm)>;
 }
 
 let Predicates = [UseSSE1] in {

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file implements a custom driver to generate instruction tables.
+/// This file implements a custom stage to generate instruction tables.
 /// See the description of command-line flag -instruction-tables in
 /// docs/CommandGuide/lvm-mca.rst
 ///
@@ -17,32 +17,26 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_INSTRUCTIONTABLES_H
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTIONTABLES_H
 
-#include "View.h"
 #include "InstrBuilder.h"
-#include "SourceMgr.h"
+#include "Scheduler.h"
+#include "Stage.h"
+#include "View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 
 namespace mca {
 
-class InstructionTables {
+class InstructionTables : public Stage {
   const llvm::MCSchedModel &SM;
   InstrBuilder &IB;
-  SourceMgr &S;
-  llvm::SmallVector<std::unique_ptr<View>, 8> Views;
+  llvm::SmallVector<std::pair<ResourceRef, double>, 4> UsedResources;
 
 public:
-  InstructionTables(const llvm::MCSchedModel &Model, InstrBuilder &Builder,
-                    SourceMgr &Source)
-      : SM(Model), IB(Builder), S(Source) {}
+  InstructionTables(const llvm::MCSchedModel &Model, InstrBuilder &Builder)
+      : Stage(), SM(Model), IB(Builder) {}
 
-  void addView(std::unique_ptr<View> V) {
-    Views.emplace_back(std::move(V));
-  }
-
-  void run();
-  
-  void printReport(llvm::raw_ostream &OS) const;
+  bool hasWorkToComplete() const override final { return false; }
+  bool execute(InstRef &IR) override final;
 };
 } // namespace mca
 

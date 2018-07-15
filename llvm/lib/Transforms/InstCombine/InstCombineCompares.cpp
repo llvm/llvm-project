@@ -2872,6 +2872,8 @@ Instruction *InstCombiner::foldICmpInstWithConstantNotInt(ICmpInst &I) {
 /// Folds:
 ///   x & (-1 >> y) SrcPred x    to    x DstPred (-1 >> y)
 /// The Mask can be a constant, too.
+/// For some predicates, the operands are commutative.
+/// For others, x can only be on a specific side.
 static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
                                           InstCombiner::BuilderTy &Builder) {
   ICmpInst::Predicate SrcPred;
@@ -2892,9 +2894,52 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
     //  x & (-1 >> y) != x    ->    x u> (-1 >> y)
     DstPred = ICmpInst::Predicate::ICMP_UGT;
     break;
-  // TODO: more folds are possible, https://bugs.llvm.org/show_bug.cgi?id=38123
+  case ICmpInst::Predicate::ICMP_UGT:
+    //  x u> x & (-1 >> y)    ->    x u> (-1 >> y)
+    assert(X == I.getOperand(0) && "instsimplify took care of commut. variant");
+    DstPred = ICmpInst::Predicate::ICMP_UGT;
+    break;
+  case ICmpInst::Predicate::ICMP_UGE:
+    //  x & (-1 >> y) u>= x    ->    x u<= (-1 >> y)
+    assert(X == I.getOperand(1) && "instsimplify took care of commut. variant");
+    DstPred = ICmpInst::Predicate::ICMP_ULE;
+    break;
+  case ICmpInst::Predicate::ICMP_ULT:
+    //  x & (-1 >> y) u< x    ->    x u> (-1 >> y)
+    assert(X == I.getOperand(1) && "instsimplify took care of commut. variant");
+    DstPred = ICmpInst::Predicate::ICMP_UGT;
+    break;
+  case ICmpInst::Predicate::ICMP_ULE:
+    //  x u<= x & (-1 >> y)    ->    x u<= (-1 >> y)
+    assert(X == I.getOperand(0) && "instsimplify took care of commut. variant");
+    DstPred = ICmpInst::Predicate::ICMP_ULE;
+    break;
+  case ICmpInst::Predicate::ICMP_SGT:
+    //  x s> x & (-1 >> y)    ->    x s> (-1 >> y)
+    if (X != I.getOperand(0)) // X must be on LHS of comparison!
+      return nullptr;         // Ignore the other case.
+    DstPred = ICmpInst::Predicate::ICMP_SGT;
+    break;
+  case ICmpInst::Predicate::ICMP_SGE:
+    //  x & (-1 >> y) s>= x    ->    x s<= (-1 >> y)
+    if (X != I.getOperand(1)) // X must be on RHS of comparison!
+      return nullptr;         // Ignore the other case.
+    DstPred = ICmpInst::Predicate::ICMP_SLE;
+    break;
+  case ICmpInst::Predicate::ICMP_SLT:
+    //  x & (-1 >> y) s< x    ->    x s> (-1 >> y)
+    if (X != I.getOperand(1)) // X must be on RHS of comparison!
+      return nullptr;         // Ignore the other case.
+    DstPred = ICmpInst::Predicate::ICMP_SGT;
+    break;
+  case ICmpInst::Predicate::ICMP_SLE:
+    //  x s<= x & (-1 >> y)    ->    x s<= (-1 >> y)
+    if (X != I.getOperand(0)) // X must be on LHS of comparison!
+      return nullptr;         // Ignore the other case.
+    DstPred = ICmpInst::Predicate::ICMP_SLE;
+    break;
   default:
-    return nullptr;
+    llvm_unreachable("All possible folds are handled.");
   }
 
   return Builder.CreateICmp(DstPred, X, M);

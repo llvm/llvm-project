@@ -600,9 +600,10 @@ class TreePatternNode {
   std::vector<TreePatternNodePtr> Children;
 
 public:
-  TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> &Ch,
+  TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
                   unsigned NumResults)
-      : Operator(Op), Val(nullptr), TransformFn(nullptr), Children(Ch) {
+      : Operator(Op), Val(nullptr), TransformFn(nullptr),
+        Children(std::move(Ch)) {
     Types.resize(NumResults);
   }
   TreePatternNode(Init *val, unsigned NumResults)    // leaf ctor
@@ -1022,7 +1023,7 @@ public:
                  std::vector<Record *> dstregs, int complexity,
                  unsigned uid, unsigned setmode = 0)
       : SrcRecord(srcrecord), SrcPattern(src), DstPattern(dst),
-        Predicates(preds), Dstregs(dstregs),
+        Predicates(std::move(preds)), Dstregs(std::move(dstregs)),
         AddedComplexity(complexity), ID(uid), ForceMode(setmode) {}
 
   Record          *SrcRecord;   // Originating Record for the pattern.
