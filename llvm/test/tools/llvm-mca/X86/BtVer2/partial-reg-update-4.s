@@ -12,9 +12,9 @@ add %cx, %bx
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      4500
-# CHECK-NEXT: Total Cycles:      3006
+# CHECK-NEXT: Total Cycles:      7503
 # CHECK-NEXT: Dispatch Width:    2
-# CHECK-NEXT: IPC:               1.50
+# CHECK-NEXT: IPC:               0.60
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -57,18 +57,18 @@ add %cx, %bx
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addw	%cx, %bx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01
+# CHECK-NEXT:                     01234567
 # CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeeeER    ..   imulw	%ax, %bx
-# CHECK-NEXT: [0,1]     .DeE-R    ..   lzcntw	%ax, %bx
-# CHECK-NEXT: [0,2]     .D=eE-R   ..   addw	%cx, %bx
-# CHECK-NEXT: [1,0]     . D=eeeER ..   imulw	%ax, %bx
-# CHECK-NEXT: [1,1]     .  DeE--R ..   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,2]     .  D=eE--R..   addw	%cx, %bx
-# CHECK-NEXT: [2,0]     .   D=eeeER.   imulw	%ax, %bx
-# CHECK-NEXT: [2,1]     .    DeE--R.   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,2]     .    D=eE--R   addw	%cx, %bx
+# CHECK:      [0,0]     DeeeER    .    . .   imulw	%ax, %bx
+# CHECK-NEXT: [0,1]     .D==eER   .    . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [0,2]     .D===eER  .    . .   addw	%cx, %bx
+# CHECK-NEXT: [1,0]     . D===eeeER    . .   imulw	%ax, %bx
+# CHECK-NEXT: [1,1]     .  D=====eER   . .   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,2]     .  D======eER  . .   addw	%cx, %bx
+# CHECK-NEXT: [2,0]     .   D======eeeER .   imulw	%ax, %bx
+# CHECK-NEXT: [2,1]     .    D========eER.   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,2]     .    D=========eER   addw	%cx, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -77,6 +77,6 @@ add %cx, %bx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.7    0.3    0.0       imulw	%ax, %bx
-# CHECK-NEXT: 1.     3     1.0    1.0    1.7       lzcntw	%ax, %bx
-# CHECK-NEXT: 2.     3     2.0    0.0    1.7       addw	%cx, %bx
+# CHECK-NEXT: 0.     3     4.0    0.3    0.0       imulw	%ax, %bx
+# CHECK-NEXT: 1.     3     6.0    0.0    0.0       lzcntw	%ax, %bx
+# CHECK-NEXT: 2.     3     7.0    0.0    0.0       addw	%cx, %bx

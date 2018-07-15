@@ -132,7 +132,22 @@ void Instruction::execute() {
 
 void Instruction::update() {
   assert(isDispatched() && "Unexpected instruction stage found!");
-  if (llvm::all_of(Uses, [](const UniqueUse &Use) { return Use->isReady(); }))
+
+  if (!llvm::all_of(Uses, [](const UniqueUse &Use) { return Use->isReady(); }))
+    return;
+
+  // A partial register write cannot complete before a dependent write.
+  auto IsDefReady = [&](const UniqueDef &Def) {
+    if (const WriteState *Write = Def->getDependentWrite()) {
+      int WriteLatency = Write->getCyclesLeft();
+      if (WriteLatency == UNKNOWN_CYCLES)
+        return false;
+      return static_cast<unsigned>(WriteLatency) < Desc.MaxLatency;
+    }
+    return true;
+  };
+
+  if (llvm::all_of(Defs, IsDefReady))
     Stage = IS_READY;
 }
 
@@ -141,14 +156,10 @@ void Instruction::cycleEvent() {
     return;
 
   if (isDispatched()) {
-    bool IsReady = true;
-    for (UniqueUse &Use : Uses) {
+    for (UniqueUse &Use : Uses)
       Use->cycleEvent();
-      IsReady &= Use->isReady();
-    }
 
-    if (IsReady)
-      Stage = IS_READY;
+    update();
     return;
   }
 

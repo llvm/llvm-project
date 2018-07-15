@@ -7,9 +7,9 @@ lzcnt %ax, %bx  ## partial register stall.
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      1500
-# CHECK-NEXT: Total Cycles:      753
+# CHECK-NEXT: Total Cycles:      1503
 # CHECK-NEXT: Dispatch Width:    2
-# CHECK-NEXT: IPC:               1.99
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      Instruction Info:
@@ -48,11 +48,11 @@ lzcnt %ax, %bx  ## partial register stall.
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     lzcntw	%ax, %bx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     01234
+# CHECK-NEXT: Index     012345
 
-# CHECK:      [0,0]     DeER.   lzcntw	%ax, %bx
-# CHECK-NEXT: [1,0]     DeER.   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,0]     .DeER   lzcntw	%ax, %bx
+# CHECK:      [0,0]     DeER .   lzcntw	%ax, %bx
+# CHECK-NEXT: [1,0]     D=eER.   lzcntw	%ax, %bx
+# CHECK-NEXT: [2,0]     .D=eER   lzcntw	%ax, %bx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -61,4 +61,4 @@ lzcnt %ax, %bx  ## partial register stall.
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.0    1.0    0.0       lzcntw	%ax, %bx
+# CHECK-NEXT: 0.     3     1.7    0.3    0.0       lzcntw	%ax, %bx

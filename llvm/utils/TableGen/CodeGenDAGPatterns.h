@@ -600,9 +600,10 @@ class TreePatternNode {
   std::vector<TreePatternNodePtr> Children;
 
 public:
-  TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> &Ch,
+  TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
                   unsigned NumResults)
-      : Operator(Op), Val(nullptr), TransformFn(nullptr), Children(Ch) {
+      : Operator(Op), Val(nullptr), TransformFn(nullptr),
+        Children(std::move(Ch)) {
     Types.resize(NumResults);
   }
   TreePatternNode(Init *val, unsigned NumResults)    // leaf ctor
