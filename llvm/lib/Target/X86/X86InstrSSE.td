@@ -6431,19 +6431,26 @@ let Predicates = [HasAVX, OptForSpeed] in {
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256:$src))),
-            (VBLENDPSYrri (v8f32 (AVX_SET0)), VR256:$src, (i8 1))>;
-
-  // Move low f64 and clear high bits.
-  def : Pat<(v4f64 (X86vzmovl (v4f64 VR256:$src))),
-            (VBLENDPDYrri (v4f64 (AVX_SET0)), VR256:$src, (i8 1))>;
-
-  // These will incur an FP/int domain crossing penalty, but it may be the only
-  // way without AVX2. Do not add any complexity because we may be able to match
-  // more optimal patterns defined earlier in this file.
+            (SUBREG_TO_REG (i32 0),
+             (VBLENDPSrri (v4f32 (V_SET0)),
+                          (EXTRACT_SUBREG (v8f32 VR256:$src), sub_xmm),
+                          (i8 1)), sub_xmm)>;
   def : Pat<(v8i32 (X86vzmovl (v8i32 VR256:$src))),
-            (VBLENDPSYrri (v8i32 (AVX_SET0)), VR256:$src, (i8 1))>;
+            (SUBREG_TO_REG (i32 0),
+             (VPBLENDWrri (v4i32 (V_SET0)),
+                          (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm),
+                          (i8 3)), sub_xmm)>;
+
+  def : Pat<(v4f64 (X86vzmovl (v4f64 VR256:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VBLENDPDrri (v2f64 (V_SET0)),
+                          (EXTRACT_SUBREG (v4f64 VR256:$src), sub_xmm),
+                          (i8 1)), sub_xmm)>;
   def : Pat<(v4i64 (X86vzmovl (v4i64 VR256:$src))),
-            (VBLENDPDYrri (v4i64 (AVX_SET0)), VR256:$src, (i8 1))>;
+            (SUBREG_TO_REG (i32 0),
+             (VPBLENDWrri (v2i64 (V_SET0)),
+                          (EXTRACT_SUBREG (v4i64 VR256:$src), sub_xmm),
+                          (i8 0xf)), sub_xmm)>;
 }
 
 // Prefer a movss or movsd over a blendps when optimizing for size. these were

@@ -4348,9 +4348,7 @@ let Predicates = [HasAVX512, OptForSize] in {
   def : Pat<(v4i64 (X86vzmovl (v4i64 VR256X:$src))),
             (SUBREG_TO_REG (i32 0), (VMOVSDZrr (v2i64 (AVX512_128_SET0)),
                        (EXTRACT_SUBREG (v4i64 VR256X:$src), sub_xmm)), sub_xmm)>;
-}
 
-let Predicates = [HasAVX512] in {
   def : Pat<(v16f32 (X86vzmovl (v16f32 VR512:$src))),
             (SUBREG_TO_REG (i32 0),
              (VMOVSSZrr (v4f32 (AVX512_128_SET0)),
@@ -4359,6 +4357,45 @@ let Predicates = [HasAVX512] in {
             (SUBREG_TO_REG (i32 0),
              (VMOVSSZrr (v4i32 (AVX512_128_SET0)),
               (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm)), sub_xmm)>;
+
+  def : Pat<(v8f64 (X86vzmovl (v8f64 VR512:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VMOVSDZrr (v2f64 (AVX512_128_SET0)),
+                       (EXTRACT_SUBREG (v8f64 VR512:$src), sub_xmm)), sub_xmm)>;
+
+  def : Pat<(v8i64 (X86vzmovl (v8i64 VR512:$src))),
+            (SUBREG_TO_REG (i32 0), (VMOVSDZrr (v2i64 (AVX512_128_SET0)),
+                       (EXTRACT_SUBREG (v8i64 VR512:$src), sub_xmm)), sub_xmm)>;
+
+}
+
+// Use 128-bit blends for OptForSpeed since BLENDs have better throughput than
+// VMOVSS/SD. Unfortunately, loses the ability to use XMM16-31.
+let Predicates = [HasAVX512, OptForSpeed] in {
+  def : Pat<(v16f32 (X86vzmovl (v16f32 VR512:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VBLENDPSrri (v4f32 (V_SET0)),
+                          (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm),
+                          (i8 1)), sub_xmm)>;
+  def : Pat<(v16i32 (X86vzmovl (v16i32 VR512:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VPBLENDWrri (v4i32 (V_SET0)),
+                          (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm),
+                          (i8 3)), sub_xmm)>;
+
+  def : Pat<(v8f64 (X86vzmovl (v8f64 VR512:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VBLENDPDrri (v2f64 (V_SET0)),
+                          (EXTRACT_SUBREG (v8f64 VR512:$src), sub_xmm),
+                          (i8 1)), sub_xmm)>;
+  def : Pat<(v8i64 (X86vzmovl (v8i64 VR512:$src))),
+            (SUBREG_TO_REG (i32 0),
+             (VPBLENDWrri (v2i64 (V_SET0)),
+                          (EXTRACT_SUBREG (v8i64 VR512:$src), sub_xmm),
+                          (i8 0xf)), sub_xmm)>;
+}
+
+let Predicates = [HasAVX512] in {
 
   // MOVSSrm zeros the high parts of the register; represent this
   // with SUBREG_TO_REG. The AVX versions also write: DST[255:128] <- 0
@@ -4415,16 +4452,6 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v4i64 (X86vzmovl (insert_subvector undef,
                    (v2i64 (scalar_to_vector (loadi64 addr:$src))), (iPTR 0)))),
             (SUBREG_TO_REG (i64 0), (VMOVQI2PQIZrm addr:$src), sub_xmm)>;
-
-  // Move low f64 and clear high bits.
-  def : Pat<(v8f64 (X86vzmovl (v8f64 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
-             (VMOVSDZrr (v2f64 (AVX512_128_SET0)),
-                       (EXTRACT_SUBREG (v8f64 VR512:$src), sub_xmm)), sub_xmm)>;
-
-  def : Pat<(v8i64 (X86vzmovl (v8i64 VR512:$src))),
-            (SUBREG_TO_REG (i32 0), (VMOVSDZrr (v2i64 (AVX512_128_SET0)),
-                       (EXTRACT_SUBREG (v8i64 VR512:$src), sub_xmm)), sub_xmm)>;
 
   // Extract and store.
   def : Pat<(store (f32 (extractelt (v4f32 VR128X:$src), (iPTR 0))),

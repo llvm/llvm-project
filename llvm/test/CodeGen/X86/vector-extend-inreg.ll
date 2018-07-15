@@ -73,7 +73,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X32-AVX-NEXT:    movl 40(%ebp), %ecx
 ; X32-AVX-NEXT:    vbroadcastsd 32(%ebp), %ymm0
 ; X32-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; X32-AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; X32-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
@@ -102,7 +103,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-AVX-NEXT:    vpermpd {{.*#+}} ymm0 = ymm3[3,1,2,3]
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5,6,7]
+; X64-AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
 ; X64-AVX-NEXT:    vmovaps %ymm1, (%rsp)
