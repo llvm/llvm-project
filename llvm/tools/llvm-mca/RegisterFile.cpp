@@ -26,7 +26,8 @@ namespace mca {
 
 RegisterFile::RegisterFile(const llvm::MCSchedModel &SM,
                            const llvm::MCRegisterInfo &mri, unsigned NumRegs)
-    : MRI(mri), RegisterMappings(mri.getNumRegs(), {WriteRef(), {0, 0}}) {
+    : MRI(mri), RegisterMappings(mri.getNumRegs(),
+                                 {WriteRef(), {IndexPlusCostPairTy(0, 1), 0}}) {
   initialize(SM, NumRegs);
 }
 
@@ -71,34 +72,46 @@ void RegisterFile::addRegisterFile(ArrayRef<MCRegisterCostEntry> Entries,
   // Special case where there is no register class identifier in the set.
   // An empty set of register classes means: this register file contains all
   // the physical registers specified by the target.
-  if (Entries.empty()) {
-    for (std::pair<WriteRef, IndexPlusCostPairTy> &Mapping : RegisterMappings)
-      Mapping.second = std::make_pair(RegisterFileIndex, 1U);
+  // We optimistically assume that a register can be renamed at the cost of a
+  // single physical register. The constructor of RegisterFile ensures that
+  // a RegisterMapping exists for each logical register defined by the Target.
+  if (Entries.empty())
     return;
-  }
 
   // Now update the cost of individual registers.
   for (const MCRegisterCostEntry &RCE : Entries) {
     const MCRegisterClass &RC = MRI.getRegClass(RCE.RegisterClassID);
     for (const MCPhysReg Reg : RC) {
-      IndexPlusCostPairTy &Entry = RegisterMappings[Reg].second;
-      if (Entry.first) {
+      RegisterRenamingInfo &Entry = RegisterMappings[Reg].second;
+      IndexPlusCostPairTy &IPC = Entry.IndexPlusCost;
+      if (IPC.first && IPC.first != RegisterFileIndex) {
         // The only register file that is allowed to overlap is the default
         // register file at index #0. The analysis is inaccurate if register
         // files overlap.
         errs() << "warning: register " << MRI.getName(Reg)
                << " defined in multiple register files.";
       }
-      Entry.first = RegisterFileIndex;
-      Entry.second = RCE.Cost;
+      IPC = std::make_pair(RegisterFileIndex, RCE.Cost);
+      Entry.RenameAs = Reg;
+
+      // Assume the same cost for each sub-register.
+      for (MCSubRegIterator I(Reg, &MRI); I.isValid(); ++I) {
+        RegisterRenamingInfo &OtherEntry = RegisterMappings[*I].second;
+        if (!OtherEntry.IndexPlusCost.first &&
+            (!OtherEntry.RenameAs ||
+             MRI.isSuperRegister(*I, OtherEntry.RenameAs))) {
+          OtherEntry.IndexPlusCost = IPC;
+          OtherEntry.RenameAs = Reg;
+        }
+      }
     }
   }
 }
 
-void RegisterFile::allocatePhysRegs(IndexPlusCostPairTy Entry,
+void RegisterFile::allocatePhysRegs(const RegisterRenamingInfo &Entry,
                                     MutableArrayRef<unsigned> UsedPhysRegs) {
-  unsigned RegisterFileIndex = Entry.first;
-  unsigned Cost = Entry.second;
+  unsigned RegisterFileIndex = Entry.IndexPlusCost.first;
+  unsigned Cost = Entry.IndexPlusCost.second;
   if (RegisterFileIndex) {
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
     RMT.NumUsedPhysRegs += Cost;
@@ -110,10 +123,10 @@ void RegisterFile::allocatePhysRegs(IndexPlusCostPairTy Entry,
   UsedPhysRegs[0] += Cost;
 }
 
-void RegisterFile::freePhysRegs(IndexPlusCostPairTy Entry,
+void RegisterFile::freePhysRegs(const RegisterRenamingInfo &Entry,
                                 MutableArrayRef<unsigned> FreedPhysRegs) {
-  unsigned RegisterFileIndex = Entry.first;
-  unsigned Cost = Entry.second;
+  unsigned RegisterFileIndex = Entry.IndexPlusCost.first;
+  unsigned Cost = Entry.IndexPlusCost.second;
   if (RegisterFileIndex) {
     RegisterMappingTracker &RMT = RegisterFiles[RegisterFileIndex];
     RMT.NumUsedPhysRegs -= Cost;
@@ -128,12 +141,48 @@ void RegisterFile::freePhysRegs(IndexPlusCostPairTy Entry,
 void RegisterFile::addRegisterWrite(WriteRef Write,
                                     MutableArrayRef<unsigned> UsedPhysRegs,
                                     bool ShouldAllocatePhysRegs) {
-  const WriteState &WS = *Write.getWriteState();
+  WriteState &WS = *Write.getWriteState();
   unsigned RegID = WS.getRegisterID();
   assert(RegID && "Adding an invalid register definition?");
 
-  RegisterMapping &Mapping = RegisterMappings[RegID];
-  Mapping.first = Write;
+  LLVM_DEBUG({
+    dbgs() << "RegisterFile: addRegisterWrite [ " << Write.getSourceIndex()
+           << ", " << MRI.getName(RegID) << "]\n";
+  });
+
+  // If RenameAs is equal to RegID, then RegID is subject to register renaming
+  // and false dependencies on RegID are all eliminated.
+
+  // If RenameAs references the invalid register, then we optimistically assume
+  // that it can be renamed. In the absence of tablegen descriptors for register
+  // files, RenameAs is always set to the invalid register ID.  In all other
+  // cases, RenameAs must be either equal to RegID, or it must reference a
+  // super-register of RegID.
+
+  // If RenameAs is a super-register of RegID, then a write to RegID has always
+  // a false dependency on RenameAs. The only exception is for when the write
+  // implicitly clears the upper portion of the underlying register.
+  // If a write clears its super-registers, then it is renamed as `RenameAs`.
+  const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
+  if (RRI.RenameAs && RRI.RenameAs != RegID) {
+    RegID = RRI.RenameAs;
+    const WriteRef &OtherWrite = RegisterMappings[RegID].first;
+
+    if (!WS.clearsSuperRegisters()) {
+      // The processor keeps the definition of `RegID` together with register
+      // `RenameAs`. Since this partial write is not renamed, no physical
+      // register is allocated.
+      ShouldAllocatePhysRegs = false;
+
+      if (OtherWrite.getSourceIndex() != Write.getSourceIndex()) {
+        // This partial write has a false dependency on RenameAs.
+        WS.setDependentWrite(OtherWrite.getWriteState());
+      }
+    }
+  }
+
+  // Update the mapping for register RegID including its sub-registers.
+  RegisterMappings[RegID].first = Write;
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I)
     RegisterMappings[*I].first = Write;
 
@@ -141,9 +190,8 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   // hardware. For example, zero-latency data-dependency breaking instructions
   // don't consume physical registers.
   if (ShouldAllocatePhysRegs)
-    allocatePhysRegs(Mapping.second, UsedPhysRegs);
+    allocatePhysRegs(RegisterMappings[RegID].second, UsedPhysRegs);
 
-  // If this is a partial update, then we are done.
   if (!WS.clearsSuperRegisters())
     return;
 
@@ -155,42 +203,50 @@ void RegisterFile::removeRegisterWrite(const WriteState &WS,
                                        MutableArrayRef<unsigned> FreedPhysRegs,
                                        bool ShouldFreePhysRegs) {
   unsigned RegID = WS.getRegisterID();
-  bool ShouldInvalidateSuperRegs = WS.clearsSuperRegisters();
 
   assert(RegID != 0 && "Invalidating an already invalid register?");
-  assert(WS.getCyclesLeft() != -512 &&
+  assert(WS.getCyclesLeft() != UNKNOWN_CYCLES &&
          "Invalidating a write of unknown cycles!");
   assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");
-  RegisterMapping &Mapping = RegisterMappings[RegID];
-  WriteRef &WR = Mapping.first;
-  if (!WR.isValid())
-    return;
+
+  unsigned RenameAs = RegisterMappings[RegID].second.RenameAs;
+  if (RenameAs && RenameAs != RegID) {
+    RegID = RenameAs;
+
+    if (!WS.clearsSuperRegisters()) {
+      // Keep the definition of `RegID` together with register `RenameAs`.
+      ShouldFreePhysRegs = false;
+    }
+  }
 
   if (ShouldFreePhysRegs)
-    freePhysRegs(Mapping.second, FreedPhysRegs);
+    freePhysRegs(RegisterMappings[RegID].second, FreedPhysRegs);
 
+  WriteRef &WR = RegisterMappings[RegID].first;
   if (WR.getWriteState() == &WS)
     WR.invalidate();
 
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-    WR = RegisterMappings[*I].first;
-    if (WR.getWriteState() == &WS)
-      WR.invalidate();
+    WriteRef &OtherWR = RegisterMappings[*I].first;
+    if (OtherWR.getWriteState() == &WS)
+      OtherWR.invalidate();
   }
 
-  if (!ShouldInvalidateSuperRegs)
+  if (!WS.clearsSuperRegisters())
     return;
 
   for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
-    WR = RegisterMappings[*I].first;
-    if (WR.getWriteState() == &WS)
-      WR.invalidate();
+    WriteRef &OtherWR = RegisterMappings[*I].first;
+    if (OtherWR.getWriteState() == &WS)
+      OtherWR.invalidate();
   }
 }
 
 void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
                                  unsigned RegID) const {
   assert(RegID && RegID < RegisterMappings.size());
+  LLVM_DEBUG(dbgs() << "RegisterFile: collecting writes for register "
+                    << MRI.getName(RegID) << '\n');
   const WriteRef &WR = RegisterMappings[RegID].first;
   if (WR.isValid())
     Writes.push_back(WR);
@@ -225,7 +281,8 @@ unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {
 
   // Find how many new mappings must be created for each register file.
   for (const unsigned RegID : Regs) {
-    const IndexPlusCostPairTy &Entry = RegisterMappings[RegID].second;
+    const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
+    const IndexPlusCostPairTy &Entry = RRI.IndexPlusCost;
     if (Entry.first)
       NumPhysRegs[Entry.first] += Entry.second;
     NumPhysRegs[0] += Entry.second;
@@ -266,10 +323,10 @@ void RegisterFile::dump() const {
     const RegisterMapping &RM = RegisterMappings[I];
     if (!RM.first.getWriteState())
       continue;
-    const std::pair<unsigned, unsigned> &IndexPlusCost = RM.second;
-    dbgs() << MRI.getName(I) << ", " << I << ", PRF=" << IndexPlusCost.first
-           << ", Cost=" << IndexPlusCost.second 
-           << ", ";
+    const RegisterRenamingInfo &RRI = RM.second;
+    dbgs() << MRI.getName(I) << ", " << I << ", PRF=" << RRI.IndexPlusCost.first
+           << ", Cost=" << RRI.IndexPlusCost.second
+           << ", RenameAs=" << RRI.RenameAs << ", ";
     RM.first.dump();
     dbgs() << '\n';
   }

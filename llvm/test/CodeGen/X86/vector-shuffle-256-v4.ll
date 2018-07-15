@@ -1882,3 +1882,67 @@ entry:
   %add = add <4 x i64> %shuffle, %shuffle1
   ret <4 x i64> %add
 }
+
+define <4 x double> @shuffle_v4f64_0zzz_optsize(<4 x double> %a) optsize {
+; AVX1OR2-LABEL: shuffle_v4f64_0zzz_optsize:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v4f64_0zzz_optsize:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512VL-NEXT:    retq
+  %b = shufflevector <4 x double> %a, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x double> %b
+}
+
+define <4 x i64> @shuffle_v4i64_0zzz_optsize(<4 x i64> %a) optsize {
+; AVX1OR2-LABEL: shuffle_v4i64_0zzz_optsize:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v4i64_0zzz_optsize:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512VL-NEXT:    retq
+  %b = shufflevector <4 x i64> %a, <4 x i64> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x i64> %b
+}
+
+define <8 x float> @shuffle_v8f32_0zzzzzzz_optsize(<8 x float> %a) optsize {
+; AVX1OR2-LABEL: shuffle_v8f32_0zzzzzzz_optsize:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v8f32_0zzzzzzz_optsize:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512VL-NEXT:    retq
+  %b = shufflevector <8 x float> %a, <8 x float> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x float> %b
+}
+
+define <8 x i32> @shuffle_v8i32_0zzzzzzz_optsize(<8 x i32> %a) optsize {
+; AVX1OR2-LABEL: shuffle_v8i32_0zzzzzzz_optsize:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_v8i32_0zzzzzzz_optsize:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512VL-NEXT:    retq
+  %b = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <8 x i32> %b
+}

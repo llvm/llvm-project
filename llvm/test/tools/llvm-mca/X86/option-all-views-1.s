@@ -21,7 +21,7 @@ add %eax, %eax
 # DEFAULTREPORT-NEXT: [3]: RThroughput
 # DEFAULTREPORT-NEXT: [4]: MayLoad
 # DEFAULTREPORT-NEXT: [5]: MayStore
-# DEFAULTREPORT-NEXT: [6]: HasSideEffects
+# DEFAULTREPORT-NEXT: [6]: HasSideEffects (U)
 
 # DEFAULTREPORT:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # DEFAULTREPORT-NEXT:  1      1     0.50                        addl	%eax, %eax

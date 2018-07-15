@@ -12,9 +12,9 @@ xor %bx, %dx
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      4500
-# CHECK-NEXT: Total Cycles:      2254
+# CHECK-NEXT: Total Cycles:      4503
 # CHECK-NEXT: Dispatch Width:    2
-# CHECK-NEXT: IPC:               2.00
+# CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
@@ -52,22 +52,23 @@ xor %bx, %dx
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -     addw	%cx, %dx
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     movw	%ax, %dx
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addw	%cx, %dx
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     movw	%ax, %dx
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     xorw	%bx, %dx
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     012345678
+# CHECK-NEXT:                     01
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DeER .  .   addw	%cx, %dx
-# CHECK-NEXT: [0,1]     DeER .  .   movw	%ax, %dx
-# CHECK-NEXT: [0,2]     .DeER.  .   xorw	%bx, %dx
-# CHECK-NEXT: [1,0]     .D=eER  .   addw	%cx, %dx
-# CHECK-NEXT: [1,1]     . DeER  .   movw	%ax, %dx
-# CHECK-NEXT: [1,2]     . D=eER .   xorw	%bx, %dx
-# CHECK-NEXT: [2,0]     .  D=eER.   addw	%cx, %dx
-# CHECK-NEXT: [2,1]     .  DeE-R.   movw	%ax, %dx
-# CHECK-NEXT: [2,2]     .   DeE-R   xorw	%bx, %dx
+# CHECK:      [0,0]     DeER .    ..   addw	%cx, %dx
+# CHECK-NEXT: [0,1]     D=eER.    ..   movw	%ax, %dx
+# CHECK-NEXT: [0,2]     .D=eER    ..   xorw	%bx, %dx
+# CHECK-NEXT: [1,0]     .D==eER   ..   addw	%cx, %dx
+# CHECK-NEXT: [1,1]     . D==eER  ..   movw	%ax, %dx
+# CHECK-NEXT: [1,2]     . D===eER ..   xorw	%bx, %dx
+# CHECK-NEXT: [2,0]     .  D===eER..   addw	%cx, %dx
+# CHECK-NEXT: [2,1]     .  D====eER.   movw	%ax, %dx
+# CHECK-NEXT: [2,2]     .   D====eER   xorw	%bx, %dx
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -76,6 +77,6 @@ xor %bx, %dx
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     1.7    0.3    0.0       addw	%cx, %dx
-# CHECK-NEXT: 1.     3     1.0    1.0    0.3       movw	%ax, %dx
-# CHECK-NEXT: 2.     3     1.3    0.0    0.3       xorw	%bx, %dx
+# CHECK-NEXT: 0.     3     2.7    0.3    0.0       addw	%cx, %dx
+# CHECK-NEXT: 1.     3     3.3    0.0    0.0       movw	%ax, %dx
+# CHECK-NEXT: 2.     3     3.7    0.0    0.0       xorw	%bx, %dx
