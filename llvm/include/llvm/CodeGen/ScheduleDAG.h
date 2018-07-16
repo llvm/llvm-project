@@ -462,8 +462,8 @@ class TargetRegisterInfo;
     void dump(const ScheduleDAG *G) const;
     void dumpAll(const ScheduleDAG *G) const;
     raw_ostream &print(raw_ostream &O,
-                       const SUnit *N = nullptr,
-                       const SUnit *X = nullptr) const;
+                       const SUnit *Entry = nullptr,
+                       const SUnit *Exit = nullptr) const;
     raw_ostream &print(raw_ostream &O, const ScheduleDAG *G) const;
 
   private:

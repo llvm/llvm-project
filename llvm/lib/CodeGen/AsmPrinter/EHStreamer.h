@@ -72,7 +72,7 @@ protected:
 
   /// Compute the actions table and gather the first action index for each
   /// landing pad site.
-  void computeActionsTable(const SmallVectorImpl<const LandingPadInfo *> &LPs,
+  void computeActionsTable(const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
                            SmallVectorImpl<ActionEntry> &Actions,
                            SmallVectorImpl<unsigned> &FirstActions);
 
@@ -86,7 +86,7 @@ protected:
   /// no entry and must not be contained in the try-range of any entry - they
   /// form gaps in the table.  Entries must be ordered by try-range address.
   void computeCallSiteTable(SmallVectorImpl<CallSiteEntry> &CallSites,
-                            const SmallVectorImpl<const LandingPadInfo *> &LPs,
+                            const SmallVectorImpl<const LandingPadInfo *> &LandingPads,
                             const SmallVectorImpl<unsigned> &FirstActions);
 
   /// Emit landing pads and actions.

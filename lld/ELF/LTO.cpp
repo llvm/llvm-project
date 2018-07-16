@@ -99,6 +99,7 @@ static lto::Config createConfig() {
   C.SampleProfile = Config->LTOSampleProfile;
   C.UseNewPM = Config->LTONewPassManager;
   C.DebugPassManager = Config->LTODebugPassManager;
+  C.DwoDir = Config->DwoDir;
 
   if (Config->SaveTemps)
     checkError(C.addSaveTemps(Config->OutputFile.str() + ".",

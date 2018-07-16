@@ -321,16 +321,16 @@ class TypePromotionTransaction;
                                        bool isPreheader);
     bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT);
     bool optimizeInst(Instruction *I, bool &ModifiedDT);
-    bool optimizeMemoryInst(Instruction *I, Value *Addr,
-                            Type *AccessTy, unsigned AS);
+    bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
+                            Type *AccessTy, unsigned AddrSpace);
     bool optimizeInlineAsmInst(CallInst *CS);
     bool optimizeCallInst(CallInst *CI, bool &ModifiedDT);
     bool optimizeExt(Instruction *&I);
     bool optimizeExtUses(Instruction *I);
-    bool optimizeLoadExt(LoadInst *I);
+    bool optimizeLoadExt(LoadInst *Load);
     bool optimizeSelectInst(SelectInst *SI);
-    bool optimizeShuffleVectorInst(ShuffleVectorInst *SI);
-    bool optimizeSwitchInst(SwitchInst *CI);
+    bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
+    bool optimizeSwitchInst(SwitchInst *SI);
     bool optimizeExtractElementInst(Instruction *Inst);
     bool dupRetToEnableTailCallOpts(BasicBlock *BB);
     bool placeDbgValues(Function &F);
@@ -2612,8 +2612,8 @@ public:
 
 private:
   bool matchScaledValue(Value *ScaleReg, int64_t Scale, unsigned Depth);
-  bool matchAddr(Value *V, unsigned Depth);
-  bool matchOperationAddr(User *Operation, unsigned Opcode, unsigned Depth,
+  bool matchAddr(Value *Addr, unsigned Depth);
+  bool matchOperationAddr(User *AddrInst, unsigned Opcode, unsigned Depth,
                           bool *MovedAway = nullptr);
   bool isProfitableToFoldIntoAddressingMode(Instruction *I,
                                             ExtAddrMode &AMBefore,

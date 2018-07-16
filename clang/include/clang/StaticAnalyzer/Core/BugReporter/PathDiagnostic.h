@@ -216,6 +216,15 @@ public:
   static PathDiagnosticLocation createBegin(const Decl *D,
                                             const SourceManager &SM);
 
+  /// Create a location for the beginning of the declaration.
+  /// The third argument is ignored, useful for generic treatment
+  /// of statements and declarations.
+  static PathDiagnosticLocation
+  createBegin(const Decl *D, const SourceManager &SM,
+              const LocationOrAnalysisDeclContext LAC) {
+    return createBegin(D, SM);
+  }
+
   /// Create a location for the beginning of the statement.
   static PathDiagnosticLocation createBegin(const Stmt *S,
                                             const SourceManager &SM,

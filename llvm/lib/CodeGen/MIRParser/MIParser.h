@@ -67,7 +67,7 @@ struct PerFunctionMIParsingState {
                             const Name2RegClassMap &Names2RegClasses,
                             const Name2RegBankMap &Names2RegBanks);
 
-  VRegInfo &getVRegInfo(unsigned VReg);
+  VRegInfo &getVRegInfo(unsigned Num);
   VRegInfo &getVRegInfoNamed(StringRef RegName);
 };
 

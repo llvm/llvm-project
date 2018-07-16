@@ -233,7 +233,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   void emitBuckets() const;
   void emitStringOffsets() const;
   void emitAbbrevs() const;
-  void emitEntry(const DataT &Data) const;
+  void emitEntry(const DataT &Entry) const;
   void emitData() const;
 
 public:

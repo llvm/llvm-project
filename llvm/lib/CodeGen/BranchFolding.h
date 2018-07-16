@@ -38,11 +38,11 @@ class TargetRegisterInfo;
 
     explicit BranchFolder(bool defaultEnableTailMerge,
                           bool CommonHoist,
-                          MBFIWrapper &MBFI,
-                          const MachineBranchProbabilityInfo &MBPI,
+                          MBFIWrapper &FreqInfo,
+                          const MachineBranchProbabilityInfo &ProbInfo,
                           // Min tail length to merge. Defaults to commandline
                           // flag. Ignored for optsize.
-                          unsigned MinCommonTailLength = 0);
+                          unsigned MinTailLength = 0);
 
     /// Perhaps branch folding, tail merging and other CFG optimizations on the
     /// given function.  Block placement changes the layout and may create new

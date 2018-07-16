@@ -105,7 +105,7 @@ class VirtRegMap;
     /// Calculate the spill weight to assign to a single instruction.
     static float getSpillWeight(bool isDef, bool isUse,
                                 const MachineBlockFrequencyInfo *MBFI,
-                                const MachineInstr &Instr);
+                                const MachineInstr &MI);
 
     /// Calculate the spill weight to assign to a single instruction.
     static float getSpillWeight(bool isDef, bool isUse,

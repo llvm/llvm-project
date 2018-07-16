@@ -141,7 +141,7 @@ private:
   /// This constructor create a MachineInstr and add the implicit operands.
   /// It reserves space for number of operands specified by
   /// MCInstrDesc.  An explicit DebugLoc is supplied.
-  MachineInstr(MachineFunction &, const MCInstrDesc &MCID, DebugLoc dl,
+  MachineInstr(MachineFunction &, const MCInstrDesc &tid, DebugLoc dl,
                bool NoImp = false);
 
   // MachineInstrs are pool-allocated and owned by MachineFunction.
@@ -1321,7 +1321,7 @@ public:
 
   /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
-  void RemoveOperand(unsigned i);
+  void RemoveOperand(unsigned OpNo);
 
   /// Add a MachineMemOperand to the machine instruction.
   /// This function should be used only occasionally. The setMemRefs function
