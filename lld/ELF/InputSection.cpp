@@ -221,9 +221,8 @@ std::string InputSectionBase::getLocation(uint64_t Offset) {
         .str();
 
   // First check if we can get desired values from debugging information.
-  std::string LineInfo = getFile<ELFT>()->getLineInfo(this, Offset);
-  if (!LineInfo.empty())
-    return LineInfo;
+  if (Optional<DILineInfo> Info = getFile<ELFT>()->getDILineInfo(this, Offset))
+    return Info->FileName + ":" + std::to_string(Info->Line);
 
   // File->SourceFile contains STT_FILE symbol that contains a
   // source file name. If it's missing, we use an object file name.
