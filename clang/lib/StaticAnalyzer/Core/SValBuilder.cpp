@@ -379,11 +379,9 @@ SVal SValBuilder::makeSymExprValNN(ProgramStateRef State,
                                    BinaryOperator::Opcode Op,
                                    NonLoc LHS, NonLoc RHS,
                                    QualType ResultTy) {
-  if (!State->isTainted(RHS) && !State->isTainted(LHS))
-    return UnknownVal();
-
   const SymExpr *symLHS = LHS.getAsSymExpr();
   const SymExpr *symRHS = RHS.getAsSymExpr();
+
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
   const unsigned MaxComp = StateMgr.getOwningEngine()

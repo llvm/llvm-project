@@ -58,6 +58,7 @@ const RegisterBank &MipsRegisterBankInfo::getRegBankFromRegClass(
   case Mips::GPR32RegClassID:
   case Mips::CPU16Regs_and_GPRMM16ZeroRegClassID:
   case Mips::GPRMM16MoveP_and_CPU16Regs_and_GPRMM16ZeroRegClassID:
+  case Mips::SP32RegClassID:
     return getRegBank(Mips::GPRBRegBankID);
   default:
     llvm_unreachable("Register class not supported");
@@ -80,7 +81,15 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case G_ADD:
+  case G_LOAD:
+  case G_STORE:
+  case G_GEP:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
+    break;
+  case G_CONSTANT:
+  case G_FRAME_INDEX:
+    OperandsMapping =
+        getOperandsMapping({&Mips::ValueMappings[Mips::GPRIdx], nullptr});
     break;
   default:
     return getInvalidInstructionMapping();

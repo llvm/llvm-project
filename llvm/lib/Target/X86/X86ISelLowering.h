@@ -815,6 +815,24 @@ namespace llvm {
 
     bool preferShiftsToClearExtremeBits(SDValue Y) const override;
 
+    bool
+    shouldTransformSignedTruncationCheck(EVT XVT,
+                                         unsigned KeptBits) const override {
+      // For vectors, we don't have a preference..
+      if (XVT.isVector())
+        return false;
+
+      auto VTIsOk = [](EVT VT) -> bool {
+        return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 ||
+               VT == MVT::i64;
+      };
+
+      // We are ok with KeptBitsVT being byte/word/dword, what MOVS supports.
+      // XVT will be larger than KeptBitsVT.
+      MVT KeptBitsVT = MVT::getIntegerVT(KeptBits);
+      return VTIsOk(XVT) && VTIsOk(KeptBitsVT);
+    }
+
     bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
       return VT.isScalarInteger();
     }

@@ -886,6 +886,10 @@ void GCNPassConfig::addPreSched2() {
 }
 
 void GCNPassConfig::addPreEmitPass() {
+  addPass(createSIMemoryLegalizerPass());
+  addPass(createSIInsertWaitcntsPass());
+  addPass(createSIShrinkInstructionsPass());
+
   // The hazard recognizer that runs as part of the post-ra scheduler does not
   // guarantee to be able handle all hazards correctly. This is because if there
   // are multiple scheduling regions in a basic block, the regions are scheduled
@@ -894,11 +898,11 @@ void GCNPassConfig::addPreEmitPass() {
   //
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
+  //
+  // FIXME: This stand-alone pass will emit indiv. S_NOP 0, as needed. It would
+  // be better for it to emit S_NOP <N> when possible.
   addPass(&PostRAHazardRecognizerID);
 
-  addPass(createSIMemoryLegalizerPass());
-  addPass(createSIInsertWaitcntsPass());
-  addPass(createSIShrinkInstructionsPass());
   addPass(&SIInsertSkipsPassID);
   addPass(createSIDebuggerInsertNopsPass());
   addPass(&BranchRelaxationPassID);

@@ -592,6 +592,18 @@ bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
     if (FD->isMain())
       return false;
 
+    // The Windows ABI expects that we would never mangle "typical"
+    // user-defined entry points regardless of visibility or freestanding-ness.
+    //
+    // N.B. This is distinct from asking about "main".  "main" has a lot of
+    // special rules associated with it in the standard while these
+    // user-defined entry points are outside of the purview of the standard.
+    // For example, there can be only one definition for "main" in a standards
+    // compliant program; however nothing forbids the existence of wmain and
+    // WinMain in the same translation unit.
+    if (FD->isMSVCRTEntryPoint())
+      return false;
+
     // C++ functions and those whose names are not a simple identifier need
     // mangling.
     if (!FD->getDeclName().isIdentifier() || L == CXXLanguageLinkage)

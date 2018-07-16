@@ -85,6 +85,16 @@ Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
   if (!Analysis.Object)
     return make_error<UnsupportedDisassembly>("Failed to cast object");
 
+  switch (Analysis.Object->getArch()) {
+    case Triple::x86:
+    case Triple::x86_64:
+    case Triple::aarch64:
+    case Triple::aarch64_be:
+      break;
+    default:
+      return make_error<UnsupportedDisassembly>("Unsupported architecture.");
+  }
+
   Analysis.ObjectTriple = Analysis.Object->makeTriple();
   Analysis.Features = Analysis.Object->getFeatures();
 

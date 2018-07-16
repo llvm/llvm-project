@@ -41,9 +41,9 @@ void test() {
   auto explicit_by_value_used = [i] { return i + 1; };
   auto explicit_by_value_used_void = [i] { (void)i; };
   auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
-  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
-  auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
-  auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
+  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture of constant 'i' is not required for this use}}
+  auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture of constant 'i' is not required for this use}}
+  auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture of constant 'k' is not required for this use}}
 
   auto explicit_by_reference_used = [&i] { i++; };
   auto explicit_by_reference_unused = [&i] {}; // expected-warning{{lambda capture 'i' is not used}}
@@ -146,10 +146,10 @@ void test_templated() {
   auto explicit_by_value_used_void = [i] { (void)i; };
 
   auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
-  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
+  auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture of constant 'i' is not required for this use}}
   auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not used}}
-  auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
-  auto explicit_by_value_unused_const_generic = [k](auto c) { return k + 1; }; // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
+  auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture of constant 'k' is not required for this use}}
+  auto explicit_by_value_unused_const_generic = [k](auto c) { return k + 1; }; // expected-warning{{lambda capture of constant 'k' is not required for this use}}
 
   auto explicit_by_reference_used = [&i] { i++; };
   auto explicit_by_reference_unused = [&i] {}; // expected-warning{{lambda capture 'i' is not used}}

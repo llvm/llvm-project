@@ -457,6 +457,23 @@ public:
     return VT.getSizeInBits() >= 64; // vector 'bic'
   }
 
+  bool shouldTransformSignedTruncationCheck(EVT XVT,
+                                            unsigned KeptBits) const override {
+    // For vectors, we don't have a preference..
+    if (XVT.isVector())
+      return false;
+
+    auto VTIsOk = [](EVT VT) -> bool {
+      return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 ||
+             VT == MVT::i64;
+    };
+
+    // We are ok with KeptBitsVT being byte/word/dword, what SXT supports.
+    // XVT will be larger than KeptBitsVT.
+    MVT KeptBitsVT = MVT::getIntegerVT(KeptBits);
+    return VTIsOk(XVT) && VTIsOk(KeptBitsVT);
+  }
+
   bool hasBitPreservingFPLogic(EVT VT) const override {
     // FIXME: Is this always true? It should be true for vectors at least.
     return VT == MVT::f32 || VT == MVT::f64;
