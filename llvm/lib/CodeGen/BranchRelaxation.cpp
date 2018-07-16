@@ -96,7 +96,7 @@ class BranchRelaxation : public MachineFunctionPass {
 
   MachineBasicBlock *splitBlockBeforeInstr(MachineInstr &MI,
                                            MachineBasicBlock *DestBB);
-  void adjustBlockOffsets(MachineBasicBlock &MBB);
+  void adjustBlockOffsets(MachineBasicBlock &Start);
   bool isBlockInRange(const MachineInstr &MI, const MachineBasicBlock &BB) const;
 
   bool fixupConditionalBranch(MachineInstr &MI);

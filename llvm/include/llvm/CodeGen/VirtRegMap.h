@@ -172,7 +172,7 @@ class TargetInstrInfo;
 
     /// create a mapping for the specified virtual register to
     /// the specified stack slot
-    void assignVirt2StackSlot(unsigned virtReg, int frameIndex);
+    void assignVirt2StackSlot(unsigned virtReg, int SS);
 
     void print(raw_ostream &OS, const Module* M = nullptr) const override;
     void dump() const;

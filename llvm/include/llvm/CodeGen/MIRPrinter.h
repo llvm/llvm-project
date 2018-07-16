@@ -38,7 +38,7 @@ void printMIR(raw_ostream &OS, const MachineFunction &MF);
 /// this funciton and the parser will use this function to construct a list if
 /// it is missing.
 void guessSuccessors(const MachineBasicBlock &MBB,
-                     SmallVectorImpl<MachineBasicBlock*> &Successors,
+                     SmallVectorImpl<MachineBasicBlock*> &Result,
                      bool &IsFallthrough);
 
 } // end namespace llvm

@@ -238,12 +238,12 @@ private:
 
 protected:
   TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
-                     regclass_iterator RegClassBegin,
-                     regclass_iterator RegClassEnd,
+                     regclass_iterator RCB,
+                     regclass_iterator RCE,
                      const char *const *SRINames,
                      const LaneBitmask *SRILaneMasks,
                      LaneBitmask CoveringLanes,
-                     const RegClassInfo *const RSI,
+                     const RegClassInfo *const RCIs,
                      unsigned Mode = 0);
   virtual ~TargetRegisterInfo();
 
@@ -1167,7 +1167,7 @@ struct VirtReg2IndexFunctor {
 ///
 /// Usage: OS << printReg(Reg, TRI, SubRegIdx) << '\n';
 Printable printReg(unsigned Reg, const TargetRegisterInfo *TRI = nullptr,
-                   unsigned SubRegIdx = 0,
+                   unsigned SubIdx = 0,
                    const MachineRegisterInfo *MRI = nullptr);
 
 /// Create Printable object to print register units on a \ref raw_ostream.

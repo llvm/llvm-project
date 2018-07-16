@@ -59,6 +59,37 @@ size_t TracePC::GetTotalPCCoverage() {
   return Res;
 }
 
+// Initializes unstable counters by copying Inline8bitCounters to unstable
+// counters.
+void TracePC::InitializeUnstableCounters() {
+  if (NumInline8bitCounters && NumInline8bitCounters == NumPCsInPCTables) {
+    size_t UnstableIdx = 0;
+    for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
+      uint8_t *Beg = ModuleCounters[i].Start;
+      size_t Size = ModuleCounters[i].Stop - Beg;
+      assert(Size == (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
+      for (size_t j = 0; j < Size; j++, UnstableIdx++)
+        if (UnstableCounters[UnstableIdx] != kUnstableCounter)
+          UnstableCounters[UnstableIdx] = Beg[j];
+    }
+  }
+}
+
+// Compares the current counters with counters from previous runs
+// and records differences as unstable edges.
+void TracePC::UpdateUnstableCounters() {
+  if (NumInline8bitCounters && NumInline8bitCounters == NumPCsInPCTables) {
+    size_t UnstableIdx = 0;
+    for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
+      uint8_t *Beg = ModuleCounters[i].Start;
+      size_t Size = ModuleCounters[i].Stop - Beg;
+      assert(Size == (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
+      for (size_t j = 0; j < Size; j++, UnstableIdx++)
+        if (Beg[j] != UnstableCounters[UnstableIdx])
+          UnstableCounters[UnstableIdx] = kUnstableCounter;
+    }
+  }
+}
 
 void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
   if (Start == Stop) return;
@@ -308,6 +339,15 @@ void TracePC::DumpCoverage() {
       PCsCopy[i] = PCs()[i] ? GetPreviousInstructionPc(PCs()[i]) : 0;
     EF->__sanitizer_dump_coverage(PCsCopy.data(), PCsCopy.size());
   }
+}
+
+void TracePC::PrintUnstableStats() {
+  size_t count = 0;
+  for (size_t i = 0; i < NumInline8bitCounters; i++)
+    if (UnstableCounters[i] == kUnstableCounter)
+      count++;
+  Printf("stat::stability_rate: %.2f\n",
+         100 - static_cast<float>(count * 100) / NumInline8bitCounters);
 }
 
 // Value profile.

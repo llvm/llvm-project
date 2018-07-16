@@ -75,7 +75,7 @@ namespace {
       initializePHIEliminationPass(*PassRegistry::getPassRegistry());
     }
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+    bool runOnMachineFunction(MachineFunction &MF) override;
     void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   private:
@@ -91,7 +91,7 @@ namespace {
     /// register which is used in a PHI node. We map that to the BB the
     /// vreg is coming from. This is used later to determine when the vreg
     /// is killed in the BB.
-    void analyzePHINodes(const MachineFunction& Fn);
+    void analyzePHINodes(const MachineFunction& MF);
 
     /// Split critical edges where necessary for good coalescer performance.
     bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,

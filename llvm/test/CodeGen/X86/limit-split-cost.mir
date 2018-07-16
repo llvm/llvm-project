@@ -1,0 +1,150 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=x86_64-- -run-pass=greedy %s -debug-only=regalloc -huge-size-for-split=0 -o /dev/null 2>&1 | FileCheck %s
+# Check no global region split is needed because the live range to split is trivially rematerializable.
+# CHECK-NOT: Compact region bundles
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "2.cc"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @m = local_unnamed_addr global i32 0, align 4
+  @.str = private unnamed_addr constant [4 x i8] c"abc\00", align 1
+  @.str.1 = private unnamed_addr constant [4 x i8] c"def\00", align 1
+  @.str.2 = private unnamed_addr constant [4 x i8] c"ghi\00", align 1
+  
+  ; Function Attrs: uwtable
+  define void @_Z3fooi(i32 %value) local_unnamed_addr #0 {
+  entry:
+    br label %do.body
+  
+  do.body:                                          ; preds = %do.cond, %entry
+    tail call void asm sideeffect "", "~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"() #2, !srcloc !3
+    switch i32 %value, label %do.cond [
+      i32 0, label %sw.bb
+      i32 1, label %sw.bb1
+      i32 2, label %sw.bb2
+    ]
+  
+  sw.bb:                                            ; preds = %do.body
+    tail call void @_Z3gooPKc(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
+    br label %sw.bb1
+  
+  sw.bb1:                                           ; preds = %sw.bb, %do.body
+    tail call void @_Z3gooPKc(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0))
+    br label %sw.bb2
+  
+  sw.bb2:                                           ; preds = %sw.bb1, %do.body
+    tail call void @_Z3gooPKc(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i64 0, i64 0))
+    br label %do.cond
+  
+  do.cond:                                          ; preds = %sw.bb2, %do.body
+    %0 = load i32, i32* @m, align 4, !tbaa !4
+    %cmp = icmp eq i32 %0, 5
+    br i1 %cmp, label %do.end, label %do.body
+  
+  do.end:                                           ; preds = %do.cond
+    ret void
+  }
+  
+  declare void @_Z3gooPKc(i8*) local_unnamed_addr #1
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { nounwind }
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+  
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 7, !"PIC Level", i32 2}
+  !2 = !{!"clang version 7.0.0 (trunk 335057)"}
+  !3 = !{i32 80}
+  !4 = !{!5, !5, i64 0}
+  !5 = !{!"int", !6, i64 0}
+  !6 = !{!"omnipotent char", !7, i64 0}
+  !7 = !{!"Simple C++ TBAA"}
+
+...
+---
+name:            _Z3fooi
+alignment:       4
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr64 }
+  - { id: 4, class: gr64 }
+  - { id: 5, class: gr64 }
+  - { id: 6, class: gr64 }
+  - { id: 7, class: gr32 }
+  - { id: 8, class: gr32 }
+liveins:         
+  - { reg: '$edi', virtual-reg: '%0' }
+frameInfo:       
+  hasCalls:        true
+body:             |
+  bb.0.entry:
+    liveins: $edi
+  
+    %0:gr32 = COPY $edi
+    %5:gr64 = LEA64r $rip, 1, $noreg, @.str.2, $noreg
+    %6:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @m, $noreg :: (load 8 from got)
+    %4:gr64 = LEA64r $rip, 1, $noreg, @.str.1, $noreg
+    %3:gr64 = LEA64r $rip, 1, $noreg, @.str, $noreg
+  
+  bb.1.do.body:
+    successors: %bb.6(0x20000000), %bb.2(0x60000000)
+  
+    INLINEASM &"", 1, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !3
+    CMP32ri8 %0, 2, implicit-def $eflags
+    JE_1 %bb.6, implicit killed $eflags
+    JMP_1 %bb.2
+  
+  bb.2.do.body:
+    successors: %bb.5(0x2aaaaaab), %bb.3(0x55555555)
+  
+    CMP32ri8 %0, 1, implicit-def $eflags
+    JE_1 %bb.5, implicit killed $eflags
+    JMP_1 %bb.3
+  
+  bb.3.do.body:
+    successors: %bb.4, %bb.7
+  
+    TEST32rr %0, %0, implicit-def $eflags
+    JNE_1 %bb.7, implicit killed $eflags
+    JMP_1 %bb.4
+  
+  bb.4.sw.bb:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %3
+    CALL64pcrel32 target-flags(x86-plt) @_Z3gooPKc, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.5.sw.bb1:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %4
+    CALL64pcrel32 target-flags(x86-plt) @_Z3gooPKc, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.6.sw.bb2:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY %5
+    CALL64pcrel32 target-flags(x86-plt) @_Z3gooPKc, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.7.do.cond:
+    successors: %bb.8(0x04000000), %bb.1(0x7c000000)
+  
+    CMP32mi8 %6, 1, $noreg, 0, $noreg, 5, implicit-def $eflags :: (dereferenceable load 4 from @m, !tbaa !4)
+    JNE_1 %bb.1, implicit killed $eflags
+    JMP_1 %bb.8
+  
+  bb.8.do.end:
+    RET 0
+
+...

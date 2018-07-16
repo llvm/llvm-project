@@ -310,9 +310,9 @@ namespace {
     SDValue visitUMULO(SDNode *N);
     SDValue visitIMINMAX(SDNode *N);
     SDValue visitAND(SDNode *N);
-    SDValue visitANDLike(SDValue N0, SDValue N1, SDNode *LocReference);
+    SDValue visitANDLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitOR(SDNode *N);
-    SDValue visitORLike(SDValue N0, SDValue N1, SDNode *LocReference);
+    SDValue visitORLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitXOR(SDNode *N);
     SDValue SimplifyVBinOp(SDNode *N);
     SDValue visitSHL(SDNode *N);
@@ -392,8 +392,8 @@ namespace {
     SDValue visitFMULForFMADistributiveCombine(SDNode *N);
 
     SDValue XformToShuffleWithZero(SDNode *N);
-    SDValue ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue LHS,
-                           SDValue RHS);
+    SDValue ReassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
+                           SDValue N1);
 
     SDValue visitShiftByConstant(SDNode *N, ConstantSDNode *Amt);
 
@@ -431,14 +431,14 @@ namespace {
     SDValue BuildSDIV(SDNode *N);
     SDValue BuildSDIVPow2(SDNode *N);
     SDValue BuildUDIV(SDNode *N);
-    SDValue BuildLogBase2(SDValue Op, const SDLoc &DL);
+    SDValue BuildLogBase2(SDValue V, const SDLoc &DL);
     SDValue BuildReciprocalEstimate(SDValue Op, SDNodeFlags Flags);
     SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags);
     SDValue buildSqrtEstimate(SDValue Op, SDNodeFlags Flags);
     SDValue buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags, bool Recip);
-    SDValue buildSqrtNROneConst(SDValue Op, SDValue Est, unsigned Iterations,
+    SDValue buildSqrtNROneConst(SDValue Arg, SDValue Est, unsigned Iterations,
                                 SDNodeFlags Flags, bool Reciprocal);
-    SDValue buildSqrtNRTwoConst(SDValue Op, SDValue Est, unsigned Iterations,
+    SDValue buildSqrtNRTwoConst(SDValue Arg, SDValue Est, unsigned Iterations,
                                 SDNodeFlags Flags, bool Reciprocal);
     SDValue MatchBSwapHWordLow(SDNode *N, SDValue N0, SDValue N1,
                                bool DemandHighBits = true);
@@ -460,7 +460,7 @@ namespace {
     SDValue createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                   ArrayRef<int> VectorMask, SDValue VecIn1,
                                   SDValue VecIn2, unsigned LeftIdx);
-    SDValue matchVSelectOpSizesWithSetCC(SDNode *N);
+    SDValue matchVSelectOpSizesWithSetCC(SDNode *Cast);
 
     /// Walk up chain skipping non-aliasing memory nodes,
     /// looking for aliasing nodes and adding them to the Aliases vector.
@@ -519,8 +519,8 @@ namespace {
 
     /// Used by BackwardsPropagateMask to find suitable loads.
     bool SearchForAndLoads(SDNode *N, SmallPtrSetImpl<LoadSDNode*> &Loads,
-                           SmallPtrSetImpl<SDNode*> &NodeWithConsts,
-                           ConstantSDNode *Mask, SDNode *&UncombinedNode);
+                           SmallPtrSetImpl<SDNode*> &NodesWithConsts,
+                           ConstantSDNode *Mask, SDNode *&NodeToMask);
     /// Attempt to propagate a given AND node back to load leaves so that they
     /// can be combined into narrow loads.
     bool BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG);
@@ -561,7 +561,7 @@ namespace {
     /// This optimization uses wide integers or vectors when possible.
     /// \return number of stores that were merged into a merged store (the
     /// affected nodes are stored as a prefix in \p StoreNodes).
-    bool MergeConsecutiveStores(StoreSDNode *N);
+    bool MergeConsecutiveStores(StoreSDNode *St);
 
     /// Try to transform a truncation where C is a constant:
     ///     (trunc (and X, C)) -> (and (trunc X), (trunc C))

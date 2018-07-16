@@ -252,7 +252,7 @@ namespace {
         BBInfo &TrueBBI, BBInfo &FalseBBI) const;
     void AnalyzeBlock(MachineBasicBlock &MBB,
                       std::vector<std::unique_ptr<IfcvtToken>> &Tokens);
-    bool FeasibilityAnalysis(BBInfo &BBI, SmallVectorImpl<MachineOperand> &Cond,
+    bool FeasibilityAnalysis(BBInfo &BBI, SmallVectorImpl<MachineOperand> &Pred,
                              bool isTriangle = false, bool RevBranch = false,
                              bool hasCommonTail = false);
     void AnalyzeBlocks(MachineFunction &MF,

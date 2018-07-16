@@ -217,7 +217,7 @@ public:
   DbgVariable *getExistingAbstractVariable(InlinedVariable IV,
                                            const DILocalVariable *&Cleansed);
   DbgVariable *getExistingAbstractVariable(InlinedVariable IV);
-  void createAbstractVariable(const DILocalVariable *DV, LexicalScope *Scope);
+  void createAbstractVariable(const DILocalVariable *Var, LexicalScope *Scope);
 
   /// Set the skeleton unit associated with this unit.
   void setSkeleton(DwarfCompileUnit &Skel) { Skeleton = &Skel; }

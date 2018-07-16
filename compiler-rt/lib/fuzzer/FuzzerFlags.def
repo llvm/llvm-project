@@ -110,6 +110,8 @@ FUZZER_FLAG_INT(print_coverage, 0, "If 1, print coverage information as text"
 FUZZER_FLAG_INT(dump_coverage, 0, "Deprecated."
                                   " If 1, dump coverage information as a"
                                   " .sancov file at exit.")
+FUZZER_FLAG_INT(print_unstable_stats, 0, "Experimental."
+				  " If 1, print unstable statistics at exit.")
 FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
 FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGBUS.")
 FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
