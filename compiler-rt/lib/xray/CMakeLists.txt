@@ -133,8 +133,8 @@ set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
     RTSanitizerCommonLibc)
 
-if (CLANG_DEFAULT_CXX_STDLIB STREQUAL "libc++" AND (TARGET cxx OR HAVE_LIBCXX))
-  set(XRAY_DEPS cxx)
+if (TARGET cxx-headers OR HAVE_LIBCXX)
+  set(XRAY_DEPS cxx-headers)
 endif()
 
 if (APPLE)
