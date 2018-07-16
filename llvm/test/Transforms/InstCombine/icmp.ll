@@ -3341,3 +3341,16 @@ define <2 x i1> @PR36583(<2 x i8*>)  {
   ret <2 x i1> %res
 }
 
+; fold (icmp pred (sub (0, X)) C1) for vec type
+define <2 x i32> @Op1Negated_Vec(<2 x i32> %x) {
+; CHECK-LABEL: @Op1Negated_Vec(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[SUB]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
+;
+  %sub = sub nsw <2 x i32> zeroinitializer, %x
+  %cmp = icmp sgt <2 x i32> %sub, <i32 -1, i32 -1>
+  %cond = select <2 x i1> %cmp, <2 x i32> %sub, <2 x i32> %x
+  ret <2 x i32> %cond
+}

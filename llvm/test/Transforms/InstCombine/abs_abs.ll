@@ -293,7 +293,7 @@ define i32 @abs_abs_x16(i32 %x) {
 define i32 @abs_abs_x17(i32 %x) {
 ; CHECK-LABEL: @abs_abs_x17(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
@@ -313,10 +313,7 @@ define i32 @abs_abs_x18(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], 0 
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw i32 0, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select i1 [[CMP1]], i32 [[SUB16]], i32 [[COND]]
-; CHECK-NEXT:    ret i32 [[COND18]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %a = sub nsw i32 %x, %y
   %b = sub nsw i32 %y, %x
@@ -332,12 +329,9 @@ define i32 @abs_abs_x18(i32 %x, i32 %y) {
 define <2 x i32> @abs_abs_x02_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @abs_abs_x02_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1> 
 ; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[SUB]], <2 x i32> [[X]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[SUB16]], <2 x i32> [[COND]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %sub = sub nsw <2 x i32> zeroinitializer, %x
   %cmp = icmp sgt <2 x i32> %sub, <i32 -1, i32 -1>
@@ -355,10 +349,7 @@ define <2 x i32> @abs_abs_x03_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[A]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[A]], <2 x i32> [[B]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[SUB16]], <2 x i32> [[COND]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %a = sub nsw <2 x i32> %x, %y
   %b = sub nsw <2 x i32> %y, %x
@@ -630,7 +621,7 @@ define i32 @nabs_nabs_x16(i32 %x) {
 define i32 @nabs_nabs_x17(i32 %x) {
 ; CHECK-LABEL: @nabs_nabs_x17(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
@@ -650,10 +641,7 @@ define i32 @nabs_nabs_x18(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], 0 
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw i32 0, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select i1 [[CMP1]], i32 [[COND]], i32 [[SUB16]]
-; CHECK-NEXT:    ret i32 [[COND18]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %a = sub nsw i32 %x, %y
   %b = sub nsw i32 %y, %x
@@ -671,12 +659,7 @@ define <2 x i32> @nabs_nabs_x01_vec(<2 x i32> %x) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[X]], <2 x i32> [[SUB]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[COND]], <2 x i32> [[SUB16]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
-;
-
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %sub = sub nsw <2 x i32> zeroinitializer, %x
   %cmp = icmp sgt <2 x i32> %sub, <i32 -1, i32 -1>
@@ -694,10 +677,7 @@ define <2 x i32> @nabs_nabs_x02_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[A]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[B]], <2 x i32> [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[COND]], <2 x i32> [[SUB16]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %a = sub nsw <2 x i32> %x, %y
   %b = sub nsw <2 x i32> %y, %x
@@ -969,9 +949,9 @@ define i32 @abs_nabs_x16(i32 %x) {
 define i32 @abs_nabs_x17(i32 %x) {
 ; CHECK-LABEL: @abs_nabs_x17(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[X]]
-; CHECK-NEXT:    ret i32 [[COND1]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %sub = sub nsw i32 0, %x
   %cmp = icmp sgt i32 %sub, -1
@@ -988,11 +968,8 @@ define i32 @abs_nabs_x18(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[A:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], -1
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], 0 
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw i32 0, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select i1 [[CMP1]], i32 [[SUB16]], i32 [[COND]]
-; CHECK-NEXT:    ret i32 [[COND18]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %a = sub nsw i32 %x, %y
   %b = sub nsw i32 %y, %x
@@ -1009,11 +986,8 @@ define <2 x i32> @abs_nabs_x01_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @abs_nabs_x01_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[X]], <2 x i32> [[SUB]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[SUB16]], <2 x i32> [[COND]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[SUB]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %sub = sub nsw <2 x i32> zeroinitializer, %x
   %cmp = icmp sgt <2 x i32> %sub, <i32 -1, i32 -1>
@@ -1030,11 +1004,8 @@ define <2 x i32> @abs_nabs_x02_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    [[A:%.*]] = sub nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[A]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[B]], <2 x i32> [[A]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[SUB16]], <2 x i32> [[COND]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[A]], <2 x i32> [[B]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %a = sub nsw <2 x i32> %x, %y
   %b = sub nsw <2 x i32> %y, %x
@@ -1306,9 +1277,9 @@ define i32 @nabs_abs_x16(i32 %x) {
 define i32 @nabs_abs_x17(i32 %x) {
 ; CHECK-LABEL: @nabs_abs_x17(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], -1
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[COND1]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %sub = sub nsw i32 0, %x
   %cmp = icmp sgt i32 %sub, -1
@@ -1325,11 +1296,8 @@ define i32 @nabs_abs_x18(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[A:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], -1
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], 0 
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw i32 0, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select i1 [[CMP1]], i32 [[COND]], i32 [[SUB16]]
-; CHECK-NEXT:    ret i32 [[COND18]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[A]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %a = sub nsw i32 %x, %y
   %b = sub nsw i32 %y, %x
@@ -1346,12 +1314,8 @@ define <2 x i32> @nabs_abs_x01_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @nabs_abs_x01_vec(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[SUB]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[SUB]], <2 x i32> [[X]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[COND]], <2 x i32> [[SUB16]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
-;
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[X]], <2 x i32> [[SUB]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %sub = sub nsw <2 x i32> zeroinitializer, %x
   %cmp = icmp sgt <2 x i32> %sub, <i32 -1, i32 -1>
@@ -1368,11 +1332,8 @@ define <2 x i32> @nabs_abs_x02_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    [[A:%.*]] = sub nsw <2 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = sub nsw <2 x i32> [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[A]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[A]], <2 x i32> [[B]]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <2 x i32> [[COND]], zeroinitializer
-; CHECK-NEXT:    [[SUB16:%.*]] = sub nsw <2 x i32> zeroinitializer, [[COND]]
-; CHECK-NEXT:    [[COND18:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> [[COND]], <2 x i32> [[SUB16]]
-; CHECK-NEXT:    ret <2 x i32> [[COND18]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[B]], <2 x i32> [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %a = sub nsw <2 x i32> %x, %y
   %b = sub nsw <2 x i32> %y, %x
