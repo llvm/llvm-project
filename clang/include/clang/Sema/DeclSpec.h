@@ -2540,12 +2540,16 @@ struct LambdaIntroducer {
     LambdaCaptureInitKind InitKind;
     ExprResult Init;
     ParsedType InitCaptureType;
+    SourceRange ExplicitRange;
+
     LambdaCapture(LambdaCaptureKind Kind, SourceLocation Loc,
                   IdentifierInfo *Id, SourceLocation EllipsisLoc,
                   LambdaCaptureInitKind InitKind, ExprResult Init,
-                  ParsedType InitCaptureType)
+                  ParsedType InitCaptureType,
+                  SourceRange ExplicitRange)
         : Kind(Kind), Loc(Loc), Id(Id), EllipsisLoc(EllipsisLoc),
-          InitKind(InitKind), Init(Init), InitCaptureType(InitCaptureType) {}
+          InitKind(InitKind), Init(Init), InitCaptureType(InitCaptureType),
+          ExplicitRange(ExplicitRange) {}
   };
 
   SourceRange Range;
@@ -2563,9 +2567,10 @@ struct LambdaIntroducer {
                   SourceLocation EllipsisLoc,
                   LambdaCaptureInitKind InitKind,
                   ExprResult Init, 
-                  ParsedType InitCaptureType) {
+                  ParsedType InitCaptureType,
+                  SourceRange ExplicitRange) {
     Captures.push_back(LambdaCapture(Kind, Loc, Id, EllipsisLoc, InitKind, Init,
-                                     InitCaptureType));
+                                     InitCaptureType, ExplicitRange));
   }
 };
 
