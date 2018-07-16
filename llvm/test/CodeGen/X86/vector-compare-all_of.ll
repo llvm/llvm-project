@@ -25,7 +25,7 @@ define i64 @test_v2f64_sext(<2 x double> %a0, <2 x double> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vandpd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovq %xmm0, %rax
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <2 x double> %a0, %a1
@@ -62,9 +62,9 @@ define i64 @test_v4f64_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltpd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vandpd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512-NEXT:    vandpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovq %xmm0, %rax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -153,9 +153,9 @@ define i32 @test_v4f32_sext(<4 x float> %a0, <4 x float> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    retq
   %c = fcmp ogt <4 x float> %a0, %a1
@@ -196,11 +196,11 @@ define i32 @test_v8f32_sext(<8 x float> %a0, <8 x float> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

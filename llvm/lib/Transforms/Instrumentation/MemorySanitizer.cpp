@@ -398,7 +398,7 @@ namespace {
 class MemorySanitizer : public FunctionPass {
 public:
   // Pass identification, replacement for typeid.
-  static char ID; 
+  static char ID;
 
   MemorySanitizer(int TrackOrigins = 0, bool Recover = false)
       : FunctionPass(ID),
@@ -422,6 +422,7 @@ private:
   friend struct VarArgPowerPC64Helper;
 
   void initializeCallbacks(Module &M);
+  void createUserspaceApi(Module &M);
 
   /// Track origins (allocation points) of uninitialized values.
   int TrackOrigins;
@@ -455,8 +456,11 @@ private:
   /// function.
   GlobalVariable *OriginTLS;
 
+  /// Are the instrumentation callbacks set up?
+  bool CallbacksInitialized = false;
+
   /// The run-time callback to print a warning.
-  Value *WarningFn = nullptr;
+  Value *WarningFn;
 
   // These arrays are indexed by log2(AccessSize).
   Value *MaybeWarningFn[kNumberOfAccessSizes];
@@ -522,12 +526,8 @@ static GlobalVariable *createPrivateNonConstGlobalForString(Module &M,
                             GlobalValue::PrivateLinkage, StrConst, "");
 }
 
-/// Insert extern declaration of runtime-provided functions and globals.
-void MemorySanitizer::initializeCallbacks(Module &M) {
-  // Only do this once.
-  if (WarningFn)
-    return;
-
+/// Insert declarations for userspace-specific functions and globals.
+void MemorySanitizer::createUserspaceApi(Module &M) {
   IRBuilder<> IRB(*C);
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
@@ -535,6 +535,38 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   StringRef WarningFnName = Recover ? "__msan_warning"
                                     : "__msan_warning_noreturn";
   WarningFn = M.getOrInsertFunction(WarningFnName, IRB.getVoidTy());
+
+  // Create the global TLS variables.
+  RetvalTLS = new GlobalVariable(
+      M, ArrayType::get(IRB.getInt64Ty(), kRetvalTLSSize / 8), false,
+      GlobalVariable::ExternalLinkage, nullptr, "__msan_retval_tls", nullptr,
+      GlobalVariable::InitialExecTLSModel);
+
+  RetvalOriginTLS = new GlobalVariable(
+      M, OriginTy, false, GlobalVariable::ExternalLinkage, nullptr,
+      "__msan_retval_origin_tls", nullptr, GlobalVariable::InitialExecTLSModel);
+
+  ParamTLS = new GlobalVariable(
+      M, ArrayType::get(IRB.getInt64Ty(), kParamTLSSize / 8), false,
+      GlobalVariable::ExternalLinkage, nullptr, "__msan_param_tls", nullptr,
+      GlobalVariable::InitialExecTLSModel);
+
+  ParamOriginTLS = new GlobalVariable(
+      M, ArrayType::get(OriginTy, kParamTLSSize / 4), false,
+      GlobalVariable::ExternalLinkage, nullptr, "__msan_param_origin_tls",
+      nullptr, GlobalVariable::InitialExecTLSModel);
+
+  VAArgTLS = new GlobalVariable(
+      M, ArrayType::get(IRB.getInt64Ty(), kParamTLSSize / 8), false,
+      GlobalVariable::ExternalLinkage, nullptr, "__msan_va_arg_tls", nullptr,
+      GlobalVariable::InitialExecTLSModel);
+  VAArgOverflowSizeTLS = new GlobalVariable(
+      M, IRB.getInt64Ty(), false, GlobalVariable::ExternalLinkage, nullptr,
+      "__msan_va_arg_overflow_size_tls", nullptr,
+      GlobalVariable::InitialExecTLSModel);
+  OriginTLS = new GlobalVariable(
+      M, IRB.getInt32Ty(), false, GlobalVariable::ExternalLinkage, nullptr,
+      "__msan_origin_tls", nullptr, GlobalVariable::InitialExecTLSModel);
 
   for (size_t AccessSizeIndex = 0; AccessSizeIndex < kNumberOfAccessSizes;
        AccessSizeIndex++) {
@@ -556,6 +588,17 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   MsanPoisonStackFn =
       M.getOrInsertFunction("__msan_poison_stack", IRB.getVoidTy(),
                             IRB.getInt8PtrTy(), IntptrTy);
+}
+
+/// Insert extern declaration of runtime-provided functions and globals.
+void MemorySanitizer::initializeCallbacks(Module &M) {
+  // Only do this once.
+  if (CallbacksInitialized)
+    return;
+
+  IRBuilder<> IRB(*C);
+  // Initialize callbacks that are common for kernel and userspace
+  // instrumentation.
   MsanChainOriginFn = M.getOrInsertFunction(
     "__msan_chain_origin", IRB.getInt32Ty(), IRB.getInt32Ty());
   MemmoveFn = M.getOrInsertFunction(
@@ -567,41 +610,13 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   MemsetFn = M.getOrInsertFunction(
     "__msan_memset", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(), IRB.getInt32Ty(),
     IntptrTy);
-
-  // Create globals.
-  RetvalTLS = new GlobalVariable(
-    M, ArrayType::get(IRB.getInt64Ty(), kRetvalTLSSize / 8), false,
-    GlobalVariable::ExternalLinkage, nullptr, "__msan_retval_tls", nullptr,
-    GlobalVariable::InitialExecTLSModel);
-  RetvalOriginTLS = new GlobalVariable(
-    M, OriginTy, false, GlobalVariable::ExternalLinkage, nullptr,
-    "__msan_retval_origin_tls", nullptr, GlobalVariable::InitialExecTLSModel);
-
-  ParamTLS = new GlobalVariable(
-    M, ArrayType::get(IRB.getInt64Ty(), kParamTLSSize / 8), false,
-    GlobalVariable::ExternalLinkage, nullptr, "__msan_param_tls", nullptr,
-    GlobalVariable::InitialExecTLSModel);
-  ParamOriginTLS = new GlobalVariable(
-    M, ArrayType::get(OriginTy, kParamTLSSize / 4), false,
-    GlobalVariable::ExternalLinkage, nullptr, "__msan_param_origin_tls",
-    nullptr, GlobalVariable::InitialExecTLSModel);
-
-  VAArgTLS = new GlobalVariable(
-    M, ArrayType::get(IRB.getInt64Ty(), kParamTLSSize / 8), false,
-    GlobalVariable::ExternalLinkage, nullptr, "__msan_va_arg_tls", nullptr,
-    GlobalVariable::InitialExecTLSModel);
-  VAArgOverflowSizeTLS = new GlobalVariable(
-    M, IRB.getInt64Ty(), false, GlobalVariable::ExternalLinkage, nullptr,
-    "__msan_va_arg_overflow_size_tls", nullptr,
-    GlobalVariable::InitialExecTLSModel);
-  OriginTLS = new GlobalVariable(
-    M, IRB.getInt32Ty(), false, GlobalVariable::ExternalLinkage, nullptr,
-    "__msan_origin_tls", nullptr, GlobalVariable::InitialExecTLSModel);
-
   // We insert an empty inline asm after __msan_report* to avoid callback merge.
   EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
+
+  createUserspaceApi(M);
+  CallbacksInitialized = true;
 }
 
 /// Module-level initialization.
@@ -1094,13 +1109,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Shadow = ShadowBase + Offset
   /// Origin = (OriginBase + Offset) & ~3ULL
-  std::pair<Value *, Value *> getShadowOriginPtrUserspace(
-      Value *Addr, IRBuilder<> &IRB, Type *ShadowTy, unsigned Alignment,
-      Instruction **FirstInsn) {
+  std::pair<Value *, Value *> getShadowOriginPtrUserspace(Value *Addr,
+                                                          IRBuilder<> &IRB,
+                                                          Type *ShadowTy,
+                                                          unsigned Alignment) {
     Value *ShadowOffset = getShadowPtrOffset(Addr, IRB);
     Value *ShadowLong = ShadowOffset;
     uint64_t ShadowBase = MS.MapParams->ShadowBase;
-    *FirstInsn = dyn_cast<Instruction>(ShadowLong);
     if (ShadowBase != 0) {
       ShadowLong =
         IRB.CreateAdd(ShadowLong,
@@ -1130,9 +1145,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                                  Type *ShadowTy,
                                                  unsigned Alignment,
                                                  bool isStore) {
-    Instruction *FirstInsn = nullptr;
     std::pair<Value *, Value *> ret =
-        getShadowOriginPtrUserspace(Addr, IRB, ShadowTy, Alignment, &FirstInsn);
+        getShadowOriginPtrUserspace(Addr, IRB, ShadowTy, Alignment);
     return ret;
   }
 

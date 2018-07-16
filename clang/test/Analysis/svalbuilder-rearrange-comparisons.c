@@ -560,7 +560,7 @@ void compare_same_symbol_plus_left_int_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(y); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(x == y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) + 1U) == (conj_$2{int})}}
 }
 
 void compare_same_symbol_minus_left_int_equal_unsigned() {
@@ -569,7 +569,7 @@ void compare_same_symbol_minus_left_int_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(y); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(x == y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) - 1U) == (conj_$2{int})}}
 }
 
 void compare_same_symbol_plus_right_int_equal_unsigned() {
@@ -577,7 +577,7 @@ void compare_same_symbol_plus_right_int_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(x == y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{(conj_$2{int}) == ((conj_$2{int}) + 1U)}}
 }
 
 void compare_same_symbol_minus_right_int_equal_unsigned() {
@@ -585,7 +585,7 @@ void compare_same_symbol_minus_right_int_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(x == y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{(conj_$2{int}) == ((conj_$2{int}) - 1U)}}
 }
 
 void compare_same_symbol_plus_left_plus_right_int_equal_unsigned() {
@@ -603,7 +603,7 @@ void compare_same_symbol_plus_left_minus_right_int_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(x == y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) + 1U) == ((conj_$2{int}) - 1U)}}
 }
 
 void compare_same_symbol_minus_left_plus_right_int_equal_unsigned() {
@@ -612,7 +612,7 @@ void compare_same_symbol_minus_left_plus_right_int_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(x == y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) - 1U) == ((conj_$2{int}) + 1U)}}
 }
 
 void compare_same_symbol_minus_left_minus_right_int_equal_unsigned() {
@@ -710,7 +710,7 @@ void compare_same_symbol_plus_left_int_less_or_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(y); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(x <= y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) + 1U) <= (conj_$2{int})}}
 }
 
 void compare_same_symbol_minus_left_int_less_or_equal_unsigned() {
@@ -719,7 +719,7 @@ void compare_same_symbol_minus_left_int_less_or_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(y); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(x <= y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) - 1U) <= (conj_$2{int})}}
 }
 
 void compare_same_symbol_plus_right_int_less_or_equal_unsigned() {
@@ -727,7 +727,7 @@ void compare_same_symbol_plus_right_int_less_or_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(x <= y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{(conj_$2{int}) <= ((conj_$2{int}) + 1U)}}
 }
 
 void compare_same_symbol_minus_right_int_less_or_equal_unsigned() {
@@ -735,7 +735,7 @@ void compare_same_symbol_minus_right_int_less_or_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(x <= y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{(conj_$2{int}) <= ((conj_$2{int}) - 1U)}}
 }
 
 void compare_same_symbol_plus_left_plus_right_int_less_or_equal_unsigned() {
@@ -753,7 +753,7 @@ void compare_same_symbol_plus_left_minus_right_int_less_or_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(x <= y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) + 1U) <= ((conj_$2{int}) - 1U)}}
 }
 
 void compare_same_symbol_minus_left_plus_right_int_less_or_equal_unsigned() {
@@ -762,7 +762,7 @@ void compare_same_symbol_minus_left_plus_right_int_less_or_equal_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(x <= y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) - 1U) <= ((conj_$2{int}) + 1U)}}
 }
 
 void compare_same_symbol_minus_left_minus_right_int_less_or_equal_unsigned() {
@@ -860,7 +860,7 @@ void compare_same_symbol_plus_left_int_less_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(y); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(x < y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) + 1U) < (conj_$2{int})}}
 }
 
 void compare_same_symbol_minus_left_int_less_unsigned() {
@@ -869,7 +869,7 @@ void compare_same_symbol_minus_left_int_less_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(y); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(x < y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) - 1U) < (conj_$2{int})}}
 }
 
 void compare_same_symbol_plus_right_int_less_unsigned() {
@@ -877,7 +877,7 @@ void compare_same_symbol_plus_right_int_less_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(x < y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{(conj_$2{int}) < ((conj_$2{int}) + 1U)}}
 }
 
 void compare_same_symbol_minus_right_int_less_unsigned() {
@@ -885,7 +885,7 @@ void compare_same_symbol_minus_right_int_less_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{conj_$2{int}}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(x < y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{(conj_$2{int}) < ((conj_$2{int}) - 1U)}}
 }
 
 void compare_same_symbol_plus_left_plus_right_int_less_unsigned() {
@@ -903,7 +903,7 @@ void compare_same_symbol_plus_left_minus_right_int_less_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(x < y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) + 1U) < ((conj_$2{int}) - 1U)}}
 }
 
 void compare_same_symbol_minus_left_plus_right_int_less_unsigned() {
@@ -912,7 +912,7 @@ void compare_same_symbol_minus_left_plus_right_int_less_unsigned() {
   clang_analyzer_dump(x); // expected-warning{{(conj_$2{int}) - 1}}
   clang_analyzer_dump(y); // expected-warning{{(conj_$2{int}) + 1}}
   clang_analyzer_dump(x < y);
-  // expected-warning@-1{{Unknown}} // FIXME: Can this be simplified?
+  // expected-warning@-1{{((conj_$2{int}) - 1U) < ((conj_$2{int}) + 1U)}}
 }
 
 void compare_same_symbol_minus_left_minus_right_int_less_unsigned() {

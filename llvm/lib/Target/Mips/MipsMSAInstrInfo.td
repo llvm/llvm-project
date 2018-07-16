@@ -3150,17 +3150,17 @@ def FTRUNC_U_D : FTRUNC_U_D_ENC, FTRUNC_U_D_DESC;
 
 def : MipsPat<(fsub MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
               (FMSUB_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
-              FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
 def : MipsPat<(fsub MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
               (FMSUB_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
-              FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
 
 def : MipsPat<(fadd MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
               (FMADD_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
-              FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
 def : MipsPat<(fadd MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
               (FMADD_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
-              FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
 
 def HADD_S_H : HADD_S_H_ENC, HADD_S_H_DESC;
 def HADD_S_W : HADD_S_W_ENC, HADD_S_W_DESC;
@@ -3792,12 +3792,13 @@ let ASEPredicate = [HasMSA] in {
  }
 
  def : MipsPat<(MipsTruncIntFP MSA128F16:$ws),
-               (TRUNC_W_D64 (MSA_FP_EXTEND_D_PSEUDO MSA128F16:$ws))>;
+               (TRUNC_W_D64 (MSA_FP_EXTEND_D_PSEUDO MSA128F16:$ws))>, ISA_MIPS1,
+               ASE_MSA;
 
  def : MipsPat<(MipsFPCmp MSA128F16:$ws, MSA128F16:$wt, imm:$cond),
                (FCMP_S32 (MSA_FP_EXTEND_W_PSEUDO MSA128F16:$ws),
                          (MSA_FP_EXTEND_W_PSEUDO MSA128F16:$wt), imm:$cond)>,
-       ISA_MIPS1_NOT_32R6_64R6;
+       ISA_MIPS1_NOT_32R6_64R6, ASE_MSA;
 }
 
 def vsplati64_imm_eq_63 : PatLeaf<(bitconvert (v4i32 (build_vector))), [{

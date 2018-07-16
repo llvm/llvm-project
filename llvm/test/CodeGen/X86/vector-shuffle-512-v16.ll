@@ -388,7 +388,7 @@ define <16 x i32> @shuffle_v16i32_0zzzzzzzzzzzzzzz(<16 x i32> %a) {
 ; ALL-LABEL: shuffle_v16i32_0zzzzzzzzzzzzzzz:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x i32> %a, <16 x i32> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   ret <16 x i32> %shuffle
@@ -398,7 +398,7 @@ define <16 x float> @shuffle_v16f32_0zzzzzzzzzzzzzzz(<16 x float> %a) {
 ; ALL-LABEL: shuffle_v16f32_0zzzzzzzzzzzzzzz:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x float> %a, <16 x float> zeroinitializer, <16 x i32> <i32 0, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   ret <16 x float> %shuffle

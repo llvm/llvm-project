@@ -39,8 +39,8 @@ entry:
 define i64 @test_llgesll_z(i64 %a) {
 ; CHECK-LABEL: test_llgesll_z:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    not r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp sgt i64 %a, -1
@@ -51,8 +51,8 @@ entry:
 define i64 @test_llgesll_sext_z(i64 %a) {
 ; CHECK-LABEL: test_llgesll_sext_z:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    sradi r3, r3, 63
 ; CHECK-NEXT:    not r3, r3
+; CHECK-NEXT:    sradi r3, r3, 63
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp sgt i64 %a, -1
@@ -99,9 +99,9 @@ define void @test_llgesll_z_store(i64 %a) {
 ; CHECK-LABEL: test_llgesll_z_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
-; CHECK-NEXT:    rldicl r3, r3, 1, 63
+; CHECK-NEXT:    not r3, r3
 ; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
-; CHECK-NEXT:    xori r3, r3, 1
+; CHECK-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
@@ -115,9 +115,9 @@ define void @test_llgesll_sext_z_store(i64 %a) {
 ; CHECK-LABEL: test_llgesll_sext_z_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
-; CHECK-NEXT:    sradi r3, r3, 63
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    not r3, r3
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    sradi r3, r3, 63
 ; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:

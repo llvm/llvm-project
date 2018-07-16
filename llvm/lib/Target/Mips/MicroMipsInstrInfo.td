@@ -1264,17 +1264,19 @@ def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
 def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
               (TAILCALL_MM texternalsym:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
-def : MipsPat<(atomic_load_16 addr:$a),
-              (LH_MM addr:$a)>;
-
 defm : BrcondPats<GPR32, BEQ_MM, BEQ_MM, BNE_MM, SLT_MM, SLTu_MM, SLTi_MM,
                   SLTiu_MM, ZERO>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
-defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, ZERO>;
-defm : SetlePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>;
-defm : SetgtPats<GPR32, SLT_MM, SLTu_MM>;
-defm : SetgePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>;
-defm : SetgeImmPats<GPR32, XORi_MM, SLTi_MM, SLTiu_MM>;
+def : MipsPat<(brcond (i32 (setlt i32:$lhs, 1)), bb:$dst),
+              (BLEZ_MM i32:$lhs, bb:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
+def : MipsPat<(brcond (i32 (setgt i32:$lhs, -1)), bb:$dst),
+              (BGEZ_MM i32:$lhs, bb:$dst)>, ISA_MICROMIPS32_NOT_MIPS32R6;
+
+defm : SeteqPats<GPR32, SLTiu_MM, XOR_MM, SLTu_MM, ZERO>, ISA_MICROMIPS;
+defm : SetlePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
+defm : SetgtPats<GPR32, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
+defm : SetgePats<GPR32, XORi_MM, SLT_MM, SLTu_MM>, ISA_MICROMIPS;
+defm : SetgeImmPats<GPR32, XORi_MM, SLTi_MM, SLTiu_MM>, ISA_MICROMIPS;
 
 // Select patterns
 

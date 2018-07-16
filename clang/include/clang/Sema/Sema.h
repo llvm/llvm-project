@@ -824,6 +824,10 @@ public:
   /// \<initializer_list>.
   ClassTemplateDecl *StdInitializerList;
 
+  /// The C++ "std::coroutine_traits" template, which is defined in
+  /// \<coroutine_traits>
+  ClassTemplateDecl *StdCoroutineTraitsCache;
+
   /// The C++ "type_info" declaration, which is defined in \<typeinfo>.
   RecordDecl *CXXTypeInfoDecl;
 
@@ -5598,8 +5602,10 @@ public:
   /// Does copying/destroying the captured variable have side effects?
   bool CaptureHasSideEffects(const sema::Capture &From);
 
-  /// Diagnose if an explicit lambda capture is unused.
-  void DiagnoseUnusedLambdaCapture(const sema::Capture &From);
+  /// Diagnose if an explicit lambda capture is unused. Returns true if a
+  /// diagnostic is emitted.
+  bool DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                   const sema::Capture &From);
 
   /// Complete a lambda-expression having processed and attached the
   /// lambda body.
@@ -8536,6 +8542,8 @@ public:
   bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
+  ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
+                                           SourceLocation FuncLoc);
 
   //===--------------------------------------------------------------------===//
   // OpenCL extensions.

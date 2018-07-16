@@ -829,6 +829,9 @@ public:
   ///  if the enclosing full-expression is instantiation dependent).
   llvm::SmallSet<Expr *, 8> NonODRUsedCapturingExprs;
 
+  /// A map of explicit capture indices to their introducer source ranges.
+  llvm::DenseMap<unsigned, SourceRange> ExplicitCaptureRanges;
+
   /// Contains all of the variables defined in this lambda that shadow variables
   /// that were defined in parent contexts. Used to avoid warnings when the
   /// shadowed variables are uncaptured by this lambda.

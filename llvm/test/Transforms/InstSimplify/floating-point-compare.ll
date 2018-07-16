@@ -266,6 +266,10 @@ define i1 @orderedLessZeroMinNum(float, float) {
   ret i1 %uge
 }
 
+; FIXME: This is wrong.
+; PR37776: https://bugs.llvm.org/show_bug.cgi?id=37776
+; exp() may return nan, leaving %1 as the unknown result, so we can't simplify.
+
 define i1 @orderedLessZeroMaxNum(float, float) {
 ; CHECK-LABEL: @orderedLessZeroMaxNum(
 ; CHECK-NEXT:    ret i1 true

@@ -860,30 +860,31 @@ let AdditionalPredicates = [NotInMicroMips] in {
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//
-def : MipsPat<(f32 fpimm0), (MTC1 ZERO)>;
-def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>;
+def : MipsPat<(f32 fpimm0), (MTC1 ZERO)>, ISA_MIPS1;
+def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>, ISA_MIPS1;
 
 def : MipsPat<(f32 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_S_W GPR32Opnd:$src)>;
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
-              (TRUNC_W_S FGR32Opnd:$src)>;
+              (TRUNC_W_S FGR32Opnd:$src)>, ISA_MIPS1;
 
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
-              (MTC1_D64 GPR32Opnd:$src)>, FGR_64;
+              (MTC1_D64 GPR32Opnd:$src)>, ISA_MIPS1, FGR_64;
 
 def : MipsPat<(f64 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D32_W GPR32Opnd:$src)>, FGR_32;
-def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
-              (TRUNC_W_D32 AFGR64Opnd:$src)>, FGR_32;
 let AdditionalPredicates = [NotInMicroMips] in {
+  def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
+                (TRUNC_W_D32 AFGR64Opnd:$src)>, ISA_MIPS2, FGR_32;
   def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
-                (CVT_S_D32 AFGR64Opnd:$src)>, FGR_32;
+                (CVT_S_D32 AFGR64Opnd:$src)>, ISA_MIPS1, FGR_32;
   def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
-                (CVT_D32_S FGR32Opnd:$src)>, FGR_32;
+                (CVT_D32_S FGR32Opnd:$src)>, ISA_MIPS1, FGR_32;
 }
 
-def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, FGR_64;
-def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, FGR_64;
+def : MipsPat<(f64 fpimm0), (DMTC1 ZERO_64)>, ISA_MIPS3, GPR_64, FGR_64;
+def : MipsPat<(f64 fpimm0neg), (FNEG_D64 (DMTC1 ZERO_64))>, ISA_MIPS3, GPR_64,
+      FGR_64;
 
 def : MipsPat<(f64 (sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D64_W GPR32Opnd:$src)>, FGR_64;
@@ -893,17 +894,17 @@ def : MipsPat<(f64 (sint_to_fp GPR64Opnd:$src)),
               (PseudoCVT_D64_L GPR64Opnd:$src)>, FGR_64;
 
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
-              (TRUNC_W_D64 FGR64Opnd:$src)>, FGR_64;
+              (TRUNC_W_D64 FGR64Opnd:$src)>, ISA_MIPS3, FGR_64;
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
-              (TRUNC_L_S FGR32Opnd:$src)>, FGR_64;
+              (TRUNC_L_S FGR32Opnd:$src)>, ISA_MIPS2, FGR_64;
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
-              (TRUNC_L_D64 FGR64Opnd:$src)>, FGR_64;
+              (TRUNC_L_D64 FGR64Opnd:$src)>, ISA_MIPS2, FGR_64;
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsPat<(f32 (fpround FGR64Opnd:$src)),
-                (CVT_S_D64 FGR64Opnd:$src)>, FGR_64;
+                (CVT_S_D64 FGR64Opnd:$src)>, ISA_MIPS1, FGR_64;
   def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
-                (CVT_D64_S FGR32Opnd:$src)>, FGR_64;
+                (CVT_D64_S FGR32Opnd:$src)>, ISA_MIPS1, FGR_64;
 }
 
 // To generate NMADD and NMSUB instructions when fneg node is present
@@ -923,13 +924,13 @@ let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, NotInMicroMips] in {
 // Patterns for loads/stores with a reg+imm operand.
 let AdditionalPredicates = [NotInMicroMips] in {
   let AddedComplexity = 40 in {
-    def : LoadRegImmPat<LWC1, f32, load>;
-    def : StoreRegImmPat<SWC1, f32>;
+    def : LoadRegImmPat<LWC1, f32, load>, ISA_MIPS1;
+    def : StoreRegImmPat<SWC1, f32>, ISA_MIPS1;
 
-    def : LoadRegImmPat<LDC164, f64, load>, FGR_64;
-    def : StoreRegImmPat<SDC164, f64>, FGR_64;
+    def : LoadRegImmPat<LDC164, f64, load>, ISA_MIPS1, FGR_64;
+    def : StoreRegImmPat<SDC164, f64>, ISA_MIPS1, FGR_64;
 
-    def : LoadRegImmPat<LDC1, f64, load>, FGR_32;
-    def : StoreRegImmPat<SDC1, f64>, FGR_32;
+    def : LoadRegImmPat<LDC1, f64, load>, ISA_MIPS1, FGR_32;
+    def : StoreRegImmPat<SDC1, f64>, ISA_MIPS1, FGR_32;
   }
 }

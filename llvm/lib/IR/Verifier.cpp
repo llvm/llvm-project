@@ -409,6 +409,7 @@ private:
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
                        SmallVectorImpl<const MDNode *> &Requirements);
+  void visitModuleFlagCGProfileEntry(const MDOperand &MDO);
   void visitFunction(const Function &F);
   void visitBasicBlock(BasicBlock &BB);
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
@@ -1411,6 +1412,28 @@ Verifier::visitModuleFlag(const MDNode *Op,
     Assert(M.getNamedMetadata("llvm.linker.options"),
            "'Linker Options' named metadata no longer supported");
   }
+
+  if (ID->getString() == "CG Profile") {
+    for (const MDOperand &MDO : cast<MDNode>(Op->getOperand(2))->operands())
+      visitModuleFlagCGProfileEntry(MDO);
+  }
+}
+
+void Verifier::visitModuleFlagCGProfileEntry(const MDOperand &MDO) {
+  auto CheckFunction = [&](const MDOperand &FuncMDO) {
+    if (!FuncMDO)
+      return;
+    auto F = dyn_cast<ValueAsMetadata>(FuncMDO);
+    Assert(F && isa<Function>(F->getValue()), "expected a Function or null",
+           FuncMDO);
+  };
+  auto Node = dyn_cast_or_null<MDNode>(MDO);
+  Assert(Node && Node->getNumOperands() == 3, "expected a MDNode triple", MDO);
+  CheckFunction(Node->getOperand(0));
+  CheckFunction(Node->getOperand(1));
+  auto Count = dyn_cast_or_null<ConstantAsMetadata>(Node->getOperand(2));
+  Assert(Count && Count->getType()->isIntegerTy(),
+         "expected an integer constant", Node->getOperand(2));
 }
 
 /// Return true if this attribute kind only applies to functions.

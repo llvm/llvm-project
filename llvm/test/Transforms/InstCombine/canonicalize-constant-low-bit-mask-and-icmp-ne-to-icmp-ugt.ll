@@ -23,6 +23,18 @@ define i1 @p0(i8 %x) {
   ret i1 %ret
 }
 
+define i1 @pv(i8 %x, i8 %y) {
+; CHECK-LABEL: @pv(
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %tmp0, %x
+  %ret = icmp ne i8 %tmp1, %x
+  ret i1 %ret
+}
+
 ; ============================================================================ ;
 ; Vector tests
 ; ============================================================================ ;
@@ -72,6 +84,52 @@ define i1 @c0() {
   %x = call i8 @gen8()
   %tmp0 = and i8 %x, 3
   %ret = icmp ne i8 %x, %tmp0 ; swapped order
+  ret i1 %ret
+}
+
+; ============================================================================ ;
+; Commutativity tests with variable
+; ============================================================================ ;
+
+define i1 @cv0(i8 %y) {
+; CHECK-LABEL: @cv0(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %x = call i8 @gen8()
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %x, %tmp0 ; swapped order
+  %ret = icmp ne i8 %tmp1, %x
+  ret i1 %ret
+}
+
+define i1 @cv1(i8 %y) {
+; CHECK-LABEL: @cv1(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %x = call i8 @gen8()
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %tmp0, %x
+  %ret = icmp ne i8 %x, %tmp1 ; swapped order
+  ret i1 %ret
+}
+
+define i1 @cv2(i8 %y) {
+; CHECK-LABEL: @cv2(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %x = call i8 @gen8()
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %x, %tmp0 ; swapped order
+  %ret = icmp ne i8 %x, %tmp1 ; swapped order
   ret i1 %ret
 }
 

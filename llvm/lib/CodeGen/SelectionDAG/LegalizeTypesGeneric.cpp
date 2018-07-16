@@ -300,6 +300,7 @@ void DAGTypeLegalizer::ExpandRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
   Lo = DAG.getVAArg(NVT, dl, Chain, Ptr, N->getOperand(2), Align);
   Hi = DAG.getVAArg(NVT, dl, Lo.getValue(1), Ptr, N->getOperand(2), 0);
+  Chain = Hi.getValue(1);
 
   // Handle endianness of the load.
   if (TLI.hasBigEndianPartOrdering(OVT, DAG.getDataLayout()))
@@ -307,7 +308,7 @@ void DAGTypeLegalizer::ExpandRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
   // Modified the chain - switch anything that used the old chain to use
   // the new one.
-  ReplaceValueWith(SDValue(N, 1), Hi.getValue(1));
+  ReplaceValueWith(SDValue(N, 1), Chain);
 }
 
 

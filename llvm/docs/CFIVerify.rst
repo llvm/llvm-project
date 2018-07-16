@@ -86,6 +86,8 @@ Only machine code sections that are marked as executable will be subject to this
 analysis. Non-executable sections do not require analysis as any execution
 present in these sections has already violated the control flow integrity.
 
-Suitable extensions may be made at a later date to include anaylsis for indirect
+Suitable extensions may be made at a later date to include analysis for indirect
 control flow operations across DSO boundaries. Currently, these CFI features are
 only experimental with an unstable ABI, making them unsuitable for analysis.
+
+The tool currently only supports the x86, x86_64, and AArch64 architectures.

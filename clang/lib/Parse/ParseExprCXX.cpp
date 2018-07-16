@@ -808,6 +808,7 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     IdentifierInfo *Id = nullptr;
     SourceLocation EllipsisLoc;
     ExprResult Init;
+    SourceLocation LocStart = Tok.getLocation();
 
     if (Tok.is(tok::star)) {
       Loc = ConsumeToken(); 
@@ -981,8 +982,11 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
           Loc, Kind == LCK_ByRef, Id, InitKind, InitExpr);
       Init = InitExpr;
     }
+
+    SourceLocation LocEnd = PrevTokLocation;
+
     Intro.addCapture(Kind, Loc, Id, EllipsisLoc, InitKind, Init,
-                     InitCaptureType);
+                     InitCaptureType, SourceRange(LocStart, LocEnd));
   }
 
   T.consumeClose();
