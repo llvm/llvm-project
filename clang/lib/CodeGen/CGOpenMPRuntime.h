@@ -522,6 +522,8 @@ private:
     enum OMPTargetGlobalVarEntryKind : uint32_t {
       /// Mark the entry as a to declare target.
       OMPTargetGlobalVarEntryTo = 0x0,
+      /// Mark the entry as a to declare target link.
+      OMPTargetGlobalVarEntryLink = 0x1,
     };
 
     /// Device global variable entries info.

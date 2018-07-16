@@ -1314,12 +1314,9 @@ void ScopStmt::realignParams() {
 /// Add @p BSet to set @p BoundedParts if @p BSet is bounded.
 static isl::set collectBoundedParts(isl::set S) {
   isl::set BoundedParts = isl::set::empty(S.get_space());
-  S.foreach_basic_set([&BoundedParts](isl::basic_set BSet) -> isl::stat {
-    if (BSet.is_bounded()) {
+  for (isl::basic_set BSet : S.get_basic_set_list())
+    if (BSet.is_bounded())
       BoundedParts = BoundedParts.unite(isl::set(BSet));
-    }
-    return isl::stat::ok;
-  });
   return BoundedParts;
 }
 
@@ -3750,13 +3747,10 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
 static bool isAccessRangeTooComplex(isl::set AccessRange) {
   unsigned NumTotalDims = 0;
 
-  auto CountDimensions = [&NumTotalDims](isl::basic_set BSet) -> isl::stat {
+  for (isl::basic_set BSet : AccessRange.get_basic_set_list()) {
     NumTotalDims += BSet.dim(isl::dim::div);
     NumTotalDims += BSet.dim(isl::dim::set);
-    return isl::stat::ok;
-  };
-
-  AccessRange.foreach_basic_set(CountDimensions);
+  }
 
   if (NumTotalDims > MaxDimensionsInAccessRange)
     return true;
@@ -4539,7 +4533,7 @@ static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
 
   auto Result = isl::union_pw_multi_aff::empty(USet.get_space());
 
-  auto Lambda = [&Result, N](isl::set S) -> isl::stat {
+  for (isl::set S : USet.get_set_list()) {
     int Dim = S.dim(isl::dim::set);
     auto PMA = isl::pw_multi_aff::project_out_map(S.get_space(), isl::dim::set,
                                                   N, Dim - N);
@@ -4547,13 +4541,7 @@ static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
       PMA = PMA.drop_dims(isl::dim::out, 0, N - 1);
 
     Result = Result.add_pw_multi_aff(PMA);
-    return isl::stat::ok;
-  };
-
-  isl::stat Res = USet.foreach_set(Lambda);
-  (void)Res;
-
-  assert(Res == isl::stat::ok);
+  }
 
   return isl::multi_union_pw_aff(isl::union_pw_multi_aff(Result));
 }

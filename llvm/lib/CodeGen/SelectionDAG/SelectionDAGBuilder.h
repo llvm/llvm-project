@@ -712,13 +712,13 @@ public:
   void FindMergedConditions(const Value *Cond, MachineBasicBlock *TBB,
                             MachineBasicBlock *FBB, MachineBasicBlock *CurBB,
                             MachineBasicBlock *SwitchBB,
-                            Instruction::BinaryOps Opc, BranchProbability TW,
-                            BranchProbability FW, bool InvertCond);
+                            Instruction::BinaryOps Opc, BranchProbability TProb,
+                            BranchProbability FProb, bool InvertCond);
   void EmitBranchForMergedCondition(const Value *Cond, MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     MachineBasicBlock *CurBB,
                                     MachineBasicBlock *SwitchBB,
-                                    BranchProbability TW, BranchProbability FW,
+                                    BranchProbability TProb, BranchProbability FProb,
                                     bool InvertCond);
   bool ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases);
   bool isExportableFromCurrentBlock(const Value *V, const BasicBlock *FromBB);
@@ -790,11 +790,11 @@ public:
   };
 
   /// Lower \p SLI into a STATEPOINT instruction.
-  SDValue LowerAsSTATEPOINT(StatepointLoweringInfo &SLI);
+  SDValue LowerAsSTATEPOINT(StatepointLoweringInfo &SI);
 
   // This function is responsible for the whole statepoint lowering process.
   // It uniformly handles invoke and call statepoints.
-  void LowerStatepoint(ImmutableStatepoint Statepoint,
+  void LowerStatepoint(ImmutableStatepoint ISP,
                        const BasicBlock *EHPadBB = nullptr);
 
   void LowerCallSiteWithDeoptBundle(ImmutableCallSite CS, SDValue Callee,
@@ -897,7 +897,7 @@ private:
 
   void visitExtractValue(const User &I);
   void visitInsertValue(const User &I);
-  void visitLandingPad(const LandingPadInst &I);
+  void visitLandingPad(const LandingPadInst &LP);
 
   void visitGetElementPtr(const User &I);
   void visitSelect(const User &I);
@@ -942,7 +942,7 @@ private:
                        const BasicBlock *EHPadBB = nullptr);
 
   // These two are implemented in StatepointLowering.cpp
-  void visitGCRelocate(const GCRelocateInst &I);
+  void visitGCRelocate(const GCRelocateInst &Relocate);
   void visitGCResult(const GCResultInst &I);
 
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
@@ -1052,7 +1052,7 @@ struct RegsForValue {
   /// Add this value to the specified inlineasm node operand list. This adds the
   /// code marker, matching input operand index (if applicable), and includes
   /// the number of values added into it.
-  void AddInlineAsmOperands(unsigned Kind, bool HasMatching,
+  void AddInlineAsmOperands(unsigned Code, bool HasMatching,
                             unsigned MatchingIdx, const SDLoc &dl,
                             SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
 

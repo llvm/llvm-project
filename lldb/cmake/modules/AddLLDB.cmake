@@ -111,18 +111,6 @@ function(add_lldb_executable name)
             RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:liblldb>${resource_dir}
             BUILD_WITH_INSTALL_RPATH On
             INSTALL_RPATH "@loader_path/../../../${resource_dots}${_dots}/${LLDB_FRAMEWORK_INSTALL_DIR}")
-      # For things inside the framework we don't need functional install targets
-      # because CMake copies the resources and headers from the build directory.
-      # But we still need this target to exist in order to use the
-      # LLVM_DISTRIBUTION_COMPONENTS build option. We also need the
-      # install-liblldb target to depend on this tool, so that it gets put into
-      # the Resources directory before the framework is installed.
-      if(ARG_GENERATE_INSTALL)
-        add_custom_target(install-${name} DEPENDS ${name})
-        add_dependencies(install-liblldb ${name})
-        add_custom_target(install-${name}-stripped DEPENDS ${name})
-        add_dependencies(install-liblldb-stripped ${name})
-      endif()
     endif()
   endif()
 
@@ -132,10 +120,14 @@ function(add_lldb_executable name)
           INSTALL_RPATH "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
   endif()
 
-  if(ARG_GENERATE_INSTALL AND NOT (ARG_INCLUDE_IN_SUITE AND LLDB_BUILD_FRAMEWORK ))
+  if(ARG_GENERATE_INSTALL)
+    set(out_dir "bin")
+    if (LLDB_BUILD_FRAMEWORK AND ARG_INCLUDE_IN_SUITE)
+      set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR})
+    endif()
     install(TARGETS ${name}
           COMPONENT ${name}
-          RUNTIME DESTINATION bin)
+          RUNTIME DESTINATION ${out_dir})
     if (NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}

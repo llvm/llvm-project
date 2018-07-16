@@ -280,7 +280,7 @@ public:
 
   /// This is a wrapper around getRegForValue that also takes care of
   /// truncating or sign-extending the given getelementptr index value.
-  std::pair<unsigned, bool> getRegForGEPIndex(const Value *V);
+  std::pair<unsigned, bool> getRegForGEPIndex(const Value *Idx);
 
   /// We're checking to see if we can fold \p LI into \p FoldInst. Note
   /// that we could have a sequence where multiple LLVM IR instructions are
@@ -439,7 +439,7 @@ protected:
 
   /// Emit a MachineInstr with a single immediate operand, and a result
   /// register in the given register class.
-  unsigned fastEmitInst_i(unsigned MachineInstrOpcode,
+  unsigned fastEmitInst_i(unsigned MachineInstOpcode,
                           const TargetRegisterClass *RC, uint64_t Imm);
 
   /// Emit a MachineInstr for an extract_subreg from a specified index of
@@ -453,7 +453,7 @@ protected:
 
   /// Emit an unconditional branch to the given block, unless it is the
   /// immediate (fall-through) successor, and update the CFG.
-  void fastEmitBranch(MachineBasicBlock *MBB, const DebugLoc &DL);
+  void fastEmitBranch(MachineBasicBlock *MSucc, const DebugLoc &DbgLoc);
 
   /// Emit an unconditional branch to \p FalseMBB, obtains the branch weight
   /// and adds TrueMBB and FalseMBB to the successor list.
@@ -508,7 +508,7 @@ protected:
   CmpInst::Predicate optimizeCmpPredicate(const CmpInst *CI) const;
 
   bool lowerCallTo(const CallInst *CI, MCSymbol *Symbol, unsigned NumArgs);
-  bool lowerCallTo(const CallInst *CI, const char *SymbolName,
+  bool lowerCallTo(const CallInst *CI, const char *SymName,
                    unsigned NumArgs);
   bool lowerCallTo(CallLoweringInfo &CLI);
 
@@ -532,11 +532,11 @@ protected:
   bool selectGetElementPtr(const User *I);
   bool selectStackmap(const CallInst *I);
   bool selectPatchpoint(const CallInst *I);
-  bool selectCall(const User *Call);
+  bool selectCall(const User *I);
   bool selectIntrinsicCall(const IntrinsicInst *II);
   bool selectBitCast(const User *I);
   bool selectCast(const User *I, unsigned Opcode);
-  bool selectExtractValue(const User *I);
+  bool selectExtractValue(const User *U);
   bool selectInsertValue(const User *I);
   bool selectXRayCustomEvent(const CallInst *II);
   bool selectXRayTypedEvent(const CallInst *II);

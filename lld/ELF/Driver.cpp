@@ -727,6 +727,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Discard = getDiscard(Args);
+  Config->DwoDir = Args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   Config->DynamicLinker = getDynamicLinker(Args);
   Config->EhFrameHdr =
       Args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);

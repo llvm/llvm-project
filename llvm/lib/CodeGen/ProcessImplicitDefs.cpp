@@ -44,7 +44,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &au) const override;
 
-  bool runOnMachineFunction(MachineFunction &fn) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // end anonymous namespace
 

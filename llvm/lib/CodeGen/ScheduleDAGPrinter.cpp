@@ -61,7 +61,7 @@ namespace llvm {
     }
 
 
-    std::string getNodeLabel(const SUnit *Node, const ScheduleDAG *Graph);
+    std::string getNodeLabel(const SUnit *SU, const ScheduleDAG *Graph);
     static std::string getNodeAttributes(const SUnit *N,
                                          const ScheduleDAG *Graph) {
       return "shape=Mrecord";

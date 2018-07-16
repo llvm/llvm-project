@@ -307,7 +307,7 @@ public:
 
   /// splitRegister - Replace OldReg ranges with NewRegs ranges where NewRegs is
   /// live. Returns true if any changes were made.
-  bool splitRegister(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
+  bool splitRegister(unsigned OldReg, ArrayRef<unsigned> NewRegs,
                      LiveIntervals &LIS);
 
   /// rewriteLocations - Rewrite virtual register locations according to the

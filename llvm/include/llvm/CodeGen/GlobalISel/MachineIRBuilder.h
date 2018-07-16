@@ -95,7 +95,7 @@ protected:
     return MIB->getOperand(0).getReg();
   }
 
-  void validateBinaryOp(unsigned Dst, unsigned Src0, unsigned Src1);
+  void validateBinaryOp(unsigned Res, unsigned Op0, unsigned Op1);
 
 public:
   /// Some constructors for easy use.
@@ -424,7 +424,7 @@ public:
   /// \pre setBasicBlock or setMI must have been called.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildBr(MachineBasicBlock &BB);
+  MachineInstrBuilder buildBr(MachineBasicBlock &Dest);
 
   /// Build and insert G_BRCOND \p Tst, \p Dest
   ///
@@ -438,7 +438,7 @@ public:
   ///      depend on bit 0 (for now).
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildBrCond(unsigned Tst, MachineBasicBlock &BB);
+  MachineInstrBuilder buildBrCond(unsigned Tst, MachineBasicBlock &Dest);
 
   /// Build and insert G_BRINDIRECT \p Tgt
   ///
@@ -558,7 +558,7 @@ public:
   template <typename DstType> MachineInstrBuilder buildUndef(DstType &&Res) {
     return buildUndef(getDestFromArg(Res));
   }
-  MachineInstrBuilder buildUndef(unsigned Dst);
+  MachineInstrBuilder buildUndef(unsigned Res);
 
   /// Build and insert instructions to put \p Ops together at the specified p
   /// Indices to form a larger register.

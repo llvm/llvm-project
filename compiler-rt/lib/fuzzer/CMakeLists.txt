@@ -59,8 +59,8 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND COMPILER_RT_LIBCXX_PATH)
   list(APPEND LIBFUZZER_CFLAGS -nostdinc++ -D_LIBCPP_ABI_VERSION=Fuzzer)
   # Remove -stdlib= which is unused when passing -nostdinc++.
   string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-elseif(CLANG_DEFAULT_CXX_STDLIB STREQUAL "libc++" AND (TARGET cxx OR HAVE_LIBCXX))
-  set(LIBFUZZER_DEPS cxx)
+elseif(TARGET cxx-headers OR HAVE_LIBCXX)
+  set(LIBFUZZER_DEPS cxx-headers)
 endif()
 
 append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer LIBFUZZER_CFLAGS)

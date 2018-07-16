@@ -2820,7 +2820,7 @@ public:
   ///    results of this function, because simply replacing replacing TLO.Old
   ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
   ///    has multiple uses.
-  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
+  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedEltMask,
                                   APInt &KnownUndef, APInt &KnownZero,
                                   TargetLoweringOpt &TLO, unsigned Depth = 0,
                                   bool AssumeSingleUse = false) const;
@@ -2903,7 +2903,7 @@ public:
   bool isConstFalseVal(const SDNode *N) const;
 
   /// Return if \p N is a True value when extended to \p VT.
-  bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool Signed) const;
+  bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool SExt) const;
 
   /// Try to simplify a setcc built with the specified operands and cc. If it is
   /// unable to simplify it, return a null SDValue.
@@ -3624,7 +3624,7 @@ public:
   /// bounds the returned pointer is unspecified, but will be within the vector
   /// bounds.
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                  SDValue Idx) const;
+                                  SDValue Index) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

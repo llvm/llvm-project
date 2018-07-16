@@ -462,7 +462,7 @@ private:
   bool calcCompactRegion(GlobalSplitCandidate&);
   void splitAroundRegion(LiveRangeEdit&, ArrayRef<unsigned>);
   void calcGapWeights(unsigned, SmallVectorImpl<float>&);
-  unsigned canReassign(LiveInterval &VirtReg, unsigned PhysReg);
+  unsigned canReassign(LiveInterval &VirtReg, unsigned PrevReg);
   bool shouldEvict(LiveInterval &A, bool, LiveInterval &B, bool);
   bool canEvictInterference(LiveInterval&, unsigned, bool, EvictionCost&);
   bool canEvictInterferenceInRange(LiveInterval &VirtReg, unsigned PhysReg,
