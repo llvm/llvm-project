@@ -380,7 +380,7 @@ define <4 x float> @signbit_sel_v4f32_fcmp(<4 x float> %x, <4 x float> %y, <4 x 
 ;
 ; AVX512VL-LABEL: signbit_sel_v4f32_fcmp:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vcmpltps %xmm2, %xmm0, %k1
 ; AVX512VL-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
 ; AVX512VL-NEXT:    retq

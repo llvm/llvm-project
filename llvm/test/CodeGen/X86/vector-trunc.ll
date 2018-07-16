@@ -1896,25 +1896,10 @@ define <16 x i8> @trunc16i64_16i8_const() {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512F-LABEL: trunc16i64_16i8_const:
-; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: trunc16i64_16i8_const:
-; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    retq
-;
-; AVX512BW-LABEL: trunc16i64_16i8_const:
-; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512BW-NEXT:    retq
-;
-; AVX512BWVL-LABEL: trunc16i64_16i8_const:
-; AVX512BWVL:       # %bb.0: # %entry
-; AVX512BWVL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512BWVL-NEXT:    retq
+; AVX512-LABEL: trunc16i64_16i8_const:
+; AVX512:       # %bb.0: # %entry
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    retq
 
 entry:
   %0 = trunc <16 x i64> zeroinitializer to <16 x i8>
