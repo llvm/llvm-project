@@ -1379,7 +1379,7 @@ class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
   const TargetLoweringBase *getTLI() const { return TLI; }
 
 public:
-  explicit BasicTTIImpl(const TargetMachine *ST, const Function &F);
+  explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
 };
 
 } // end namespace llvm

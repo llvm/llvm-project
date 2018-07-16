@@ -58,7 +58,7 @@ private:
 public:
   void addNodeToList(MachineInstr *N);
   void removeNodeFromList(MachineInstr *N);
-  void transferNodesFromList(ilist_traits &OldList, instr_iterator First,
+  void transferNodesFromList(ilist_traits &FromList, instr_iterator First,
                              instr_iterator Last);
   void deleteNode(MachineInstr *MI);
 };

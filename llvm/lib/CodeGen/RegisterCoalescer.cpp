@@ -162,7 +162,7 @@ namespace {
     /// was successfully coalesced away. If it is not currently possible to
     /// coalesce this interval, but it may be possible if other things get
     /// coalesced, then it returns true by reference in 'Again'.
-    bool joinCopy(MachineInstr *TheCopy, bool &Again);
+    bool joinCopy(MachineInstr *CopyMI, bool &Again);
 
     /// Attempt to join these two intervals.  On failure, this
     /// returns false.  The output "SrcInt" will not have been modified, so we
@@ -2126,7 +2126,7 @@ class JoinVals {
   /// Find the ultimate value that VNI was copied from.
   std::pair<const VNInfo*,unsigned> followCopyChain(const VNInfo *VNI) const;
 
-  bool valuesIdentical(VNInfo *Val0, VNInfo *Val1, const JoinVals &Other) const;
+  bool valuesIdentical(VNInfo *Value0, VNInfo *Value1, const JoinVals &Other) const;
 
   /// Analyze ValNo in this live range, and set all fields of Vals[ValNo].
   /// Return a conflict resolution when possible, but leave the hard cases as

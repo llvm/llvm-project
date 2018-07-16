@@ -98,8 +98,8 @@ namespace {
         CreateCmpXchgInstFun CreateCmpXchg);
 
     bool expandAtomicCmpXchg(AtomicCmpXchgInst *CI);
-    bool isIdempotentRMW(AtomicRMWInst *AI);
-    bool simplifyIdempotentRMW(AtomicRMWInst *AI);
+    bool isIdempotentRMW(AtomicRMWInst *RMWI);
+    bool simplifyIdempotentRMW(AtomicRMWInst *RMWI);
 
     bool expandAtomicOpToLibcall(Instruction *I, unsigned Size, unsigned Align,
                                  Value *PointerOperand, Value *ValueOperand,

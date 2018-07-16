@@ -331,9 +331,9 @@ class DwarfDebug : public DebugHandlerBase {
 
   using InlinedVariable = DbgValueHistoryMap::InlinedVariable;
 
-  void ensureAbstractVariableIsCreated(DwarfCompileUnit &CU, InlinedVariable Var,
+  void ensureAbstractVariableIsCreated(DwarfCompileUnit &CU, InlinedVariable IV,
                                        const MDNode *Scope);
-  void ensureAbstractVariableIsCreatedIfScoped(DwarfCompileUnit &CU, InlinedVariable Var,
+  void ensureAbstractVariableIsCreatedIfScoped(DwarfCompileUnit &CU, InlinedVariable IV,
                                                const MDNode *Scope);
 
   DbgVariable *createConcreteVariable(DwarfCompileUnit &TheCU,

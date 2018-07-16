@@ -623,6 +623,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::FSUB);
   setTargetDAGCombine(ISD::FMINNUM);
   setTargetDAGCombine(ISD::FMAXNUM);
+  setTargetDAGCombine(ISD::FMA);
   setTargetDAGCombine(ISD::SMIN);
   setTargetDAGCombine(ISD::SMAX);
   setTargetDAGCombine(ISD::UMIN);
@@ -4945,6 +4946,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_fmed3:
     return DAG.getNode(AMDGPUISD::FMED3, DL, VT,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::amdgcn_fdot2:
+    return DAG.getNode(AMDGPUISD::FDOT2, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_fmul_legacy:
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT,
                        Op.getOperand(1), Op.getOperand(2));
@@ -7476,6 +7480,79 @@ SDValue SITargetLowering::performFSubCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performFMACombine(SDNode *N,
+                                            DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  SDLoc SL(N);
+
+  if (!Subtarget->hasDLInsts() || VT != MVT::f32)
+    return SDValue();
+
+  // FMA((F32)S0.x, (F32)S1. x, FMA((F32)S0.y, (F32)S1.y, (F32)z)) ->
+  //   FDOT2((V2F16)S0, (V2F16)S1, (F32)z))
+  SDValue Op1 = N->getOperand(0);
+  SDValue Op2 = N->getOperand(1);
+  SDValue FMA = N->getOperand(2);
+
+  if (FMA.getOpcode() != ISD::FMA ||
+      Op1.getOpcode() != ISD::FP_EXTEND ||
+      Op2.getOpcode() != ISD::FP_EXTEND)
+    return SDValue();
+
+  // fdot2_f32_f16 always flushes fp32 denormal operand and output to zero,
+  // regardless of the denorm mode setting. Therefore, unsafe-fp-math/fp-contract
+  // is sufficient to allow generaing fdot2.
+  const TargetOptions &Options = DAG.getTarget().Options;
+  if (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+      (N->getFlags().hasAllowContract() &&
+       FMA->getFlags().hasAllowContract())) {
+    Op1 = Op1.getOperand(0);
+    Op2 = Op2.getOperand(0);
+    if (Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+        Op2.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+
+    SDValue Vec1 = Op1.getOperand(0);
+    SDValue Idx1 = Op1.getOperand(1);
+    SDValue Vec2 = Op2.getOperand(0);
+
+    SDValue FMAOp1 = FMA.getOperand(0);
+    SDValue FMAOp2 = FMA.getOperand(1);
+    SDValue FMAAcc = FMA.getOperand(2);
+
+    if (FMAOp1.getOpcode() != ISD::FP_EXTEND ||
+        FMAOp2.getOpcode() != ISD::FP_EXTEND)
+      return SDValue();
+
+    FMAOp1 = FMAOp1.getOperand(0);
+    FMAOp2 = FMAOp2.getOperand(0);
+    if (FMAOp1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+        FMAOp2.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+
+    SDValue Vec3 = FMAOp1.getOperand(0);
+    SDValue Vec4 = FMAOp2.getOperand(0);
+    SDValue Idx2 = FMAOp1.getOperand(1);
+
+    if (Idx1 != Op2.getOperand(1) || Idx2 != FMAOp2.getOperand(1) ||
+        // Idx1 and Idx2 cannot be the same.
+        Idx1 == Idx2)
+      return SDValue();
+
+    if (Vec1 == Vec2 || Vec3 == Vec4)
+      return SDValue();
+
+    if (Vec1.getValueType() != MVT::v2f16 || Vec2.getValueType() != MVT::v2f16)
+      return SDValue();
+
+    if ((Vec1 == Vec3 && Vec2 == Vec4) ||
+        (Vec1 == Vec4 && Vec2 == Vec3))
+      return DAG.getNode(AMDGPUISD::FDOT2, SL, MVT::f32, Vec1, Vec2, FMAAcc);
+  }
+  return SDValue();
+}
+
 SDValue SITargetLowering::performSetCCCombine(SDNode *N,
                                               DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -7660,6 +7737,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
       return performMinMaxCombine(N, DCI);
     break;
   }
+  case ISD::FMA:
+    return performFMACombine(N, DCI);
   case ISD::LOAD: {
     if (SDValue Widended = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widended;

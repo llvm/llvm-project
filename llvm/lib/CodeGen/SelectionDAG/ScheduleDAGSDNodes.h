@@ -88,7 +88,7 @@ class InstrItineraryData;
     /// Clone - Creates a clone of the specified SUnit. It does not copy the
     /// predecessors / successors info nor the temporary scheduling states.
     ///
-    SUnit *Clone(SUnit *N);
+    SUnit *Clone(SUnit *Old);
 
     /// BuildSchedGraph - Build the SUnit graph from the selection dag that we
     /// are input.  This SUnit graph is similar to the SelectionDAG, but

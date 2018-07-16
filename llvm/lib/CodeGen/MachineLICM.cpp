@@ -216,7 +216,7 @@ namespace {
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
         DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
-    void HoistOutOfLoop(MachineDomTreeNode *LoopHeaderNode);
+    void HoistOutOfLoop(MachineDomTreeNode *HeaderN);
 
     void HoistRegion(MachineDomTreeNode *N, bool IsHeader);
 

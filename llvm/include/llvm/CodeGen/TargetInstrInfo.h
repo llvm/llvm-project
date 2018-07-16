@@ -81,7 +81,7 @@ public:
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
-  const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF) const;
 
@@ -909,7 +909,7 @@ public:
   /// The new instruction is inserted before MI, and the client is responsible
   /// for removing the old instruction.
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
-                                  int FrameIndex,
+                                  int FI,
                                   LiveIntervals *LIS = nullptr) const;
 
   /// Same as the previous version except it allows folding of any load and
@@ -967,7 +967,7 @@ public:
       MachineInstr &Root, MachineCombinerPattern Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
+      DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
 
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.

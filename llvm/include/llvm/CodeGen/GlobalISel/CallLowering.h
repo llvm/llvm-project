@@ -123,7 +123,7 @@ protected:
   }
 
   template <typename FuncInfoTy>
-  void setArgFlags(ArgInfo &Arg, unsigned OpNum, const DataLayout &DL,
+  void setArgFlags(ArgInfo &Arg, unsigned OpIdx, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
 
   /// Invoke Handler::assignArg on each of the given \p Args and then use
@@ -131,7 +131,7 @@ protected:
   ///
   /// \return True if everything has succeeded, false otherwise.
   bool handleAssignments(MachineIRBuilder &MIRBuilder, ArrayRef<ArgInfo> Args,
-                         ValueHandler &Callback) const;
+                         ValueHandler &Handler) const;
 
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
