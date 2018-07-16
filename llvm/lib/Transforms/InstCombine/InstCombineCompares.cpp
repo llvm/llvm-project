@@ -3154,8 +3154,8 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   if (NoOp0WrapProblem && ICmpInst::isSigned(Pred)) {
     Value *X;
     if (match(BO0, m_Neg(m_Value(X))))
-      if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1))
-        if (!RHSC->isMinValue(/*isSigned=*/true))
+      if (Constant *RHSC = dyn_cast<Constant>(Op1))
+        if (RHSC->isNotMinSignedValue())
           return new ICmpInst(I.getSwappedPredicate(), X,
                               ConstantExpr::getNeg(RHSC));
   }

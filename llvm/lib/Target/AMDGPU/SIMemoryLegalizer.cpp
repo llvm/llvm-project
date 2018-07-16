@@ -737,7 +737,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
       // The L1 cache keeps all memory operations in order for
-      // wavesfronts in the same work-group.
+      // wavefronts in the same work-group.
       break;
     default:
       llvm_unreachable("Unsupported synchronization scope");

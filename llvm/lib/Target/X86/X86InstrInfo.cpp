@@ -6311,6 +6311,29 @@ static const uint16_t ReplaceableCustomAVX2Instrs[][3] = {
   { X86::VBLENDPSYrri,       X86::VBLENDPDYrri,       X86::VPBLENDDYrri },
 };
 
+// Special table for changing EVEX logic instructions to VEX.
+// TODO: Should we run EVEX->VEX earlier?
+static const uint16_t ReplaceableCustomAVX512LogicInstrs[][4] = {
+  // Two integer columns for 64-bit and 32-bit elements.
+  //PackedSingle     PackedDouble     PackedInt           PackedInt
+  { X86::VANDNPSrm,  X86::VANDNPDrm,  X86::VPANDNQZ128rm, X86::VPANDNDZ128rm },
+  { X86::VANDNPSrr,  X86::VANDNPDrr,  X86::VPANDNQZ128rr, X86::VPANDNDZ128rr },
+  { X86::VANDPSrm,   X86::VANDPDrm,   X86::VPANDQZ128rm,  X86::VPANDDZ128rm  },
+  { X86::VANDPSrr,   X86::VANDPDrr,   X86::VPANDQZ128rr,  X86::VPANDDZ128rr  },
+  { X86::VORPSrm,    X86::VORPDrm,    X86::VPORQZ128rm,   X86::VPORDZ128rm   },
+  { X86::VORPSrr,    X86::VORPDrr,    X86::VPORQZ128rr,   X86::VPORDZ128rr   },
+  { X86::VXORPSrm,   X86::VXORPDrm,   X86::VPXORQZ128rm,  X86::VPXORDZ128rm  },
+  { X86::VXORPSrr,   X86::VXORPDrr,   X86::VPXORQZ128rr,  X86::VPXORDZ128rr  },
+  { X86::VANDNPSYrm, X86::VANDNPDYrm, X86::VPANDNQZ256rm, X86::VPANDNDZ256rm },
+  { X86::VANDNPSYrr, X86::VANDNPDYrr, X86::VPANDNQZ256rr, X86::VPANDNDZ256rr },
+  { X86::VANDPSYrm,  X86::VANDPDYrm,  X86::VPANDQZ256rm,  X86::VPANDDZ256rm  },
+  { X86::VANDPSYrr,  X86::VANDPDYrr,  X86::VPANDQZ256rr,  X86::VPANDDZ256rr  },
+  { X86::VORPSYrm,   X86::VORPDYrm,   X86::VPORQZ256rm,   X86::VPORDZ256rm   },
+  { X86::VORPSYrr,   X86::VORPDYrr,   X86::VPORQZ256rr,   X86::VPORDZ256rr   },
+  { X86::VXORPSYrm,  X86::VXORPDYrm,  X86::VPXORQZ256rm,  X86::VPXORDZ256rm  },
+  { X86::VXORPSYrr,  X86::VXORPDYrr,  X86::VPXORQZ256rr,  X86::VPXORDZ256rr  },
+};
+
 // FIXME: Some shuffle and unpack instructions have equivalents in different
 // domains, but they require a bit more work than just switching opcodes.
 
@@ -6410,6 +6433,38 @@ uint16_t X86InstrInfo::getExecutionDomainCustom(const MachineInstr &MI) const {
   case X86::VPBLENDWYrmi:
   case X86::VPBLENDWYrri:
     return GetBlendDomains(8, false);
+  case X86::VPANDDZ128rr:  case X86::VPANDDZ128rm:
+  case X86::VPANDDZ256rr:  case X86::VPANDDZ256rm:
+  case X86::VPANDQZ128rr:  case X86::VPANDQZ128rm:
+  case X86::VPANDQZ256rr:  case X86::VPANDQZ256rm:
+  case X86::VPANDNDZ128rr: case X86::VPANDNDZ128rm:
+  case X86::VPANDNDZ256rr: case X86::VPANDNDZ256rm:
+  case X86::VPANDNQZ128rr: case X86::VPANDNQZ128rm:
+  case X86::VPANDNQZ256rr: case X86::VPANDNQZ256rm:
+  case X86::VPORDZ128rr:   case X86::VPORDZ128rm:
+  case X86::VPORDZ256rr:   case X86::VPORDZ256rm:
+  case X86::VPORQZ128rr:   case X86::VPORQZ128rm:
+  case X86::VPORQZ256rr:   case X86::VPORQZ256rm:
+  case X86::VPXORDZ128rr:  case X86::VPXORDZ128rm:
+  case X86::VPXORDZ256rr:  case X86::VPXORDZ256rm:
+  case X86::VPXORQZ128rr:  case X86::VPXORQZ128rm:
+  case X86::VPXORQZ256rr:  case X86::VPXORQZ256rm:
+    // If we don't have DQI see if we can still switch from an EVEX integer
+    // instruction to a VEX floating point instruction.
+    if (Subtarget.hasDQI())
+      return 0;
+
+    if (RI.getEncodingValue(MI.getOperand(0).getReg()) >= 16)
+      return 0;
+    if (RI.getEncodingValue(MI.getOperand(1).getReg()) >= 16)
+      return 0;
+    // Register forms will have 3 operands. Memory form will have more.
+    if (NumOperands == 3 &&
+        RI.getEncodingValue(MI.getOperand(2).getReg()) >= 16)
+      return 0;
+
+    // All domains are valid.
+    return 0xe;
   }
   return 0;
 }
@@ -6486,6 +6541,36 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
   case X86::VPBLENDWYrmi:
   case X86::VPBLENDWYrri:
     return SetBlendDomain(16, true);
+  case X86::VPANDDZ128rr:  case X86::VPANDDZ128rm:
+  case X86::VPANDDZ256rr:  case X86::VPANDDZ256rm:
+  case X86::VPANDQZ128rr:  case X86::VPANDQZ128rm:
+  case X86::VPANDQZ256rr:  case X86::VPANDQZ256rm:
+  case X86::VPANDNDZ128rr: case X86::VPANDNDZ128rm:
+  case X86::VPANDNDZ256rr: case X86::VPANDNDZ256rm:
+  case X86::VPANDNQZ128rr: case X86::VPANDNQZ128rm:
+  case X86::VPANDNQZ256rr: case X86::VPANDNQZ256rm:
+  case X86::VPORDZ128rr:   case X86::VPORDZ128rm:
+  case X86::VPORDZ256rr:   case X86::VPORDZ256rm:
+  case X86::VPORQZ128rr:   case X86::VPORQZ128rm:
+  case X86::VPORQZ256rr:   case X86::VPORQZ256rm:
+  case X86::VPXORDZ128rr:  case X86::VPXORDZ128rm:
+  case X86::VPXORDZ256rr:  case X86::VPXORDZ256rm:
+  case X86::VPXORQZ128rr:  case X86::VPXORQZ128rm:
+  case X86::VPXORQZ256rr:  case X86::VPXORQZ256rm: {
+    // Without DQI, convert EVEX instructions to VEX instructions.
+    if (Subtarget.hasDQI())
+      return false;
+
+    const uint16_t *table = lookupAVX512(MI.getOpcode(), dom,
+                                         ReplaceableCustomAVX512LogicInstrs);
+    assert(table && "Instruction not found in table?");
+    // Don't change integer Q instructions to D instructions and
+    // use D intructions if we started with a PS instruction.
+    if (Domain == 3 && (dom == 1 || table[3] == MI.getOpcode()))
+      Domain = 4;
+    MI.setDesc(get(table[Domain - 1]));
+    return true;
+  }
   }
   return false;
 }

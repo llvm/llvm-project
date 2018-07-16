@@ -519,6 +519,19 @@ public:
     return false;
   }
 
+  /// Should we tranform the IR-optimal check for whether given truncation
+  /// down into KeptBits would be truncating or not:
+  ///   (add %x, (1 << (KeptBits-1))) srccond (1 << KeptBits)
+  /// Into it's more traditional form:
+  ///   ((%x << C) a>> C) dstcond %x
+  /// Return true if we should transform.
+  /// Return false if there is no preference.
+  virtual bool shouldTransformSignedTruncationCheck(EVT XVT,
+                                                    unsigned KeptBits) const {
+    // By default, let's assume that no one prefers shifts.
+    return false;
+  }
+
   /// Return true if the target wants to use the optimization that
   /// turns ext(promotableInst1(...(promotableInstN(load)))) into
   /// promotedInst1(...(promotedInstN(ext(load)))).
@@ -3667,6 +3680,11 @@ private:
   SDValue simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
                                ISD::CondCode Cond, DAGCombinerInfo &DCI,
                                const SDLoc &DL) const;
+
+  SDValue optimizeSetCCOfSignedTruncationCheck(EVT SCCVT, SDValue N0,
+                                               SDValue N1, ISD::CondCode Cond,
+                                               DAGCombinerInfo &DCI,
+                                               const SDLoc &DL) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

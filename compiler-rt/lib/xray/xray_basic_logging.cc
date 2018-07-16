@@ -271,7 +271,7 @@ void InMemoryRawLogWithArg(int32_t FuncId, XRayEntryType Type, uint64_t Arg1,
   if (!G)
     return;
 
-  // And from here on write the arg payload.
+  // And, from here on write the arg payload.
   XRayArgPayload R;
   R.RecordType = RecordTypes::ARG_PAYLOAD;
   R.FuncId = FuncId;

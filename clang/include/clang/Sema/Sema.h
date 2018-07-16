@@ -5602,8 +5602,10 @@ public:
   /// Does copying/destroying the captured variable have side effects?
   bool CaptureHasSideEffects(const sema::Capture &From);
 
-  /// Diagnose if an explicit lambda capture is unused.
-  void DiagnoseUnusedLambdaCapture(const sema::Capture &From);
+  /// Diagnose if an explicit lambda capture is unused. Returns true if a
+  /// diagnostic is emitted.
+  bool DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                   const sema::Capture &From);
 
   /// Complete a lambda-expression having processed and attached the
   /// lambda body.

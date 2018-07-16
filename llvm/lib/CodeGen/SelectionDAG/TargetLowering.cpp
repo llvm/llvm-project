@@ -1850,6 +1850,80 @@ SDValue TargetLowering::simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+/// There are multiple IR patterns that could be checking whether certain
+/// truncation of a signed number would be lossy or not. The pattern which is
+/// best at IR level, may not lower optimally. Thus, we want to unfold it.
+/// We are looking for the following pattern: (KeptBits is a constant)
+///   (add %x, (1 << (KeptBits-1))) srccond (1 << KeptBits)
+/// KeptBits won't be bitwidth(x), that will be constant-folded to true/false.
+/// KeptBits also can't be 1, that would have been folded to  %x dstcond 0
+/// We will unfold it into the natural trunc+sext pattern:
+///   ((%x << C) a>> C) dstcond %x
+/// Where  C = bitwidth(x) - KeptBits  and  C u< bitwidth(x)
+SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
+    EVT SCCVT, SDValue N0, SDValue N1, ISD::CondCode Cond, DAGCombinerInfo &DCI,
+    const SDLoc &DL) const {
+  ISD::CondCode NewCond;
+  if (Cond == ISD::CondCode::SETULT)
+    NewCond = ISD::CondCode::SETEQ;
+  else if (Cond == ISD::CondCode::SETUGE)
+    NewCond = ISD::CondCode::SETNE;
+  else
+    return SDValue();
+
+  // We must be comparing with a constant.
+  ConstantSDNode *C1;
+  if (!(C1 = dyn_cast<ConstantSDNode>(N1)))
+    return SDValue();
+
+  // N0 should be:  add %x, (1 << (KeptBits-1))
+  if (N0->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  // And we must be 'add'ing a constant.
+  ConstantSDNode *C01;
+  if (!(C01 = dyn_cast<ConstantSDNode>(N0->getOperand(1))))
+    return SDValue();
+
+  SDValue X = N0->getOperand(0);
+  EVT XVT = X.getValueType();
+
+  // Validate constants ...
+
+  const APInt &I1 = C1->getAPIntValue();
+  const APInt &I01 = C01->getAPIntValue();
+  // Both of them must be power-of-two, and the constant from setcc is bigger.
+  if (!(I1.ugt(I01) && I1.isPowerOf2() && I01.isPowerOf2()))
+    return SDValue();
+
+  // They are power-of-two, so which bit is set?
+  const unsigned KeptBits = I1.logBase2();
+  const unsigned KeptBitsMinusOne = I01.logBase2();
+
+  // Magic!
+  if (KeptBits != (KeptBitsMinusOne + 1))
+    return SDValue();
+  assert(KeptBits > 0 && KeptBits < XVT.getSizeInBits() && "unreachable");
+
+  // We don't want to do this in every single case.
+  SelectionDAG &DAG = DCI.DAG;
+  if (!DAG.getTargetLoweringInfo().shouldTransformSignedTruncationCheck(
+          XVT, KeptBits))
+    return SDValue();
+
+  const unsigned MaskedBits = XVT.getSizeInBits() - KeptBits;
+  assert(MaskedBits > 0 && MaskedBits < XVT.getSizeInBits() && "unreachable");
+
+  // Unfold into:  ((%x << C) a>> C) cond %x
+  // Where 'cond' will be either 'eq' or 'ne'.
+  SDValue ShiftAmt = DAG.getConstant(MaskedBits, DL, XVT);
+  SDValue T0 = DAG.getNode(ISD::SHL, DL, XVT, X, ShiftAmt);
+  SDValue T1 = DAG.getNode(ISD::SRA, DL, XVT, T0, ShiftAmt);
+  SDValue T2 = DAG.getSetCC(DL, SCCVT, T1, X, NewCond);
+
+  return T2;
+}
+
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
 SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
@@ -2246,6 +2320,10 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               Cond == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ);
       }
     }
+
+    if (SDValue V =
+            optimizeSetCCOfSignedTruncationCheck(VT, N0, N1, Cond, DCI, dl))
+      return V;
   }
 
   // These simplifications apply to splat vectors as well.

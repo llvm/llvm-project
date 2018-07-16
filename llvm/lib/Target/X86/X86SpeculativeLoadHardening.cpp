@@ -172,7 +172,8 @@ private:
                  SmallDenseMap<unsigned, unsigned, 32> &AddrRegToHardenedReg);
   MachineInstr *
   sinkPostLoadHardenedInst(MachineInstr &MI,
-                           SmallPtrSetImpl<MachineInstr *> &HardenedLoads);
+                           SmallPtrSetImpl<MachineInstr *> &HardenedInstrs);
+  bool canHardenRegister(unsigned Reg);
   void hardenPostLoad(MachineInstr &MI, MachineSSAUpdater &PredStateSSA);
   void checkReturnInstr(MachineInstr &MI, MachineSSAUpdater &PredStateSSA);
   void checkCallInstr(MachineInstr &MI, MachineSSAUpdater &PredStateSSA);
@@ -283,6 +284,84 @@ static MachineBasicBlock &splitEdge(MachineBasicBlock &MBB,
   return NewMBB;
 }
 
+/// Removing duplicate PHI operands to leave the PHI in a canonical and
+/// predictable form.
+///
+/// FIXME: It's really frustrating that we have to do this, but SSA-form in MIR
+/// isn't what you might expect. We may have multiple entries in PHI nodes for
+/// a single predecessor. This makes CFG-updating extremely complex, so here we
+/// simplify all PHI nodes to a model even simpler than the IR's model: exactly
+/// one entry per predecessor, regardless of how many edges there are.
+static void canonicalizePHIOperands(MachineFunction &MF) {
+  SmallPtrSet<MachineBasicBlock *, 4> Preds;
+  SmallVector<int, 4> DupIndices;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB) {
+      if (!MI.isPHI())
+        break;
+
+      // First we scan the operands of the PHI looking for duplicate entries
+      // a particular predecessor. We retain the operand index of each duplicate
+      // entry found.
+      for (int OpIdx = 1, NumOps = MI.getNumOperands(); OpIdx < NumOps;
+           OpIdx += 2)
+        if (!Preds.insert(MI.getOperand(OpIdx + 1).getMBB()).second)
+          DupIndices.push_back(OpIdx);
+
+      // Now walk the duplicate indices, removing both the block and value. Note
+      // that these are stored as a vector making this element-wise removal
+      // :w
+      // potentially quadratic.
+      //
+      // FIXME: It is really frustrating that we have to use a quadratic
+      // removal algorithm here. There should be a better way, but the use-def
+      // updates required make that impossible using the public API.
+      //
+      // Note that we have to process these backwards so that we don't
+      // invalidate other indices with each removal.
+      while (!DupIndices.empty()) {
+        int OpIdx = DupIndices.pop_back_val();
+        // Remove both the block and value operand, again in reverse order to
+        // preserve indices.
+        MI.RemoveOperand(OpIdx + 1);
+        MI.RemoveOperand(OpIdx);
+      }
+
+      Preds.clear();
+    }
+}
+
+/// Helper to scan a function for loads vulnerable to misspeculation that we
+/// want to harden.
+///
+/// We use this to avoid making changes to functions where there is nothing we
+/// need to do to harden against misspeculation.
+static bool hasVulnerableLoad(MachineFunction &MF) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      // Loads within this basic block after an LFENCE are not at risk of
+      // speculatively executing with invalid predicates from prior control
+      // flow. So break out of this block but continue scanning the function.
+      if (MI.getOpcode() == X86::LFENCE)
+        break;
+
+      // Looking for loads only.
+      if (!MI.mayLoad())
+        continue;
+
+      // An MFENCE is modeled as a load but isn't vulnerable to misspeculation.
+      if (MI.getOpcode() == X86::MFENCE)
+        continue;
+
+      // We found a load.
+      return true;
+    }
+  }
+
+  // No loads found.
+  return false;
+}
+
 bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
@@ -312,34 +391,14 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
   auto EntryInsertPt = Entry.SkipPHIsLabelsAndDebug(Entry.begin());
 
   // Do a quick scan to see if we have any checkable loads.
-  bool HasCheckableLoad = false;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      // Stop searching blocks at an LFENCE.
-      if (MI.getOpcode() == X86::LFENCE)
-        break;
-
-      // Looking for loads only.
-      if (!MI.mayLoad())
-        continue;
-
-      // An MFENCE is modeled as a load but doesn't require hardening.
-      if (MI.getOpcode() == X86::MFENCE)
-        continue;
-
-      HasCheckableLoad = true;
-      break;
-    }
-    if (HasCheckableLoad)
-      break;
-  }
+  bool HasVulnerableLoad = hasVulnerableLoad(MF);
 
   // See if we have any conditional branching blocks that we will need to trace
   // predicate state through.
   SmallVector<BlockCondInfo, 16> Infos = collectBlockCondInfo(MF);
 
   // If we have no interesting conditions or loads, nothing to do here.
-  if (!HasCheckableLoad && Infos.empty())
+  if (!HasVulnerableLoad && Infos.empty())
     return true;
 
   unsigned PredStateReg;
@@ -355,7 +414,7 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
 
   // If we have loads being hardened and we've asked for call and ret edges to
   // get a full fence-based mitigation, inject that fence.
-  if (HasCheckableLoad && FenceCallAndRet) {
+  if (HasVulnerableLoad && FenceCallAndRet) {
     // We need to insert an LFENCE at the start of the function to suspend any
     // incoming misspeculation from the caller. This helps two-fold: the caller
     // may not have been protected as this code has been, and this code gets to
@@ -401,49 +460,7 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
   // We're going to need to trace predicate state throughout the function's
   // CFG. Prepare for this by setting up our initial state of PHIs with unique
   // predecessor entries and all the initial predicate state.
-
-  // FIXME: It's really frustrating that we have to do this, but SSA-form in
-  // MIR isn't what you might expect. We may have multiple entries in PHI nodes
-  // for a single predecessor. This makes CFG-updating extremely complex, so
-  // here we simplify all PHI nodes to a model even simpler than the IR's
-  // model: exactly one entry per predecessor, regardless of how many edges
-  // there are.
-  SmallPtrSet<MachineBasicBlock *, 4> Preds;
-  SmallVector<int, 4> DupIndices;
-  for (auto &MBB : MF)
-    for (auto &MI : MBB) {
-      if (!MI.isPHI())
-        break;
-
-      // First we scan the operands of the PHI looking for duplicate entries
-      // a particular predecessor. We retain the operand index of each duplicate
-      // entry found.
-      for (int OpIdx = 1, NumOps = MI.getNumOperands(); OpIdx < NumOps;
-           OpIdx += 2)
-        if (!Preds.insert(MI.getOperand(OpIdx + 1).getMBB()).second)
-          DupIndices.push_back(OpIdx);
-
-      // Now walk the duplicate indices, removing both the block and value. Note
-      // that these are stored as a vector making this element-wise removal
-      // :w
-      // potentially quadratic.
-      //
-      // FIXME: It is really frustrating that we have to use a quadratic
-      // removal algorithm here. There should be a better way, but the use-def
-      // updates required make that impossible using the public API.
-      //
-      // Note that we have to process these backwards so that we don't
-      // invalidate other indices with each removal.
-      while (!DupIndices.empty()) {
-        int OpIdx = DupIndices.pop_back_val();
-        // Remove both the block and value operand, again in reverse order to
-        // preserve indices.
-        MI.RemoveOperand(OpIdx + 1);
-        MI.RemoveOperand(OpIdx);
-      }
-
-      Preds.clear();
-    }
+  canonicalizePHIOperands(MF);
 
   // Track the updated values in an SSA updater to rewrite into SSA form at the
   // end.
@@ -773,10 +790,152 @@ static bool isDataInvariant(MachineInstr &MI) {
     // By default, assume that the instruction is not data invariant.
     return false;
 
-    // FIXME: For now, we just use a very boring, conservative set of unary
-    // instructions because we're mostly interested in handling simple
-    // transformations.
+    // Some target-independent operations that trivially lower to data-invariant
+    // instructions.
   case TargetOpcode::COPY:
+  case TargetOpcode::INSERT_SUBREG:
+  case TargetOpcode::SUBREG_TO_REG:
+    return true;
+
+  // On x86 it is believed that imul is constant time w.r.t. the loaded data.
+  // However, they set flags and are perhaps the most surprisingly constant
+  // time operations so we call them out here separately.
+  case X86::IMUL16rr:
+  case X86::IMUL16rri8:
+  case X86::IMUL16rri:
+  case X86::IMUL32rr:
+  case X86::IMUL32rri8:
+  case X86::IMUL32rri:
+  case X86::IMUL64rr:
+  case X86::IMUL64rri32:
+  case X86::IMUL64rri8:
+
+  // Bit scanning and counting instructions that are somewhat surprisingly
+  // constant time as they scan across bits and do other fairly complex
+  // operations like popcnt, but are believed to be constant time on x86.
+  // However, these set flags.
+  case X86::BSF16rr:
+  case X86::BSF32rr:
+  case X86::BSF64rr:
+  case X86::BSR16rr:
+  case X86::BSR32rr:
+  case X86::BSR64rr:
+  case X86::LZCNT16rr:
+  case X86::LZCNT32rr:
+  case X86::LZCNT64rr:
+  case X86::POPCNT16rr:
+  case X86::POPCNT32rr:
+  case X86::POPCNT64rr:
+  case X86::TZCNT16rr:
+  case X86::TZCNT32rr:
+  case X86::TZCNT64rr:
+
+  // Bit manipulation instructions are effectively combinations of basic
+  // arithmetic ops, and should still execute in constant time. These also
+  // set flags.
+  case X86::BLCFILL32rr:
+  case X86::BLCFILL64rr:
+  case X86::BLCI32rr:
+  case X86::BLCI64rr:
+  case X86::BLCIC32rr:
+  case X86::BLCIC64rr:
+  case X86::BLCMSK32rr:
+  case X86::BLCMSK64rr:
+  case X86::BLCS32rr:
+  case X86::BLCS64rr:
+  case X86::BLSFILL32rr:
+  case X86::BLSFILL64rr:
+  case X86::BLSI32rr:
+  case X86::BLSI64rr:
+  case X86::BLSIC32rr:
+  case X86::BLSIC64rr:
+  case X86::BLSMSK32rr:
+  case X86::BLSMSK64rr:
+  case X86::BLSR32rr:
+  case X86::BLSR64rr:
+  case X86::TZMSK32rr:
+  case X86::TZMSK64rr:
+
+  // Bit extracting and clearing instructions should execute in constant time,
+  // and set flags.
+  case X86::BEXTR32rr:
+  case X86::BEXTR64rr:
+  case X86::BEXTRI32ri:
+  case X86::BEXTRI64ri:
+  case X86::BZHI32rr:
+  case X86::BZHI64rr:
+
+  // Basic arithmetic is constant time on the input but does set flags.
+  case X86::ADC8rr:   case X86::ADC8ri:
+  case X86::ADC16rr:  case X86::ADC16ri:   case X86::ADC16ri8:
+  case X86::ADC32rr:  case X86::ADC32ri:   case X86::ADC32ri8:
+  case X86::ADC64rr:  case X86::ADC64ri8:  case X86::ADC64ri32:
+  case X86::ADD8rr:   case X86::ADD8ri:
+  case X86::ADD16rr:  case X86::ADD16ri:   case X86::ADD16ri8:
+  case X86::ADD32rr:  case X86::ADD32ri:   case X86::ADD32ri8:
+  case X86::ADD64rr:  case X86::ADD64ri8:  case X86::ADD64ri32:
+  case X86::AND8rr:   case X86::AND8ri:
+  case X86::AND16rr:  case X86::AND16ri:   case X86::AND16ri8:
+  case X86::AND32rr:  case X86::AND32ri:   case X86::AND32ri8:
+  case X86::AND64rr:  case X86::AND64ri8:  case X86::AND64ri32:
+  case X86::OR8rr:    case X86::OR8ri:
+  case X86::OR16rr:   case X86::OR16ri:    case X86::OR16ri8:
+  case X86::OR32rr:   case X86::OR32ri:    case X86::OR32ri8:
+  case X86::OR64rr:   case X86::OR64ri8:   case X86::OR64ri32:
+  case X86::SBB8rr:   case X86::SBB8ri:
+  case X86::SBB16rr:  case X86::SBB16ri:   case X86::SBB16ri8:
+  case X86::SBB32rr:  case X86::SBB32ri:   case X86::SBB32ri8:
+  case X86::SBB64rr:  case X86::SBB64ri8:  case X86::SBB64ri32:
+  case X86::SUB8rr:   case X86::SUB8ri:
+  case X86::SUB16rr:  case X86::SUB16ri:   case X86::SUB16ri8:
+  case X86::SUB32rr:  case X86::SUB32ri:   case X86::SUB32ri8:
+  case X86::SUB64rr:  case X86::SUB64ri8:  case X86::SUB64ri32:
+  case X86::XOR8rr:   case X86::XOR8ri:
+  case X86::XOR16rr:  case X86::XOR16ri:   case X86::XOR16ri8:
+  case X86::XOR32rr:  case X86::XOR32ri:   case X86::XOR32ri8:
+  case X86::XOR64rr:  case X86::XOR64ri8:  case X86::XOR64ri32:
+  // Arithmetic with just 32-bit and 64-bit variants and no immediates.
+  case X86::ADCX32rr: case X86::ADCX64rr:
+  case X86::ADOX32rr: case X86::ADOX64rr:
+  case X86::ANDN32rr: case X86::ANDN64rr:
+  // Just one operand for inc and dec.
+  case X86::INC8r: case X86::INC16r: case X86::INC32r: case X86::INC64r:
+  case X86::DEC8r: case X86::DEC16r: case X86::DEC32r: case X86::DEC64r:
+    // Check whether the EFLAGS implicit-def is dead. We assume that this will
+    // always find the implicit-def because this code should only be reached
+    // for instructions that do in fact implicitly def this.
+    if (!MI.findRegisterDefOperand(X86::EFLAGS)->isDead()) {
+      // If we would clobber EFLAGS that are used, just bail for now.
+      LLVM_DEBUG(dbgs() << "    Unable to harden post-load due to EFLAGS: ";
+                 MI.dump(); dbgs() << "\n");
+      return false;
+    }
+
+    // Otherwise, fallthrough to handle these the same as instructions that
+    // don't set EFLAGS.
+    LLVM_FALLTHROUGH;
+
+  // Integer multiply w/o affecting flags is still believed to be constant
+  // time on x86. Called out separately as this is among the most surprising
+  // instructions to exhibit that behavior.
+  case X86::MULX32rr:
+  case X86::MULX64rr:
+
+  // Arithmetic instructions that are both constant time and don't set flags.
+  case X86::RORX32ri:
+  case X86::RORX64ri:
+  case X86::SARX32rr:
+  case X86::SARX64rr:
+  case X86::SHLX32rr:
+  case X86::SHLX64rr:
+  case X86::SHRX32rr:
+  case X86::SHRX64rr:
+
+  // LEA doesn't actually access memory, and its arithmetic is constant time.
+  case X86::LEA16r:
+  case X86::LEA32r:
+  case X86::LEA64_32r:
+  case X86::LEA64r:
     return true;
   }
 }
@@ -1099,12 +1258,14 @@ void X86SpeculativeLoadHardeningPass::checkAllLoads(
           (IndexReg && LoadDepRegs.test(IndexReg)))
         continue;
 
-      // If post-load hardening is enabled, this load is known to be
-      // data-invariant, and we aren't already going to harden one of the
+      // If post-load hardening is enabled, this load is compatible with
+      // post-load hardening, and we aren't already going to harden one of the
       // address registers, queue it up to be hardened post-load. Notably, even
       // once hardened this won't introduce a useful dependency that could prune
       // out subsequent loads.
       if (EnablePostLoadHardening && isDataInvariantLoad(MI) &&
+          MI.getDesc().getNumDefs() == 1 && MI.getOperand(0).isReg() &&
+          canHardenRegister(MI.getOperand(0).getReg()) &&
           !HardenedAddrRegs.count(BaseReg) &&
           !HardenedAddrRegs.count(IndexReg)) {
         HardenPostLoad.insert(&MI);
@@ -1393,29 +1554,105 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
   }
 
   for (MachineOperand *Op : HardenOpRegs) {
-    auto *OpRC = MRI->getRegClass(Op->getReg());
-
     unsigned OpReg = Op->getReg();
+    auto *OpRC = MRI->getRegClass(OpReg);
     unsigned TmpReg = MRI->createVirtualRegister(OpRC);
 
-    if (!EFLAGSLive) {
-      // Merge our potential poison state into the value with an or.
-      auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::OR64rr), TmpReg)
-                     .addReg(StateReg)
+    // If this is a vector register, we'll need somewhat custom logic to handle
+    // hardening it.
+    if (!Subtarget->hasVLX() && (OpRC->hasSuperClassEq(&X86::VR128RegClass) ||
+                                 OpRC->hasSuperClassEq(&X86::VR256RegClass))) {
+      assert(Subtarget->hasAVX2() && "AVX2-specific register classes!");
+      bool Is128Bit = OpRC->hasSuperClassEq(&X86::VR128RegClass);
+
+      // Move our state into a vector register.
+      // FIXME: We could skip this at the cost of longer encodings with AVX-512
+      // but that doesn't seem likely worth it.
+      unsigned VStateReg = MRI->createVirtualRegister(&X86::VR128RegClass);
+      auto MovI =
+          BuildMI(MBB, InsertPt, Loc, TII->get(X86::VMOV64toPQIrr), VStateReg)
+              .addReg(StateReg);
+      (void)MovI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting mov: "; MovI->dump(); dbgs() << "\n");
+
+      // Broadcast it across the vector register.
+      unsigned VBStateReg = MRI->createVirtualRegister(OpRC);
+      auto BroadcastI = BuildMI(MBB, InsertPt, Loc,
+                                TII->get(Is128Bit ? X86::VPBROADCASTQrr
+                                                  : X86::VPBROADCASTQYrr),
+                                VBStateReg)
+                            .addReg(VStateReg);
+      (void)BroadcastI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting broadcast: "; BroadcastI->dump();
+                 dbgs() << "\n");
+
+      // Merge our potential poison state into the value with a vector or.
+      auto OrI =
+          BuildMI(MBB, InsertPt, Loc,
+                  TII->get(Is128Bit ? X86::VPORrr : X86::VPORYrr), TmpReg)
+              .addReg(VBStateReg)
+              .addReg(OpReg);
+      (void)OrI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
+    } else if (OpRC->hasSuperClassEq(&X86::VR128XRegClass) ||
+               OpRC->hasSuperClassEq(&X86::VR256XRegClass) ||
+               OpRC->hasSuperClassEq(&X86::VR512RegClass)) {
+      assert(Subtarget->hasAVX512() && "AVX512-specific register classes!");
+      bool Is128Bit = OpRC->hasSuperClassEq(&X86::VR128XRegClass);
+      bool Is256Bit = OpRC->hasSuperClassEq(&X86::VR256XRegClass);
+      if (Is128Bit || Is256Bit)
+        assert(Subtarget->hasVLX() && "AVX512VL-specific register classes!");
+
+      // Broadcast our state into a vector register.
+      unsigned VStateReg = MRI->createVirtualRegister(OpRC);
+      unsigned BroadcastOp =
+          Is128Bit ? X86::VPBROADCASTQrZ128r
+                   : Is256Bit ? X86::VPBROADCASTQrZ256r : X86::VPBROADCASTQrZr;
+      auto BroadcastI =
+          BuildMI(MBB, InsertPt, Loc, TII->get(BroadcastOp), VStateReg)
+              .addReg(StateReg);
+      (void)BroadcastI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting broadcast: "; BroadcastI->dump();
+                 dbgs() << "\n");
+
+      // Merge our potential poison state into the value with a vector or.
+      unsigned OrOp = Is128Bit ? X86::VPORQZ128rr
+                               : Is256Bit ? X86::VPORQZ256rr : X86::VPORQZrr;
+      auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOp), TmpReg)
+                     .addReg(VStateReg)
                      .addReg(OpReg);
-      OrI->addRegisterDead(X86::EFLAGS, TRI);
+      (void)OrI;
       ++NumInstsInserted;
       LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
     } else {
-      // We need to avoid touching EFLAGS so shift out all but the least
-      // significant bit using the instruction that doesn't update flags.
-      auto ShiftI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::SHRX64rr), TmpReg)
-                        .addReg(OpReg)
-                        .addReg(StateReg);
-      (void)ShiftI;
-      ++NumInstsInserted;
-      LLVM_DEBUG(dbgs() << "  Inserting shrx: "; ShiftI->dump();
-                 dbgs() << "\n");
+      // FIXME: Need to support GR32 here for 32-bit code.
+      assert(OpRC->hasSuperClassEq(&X86::GR64RegClass) &&
+             "Not a supported register class for address hardening!");
+
+      if (!EFLAGSLive) {
+        // Merge our potential poison state into the value with an or.
+        auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::OR64rr), TmpReg)
+                       .addReg(StateReg)
+                       .addReg(OpReg);
+        OrI->addRegisterDead(X86::EFLAGS, TRI);
+        ++NumInstsInserted;
+        LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
+      } else {
+        // We need to avoid touching EFLAGS so shift out all but the least
+        // significant bit using the instruction that doesn't update flags.
+        auto ShiftI =
+            BuildMI(MBB, InsertPt, Loc, TII->get(X86::SHRX64rr), TmpReg)
+                .addReg(OpReg)
+                .addReg(StateReg);
+        (void)ShiftI;
+        ++NumInstsInserted;
+        LLVM_DEBUG(dbgs() << "  Inserting shrx: "; ShiftI->dump();
+                   dbgs() << "\n");
+      }
     }
 
     // Record this register as checked and update the operand.
@@ -1432,7 +1669,7 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
 }
 
 MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
-    MachineInstr &InitialMI, SmallPtrSetImpl<MachineInstr *> &HardenedLoads) {
+    MachineInstr &InitialMI, SmallPtrSetImpl<MachineInstr *> &HardenedInstrs) {
   assert(isDataInvariantLoad(InitialMI) &&
          "Cannot get here with a non-invariant load!");
 
@@ -1447,9 +1684,19 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
     MachineInstr *SingleUseMI = nullptr;
     for (MachineInstr &UseMI : MRI->use_instructions(DefReg)) {
       // If we're already going to harden this use, it is data invariant and
-      // within our block and we just need to check that the use isn't in an
-      // address.
-      if (HardenedLoads.count(&UseMI)) {
+      // within our block.
+      if (HardenedInstrs.count(&UseMI)) {
+        if (!isDataInvariantLoad(UseMI)) {
+          // If we've already decided to harden a non-load, we must have sunk
+          // some other post-load hardened instruction to it and it must itself
+          // be data-invariant.
+          assert(isDataInvariant(UseMI) &&
+                 "Data variant instruction being hardened!");
+          continue;
+        }
+
+        // Otherwise, this is a load and the load component can't be data
+        // invariant so check how this register is being used.
         const MCInstrDesc &Desc = UseMI.getDesc();
         int MemRefBeginIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
         assert(MemRefBeginIdx >= 0 &&
@@ -1488,7 +1735,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
       // can harden.
       unsigned UseDefReg = UseMI.getOperand(0).getReg();
       if (!TRI->isVirtualRegister(UseDefReg) ||
-          !MRI->getRegClass(UseDefReg)->hasSubClassEq(&X86::GR64RegClass))
+          !canHardenRegister(UseDefReg))
         return {};
 
       SingleUseMI = &UseMI;
@@ -1510,6 +1757,32 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
   return MI;
 }
 
+bool X86SpeculativeLoadHardeningPass::canHardenRegister(unsigned Reg) {
+  auto *RC = MRI->getRegClass(Reg);
+  int RegBytes = TRI->getRegSizeInBits(*RC) / 8;
+  if (RegBytes > 8)
+    // We don't support post-load hardening of vectors.
+    return false;
+
+  // If this register class is explicitly constrained to a class that doesn't
+  // require REX prefix, we may not be able to satisfy that constraint when
+  // emitting the hardening instructions, so bail out here.
+  // FIXME: This seems like a pretty lame hack. The way this comes up is when we
+  // end up both with a NOREX and REX-only register as operands to the hardening
+  // instructions. It would be better to fix that code to handle this situation
+  // rather than hack around it in this way.
+  const TargetRegisterClass *NOREXRegClasses[] = {
+      &X86::GR8_NOREXRegClass, &X86::GR16_NOREXRegClass,
+      &X86::GR32_NOREXRegClass, &X86::GR64_NOREXRegClass};
+  if (RC == NOREXRegClasses[Log2_32(RegBytes)])
+    return false;
+
+  const TargetRegisterClass *GPRRegClasses[] = {
+      &X86::GR8RegClass, &X86::GR16RegClass, &X86::GR32RegClass,
+      &X86::GR64RegClass};
+  return RC->hasSuperClassEq(GPRRegClasses[Log2_32(RegBytes)]);
+}
+
 // We can harden non-leaking loads into register without touching the address
 // by just hiding all of the loaded bits. We use an `or` instruction to do
 // this because having the poison value be all ones allows us to use the same
@@ -1517,29 +1790,20 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 // execution and coercing them to one is sufficient.
 void X86SpeculativeLoadHardeningPass::hardenPostLoad(
     MachineInstr &MI, MachineSSAUpdater &PredStateSSA) {
-  assert(isDataInvariantLoad(MI) &&
-         "Cannot get here with a non-invariant load!");
-
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc Loc = MI.getDebugLoc();
 
   // For all of these, the def'ed register operand is operand zero.
   auto &DefOp = MI.getOperand(0);
   unsigned OldDefReg = DefOp.getReg();
+  assert(canHardenRegister(OldDefReg) &&
+         "Cannot harden this instruction's defined register!");
 
   auto *DefRC = MRI->getRegClass(OldDefReg);
   int DefRegBytes = TRI->getRegSizeInBits(*DefRC) / 8;
 
   unsigned OrOpCodes[] = {X86::OR8rr, X86::OR16rr, X86::OR32rr, X86::OR64rr};
   unsigned OrOpCode = OrOpCodes[Log2_32(DefRegBytes)];
-
-#ifndef NDEBUG
-  const TargetRegisterClass *OrRegClasses[] = {
-      &X86::GR8RegClass, &X86::GR16RegClass, &X86::GR32RegClass,
-      &X86::GR64RegClass};
-  assert(DefRC->hasSuperClassEq(OrRegClasses[Log2_32(DefRegBytes)]) &&
-         "Cannot define this register with OR instruction!");
-#endif
 
   unsigned SubRegImms[] = {X86::sub_8bit, X86::sub_16bit, X86::sub_32bit};
 

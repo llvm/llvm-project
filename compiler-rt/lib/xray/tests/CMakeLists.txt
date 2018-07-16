@@ -42,8 +42,8 @@ endfunction()
 set(XRAY_TEST_ARCH ${XRAY_SUPPORTED_ARCH})
 set(XRAY_UNITTEST_LINK_FLAGS
   ${CMAKE_THREAD_LIBS_INIT}
+	-l${SANITIZER_CXX_ABI_LIBRARY}
   -fxray-instrument
-  -lstdc++  # TODO: Detect the correct standard library used!
   )
 if (NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBM -lm XRAY_UNITTEST_LINK_FLAGS)
@@ -68,7 +68,7 @@ macro(add_xray_unittest testname)
         COMPILE_DEPS ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         ${XRAY_HEADERS} ${XRAY_ALL_SOURCE_FILES_ABS_PATHS}
         RUNTIME "${XRAY_RUNTIME_LIBS}"
-        DEPS gtest xray
+        DEPS gtest xray llvm-xray
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
         LINK_FLAGS ${TARGET_LINK_FLAGS} ${XRAY_UNITTEST_LINK_FLAGS})
       set_target_properties(XRayUnitTests

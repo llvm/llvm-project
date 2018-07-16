@@ -6,9 +6,9 @@
 define i32 @zext_ifpos(i32 %x) {
 ; CHECK-LABEL: zext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %al
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    shrl $31, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %e = zext i1 %c to i32
@@ -18,10 +18,10 @@ define i32 @zext_ifpos(i32 %x) {
 define i32 @add_zext_ifpos(i32 %x) {
 ; CHECK-LABEL: add_zext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    addl $41, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    shrl $31, %edi
+; CHECK-NEXT:    leal 41(%rdi), %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %e = zext i1 %c to i32
@@ -32,10 +32,10 @@ define i32 @add_zext_ifpos(i32 %x) {
 define i32 @sel_ifpos_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_tval_bigger:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    addl $41, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    shrl $31, %edi
+; CHECK-NEXT:    leal 41(%rdi), %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %r = select i1 %c, i32 42, i32 41
@@ -45,10 +45,9 @@ define i32 @sel_ifpos_tval_bigger(i32 %x) {
 define i32 @sext_ifpos(i32 %x) {
 ; CHECK-LABEL: sext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    sarl $31, %edi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %e = sext i1 %c to i32
@@ -58,11 +57,10 @@ define i32 @sext_ifpos(i32 %x) {
 define i32 @add_sext_ifpos(i32 %x) {
 ; CHECK-LABEL: add_sext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %cl
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %e = sext i1 %c to i32
@@ -73,11 +71,10 @@ define i32 @add_sext_ifpos(i32 %x) {
 define i32 @sel_ifpos_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_fval_bigger:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setns %cl
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    shrl $31, %edi
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    subl %edi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp sgt i32 %x, -1
   %r = select i1 %c, i32 41, i32 42

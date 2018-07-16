@@ -4725,6 +4725,14 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
           return LHS;
       }
       return nullptr;
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
+      // If one argument is NaN, return the other argument.
+      if (match(LHS, m_NaN()))
+        return RHS;
+      if (match(RHS, m_NaN()))
+        return LHS;
+      return nullptr;
     default:
       return nullptr;
     }
