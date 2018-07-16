@@ -221,14 +221,6 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *S,
   return None;
 }
 
-// Returns source line information for a given offset using DWARF debug info.
-template <class ELFT>
-std::string ObjFile<ELFT>::getLineInfo(InputSectionBase *S, uint64_t Offset) {
-  if (Optional<DILineInfo> Info = getDILineInfo(S, Offset))
-    return Info->FileName + ":" + std::to_string(Info->Line);
-  return "";
-}
-
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".
 std::string lld::toString(const InputFile *F) {
   if (!F)
