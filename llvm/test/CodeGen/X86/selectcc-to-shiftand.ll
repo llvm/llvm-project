@@ -93,18 +93,18 @@ define i32 @not_pos_sel_same_variable(i32 %a) {
 define i32 @pos_sel_constants(i32 %a) {
 ; CHECK-NOBMI-LABEL: pos_sel_constants:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %eax, %eax
-; CHECK-NOBMI-NEXT:    testl %edi, %edi
-; CHECK-NOBMI-NEXT:    setns %al
-; CHECK-NOBMI-NEXT:    leal (%rax,%rax,4), %eax
+; CHECK-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NOBMI-NEXT:    notl %edi
+; CHECK-NOBMI-NEXT:    shrl $31, %edi
+; CHECK-NOBMI-NEXT:    leal (%rdi,%rdi,4), %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: pos_sel_constants:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %eax, %eax
-; CHECK-BMI-NEXT:    testl %edi, %edi
-; CHECK-BMI-NEXT:    setns %al
-; CHECK-BMI-NEXT:    leal (%rax,%rax,4), %eax
+; CHECK-BMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-BMI-NEXT:    notl %edi
+; CHECK-BMI-NEXT:    shrl $31, %edi
+; CHECK-BMI-NEXT:    leal (%rdi,%rdi,4), %eax
 ; CHECK-BMI-NEXT:    retq
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 5, i32 0
@@ -116,18 +116,18 @@ define i32 @pos_sel_constants(i32 %a) {
 define i32 @pos_sel_special_constant(i32 %a) {
 ; CHECK-NOBMI-LABEL: pos_sel_special_constant:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %eax, %eax
-; CHECK-NOBMI-NEXT:    testl %edi, %edi
-; CHECK-NOBMI-NEXT:    setns %al
-; CHECK-NOBMI-NEXT:    shll $9, %eax
+; CHECK-NOBMI-NEXT:    notl %edi
+; CHECK-NOBMI-NEXT:    shrl $22, %edi
+; CHECK-NOBMI-NEXT:    andl $512, %edi # imm = 0x200
+; CHECK-NOBMI-NEXT:    movl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: pos_sel_special_constant:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    xorl %eax, %eax
-; CHECK-BMI-NEXT:    testl %edi, %edi
-; CHECK-BMI-NEXT:    setns %al
-; CHECK-BMI-NEXT:    shll $9, %eax
+; CHECK-BMI-NEXT:    notl %edi
+; CHECK-BMI-NEXT:    shrl $22, %edi
+; CHECK-BMI-NEXT:    andl $512, %edi # imm = 0x200
+; CHECK-BMI-NEXT:    movl %edi, %eax
 ; CHECK-BMI-NEXT:    retq
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 512, i32 0

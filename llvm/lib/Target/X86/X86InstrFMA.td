@@ -337,29 +337,29 @@ multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
                     (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
                     RC:$src3))))),
               (!cast<Instruction>(Prefix#"213"#Suffix#"r_Int")
-               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
-               (COPY_TO_REGCLASS RC:$src3, VR128))>;
+               VR128:$src1, (VT (COPY_TO_REGCLASS RC:$src2, VR128)),
+               (VT (COPY_TO_REGCLASS RC:$src3, VR128)))>;
 
     def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
                 (Op RC:$src2,
                     (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
                     (mem_frag addr:$src3)))))),
               (!cast<Instruction>(Prefix#"213"#Suffix#"m_Int")
-               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
+               VR128:$src1, (VT (COPY_TO_REGCLASS RC:$src2, VR128)),
                addr:$src3)>;
 
     def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
                 (Op (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
                     (mem_frag addr:$src3), RC:$src2))))),
               (!cast<Instruction>(Prefix#"132"#Suffix#"m_Int")
-               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
+               VR128:$src1, (VT (COPY_TO_REGCLASS RC:$src2, VR128)),
                addr:$src3)>;
 
     def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
                 (Op RC:$src2, (mem_frag addr:$src3),
                     (EltVT (extractelt (VT VR128:$src1), (iPTR 0)))))))),
               (!cast<Instruction>(Prefix#"231"#Suffix#"m_Int")
-               VR128:$src1, (COPY_TO_REGCLASS RC:$src2, VR128),
+               VR128:$src1, (VT (COPY_TO_REGCLASS RC:$src2, VR128)),
                addr:$src3)>;
   }
 }
@@ -598,23 +598,23 @@ multiclass scalar_fma4_patterns<SDNode Op, string Name,
     def : Pat<(VT (X86vzmovl (VT (scalar_to_vector
                                   (Op RC:$src1, RC:$src2, RC:$src3))))),
               (!cast<Instruction>(Name#"rr_Int")
-               (COPY_TO_REGCLASS RC:$src1, VR128),
-               (COPY_TO_REGCLASS RC:$src2, VR128),
-               (COPY_TO_REGCLASS RC:$src3, VR128))>;
+               (VT (COPY_TO_REGCLASS RC:$src1, VR128)),
+               (VT (COPY_TO_REGCLASS RC:$src2, VR128)),
+               (VT (COPY_TO_REGCLASS RC:$src3, VR128)))>;
 
     def : Pat<(VT (X86vzmovl (VT (scalar_to_vector
                                   (Op RC:$src1, RC:$src2,
                                       (mem_frag addr:$src3)))))),
               (!cast<Instruction>(Name#"rm_Int")
-               (COPY_TO_REGCLASS RC:$src1, VR128),
-               (COPY_TO_REGCLASS RC:$src2, VR128), addr:$src3)>;
+               (VT (COPY_TO_REGCLASS RC:$src1, VR128)),
+               (VT (COPY_TO_REGCLASS RC:$src2, VR128)), addr:$src3)>;
 
     def : Pat<(VT (X86vzmovl (VT (scalar_to_vector
                                   (Op RC:$src1, (mem_frag addr:$src2),
                                       RC:$src3))))),
               (!cast<Instruction>(Name#"mr_Int")
-               (COPY_TO_REGCLASS RC:$src1, VR128), addr:$src2,
-               (COPY_TO_REGCLASS RC:$src3, VR128))>;
+               (VT (COPY_TO_REGCLASS RC:$src1, VR128)), addr:$src2,
+               (VT (COPY_TO_REGCLASS RC:$src3, VR128)))>;
   }
 }
 

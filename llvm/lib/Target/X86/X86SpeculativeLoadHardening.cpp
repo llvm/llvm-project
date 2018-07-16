@@ -283,6 +283,53 @@ static MachineBasicBlock &splitEdge(MachineBasicBlock &MBB,
   return NewMBB;
 }
 
+/// Removing duplicate PHI operands to leave the PHI in a canonical and
+/// predictable form.
+///
+/// FIXME: It's really frustrating that we have to do this, but SSA-form in MIR
+/// isn't what you might expect. We may have multiple entries in PHI nodes for
+/// a single predecessor. This makes CFG-updating extremely complex, so here we
+/// simplify all PHI nodes to a model even simpler than the IR's model: exactly
+/// one entry per predecessor, regardless of how many edges there are.
+static void canonicalizePHIOperands(MachineFunction &MF) {
+  SmallPtrSet<MachineBasicBlock *, 4> Preds;
+  SmallVector<int, 4> DupIndices;
+  for (auto &MBB : MF)
+    for (auto &MI : MBB) {
+      if (!MI.isPHI())
+        break;
+
+      // First we scan the operands of the PHI looking for duplicate entries
+      // a particular predecessor. We retain the operand index of each duplicate
+      // entry found.
+      for (int OpIdx = 1, NumOps = MI.getNumOperands(); OpIdx < NumOps;
+           OpIdx += 2)
+        if (!Preds.insert(MI.getOperand(OpIdx + 1).getMBB()).second)
+          DupIndices.push_back(OpIdx);
+
+      // Now walk the duplicate indices, removing both the block and value. Note
+      // that these are stored as a vector making this element-wise removal
+      // :w
+      // potentially quadratic.
+      //
+      // FIXME: It is really frustrating that we have to use a quadratic
+      // removal algorithm here. There should be a better way, but the use-def
+      // updates required make that impossible using the public API.
+      //
+      // Note that we have to process these backwards so that we don't
+      // invalidate other indices with each removal.
+      while (!DupIndices.empty()) {
+        int OpIdx = DupIndices.pop_back_val();
+        // Remove both the block and value operand, again in reverse order to
+        // preserve indices.
+        MI.RemoveOperand(OpIdx + 1);
+        MI.RemoveOperand(OpIdx);
+      }
+
+      Preds.clear();
+    }
+}
+
 bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
     MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
@@ -401,49 +448,7 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
   // We're going to need to trace predicate state throughout the function's
   // CFG. Prepare for this by setting up our initial state of PHIs with unique
   // predecessor entries and all the initial predicate state.
-
-  // FIXME: It's really frustrating that we have to do this, but SSA-form in
-  // MIR isn't what you might expect. We may have multiple entries in PHI nodes
-  // for a single predecessor. This makes CFG-updating extremely complex, so
-  // here we simplify all PHI nodes to a model even simpler than the IR's
-  // model: exactly one entry per predecessor, regardless of how many edges
-  // there are.
-  SmallPtrSet<MachineBasicBlock *, 4> Preds;
-  SmallVector<int, 4> DupIndices;
-  for (auto &MBB : MF)
-    for (auto &MI : MBB) {
-      if (!MI.isPHI())
-        break;
-
-      // First we scan the operands of the PHI looking for duplicate entries
-      // a particular predecessor. We retain the operand index of each duplicate
-      // entry found.
-      for (int OpIdx = 1, NumOps = MI.getNumOperands(); OpIdx < NumOps;
-           OpIdx += 2)
-        if (!Preds.insert(MI.getOperand(OpIdx + 1).getMBB()).second)
-          DupIndices.push_back(OpIdx);
-
-      // Now walk the duplicate indices, removing both the block and value. Note
-      // that these are stored as a vector making this element-wise removal
-      // :w
-      // potentially quadratic.
-      //
-      // FIXME: It is really frustrating that we have to use a quadratic
-      // removal algorithm here. There should be a better way, but the use-def
-      // updates required make that impossible using the public API.
-      //
-      // Note that we have to process these backwards so that we don't
-      // invalidate other indices with each removal.
-      while (!DupIndices.empty()) {
-        int OpIdx = DupIndices.pop_back_val();
-        // Remove both the block and value operand, again in reverse order to
-        // preserve indices.
-        MI.RemoveOperand(OpIdx + 1);
-        MI.RemoveOperand(OpIdx);
-      }
-
-      Preds.clear();
-    }
+  canonicalizePHIOperands(MF);
 
   // Track the updated values in an SSA updater to rewrite into SSA form at the
   // end.
@@ -1393,29 +1398,105 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
   }
 
   for (MachineOperand *Op : HardenOpRegs) {
-    auto *OpRC = MRI->getRegClass(Op->getReg());
-
     unsigned OpReg = Op->getReg();
+    auto *OpRC = MRI->getRegClass(OpReg);
     unsigned TmpReg = MRI->createVirtualRegister(OpRC);
 
-    if (!EFLAGSLive) {
-      // Merge our potential poison state into the value with an or.
-      auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::OR64rr), TmpReg)
-                     .addReg(StateReg)
+    // If this is a vector register, we'll need somewhat custom logic to handle
+    // hardening it.
+    if (!Subtarget->hasVLX() && (OpRC->hasSuperClassEq(&X86::VR128RegClass) ||
+                                 OpRC->hasSuperClassEq(&X86::VR256RegClass))) {
+      assert(Subtarget->hasAVX2() && "AVX2-specific register classes!");
+      bool Is128Bit = OpRC->hasSuperClassEq(&X86::VR128RegClass);
+
+      // Move our state into a vector register.
+      // FIXME: We could skip this at the cost of longer encodings with AVX-512
+      // but that doesn't seem likely worth it.
+      unsigned VStateReg = MRI->createVirtualRegister(&X86::VR128RegClass);
+      auto MovI =
+          BuildMI(MBB, InsertPt, Loc, TII->get(X86::VMOV64toPQIrr), VStateReg)
+              .addReg(StateReg);
+      (void)MovI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting mov: "; MovI->dump(); dbgs() << "\n");
+
+      // Broadcast it across the vector register.
+      unsigned VBStateReg = MRI->createVirtualRegister(OpRC);
+      auto BroadcastI = BuildMI(MBB, InsertPt, Loc,
+                                TII->get(Is128Bit ? X86::VPBROADCASTQrr
+                                                  : X86::VPBROADCASTQYrr),
+                                VBStateReg)
+                            .addReg(VStateReg);
+      (void)BroadcastI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting broadcast: "; BroadcastI->dump();
+                 dbgs() << "\n");
+
+      // Merge our potential poison state into the value with a vector or.
+      auto OrI =
+          BuildMI(MBB, InsertPt, Loc,
+                  TII->get(Is128Bit ? X86::VPORrr : X86::VPORYrr), TmpReg)
+              .addReg(VBStateReg)
+              .addReg(OpReg);
+      (void)OrI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
+    } else if (OpRC->hasSuperClassEq(&X86::VR128XRegClass) ||
+               OpRC->hasSuperClassEq(&X86::VR256XRegClass) ||
+               OpRC->hasSuperClassEq(&X86::VR512RegClass)) {
+      assert(Subtarget->hasAVX512() && "AVX512-specific register classes!");
+      bool Is128Bit = OpRC->hasSuperClassEq(&X86::VR128XRegClass);
+      bool Is256Bit = OpRC->hasSuperClassEq(&X86::VR256XRegClass);
+      if (Is128Bit || Is256Bit)
+        assert(Subtarget->hasVLX() && "AVX512VL-specific register classes!");
+
+      // Broadcast our state into a vector register.
+      unsigned VStateReg = MRI->createVirtualRegister(OpRC);
+      unsigned BroadcastOp =
+          Is128Bit ? X86::VPBROADCASTQrZ128r
+                   : Is256Bit ? X86::VPBROADCASTQrZ256r : X86::VPBROADCASTQrZr;
+      auto BroadcastI =
+          BuildMI(MBB, InsertPt, Loc, TII->get(BroadcastOp), VStateReg)
+              .addReg(StateReg);
+      (void)BroadcastI;
+      ++NumInstsInserted;
+      LLVM_DEBUG(dbgs() << "  Inserting broadcast: "; BroadcastI->dump();
+                 dbgs() << "\n");
+
+      // Merge our potential poison state into the value with a vector or.
+      unsigned OrOp = Is128Bit ? X86::VPORQZ128rr
+                               : Is256Bit ? X86::VPORQZ256rr : X86::VPORQZrr;
+      auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(OrOp), TmpReg)
+                     .addReg(VStateReg)
                      .addReg(OpReg);
-      OrI->addRegisterDead(X86::EFLAGS, TRI);
+      (void)OrI;
       ++NumInstsInserted;
       LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
     } else {
-      // We need to avoid touching EFLAGS so shift out all but the least
-      // significant bit using the instruction that doesn't update flags.
-      auto ShiftI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::SHRX64rr), TmpReg)
-                        .addReg(OpReg)
-                        .addReg(StateReg);
-      (void)ShiftI;
-      ++NumInstsInserted;
-      LLVM_DEBUG(dbgs() << "  Inserting shrx: "; ShiftI->dump();
-                 dbgs() << "\n");
+      // FIXME: Need to support GR32 here for 32-bit code.
+      assert(OpRC->hasSuperClassEq(&X86::GR64RegClass) &&
+             "Not a supported register class for address hardening!");
+
+      if (!EFLAGSLive) {
+        // Merge our potential poison state into the value with an or.
+        auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::OR64rr), TmpReg)
+                       .addReg(StateReg)
+                       .addReg(OpReg);
+        OrI->addRegisterDead(X86::EFLAGS, TRI);
+        ++NumInstsInserted;
+        LLVM_DEBUG(dbgs() << "  Inserting or: "; OrI->dump(); dbgs() << "\n");
+      } else {
+        // We need to avoid touching EFLAGS so shift out all but the least
+        // significant bit using the instruction that doesn't update flags.
+        auto ShiftI =
+            BuildMI(MBB, InsertPt, Loc, TII->get(X86::SHRX64rr), TmpReg)
+                .addReg(OpReg)
+                .addReg(StateReg);
+        (void)ShiftI;
+        ++NumInstsInserted;
+        LLVM_DEBUG(dbgs() << "  Inserting shrx: "; ShiftI->dump();
+                   dbgs() << "\n");
+      }
     }
 
     // Record this register as checked and update the operand.

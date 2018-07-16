@@ -297,11 +297,10 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ;
 ; MCU-LABEL: test7:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    xorl %ecx, %ecx
-; MCU-NEXT:    testl %eax, %eax
-; MCU-NEXT:    setns %cl
-; MCU-NEXT:    shll $4, %ecx
-; MCU-NEXT:    fldt {{\.LCPI.*}}(%ecx)
+; MCU-NEXT:    notl %eax
+; MCU-NEXT:    shrl $27, %eax
+; MCU-NEXT:    andl $-16, %eax
+; MCU-NEXT:    fldt {{\.LCPI.*}}(%eax)
 ; MCU-NEXT:    retl
   %tmp9 = icmp sgt i32 %tmp8, -1
   %retval = select i1 %tmp9, x86_fp80 0xK4005B400000000000000, x86_fp80 0xK40078700000000000000

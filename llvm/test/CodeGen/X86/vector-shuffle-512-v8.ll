@@ -1969,8 +1969,8 @@ define <8 x double> @shuffle_v8f64_uuu2301(<8 x double> %a0, <8 x double> %a1) {
 define <8 x i64> @shuffle_v8i64_0zzzzzzz(<8 x i64> %a) {
 ; ALL-LABEL: shuffle_v8i64_0zzzzzzz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; ALL-NEXT:    ret{{[l|q]}}
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
   ret <8 x i64> %shuffle
@@ -1979,8 +1979,8 @@ define <8 x i64> @shuffle_v8i64_0zzzzzzz(<8 x i64> %a) {
 define <8 x double> @shuffle_v8f64_0zzzzzzz(<8 x double> %a) {
 ; ALL-LABEL: shuffle_v8f64_0zzzzzzz:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; ALL-NEXT:    ret{{[l|q]}}
   %shuffle = shufflevector <8 x double> %a, <8 x double> zeroinitializer, <8 x i32> <i32 0, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
   ret <8 x double> %shuffle

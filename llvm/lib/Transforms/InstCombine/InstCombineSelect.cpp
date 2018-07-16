@@ -810,6 +810,11 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
   if (SPF != SelectPatternFlavor::SPF_ABS &&
       SPF != SelectPatternFlavor::SPF_NABS)
     return nullptr;
+  
+  // TODO: later canonicalization change will move this condition check.
+  // Without this check, following assert will be hit.
+  if (match(Cmp.getOperand(0), m_Sub(m_Value(), m_Value())))
+    return nullptr;
 
   // Is this already canonical?
   if (match(Cmp.getOperand(1), m_ZeroInt()) &&

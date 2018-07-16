@@ -101,6 +101,12 @@ class WriteState {
   // super-registers.
   bool ClearsSuperRegs;
 
+  // This field is set if this is a partial register write, and it has a false
+  // dependency on any previous write of the same register (or a portion of it).
+  // DependentWrite must be able to complete before this write completes, so
+  // that we don't break the WAW, and the two writes can be merged together.
+  const WriteState *DependentWrite;
+
   // A list of dependent reads. Users is a set of dependent
   // reads. A dependent read is added to the set only if CyclesLeft
   // is "unknown". As soon as CyclesLeft is 'known', each user in the set
@@ -113,7 +119,7 @@ public:
   WriteState(const WriteDescriptor &Desc, unsigned RegID,
              bool clearsSuperRegs = false)
       : WD(Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
-        ClearsSuperRegs(clearsSuperRegs) {}
+        ClearsSuperRegs(clearsSuperRegs), DependentWrite(nullptr) {}
   WriteState(const WriteState &Other) = delete;
   WriteState &operator=(const WriteState &Other) = delete;
 
@@ -125,6 +131,9 @@ public:
   void addUser(ReadState *Use, int ReadAdvance);
   unsigned getNumUsers() const { return Users.size(); }
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
+
+  const WriteState *getDependentWrite() const { return DependentWrite; }
+  void setDependentWrite(const WriteState *Write) { DependentWrite = Write; }
 
   // On every cycle, update CyclesLeft and notify dependent users.
   void cycleEvent();
@@ -315,6 +324,7 @@ public:
   const VecUses &getUses() const { return Uses; }
   const InstrDesc &getDesc() const { return Desc; }
   unsigned getRCUTokenID() const { return RCUTokenID; }
+  int getCyclesLeft() const { return CyclesLeft; }
 
   unsigned getNumUsers() const {
     unsigned NumUsers = 0;

@@ -114,7 +114,7 @@ define amdgpu_kernel void @commute_ule_64_i32(i32 addrspace(1)* %out, i32 addrsp
 }
 
 ; GCN-LABEL: {{^}}commute_sgt_neg1_i32:
-; GCN: v_cmp_lt_i32_e32 vcc, -1, v{{[0-9]+}}
+; GCN: v_ashrrev_i32_e32 v2, 31, v2
 define amdgpu_kernel void @commute_sgt_neg1_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
