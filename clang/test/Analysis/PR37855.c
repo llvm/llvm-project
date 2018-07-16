@@ -20,5 +20,5 @@ void k(l, node) {
     nodep = n;
   }
   if (nodep) // expected-warning {{Branch condition evaluates to a garbage value}}
-    n[1].node->s; // expected-warning {{Dereference of undefined pointer value}}
+    n[1].node->s;
 }

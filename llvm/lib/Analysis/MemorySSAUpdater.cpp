@@ -278,8 +278,7 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   // above and reset ourselves.
   MD->setDefiningAccess(DefBefore);
 
-  SmallVector<MemoryAccess *, 8> FixupList(InsertedPHIs.begin(),
-                                           InsertedPHIs.end());
+  SmallVector<WeakVH, 8> FixupList(InsertedPHIs.begin(), InsertedPHIs.end());
   if (!DefBeforeSameBlock) {
     // If there was a local def before us, we must have the same effect it
     // did. Because every may-def is the same, any phis/etc we would create, it
@@ -300,7 +299,7 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     fixupDefs(FixupList);
     FixupList.clear();
     // Put any new phis on the fixup list, and process them
-    FixupList.append(InsertedPHIs.end() - StartingPHISize, InsertedPHIs.end());
+    FixupList.append(InsertedPHIs.begin() + StartingPHISize, InsertedPHIs.end());
   }
   // Now that all fixups are done, rename all uses if we are asked.
   if (RenameUses) {
@@ -317,15 +316,21 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     MSSA->renamePass(MD->getBlock(), FirstDef, Visited);
     // We just inserted a phi into this block, so the incoming value will become
     // the phi anyway, so it does not matter what we pass.
-    for (auto *MP : InsertedPHIs)
-      MSSA->renamePass(MP->getBlock(), nullptr, Visited);
+    for (auto &MP : InsertedPHIs) {
+      MemoryPhi *Phi = dyn_cast_or_null<MemoryPhi>(MP);
+      if (Phi)
+        MSSA->renamePass(Phi->getBlock(), nullptr, Visited);
+    }
   }
 }
 
-void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<MemoryAccess *> &Vars) {
+void MemorySSAUpdater::fixupDefs(const SmallVectorImpl<WeakVH> &Vars) {
   SmallPtrSet<const BasicBlock *, 8> Seen;
   SmallVector<const BasicBlock *, 16> Worklist;
-  for (auto *NewDef : Vars) {
+  for (auto &Var : Vars) {
+    MemoryAccess *NewDef = dyn_cast_or_null<MemoryAccess>(Var);
+    if (!NewDef)
+      continue;
     // First, see if there is a local def after the operand.
     auto *Defs = MSSA->getWritableBlockDefs(NewDef->getBlock());
     auto DefIter = NewDef->getDefsIterator();

@@ -993,6 +993,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
       CheckCXXThisCapture(C->Loc, /*Explicit=*/true, /*BuildAndDiagnose*/ true,
                           /*FunctionScopeIndexToStopAtPtr*/ nullptr,
                           C->Kind == LCK_StarThis);
+      if (!LSI->Captures.empty())
+        LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
       continue;
     }
 
@@ -1139,6 +1141,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
                                                    TryCapture_ExplicitByVal;
       tryCaptureVariable(Var, C->Loc, Kind, EllipsisLoc);
     }
+    if (!LSI->Captures.empty())
+      LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
   }
   finishLambdaExplicitCaptures(LSI);
 
@@ -1478,12 +1482,13 @@ bool Sema::CaptureHasSideEffects(const Capture &From) {
   return false;
 }
 
-void Sema::DiagnoseUnusedLambdaCapture(const Capture &From) {
+bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                       const Capture &From) {
   if (CaptureHasSideEffects(From))
-    return;
+    return false;
 
   if (From.isVLATypeCapture())
-    return;
+    return false;
 
   auto diag = Diag(From.getLocation(), diag::warn_unused_lambda_capture);
   if (From.isThisCapture())
@@ -1491,6 +1496,8 @@ void Sema::DiagnoseUnusedLambdaCapture(const Capture &From) {
   else
     diag << From.getVariable();
   diag << From.isNonODRUsed();
+  diag << FixItHint::CreateRemoval(CaptureRange);
+  return true;
 }
 
 ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -1532,18 +1539,49 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
     // Translate captures.
     auto CurField = Class->field_begin();
+    // True if the current capture has a used capture or default before it.
+    bool CurHasPreviousCapture = CaptureDefault != LCD_None;
+    SourceLocation PrevCaptureLoc = CurHasPreviousCapture ?
+        CaptureDefaultLoc : IntroducerRange.getBegin();
+
     for (unsigned I = 0, N = LSI->Captures.size(); I != N; ++I, ++CurField) {
       const Capture &From = LSI->Captures[I];
+
       assert(!From.isBlockCapture() && "Cannot capture __block variables");
       bool IsImplicit = I >= LSI->NumExplicitCaptures;
 
+      // Use source ranges of explicit captures for fixits where available.
+      SourceRange CaptureRange = LSI->ExplicitCaptureRanges[I];
+
       // Warn about unused explicit captures.
+      bool IsCaptureUsed = true;
       if (!CurContext->isDependentContext() && !IsImplicit && !From.isODRUsed()) {
         // Initialized captures that are non-ODR used may not be eliminated.
         bool NonODRUsedInitCapture =
             IsGenericLambda && From.isNonODRUsed() && From.getInitExpr();
-        if (!NonODRUsedInitCapture)
-          DiagnoseUnusedLambdaCapture(From);
+        if (!NonODRUsedInitCapture) {
+          bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
+					SourceRange FixItRange;
+          if (CaptureRange.isValid()) {
+            if (!CurHasPreviousCapture && !IsLast) {
+              // If there are no captures preceding this capture, remove the
+              // following comma.
+              FixItRange = SourceRange(CaptureRange.getBegin(),
+                                       getLocForEndOfToken(CaptureRange.getEnd()));
+            } else {
+              // Otherwise, remove the comma since the last used capture.
+              FixItRange = SourceRange(getLocForEndOfToken(PrevCaptureLoc),
+                                       CaptureRange.getEnd());
+            }
+          }
+
+          IsCaptureUsed = !DiagnoseUnusedLambdaCapture(FixItRange, From);
+        }
+      }
+
+      if (CaptureRange.isValid()) {
+        CurHasPreviousCapture |= IsCaptureUsed;
+        PrevCaptureLoc = CaptureRange.getEnd();
       }
 
       // Handle 'this' capture.

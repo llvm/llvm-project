@@ -76,8 +76,8 @@ registers:
   - { id: 17, class: gr32, preferred-register: '' }
   - { id: 18, class: vk1wm, preferred-register: '' }
   - { id: 19, class: vr128x, preferred-register: '' }
-  - { id: 20, class: fr128, preferred-register: '' }
-  - { id: 21, class: fr128, preferred-register: '' }
+  - { id: 20, class: vr128, preferred-register: '' }
+  - { id: 21, class: vr128, preferred-register: '' }
   - { id: 22, class: fr32x, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%3' }
@@ -141,8 +141,8 @@ body:             |
   ; CHECK:   [[COPY13:%[0-9]+]]:vk32 = COPY [[PHI]]
   ; CHECK:   [[COPY14:%[0-9]+]]:vk1wm = COPY [[COPY13]]
   ; CHECK:   [[COPY15:%[0-9]+]]:vr128x = COPY [[COPY4]]
-  ; CHECK:   [[DEF:%[0-9]+]]:fr128 = IMPLICIT_DEF
-  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:fr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF]], [[COPY5]]
+  ; CHECK:   [[DEF:%[0-9]+]]:vr128 = IMPLICIT_DEF
+  ; CHECK:   [[VMOVSSZrrk:%[0-9]+]]:vr128 = VMOVSSZrrk [[COPY15]], killed [[COPY14]], killed [[DEF]], [[COPY5]]
   ; CHECK:   [[COPY16:%[0-9]+]]:fr32x = COPY [[VMOVSSZrrk]]
   ; CHECK:   VMOVSSZmr [[COPY6]], 1, $noreg, 0, $noreg, killed [[COPY16]] :: (store 4 into %ir.fptr)
   ; CHECK:   RET 0

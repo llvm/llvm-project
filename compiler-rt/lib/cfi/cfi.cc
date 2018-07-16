@@ -132,7 +132,11 @@ void ShadowBuilder::Start() {
 void ShadowBuilder::AddUnchecked(uptr begin, uptr end) {
   uint16_t *shadow_begin = MemToShadow(begin, shadow_);
   uint16_t *shadow_end = MemToShadow(end - 1, shadow_) + 1;
-  memset(shadow_begin, kUncheckedShadow,
+  // memset takes a byte, so our unchecked shadow value requires both bytes to
+  // be the same. Make sure we're ok during compilation.
+  static_assert((kUncheckedShadow & 0xff) == ((kUncheckedShadow >> 8) & 0xff),
+                "Both bytes of the 16-bit value must be the same!");
+  memset(shadow_begin, kUncheckedShadow & 0xff,
          (shadow_end - shadow_begin) * sizeof(*shadow_begin));
 }
 

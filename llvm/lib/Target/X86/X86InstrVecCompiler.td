@@ -263,7 +263,7 @@ multiclass subvec_zero_lowering<string MoveStr,
   def : Pat<(DstTy (insert_subvector (bitconvert (ZeroTy immAllZerosV)),
                                      (SrcTy RC:$src), (iPTR 0))),
             (SUBREG_TO_REG (i64 0),
-             (!cast<Instruction>("VMOV"#MoveStr#"rr") RC:$src), SubIdx)>;
+             (SrcTy (!cast<Instruction>("VMOV"#MoveStr#"rr") RC:$src)), SubIdx)>;
 }
 
 let Predicates = [HasAVX, NoVLX] in {

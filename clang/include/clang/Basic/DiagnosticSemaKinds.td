@@ -341,8 +341,8 @@ def warn_unneeded_member_function : Warning<
   InGroup<UnneededMemberFunction>, DefaultIgnore;
 def warn_unused_private_field: Warning<"private field %0 is not used">,
   InGroup<UnusedPrivateField>, DefaultIgnore;
-def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
-  "%select{used|required to be captured for this use}1">,
+def warn_unused_lambda_capture: Warning<"lambda capture "
+  "%select{|of constant }1%0 is not %select{used|required for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
 def warn_parameter_size: Warning<

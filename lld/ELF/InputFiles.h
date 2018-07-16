@@ -194,9 +194,6 @@ public:
     return getSymbol(SymIndex);
   }
 
-  // Returns source line information for a given offset.
-  // If no information is available, returns "".
-  std::string getLineInfo(InputSectionBase *S, uint64_t Offset);
   llvm::Optional<llvm::DILineInfo> getDILineInfo(InputSectionBase *, uint64_t);
   llvm::Optional<std::pair<std::string, unsigned>> getVariableLoc(StringRef Name);
 
