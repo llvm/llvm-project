@@ -40,6 +40,7 @@ endif()
 # lldb-suite is a dummy target that encompasses all the necessary tools and
 # libraries for building a fully-functioning liblldb.
 add_custom_target(lldb-suite)
+set(LLDB_SUITE_TARGET lldb-suite)
 
 option(LLDB_BUILD_FRAMEWORK "Build the Darwin LLDB.framework" Off)
 if(LLDB_BUILD_FRAMEWORK)
@@ -55,6 +56,7 @@ if(LLDB_BUILD_FRAMEWORK)
   set(PRODUCT_NAME "LLDB")
   set(EXECUTABLE_NAME "LLDB")
   set(CURRENT_PROJECT_VERSION "360.99.0")
+  set(LLDB_SUITE_TARGET lldb-framework)
 
   set(LLDB_FRAMEWORK_DIR
     ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_FRAMEWORK_INSTALL_DIR})
@@ -163,9 +165,7 @@ endif()
 if (LLDB_BUILD_FRAMEWORK)
   add_custom_target(lldb-framework)
   include(LLDBFramework)
-  add_dependencies(lldb-suite lldb-framework)
 endif()
-add_dependencies(lldb-suite liblldb)
 
 if (NOT LLDB_DISABLE_PYTHON)
     # Add a Post-Build Event to copy over Python files and create the symlink
@@ -187,7 +187,7 @@ if (NOT LLDB_DISABLE_PYTHON)
         COMMENT "Python script sym-linking LLDB Python API")
 
     # We depend on liblldb and lldb-argdumper being built before we can do this step.
-    add_dependencies(finish_swig lldb-suite)
+    add_dependencies(finish_swig ${LLDB_SUITE_TARGET})
 
     # If we build the readline module, we depend on that happening
     # first.

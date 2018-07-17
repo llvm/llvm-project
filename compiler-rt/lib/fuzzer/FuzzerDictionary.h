@@ -33,7 +33,6 @@ public:
   }
 
   bool operator==(const FixedWord<kMaxSize> &w) const {
-    ScopedDoingMyOwnMemOrStr scoped_doing_my_own_mem_os_str;
     return Size == w.Size && 0 == memcmp(Data, w.Data, Size);
   }
 

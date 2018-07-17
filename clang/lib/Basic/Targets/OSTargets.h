@@ -369,7 +369,7 @@ protected:
 public:
   NetBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
-    this->MCountName = "_mcount";
+    this->MCountName = "__mcount";
   }
 };
 

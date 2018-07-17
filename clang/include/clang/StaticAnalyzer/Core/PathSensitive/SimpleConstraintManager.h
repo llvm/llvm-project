@@ -75,6 +75,7 @@ protected:
   // Internal implementation.
   //===------------------------------------------------------------------===//
 
+  SValBuilder &getSValBuilder() const { return SVB; }
   BasicValueFactory &getBasicVals() const { return SVB.getBasicValueFactory(); }
   SymbolManager &getSymbolManager() const { return SVB.getSymbolManager(); }
 

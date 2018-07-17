@@ -123,6 +123,8 @@ public:
 
   void printVerboseInfo(raw_ostream &OS) const override;
 
+  bool FoundMSVCInstall() const { return !VCToolChainPath.empty(); }
+
 protected:
   void AddSystemIncludeWithSubfolder(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args,

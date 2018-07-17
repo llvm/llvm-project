@@ -176,12 +176,6 @@ typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
 
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback);
 
-struct ScopedDoingMyOwnMemOrStr {
-  ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr++; }
-  ~ScopedDoingMyOwnMemOrStr() { DoingMyOwnMemOrStr--; }
-  static int DoingMyOwnMemOrStr;
-};
-
 inline uint8_t  Bswap(uint8_t x)  { return x; }
 inline uint16_t Bswap(uint16_t x) { return __builtin_bswap16(x); }
 inline uint32_t Bswap(uint32_t x) { return __builtin_bswap32(x); }
@@ -190,6 +184,8 @@ inline uint64_t Bswap(uint64_t x) { return __builtin_bswap64(x); }
 uint8_t *ExtraCountersBegin();
 uint8_t *ExtraCountersEnd();
 void ClearExtraCounters();
+
+extern bool RunningUserCallback;
 
 }  // namespace fuzzer
 

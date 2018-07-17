@@ -13,3 +13,9 @@ short _Accum short_accum;             // expected-error{{compile with '-ffixed-p
 _Accum accum;                         // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
                                       // expected-warning@-1{{type specifier missing, defaults to 'int'}}
 long _Accum long_accum;               // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
+
+// Cannot use fixed point suffixes
+int accum_int = 10k;     // expected-error{{invalid suffix 'k' on integer constant}}
+int fract_int = 10r;     // expected-error{{invalid suffix 'r' on integer constant}}
+float accum_flt = 10.0k; // expected-error{{invalid suffix 'k' on floating constant}}
+float fract_flt = 10.0r; // expected-error{{invalid suffix 'r' on floating constant}}

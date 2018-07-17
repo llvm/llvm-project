@@ -307,6 +307,9 @@ Symbol *SymbolTable::addUndefinedData(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name);
 
+  if (!File || File->kind() == InputFile::ObjectKind)
+    S->IsUsedInRegularObj = true;
+
   if (WasInserted)
     replaceSymbol<UndefinedData>(S, Name, Flags, File);
   else if (auto *Lazy = dyn_cast<LazySymbol>(S))

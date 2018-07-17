@@ -7498,7 +7498,7 @@ bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
       StructuralEquivalenceKind::Default,
       false /*StrictTypeSpelling*/, true /*Complain*/,
       true /*ErrorOnTagTypeMismatch*/);
-  return Ctx.IsStructurallyEquivalent(D, Suggested);
+  return Ctx.IsEquivalent(D, Suggested);
 }
 
 /// Determine whether there is any declaration of \p D that was ever a

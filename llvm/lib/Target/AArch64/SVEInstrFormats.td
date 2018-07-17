@@ -987,6 +987,112 @@ multiclass sve_fp_2op_p_zds<bits<4> opc, string asm> {
 
 
 //===----------------------------------------------------------------------===//
+// SVE Floating Point Fused Multiply-Add Group
+//===----------------------------------------------------------------------===//
+
+class sve_fp_3op_p_zds_a<bits<2> sz, bits<2> opc, string asm, ZPRRegOp zprty>
+: I<(outs zprty:$Zda), (ins PPR3bAny:$Pg, zprty:$_Zda, zprty:$Zn, zprty:$Zm),
+  asm, "\t$Zda, $Pg/m, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zda;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = opc;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+}
+
+multiclass sve_fp_3op_p_zds_a<bits<2> opc, string asm> {
+  def _H : sve_fp_3op_p_zds_a<0b01, opc, asm, ZPR16>;
+  def _S : sve_fp_3op_p_zds_a<0b10, opc, asm, ZPR32>;
+  def _D : sve_fp_3op_p_zds_a<0b11, opc, asm, ZPR64>;
+}
+
+class sve_fp_3op_p_zds_b<bits<2> sz, bits<2> opc, string asm,
+                         ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, zprty:$Zm, zprty:$Za),
+  asm, "\t$Zdn, $Pg/m, $Zm, $Za",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Za;
+  bits<5> Zdn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Za;
+  let Inst{15}    = 0b1;
+  let Inst{14-13} = opc;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zm;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sve_fp_3op_p_zds_b<bits<2> opc, string asm> {
+  def _H : sve_fp_3op_p_zds_b<0b01, opc, asm, ZPR16>;
+  def _S : sve_fp_3op_p_zds_b<0b10, opc, asm, ZPR32>;
+  def _D : sve_fp_3op_p_zds_b<0b11, opc, asm, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE Floating Point Multiply-Add - Indexed Group
+//===----------------------------------------------------------------------===//
+
+class sve_fp_fma_by_indexed_elem<bits<2> sz, bit opc, string asm,
+                                 ZPRRegOp zprty1,
+                                 ZPRRegOp zprty2, Operand itype>
+: I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty1:$Zn, zprty2:$Zm, itype:$iop),
+  asm, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{15-11} = 0;
+  let Inst{10}    = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+}
+
+multiclass sve_fp_fma_by_indexed_elem<bit opc, string asm> {
+  def _H : sve_fp_fma_by_indexed_elem<{0, ?}, opc, asm, ZPR16, ZPR3b16, VectorIndexH> {
+    bits<3> Zm;
+    bits<3> iop;
+    let Inst{22} = iop{2};
+    let Inst{20-19} = iop{1-0};
+    let Inst{18-16} = Zm;
+  }
+  def _S : sve_fp_fma_by_indexed_elem<0b10, opc, asm, ZPR32, ZPR3b32, VectorIndexS> {
+    bits<3> Zm;
+    bits<2> iop;
+    let Inst{20-19} = iop;
+    let Inst{18-16} = Zm;
+  }
+  def _D : sve_fp_fma_by_indexed_elem<0b11, opc, asm, ZPR64, ZPR4b64, VectorIndexD> {
+    bits<4> Zm;
+    bit iop;
+    let Inst{20} = iop;
+    let Inst{19-16} = Zm;
+  }
+}
+
+
+//===----------------------------------------------------------------------===//
 // SVE Floating Point Multiply - Indexed Group
 //===----------------------------------------------------------------------===//
 
@@ -1272,6 +1378,70 @@ multiclass sve_int_bin_pred_arit_1<bits<3> opc, string asm> {
   def _H : sve_int_bin_pred_arit_log<0b01, 0b01, opc, asm, ZPR16>;
   def _S : sve_int_bin_pred_arit_log<0b10, 0b01, opc, asm, ZPR32>;
   def _D : sve_int_bin_pred_arit_log<0b11, 0b01, opc, asm, ZPR64>;
+}
+
+//===----------------------------------------------------------------------===//
+// SVE Integer Multiply-Add Group
+//===----------------------------------------------------------------------===//
+
+class sve_int_mladdsub_vvv_pred<bits<2> sz8_64, bits<1> opc, string asm,
+                                ZPRRegOp zprty>
+: I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, zprty:$Zm, zprty:$Za),
+  asm, "\t$Zdn, $Pg/m, $Zm, $Za",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zdn;
+  bits<5> Za;
+  bits<5> Zm;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15-14} = 0b11;
+  let Inst{13}    = opc;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Za;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sve_int_mladdsub_vvv_pred<bits<1> opc, string asm> {
+  def _B : sve_int_mladdsub_vvv_pred<0b00, opc, asm, ZPR8>;
+  def _H : sve_int_mladdsub_vvv_pred<0b01, opc, asm, ZPR16>;
+  def _S : sve_int_mladdsub_vvv_pred<0b10, opc, asm, ZPR32>;
+  def _D : sve_int_mladdsub_vvv_pred<0b11, opc, asm, ZPR64>;
+}
+
+class sve_int_mlas_vvv_pred<bits<2> sz8_64, bits<1> opc, string asm,
+                            ZPRRegOp zprty>
+: I<(outs zprty:$Zda), (ins PPR3bAny:$Pg, zprty:$_Zda, zprty:$Zn, zprty:$Zm),
+  asm, "\t$Zda, $Pg/m, $Zn, $Zm",
+  "",
+  []>, Sched<[]> {
+  bits<3> Pg;
+  bits<5> Zda;
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz8_64;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15-14} = 0b01;
+  let Inst{13}    = opc;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+}
+
+multiclass sve_int_mlas_vvv_pred<bits<1> opc, string asm> {
+  def _B : sve_int_mlas_vvv_pred<0b00, opc, asm, ZPR8>;
+  def _H : sve_int_mlas_vvv_pred<0b01, opc, asm, ZPR16>;
+  def _S : sve_int_mlas_vvv_pred<0b10, opc, asm, ZPR32>;
+  def _D : sve_int_mlas_vvv_pred<0b11, opc, asm, ZPR64>;
 }
 
 //===----------------------------------------------------------------------===//

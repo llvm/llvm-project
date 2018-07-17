@@ -5632,6 +5632,8 @@ public:
     Type *Ty = B->getType();
     if (!isValidElementType(Ty))
       return false;
+    if (!Ty->isIntOrIntVectorTy() && !Ty->isFPOrFPVectorTy())
+      return false;
 
     ReducedValueData.clear();
     ReductionRoot = B;
