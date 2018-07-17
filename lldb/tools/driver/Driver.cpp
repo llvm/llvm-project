@@ -41,9 +41,10 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
-#if defined(_WIN32)
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
-#endif
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include <thread>
 
 #if !defined(__APPLE__)
@@ -71,7 +72,7 @@ typedef struct {
   uint32_t usage_mask; // Used to mark options that can be used together.  If (1
                        // << n & usage_mask) != 0
                        // then this option belongs to option set n.
-  bool required;
+  bool required;       // This option is required (in the current usage level)
   const char *long_option; // Full name for this option.
   int short_option;        // Single character for this option.
   int option_has_arg; // no_argument, required_argument or optional_argument
@@ -85,7 +86,6 @@ typedef struct {
 
 #define LLDB_3_TO_5 LLDB_OPT_SET_3 | LLDB_OPT_SET_4 | LLDB_OPT_SET_5
 #define LLDB_4_TO_5 LLDB_OPT_SET_4 | LLDB_OPT_SET_5
-#define LLDB_3_AND_7 LLDB_OPT_SET_3 | LLDB_OPT_SET_7
 
 static OptionDefinition g_options[] = {
     {LLDB_OPT_SET_1, true, "help", 'h', no_argument, 0, eArgTypeNone,
@@ -1235,6 +1235,10 @@ main(int argc, char const *argv[])
   }
   const char **argv = argvPointers.data();
 #endif
+
+  llvm::StringRef ToolName = argv[0];
+  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
+  llvm::PrettyStackTraceProgram X(argc, argv);
 
   SBDebugger::Initialize();
 

@@ -12,7 +12,10 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +48,10 @@ static void terminate() { g_debugger_lifetime->Terminate(); }
 // main
 //----------------------------------------------------------------------
 int main(int argc, char *argv[]) {
+  llvm::StringRef ToolName = argv[0];
+  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
+  llvm::PrettyStackTraceProgram X(argc, argv);
+
   int option_error = 0;
   const char *progname = argv[0];
   if (argc < 2) {

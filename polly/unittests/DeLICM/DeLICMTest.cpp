@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/DeLICM.h"
+#include "polly/Support/ISLTools.h"
 #include "gtest/gtest.h"
 #include <isl/map.h>
 #include <isl/set.h>
@@ -24,12 +25,11 @@ namespace {
 /// Get the universes of all spaces in @p USet.
 isl::union_set unionSpace(const isl::union_set &USet) {
   auto Result = isl::union_set::empty(USet.get_space());
-  USet.foreach_set([=, &Result](isl::set Set) -> isl::stat {
-    auto Space = Set.get_space();
-    auto Universe = isl::set::universe(Space);
+  for (isl::set Set : USet.get_set_list()) {
+    isl::space Space = Set.get_space();
+    isl::set Universe = isl::set::universe(Space);
     Result = Result.add_set(Universe);
-    return isl::stat::ok;
-  });
+  }
   return Result;
 }
 
@@ -51,12 +51,11 @@ void completeLifetime(isl::union_set Universe, isl::union_map OccupiedAndKnown,
     if (!Occupied)
       Occupied = OccupiedAndKnown.domain();
 
-    OccupiedAndKnown.foreach_map([&Known](isl::map Map) -> isl::stat {
+    for (isl::map Map : OccupiedAndKnown.get_map_list()) {
       if (!Map.has_tuple_name(isl::dim::out))
-        return isl::stat::ok;
+        continue;
       Known = Known.add_map(Map);
-      return isl::stat::ok;
-    });
+    }
   }
 
   if (!Undef) {
