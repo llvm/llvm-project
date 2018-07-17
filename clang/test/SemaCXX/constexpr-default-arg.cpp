@@ -31,8 +31,8 @@ void test_default_arg2() {
 }
 
 // Check that multiple CXXDefaultInitExprs don't cause an assertion failure.
-struct A { int &&r = 0; }; // expected-warning 2{{not supported}}
+struct A { int &&r = 0; }; // expected-warning {{binding reference member}} // expected-note {{reference member declared here}}
 struct B { A x, y; };
-B b = {}; // expected-note 2{{in default member initializer for field 'r' used here}}
+B b = {};
 
 }

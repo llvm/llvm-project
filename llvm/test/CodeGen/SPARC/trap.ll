@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=sparc-linux-gnu < %s -show-mc-encoding | FileCheck %s
+; RUN: llc -mtriple=sparc-linux-gnu < %s -show-mc-encoding -verify-machineinstrs | FileCheck %s
 
 define void @test1() {
   tail call void @llvm.trap()

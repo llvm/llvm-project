@@ -28,6 +28,9 @@
 
 // Third party headers:
 #include "lldb/API/SBHostOS.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include <atomic>
 #include <csignal>
 #include <stdio.h>
@@ -168,6 +171,10 @@ int main(int argc, char const *argv[]) {
   CMIUtilDebug::WaitForDbgAttachInfinteLoop();
 #endif //  _WIN32
 #endif // MICONFIG_DEBUG_SHOW_ATTACH_DBG_DLG
+
+  llvm::StringRef ToolName = argv[0];
+  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
+  llvm::PrettyStackTraceProgram X(argc, argv);
 
   // *** Order is important here ***
   bool bOk = DriverSystemInit();

@@ -2283,8 +2283,11 @@ void Scop::simplifyContexts() {
 }
 
 /// Add the minimal/maximal access in @p Set to @p User.
-static isl::stat
-buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
+///
+/// @return True if more accesses should be added, false if we reached the
+///         maximal number of run-time checks to be generated.
+static bool buildMinMaxAccess(isl::set Set,
+                              Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
   isl::pw_multi_aff MinPMA, MaxPMA;
   isl::pw_aff LastDimAff;
   isl::aff OneAff;
@@ -2317,7 +2320,7 @@ buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
         InvolvedParams++;
 
     if (InvolvedParams > RunTimeChecksMaxParameters)
-      return isl::stat::error;
+      return false;
   }
 
   MinPMA = Set.lexmin_pw_multi_aff();
@@ -2341,11 +2344,11 @@ buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
   MaxPMA = MaxPMA.set_pw_aff(Pos, LastDimAff);
 
   if (!MinPMA || !MaxPMA)
-    return isl::stat::error;
+    return false;
 
   MinMaxAccesses.push_back(std::make_pair(MinPMA, MaxPMA));
 
-  return isl::stat::ok;
+  return true;
 }
 
 static isl::set getAccessDomain(MemoryAccess *MA) {
@@ -2368,10 +2371,14 @@ static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
   Accesses = Accesses.intersect_domain(Domains);
   isl::union_set Locations = Accesses.range();
 
-  auto Lambda = [&MinMaxAccesses, &S](isl::set Set) -> isl::stat {
-    return buildMinMaxAccess(Set, MinMaxAccesses, S);
-  };
-  return Locations.foreach_set(Lambda) == isl::stat::ok;
+  bool LimitReached = false;
+  for (isl::set Set : Locations.get_set_list()) {
+    LimitReached |= !buildMinMaxAccess(Set, MinMaxAccesses, S);
+    if (LimitReached)
+      break;
+  }
+
+  return !LimitReached;
 }
 
 /// Helper to treat non-affine regions and basic blocks the same.

@@ -43,12 +43,8 @@ class NotDeleted2a { int &a = n; };
 NotDeleted2a nd2a;
 class NotDeleted2b { int &a = error; }; // expected-error {{undeclared identifier}}
 NotDeleted2b nd2b;
-class NotDeleted2c { int &&a = static_cast<int&&>(n); };
+class NotDeleted2c { int &&a = 0; }; // expected-warning {{binding reference member 'a' to a temporary}} expected-note {{here}}
 NotDeleted2c nd2c;
-// Note: this one does not have a deleted default constructor even though the
-// implicit default constructor is ill-formed!
-class NotDeleted2d { int &&a = 0; }; // expected-error {{reference member 'a' binds to a temporary object}} expected-note {{here}}
-NotDeleted2d nd2d; // expected-note {{first required here}}
 
 // - any non-variant non-static data member of const qualified type (or array
 // thereof) with no brace-or-equal-initializer does not have a user-provided

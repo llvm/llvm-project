@@ -26,10 +26,10 @@ namespace pr33140_0b {
 
 namespace pr33140_2 {
   // FIXME: The declaration of 'b' below should lifetime-extend two int
-  // temporaries.
-  struct A { int &&r = 0; }; // expected-warning 2{{not supported}}
+  // temporaries, invalidating this warning to some extent.
+  struct A { int &&r = 0; }; // expected-warning {{binding reference member 'r' to a temporary}} expected-note {{here}}
   struct B { A x, y; };
-  B b = {}; // expected-note 2{{used here}}
+  B b = {};
 }
 
 namespace pr33140_3 {

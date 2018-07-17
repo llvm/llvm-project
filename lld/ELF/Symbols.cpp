@@ -144,9 +144,7 @@ uint64_t Symbol::getPltOffset() const {
 uint64_t Symbol::getSize() const {
   if (const auto *DR = dyn_cast<Defined>(this))
     return DR->Size;
-  if (const auto *S = dyn_cast<SharedSymbol>(this))
-    return S->Size;
-  return 0;
+  return cast<SharedSymbol>(this)->Size;
 }
 
 OutputSection *Symbol::getOutputSection() const {
