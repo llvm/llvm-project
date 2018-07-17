@@ -143,8 +143,6 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
   exit(1);
 }
 
-} // end namespace llvm
-
 struct CopyConfig {
   StringRef OutputFilename;
   StringRef InputFilename;
@@ -181,9 +179,13 @@ struct CopyConfig {
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
-bool IsDWOSection(const SectionBase &Sec) { return Sec.Name.endswith(".dwo"); }
+} // end namespace llvm
 
-bool OnlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
+static bool IsDWOSection(const SectionBase &Sec) {
+  return Sec.Name.endswith(".dwo");
+}
+
+static bool OnlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   // We can't remove the section header string table.
   if (&Sec == Obj.SectionNames)
     return false;
@@ -192,8 +194,9 @@ bool OnlyKeepDWOPred(const Object &Obj, const SectionBase &Sec) {
   return !IsDWOSection(Sec);
 }
 
-std::unique_ptr<Writer> CreateWriter(const CopyConfig &Config, Object &Obj,
-                                     Buffer &Buf, ElfType OutputElfType) {
+static std::unique_ptr<Writer> CreateWriter(const CopyConfig &Config,
+                                            Object &Obj, Buffer &Buf,
+                                            ElfType OutputElfType) {
   if (Config.OutputFormat == "binary") {
     return llvm::make_unique<BinaryWriter>(Obj, Buf);
   }
@@ -215,8 +218,8 @@ std::unique_ptr<Writer> CreateWriter(const CopyConfig &Config, Object &Obj,
   llvm_unreachable("Invalid output format");
 }
 
-void SplitDWOToFile(const CopyConfig &Config, const Reader &Reader,
-                    StringRef File, ElfType OutputElfType) {
+static void SplitDWOToFile(const CopyConfig &Config, const Reader &Reader,
+                           StringRef File, ElfType OutputElfType) {
   auto DWOFile = Reader.create();
   DWOFile->removeSections(
       [&](const SectionBase &Sec) { return OnlyKeepDWOPred(*DWOFile, Sec); });
@@ -233,8 +236,8 @@ void SplitDWOToFile(const CopyConfig &Config, const Reader &Reader,
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
-                ElfType OutputElfType) {
+static void HandleArgs(const CopyConfig &Config, Object &Obj,
+                       const Reader &Reader, ElfType OutputElfType) {
 
   if (!Config.SplitDWO.empty()) {
     SplitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType);
@@ -444,8 +447,8 @@ void HandleArgs(const CopyConfig &Config, Object &Obj, const Reader &Reader,
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
 }
 
-void ExecuteElfObjcopyOnBinary(const CopyConfig &Config, Binary &Binary,
-                               Buffer &Out) {
+static void ExecuteElfObjcopyOnBinary(const CopyConfig &Config, Binary &Binary,
+                                      Buffer &Out) {
   ELFReader Reader(&Binary);
   std::unique_ptr<Object> Obj = Reader.create();
 
@@ -459,9 +462,10 @@ void ExecuteElfObjcopyOnBinary(const CopyConfig &Config, Binary &Binary,
 
 // For regular archives this function simply calls llvm::writeArchive,
 // For thin archives it writes the archive file itself as well as its members.
-Error deepWriteArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
-                       bool WriteSymtab, object::Archive::Kind Kind,
-                       bool Deterministic, bool Thin) {
+static Error deepWriteArchive(StringRef ArcName,
+                              ArrayRef<NewArchiveMember> NewMembers,
+                              bool WriteSymtab, object::Archive::Kind Kind,
+                              bool Deterministic, bool Thin) {
   Error E =
       writeArchive(ArcName, NewMembers, WriteSymtab, Kind, Deterministic, Thin);
   if (!Thin || E)
@@ -485,7 +489,7 @@ Error deepWriteArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
   return Error::success();
 }
 
-void ExecuteElfObjcopyOnArchive(const CopyConfig &Config, const Archive &Ar) {
+static void ExecuteElfObjcopyOnArchive(const CopyConfig &Config, const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
@@ -516,7 +520,7 @@ void ExecuteElfObjcopyOnArchive(const CopyConfig &Config, const Archive &Ar) {
     reportError(Config.OutputFilename, std::move(E));
 }
 
-void ExecuteElfObjcopy(const CopyConfig &Config) {
+static void ExecuteElfObjcopy(const CopyConfig &Config) {
   Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
       createBinary(Config.InputFilename);
   if (!BinaryOrErr)
@@ -532,7 +536,7 @@ void ExecuteElfObjcopy(const CopyConfig &Config) {
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
-CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
+static CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   ObjcopyOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -618,7 +622,7 @@ CopyConfig ParseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 // ParseStripOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseStripOptions will print the help messege and
 // exit.
-CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
+static CopyConfig ParseStripOptions(ArrayRef<const char *> ArgsArr) {
   StripOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =

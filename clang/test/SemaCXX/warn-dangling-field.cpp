@@ -20,7 +20,7 @@ struct S {
 
 struct S2 {
   const X &x; // expected-note {{reference member declared here}}
-  S2(int i) : x(i) {} // expected-warning {{binding reference member 'x' to a temporary}}
+  S2(int i) : x(i) {} // expected-error {{member 'x' binds to a temporary}}
 };
 
 struct S3 {
@@ -43,9 +43,9 @@ S5 s5 = { 0 }; // ok, lifetime-extended
 
 struct S6 {
   S5 s5; // expected-note {{here}}
-  S6() : s5 { 0 } {} // expected-warning {{binding reference subobject of member 's5' to a temporary}}
+  S6() : s5 { 0 } {} // expected-error {{reference subobject of member 's5' binds to a temporary}}
 };
 
 struct S7 : S5 {
-  S7() : S5 { 0 } {} // expected-warning {{binding reference member 'x' to a temporary}}
+  S7() : S5 { 0 } {} // expected-error {{reference member 'x' binds to a temporary}}
 };

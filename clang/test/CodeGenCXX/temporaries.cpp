@@ -198,20 +198,6 @@ B::B()
   f();
 }
   
-struct C {
-  C();
-  
-  const B& b;
-};
-
-C::C() 
-  // CHECK: call void @_ZN6PR50771BC1Ev
-  : b(B()) {
-  // CHECK: call void @_ZN6PR50771fEv
-  f();
-  
-  // CHECK: call void @_ZN6PR50771BD1Ev
-}
 }
 
 A f8() {
@@ -815,17 +801,4 @@ namespace PR14130 {
   U v { { 0 } };
   // CHECK: call void @_ZN7PR141301SC1Ei({{.*}} @_ZGRN7PR141301vE_, i32 0)
   // CHECK: store {{.*}} @_ZGRN7PR141301vE_, {{.*}} @_ZN7PR141301vE
-}
-
-namespace Ctor {
-  struct A { A(); ~A(); };
-  void f();
-  struct B {
-    A &&a;
-    B() : a{} { f(); }
-  } b;
-  // CHECK: define {{.*}}void @_ZN4Ctor1BC1Ev(
-  // CHECK: call void @_ZN4Ctor1AC1Ev(
-  // CHECK: call void @_ZN4Ctor1fEv(
-  // CHECK: call void @_ZN4Ctor1AD1Ev(
 }

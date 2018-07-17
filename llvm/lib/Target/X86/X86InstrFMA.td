@@ -341,6 +341,13 @@ multiclass scalar_fma_patterns<SDNode Op, string Prefix, string Suffix,
                (VT (COPY_TO_REGCLASS RC:$src3, VR128)))>;
 
     def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
+                (Op RC:$src2, RC:$src3,
+                    (EltVT (extractelt (VT VR128:$src1), (iPTR 0)))))))),
+              (!cast<Instruction>(Prefix#"231"#Suffix#"r_Int")
+               VR128:$src1, (VT (COPY_TO_REGCLASS RC:$src2, VR128)),
+               (VT (COPY_TO_REGCLASS RC:$src3, VR128)))>;
+
+    def : Pat<(VT (Move (VT VR128:$src1), (VT (scalar_to_vector
                 (Op RC:$src2,
                     (EltVT (extractelt (VT VR128:$src1), (iPTR 0))),
                     (mem_frag addr:$src3)))))),

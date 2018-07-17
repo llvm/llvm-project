@@ -72,8 +72,8 @@ TEST(Disassembler, WebAssemblyTest) {
   uint8_t *BytesP = Bytes;
   const char OutStringSize = 100;
   char OutString[OutStringSize];
-  LLVMDisasmContextRef DCR = LLVMCreateDisasm(
-      "wasm32-unknown-unknown-elf", nullptr, 0, nullptr, symbolLookupCallback);
+  LLVMDisasmContextRef DCR = LLVMCreateDisasm("wasm32-unknown-unknown", nullptr,
+                                              0, nullptr, symbolLookupCallback);
   if (!DCR)
     return;
 
