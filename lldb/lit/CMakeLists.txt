@@ -41,12 +41,12 @@ set(LLDB_TEST_DEPS
 if(NOT LLDB_BUILT_STANDALONE)
   list(APPEND LLDB_TEST_DEPS FileCheck not yaml2obj)
 endif()
-  
+
 # lldb-server is not built on every platform.
 if (TARGET lldb-server)
   list(APPEND LLDB_TEST_DEPS lldb-server)
 endif()
-  
+
 if(APPLE)
   list(APPEND LLDB_TEST_DEPS debugserver)
 endif()
@@ -63,7 +63,7 @@ add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
   ${LIT_ARGS}
   PARAMS lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-       lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
+         lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLDB_TEST_DEPS}
   )
 
@@ -75,7 +75,8 @@ if (TARGET clang)
   add_dependencies(check-lldb-lit clang)
 endif()
 
-add_lit_testsuites(LLDB ${CMAKE_CURRENT_SOURCE_DIR}
+add_lit_testsuites(LLDB
+  ${CMAKE_CURRENT_BINARY_DIR}
   ${LIT_ARGS}
   PARAMS lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
          lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
