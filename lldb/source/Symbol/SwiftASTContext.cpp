@@ -1320,6 +1320,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   if (!arch.IsValid())
     return TypeSystemSP();
 
+  swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
+
   bool handled_sdk_path = false;
   bool handled_resource_dir = false;
   const size_t num_images = target.GetImages().GetSize();
