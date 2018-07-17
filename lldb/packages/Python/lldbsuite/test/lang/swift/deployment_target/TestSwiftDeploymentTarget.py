@@ -35,3 +35,17 @@ class TestSwiftDeploymentTarget(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         self.expect("p f", substrs=['i = 23'])
 
+    @decorators.skipUnlessDarwin
+    @decorators.skipIf(macos_version=["<", "10.11"])
+    @decorators.swiftTest
+    @decorators.add_test_categories(["swiftpr"])
+    def test_swift_deployment_target_dlopen(self):
+        self.build()
+        # Create the target
+        target = self.dbg.CreateTarget(self.getBuildArtifact("dlopen_module"))
+        self.assertTrue(target, VALID_TARGET)
+
+        (_, _, self.thread, _) = lldbutil.run_to_source_breakpoint(self,
+            'break here', lldb.SBFileSpec('NewerTarget.swift'))
+        self.expect("p self", substrs=['i = 23'])
+
