@@ -212,6 +212,19 @@ public:
       return *this;
     }
 
+    bool GetFrontEndWantsDereference() const {
+      return (m_flags & lldb::eTypeOptionFrontEndWantsDereference) ==
+             lldb::eTypeOptionFrontEndWantsDereference;
+    }
+
+    Flags &SetFrontEndWantsDereference(bool value = true) {
+      if (value)
+        m_flags |= lldb::eTypeOptionFrontEndWantsDereference;
+      else
+        m_flags &= ~lldb::eTypeOptionFrontEndWantsDereference;
+      return *this;
+    }
+
     uint32_t GetValue() { return m_flags; }
 
     void SetValue(uint32_t value) { m_flags = value; }
@@ -231,6 +244,8 @@ public:
   bool SkipsReferences() const { return m_flags.GetSkipReferences(); }
 
   bool NonCacheable() const { return m_flags.GetNonCacheable(); }
+  
+  bool WantsDereference() const { return m_flags.GetFrontEndWantsDereference();} 
 
   void SetCascades(bool value) { m_flags.SetCascades(value); }
 
