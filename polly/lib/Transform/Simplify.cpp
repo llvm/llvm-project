@@ -97,18 +97,16 @@ static isl::union_map underapproximatedAddMap(isl::union_map UMap,
     return UMap.add_map(Map);
 
   isl::map Result = isl::map::empty(PrevMap.get_space());
-  PrevMap.foreach_basic_map([&Result](isl::basic_map BMap) -> isl::stat {
-    if (isl_map_n_basic_map(Result.get()) > SimplifyMaxDisjuncts)
-      return isl::stat::error;
+  for (isl::basic_map BMap : PrevMap.get_basic_map_list()) {
+    if (Result.n_basic_map() > SimplifyMaxDisjuncts)
+      break;
     Result = Result.unite(BMap);
-    return isl::stat::ok;
-  });
-  Map.foreach_basic_map([&Result](isl::basic_map BMap) -> isl::stat {
+  }
+  for (isl::basic_map BMap : Map.get_basic_map_list()) {
     if (isl_map_n_basic_map(Result.get()) > SimplifyMaxDisjuncts)
-      return isl::stat::error;
+      break;
     Result = Result.unite(BMap);
-    return isl::stat::ok;
-  });
+  }
 
   isl::union_map UResult =
       UMap.subtract(isl::map::universe(PrevMap.get_space()));
@@ -312,7 +310,7 @@ private:
               FutureWrites.uncurry().intersect_domain(Filter.wrap());
 
           // Iterate through the candidates.
-          Filtered.foreach_map([&, this](isl::map Map) -> isl::stat {
+          for (isl::map Map : Filtered.get_map_list()) {
             MemoryAccess *OtherMA = (MemoryAccess *)Map.get_space()
                                         .get_tuple_id(isl::dim::out)
                                         .get_user();
@@ -324,7 +322,7 @@ private:
             // elements are allowed. Verify that it only accesses allowed
             // elements. Otherwise, continue with the next candidate.
             if (!OtherAccRel.is_subset(AllowedAccesses).is_true())
-              return isl::stat::ok;
+              continue;
 
             // The combined access relation.
             // { Domain[] -> Element[] }
@@ -342,8 +340,8 @@ private:
             WritesCoalesced++;
 
             // Don't look for more candidates.
-            return isl::stat::error;
-          });
+            break;
+          }
         }
 
         // Two writes cannot be coalesced if there is another access (to some of
@@ -352,20 +350,18 @@ private:
         // elements, but any MemoryAccess that touches any of the invalidated
         // elements.
         SmallPtrSet<MemoryAccess *, 2> TouchedAccesses;
-        FutureWrites.intersect_domain(AccRelWrapped)
-            .foreach_map([&TouchedAccesses](isl::map Map) -> isl::stat {
-              MemoryAccess *MA = (MemoryAccess *)Map.get_space()
-                                     .range()
-                                     .unwrap()
-                                     .get_tuple_id(isl::dim::out)
-                                     .get_user();
-              TouchedAccesses.insert(MA);
-              return isl::stat::ok;
-            });
+        for (isl::map Map :
+             FutureWrites.intersect_domain(AccRelWrapped).get_map_list()) {
+          MemoryAccess *MA = (MemoryAccess *)Map.get_space()
+                                 .range()
+                                 .unwrap()
+                                 .get_tuple_id(isl::dim::out)
+                                 .get_user();
+          TouchedAccesses.insert(MA);
+        }
         isl::union_map NewFutureWrites =
             isl::union_map::empty(FutureWrites.get_space());
-        FutureWrites.foreach_map([&TouchedAccesses, &NewFutureWrites](
-                                     isl::map FutureWrite) -> isl::stat {
+        for (isl::map FutureWrite : FutureWrites.get_map_list()) {
           MemoryAccess *MA = (MemoryAccess *)FutureWrite.get_space()
                                  .range()
                                  .unwrap()
@@ -373,8 +369,7 @@ private:
                                  .get_user();
           if (!TouchedAccesses.count(MA))
             NewFutureWrites = NewFutureWrites.add_map(FutureWrite);
-          return isl::stat::ok;
-        });
+        }
         FutureWrites = NewFutureWrites;
 
         if (MA->isMustWrite() && !ValSet.is_null()) {
