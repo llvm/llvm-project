@@ -3970,7 +3970,7 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
       if (!CE->getID() || !CE->getAddress()) {
         unsigned DiagID = CGM.getDiags().getCustomDiagID(
             DiagnosticsEngine::Error,
-            "Offloading entry for target region is incorect: either the "
+            "Offloading entry for target region is incorrect: either the "
             "address or the ID is invalid.");
         CGM.getDiags().Report(DiagID);
         continue;
@@ -3980,16 +3980,39 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
     } else if (const auto *CE =
                    dyn_cast<OffloadEntriesInfoManagerTy::
                                 OffloadEntryInfoDeviceGlobalVar>(E)) {
-      if (!CE->getAddress()) {
-        unsigned DiagID = CGM.getDiags().getCustomDiagID(
-            DiagnosticsEngine::Error,
-            "Offloading entry for declare target varible is inccorect: the "
-            "address is invalid.");
-        CGM.getDiags().Report(DiagID);
-        continue;
+      OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind Flags =
+          static_cast<OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind>(
+              CE->getFlags());
+      switch (Flags) {
+      case OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo: {
+        if (!CE->getAddress()) {
+          unsigned DiagID = CGM.getDiags().getCustomDiagID(
+              DiagnosticsEngine::Error,
+              "Offloading entry for declare target variable is incorrect: the "
+              "address is invalid.");
+          CGM.getDiags().Report(DiagID);
+          continue;
+        }
+        break;
+      }
+      case OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryLink:
+        assert(((CGM.getLangOpts().OpenMPIsDevice && !CE->getAddress()) ||
+                (!CGM.getLangOpts().OpenMPIsDevice && CE->getAddress())) &&
+               "Declaret target link address is set.");
+        if (CGM.getLangOpts().OpenMPIsDevice)
+          continue;
+        if (!CE->getAddress()) {
+          unsigned DiagID = CGM.getDiags().getCustomDiagID(
+              DiagnosticsEngine::Error,
+              "Offloading entry for declare target variable is incorrect: the "
+              "address is invalid.");
+          CGM.getDiags().Report(DiagID);
+          continue;
+        }
+        break;
       }
       createOffloadEntry(CE->getAddress(), CE->getAddress(),
-                         CE->getVarSize().getQuantity(), CE->getFlags(),
+                         CE->getVarSize().getQuantity(), Flags,
                          CE->getLinkage());
     } else {
       llvm_unreachable("Unsupported entry kind.");
@@ -7889,14 +7912,15 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
       Linkage = CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
       break;
     case OMPDeclareTargetDeclAttr::MT_Link:
-      // Map type 'to' because we do not map the original variable but the
-      // reference.
-      Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo;
-      if (!CGM.getLangOpts().OpenMPIsDevice) {
+      Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryLink;
+      if (CGM.getLangOpts().OpenMPIsDevice) {
+        VarName = Addr->getName();
+        Addr = nullptr;
+      } else {
+        VarName = getAddrOfDeclareTargetLink(VD).getName();
         Addr =
             cast<llvm::Constant>(getAddrOfDeclareTargetLink(VD).getPointer());
       }
-      VarName = Addr->getName();
       VarSize = CGM.getPointerSize();
       Linkage = llvm::GlobalValue::WeakAnyLinkage;
       break;

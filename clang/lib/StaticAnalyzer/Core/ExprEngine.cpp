@@ -2297,9 +2297,9 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
 
     // Notify checkers.
     for (const auto I : AfterRemovedDead)
-      getCheckerManager().runCheckersForEndFunction(BC, Dst, I, *this);
+      getCheckerManager().runCheckersForEndFunction(BC, Dst, I, *this, RS);
   } else {
-    getCheckerManager().runCheckersForEndFunction(BC, Dst, Pred, *this);
+    getCheckerManager().runCheckersForEndFunction(BC, Dst, Pred, *this, RS);
   }
 
   Engine.enqueueEndOfFunction(Dst, RS);

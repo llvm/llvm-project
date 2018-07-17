@@ -47,7 +47,7 @@ public:
 
   UninitializedObjectChecker()
       : BT_uninitField(new BuiltinBug(this, "Uninitialized fields")) {}
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 };
 
 /// Represents a field chain. A field chain is a vector of fields where the
@@ -241,7 +241,7 @@ static StringRef getVariableName(const FieldDecl *Field);
 //===----------------------------------------------------------------------===//
 
 void UninitializedObjectChecker::checkEndFunction(
-    CheckerContext &Context) const {
+    const ReturnStmt *RS, CheckerContext &Context) const {
 
   const auto *CtorDecl = dyn_cast_or_null<CXXConstructorDecl>(
       Context.getLocationContext()->getDecl());

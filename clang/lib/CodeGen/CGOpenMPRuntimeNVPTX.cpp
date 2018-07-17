@@ -204,7 +204,7 @@ class CheckVarsEscapingDeclContext final
 
   void markAsEscaped(const ValueDecl *VD) {
     // Do not globalize declare target variables.
-    if (isDeclareTargetDeclaration(VD))
+    if (!isa<VarDecl>(VD) || isDeclareTargetDeclaration(VD))
       return;
     VD = cast<ValueDecl>(VD->getCanonicalDecl());
     // Variables captured by value must be globalized.

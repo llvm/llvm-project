@@ -2743,7 +2743,7 @@ public:
 
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
   void checkBeginFunction(CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 
   ProgramStateRef updateSymbol(ProgramStateRef state, SymbolRef sym,
                                RefVal V, ArgEffect E, RefVal::Kind &hasErr,
@@ -3991,7 +3991,8 @@ void RetainCountChecker::checkBeginFunction(CheckerContext &Ctx) const {
   Ctx.addTransition(state);
 }
 
-void RetainCountChecker::checkEndFunction(CheckerContext &Ctx) const {
+void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
+                                          CheckerContext &Ctx) const {
   ProgramStateRef state = Ctx.getState();
   RefBindingsTy B = state->get<RefBindings>();
   ExplodedNode *Pred = Ctx.getPredecessor();

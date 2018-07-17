@@ -43,3 +43,26 @@ int testDivision(int a) {
 DEREF_IN_MACRO(0) // expected-warning{{Dereference of null pointer}}
                   // expected-note@-1{{'p' initialized to a null}}
                   // expected-note@-2{{Dereference of null pointer}}
+
+// Warning should not be suppressed if the null returned by the macro
+// is not related to the warning.
+#define RETURN_NULL() (0)
+extern int* returnFreshPointer();
+int noSuppressMacroUnrelated() {
+  int *x = RETURN_NULL();
+  x = returnFreshPointer();  // expected-note{{Value assigned to 'x'}}
+  if (x) {} // expected-note{{Taking false branch}}
+            // expected-note@-1{{Assuming 'x' is null}}
+  return *x; // expected-warning{{Dereference of null pointer}}
+             // expected-note@-1{{Dereference}}
+}
+
+// Value haven't changed by the assignment, but the null pointer
+// did not come from the macro.
+int noSuppressMacroUnrelatedOtherReason() {
+  int *x = RETURN_NULL();
+  x = returnFreshPointer();  
+  x = 0; // expected-note{{Null pointer value stored to 'x'}}
+  return *x; // expected-warning{{Dereference of null pointer}}
+             // expected-note@-1{{Dereference}}
+}

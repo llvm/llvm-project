@@ -1185,7 +1185,7 @@ TEST_P(ASTImporterTestBase,
 }
 
 TEST_P(ASTImporterTestBase,
-       DISABLED_ImportOfTemplatedDeclShouldImportTheFunctionTemplateDecl) {
+       ImportOfTemplatedDeclShouldImportTheFunctionTemplateDecl) {
   Decl *FromTU = getTuDecl("template<class X> void f(){}", Lang_CXX);
   auto FromFT = FirstDeclMatcher<FunctionTemplateDecl>().match(
       FromTU, functionTemplateDecl());
@@ -2341,6 +2341,117 @@ TEST_P(ImportExpr, UnresolvedMemberExpr) {
              Lang_CXX11, "", Lang_CXX11, Verifier,
              functionTemplateDecl(has(functionDecl(has(
                  compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
+}
+
+class ImportImplicitMethods : public ASTImporterTestBase {
+public:
+  static constexpr auto DefaultCode = R"(
+      struct A { int x; };
+      void f() {
+        A a;
+        A a1(a);
+        A a2(A{});
+        a = a1;
+        a = A{};
+        a.~A();
+      })";
+
+  template <typename MatcherType>
+  void testImportOf(
+      const MatcherType &MethodMatcher, const char *Code = DefaultCode) {
+    test(MethodMatcher, Code, /*ExpectedCount=*/1u);
+  }
+
+  template <typename MatcherType>
+  void testNoImportOf(
+      const MatcherType &MethodMatcher, const char *Code = DefaultCode) {
+    test(MethodMatcher, Code, /*ExpectedCount=*/0u);
+  }
+
+private:
+  template <typename MatcherType>
+  void test(const MatcherType &MethodMatcher,
+      const char *Code, unsigned int ExpectedCount) {
+    auto ClassMatcher = cxxRecordDecl(unless(isImplicit()));
+
+    Decl *ToTU = getToTuDecl(Code, Lang_CXX11);
+    auto *ToClass = FirstDeclMatcher<CXXRecordDecl>().match(
+        ToTU, ClassMatcher);
+
+    ASSERT_EQ(DeclCounter<CXXMethodDecl>().match(ToClass, MethodMatcher), 1u);
+
+    {
+      CXXMethodDecl *Method =
+          FirstDeclMatcher<CXXMethodDecl>().match(ToClass, MethodMatcher);
+      ToClass->removeDecl(Method);
+    }
+
+    ASSERT_EQ(DeclCounter<CXXMethodDecl>().match(ToClass, MethodMatcher), 0u);
+
+    Decl *ImportedClass = nullptr;
+    {
+      Decl *FromTU = getTuDecl(Code, Lang_CXX11, "input1.cc");
+      auto *FromClass = FirstDeclMatcher<CXXRecordDecl>().match(
+          FromTU, ClassMatcher);
+      ImportedClass = Import(FromClass, Lang_CXX11);
+    }
+
+    EXPECT_EQ(ToClass, ImportedClass);
+    EXPECT_EQ(DeclCounter<CXXMethodDecl>().match(ToClass, MethodMatcher),
+        ExpectedCount);
+  }
+};
+
+TEST_P(ImportImplicitMethods, DefaultConstructor) {
+  testImportOf(cxxConstructorDecl(isDefaultConstructor()));
+}
+
+TEST_P(ImportImplicitMethods, CopyConstructor) {
+  testImportOf(cxxConstructorDecl(isCopyConstructor()));
+}
+
+TEST_P(ImportImplicitMethods, MoveConstructor) {
+  testImportOf(cxxConstructorDecl(isMoveConstructor()));
+}
+
+TEST_P(ImportImplicitMethods, Destructor) {
+  testImportOf(cxxDestructorDecl());
+}
+
+TEST_P(ImportImplicitMethods, CopyAssignment) {
+  testImportOf(cxxMethodDecl(isCopyAssignmentOperator()));
+}
+
+TEST_P(ImportImplicitMethods, MoveAssignment) {
+  testImportOf(cxxMethodDecl(isMoveAssignmentOperator()));
+}
+
+TEST_P(ImportImplicitMethods, DoNotImportUserProvided) {
+  auto Code = R"(
+      struct A { A() { int x; } };
+      )";
+  testNoImportOf(cxxConstructorDecl(isDefaultConstructor()), Code);
+}
+
+TEST_P(ImportImplicitMethods, DoNotImportDefault) {
+  auto Code = R"(
+      struct A { A() = default; };
+      )";
+  testNoImportOf(cxxConstructorDecl(isDefaultConstructor()), Code);
+}
+
+TEST_P(ImportImplicitMethods, DoNotImportDeleted) {
+  auto Code = R"(
+      struct A { A() = delete; };
+      )";
+  testNoImportOf(cxxConstructorDecl(isDefaultConstructor()), Code);
+}
+
+TEST_P(ImportImplicitMethods, DoNotImportOtherMethod) {
+  auto Code = R"(
+      struct A { void f() { } };
+      )";
+  testNoImportOf(cxxMethodDecl(hasName("f")), Code);
 }
 
 TEST_P(ASTImporterTestBase, ImportOfEquivalentRecord) {
