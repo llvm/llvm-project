@@ -1902,13 +1902,17 @@ bool llvm::runIPSCCP(Module &M, const DataLayout &DL,
 
   // Solve for constants.
   bool ResolvedUndefs = true;
+  Solver.Solve();
   while (ResolvedUndefs) {
-    Solver.Solve();
-
     LLVM_DEBUG(dbgs() << "RESOLVING UNDEFS\n");
     ResolvedUndefs = false;
     for (Function &F : M)
-      ResolvedUndefs |= Solver.ResolvedUndefsIn(F);
+      if (Solver.ResolvedUndefsIn(F)) {
+        // We run Solve() after we resolved an undef in a function, because
+        // we might deduce a fact that eliminates an undef in another function.
+        Solver.Solve();
+        ResolvedUndefs = true;
+      }
   }
 
   bool MadeChanges = false;

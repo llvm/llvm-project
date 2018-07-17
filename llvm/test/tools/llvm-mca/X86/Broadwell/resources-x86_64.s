@@ -118,6 +118,9 @@ bsrq %rsi, %rdi
 bsfq (%rax), %rdi
 bsrq (%rax), %rdi
 
+bswap %eax
+bswap %rax
+
 btw  %si, %di
 btcw %si, %di
 btrw %si, %di
@@ -169,7 +172,50 @@ btcq $7, (%rax)
 btrq $7, (%rax)
 btsq $7, (%rax)
 
+cbw
+cwde
+cdqe
+cwd
+cdq
+cqo
+
 clc
+cld
+cmc
+
+cmpb $7, %al
+cmpb $7, %dil
+cmpb $7, (%rax)
+cmpb %sil, %dil
+cmpb %sil, (%rax)
+cmpb (%rax), %dil
+
+cmpw $511, %ax
+cmpw $511, %di
+cmpw $511, (%rax)
+cmpw $7, %di
+cmpw $7, (%rax)
+cmpw %si, %di
+cmpw %si, (%rax)
+cmpw (%rax), %di
+
+cmpl $665536, %eax
+cmpl $665536, %edi
+cmpl $665536, (%rax)
+cmpl $7, %edi
+cmpl $7, (%rax)
+cmpl %esi, %edi
+cmpl %esi, (%rax)
+cmpl (%rax), %edi
+
+cmpq $665536, %rax
+cmpq $665536, %rdi
+cmpq $665536, (%rax)
+cmpq $7, %rdi
+cmpq $7, (%rax)
+cmpq %rsi, %rdi
+cmpq %rsi, (%rax)
+cmpq (%rax), %rdi
 
 decb %dil
 decb (%rax)
@@ -730,6 +776,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      3     1.00                        bsrq	%rsi, %rdi
 # CHECK-NEXT:  2      8     1.00    *                   bsfq	(%rax), %rdi
 # CHECK-NEXT:  2      8     1.00    *                   bsrq	(%rax), %rdi
+# CHECK-NEXT:  1      1     0.50                        bswapl	%eax
+# CHECK-NEXT:  2      2     0.50                        bswapq	%rax
 # CHECK-NEXT:  1      1     0.50                        btw	%si, %di
 # CHECK-NEXT:  1      1     0.50                        btcw	%si, %di
 # CHECK-NEXT:  1      1     0.50                        btrw	%si, %di
@@ -778,7 +826,45 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  4      6     1.00    *      *            btcq	$7, (%rax)
 # CHECK-NEXT:  4      6     1.00    *      *            btrq	$7, (%rax)
 # CHECK-NEXT:  4      6     1.00    *      *            btsq	$7, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cbtw
+# CHECK-NEXT:  1      1     0.25                        cwtl
+# CHECK-NEXT:  1      1     0.25                        cltq
+# CHECK-NEXT:  2      2     0.50                        cwtd
+# CHECK-NEXT:  1      1     0.50                        cltd
+# CHECK-NEXT:  1      1     0.50                        cqto
 # CHECK-NEXT:  1      1     0.25                  U     clc
+# CHECK-NEXT:  3      3     1.00                  U     cld
+# CHECK-NEXT:  1      1     0.25                  U     cmc
+# CHECK-NEXT:  1      1     0.25                        cmpb	$7, %al
+# CHECK-NEXT:  1      1     0.25                        cmpb	$7, %dil
+# CHECK-NEXT:  2      6     0.50    *                   cmpb	$7, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cmpb	%sil, %dil
+# CHECK-NEXT:  2      6     0.50    *                   cmpb	%sil, (%rax)
+# CHECK-NEXT:  2      6     0.50    *                   cmpb	(%rax), %dil
+# CHECK-NEXT:  1      1     0.25                        cmpw	$511, %ax
+# CHECK-NEXT:  1      1     0.25                        cmpw	$511, %di
+# CHECK-NEXT:  2      6     0.50    *                   cmpw	$511, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cmpw	$7, %di
+# CHECK-NEXT:  2      6     0.50    *                   cmpw	$7, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cmpw	%si, %di
+# CHECK-NEXT:  2      6     0.50    *                   cmpw	%si, (%rax)
+# CHECK-NEXT:  2      6     0.50    *                   cmpw	(%rax), %di
+# CHECK-NEXT:  1      1     0.25                        cmpl	$665536, %eax
+# CHECK-NEXT:  1      1     0.25                        cmpl	$665536, %edi
+# CHECK-NEXT:  2      6     0.50    *                   cmpl	$665536, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cmpl	$7, %edi
+# CHECK-NEXT:  2      6     0.50    *                   cmpl	$7, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cmpl	%esi, %edi
+# CHECK-NEXT:  2      6     0.50    *                   cmpl	%esi, (%rax)
+# CHECK-NEXT:  2      6     0.50    *                   cmpl	(%rax), %edi
+# CHECK-NEXT:  1      1     0.25                        cmpq	$665536, %rax
+# CHECK-NEXT:  1      1     0.25                        cmpq	$665536, %rdi
+# CHECK-NEXT:  2      6     0.50    *                   cmpq	$665536, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cmpq	$7, %rdi
+# CHECK-NEXT:  2      6     0.50    *                   cmpq	$7, (%rax)
+# CHECK-NEXT:  1      1     0.25                        cmpq	%rsi, %rdi
+# CHECK-NEXT:  2      6     0.50    *                   cmpq	%rsi, (%rax)
+# CHECK-NEXT:  2      6     0.50    *                   cmpq	(%rax), %rdi
 # CHECK-NEXT:  1      1     0.25                        decb	%dil
 # CHECK-NEXT:  3      7     1.00    *      *            decb	(%rax)
 # CHECK-NEXT:  1      1     0.25                        decw	%di
@@ -1197,7 +1283,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT: 50.00   -     363.00 254.50 205.00 205.00 167.00 148.00 328.50 69.00
+# CHECK-NEXT: 50.00   -     374.25 264.75 212.50 212.50 167.00 158.25 340.75 69.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1303,6 +1389,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     bsrq	%rsi, %rdi
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     bsfq	(%rax), %rdi
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     bsrq	(%rax), %rdi
+# CHECK-NEXT:  -      -      -     0.50    -      -      -     0.50    -      -     bswapl	%eax
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   0.50    -     bswapq	%rax
 # CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     btw	%si, %di
 # CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     btcw	%si, %di
 # CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     btrw	%si, %di
@@ -1351,7 +1439,45 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -     0.50    -     0.83   0.83   1.00    -     0.50   0.33   btcq	$7, (%rax)
 # CHECK-NEXT:  -      -     0.50    -     0.83   0.83   1.00    -     0.50   0.33   btrq	$7, (%rax)
 # CHECK-NEXT:  -      -     0.50    -     0.83   0.83   1.00    -     0.50   0.33   btsq	$7, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cbtw
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cwtl
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cltq
+# CHECK-NEXT:  -      -     0.75   0.25    -      -      -     0.25   0.75    -     cwtd
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     cltd
+# CHECK-NEXT:  -      -     0.50    -      -      -      -      -     0.50    -     cqto
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     clc
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   1.50    -     cld
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmc
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpb	$7, %al
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpb	$7, %dil
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpb	$7, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpb	%sil, %dil
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpb	%sil, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpb	(%rax), %dil
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpw	$511, %ax
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpw	$511, %di
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpw	$511, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpw	$7, %di
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpw	$7, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpw	%si, %di
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpw	%si, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpw	(%rax), %di
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpl	$665536, %eax
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpl	$665536, %edi
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpl	$665536, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpl	$7, %edi
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpl	$7, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpl	%esi, %edi
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpl	%esi, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpl	(%rax), %edi
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpq	$665536, %rax
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpq	$665536, %rdi
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpq	$665536, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpq	$7, %rdi
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpq	$7, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     cmpq	%rsi, %rdi
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpq	%rsi, (%rax)
+# CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     0.25   0.25    -     cmpq	(%rax), %rdi
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     decb	%dil
 # CHECK-NEXT:  -      -     0.25   0.25   0.83   0.83   1.00   0.25   0.25   0.33   decb	(%rax)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -     decw	%di

@@ -41,5 +41,5 @@ set_target_properties(liblldb PROPERTIES
   PUBLIC_HEADER "${framework_headers}")
 
 add_dependencies(lldb-framework
-  liblldb
-  lldb-framework-headers)
+  lldb-framework-headers
+  lldb-suite)
