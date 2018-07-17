@@ -296,7 +296,8 @@ public:
   void runCheckersForEndFunction(NodeBuilderContext &BC,
                                  ExplodedNodeSet &Dst,
                                  ExplodedNode *Pred,
-                                 ExprEngine &Eng);
+                                 ExprEngine &Eng,
+                                 const ReturnStmt *RS);
 
   /// Run checkers for branch condition.
   void runCheckersForBranchCondition(const Stmt *condition,
@@ -438,7 +439,8 @@ public:
 
   using CheckBeginFunctionFunc = CheckerFn<void (CheckerContext &)>;
 
-  using CheckEndFunctionFunc = CheckerFn<void (CheckerContext &)>;
+  using CheckEndFunctionFunc =
+      CheckerFn<void (const ReturnStmt *, CheckerContext &)>;
   
   using CheckBranchConditionFunc =
       CheckerFn<void (const Stmt *, CheckerContext &)>;
@@ -496,7 +498,7 @@ public:
 
   void _registerForEndAnalysis(CheckEndAnalysisFunc checkfn);
 
-  void _registerForBeginFunction(CheckEndFunctionFunc checkfn);
+  void _registerForBeginFunction(CheckBeginFunctionFunc checkfn);
   void _registerForEndFunction(CheckEndFunctionFunc checkfn);
 
   void _registerForBranchCondition(CheckBranchConditionFunc checkfn);

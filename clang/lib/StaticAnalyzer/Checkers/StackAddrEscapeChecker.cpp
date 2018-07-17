@@ -47,7 +47,7 @@ public:
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &Ctx) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &Ctx) const;
 
 private:
   void checkReturnedBlockCaptures(const BlockDataRegion &B,
@@ -287,7 +287,8 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   EmitStackError(C, R, RetE);
 }
 
-void StackAddrEscapeChecker::checkEndFunction(CheckerContext &Ctx) const {
+void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
+                                              CheckerContext &Ctx) const {
   if (!ChecksEnabled[CK_StackAddrEscapeChecker])
     return;
 

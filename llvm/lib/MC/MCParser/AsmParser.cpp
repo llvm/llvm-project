@@ -696,8 +696,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   case MCObjectFileInfo::IsWasm:
     // TODO: WASM will need its own MCAsmParserExtension implementation, but
     // for now we can re-use the ELF one, since the directives can be the
-    // same for now, and this makes the -triple=wasm32-unknown-unknown-wasm
-    // path work.
+    // same for now.
     PlatformParser.reset(createELFAsmParser());
     break;
   }

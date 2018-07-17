@@ -125,13 +125,6 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
-  case ELF::EM_WEBASSEMBLY:
-    switch (Type) {
-#include "llvm/BinaryFormat/ELFRelocs/WebAssembly.def"
-    default:
-      break;
-    }
-    break;
   case ELF::EM_AMDGPU:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
@@ -188,8 +181,6 @@ uint32_t llvm::object::getELFRelrRelocationType(uint32_t Machine) {
   case ELF::EM_SPARC32PLUS:
   case ELF::EM_SPARCV9:
     return ELF::R_SPARC_RELATIVE;
-  case ELF::EM_WEBASSEMBLY:
-    break;
   case ELF::EM_AMDGPU:
     break;
   case ELF::EM_BPF:

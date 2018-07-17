@@ -3268,6 +3268,19 @@ represent an error condition in the tree!
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('isInstanceMessage0')"><a name="isInstanceMessage0Anchor">isInstanceMessage</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInstanceMessage0"><pre>Returns true when the Objective-C message is sent to an instance.
+
+Example
+matcher = objcMessagaeExpr(isInstanceMessage())
+matches
+  NSString *x = @"hello";
+  [x containsString:@"h"]
+but not
+  [NSString stringWithFormat:@"format"]
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('matchesSelector0')"><a name="matchesSelector0Anchor">matchesSelector</a></td><td>std::string RegExp</td></tr>
 <tr><td colspan="4" class="doc" id="matchesSelector0"><pre>Matches ObjC selectors whose name contains
 a substring matched by the given RegExp.
@@ -5872,6 +5885,18 @@ call expression.
 Example matches y in x(y)
     (matcher = callExpr(hasArgument(0, declRefExpr())))
   void x(int) { int y; x(y); }
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('hasReceiver0')"><a name="hasReceiver0Anchor">hasReceiver</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasReceiver0"><pre>Matches if the Objective-C message is sent to an instance,
+and the inner matcher matches on that instance.
+
+For example the method call in
+  NSString *x = @"hello";
+  [x containsString:@"h"]
+is matched by
+objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))
 </pre></td></tr>
 
 

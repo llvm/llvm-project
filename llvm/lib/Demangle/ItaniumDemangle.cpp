@@ -11,9 +11,11 @@
 // file does not yet support:
 //   - C++ modules TS
 
+#include "Compiler.h"
+#include "StringView.h"
+#include "Utility.h"
 #include "llvm/Demangle/Demangle.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <cstdio>
@@ -22,204 +24,9 @@
 #include <numeric>
 #include <vector>
 
-#ifdef _MSC_VER
-// snprintf is implemented in VS 2015
-#if _MSC_VER < 1900
-#define snprintf _snprintf_s
-#endif
-#endif
-
-// A variety of feature test macros copied from include/llvm/Support/Compiler.h
-#ifndef __has_feature
-#define __has_feature(x) 0
-#endif
-
-#ifndef __has_cpp_attribute
-#define __has_cpp_attribute(x) 0
-#endif
-
-#ifndef __has_attribute
-#define __has_attribute(x) 0
-#endif
-
-#ifndef __has_builtin
-#define __has_builtin(x) 0
-#endif
-
-#ifndef LLVM_GNUC_PREREQ
-#if defined(__GNUC__) && defined(__GNUC_MINOR__) && defined(__GNUC_PATCHLEVEL__)
-#define LLVM_GNUC_PREREQ(maj, min, patch)                                      \
-  ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) + __GNUC_PATCHLEVEL__ >=          \
-   ((maj) << 20) + ((min) << 10) + (patch))
-#elif defined(__GNUC__) && defined(__GNUC_MINOR__)
-#define LLVM_GNUC_PREREQ(maj, min, patch)                                      \
-  ((__GNUC__ << 20) + (__GNUC_MINOR__ << 10) >= ((maj) << 20) + ((min) << 10))
-#else
-#define LLVM_GNUC_PREREQ(maj, min, patch) 0
-#endif
-#endif
-
-#if __has_attribute(used) || LLVM_GNUC_PREREQ(3, 1, 0)
-#define LLVM_ATTRIBUTE_USED __attribute__((__used__))
-#else
-#define LLVM_ATTRIBUTE_USED
-#endif
-
-#if __has_builtin(__builtin_unreachable) || LLVM_GNUC_PREREQ(4, 5, 0)
-#define LLVM_BUILTIN_UNREACHABLE __builtin_unreachable()
-#elif defined(_MSC_VER)
-#define LLVM_BUILTIN_UNREACHABLE __assume(false)
-#endif
-
-#if __has_attribute(noinline) || LLVM_GNUC_PREREQ(3, 4, 0)
-#define LLVM_ATTRIBUTE_NOINLINE __attribute__((noinline))
-#elif defined(_MSC_VER)
-#define LLVM_ATTRIBUTE_NOINLINE __declspec(noinline)
-#else
-#define LLVM_ATTRIBUTE_NOINLINE
-#endif
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
-#else
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
-#endif
-
-#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
-#define LLVM_FALLTHROUGH [[fallthrough]]
-#elif __has_cpp_attribute(gnu::fallthrough)
-#define LLVM_FALLTHROUGH [[gnu::fallthrough]]
-#elif !__cplusplus
-// Workaround for llvm.org/PR23435, since clang 3.6 and below emit a spurious
-// error when __has_cpp_attribute is given a scoped attribute in C mode.
-#define LLVM_FALLTHROUGH
-#elif __has_cpp_attribute(clang::fallthrough)
-#define LLVM_FALLTHROUGH [[clang::fallthrough]]
-#else
-#define LLVM_FALLTHROUGH
-#endif
 
 namespace {
 
-class StringView {
-  const char *First;
-  const char *Last;
-
-public:
-  template <size_t N>
-  StringView(const char (&Str)[N]) : First(Str), Last(Str + N - 1) {}
-  StringView(const char *First_, const char *Last_) : First(First_), Last(Last_) {}
-  StringView() : First(nullptr), Last(nullptr) {}
-
-  StringView substr(size_t From, size_t To) {
-    if (To >= size())
-      To = size() - 1;
-    if (From >= size())
-      From = size() - 1;
-    return StringView(First + From, First + To);
-  }
-
-  StringView dropFront(size_t N) const {
-    if (N >= size())
-      N = size() - 1;
-    return StringView(First + N, Last);
-  }
-
-  bool startsWith(StringView Str) const {
-    if (Str.size() > size())
-      return false;
-    return std::equal(Str.begin(), Str.end(), begin());
-  }
-
-  const char &operator[](size_t Idx) const { return *(begin() + Idx); }
-
-  const char *begin() const { return First; }
-  const char *end() const { return Last; }
-  size_t size() const { return static_cast<size_t>(Last - First); }
-  bool empty() const { return First == Last; }
-};
-
-bool operator==(const StringView &LHS, const StringView &RHS) {
-  return LHS.size() == RHS.size() &&
-         std::equal(LHS.begin(), LHS.end(), RHS.begin());
-}
-
-// Stream that AST nodes write their string representation into after the AST
-// has been parsed.
-class OutputStream {
-  char *Buffer;
-  size_t CurrentPosition;
-  size_t BufferCapacity;
-
-  // Ensure there is at least n more positions in buffer.
-  void grow(size_t N) {
-    if (N + CurrentPosition >= BufferCapacity) {
-      BufferCapacity *= 2;
-      if (BufferCapacity < N + CurrentPosition)
-        BufferCapacity = N + CurrentPosition;
-      Buffer = static_cast<char *>(std::realloc(Buffer, BufferCapacity));
-    }
-  }
-
-public:
-  OutputStream(char *StartBuf, size_t Size)
-      : Buffer(StartBuf), CurrentPosition(0), BufferCapacity(Size) {}
-  OutputStream() = default;
-  void reset(char *Buffer_, size_t BufferCapacity_) {
-    CurrentPosition = 0;
-    Buffer = Buffer_;
-    BufferCapacity = BufferCapacity_;
-  }
-
-  /// If a ParameterPackExpansion (or similar type) is encountered, the offset
-  /// into the pack that we're currently printing.
-  unsigned CurrentPackIndex = std::numeric_limits<unsigned>::max();
-  unsigned CurrentPackMax = std::numeric_limits<unsigned>::max();
-
-  OutputStream &operator+=(StringView R) {
-    size_t Size = R.size();
-    if (Size == 0)
-      return *this;
-    grow(Size);
-    memmove(Buffer + CurrentPosition, R.begin(), Size);
-    CurrentPosition += Size;
-    return *this;
-  }
-
-  OutputStream &operator+=(char C) {
-    grow(1);
-    Buffer[CurrentPosition++] = C;
-    return *this;
-  }
-
-  size_t getCurrentPosition() const { return CurrentPosition; }
-  void setCurrentPosition(size_t NewPos) { CurrentPosition = NewPos; }
-
-  char back() const {
-    return CurrentPosition ? Buffer[CurrentPosition - 1] : '\0';
-  }
-
-  bool empty() const { return CurrentPosition == 0; }
-
-  char *getBuffer() { return Buffer; }
-  char *getBufferEnd() { return Buffer + CurrentPosition - 1; }
-  size_t getBufferCapacity() { return BufferCapacity; }
-};
-
-template <class T>
-class SwapAndRestore {
-  T &Restore;
-  T OriginalValue;
-public:
-  SwapAndRestore(T& Restore_, T NewVal)
-      : Restore(Restore_), OriginalValue(Restore) {
-    Restore = std::move(NewVal);
-  }
-  ~SwapAndRestore() { Restore = std::move(OriginalValue); }
-
-  SwapAndRestore(const SwapAndRestore &) = delete;
-  SwapAndRestore &operator=(const SwapAndRestore &) = delete;
-};
 
 // Base class of all AST nodes. The AST is built by the parser, then is
 // traversed by the printLeft/Right functions to produce a demangled string.
@@ -2987,7 +2794,7 @@ Node *Db::parseBaseUnresolvedName() {
 // <unresolved-name>
 //  extension        ::= srN <unresolved-type> [<template-args>] <unresolved-qualifier-level>* E <base-unresolved-name>
 //                   ::= [gs] <base-unresolved-name>                     # x or (with "gs") ::x
-//                   ::= [gs] sr <unresolved-qualifier-level>+ E <base-unresolved-name>  
+//                   ::= [gs] sr <unresolved-qualifier-level>+ E <base-unresolved-name>
 //                                                                       # A::x, N::y, A<T>::z; "gs" means leading "::"
 //                   ::= sr <unresolved-type> <base-unresolved-name>     # T::x / decltype(p)::x
 //  extension        ::= sr <unresolved-type> <template-args> <base-unresolved-name>
@@ -3037,7 +2844,7 @@ Node *Db::parseUnresolvedName() {
     return SoFar;
   }
 
-  // [gs] sr <unresolved-qualifier-level>+ E   <base-unresolved-name>  
+  // [gs] sr <unresolved-qualifier-level>+ E   <base-unresolved-name>
   if (std::isdigit(look())) {
     do {
       Node *Qual = parseSimpleId();

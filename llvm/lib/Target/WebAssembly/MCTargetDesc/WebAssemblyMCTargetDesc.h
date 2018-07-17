@@ -41,9 +41,6 @@ MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 
 std::unique_ptr<MCObjectTargetWriter>
-createWebAssemblyELFObjectWriter(bool Is64Bit, uint8_t OSABI);
-
-std::unique_ptr<MCObjectTargetWriter>
 createWebAssemblyWasmObjectWriter(bool Is64Bit);
 
 namespace WebAssembly {

@@ -2736,6 +2736,41 @@ AST_MATCHER_P(ObjCMessageExpr, hasReceiverType, internal::Matcher<QualType>,
   return InnerMatcher.matches(TypeDecl, Finder, Builder);
 }
 
+/// Returns true when the Objective-C message is sent to an instance.
+///
+/// Example
+/// matcher = objcMessagaeExpr(isInstanceMessage())
+/// matches
+/// \code
+///   NSString *x = @"hello";
+///   [x containsString:@"h"];
+/// \endcode
+/// but not
+/// \code
+///   [NSString stringWithFormat:@"format"];
+/// \endcode
+AST_MATCHER(ObjCMessageExpr, isInstanceMessage) {
+  return Node.isInstanceMessage();
+}
+
+/// Matches if the Objective-C message is sent to an instance,
+/// and the inner matcher matches on that instance.
+///
+/// For example the method call in
+/// \code
+///   NSString *x = @"hello";
+///   [x containsString:@"h"];
+/// \endcode
+/// is matched by
+/// objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))
+AST_MATCHER_P(ObjCMessageExpr, hasReceiver, internal::Matcher<Expr>,
+              InnerMatcher) {
+  const Expr *ReceiverNode = Node.getInstanceReceiver();
+  return (ReceiverNode != nullptr &&
+          InnerMatcher.matches(*ReceiverNode->IgnoreParenImpCasts(), Finder,
+                               Builder));
+}
+
 /// Matches when BaseName == Selector.getAsString()
 ///
 ///  matcher = objCMessageExpr(hasSelector("loadHTMLString:baseURL:"));

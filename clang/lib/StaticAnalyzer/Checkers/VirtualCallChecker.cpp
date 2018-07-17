@@ -48,7 +48,7 @@ public:
   DefaultBool IsPureOnly;
 
   void checkBeginFunction(CheckerContext &C) const;
-  void checkEndFunction(CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 
 private:
@@ -167,7 +167,8 @@ void VirtualCallChecker::checkBeginFunction(CheckerContext &C) const {
 }
 
 // The EndFunction callback when leave a constructor or a destructor.
-void VirtualCallChecker::checkEndFunction(CheckerContext &C) const {
+void VirtualCallChecker::checkEndFunction(const ReturnStmt *RS,
+                                          CheckerContext &C) const {
   registerCtorDtorCallInState(false, C);
 }
 

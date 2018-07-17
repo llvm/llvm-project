@@ -333,3 +333,13 @@ void dispatch_group_and_semaphore_use(MyInterface1 *M) {
   }];
   dispatch_semaphore_wait(sema1, 100); // expected-warning{{Waiting on a callback using a semaphore}}
 }
+
+void no_warn_on_nonzero_semaphore(MyInterface1 *M) {
+  dispatch_semaphore_t sema1 = dispatch_semaphore_create(1);
+
+  [M acceptBlock:^{
+      dispatch_semaphore_signal(sema1);
+  }];
+  dispatch_semaphore_wait(sema1, 100); // no-warning
+}
+

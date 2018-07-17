@@ -439,7 +439,8 @@ void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
 void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
                                                ExplodedNodeSet &Dst,
                                                ExplodedNode *Pred,
-                                               ExprEngine &Eng) {
+                                               ExprEngine &Eng,
+                                               const ReturnStmt *RS) {
   // We define the builder outside of the loop bacause if at least one checkers
   // creates a sucsessor for Pred, we do not need to generate an
   // autotransition for it.
@@ -449,7 +450,7 @@ void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
                                           Pred->getLocationContext(),
                                           checkFn.Checker);
     CheckerContext C(Bldr, Eng, Pred, L);
-    checkFn(C);
+    checkFn(RS, C);
   }
 }
 
