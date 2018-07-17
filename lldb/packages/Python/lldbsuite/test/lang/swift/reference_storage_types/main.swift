@@ -16,9 +16,12 @@ class Minion {
 }
 
 class MyClass {
-    weak var sub_001: Minion! = Minion.TheMinionKing
-    var sub_002: Minion! = Minion.TheMinionKing
-    unowned(unsafe) var sub_003: Minion = Minion.TheMinionKing
+    /*default*/     var sub_001: Minion! = Minion.TheMinionKing
+    weak            var sub_002: Minion! = Minion.TheMinionKing
+    unowned         var sub_003: Minion! = Minion.TheMinionKing
+    unowned(unsafe) var sub_004: Minion! = Minion.TheMinionKing
+    unowned         var sub_005: Minion  = Minion.TheMinionKing
+    unowned(unsafe) var sub_006: Minion  = Minion.TheMinionKing
 }
 
 func main() {
