@@ -695,7 +695,7 @@ multiclass sse12_mov_hilo_packed<bits<8>opc, SDPatternOperator psnode,
                                     "\t{$src2, $dst|$dst, $src2}">;
 }
 
-defm MOVL : sse12_mov_hilo_packed<0x12, null_frag, null_frag, "movlp">;
+defm MOVL : sse12_mov_hilo_packed<0x12, null_frag, X86Movsd, "movlp">;
 
 let SchedRW = [WriteFStore] in {
 let Predicates = [UseAVX] in {
@@ -720,25 +720,11 @@ def MOVLPDmr : PDI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                                  (iPTR 0))), addr:$dst)]>;
 } // SchedRW
 
-let Predicates = [UseAVX] in {
-  // Shuffle with VMOVLPD
-  def : Pat<(v2f64 (X86Movsd VR128:$src1,
-                             (v2f64 (scalar_to_vector (loadf64 addr:$src2))))),
-            (VMOVLPDrm VR128:$src1, addr:$src2)>;
-}
-
 let Predicates = [UseSSE1] in {
   // (store (vector_shuffle (load addr), v2, <4, 5, 2, 3>), addr) using MOVLPS
   def : Pat<(store (i64 (extractelt (bc_v2i64 (v4f32 VR128:$src2)),
                                  (iPTR 0))), addr:$src1),
             (MOVLPSmr addr:$src1, VR128:$src2)>;
-}
-
-let Predicates = [UseSSE2] in {
-  // Shuffle with MOVLPD
-  def : Pat<(v2f64 (X86Movsd VR128:$src1,
-                             (v2f64 (scalar_to_vector (loadf64 addr:$src2))))),
-            (MOVLPDrm VR128:$src1, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//

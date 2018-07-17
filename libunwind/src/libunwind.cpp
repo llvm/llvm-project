@@ -188,8 +188,20 @@ _LIBUNWIND_EXPORT int unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
     co->setReg(regNum, (pint_t)value);
     // specical case altering IP to re-find info (being called by personality
     // function)
-    if (regNum == UNW_REG_IP)
+    if (regNum == UNW_REG_IP) {
+      unw_proc_info_t info;
+      // First, get the FDE for the old location and then update it.
+      co->getInfo(&info);
       co->setInfoBasedOnIPRegister(false);
+      // If the original call expects stack adjustment, perform this now.
+      // Normal frame unwinding would have included the offset already in the
+      // CFA computation.
+      // Note: for PA-RISC and other platforms where the stack grows up,
+      // this should actually be - info.gp. LLVM doesn't currently support
+      // any such platforms and Clang doesn't export a macro for them.
+      if (info.gp)
+        co->setReg(UNW_REG_SP, co->getReg(UNW_REG_SP) + info.gp);
+    }
     return UNW_ESUCCESS;
   }
   return UNW_EBADREG;

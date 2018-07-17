@@ -59,6 +59,15 @@ struct CompileCommand {
 
   /// The output file associated with the command.
   std::string Output;
+
+  friend bool operator==(const CompileCommand &LHS, const CompileCommand &RHS) {
+    return LHS.Directory == RHS.Directory && LHS.Filename == RHS.Filename &&
+           LHS.CommandLine == RHS.CommandLine && LHS.Output == RHS.Output;
+  }
+
+  friend bool operator!=(const CompileCommand &LHS, const CompileCommand &RHS) {
+    return !(LHS == RHS);
+  }
 };
 
 /// Interface for compilation databases.

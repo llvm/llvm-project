@@ -5,9 +5,9 @@ target triple = "wasm32-unknown-unknown"
 
 @_ZTIi = external constant i8*
 @_ZTIc = external constant i8*
-; CHECK-DAG: @[[__THREW__:__THREW__.*]] = global i32 0
-; CHECK-DAG: @[[THREWVALUE:__threwValue.*]] = global i32 0
-; CHECK-DAG: @[[TEMPRET0:__tempRet0.*]] = global i32 0
+; CHECK-DAG: __THREW__ = weak_odr global i32 0
+; CHECK-DAG: __threwValue = weak_odr global i32 0
+; CHECK-DAG: __tempRet0 = weak_odr global i32 0
 
 ; Test invoke instruction with clauses (try-catch block)
 define void @clause() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -16,10 +16,10 @@ entry:
   invoke void @foo(i32 3)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: call void @__invoke_void_i32(void (i32)* @foo, i32 3)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @[[__THREW__]]
-; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
+; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
 ; CHECK-NEXT: br i1 %cmp, label %lpad, label %invoke.cont
 
@@ -36,7 +36,7 @@ lpad:                                             ; preds = %entry
 ; CHECK: lpad:
 ; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* null)
 ; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
-; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @[[TEMPRET0]]
+; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @__tempRet0
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 0
 ; CHECK-NEXT: %[[CDR:.*]] = extractvalue { i8*, i32 } %[[IVI2]], 1
@@ -72,10 +72,10 @@ entry:
   invoke void @foo(i32 3)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: call void @__invoke_void_i32(void (i32)* @foo, i32 3)
-; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @[[__THREW__]]
-; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
+; CHECK-NEXT: %[[__THREW__VAL:.*]] = load i32, i32* @__THREW__
+; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__VAL]], 1
 ; CHECK-NEXT: br i1 %cmp, label %lpad, label %invoke.cont
 
@@ -91,7 +91,7 @@ lpad:                                             ; preds = %entry
 ; CHECK: lpad:
 ; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* bitcast (i8** @_ZTIc to i8*))
 ; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
-; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @[[TEMPRET0]]
+; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @__tempRet0
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 0
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 1
@@ -123,7 +123,7 @@ entry:
   %0 = invoke noalias i8* @bar(i8 signext 1, i8 zeroext 2)
           to label %invoke.cont unwind label %lpad
 ; CHECK: entry:
-; CHECK-NEXT: store i32 0, i32* @[[__THREW__]]
+; CHECK-NEXT: store i32 0, i32* @__THREW__
 ; CHECK-NEXT: %0 = call noalias i8* @"__invoke_i8*_i8_i8"(i8* (i8, i8)* @bar, i8 signext 1, i8 zeroext 2)
 
 invoke.cont:                                      ; preds = %entry
@@ -173,22 +173,22 @@ declare void @__cxa_call_unexpected(i8*)
 ; CHECK-DAG: declare i8* @__cxa_find_matching_catch_4(i8*, i8*)
 
 ; setThrew function creation
-; CHECK-LABEL: define void @setThrew(i32 %threw, i32 %value) {
+; CHECK-LABEL: define weak_odr void @setThrew(i32 %threw, i32 %value) {
 ; CHECK: entry:
-; CHECK-NEXT: %[[__THREW__]].val = load i32, i32* @[[__THREW__]]
-; CHECK-NEXT: %cmp = icmp eq i32 %[[__THREW__]].val, 0
+; CHECK-NEXT: %__THREW__.val = load i32, i32* @__THREW__
+; CHECK-NEXT: %cmp = icmp eq i32 %__THREW__.val, 0
 ; CHECK-NEXT: br i1 %cmp, label %if.then, label %if.end
 ; CHECK: if.then:
-; CHECK-NEXT: store i32 %threw, i32* @[[__THREW__]]
-; CHECK-NEXT: store i32 %value, i32* @[[THREWVALUE]]
+; CHECK-NEXT: store i32 %threw, i32* @__THREW__
+; CHECK-NEXT: store i32 %value, i32* @__threwValue
 ; CHECK-NEXT: br label %if.end
 ; CHECK: if.end:
 ; CHECK-NEXT: ret void
 ; CHECK: }
 
 ; setTempRet0 function creation
-; CHECK-LABEL: define void @setTempRet0(i32 %value) {
+; CHECK-LABEL: define weak_odr void @setTempRet0(i32 %value) {
 ; CHECK: entry:
-; CHECK-NEXT: store i32 %value, i32* @[[TEMPRET0]]
+; CHECK-NEXT: store i32 %value, i32* @__tempRet0
 ; CHECK-NEXT: ret void
 ; CHECK: }

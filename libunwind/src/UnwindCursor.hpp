@@ -1411,8 +1411,6 @@ int UnwindCursor<A, R>::step() {
     this->setInfoBasedOnIPRegister(true);
     if (_unwindInfoMissing)
       return UNW_STEP_END;
-    if (_info.gp)
-      setReg(UNW_REG_SP, getReg(UNW_REG_SP) + _info.gp);
   }
 
   return result;

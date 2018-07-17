@@ -148,3 +148,87 @@ _Accum dec_with_hex_exp1 = 0.1p10k;    // expected-error{{invalid suffix 'p10k' 
 _Accum dec_with_hex_exp2 = 0.1P10k;    // expected-error{{invalid suffix 'P10k' on integer constant}}
 _Accum hex_with_dex_exp1 = 0x0.1e10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
 _Accum hex_with_dex_exp2 = 0x0.1E10k;  // expected-error{{hexadecimal floating constant requires an exponent}}
+
+void CheckSuffixOnIntegerLiterals() {
+  _Accum short_acc_int;
+  _Accum acc_int;
+  _Accum long_acc_int;
+
+  _Accum u_short_acc_int;
+  _Accum u_acc_int;
+  _Accum u_long_acc_int;
+
+  _Fract short_fract_int;
+  _Fract fract_int;
+  _Fract long_fract_int;
+
+  _Fract u_short_fract_int;
+  _Fract u_fract_int;
+  _Fract u_long_fract_int;
+
+  // Decimal integer literals (non-zero)
+  short_acc_int = 10hk; // expected-error{{invalid suffix 'hk' on integer constant}}
+  acc_int = 10k;        // expected-error{{invalid suffix 'k' on integer constant}}
+  long_acc_int = 10lk;  // expected-error{{invalid suffix 'lk' on integer constant}}
+
+  u_short_acc_int = 10uhk; // expected-error{{invalid suffix 'uhk' on integer constant}}
+  u_acc_int = 10uk;        // expected-error{{invalid suffix 'uk' on integer constant}}
+  u_long_acc_int = 10ulk;  // expected-error{{invalid suffix 'ulk' on integer constant}}
+
+  short_fract_int = 10hr; // expected-error{{invalid suffix 'hr' on integer constant}}
+  fract_int = 10r;        // expected-error{{invalid suffix 'r' on integer constant}}
+  long_fract_int = 10lr;  // expected-error{{invalid suffix 'lr' on integer constant}}
+
+  u_short_fract_int = 10uhr; // expected-error{{invalid suffix 'uhr' on integer constant}}
+  u_fract_int = 10ur;        // expected-error{{invalid suffix 'ur' on integer constant}}
+  u_long_fract_int = 10ulr;  // expected-error{{invalid suffix 'ulr' on integer constant}}
+
+  // Decimal integer literals (0)
+  short_acc_int = 0hk; // expected-error{{invalid suffix 'hk' on integer constant}}
+  acc_int = 0k;        // expected-error{{invalid suffix 'k' on integer constant}}
+  long_acc_int = 0lk;  // expected-error{{invalid suffix 'lk' on integer constant}}
+
+  // Decimal integer literals (large number)
+  acc_int = 999999999999999999k;   // expected-error{{invalid suffix 'k' on integer constant}}
+  fract_int = 999999999999999999r; // expected-error{{invalid suffix 'r' on integer constant}}
+
+  // Octal integer literals
+  short_acc_int = 010hk; // expected-error{{invalid suffix 'hk' on integer constant}}
+  acc_int = 010k;        // expected-error{{invalid suffix 'k' on integer constant}}
+  long_acc_int = 010lk;  // expected-error{{invalid suffix 'lk' on integer constant}}
+
+  u_short_acc_int = 010uhk; // expected-error{{invalid suffix 'uhk' on integer constant}}
+  u_acc_int = 010uk;        // expected-error{{invalid suffix 'uk' on integer constant}}
+  u_long_acc_int = 010ulk;  // expected-error{{invalid suffix 'ulk' on integer constant}}
+
+  short_fract_int = 010hr; // expected-error{{invalid suffix 'hr' on integer constant}}
+  fract_int = 010r;        // expected-error{{invalid suffix 'r' on integer constant}}
+  long_fract_int = 010lr;  // expected-error{{invalid suffix 'lr' on integer constant}}
+
+  u_short_fract_int = 010uhr; // expected-error{{invalid suffix 'uhr' on integer constant}}
+  u_fract_int = 010ur;        // expected-error{{invalid suffix 'ur' on integer constant}}
+  u_long_fract_int = 010ulr;  // expected-error{{invalid suffix 'ulr' on integer constant}}
+
+  // Hexadecimal integer literals
+  short_acc_int = 0x10hk; // expected-error{{invalid suffix 'hk' on integer constant}}
+  acc_int = 0x10k;        // expected-error{{invalid suffix 'k' on integer constant}}
+  long_acc_int = 0x10lk;  // expected-error{{invalid suffix 'lk' on integer constant}}
+
+  u_short_acc_int = 0x10uhk; // expected-error{{invalid suffix 'uhk' on integer constant}}
+  u_acc_int = 0x10uk;        // expected-error{{invalid suffix 'uk' on integer constant}}
+  u_long_acc_int = 0x10ulk;  // expected-error{{invalid suffix 'ulk' on integer constant}}
+
+  short_fract_int = 0x10hr; // expected-error{{invalid suffix 'hr' on integer constant}}
+  fract_int = 0x10r;        // expected-error{{invalid suffix 'r' on integer constant}}
+  long_fract_int = 0x10lr;  // expected-error{{invalid suffix 'lr' on integer constant}}
+
+  u_short_fract_int = 0x10uhr; // expected-error{{invalid suffix 'uhr' on integer constant}}
+  u_fract_int = 0x10ur;        // expected-error{{invalid suffix 'ur' on integer constant}}
+  u_long_fract_int = 0x10ulr;  // expected-error{{invalid suffix 'ulr' on integer constant}}
+
+  // Using auto
+  auto auto_fract = 0r;  // expected-error{{invalid suffix 'r' on integer constant}}
+                         // expected-warning@-1{{type specifier missing, defaults to 'int'}}
+  auto auto_accum = 0k;  // expected-error{{invalid suffix 'k' on integer constant}}
+                         // expected-warning@-1{{type specifier missing, defaults to 'int'}}
+}

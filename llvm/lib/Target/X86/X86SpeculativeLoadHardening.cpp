@@ -865,6 +865,27 @@ static bool isDataInvariant(MachineInstr &MI) {
   case X86::BZHI32rr:
   case X86::BZHI64rr:
 
+  // Shift and rotate.
+  case X86::ROL8r1:  case X86::ROL16r1:  case X86::ROL32r1:  case X86::ROL64r1:
+  case X86::ROL8rCL: case X86::ROL16rCL: case X86::ROL32rCL: case X86::ROL64rCL:
+  case X86::ROL8ri:  case X86::ROL16ri:  case X86::ROL32ri:  case X86::ROL64ri:
+  case X86::ROR8r1:  case X86::ROR16r1:  case X86::ROR32r1:  case X86::ROR64r1:
+  case X86::ROR8rCL: case X86::ROR16rCL: case X86::ROR32rCL: case X86::ROR64rCL:
+  case X86::ROR8ri:  case X86::ROR16ri:  case X86::ROR32ri:  case X86::ROR64ri:
+  case X86::SAR8r1:  case X86::SAR16r1:  case X86::SAR32r1:  case X86::SAR64r1:
+  case X86::SAR8rCL: case X86::SAR16rCL: case X86::SAR32rCL: case X86::SAR64rCL:
+  case X86::SAR8ri:  case X86::SAR16ri:  case X86::SAR32ri:  case X86::SAR64ri:
+  case X86::SHL8r1:  case X86::SHL16r1:  case X86::SHL32r1:  case X86::SHL64r1:
+  case X86::SHL8rCL: case X86::SHL16rCL: case X86::SHL32rCL: case X86::SHL64rCL:
+  case X86::SHL8ri:  case X86::SHL16ri:  case X86::SHL32ri:  case X86::SHL64ri:
+  case X86::SHR8r1:  case X86::SHR16r1:  case X86::SHR32r1:  case X86::SHR64r1:
+  case X86::SHR8rCL: case X86::SHR16rCL: case X86::SHR32rCL: case X86::SHR64rCL:
+  case X86::SHR8ri:  case X86::SHR16ri:  case X86::SHR32ri:  case X86::SHR64ri:
+  case X86::SHLD16rrCL: case X86::SHLD32rrCL: case X86::SHLD64rrCL:
+  case X86::SHLD16rri8: case X86::SHLD32rri8: case X86::SHLD64rri8:
+  case X86::SHRD16rrCL: case X86::SHRD32rrCL: case X86::SHRD64rrCL:
+  case X86::SHRD16rri8: case X86::SHRD32rri8: case X86::SHRD64rri8:
+
   // Basic arithmetic is constant time on the input but does set flags.
   case X86::ADC8rr:   case X86::ADC8ri:
   case X86::ADC16rr:  case X86::ADC16ri:   case X86::ADC16ri8:
@@ -898,9 +919,10 @@ static bool isDataInvariant(MachineInstr &MI) {
   case X86::ADCX32rr: case X86::ADCX64rr:
   case X86::ADOX32rr: case X86::ADOX64rr:
   case X86::ANDN32rr: case X86::ANDN64rr:
-  // Just one operand for inc and dec.
-  case X86::INC8r: case X86::INC16r: case X86::INC32r: case X86::INC64r:
+  // Unary arithmetic operations.
   case X86::DEC8r: case X86::DEC16r: case X86::DEC32r: case X86::DEC64r:
+  case X86::INC8r: case X86::INC16r: case X86::INC32r: case X86::INC64r:
+  case X86::NEG8r: case X86::NEG16r: case X86::NEG32r: case X86::NEG64r:
     // Check whether the EFLAGS implicit-def is dead. We assume that this will
     // always find the implicit-def because this code should only be reached
     // for instructions that do in fact implicitly def this.
@@ -915,11 +937,19 @@ static bool isDataInvariant(MachineInstr &MI) {
     // don't set EFLAGS.
     LLVM_FALLTHROUGH;
 
-  // Integer multiply w/o affecting flags is still believed to be constant
-  // time on x86. Called out separately as this is among the most surprising
-  // instructions to exhibit that behavior.
-  case X86::MULX32rr:
-  case X86::MULX64rr:
+  // Unlike other arithmetic, NOT doesn't set EFLAGS.
+  case X86::NOT8r: case X86::NOT16r: case X86::NOT32r: case X86::NOT64r:
+
+  // Various move instructions used to zero or sign extend things. Note that we
+  // intentionally don't support the _NOREX variants as we can't handle that
+  // register constraint anyways.
+  case X86::MOVSX16rr8:
+  case X86::MOVSX32rr8: case X86::MOVSX32rr16:
+  case X86::MOVSX64rr8: case X86::MOVSX64rr16: case X86::MOVSX64rr32:
+  case X86::MOVZX16rr8:
+  case X86::MOVZX32rr8: case X86::MOVZX32rr16:
+  case X86::MOVZX64rr8: case X86::MOVZX64rr16:
+  case X86::MOV32rr:
 
   // Arithmetic instructions that are both constant time and don't set flags.
   case X86::RORX32ri:

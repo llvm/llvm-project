@@ -276,7 +276,7 @@ public:
 template <typename T> RecordDecl *getRecordDecl(T *D) {
   auto *ET = cast<ElaboratedType>(D->getType().getTypePtr());
   return cast<RecordType>(ET->getNamedType().getTypePtr())->getDecl();
-};
+}
 
 // This class provides generic methods to write tests which can check internal
 // attributes of AST nodes like getPreviousDecl(), isVirtual(), etc. Also,
