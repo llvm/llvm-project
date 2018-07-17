@@ -69,8 +69,8 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr
 ; X64-NEXT:    cmovneq %rbx, %rax
 ; X64-NEXT:    movl (%rcx), %ecx
 ; X64-NEXT:    addl (%r15), %ecx
-; X64-NEXT:    orl %eax, %ecx
 ; X64-NEXT:    movslq %ecx, %rdi
+; X64-NEXT:    orq %rax, %rdi
 ; X64-NEXT:    movl (%r15,%rdi,4), %esi
 ; X64-NEXT:    orl %eax, %esi
 ; X64-NEXT:    movq (%r9), %r14
@@ -516,8 +516,8 @@ define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) nounwind personality 
 ; X64-NEXT:    sarq $63, %rcx
 ; X64-NEXT:    movl (%rax), %eax
 ; X64-NEXT:    addl (%rbx), %eax
-; X64-NEXT:    orl %ecx, %eax
 ; X64-NEXT:    cltq
+; X64-NEXT:    orq %rcx, %rax
 ; X64-NEXT:    movl (%r14,%rax,4), %edi
 ; X64-NEXT:    orl %ecx, %edi
 ; X64-NEXT:    shlq $47, %rcx
@@ -892,6 +892,34 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind {
 ; X64-NEXT:    callq sink
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    sarq $63, %rax
+; X64-NEXT:    movl (%rbx), %edi
+; X64-NEXT:    shll $7, %edi
+; X64-NEXT:    orl %eax, %edi
+; X64-NEXT:    shlq $47, %rax
+; X64-NEXT:    orq %rax, %rsp
+; X64-NEXT:    callq sink
+; X64-NEXT:    movq %rsp, %rax
+; X64-NEXT:    sarq $63, %rax
+; X64-NEXT:    movzwl (%rbx), %ecx
+; X64-NEXT:    sarw $7, %cx
+; X64-NEXT:    movzwl %cx, %edi
+; X64-NEXT:    notl %edi
+; X64-NEXT:    orl %eax, %edi
+; X64-NEXT:    shlq $47, %rax
+; X64-NEXT:    orq %rax, %rsp
+; X64-NEXT:    callq sink
+; X64-NEXT:    movq %rsp, %rax
+; X64-NEXT:    sarq $63, %rax
+; X64-NEXT:    movzwl (%rbx), %ecx
+; X64-NEXT:    rolw $9, %cx
+; X64-NEXT:    movswl %cx, %edi
+; X64-NEXT:    negl %edi
+; X64-NEXT:    orl %eax, %edi
+; X64-NEXT:    shlq $47, %rax
+; X64-NEXT:    orq %rax, %rsp
+; X64-NEXT:    callq sink
+; X64-NEXT:    movq %rsp, %rax
+; X64-NEXT:    sarq $63, %rax
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
 ; X64-NEXT:    addq $8, %rsp
@@ -914,6 +942,19 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind {
 ; X64-LFENCE-NEXT:    movl (%r14), %ecx
 ; X64-LFENCE-NEXT:    leal 1(%rax,%rcx), %edi
 ; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    movl (%rbx), %edi
+; X64-LFENCE-NEXT:    shll $7, %edi
+; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    movzwl (%rbx), %eax
+; X64-LFENCE-NEXT:    sarw $7, %ax
+; X64-LFENCE-NEXT:    movzwl %ax, %edi
+; X64-LFENCE-NEXT:    notl %edi
+; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    movzwl (%rbx), %eax
+; X64-LFENCE-NEXT:    rolw $9, %ax
+; X64-LFENCE-NEXT:    movswl %ax, %edi
+; X64-LFENCE-NEXT:    negl %edi
+; X64-LFENCE-NEXT:    callq sink
 ; X64-LFENCE-NEXT:    addq $8, %rsp
 ; X64-LFENCE-NEXT:    popq %rbx
 ; X64-LFENCE-NEXT:    popq %r14
@@ -928,5 +969,23 @@ entry:
   %b3 = load i32, i32* %ptr2
   %b4 = add i32 %b2, %b3
   call void @sink(i32 %b4)
+  %c1 = load i32, i32* %ptr1
+  %c2 = shl i32 %c1, 7
+  call void @sink(i32 %c2)
+  %d1 = load i32, i32* %ptr1
+  ; Check trunc and integer ops narrower than i32.
+  %d2 = trunc i32 %d1 to i16
+  %d3 = ashr i16 %d2, 7
+  %d4 = zext i16 %d3 to i32
+  %d5 = xor i32 %d4, -1
+  call void @sink(i32 %d5)
+  %e1 = load i32, i32* %ptr1
+  %e2 = trunc i32 %e1 to i16
+  %e3 = lshr i16 %e2, 7
+  %e4 = shl i16 %e2, 9
+  %e5 = or i16 %e3, %e4
+  %e6 = sext i16 %e5 to i32
+  %e7 = sub i32 0, %e6
+  call void @sink(i32 %e7)
   ret void
 }

@@ -10,6 +10,59 @@
 //  This file implement StructuralEquivalenceContext class and helper functions
 //  for layout matching.
 //
+// The structural equivalence check could have been implemented as a parallel
+// BFS on a pair of graphs.  That must have been the original approach at the
+// beginning.
+// Let's consider this simple BFS algorithm from the `s` source:
+// ```
+// void bfs(Graph G, int s)
+// {
+//   Queue<Integer> queue = new Queue<Integer>();
+//   marked[s] = true; // Mark the source
+//   queue.enqueue(s); // and put it on the queue.
+//   while (!q.isEmpty()) {
+//     int v = queue.dequeue(); // Remove next vertex from the queue.
+//     for (int w : G.adj(v))
+//       if (!marked[w]) // For every unmarked adjacent vertex,
+//       {
+//         marked[w] = true;
+//         queue.enqueue(w);
+//       }
+//   }
+// }
+// ```
+// Indeed, it has it's queue, which holds pairs of nodes, one from each graph,
+// this is the `DeclsToCheck` and it's pair is in `TentativeEquivalences`.
+// `TentativeEquivalences` also plays the role of the marking (`marked`)
+// functionality above, we use it to check whether we've already seen a pair of
+// nodes.
+//
+// We put in the elements into the queue only in the toplevel decl check
+// function:
+// ```
+// static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+//                                      Decl *D1, Decl *D2);
+// ```
+// The `while` loop where we iterate over the children is implemented in
+// `Finish()`.  And `Finish` is called only from the two **member** functions
+// which check the equivalency of two Decls or two Types. ASTImporter (and
+// other clients) call only these functions.
+//
+// The `static` implementation functions are called from `Finish`, these push
+// the children nodes to the queue via `static bool
+// IsStructurallyEquivalent(StructuralEquivalenceContext &Context, Decl *D1,
+// Decl *D2)`.  So far so good, this is almost like the BFS.  However, if we
+// let a static implementation function to call `Finish` via another **member**
+// function that means we end up with two nested while loops each of them
+// working on the same queue. This is wrong and nobody can reason about it's
+// doing. Thus, static implementation functions must not call the **member**
+// functions.
+//
+// So, now `TentativeEquivalences` plays two roles. It is used to store the
+// second half of the decls which we want to compare, plus it plays a role in
+// closing the recursion. On a long term, we could refactor structural
+// equivalency to be more alike to the traditional BFS.
+//
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTStructuralEquivalence.h"
@@ -184,10 +237,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return true;
 
   case TemplateArgument::Type:
-    return Context.IsStructurallyEquivalent(Arg1.getAsType(), Arg2.getAsType());
+    return IsStructurallyEquivalent(Context, Arg1.getAsType(), Arg2.getAsType());
 
   case TemplateArgument::Integral:
-    if (!Context.IsStructurallyEquivalent(Arg1.getIntegralType(),
+    if (!IsStructurallyEquivalent(Context, Arg1.getIntegralType(),
                                           Arg2.getIntegralType()))
       return false;
 
@@ -195,7 +248,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      Arg2.getAsIntegral());
 
   case TemplateArgument::Declaration:
-    return Context.IsStructurallyEquivalent(Arg1.getAsDecl(), Arg2.getAsDecl());
+    return IsStructurallyEquivalent(Context, Arg1.getAsDecl(), Arg2.getAsDecl());
 
   case TemplateArgument::NullPtr:
     return true; // FIXME: Is this correct?
@@ -1205,8 +1258,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     }
 
-    if (!Context.IsStructurallyEquivalent(Params1->getParam(I),
-                                          Params2->getParam(I)))
+    if (!IsStructurallyEquivalent(Context, Params1->getParam(I),
+                                  Params2->getParam(I)))
       return false;
   }
 
@@ -1243,7 +1296,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   }
 
   // Check types.
-  if (!Context.IsStructurallyEquivalent(D1->getType(), D2->getType())) {
+  if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType())) {
     if (Context.Complain) {
       Context.Diag2(D2->getLocation(),
                     diag::err_odr_non_type_parameter_type_inconsistent)
@@ -1294,8 +1347,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
 
   // Check the templated declaration.
-  return Context.IsStructurallyEquivalent(D1->getTemplatedDecl(),
-                                          D2->getTemplatedDecl());
+  return IsStructurallyEquivalent(Context, D1->getTemplatedDecl(),
+                                  D2->getTemplatedDecl());
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -1306,8 +1359,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
 
   // Check the templated declaration.
-  return Context.IsStructurallyEquivalent(D1->getTemplatedDecl()->getType(),
-                                          D2->getTemplatedDecl()->getType());
+  return IsStructurallyEquivalent(Context, D1->getTemplatedDecl()->getType(),
+                                  D2->getTemplatedDecl()->getType());
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -1418,16 +1471,26 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
   return Index;
 }
 
-bool StructuralEquivalenceContext::IsStructurallyEquivalent(Decl *D1,
-                                                            Decl *D2) {
+bool StructuralEquivalenceContext::IsEquivalent(Decl *D1, Decl *D2) {
+
+  // Ensure that the implementation functions (all static functions in this TU)
+  // never call the public ASTStructuralEquivalence::IsEquivalent() functions,
+  // because that will wreak havoc the internal state (DeclsToCheck and
+  // TentativeEquivalences members) and can cause faulty behaviour. For
+  // instance, some leaf declarations can be stated and cached as inequivalent
+  // as a side effect of one inequivalent element in the DeclsToCheck list.
+  assert(DeclsToCheck.empty());
+  assert(TentativeEquivalences.empty());
+
   if (!::IsStructurallyEquivalent(*this, D1, D2))
     return false;
 
   return !Finish();
 }
 
-bool StructuralEquivalenceContext::IsStructurallyEquivalent(QualType T1,
-                                                            QualType T2) {
+bool StructuralEquivalenceContext::IsEquivalent(QualType T1, QualType T2) {
+  assert(DeclsToCheck.empty());
+  assert(TentativeEquivalences.empty());
   if (!::IsStructurallyEquivalent(*this, T1, T2))
     return false;
 

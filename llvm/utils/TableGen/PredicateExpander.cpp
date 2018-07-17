@@ -22,14 +22,14 @@ void PredicateExpander::expandFalse(formatted_raw_ostream &OS) {
 
 void PredicateExpander::expandCheckImmOperand(formatted_raw_ostream &OS,
                                               int OpIndex, int ImmVal) {
-  OS << "MI.getOperand(" << OpIndex << ").getImm() "
-     << (shouldNegate() ? "!= " : "== ") << ImmVal;
+  OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
+     << ").getImm() " << (shouldNegate() ? "!= " : "== ") << ImmVal;
 }
 
 void PredicateExpander::expandCheckImmOperand(formatted_raw_ostream &OS,
                                               int OpIndex, StringRef ImmVal) {
-  OS << "MI.getOperand(" << OpIndex << ").getImm() "
-     << (shouldNegate() ? "!= " : "== ") << ImmVal;
+  OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
+     << ").getImm() " << (shouldNegate() ? "!= " : "== ") << ImmVal;
 }
 
 void PredicateExpander::expandCheckRegOperand(formatted_raw_ostream &OS,

@@ -180,7 +180,6 @@ private:
 
   std::pair<size_t, size_t> FocusFunction = {-1, -1};  // Module and PC IDs.
 
-
   ValueBitMap ValueProfileMap;
   uintptr_t InitialStack;
 };

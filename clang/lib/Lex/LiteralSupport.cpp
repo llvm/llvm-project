@@ -572,10 +572,12 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   checkSeparator(TokLoc, s, CSK_AfterDigits);
 
   // Initial scan to lookahead for fixed point suffix.
-  for (const char *c = s; c != ThisTokEnd; ++c) {
-    if (*c == 'r' || *c == 'k' || *c == 'R' || *c == 'K') {
-      saw_fixed_point_suffix = true;
-      break;
+  if (PP.getLangOpts().FixedPoint) {
+    for (const char *c = s; c != ThisTokEnd; ++c) {
+      if (*c == 'r' || *c == 'k' || *c == 'R' || *c == 'K') {
+        saw_fixed_point_suffix = true;
+        break;
+      }
     }
   }
 
@@ -589,12 +591,16 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     switch (*s) {
     case 'R':
     case 'r':
+      if (!PP.getLangOpts().FixedPoint) break;
       if (isFract || isAccum) break;
+      if (!(saw_period || saw_exponent)) break;
       isFract = true;
       continue;
     case 'K':
     case 'k':
+      if (!PP.getLangOpts().FixedPoint) break;
       if (isFract || isAccum) break;
+      if (!(saw_period || saw_exponent)) break;
       isAccum = true;
       continue;
     case 'h':      // FP Suffix for "half".
@@ -734,7 +740,6 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
 
   if (!hadError && saw_fixed_point_suffix) {
     assert(isFract || isAccum);
-    //assert(radix == 16 || radix == 10);
   }
 }
 

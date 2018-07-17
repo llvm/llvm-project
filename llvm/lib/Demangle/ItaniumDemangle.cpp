@@ -4925,32 +4925,24 @@ bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
 
 }  // unnamed namespace
 
-enum {
-  unknown_error = -4,
-  invalid_args = -3,
-  invalid_mangled_name = -2,
-  memory_alloc_failure = -1,
-  success = 0,
-};
-
 char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
                             size_t *N, int *Status) {
   if (MangledName == nullptr || (Buf != nullptr && N == nullptr)) {
     if (Status)
-      *Status = invalid_args;
+      *Status = demangle_invalid_args;
     return nullptr;
   }
 
-  int InternalStatus = success;
+  int InternalStatus = demangle_success;
   Db Parser(MangledName, MangledName + std::strlen(MangledName));
   OutputStream S;
 
   Node *AST = Parser.parse();
 
   if (AST == nullptr)
-    InternalStatus = invalid_mangled_name;
+    InternalStatus = demangle_invalid_mangled_name;
   else if (initializeOutputStream(Buf, N, S, 1024))
-    InternalStatus = memory_alloc_failure;
+    InternalStatus = demangle_memory_alloc_failure;
   else {
     assert(Parser.ForwardTemplateRefs.empty());
     AST->print(S);
@@ -4962,7 +4954,7 @@ char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
 
   if (Status)
     *Status = InternalStatus;
-  return InternalStatus == success ? Buf : nullptr;
+  return InternalStatus == demangle_success ? Buf : nullptr;
 }
 
 namespace llvm {

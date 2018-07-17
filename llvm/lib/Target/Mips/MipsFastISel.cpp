@@ -2062,6 +2062,10 @@ unsigned MipsFastISel::getRegEnsuringSimpleIntegerWidening(const Value *V,
   if (VReg == 0)
     return 0;
   MVT VMVT = TLI.getValueType(DL, V->getType(), true).getSimpleVT();
+
+  if (VMVT == MVT::i1)
+    return 0;
+
   if ((VMVT == MVT::i8) || (VMVT == MVT::i16)) {
     unsigned TempReg = createResultReg(&Mips::GPR32RegClass);
     if (!emitIntExt(VMVT, VReg, MVT::i32, TempReg, IsUnsigned))

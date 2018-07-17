@@ -282,8 +282,10 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
     // condition may inhibit other folds and lead to worse codegen.
     auto *Cmp = dyn_cast<CmpInst>(Sel->getCondition());
     if (!Cmp || Cmp->getOperand(0)->getType() != Sel->getType())
-      if (Instruction *NV = FoldOpIntoSelect(CI, Sel))
+      if (Instruction *NV = FoldOpIntoSelect(CI, Sel)) {
+        replaceAllDbgUsesWith(*Sel, *NV, CI, DT);
         return NV;
+      }
   }
 
   // If we are casting a PHI, then fold the cast into the PHI.

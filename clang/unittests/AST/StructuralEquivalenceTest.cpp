@@ -82,7 +82,7 @@ struct StructuralEquivalenceTest : ::testing::Test {
     StructuralEquivalenceContext Ctx(
         D0->getASTContext(), D1->getASTContext(), NonEquivalentDecls,
         StructuralEquivalenceKind::Default, false, false);
-    return Ctx.IsStructurallyEquivalent(D0, D1);
+    return Ctx.IsEquivalent(D0, D1);
   }
 
   bool testStructuralMatch(std::tuple<Decl *, Decl *> t) {
