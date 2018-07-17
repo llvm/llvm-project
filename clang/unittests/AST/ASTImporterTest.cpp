@@ -273,6 +273,11 @@ public:
   }
 };
 
+template <typename T> RecordDecl *getRecordDecl(T *D) {
+  auto *ET = cast<ElaboratedType>(D->getType().getTypePtr());
+  return cast<RecordType>(ET->getNamedType().getTypePtr())->getDecl();
+}
+
 // This class provides generic methods to write tests which can check internal
 // attributes of AST nodes like getPreviousDecl(), isVirtual(), etc. Also,
 // this fixture makes it possible to import from several "From" contexts.
@@ -1755,11 +1760,6 @@ TEST_P(ASTImporterTestBase, ObjectsWithUnnamedStructType) {
       )",
       Lang_CXX, "input0.cc");
 
-  auto getRecordDecl = [](VarDecl *VD) {
-    auto *ET = cast<ElaboratedType>(VD->getType().getTypePtr());
-    return cast<RecordType>(ET->getNamedType().getTypePtr())->getDecl();
-  };
-
   auto *Obj0 =
       FirstDeclMatcher<VarDecl>().match(FromTU, varDecl(hasName("object0")));
   auto *From0 = getRecordDecl(Obj0);
@@ -2578,6 +2578,38 @@ TEST_P(ASTImporterTestBase, ImportOfNonEquivalentMethod) {
     ToM2 = Import(FromM, Lang_CXX);
   }
   EXPECT_NE(ToM1, ToM2);
+}
+
+TEST_P(ASTImporterTestBase, ImportUnnamedStructsWithRecursingField) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        struct {
+          struct A *next;
+        } entry0;
+        struct {
+          struct A *next;
+        } entry1;
+      };
+      )",
+      Lang_C, "input0.cc");
+  auto *From =
+      FirstDeclMatcher<RecordDecl>().match(FromTU, recordDecl(hasName("A")));
+
+  Import(From, Lang_C);
+
+  auto *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+  auto *Entry0 =
+      FirstDeclMatcher<FieldDecl>().match(ToTU, fieldDecl(hasName("entry0")));
+  auto *Entry1 =
+      FirstDeclMatcher<FieldDecl>().match(ToTU, fieldDecl(hasName("entry1")));
+  auto *R0 = getRecordDecl(Entry0);
+  auto *R1 = getRecordDecl(Entry1);
+  EXPECT_NE(R0, R1);
+  EXPECT_TRUE(MatchVerifier<RecordDecl>().match(
+      R0, recordDecl(has(fieldDecl(hasName("next"))))));
+  EXPECT_TRUE(MatchVerifier<RecordDecl>().match(
+      R1, recordDecl(has(fieldDecl(hasName("next"))))));
 }
 
 struct DeclContextTest : ASTImporterTestBase {};

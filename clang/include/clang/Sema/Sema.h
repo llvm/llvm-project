@@ -2612,6 +2612,11 @@ public:
                                                  NamedDecl *FoundDecl,
                                                  CXXMethodDecl *Method);
 
+  /// Check that the lifetime of the initializer (and its subobjects) is
+  /// sufficient for initializing the entity, and perform lifetime extension
+  /// (when permitted) if not.
+  void checkInitializerLifetime(const InitializedEntity &Entity, Expr *Init);
+
   ExprResult PerformContextuallyConvertToBool(Expr *From);
   ExprResult PerformContextuallyConvertToObjCPointer(Expr *From);
 

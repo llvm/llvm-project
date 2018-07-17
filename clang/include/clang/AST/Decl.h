@@ -83,7 +83,7 @@ class VarTemplateDecl;
 /// TypeLoc TL = TypeSourceInfo->getTypeLoc();
 /// TL.getStartLoc().print(OS, SrcMgr);
 /// @endcode
-class LLVM_ALIGNAS(8) TypeSourceInfo {
+class alignas(8) TypeSourceInfo {
   // Contains a memory block after the class, used for type source information,
   // allocated by ASTContext.
   friend class ASTContext;
@@ -2860,7 +2860,7 @@ public:
 
 /// Base class for declarations which introduce a typedef-name.
 class TypedefNameDecl : public TypeDecl, public Redeclarable<TypedefNameDecl> {
-  struct LLVM_ALIGNAS(8) ModedTInfo {
+  struct alignas(8) ModedTInfo {
     TypeSourceInfo *first;
     QualType second;
   };

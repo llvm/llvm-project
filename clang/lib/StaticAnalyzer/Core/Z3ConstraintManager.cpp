@@ -1077,40 +1077,39 @@ bool Z3ConstraintManager::canReasonAbout(SVal X) const {
     return true;
 
   const SymExpr *Sym = SymVal->getSymbol();
-  do {
-    QualType Ty = Sym->getType();
+  QualType Ty = Sym->getType();
 
-    // Complex types are not modeled
-    if (Ty->isComplexType() || Ty->isComplexIntegerType())
-      return false;
+  // Complex types are not modeled
+  if (Ty->isComplexType() || Ty->isComplexIntegerType())
+    return false;
 
-    // Non-IEEE 754 floating-point types are not modeled
-    if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-         (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
-          &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
-      return false;
+  // Non-IEEE 754 floating-point types are not modeled
+  if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+       (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
+        &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
+    return false;
 
-    if (isa<SymbolData>(Sym)) {
-      break;
-    } else if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
-      Sym = SC->getOperand();
-    } else if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
-      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
-        Sym = SIE->getLHS();
-      } else if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
-        Sym = ISE->getRHS();
-      } else if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
-        return canReasonAbout(nonloc::SymbolVal(SSM->getLHS())) &&
-               canReasonAbout(nonloc::SymbolVal(SSM->getRHS()));
-      } else {
-        llvm_unreachable("Unsupported binary expression to reason about!");
-      }
-    } else {
-      llvm_unreachable("Unsupported expression to reason about!");
-    }
-  } while (Sym);
+  if (isa<SymbolData>(Sym))
+    return true;
 
-  return true;
+  SValBuilder &SVB = getSValBuilder();
+
+  if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
+    return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
+
+  if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
+    if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
+      return canReasonAbout(SVB.makeSymbolVal(SIE->getLHS()));
+
+    if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE))
+      return canReasonAbout(SVB.makeSymbolVal(ISE->getRHS()));
+
+    if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(BSE))
+      return canReasonAbout(SVB.makeSymbolVal(SSE->getLHS())) &&
+             canReasonAbout(SVB.makeSymbolVal(SSE->getRHS()));
+  }
+
+  llvm_unreachable("Unsupported expression to reason about!");
 }
 
 ConditionTruthVal Z3ConstraintManager::checkNull(ProgramStateRef State,

@@ -91,6 +91,8 @@ add_lldb_library(liblldb SHARED
     Support
   )
 
+add_dependencies(lldb-suite liblldb)
+
 if (MSVC)
   set_property(SOURCE ${LLDB_WRAP_PYTHON} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
 else()
@@ -111,7 +113,7 @@ endif ()
 set_target_properties(liblldb
   PROPERTIES
   VERSION ${LLDB_VERSION}
-  )
+)
 
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   if (NOT LLDB_EXPORT_ALL_SYMBOLS)
@@ -138,7 +140,7 @@ else()
   set_target_properties(liblldb
     PROPERTIES
     OUTPUT_NAME lldb
-    )
+  )
 endif()
 
 if (LLDB_WRAP_PYTHON)

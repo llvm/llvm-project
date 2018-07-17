@@ -43,6 +43,8 @@ public:
   void relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   void relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
+  bool adjustPrologueForCrossSplitStack(uint8_t *Loc,
+                                        uint8_t *End) const override;
 
 private:
   void relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
@@ -467,6 +469,40 @@ void X86_64<ELFT>::relaxGot(uint8_t *Loc, uint64_t Val) const {
   Loc[-2] = 0xe9; // jmp
   Loc[3] = 0x90;  // nop
   write32le(Loc - 1, Val + 1);
+}
+
+// A split-stack prologue starts by checking the amount of stack remaining
+// in one of two ways:
+// A) Comparing of the stack pointer to a field in the tcb.
+// B) Or a load of a stack pointer offset with an lea to r10 or r11.
+template <>
+bool X86_64<ELF64LE>::adjustPrologueForCrossSplitStack(uint8_t *Loc,
+                                                       uint8_t *End) const {
+  // Replace "cmp %fs:0x70,%rsp" and subsequent branch
+  // with "stc, nopl 0x0(%rax,%rax,1)"
+  if (Loc + 8 < End && memcmp(Loc, "\x64\x48\x3b\x24\x25", 4) == 0) {
+    memcpy(Loc, "\xf9\x0f\x1f\x84\x00\x00\x00\x00", 8);
+    return true;
+  }
+
+  // Adjust "lea -0x200(%rsp),%r10" to lea "-0x4200(%rsp),%r10"
+  if (Loc + 7 < End && memcmp(Loc, "\x4c\x8d\x94\x24\x00\xfe\xff", 7) == 0) {
+    memcpy(Loc, "\x4c\x8d\x94\x24\x00\xbe\xff", 7);
+    return true;
+  }
+
+  // Adjust "lea -0x200(%rsp),%r11" to lea "-0x4200(%rsp),%r11"
+  if (Loc + 7 < End && memcmp(Loc, "\x4c\x8d\x9c\x24\x00\xfe\xff", 7) == 0) {
+    memcpy(Loc, "\x4c\x8d\x9c\x24\x00\xbe\xff", 7);
+    return true;
+  }
+  return false;
+}
+
+template <>
+bool X86_64<ELF32LE>::adjustPrologueForCrossSplitStack(uint8_t *Loc,
+                                                       uint8_t *End) const {
+  llvm_unreachable("Target doesn't support split stacks.");
 }
 
 // These nonstandard PLT entries are to migtigate Spectre v2 security

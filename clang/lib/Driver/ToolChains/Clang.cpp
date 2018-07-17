@@ -524,6 +524,10 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     break;
   }
 
+  if (Triple.getOS() == llvm::Triple::NetBSD) {
+    return !areOptimizationsEnabled(Args);
+  }
+
   if (Triple.isOSLinux() || Triple.getOS() == llvm::Triple::CloudABI) {
     switch (Triple.getArch()) {
     // Don't use a frame pointer on linux if optimizing for certain targets.
@@ -4805,6 +4809,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-enable-machine-outliner=never");
     }
   }
+
+  if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,
+                   getToolChain().getTriple().isOSBinFormatELF() &&
+                       getToolChain().useIntegratedAs()))
+    CmdArgs.push_back("-faddrsig");
 
   // Finally add the compile command to the compilation.
   if (Args.hasArg(options::OPT__SLASH_fallback) &&

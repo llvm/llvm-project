@@ -1105,7 +1105,7 @@ _mm512_maskz_broadcast_i64x2(__mmask8 __M, __m128i __A)
 #define _mm512_extractf32x8_ps(A, imm) \
   (__m256)__builtin_ia32_extractf32x8_mask((__v16sf)(__m512)(A), (int)(imm), \
                                            (__v8sf)_mm256_undefined_ps(), \
-                                           (__mmask8)-1);
+                                           (__mmask8)-1)
 
 #define _mm512_mask_extractf32x8_ps(W, U, A, imm) \
   (__m256)__builtin_ia32_extractf32x8_mask((__v16sf)(__m512)(A), (int)(imm), \

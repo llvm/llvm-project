@@ -92,7 +92,7 @@ namespace SrcMgr {
   /// One instance of this struct is kept for every file loaded or used.
   ///
   /// This object owns the MemoryBuffer object.
-  class LLVM_ALIGNAS(8) ContentCache {
+  class alignas(8) ContentCache {
     enum CCFlags {
       /// Whether the buffer is invalid.
       InvalidFlag = 0x01,

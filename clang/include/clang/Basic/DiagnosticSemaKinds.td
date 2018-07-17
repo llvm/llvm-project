@@ -341,8 +341,8 @@ def warn_unneeded_member_function : Warning<
   InGroup<UnneededMemberFunction>, DefaultIgnore;
 def warn_unused_private_field: Warning<"private field %0 is not used">,
   InGroup<UnusedPrivateField>, DefaultIgnore;
-def warn_unused_lambda_capture: Warning<"lambda capture "
-  "%select{|of constant }1%0 is not %select{used|required for this use}1">,
+def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
+  "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
 def warn_parameter_size: Warning<
@@ -2055,10 +2055,6 @@ def err_implied_std_initializer_list_not_found : Error<
   "not found; include <initializer_list>">;
 def err_malformed_std_initializer_list : Error<
   "std::initializer_list must be a class template with a single type parameter">;
-def warn_dangling_std_initializer_list : Warning<
-  "array backing the initializer list will be destroyed at the end of "
-  "%select{the full-expression|the constructor}0">,
-  InGroup<DiagGroup<"dangling-initializer-list">>;
 def err_auto_init_list_from_c : Error<
   "cannot use __auto_type with initializer list in C">;
 def err_auto_bitfield : Error<
@@ -7918,13 +7914,39 @@ def warn_bind_ref_member_to_parameter : Warning<
 def warn_init_ptr_member_to_parameter_addr : Warning<
   "initializing pointer member %0 with the stack address of parameter %1">,
   InGroup<DanglingField>;
-def warn_bind_ref_member_to_temporary : Warning<
-  "binding reference %select{|subobject of }1member %0 to a temporary value">,
-  InGroup<DanglingField>;
 def note_ref_or_ptr_member_declared_here : Note<
   "%select{reference|pointer}0 member declared here">;
-def note_ref_subobject_of_member_declared_here : Note<
-  "member with reference subobject declared here">;
+
+def err_bind_ref_member_to_temporary : Error<
+  "%select{reference|backing array for 'std::initializer_list'}2 "
+  "%select{|subobject of }1member %0 "
+  "%select{binds to|is}2 a temporary object "
+  "whose lifetime would be shorter than the constructed object">;
+def note_lifetime_extending_member_declared_here : Note<
+  "%select{%select{reference|'std::initializer_list'}0 member|"
+  "member with %select{reference|'std::initializer_list'}0 subobject}1 "
+  "declared here">;
+def warn_new_dangling_reference : Warning<
+  "temporary bound to reference member of allocated object "
+  "will be destroyed at the end of the full-expression">,
+  InGroup<DanglingField>;
+def warn_new_dangling_initializer_list : Warning<
+  "array backing "
+  "%select{initializer list subobject of the allocated object|"
+  "the allocated initializer list}0 "
+  "will be destroyed at the end of the full-expression">,
+  InGroup<DanglingInitializerList>;
+def warn_default_member_init_temporary_not_extended : Warning<
+  "sorry, lifetime extension of temporary created by aggregate initialization "
+  "using default member initializer is not supported; lifetime of temporary "
+  "will end at the end of the full-expression">, InGroup<DanglingField>;
+def warn_default_member_init_init_list_not_extended : Warning<
+  "sorry, lifetime extension of backing array of initializer list "
+  "created by aggregate initialization using default member initializer "
+  "is not supported; lifetime of backing array will end at the end of the "
+  "full-expression">, InGroup<DanglingInitializerList>;
+def note_in_default_member_initalizer_here : Note<
+  "in default member initializer for field %0 used here">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
