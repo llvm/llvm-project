@@ -35,3 +35,9 @@ int *&&castToIntPtrRValueRef(char *p) {
 bool testCastToIntPtrRValueRef(char *p, int *s) {
   return castToIntPtrRValueRef(p) != s; // no-crash
 }
+
+bool retrievePointerFromBoolean(int *p) {
+  bool q;
+  *reinterpret_cast<int **>(&q) = p;
+  return q;
+}

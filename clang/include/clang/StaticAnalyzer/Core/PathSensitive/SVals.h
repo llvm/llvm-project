@@ -343,11 +343,14 @@ private:
 
 namespace nonloc {
 
-/// Represents symbolic expression.
+/// Represents symbolic expression that isn't a location.
 class SymbolVal : public NonLoc {
 public:
   SymbolVal() = delete;
-  SymbolVal(SymbolRef sym) : NonLoc(SymbolValKind, sym) { assert(sym); }
+  SymbolVal(SymbolRef sym) : NonLoc(SymbolValKind, sym) {
+    assert(sym);
+    assert(!Loc::isLocType(sym->getType()));
+  }
 
   SymbolRef getSymbol() const {
     return (const SymExpr *) Data;

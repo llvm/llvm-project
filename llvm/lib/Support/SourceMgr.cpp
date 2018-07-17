@@ -136,7 +136,6 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   const char *Ptr = Loc.getPointer();
 
   size_t Sz = SB.Buffer->getBufferSize();
-  assert(Sz <= std::numeric_limits<uint64_t>::max());
   unsigned LineNo;
   if (Sz <= std::numeric_limits<uint8_t>::max())
     LineNo = SB.getLineNumber<uint8_t>(Ptr);

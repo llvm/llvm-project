@@ -424,28 +424,28 @@ TEST(Matcher, AnyArgument) {
 
 TEST(Matcher, HasReceiver) {
   EXPECT_TRUE(matchesObjC(
-      "@interface NSString @end"
+      "@interface NSString @end "
       "void f(NSString *x) {"
-      "[x containsString]"
+      "[x containsString];"
       "}",
       objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))));
 
   EXPECT_FALSE(matchesObjC(
-      "@interface NSString +(NSString *) stringWithFormat; @end"
+      "@interface NSString +(NSString *) stringWithFormat; @end "
       "void f() { [NSString stringWithFormat]; }",
       objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))));
 }
 
 TEST(Matcher, isInstanceMessage) {
   EXPECT_TRUE(matchesObjC(
-      "@interface NSString @end"
+      "@interface NSString @end "
       "void f(NSString *x) {"
-      "[x containsString]"
+      "[x containsString];"
       "}",
       objcMessageExpr(isInstanceMessage())));
 
   EXPECT_FALSE(matchesObjC(
-      "@interface NSString +(NSString *) stringWithFormat; @end"
+      "@interface NSString +(NSString *) stringWithFormat; @end "
       "void f() { [NSString stringWithFormat]; }",
       objcMessageExpr(isInstanceMessage())));
 

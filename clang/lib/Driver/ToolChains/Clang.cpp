@@ -524,6 +524,10 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     break;
   }
 
+  if (Triple.getOS() == llvm::Triple::NetBSD) {
+    return !areOptimizationsEnabled(Args);
+  }
+
   if (Triple.isOSLinux() || Triple.getOS() == llvm::Triple::CloudABI) {
     switch (Triple.getArch()) {
     // Don't use a frame pointer on linux if optimizing for certain targets.
@@ -3925,6 +3929,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Forward -f (flag) options which we can pass directly.
   Args.AddLastArg(CmdArgs, options::OPT_femit_all_decls);
   Args.AddLastArg(CmdArgs, options::OPT_fheinous_gnu_extensions);
+  Args.AddLastArg(CmdArgs, options::OPT_fdigraphs, options::OPT_fno_digraphs);
   Args.AddLastArg(CmdArgs, options::OPT_fno_operator_names);
   Args.AddLastArg(CmdArgs, options::OPT_femulated_tls,
                   options::OPT_fno_emulated_tls);

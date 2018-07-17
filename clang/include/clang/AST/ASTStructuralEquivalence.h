@@ -85,10 +85,18 @@ struct StructuralEquivalenceContext {
 
   /// Determine whether the two declarations are structurally
   /// equivalent.
-  bool IsStructurallyEquivalent(Decl *D1, Decl *D2);
+  /// Implementation functions (all static functions in
+  /// ASTStructuralEquivalence.cpp) must never call this function because that
+  /// will wreak havoc the internal state (\c DeclsToCheck and
+  /// \c TentativeEquivalences members) and can cause faulty equivalent results.
+  bool IsEquivalent(Decl *D1, Decl *D2);
 
   /// Determine whether the two types are structurally equivalent.
-  bool IsStructurallyEquivalent(QualType T1, QualType T2);
+  /// Implementation functions (all static functions in
+  /// ASTStructuralEquivalence.cpp) must never call this function because that
+  /// will wreak havoc the internal state (\c DeclsToCheck and
+  /// \c TentativeEquivalences members) and can cause faulty equivalent results.
+  bool IsEquivalent(QualType T1, QualType T2);
 
   /// Find the index of the given anonymous struct/union within its
   /// context.

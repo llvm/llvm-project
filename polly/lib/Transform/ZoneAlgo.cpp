@@ -252,13 +252,10 @@ static bool isMapToUnknown(const isl::map &Map) {
 
 isl::union_map polly::filterKnownValInst(const isl::union_map &UMap) {
   isl::union_map Result = isl::union_map::empty(UMap.get_space());
-  isl::stat Success = UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+  for (isl::map Map : UMap.get_map_list()) {
     if (!isMapToUnknown(Map))
       Result = Result.add_map(Map);
-    return isl::stat::ok;
-  });
-  if (Success != isl::stat::ok)
-    return {};
+  }
   return Result;
 }
 
@@ -944,12 +941,12 @@ isl::boolean ZoneAlgorithm::isNormalized(isl::map Map) {
 
 isl::boolean ZoneAlgorithm::isNormalized(isl::union_map UMap) {
   isl::boolean Result = true;
-  UMap.foreach_map([this, &Result](isl::map Map) -> isl::stat {
+  for (isl::map Map : UMap.get_map_list()) {
     Result = isNormalized(Map);
     if (Result.is_true())
-      return isl::stat::ok;
-    return isl::stat::error;
-  });
+      continue;
+    break;
+  }
   return Result;
 }
 

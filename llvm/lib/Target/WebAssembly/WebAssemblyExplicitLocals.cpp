@@ -189,11 +189,6 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   if (DisableWebAssemblyExplicitLocals)
     return false;
 
-  // Disable this pass if we aren't doing direct wasm object emission.
-  if (MF.getSubtarget<WebAssemblySubtarget>()
-        .getTargetTriple().isOSBinFormatELF())
-    return false;
-
   bool Changed = false;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();

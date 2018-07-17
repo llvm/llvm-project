@@ -878,3 +878,26 @@ void passArgumentWithDestructorByReference() {
   useDByReference(D());
 }
 } // end namespace argument_constructors
+
+namespace copy_elision_with_extra_arguments {
+class C {
+public:
+  C();
+  C(const C &c, int x = 0);
+};
+
+// CHECK: void testCopyElisionWhenCopyConstructorHasExtraArguments()
+// CHECK:        [B1]
+// CXX11-ELIDE-NEXT:     1: copy_elision_with_extra_arguments::C() (CXXConstructExpr, [B1.3], [B1.5], class copy_elision_with_extra_arguments::C)
+// CXX11-NOELIDE-NEXT:     1: copy_elision_with_extra_arguments::C() (CXXConstructExpr, [B1.3], class copy_elision_with_extra_arguments::C)
+// CXX11-NEXT:     2: [B1.1] (ImplicitCastExpr, NoOp, const class copy_elision_with_extra_arguments::C)
+// CXX11-NEXT:     3: [B1.2]
+// CXX11-NEXT:     4:
+// CXX11-NEXT:     5: [B1.3] (CXXConstructExpr, [B1.6], class copy_elision_with_extra_arguments::C)
+// CXX11-NEXT:     6: copy_elision_with_extra_arguments::C c = copy_elision_with_extra_arguments::C();
+// CXX17-NEXT:     1: copy_elision_with_extra_arguments::C() (CXXConstructExpr, [B1.2], class copy_elision_with_extra_arguments::C)
+// CXX17-NEXT:     2: copy_elision_with_extra_arguments::C c = copy_elision_with_extra_arguments::C();
+void testCopyElisionWhenCopyConstructorHasExtraArguments() {
+  C c = C();
+}
+} // namespace copy_elision_with_extra_arguments

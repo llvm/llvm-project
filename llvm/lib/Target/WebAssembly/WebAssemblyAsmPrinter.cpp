@@ -34,7 +34,6 @@
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -101,8 +100,6 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
     if (!G.hasInitializer() && G.hasExternalLinkage()) {
       if (G.getValueType()->isSized()) {
         uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
-        if (TM.getTargetTriple().isOSBinFormatELF())
-          getTargetStreamer()->emitGlobalImport(G.getGlobalIdentifier());
         OutStreamer->emitELFSize(getSymbol(&G),
                                  MCConstantExpr::create(Size, OutContext));
       }
@@ -162,32 +159,9 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
   else
     getTargetStreamer()->emitResult(CurrentFnSym, ArrayRef<MVT>());
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
-    assert(MFI->getLocals().empty());
-    for (unsigned Idx = 0, IdxE = MRI->getNumVirtRegs(); Idx != IdxE; ++Idx) {
-      unsigned VReg = TargetRegisterInfo::index2VirtReg(Idx);
-      unsigned WAReg = MFI->getWAReg(VReg);
-      // Don't declare unused registers.
-      if (WAReg == WebAssemblyFunctionInfo::UnusedReg)
-        continue;
-      // Don't redeclare parameters.
-      if (WAReg < MFI->getParams().size())
-        continue;
-      // Don't declare stackified registers.
-      if (int(WAReg) < 0)
-        continue;
-      MFI->addLocal(getRegType(VReg));
-    }
-  }
-
   getTargetStreamer()->emitLocal(MFI->getLocals());
 
   AsmPrinter::EmitFunctionBodyStart();
-}
-
-void WebAssemblyAsmPrinter::EmitFunctionBodyEnd() {
-  if (TM.getTargetTriple().isOSBinFormatELF())
-    getTargetStreamer()->emitEndFunc();
 }
 
 void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {

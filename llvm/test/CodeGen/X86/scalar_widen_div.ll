@@ -427,7 +427,6 @@ define void @test_int_div(<3 x i32>* %dest, <3 x i32>* %old, i32 %n) {
 ; CHECK-NEXT:    pextrd $2, %xmm1, %r8d
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %r8d
-; CHECK-NEXT:    pinsrd $2, %eax, %xmm2
 ; CHECK-NEXT:    movl %eax, 8(%rdi,%rcx)
 ; CHECK-NEXT:    movq %xmm2, (%rdi,%rcx)
 ; CHECK-NEXT:    addq $16, %rcx

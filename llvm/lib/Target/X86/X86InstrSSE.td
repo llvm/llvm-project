@@ -287,14 +287,6 @@ let Predicates = [UseAVX] in {
   def : Pat<(store (f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
                    addr:$dst),
             (VMOVSSmr addr:$dst, (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32))>;
-
-  // Shuffle with VMOVSS
-  def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
-            (VMOVSSrr VR128:$src1, VR128:$src2)>;
-
-  // Shuffle with VMOVSD
-  def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
-            (VMOVSDrr VR128:$src1, VR128:$src2)>;
 }
 
 let Predicates = [UseAVX, OptForSize] in {
@@ -325,6 +317,14 @@ let Predicates = [UseAVX, OptForSize] in {
              (v2i64 (VMOVSDrr (v2i64 (V_SET0)),
                        (v2i64 (EXTRACT_SUBREG (v4i64 VR256:$src), sub_xmm)))),
              sub_xmm)>;
+
+  // Shuffle with VMOVSS
+  def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
+            (VMOVSSrr VR128:$src1, VR128:$src2)>;
+
+  // Shuffle with VMOVSD
+  def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
+            (VMOVSDrr VR128:$src1, VR128:$src2)>;
 }
 
 let Predicates = [UseSSE1] in {
@@ -335,6 +335,9 @@ let Predicates = [UseSSE1] in {
             (MOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
             (MOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
+  // Shuffle with MOVSS
+  def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
+            (MOVSSrr VR128:$src1, VR128:$src2)>;
   }
 
   // MOVSSrm already zeros the high parts of the register.
@@ -349,10 +352,6 @@ let Predicates = [UseSSE1] in {
   def : Pat<(store (f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
                    addr:$dst),
             (MOVSSmr addr:$dst, (COPY_TO_REGCLASS VR128:$src, FR32))>;
-
-  // Shuffle with MOVSS
-  def : Pat<(v4i32 (X86Movss VR128:$src1, VR128:$src2)),
-            (MOVSSrr VR128:$src1, VR128:$src2)>;
 }
 
 let Predicates = [UseSSE2] in {
@@ -366,9 +365,11 @@ let Predicates = [UseSSE2] in {
   def : Pat<(v2f64 (X86vzload addr:$src)),
             (COPY_TO_REGCLASS (MOVSDrm addr:$src), VR128)>;
 
+  let Predicates = [UseSSE2, NoSSE41_Or_OptForSize] in {
   // Shuffle with MOVSD
   def : Pat<(v2i64 (X86Movsd VR128:$src1, VR128:$src2)),
             (MOVSDrr VR128:$src1, VR128:$src2)>;
+  }
 }
 
 // Aliases to help the assembler pick two byte VEX encodings by swapping the

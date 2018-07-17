@@ -328,8 +328,6 @@ void BuildIdSection::computeHash(
 BssSection::BssSection(StringRef Name, uint64_t Size, uint32_t Alignment)
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_NOBITS, Alignment, Name) {
   this->Bss = true;
-  if (OutputSection *Sec = getParent())
-    Sec->Alignment = std::max(Sec->Alignment, Alignment);
   this->Size = Size;
 }
 

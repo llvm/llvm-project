@@ -228,6 +228,38 @@ static bool isFunctionMacroExpansion(SourceLocation Loc,
   return EInfo.isFunctionMacroExpansion();
 }
 
+/// \return Whether \c RegionOfInterest was modified at \p N,
+/// where \p ReturnState is a state associated with the return
+/// from the current frame.
+static bool wasRegionOfInterestModifiedAt(
+        const SubRegion *RegionOfInterest,
+        const ExplodedNode *N,
+        SVal ValueAfter) {
+  ProgramStateRef State = N->getState();
+  ProgramStateManager &Mgr = N->getState()->getStateManager();
+
+  if (!N->getLocationAs<PostStore>()
+      && !N->getLocationAs<PostInitializer>()
+      && !N->getLocationAs<PostStmt>())
+    return false;
+
+  // Writing into region of interest.
+  if (auto PS = N->getLocationAs<PostStmt>())
+    if (auto *BO = PS->getStmtAs<BinaryOperator>())
+      if (BO->isAssignmentOp() && RegionOfInterest->isSubRegionOf(
+            N->getSVal(BO->getLHS()).getAsRegion()))
+        return true;
+
+  // SVal after the state is possibly different.
+  SVal ValueAtN = N->getState()->getSVal(RegionOfInterest);
+  if (!Mgr.getSValBuilder().areEqual(State, ValueAtN, ValueAfter).isConstrainedTrue() &&
+      (!ValueAtN.isUndef() || !ValueAfter.isUndef()))
+    return true;
+
+  return false;
+}
+
+
 namespace {
 
 /// Put a diagnostic on return statement of all inlined functions
@@ -346,7 +378,7 @@ private:
       FramesModifyingCalculated.insert(
         N->getLocationContext()->getStackFrame());
 
-      if (wasRegionOfInterestModifiedAt(N, LastReturnState, ValueAtReturn)) {
+      if (wasRegionOfInterestModifiedAt(RegionOfInterest, N, ValueAtReturn)) {
         const StackFrameContext *SCtx = N->getStackFrame();
         while (!SCtx->inTopFrame()) {
           auto p = FramesModifyingRegion.insert(SCtx);
@@ -363,33 +395,6 @@ private:
 
       N = N->getFirstPred();
     } while (N);
-  }
-
-  /// \return Whether \c RegionOfInterest was modified at \p N,
-  /// where \p ReturnState is a state associated with the return
-  /// from the current frame.
-  bool wasRegionOfInterestModifiedAt(const ExplodedNode *N,
-                                     ProgramStateRef ReturnState,
-                                     SVal ValueAtReturn) {
-    if (!N->getLocationAs<PostStore>()
-        && !N->getLocationAs<PostInitializer>()
-        && !N->getLocationAs<PostStmt>())
-      return false;
-
-    // Writing into region of interest.
-    if (auto PS = N->getLocationAs<PostStmt>())
-      if (auto *BO = PS->getStmtAs<BinaryOperator>())
-        if (BO->isAssignmentOp() && RegionOfInterest->isSubRegionOf(
-                                        N->getSVal(BO->getLHS()).getAsRegion()))
-          return true;
-
-    // SVal after the state is possibly different.
-    SVal ValueAtN = N->getState()->getSVal(RegionOfInterest);
-    if (!ReturnState->areEqual(ValueAtN, ValueAtReturn).isConstrainedTrue() &&
-        (!ValueAtN.isUndef() || !ValueAtReturn.isUndef()))
-      return true;
-
-    return false;
   }
 
   /// Get parameters associated with runtime definition in order
@@ -524,25 +529,28 @@ private:
   }
 };
 
+/// Suppress null-pointer-dereference bugs where dereferenced null was returned
+/// the macro.
 class MacroNullReturnSuppressionVisitor final : public BugReporterVisitor {
   const SubRegion *RegionOfInterest;
+  const SVal ValueAtDereference;
+
+  // Do not invalidate the reports where the value was modified
+  // after it got assigned to from the macro.
+  bool WasModified = false;
 
 public:
-  MacroNullReturnSuppressionVisitor(const SubRegion *R) : RegionOfInterest(R) {}
-
-  static void *getTag() {
-    static int Tag = 0;
-    return static_cast<void *>(&Tag);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override {
-    ID.AddPointer(getTag());
-  }
+  MacroNullReturnSuppressionVisitor(const SubRegion *R,
+                                    const SVal V) : RegionOfInterest(R),
+                                                    ValueAtDereference(V) {}
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
                                                  const ExplodedNode *PrevN,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override {
+    if (WasModified)
+      return nullptr;
+
     auto BugPoint = BR.getErrorNode()->getLocation().getAs<StmtPoint>();
     if (!BugPoint)
       return nullptr;
@@ -556,6 +564,10 @@ public:
           BR.markInvalid(getTag(), MacroName.c_str());
       }
     }
+
+    if (wasRegionOfInterestModifiedAt(RegionOfInterest, N, ValueAtDereference))
+      WasModified = true;
+
     return nullptr;
   }
 
@@ -568,7 +580,16 @@ public:
     if (EnableNullFPSuppression && Options.shouldSuppressNullReturnPaths()
           && V.getAs<Loc>())
       BR.addVisitor(llvm::make_unique<MacroNullReturnSuppressionVisitor>(
-              R->getAs<SubRegion>()));
+              R->getAs<SubRegion>(), V));
+  }
+
+  void* getTag() const {
+    static int Tag = 0;
+    return static_cast<void *>(&Tag);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
   }
 
 private:

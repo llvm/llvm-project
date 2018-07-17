@@ -159,7 +159,8 @@ SVal SimpleSValBuilder::evalCastFromLoc(Loc val, QualType castTy) {
               return nonloc::SymbolVal(SymMgr.getExtentSymbol(FTR));
 
         if (const SymbolicRegion *SymR = R->getSymbolicBase())
-          return nonloc::SymbolVal(SymR->getSymbol());
+          return makeNonLoc(SymR->getSymbol(), BO_NE,
+                            BasicVals.getZeroWithPtrWidth(), castTy);
 
         // FALL-THROUGH
         LLVM_FALLTHROUGH;
@@ -1238,7 +1239,7 @@ SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
 
     SVal VisitSymbolData(const SymbolData *S) {
       if (const llvm::APSInt *I =
-              SVB.getKnownValue(State, nonloc::SymbolVal(S)))
+              SVB.getKnownValue(State, SVB.makeSymbolVal(S)))
         return Loc::isLocType(S->getType()) ? (SVal)SVB.makeIntLocVal(*I)
                                             : (SVal)SVB.makeIntVal(*I);
       return SVB.makeSymbolVal(S);

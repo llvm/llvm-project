@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instsimplify -S | FileCheck %s
 
 define i32 @negated_operand(i32 %x) {
 ; CHECK-LABEL: @negated_operand(

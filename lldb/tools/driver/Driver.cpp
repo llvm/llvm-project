@@ -41,7 +41,10 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
 #include <thread>
 
 #if !defined(__APPLE__)
@@ -1230,6 +1233,10 @@ main(int argc, char const *argv[])
   }
   const char **argv = argvPointers.data();
 #endif
+
+  llvm::StringRef ToolName = argv[0];
+  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
+  llvm::PrettyStackTraceProgram X(argc, argv);
 
   SBDebugger::Initialize();
 
