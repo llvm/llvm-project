@@ -272,6 +272,7 @@ def ShiftOpParentheses: DiagGroup<"shift-op-parentheses">;
 def OverloadedShiftOpParentheses: DiagGroup<"overloaded-shift-op-parentheses">;
 def DanglingElse: DiagGroup<"dangling-else">;
 def DanglingField : DiagGroup<"dangling-field">;
+def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
 def FlagEnum : DiagGroup<"flag-enum">;

@@ -192,7 +192,7 @@ public:
   /// level or is inlined.
   ///
   /// check::EndFunction
-  void checkEndFunction(CheckerContext &Ctx) const {}
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &Ctx) const {}
 
   /// Called after all the paths in the ExplodedGraph reach end of path
   /// - the symbolic execution graph is fully explored.

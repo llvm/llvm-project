@@ -254,9 +254,9 @@ public:
 
 class EndFunction {
   template <typename CHECKER>
-  static void _checkEndFunction(void *checker,
+  static void _checkEndFunction(void *checker, const ReturnStmt *RS,
                                 CheckerContext &C) {
-    ((const CHECKER *)checker)->checkEndFunction(C);
+    ((const CHECKER *)checker)->checkEndFunction(RS, C);
   }
 
 public:

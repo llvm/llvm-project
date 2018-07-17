@@ -358,9 +358,7 @@ static void PlaceMarkers(MachineFunction &MF, const MachineLoopInfo &MLI,
   FixEndsAtEndOfFunction(MF, MFI, BlockTops, LoopTops);
 
   // Add an end instruction at the end of the function body.
-  if (!MF.getSubtarget<WebAssemblySubtarget>()
-        .getTargetTriple().isOSBinFormatELF())
-    AppendEndToFunction(MF, TII);
+  AppendEndToFunction(MF, TII);
 }
 
 bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {

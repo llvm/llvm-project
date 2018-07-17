@@ -22,7 +22,6 @@
 
 namespace llvm {
 
-class MCELFStreamer;
 class MCWasmStreamer;
 class MCSymbolWasm;
 
@@ -61,23 +60,6 @@ class WebAssemblyTargetAsmStreamer final : public WebAssemblyTargetStreamer {
 
 public:
   WebAssemblyTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
-
-  void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
-  void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
-  void emitLocal(ArrayRef<MVT> Types) override;
-  void emitEndFunc() override;
-  void emitIndirectFunctionType(MCSymbol *Symbol,
-                                SmallVectorImpl<MVT> &Params,
-                                SmallVectorImpl<MVT> &Results) override;
-  void emitIndIdx(const MCExpr *Value) override;
-  void emitGlobalImport(StringRef name) override;
-  void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
-};
-
-/// This part is for ELF object output
-class WebAssemblyTargetELFStreamer final : public WebAssemblyTargetStreamer {
-public:
-  explicit WebAssemblyTargetELFStreamer(MCStreamer &S);
 
   void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
   void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;

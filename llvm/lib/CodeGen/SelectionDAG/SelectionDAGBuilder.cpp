@@ -5656,6 +5656,43 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     setValue(&I, DAG.getNode(ISD::CTPOP, sdl, Ty, Arg));
     return nullptr;
   }
+  case Intrinsic::fshl:
+  case Intrinsic::fshr: {
+    bool IsFSHL = Intrinsic == Intrinsic::fshl;
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    SDValue Z = getValue(I.getArgOperand(2));
+    EVT VT = X.getValueType();
+
+    // TODO: When X == Y, this is rotate. Create the node directly if legal.
+
+    // Get the shift amount and inverse shift amount, modulo the bit-width.
+    SDValue BitWidthC = DAG.getConstant(VT.getScalarSizeInBits(), sdl, VT);
+    SDValue ShAmt = DAG.getNode(ISD::UREM, sdl, VT, Z, BitWidthC);
+    SDValue NegZ = DAG.getNode(ISD::SUB, sdl, VT, BitWidthC, Z);
+    SDValue InvShAmt = DAG.getNode(ISD::UREM, sdl, VT, NegZ, BitWidthC);
+
+    // fshl: (X << (Z % BW)) | (Y >> ((BW - Z) % BW))
+    // fshr: (X << ((BW - Z) % BW)) | (Y >> (Z % BW))
+    SDValue ShX = DAG.getNode(ISD::SHL, sdl, VT, X, IsFSHL ? ShAmt : InvShAmt);
+    SDValue ShY = DAG.getNode(ISD::SRL, sdl, VT, Y, IsFSHL ? InvShAmt : ShAmt);
+    SDValue Res = DAG.getNode(ISD::OR, sdl, VT, ShX, ShY);
+
+    // If (Z % BW == 0), then (BW - Z) % BW is also zero, so the result would
+    // be X | Y. If X == Y (rotate), that's fine. If not, we have to select.
+    if (X != Y) {
+      SDValue Zero = DAG.getConstant(0, sdl, VT);
+      EVT CCVT = MVT::i1;
+      if (VT.isVector())
+        CCVT = EVT::getVectorVT(*Context, CCVT, VT.getVectorNumElements());
+      // For fshl, 0 shift returns the 1st arg (X).
+      // For fshr, 0 shift returns the 2nd arg (Y).
+      SDValue IsZeroShift = DAG.getSetCC(sdl, CCVT, ShAmt, Zero, ISD::SETEQ);
+      Res = DAG.getSelect(sdl, VT, IsZeroShift, IsFSHL ? X : Y, Res);
+    }
+    setValue(&I, Res);
+    return nullptr;
+  }
   case Intrinsic::stacksave: {
     SDValue Op = getRoot();
     Res = DAG.getNode(

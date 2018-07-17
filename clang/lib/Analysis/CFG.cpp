@@ -1263,7 +1263,6 @@ void CFGBuilder::findConstructionContexts(
     // Support pre-C++17 copy elision AST.
     auto *CE = cast<CXXConstructExpr>(Child);
     if (BuildOpts.MarkElidedCXXConstructors && CE->isElidable()) {
-      assert(CE->getNumArgs() == 1);
       findConstructionContexts(withExtraLayer(CE), CE->getArg(0));
     }
 

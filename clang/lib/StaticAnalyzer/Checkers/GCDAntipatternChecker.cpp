@@ -93,7 +93,9 @@ static bool isTest(const Decl *D) {
 static auto findGCDAntiPatternWithSemaphore() -> decltype(compoundStmt()) {
 
   const char *SemaphoreBinding = "semaphore_name";
-  auto SemaphoreCreateM = callExpr(callsName("dispatch_semaphore_create"));
+  auto SemaphoreCreateM = callExpr(allOf(
+      callsName("dispatch_semaphore_create"),
+      hasArgument(0, ignoringParenCasts(integerLiteral(equals(0))))));
 
   auto SemaphoreBindingM = anyOf(
       forEachDescendant(
