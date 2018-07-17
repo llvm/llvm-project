@@ -97,6 +97,7 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
                 isMemberInitializer(), forField(equalsNode(Field)),
                 withInitializer(anyOf(
                     AccessToFieldInParam,
+                    initListExpr(has(AccessToFieldInParam)),
                     cxxConstructExpr(allOf(
                         hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
                         argumentCountIs(1),

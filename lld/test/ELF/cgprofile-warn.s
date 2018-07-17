@@ -29,3 +29,8 @@ A:
 # CHECK: {{.*}}.call_graph: no such symbol: adena1
 # CHECK: {{.*}}.call_graph: no such symbol: adena2
 # CHECK: unable to order undefined symbol: poppy
+
+# RUN: ld.lld %t --call-graph-ordering-file %t.call_graph -o /dev/null \
+# RUN:   -noinhibit-exec -icf=all --no-warn-symbol-ordering 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOWARN
+# NOWARN-NOT: unable to order

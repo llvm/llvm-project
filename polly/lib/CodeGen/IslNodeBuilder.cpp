@@ -23,6 +23,7 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLTools.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/APInt.h"
@@ -242,8 +243,8 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   return 0;
 }
 
-isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
-                               bool CreateScalarRefs) {
+void addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                           bool CreateScalarRefs) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
   if (Stmt->isBlockStmt())
@@ -275,8 +276,6 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
     if (CreateScalarRefs)
       References.Values.insert(References.BlockGen.getOrCreateAlloca(*Access));
   }
-
-  return isl_stat_ok;
 }
 
 /// Extract the out-of-scop values and SCEVs referenced from a set describing
@@ -290,12 +289,10 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
 /// @param Set     A set which references the ScopStmt we are interested in.
 /// @param UserPtr A void pointer that can be casted to a SubtreeReferences
 ///                structure.
-static isl_stat addReferencesFromStmtSet(__isl_take isl_set *Set,
-                                         void *UserPtr) {
-  isl_id *Id = isl_set_get_tuple_id(Set);
-  auto *Stmt = static_cast<const ScopStmt *>(isl_id_get_user(Id));
-  isl_id_free(Id);
-  isl_set_free(Set);
+static void addReferencesFromStmtSet(isl::set Set,
+                                     struct SubtreeReferences *UserPtr) {
+  isl::id Id = Set.get_tuple_id();
+  auto *Stmt = static_cast<const ScopStmt *>(Id.get_user());
   return addReferencesFromStmt(Stmt, UserPtr);
 }
 
@@ -313,10 +310,11 @@ static isl_stat addReferencesFromStmtSet(__isl_take isl_set *Set,
 ///                   results are returned and further information is
 ///                   provided.
 static void
-addReferencesFromStmtUnionSet(isl_union_set *USet,
+addReferencesFromStmtUnionSet(isl::union_set USet,
                               struct SubtreeReferences &References) {
-  isl_union_set_foreach_set(USet, addReferencesFromStmtSet, &References);
-  isl_union_set_free(USet);
+
+  for (isl::set Set : USet.get_set_list())
+    addReferencesFromStmtSet(Set, &References);
 }
 
 __isl_give isl_union_map *
@@ -338,7 +336,8 @@ void IslNodeBuilder::getReferencesInSubtree(__isl_keep isl_ast_node *For,
   for (const auto &I : OutsideLoopIterations)
     Values.insert(cast<SCEVUnknown>(I.second)->getValue());
 
-  isl_union_set *Schedule = isl_union_map_domain(getScheduleForAstNode(For));
+  isl::union_set Schedule =
+      isl::manage(isl_union_map_domain(getScheduleForAstNode(For)));
   addReferencesFromStmtUnionSet(Schedule, References);
 
   for (const SCEV *Expr : SCEVs) {

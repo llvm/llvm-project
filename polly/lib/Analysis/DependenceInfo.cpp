@@ -25,6 +25,7 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLTools.h"
 #include "llvm/Support/Debug.h"
 #include <isl/aff.h>
 #include <isl/ctx.h>
@@ -189,12 +190,10 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
 }
 
 /// Fix all dimension of @p Zero to 0 and add it to @p user
-static isl_stat fixSetToZero(__isl_take isl_set *Zero, void *user) {
-  isl_union_set **User = (isl_union_set **)user;
-  for (unsigned i = 0; i < isl_set_dim(Zero, isl_dim_set); i++)
-    Zero = isl_set_fix_si(Zero, isl_dim_set, i, 0);
-  *User = isl_union_set_add_set(*User, Zero);
-  return isl_stat_ok;
+static void fixSetToZero(isl::set Zero, isl::union_set *User) {
+  for (unsigned i = 0; i < Zero.dim(isl::dim::set); i++)
+    Zero = Zero.fix_si(isl::dim::set, i, 0);
+  *User = User->add_set(Zero);
 }
 
 /// Compute the privatization dependences for a given dependency @p Map
@@ -256,9 +255,14 @@ void Dependences::addPrivatizationDependences() {
   //        want to eliminate here.
   isl_union_set *UDeltas = isl_union_map_deltas(isl_union_map_copy(TC_RED));
   isl_union_set *Universe = isl_union_set_universe(isl_union_set_copy(UDeltas));
-  isl_union_set *Zero = isl_union_set_empty(isl_union_set_get_space(Universe));
-  isl_union_set_foreach_set(Universe, fixSetToZero, &Zero);
-  isl_union_map *NonPositive = isl_union_set_lex_le_union_set(UDeltas, Zero);
+  isl::union_set Zero =
+      isl::manage(isl_union_set_empty(isl_union_set_get_space(Universe)));
+
+  for (isl::set Set : isl::manage_copy(Universe).get_set_list())
+    fixSetToZero(Set, &Zero);
+
+  isl_union_map *NonPositive =
+      isl_union_set_lex_le_union_set(UDeltas, Zero.release());
 
   TC_RED = isl_union_map_subtract(TC_RED, NonPositive);
 
