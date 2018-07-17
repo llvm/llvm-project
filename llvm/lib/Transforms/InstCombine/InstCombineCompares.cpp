@@ -2999,8 +2999,8 @@ foldICmpWithTruncSignExtendedVal(ICmpInst &I,
 
   const uint64_t XBitWidth = C0->getBitWidth();
   const uint64_t KeptBits = XBitWidth - MaskedBits;
-  const uint64_t ICmpCst = 1UL << KeptBits; // (1 << KeptBits)
-  const uint64_t AddCst = ICmpCst >> 1UL;   // (1 << (KeptBits-1))
+  const uint64_t ICmpCst = (uint64_t)1 << KeptBits; // (1 << KeptBits)
+  const uint64_t AddCst = ICmpCst >> 1;   // (1 << (KeptBits-1))
 
   auto *XType = X->getType();
   // (add %x, (1 << (KeptBits-1)))

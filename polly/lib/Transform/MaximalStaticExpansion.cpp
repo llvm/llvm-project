@@ -140,11 +140,10 @@ isl::union_map MaximalStaticExpander::filterDependences(
 
   isl::union_map MapDependences = isl::union_map::empty(S.getParamSpace());
 
-  Dependences.foreach_map([&MapDependences, &AccessDomainId,
-                           &SAI](isl::map Map) -> isl::stat {
+  for (isl::map Map : Dependences.get_map_list()) {
     // Filter out Statement to Statement dependences.
     if (!Map.can_curry())
-      return isl::stat::ok;
+      continue;
 
     // Intersect with the relevant SAI.
     auto TmpMapDomainId =
@@ -154,20 +153,18 @@ isl::union_map MaximalStaticExpander::filterDependences(
         static_cast<ScopArrayInfo *>(TmpMapDomainId.get_user());
 
     if (SAI != UserSAI)
-      return isl::stat::ok;
+      continue;
 
     // Get the correct S1[] -> S2[] dependence.
     auto NewMap = Map.factor_domain();
     auto NewMapDomainId = NewMap.domain().get_tuple_id();
 
     if (AccessDomainId.get() != NewMapDomainId.get())
-      return isl::stat::ok;
+      continue;
 
     // Add the corresponding map to MapDependences.
     MapDependences = MapDependences.add_map(NewMap);
-
-    return isl::stat::ok;
-  });
+  }
 
   return MapDependences;
 }
@@ -193,10 +190,8 @@ bool MaximalStaticExpander::isExpandable(
 
     for (auto Write : Writes) {
       auto MapDeps = filterDependences(S, Dependences, Write);
-      MapDeps.foreach_map([&WriteDomain](isl::map Map) -> isl::stat {
+      for (isl::map Map : MapDeps.get_map_list())
         WriteDomain = WriteDomain.add_set(Map.range());
-        return isl::stat::ok;
-      });
     }
 
     // For now, read from original scalar is not possible.

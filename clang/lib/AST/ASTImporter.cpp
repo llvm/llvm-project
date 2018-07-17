@@ -2539,6 +2539,7 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     return ToD;
 
   const FunctionDecl *FoundByLookup = nullptr;
+  FunctionTemplateDecl *FromFT = D->getDescribedFunctionTemplate();
 
   // If this is a function template specialization, then try to find the same
   // existing specialization in the "to" context. The localUncachedLookup
@@ -2564,6 +2565,14 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     for (auto *FoundDecl : FoundDecls) {
       if (!FoundDecl->isInIdentifierNamespace(IDNS))
         continue;
+
+      // If template was found, look at the templated function.
+      if (FromFT) {
+        if (auto *Template = dyn_cast<FunctionTemplateDecl>(FoundDecl))
+          FoundDecl = Template->getTemplatedDecl();
+        else
+          continue;
+      }
 
       if (auto *FoundFunction = dyn_cast<FunctionDecl>(FoundDecl)) {
         if (FoundFunction->hasExternalFormalLinkage() &&
@@ -2739,6 +2748,11 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
       return nullptr;
     ToFunction->setType(T);
   }
+
+  // Import the describing template function, if any.
+  if (FromFT)
+    if (!Importer.Import(FromFT))
+      return nullptr;
 
   if (D->doesThisDeclarationHaveABody()) {
     if (Stmt *FromBody = D->getBody()) {

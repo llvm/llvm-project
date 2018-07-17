@@ -1009,8 +1009,8 @@ let DecoderNamespace = "SparcV9", DecoderMethod = "DecodeTRAP", Predicates = [Ha
 let isBarrier = 1, isTerminator = 1, rd = 0b01000, rs1 = 0, simm13 = 5 in
   def TA5 : F3_2<0b10, 0b111010, (outs), (ins), "ta 5", [(trap)]>;
 
-def : Pat<(debugtrap),
-  (TRAPri (i32 G0), (i32 1), (i32 8))>;
+let hasSideEffects = 1, rd = 0b01000, rs1 = 0, simm13 = 1 in
+  def TA1 : F3_2<0b10, 0b111010, (outs), (ins), "ta 1", [(debugtrap)]>;
 
 // Section B.28 - Read State Register Instructions
 let rs2 = 0 in

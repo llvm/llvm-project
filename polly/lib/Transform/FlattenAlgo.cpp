@@ -54,20 +54,19 @@ bool isVariableDim(const isl::basic_map &BMap) {
 
 /// Whether Map's first out dimension is no constant nor piecewise constant.
 bool isVariableDim(const isl::map &Map) {
-  return Map.foreach_basic_map([](isl::basic_map BMap) -> isl::stat {
+  for (isl::basic_map BMap : Map.get_basic_map_list())
     if (isVariableDim(BMap))
-      return isl::stat::error;
-    return isl::stat::ok;
-  }) == isl::stat::ok;
+      return false;
+
+  return true;
 }
 
 /// Whether UMap's first out dimension is no (piecewise) constant.
 bool isVariableDim(const isl::union_map &UMap) {
-  return UMap.foreach_map([](isl::map Map) -> isl::stat {
+  for (isl::map Map : UMap.get_map_list())
     if (isVariableDim(Map))
-      return isl::stat::error;
-    return isl::stat::ok;
-  }) == isl::stat::ok;
+      return false;
+  return true;
 }
 
 /// Compute @p UPwAff - @p Val.
@@ -113,11 +112,10 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
                     have no effect on schedule ranges */
 
   auto Result = isl::union_map::empty(UMap.get_space());
-  UMap.foreach_map([=, &Result](isl::map Map) -> isl::stat {
+  for (isl::map Map : UMap.get_map_list()) {
     auto Outprojected = Map.project_out(isl::dim::out, first, n);
     Result = Result.add_map(Outprojected);
-    return isl::stat::ok;
-  });
+  }
   return Result;
 }
 
@@ -128,23 +126,20 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
 /// number of dimensions is not supported by the other code in this file.
 size_t scheduleScatterDims(const isl::union_map &Schedule) {
   unsigned Dims = 0;
-  Schedule.foreach_map([&Dims](isl::map Map) -> isl::stat {
+  for (isl::map Map : Schedule.get_map_list())
     Dims = std::max(Dims, Map.dim(isl::dim::out));
-    return isl::stat::ok;
-  });
   return Dims;
 }
 
 /// Return the @p pos' range dimension, converted to an isl_union_pw_aff.
 isl::union_pw_aff scheduleExtractDimAff(isl::union_map UMap, unsigned pos) {
   auto SingleUMap = isl::union_map::empty(UMap.get_space());
-  UMap.foreach_map([=, &SingleUMap](isl::map Map) -> isl::stat {
-    auto MapDims = Map.dim(isl::dim::out);
-    auto SingleMap = Map.project_out(isl::dim::out, 0, pos);
+  for (isl::map Map : UMap.get_map_list()) {
+    unsigned MapDims = Map.dim(isl::dim::out);
+    isl::map SingleMap = Map.project_out(isl::dim::out, 0, pos);
     SingleMap = SingleMap.project_out(isl::dim::out, 1, MapDims - pos - 1);
     SingleUMap = SingleUMap.add_map(SingleMap);
-    return isl::stat::ok;
-  });
+  };
 
   auto UAff = isl::union_pw_multi_aff(SingleUMap);
   auto FirstMAff = isl::multi_union_pw_aff(UAff);

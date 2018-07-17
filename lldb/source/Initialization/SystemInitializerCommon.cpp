@@ -29,7 +29,6 @@
 #include "lldb/Host/windows/windows.h"
 #endif
 
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include <string>
@@ -63,9 +62,6 @@ void SystemInitializerCommon::Initialize() {
   }
 #endif
 
-#if not defined(__APPLE__)
-  llvm::EnablePrettyStackTrace();
-#endif
   Log::Initialize();
   HostInfo::Initialize();
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
