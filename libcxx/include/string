@@ -807,8 +807,14 @@ public:
 #endif  // _LIBCPP_CXX03_LANG
 
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
-        _LIBCPP_INLINE_VISIBILITY
-        basic_string(const _CharT* __s);
+    _LIBCPP_INLINE_VISIBILITY
+    basic_string(const _CharT* __s) {
+      _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*) detected nullptr");
+      __init(__s, traits_type::length(__s));
+#   if _LIBCPP_DEBUG_LEVEL >= 2
+      __get_db()->__insert_c(this);
+#   endif
+    }
 
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
         _LIBCPP_INLINE_VISIBILITY
@@ -1771,17 +1777,6 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
     }
     traits_type::copy(_VSTD::__to_raw_pointer(__p), __s, __sz);
     traits_type::assign(__p[__sz], value_type());
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-template <class>
-basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s)
-{
-    _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*) detected nullptr");
-    __init(__s, traits_type::length(__s));
-#if _LIBCPP_DEBUG_LEVEL >= 2
-    __get_db()->__insert_c(this);
-#endif
 }
 
 template <class _CharT, class _Traits, class _Allocator>
