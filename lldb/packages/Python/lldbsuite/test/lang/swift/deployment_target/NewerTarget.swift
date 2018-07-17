@@ -1,9 +1,11 @@
+import Foundation
+
 func use<T>(_ t: T) {}
 
-public struct Foo {
+@objc public class Foo: NSObject {
   let i = 23
-  public init() {}
-  public func f() {
-    use(i)
+  override public init() {}
+  @objc public func f() {
+    use(i) // break here
   }
 }
