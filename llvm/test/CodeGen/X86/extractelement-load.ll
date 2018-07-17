@@ -85,8 +85,7 @@ define i64 @t4(<2 x double>* %a) {
 ; X32-SSE2-LABEL: t4:
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    movapd (%eax), %xmm0
-; X32-SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; X32-SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; X32-SSE2-NEXT:    movd %xmm1, %eax
 ; X32-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]

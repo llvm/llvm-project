@@ -48,3 +48,21 @@ fmax    z0.d, p0/m, z0.d, #0.0
 // CHECK-ENCODING: [0x00,0x80,0xde,0x65]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 00 80 de 65 <unknown>
+
+fmax    z0.h, p7/m, z0.h, z31.h
+// CHECK-INST: fmax	z0.h, p7/m, z0.h, z31.h
+// CHECK-ENCODING: [0xe0,0x9f,0x46,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 9f 46 65 <unknown>
+
+fmax    z0.s, p7/m, z0.s, z31.s
+// CHECK-INST: fmax	z0.s, p7/m, z0.s, z31.s
+// CHECK-ENCODING: [0xe0,0x9f,0x86,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 9f 86 65 <unknown>
+
+fmax    z0.d, p7/m, z0.d, z31.d
+// CHECK-INST: fmax	z0.d, p7/m, z0.d, z31.d
+// CHECK-ENCODING: [0xe0,0x9f,0xc6,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 9f c6 65 <unknown>

@@ -30,17 +30,6 @@ namespace dr1813 { // dr1813: 7
   static_assert(!__is_standard_layout(U), "");
 }
 
-namespace dr1815 { // dr1815: no
-#if __cplusplus >= 201402L
-  // FIXME: needs codegen test
-  struct A { int &&r = 0; }; // FIXME expected-warning {{not supported}}
-  A a = {}; // expected-note {{here}}
-
-  struct B { int &&r = 0; }; // expected-error {{binds to a temporary}} expected-note {{here}}
-  B b; // expected-note {{here}}
-#endif
-}
-
 namespace dr1881 { // dr1881: 7
   struct A { int a : 4; };
   struct B : A { int b : 3; };

@@ -1892,15 +1892,14 @@ namespace Lifetime {
   }
 
   constexpr int &get(int &&n) { return n; }
-  constexpr int &&get_rv(int &&n) { return static_cast<int&&>(n); }
   struct S {
-    int &&r;
+    int &&r; // expected-note 2{{declared here}}
     int &s;
     int t;
-    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // expected-note {{read of object outside its lifetime}}
-    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // expected-note {{read of object outside its lifetime}}
+    constexpr S() : r(0), s(get(0)), t(r) {} // expected-warning {{temporary}}
+    constexpr S(int) : r(0), s(get(0)), t(s) {} // expected-warning {{temporary}} expected-note {{read of object outside its lifetime}}
   };
-  constexpr int k1 = S().t; // expected-error {{constant expression}} expected-note {{in call}}
+  constexpr int k1 = S().t; // ok, int is lifetime-extended to end of constructor
   constexpr int k2 = S(0).t; // expected-error {{constant expression}} expected-note {{in call}}
 }
 

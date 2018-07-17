@@ -31,7 +31,6 @@ define i32 @t(i8* %ref_frame_ptr, i32 %ref_frame_stride, i32 %idxX, i32 %idxY) n
 ; X64-NEXT:    shlq $32, %rcx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    movq %rcx, %xmm0
-; X64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,1,2,4,5,6,7]
 ; X64-NEXT:    movd %xmm0, %eax
 ; X64-NEXT:    retq

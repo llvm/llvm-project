@@ -238,6 +238,10 @@ char *LLVMGetDefaultTargetTriple(void) {
   return strdup(sys::getDefaultTargetTriple().c_str());
 }
 
+char *LLVMNormalizeTargetTriple(const char* triple) {
+  return strdup(Triple::normalize(StringRef(triple)).c_str());
+}
+
 char *LLVMGetHostCPUName(void) {
   return strdup(sys::getHostCPUName().data());
 }

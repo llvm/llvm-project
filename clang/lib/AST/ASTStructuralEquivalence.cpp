@@ -924,7 +924,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
   }
 
-  if (D1->isAnonymousStructOrUnion() && D2->isAnonymousStructOrUnion()) {
+  if (!D1->getDeclName() && !D2->getDeclName()) {
     // If both anonymous structs/unions are in a record context, make sure
     // they occur in the same location in the context records.
     if (Optional<unsigned> Index1 =

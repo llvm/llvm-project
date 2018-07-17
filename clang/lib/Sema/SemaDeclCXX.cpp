@@ -3621,8 +3621,7 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
 
   ExprResult Init = InitExpr;
   if (!FD->getType()->isDependentType() && !InitExpr->isTypeDependent()) {
-    InitializedEntity Entity =
-        InitializedEntity::InitializeMemberFromDefaultMemberInitializer(FD);
+    InitializedEntity Entity = InitializedEntity::InitializeMember(FD);
     InitializationKind Kind =
         FD->getInClassInitStyle() == ICIS_ListInit
             ? InitializationKind::CreateDirectList(InitExpr->getLocStart(),
@@ -4647,10 +4646,6 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
         SemaRef.BuildCXXDefaultInitExpr(Info.Ctor->getLocation(), Field);
     if (DIE.isInvalid())
       return true;
-
-    auto Entity = InitializedEntity::InitializeMember(Field, nullptr, true);
-    SemaRef.checkInitializerLifetime(Entity, DIE.get());
-
     CXXCtorInitializer *Init;
     if (Indirect)
       Init = new (SemaRef.Context)

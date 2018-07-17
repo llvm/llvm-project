@@ -35,14 +35,11 @@ const Builtin::Info AArch64TargetInfo::BuiltinInfo[] = {
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
-  if (getTriple().getOS() == llvm::Triple::NetBSD ||
-      getTriple().getOS() == llvm::Triple::OpenBSD) {
-    // NetBSD apparently prefers consistency across ARM targets to
-    // consistency across 64-bit targets.
+  if (getTriple().getOS() == llvm::Triple::OpenBSD) {
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {
-    if (!getTriple().isOSDarwin())
+    if (!getTriple().isOSDarwin() && getTriple().getOS() != llvm::Triple::NetBSD)
       WCharType = UnsignedInt;
 
     Int64Type = SignedLong;

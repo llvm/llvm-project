@@ -2,7 +2,8 @@
 
 // expected-no-diagnostics
 
-void *operator new(unsigned long, void *h) { return h; }
+typedef __typeof(sizeof(int)) size_t;
+void *operator new(size_t, void *h) { return h; }
 
 // I've no idea what this code does, but it used to crash, so let's keep it.
 namespace pr37802_v1 {

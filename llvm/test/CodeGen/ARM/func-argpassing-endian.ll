@@ -38,7 +38,6 @@ define void @arg_double( double %val ) {
 define void @arg_v4i32(<4 x i32> %vec ) {
 ; CHECK-LE-LABEL: arg_v4i32:
 ; CHECK-LE:       @ %bb.0:
-; CHECK-LE-NEXT:    vmov d17, r2, r3
 ; CHECK-LE-NEXT:    vmov d16, r0, r1
 ; CHECK-LE-NEXT:    movw r0, :lower16:var32
 ; CHECK-LE-NEXT:    movt r0, :upper16:var32
@@ -47,7 +46,6 @@ define void @arg_v4i32(<4 x i32> %vec ) {
 ;
 ; CHECK-BE-LABEL: arg_v4i32:
 ; CHECK-BE:       @ %bb.0:
-; CHECK-BE-NEXT:    vmov d17, r3, r2
 ; CHECK-BE-NEXT:    vmov d16, r1, r0
 ; CHECK-BE-NEXT:    movw r0, :lower16:var32
 ; CHECK-BE-NEXT:    movt r0, :upper16:var32

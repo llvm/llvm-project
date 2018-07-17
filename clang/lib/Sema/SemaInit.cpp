@@ -572,7 +572,6 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
         hadError = true;
         return;
       }
-      SemaRef.checkInitializerLifetime(MemberEntity, DIE.get());
       if (Init < NumInits)
         ILE->setInit(Init, DIE.get());
       else {
@@ -6198,43 +6197,17 @@ InitializedEntityOutlivesFullExpression(const InitializedEntity &Entity) {
   llvm_unreachable("unknown entity kind");
 }
 
-namespace {
-enum LifetimeKind {
-  /// The lifetime of a temporary bound to this entity ends at the end of the
-  /// full-expression, and that's (probably) fine.
-  LK_FullExpression,
-
-  /// The lifetime of a temporary bound to this entity is extended to the
-  /// lifeitme of the entity itself.
-  LK_Extended,
-
-  /// The lifetime of a temporary bound to this entity probably ends too soon,
-  /// because the entity is allocated in a new-expression.
-  LK_New,
-
-  /// The lifetime of a temporary bound to this entity ends too soon, because
-  /// the entity is a return object.
-  LK_Return,
-
-  /// This is a mem-initializer: if it would extend a temporary (other than via
-  /// a default member initializer), the program is ill-formed.
-  LK_MemInitializer,
-};
-using LifetimeResult =
-    llvm::PointerIntPair<const InitializedEntity *, 3, LifetimeKind>;
-}
-
 /// Determine the declaration which an initialized entity ultimately refers to,
 /// for the purpose of lifetime-extending a temporary bound to a reference in
 /// the initialization of \p Entity.
-static LifetimeResult getEntityForTemporaryLifetimeExtension(
+static const InitializedEntity *getEntityForTemporaryLifetimeExtension(
     const InitializedEntity *Entity,
-    const InitializedEntity *InitField = nullptr) {
+    const InitializedEntity *FallbackDecl = nullptr) {
   // C++11 [class.temporary]p5:
   switch (Entity->getKind()) {
   case InitializedEntity::EK_Variable:
     //   The temporary [...] persists for the lifetime of the reference
-    return {Entity, LK_Extended};
+    return Entity;
 
   case InitializedEntity::EK_Member:
     // For subobjects, we look at the complete object.
@@ -6243,43 +6216,29 @@ static LifetimeResult getEntityForTemporaryLifetimeExtension(
                                                     Entity);
 
     //   except:
-    // C++17 [class.base.init]p8:
-    //   A temporary expression bound to a reference member in a
-    //   mem-initializer is ill-formed.
-    // C++17 [class.base.init]p11:
-    //   A temporary expression bound to a reference member from a
-    //   default member initializer is ill-formed.
-    //
-    // The context of p11 and its example suggest that it's only the use of a
-    // default member initializer from a constructor that makes the program
-    // ill-formed, not its mere existence, and that it can even be used by
-    // aggregate initialization.
-    return {Entity, Entity->isDefaultMemberInitializer() ? LK_Extended
-                                                         : LK_MemInitializer};
+    //   -- A temporary bound to a reference member in a constructor's
+    //      ctor-initializer persists until the constructor exits.
+    return Entity;
 
   case InitializedEntity::EK_Binding:
     // Per [dcl.decomp]p3, the binding is treated as a variable of reference
     // type.
-    return {Entity, LK_Extended};
+    return Entity;
 
   case InitializedEntity::EK_Parameter:
   case InitializedEntity::EK_Parameter_CF_Audited:
     //   -- A temporary bound to a reference parameter in a function call
     //      persists until the completion of the full-expression containing
     //      the call.
-    return {nullptr, LK_FullExpression};
-
   case InitializedEntity::EK_Result:
     //   -- The lifetime of a temporary bound to the returned value in a
     //      function return statement is not extended; the temporary is
     //      destroyed at the end of the full-expression in the return statement.
-    return {nullptr, LK_Return};
-
   case InitializedEntity::EK_New:
     //   -- A temporary bound to a reference in a new-initializer persists
     //      until the completion of the full-expression containing the
     //      new-initializer.
-    return {nullptr, LK_New};
+    return nullptr;
 
   case InitializedEntity::EK_Temporary:
   case InitializedEntity::EK_CompoundLiteralInit:
@@ -6287,26 +6246,25 @@ static LifetimeResult getEntityForTemporaryLifetimeExtension(
     // We don't yet know the storage duration of the surrounding temporary.
     // Assume it's got full-expression duration for now, it will patch up our
     // storage duration if that's not correct.
-    return {nullptr, LK_FullExpression};
+    return nullptr;
 
   case InitializedEntity::EK_ArrayElement:
     // For subobjects, we look at the complete object.
     return getEntityForTemporaryLifetimeExtension(Entity->getParent(),
-                                                  InitField);
+                                                  FallbackDecl);
 
   case InitializedEntity::EK_Base:
     // For subobjects, we look at the complete object.
     if (Entity->getParent())
       return getEntityForTemporaryLifetimeExtension(Entity->getParent(),
-                                                    InitField);
-    return {InitField, LK_MemInitializer};
-
+                                                    Entity);
+    LLVM_FALLTHROUGH;
   case InitializedEntity::EK_Delegating:
     // We can reach this case for aggregate initialization in a constructor:
     //   struct A { int &&r; };
     //   struct B : A { B() : A{0} {} };
-    // In this case, use the outermost field decl as the context.
-    return {InitField, LK_MemInitializer};
+    // In this case, use the innermost field decl as the context.
+    return FallbackDecl;
 
   case InitializedEntity::EK_BlockElement:
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
@@ -6314,54 +6272,30 @@ static LifetimeResult getEntityForTemporaryLifetimeExtension(
   case InitializedEntity::EK_Exception:
   case InitializedEntity::EK_VectorElement:
   case InitializedEntity::EK_ComplexElement:
-    return {nullptr, LK_FullExpression};
+    return nullptr;
   }
   llvm_unreachable("unknown entity kind");
 }
 
-namespace {
-enum ExtensionKind {
-  /// Lifetime would be extended by a reference binding to a temporary.
-  EK_ReferenceBinding,
-  /// Lifetime would be extended by a std::initializer_list object binding to
-  /// its backing array.
-  EK_StdInitializerList,
-};
-using IndirectTemporaryPathEntry =
-    llvm::PointerUnion<CXXDefaultInitExpr *, ValueDecl *>;
-using IndirectTemporaryPath = llvm::SmallVectorImpl<IndirectTemporaryPathEntry>;
+static void performLifetimeExtension(Expr *Init,
+                                     const InitializedEntity *ExtendingEntity);
 
-struct RevertToOldSizeRAII {
-  IndirectTemporaryPath &Path;
-  unsigned OldSize = Path.size();
-  RevertToOldSizeRAII(IndirectTemporaryPath &Path) : Path(Path) {}
-  ~RevertToOldSizeRAII() { Path.resize(OldSize); }
-};
-}
-
-template <typename TemporaryVisitor>
-static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
-                                                  Expr *Init,
-                                                  TemporaryVisitor Visit);
-
-/// Visit the temporaries whose lifetimes would be extended by binding a
-/// reference to the glvalue expression \c Init.
-template <typename TemporaryVisitor>
-static void
-visitTemporariesExtendedByReferenceBinding(IndirectTemporaryPath &Path,
-                                           Expr *Init, ExtensionKind EK,
-                                           TemporaryVisitor Visit) {
-  RevertToOldSizeRAII RAII(Path);
-
+/// Update a glvalue expression that is used as the initializer of a reference
+/// to note that its lifetime is extended.
+/// \return \c true if any temporary had its lifetime extended.
+static bool
+performReferenceExtension(Expr *Init,
+                          const InitializedEntity *ExtendingEntity) {
   // Walk past any constructs which we can lifetime-extend across.
   Expr *Old;
   do {
     Old = Init;
 
     if (InitListExpr *ILE = dyn_cast<InitListExpr>(Init)) {
-      // If this is just redundant braces around an initializer, step over it.
-      if (ILE->isTransparent())
+      if (ILE->getNumInits() == 1 && ILE->isGLValue()) {
+        // This is just redundant braces around an initializer. Step over it.
         Init = ILE->getInit(0);
+      }
     }
 
     // Step over any subobject adjustments; we may have a materialized
@@ -6378,65 +6312,40 @@ visitTemporariesExtendedByReferenceBinding(IndirectTemporaryPath &Path,
     // when performing lifetime extension.
     if (auto *ASE = dyn_cast<ArraySubscriptExpr>(Init))
       Init = ASE->getBase();
-
-    // Step into CXXDefaultInitExprs so we can diagnose cases where a
-    // constructor inherits one as an implicit mem-initializer.
-    if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init)) {
-      Path.push_back(DIE);
-      Init = DIE->getExpr();
-
-      if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
-        Init = EWC->getSubExpr();
-    }
   } while (Init != Old);
 
-  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init)) {
-    if (Visit(Path, MTE, EK))
-      visitTemporariesExtendedByInitializer(Path, MTE->GetTemporaryExpr(),
-                                            Visit);
+  if (MaterializeTemporaryExpr *ME = dyn_cast<MaterializeTemporaryExpr>(Init)) {
+    // Update the storage duration of the materialized temporary.
+    // FIXME: Rebuild the expression instead of mutating it.
+    ME->setExtendingDecl(ExtendingEntity->getDecl(),
+                         ExtendingEntity->allocateManglingNumber());
+    performLifetimeExtension(ME->GetTemporaryExpr(), ExtendingEntity);
+    return true;
   }
+
+  return false;
 }
 
-/// Visit the temporaries whose lifetimes would be extended by
-/// lifetime-extending the object initialized by the prvalue expression \c
-/// Init.
-template <typename TemporaryVisitor>
-static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
-                                                  Expr *Init,
-                                                  TemporaryVisitor Visit) {
-  RevertToOldSizeRAII RAII(Path);
-
-  // Step into CXXDefaultInitExprs so we can diagnose cases where a
-  // constructor inherits one as an implicit mem-initializer.
-  if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init)) {
-    Path.push_back(DIE);
-    Init = DIE->getExpr();
-
-    if (auto *EWC = dyn_cast<ExprWithCleanups>(Init))
-      Init = EWC->getSubExpr();
-  }
-
+/// Update a prvalue expression that is going to be materialized as a
+/// lifetime-extended temporary.
+static void performLifetimeExtension(Expr *Init,
+                                     const InitializedEntity *ExtendingEntity) {
   // Dig out the expression which constructs the extended temporary.
   Init = const_cast<Expr *>(Init->skipRValueSubobjectAdjustments());
 
   if (CXXBindTemporaryExpr *BTE = dyn_cast<CXXBindTemporaryExpr>(Init))
     Init = BTE->getSubExpr();
 
-  // C++17 [dcl.init.list]p6:
-  //   initializing an initializer_list object from the array extends the
-  //   lifetime of the array exactly like binding a reference to a temporary.
-  if (auto *ILE = dyn_cast<CXXStdInitializerListExpr>(Init))
-    return visitTemporariesExtendedByReferenceBinding(
-        Path, ILE->getSubExpr(), EK_StdInitializerList, Visit);
+  if (CXXStdInitializerListExpr *ILE =
+          dyn_cast<CXXStdInitializerListExpr>(Init)) {
+    performReferenceExtension(ILE->getSubExpr(), ExtendingEntity);
+    return;
+  }
 
   if (InitListExpr *ILE = dyn_cast<InitListExpr>(Init)) {
-    if (ILE->isTransparent())
-      return visitTemporariesExtendedByInitializer(Path, ILE->getInit(0),
-                                                   Visit);
-
     if (ILE->getType()->isArrayType()) {
       for (unsigned I = 0, N = ILE->getNumInits(); I != N; ++I)
-        visitTemporariesExtendedByInitializer(Path, ILE->getInit(I), Visit);
+        performLifetimeExtension(ILE->getInit(I), ExtendingEntity);
       return;
     }
 
@@ -6448,8 +6357,7 @@ static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
       // bound to temporaries, those temporaries are also lifetime-extended.
       if (RD->isUnion() && ILE->getInitializedFieldInUnion() &&
           ILE->getInitializedFieldInUnion()->getType()->isReferenceType())
-        visitTemporariesExtendedByReferenceBinding(Path, ILE->getInit(0),
-                                                   EK_ReferenceBinding, Visit);
+        performReferenceExtension(ILE->getInit(0), ExtendingEntity);
       else {
         unsigned Index = 0;
         for (const auto *I : RD->fields()) {
@@ -6459,13 +6367,13 @@ static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
             continue;
           Expr *SubInit = ILE->getInit(Index);
           if (I->getType()->isReferenceType())
-            visitTemporariesExtendedByReferenceBinding(
-                Path, SubInit, EK_ReferenceBinding, Visit);
-          else
-            // This might be either aggregate-initialization of a member or
-            // initialization of a std::initializer_list object. Regardless,
+            performReferenceExtension(SubInit, ExtendingEntity);
+          else if (isa<InitListExpr>(SubInit) ||
+                   isa<CXXStdInitializerListExpr>(SubInit))
+            // This may be either aggregate-initialization of a member or
+            // initialization of a std::initializer_list object. Either way,
             // we should recursively lifetime-extend that initializer.
-            visitTemporariesExtendedByInitializer(Path, SubInit, Visit);
+            performLifetimeExtension(SubInit, ExtendingEntity);
           ++Index;
         }
       }
@@ -6473,123 +6381,37 @@ static void visitTemporariesExtendedByInitializer(IndirectTemporaryPath &Path,
   }
 }
 
-/// Determine whether this is an indirect path to a temporary that we are
-/// supposed to lifetime-extend along (but don't).
-static bool shouldLifetimeExtendThroughPath(const IndirectTemporaryPath &Path) {
-  for (auto Elem : Path) {
-    if (!Elem.is<CXXDefaultInitExpr*>())
-      return false;
+static void warnOnLifetimeExtension(Sema &S, const InitializedEntity &Entity,
+                                    const Expr *Init, bool IsInitializerList,
+                                    const ValueDecl *ExtendingDecl) {
+  // Warn if a field lifetime-extends a temporary.
+  if (isa<FieldDecl>(ExtendingDecl)) {
+    if (IsInitializerList) {
+      S.Diag(Init->getExprLoc(), diag::warn_dangling_std_initializer_list)
+        << /*at end of constructor*/true;
+      return;
+    }
+
+    bool IsSubobjectMember = false;
+    for (const InitializedEntity *Ent = Entity.getParent(); Ent;
+         Ent = Ent->getParent()) {
+      if (Ent->getKind() != InitializedEntity::EK_Base) {
+        IsSubobjectMember = true;
+        break;
+      }
+    }
+    S.Diag(Init->getExprLoc(),
+           diag::warn_bind_ref_member_to_temporary)
+      << ExtendingDecl << Init->getSourceRange()
+      << IsSubobjectMember << IsInitializerList;
+    if (IsSubobjectMember)
+      S.Diag(ExtendingDecl->getLocation(),
+             diag::note_ref_subobject_of_member_declared_here);
+    else
+      S.Diag(ExtendingDecl->getLocation(),
+             diag::note_ref_or_ptr_member_declared_here)
+        << /*is pointer*/false;
   }
-  return true;
-}
-
-void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
-                                    Expr *Init) {
-  LifetimeResult LR = getEntityForTemporaryLifetimeExtension(&Entity);
-  LifetimeKind LK = LR.getInt();
-  const InitializedEntity *ExtendingEntity = LR.getPointer();
-
-  // If this entity doesn't have an interesting lifetime, don't bother looking
-  // for temporaries within its initializer.
-  if (LK == LK_FullExpression)
-    return;
-
-  auto TemporaryVisitor = [&](IndirectTemporaryPath &Path,
-                              MaterializeTemporaryExpr *MTE,
-                              ExtensionKind EK) -> bool {
-    switch (LK) {
-    case LK_FullExpression:
-      llvm_unreachable("already handled this");
-
-    case LK_Extended:
-      // Lifetime-extend the temporary.
-      if (Path.empty()) {
-        // Update the storage duration of the materialized temporary.
-        // FIXME: Rebuild the expression instead of mutating it.
-        MTE->setExtendingDecl(ExtendingEntity->getDecl(),
-                              ExtendingEntity->allocateManglingNumber());
-        // Also visit the temporaries lifetime-extended by this initializer.
-        return true;
-      }
-
-      if (shouldLifetimeExtendThroughPath(Path)) {
-        // We're supposed to lifetime-extend the temporary along this path (per
-        // the resolution of DR1815), but we don't support that yet.
-        //
-        // FIXME: Properly handle this situation. Perhaps the easiest approach
-        // would be to clone the initializer expression on each use that would
-        // lifetime extend its temporaries.
-        Diag(MTE->getExprLoc(),
-             EK == EK_ReferenceBinding
-                 ? diag::warn_default_member_init_temporary_not_extended
-                 : diag::warn_default_member_init_init_list_not_extended);
-      } else {
-        llvm_unreachable("unexpected indirect temporary path");
-      }
-      break;
-
-    case LK_MemInitializer:
-      // Under C++ DR1696, if a mem-initializer (or a default member
-      // initializer used by the absence of one) would lifetime-extend a
-      // temporary, the program is ill-formed.
-      if (auto *ExtendingDecl = ExtendingEntity->getDecl()) {
-        bool IsSubobjectMember = ExtendingEntity != &Entity;
-        Diag(MTE->getExprLoc(), diag::err_bind_ref_member_to_temporary)
-            << ExtendingDecl << Init->getSourceRange() << IsSubobjectMember
-            << EK;
-        // Don't bother adding a note pointing to the field if we're inside its
-        // default member initializer; our primary diagnostic points to the
-        // same place in that case.
-        if (Path.empty() || !Path.back().is<CXXDefaultInitExpr*>()) {
-          Diag(ExtendingDecl->getLocation(),
-               diag::note_lifetime_extending_member_declared_here)
-              << EK << IsSubobjectMember;
-        }
-      } else {
-        // We have a mem-initializer but no particular field within it; this
-        // is either a base class or a delegating initializer directly
-        // initializing the base-class from something that doesn't live long
-        // enough. Either way, that can't happen.
-        // FIXME: Move CheckForDanglingReferenceOrPointer checks here.
-        llvm_unreachable(
-            "temporary initializer for base class / delegating ctor");
-      }
-      break;
-
-    case LK_New:
-      if (EK == EK_ReferenceBinding) {
-        Diag(MTE->getExprLoc(), diag::warn_new_dangling_reference);
-      } else {
-        Diag(MTE->getExprLoc(), diag::warn_new_dangling_initializer_list)
-            << (ExtendingEntity != &Entity);
-      }
-      break;
-
-    case LK_Return:
-      // FIXME: Move -Wreturn-stack-address checks here.
-      return false;
-    }
-
-    // FIXME: Model these as CodeSynthesisContexts to fix the note emission
-    // order.
-    for (auto Elem : llvm::reverse(Path)) {
-      if (auto *DIE = Elem.dyn_cast<CXXDefaultInitExpr*>()) {
-        Diag(DIE->getExprLoc(), diag::note_in_default_member_initalizer_here)
-            << DIE->getField();
-      }
-    }
-
-    // We didn't lifetime-extend, so don't go any further; we don't need more
-    // warnings or errors on inner temporaries within this one's initializer.
-    return false;
-  };
-
-  llvm::SmallVector<IndirectTemporaryPathEntry, 8> Path;
-  if (Init->isGLValue())
-    visitTemporariesExtendedByReferenceBinding(Path, Init, EK_ReferenceBinding,
-                                               TemporaryVisitor);
-  else
-    visitTemporariesExtendedByInitializer(Path, Init, TemporaryVisitor);
 }
 
 static void DiagnoseNarrowingInInitList(Sema &S,
@@ -7016,9 +6838,14 @@ InitializationSequence::Perform(Sema &S,
       }
 
       // Even though we didn't materialize a temporary, the binding may still
-      // extend the lifetime of a temporary. This happens if we bind a
-      // reference to the result of a cast to reference type.
-      S.checkInitializerLifetime(Entity, CurInit.get());
+      // extend the lifetime of a temporary. This happens if we bind a reference
+      // to the result of a cast to reference type.
+      if (const InitializedEntity *ExtendingEntity =
+              getEntityForTemporaryLifetimeExtension(&Entity))
+        if (performReferenceExtension(CurInit.get(), ExtendingEntity))
+          warnOnLifetimeExtension(S, Entity, CurInit.get(),
+                                  /*IsInitializerList=*/false,
+                                  ExtendingEntity->getDecl());
 
       CheckForNullPointerDereference(S, CurInit.get());
       break;
@@ -7034,17 +6861,23 @@ InitializationSequence::Perform(Sema &S,
       // Materialize the temporary into memory.
       MaterializeTemporaryExpr *MTE = S.CreateMaterializeTemporaryExpr(
           Step->Type, CurInit.get(), Entity.getType()->isLValueReferenceType());
-      CurInit = MTE;
 
       // Maybe lifetime-extend the temporary's subobjects to match the
       // entity's lifetime.
-      S.checkInitializerLifetime(Entity, CurInit.get());
+      if (const InitializedEntity *ExtendingEntity =
+              getEntityForTemporaryLifetimeExtension(&Entity))
+        if (performReferenceExtension(MTE, ExtendingEntity))
+          warnOnLifetimeExtension(S, Entity, CurInit.get(),
+                                  /*IsInitializerList=*/false,
+                                  ExtendingEntity->getDecl());
 
       // If we're extending this temporary to automatic storage duration -- we
       // need to register its cleanup during the full-expression's cleanups.
       if (MTE->getStorageDuration() == SD_Automatic &&
           MTE->getType().isDestructedType())
         S.Cleanup.setExprNeedsCleanups(true);
+
+      CurInit = MTE;
       break;
     }
 
@@ -7487,12 +7320,17 @@ InitializationSequence::Perform(Sema &S,
           CurInit.get()->getType(), CurInit.get(),
           /*BoundToLvalueReference=*/false);
 
-      // Wrap it in a construction of a std::initializer_list<T>.
-      CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);
-
       // Maybe lifetime-extend the array temporary's subobjects to match the
       // entity's lifetime.
-      S.checkInitializerLifetime(Entity, CurInit.get());
+      if (const InitializedEntity *ExtendingEntity =
+              getEntityForTemporaryLifetimeExtension(&Entity))
+        if (performReferenceExtension(MTE, ExtendingEntity))
+          warnOnLifetimeExtension(S, Entity, CurInit.get(),
+                                  /*IsInitializerList=*/true,
+                                  ExtendingEntity->getDecl());
+
+      // Wrap it in a construction of a std::initializer_list<T>.
+      CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);
 
       // Bind the result, in case the library has given initializer_list a
       // non-trivial destructor.

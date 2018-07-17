@@ -137,6 +137,10 @@ LLVMBool LLVMTargetMachineEmitToMemoryBuffer(LLVMTargetMachineRef T, LLVMModuleR
   disposed with LLVMDisposeMessage. */
 char* LLVMGetDefaultTargetTriple(void);
 
+/** Normalize a target triple. The result needs to be disposed with
+  LLVMDisposeMessage. */
+char* LLVMNormalizeTargetTriple(const char* triple);
+
 /** Get the host CPU as a string. The result needs to be disposed with
   LLVMDisposeMessage. */
 char* LLVMGetHostCPUName(void);
