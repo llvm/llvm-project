@@ -167,7 +167,7 @@ defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 
 let SubtargetPredicate = HasDLInsts in {
 
-def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>, int_amdgcn_fdot2>;
+def V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16", VOP3_Profile<VOP_F32_V2F16_V2F16_F32>, AMDGPUfdot2>;
 def V_DOT2_I32_I16 : VOP3PInst<"v_dot2_i32_i16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_sdot2>;
 def V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16", VOP3_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_udot2>;
 def V_DOT4_I32_I8  : VOP3PInst<"v_dot4_i32_i8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_sdot4>;

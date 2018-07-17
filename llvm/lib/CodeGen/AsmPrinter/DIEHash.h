@@ -44,7 +44,7 @@ public:
   // Helper routines to process parts of a DIE.
 private:
   /// Adds the parent context of \param Die to the hash.
-  void addParentContext(const DIE &Die);
+  void addParentContext(const DIE &Parent);
 
   /// Adds the attributes of \param Die to the hash.
   void addAttributes(const DIE &Die);

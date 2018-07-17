@@ -434,7 +434,7 @@ private:
                                     unsigned InstStageNum,
                                     SMSchedule &Schedule);
   void updateInstruction(MachineInstr *NewMI, bool LastDef,
-                         unsigned CurStageNum, unsigned InstStageNum,
+                         unsigned CurStageNum, unsigned InstrStageNum,
                          SMSchedule &Schedule, ValueMapTy *VRMap);
   MachineInstr *findDefInLoop(unsigned Reg);
   unsigned getPrevMapVal(unsigned StageNum, unsigned PhiStage, unsigned LoopVal,
@@ -710,7 +710,7 @@ public:
   void orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
                        std::deque<SUnit *> &Insts);
   bool isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi);
-  bool isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD, MachineInstr *Inst,
+  bool isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD, MachineInstr *Def,
                              MachineOperand &MO);
   void print(raw_ostream &os) const;
   void dump() const;

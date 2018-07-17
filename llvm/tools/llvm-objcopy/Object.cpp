@@ -101,6 +101,10 @@ template <class ELFT> void ELFWriter<ELFT>::writeShdr(const SectionBase &Sec) {
 
 SectionVisitor::~SectionVisitor() {}
 
+void BinarySectionWriter::visit(const SectionIndexSection &Sec) {
+  error("Cannot write symbol section index table '" + Sec.Name + "' ");
+}
+
 void BinarySectionWriter::visit(const SymbolTableSection &Sec) {
   error("Cannot write symbol table '" + Sec.Name + "' out to binary");
 }
@@ -154,6 +158,29 @@ void StringTableSection::accept(SectionVisitor &Visitor) const {
   Visitor.visit(*this);
 }
 
+template <class ELFT>
+void ELFSectionWriter<ELFT>::visit(const SectionIndexSection &Sec) {
+  uint8_t *Buf = Out.getBufferStart() + Sec.Offset;
+  auto *IndexesBuffer = reinterpret_cast<typename ELFT::Word *>(Buf);
+  std::copy(std::begin(Sec.Indexes), std::end(Sec.Indexes), IndexesBuffer);
+}
+
+void SectionIndexSection::initialize(SectionTableRef SecTable) {
+  Size = 0;
+  setSymTab(SecTable.getSectionOfType<SymbolTableSection>(
+      Link,
+      "Link field value " + Twine(Link) + " in section " + Name + " is invalid",
+      "Link field value " + Twine(Link) + " in section " + Name +
+          " is not a symbol table"));
+  Symbols->setShndxTable(this);
+}
+
+void SectionIndexSection::finalize() { Link = Symbols->Index; }
+
+void SectionIndexSection::accept(SectionVisitor &Visitor) const {
+  Visitor.visit(*this);
+}
+
 static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
   switch (Index) {
   case SHN_ABS:
@@ -172,8 +199,13 @@ static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
   return false;
 }
 
+// Large indexes force us to clarify exactly what this function should do. This
+// function should return the value that will appear in st_shndx when written
+// out.
 uint16_t Symbol::getShndx() const {
   if (DefinedIn != nullptr) {
+    if (DefinedIn->Index >= SHN_LORESERVE)
+      return SHN_XINDEX;
     return DefinedIn->Index;
   }
   switch (ShndxType) {
@@ -187,6 +219,7 @@ uint16_t Symbol::getShndx() const {
   case SYMBOL_HEXAGON_SCOMMON_2:
   case SYMBOL_HEXAGON_SCOMMON_4:
   case SYMBOL_HEXAGON_SCOMMON_8:
+  case SYMBOL_XINDEX:
     return static_cast<uint16_t>(ShndxType);
   }
   llvm_unreachable("Symbol with invalid ShndxType encountered");
@@ -207,6 +240,8 @@ void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
   Sym.Binding = Bind;
   Sym.Type = Type;
   Sym.DefinedIn = DefinedIn;
+  if (DefinedIn != nullptr)
+    DefinedIn->HasSymbol = true;
   if (DefinedIn == nullptr) {
     if (Shndx >= SHN_LORESERVE)
       Sym.ShndxType = static_cast<SymbolShndxType>(Shndx);
@@ -222,6 +257,8 @@ void SymbolTableSection::addSymbol(StringRef Name, uint8_t Bind, uint8_t Type,
 }
 
 void SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
+  if (SectionIndexTable == Sec)
+    SectionIndexTable = nullptr;
   if (SymbolNames == Sec) {
     error("String table " + SymbolNames->Name +
           " cannot be removed because it is referenced by the symbol table " +
@@ -274,7 +311,17 @@ void SymbolTableSection::finalize() {
   Info = MaxLocalIndex + 1;
 }
 
-void SymbolTableSection::addSymbolNames() {
+void SymbolTableSection::prepareForLayout() {
+  // Add all potential section indexes before file layout so that the section
+  // index section has the approprite size.
+  if (SectionIndexTable != nullptr) {
+    for (const auto &Sym : Symbols) {
+      if (Sym->DefinedIn != nullptr && Sym->DefinedIn->Index >= SHN_LORESERVE)
+        SectionIndexTable->addIndex(Sym->DefinedIn->Index);
+      else
+        SectionIndexTable->addIndex(SHN_UNDEF);
+    }
+  }
   // Add all of our strings to SymbolNames so that SymbolNames has the right
   // size before layout is decided.
   for (auto &Sym : Symbols)
@@ -351,15 +398,15 @@ void RelocSectionWithSymtabBase<SymTabType>::finalize() {
 }
 
 template <class ELFT>
-void setAddend(Elf_Rel_Impl<ELFT, false> &Rel, uint64_t Addend) {}
+static void setAddend(Elf_Rel_Impl<ELFT, false> &Rel, uint64_t Addend) {}
 
 template <class ELFT>
-void setAddend(Elf_Rel_Impl<ELFT, true> &Rela, uint64_t Addend) {
+static void setAddend(Elf_Rel_Impl<ELFT, true> &Rela, uint64_t Addend) {
   Rela.r_addend = Addend;
 }
 
 template <class RelRange, class T>
-void writeRel(const RelRange &Relocations, T *Buf) {
+static void writeRel(const RelRange &Relocations, T *Buf) {
   for (const auto &Reloc : Relocations) {
     Buf->r_offset = Reloc.Offset;
     setAddend(*Buf, Reloc.Addend);
@@ -654,12 +701,32 @@ template <class ELFT>
 void ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
   const Elf_Shdr &Shdr = *unwrapOrError(ElfFile.getSection(SymTab->Index));
   StringRef StrTabData = unwrapOrError(ElfFile.getStringTableForSymtab(Shdr));
+  ArrayRef<Elf_Word> ShndxData;
 
-  for (const auto &Sym : unwrapOrError(ElfFile.symbols(&Shdr))) {
+  auto Symbols = unwrapOrError(ElfFile.symbols(&Shdr));
+  for (const auto &Sym : Symbols) {
     SectionBase *DefSection = nullptr;
     StringRef Name = unwrapOrError(Sym.getName(StrTabData));
 
-    if (Sym.st_shndx >= SHN_LORESERVE) {
+    if (Sym.st_shndx == SHN_XINDEX) {
+      if (SymTab->getShndxTable() == nullptr)
+        error("Symbol '" + Name +
+              "' has index SHN_XINDEX but no SHT_SYMTAB_SHNDX section exists.");
+      if (ShndxData.data() == nullptr) {
+        const Elf_Shdr &ShndxSec =
+            *unwrapOrError(ElfFile.getSection(SymTab->getShndxTable()->Index));
+        ShndxData = unwrapOrError(
+            ElfFile.template getSectionContentsAsArray<Elf_Word>(&ShndxSec));
+        if (ShndxData.size() != Symbols.size())
+          error("Symbol section index table does not have the same number of "
+                "entries as the symbol table.");
+      }
+      Elf_Word Index = ShndxData[&Sym - Symbols.begin()];
+      DefSection = Obj.sections().getSection(
+          Index,
+          "Symbol '" + Name + "' has invalid section index " +
+              Twine(Index));
+    } else if (Sym.st_shndx >= SHN_LORESERVE) {
       if (!isValidReservedSectionIndex(Sym.st_shndx, Obj.Machine)) {
         error(
             "Symbol '" + Name +
@@ -669,7 +736,7 @@ void ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
     } else if (Sym.st_shndx != SHN_UNDEF) {
       DefSection = Obj.sections().getSection(
           Sym.st_shndx, "Symbol '" + Name +
-                            "' is defined in invalid section with index " +
+                            "' is defined has invalid section index " +
                             Twine(Sym.st_shndx));
     }
 
@@ -687,8 +754,8 @@ static void getAddend(uint64_t &ToSet, const Elf_Rel_Impl<ELFT, true> &Rela) {
 }
 
 template <class T>
-void initRelocations(RelocationSection *Relocs, SymbolTableSection *SymbolTable,
-                     T RelRange) {
+static void initRelocations(RelocationSection *Relocs,
+                            SymbolTableSection *SymbolTable, T RelRange) {
   for (const auto &Rel : RelRange) {
     Relocation ToAdd;
     ToAdd.Offset = Rel.r_offset;
@@ -699,14 +766,14 @@ void initRelocations(RelocationSection *Relocs, SymbolTableSection *SymbolTable,
   }
 }
 
-SectionBase *SectionTableRef::getSection(uint16_t Index, Twine ErrMsg) {
+SectionBase *SectionTableRef::getSection(uint32_t Index, Twine ErrMsg) {
   if (Index == SHN_UNDEF || Index > Sections.size())
     error(ErrMsg);
   return Sections[Index - 1].get();
 }
 
 template <class T>
-T *SectionTableRef::getSectionOfType(uint16_t Index, Twine IndexErrMsg,
+T *SectionTableRef::getSectionOfType(uint32_t Index, Twine IndexErrMsg,
                                      Twine TypeErrMsg) {
   if (T *Sec = dyn_cast<T>(getSection(Index, IndexErrMsg)))
     return Sec;
@@ -753,6 +820,11 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     Obj.SymbolTable = &SymTab;
     return SymTab;
   }
+  case SHT_SYMTAB_SHNDX: {
+    auto &ShndxSection = Obj.addSection<SectionIndexSection>();
+    Obj.SectionIndexTable = &ShndxSection;
+    return ShndxSection;
+  }
   case SHT_NOBITS:
     return Obj.addSection<Section>(Data);
   default:
@@ -782,6 +854,12 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
     Sec.EntrySize = Shdr.sh_entsize;
     Sec.Index = Index++;
   }
+
+  // If a section index table exists we'll need to initialize it before we
+  // initialize the symbol table because the symbol table might need to
+  // reference it.
+  if (Obj.SectionIndexTable)
+    Obj.SectionIndexTable->initialize(Obj.sections());
 
   // Now that all of the sections have been added we can fill out some extra
   // details about symbol tables. We need the symbol table filled out before
@@ -825,9 +903,13 @@ template <class ELFT> void ELFBuilder<ELFT>::build() {
   readSectionHeaders();
   readProgramHeaders();
 
+  uint32_t ShstrIndex = Ehdr.e_shstrndx;
+  if (ShstrIndex == SHN_XINDEX)
+    ShstrIndex = unwrapOrError(ElfFile.getSection(0))->sh_link;
+
   Obj.SectionNames =
       Obj.sections().template getSectionOfType<StringTableSection>(
-          Ehdr.e_shstrndx,
+          ShstrIndex,
           "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
               " in elf header " + " is invalid",
           "e_shstrndx field value " + Twine(Ehdr.e_shstrndx) +
@@ -893,8 +975,27 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_shentsize = sizeof(Elf_Shdr);
   if (WriteSectionHeaders) {
     Ehdr.e_shoff = Obj.SHOffset;
-    Ehdr.e_shnum = size(Obj.sections()) + 1;
-    Ehdr.e_shstrndx = Obj.SectionNames->Index;
+    // """
+    // If the number of sections is greater than or equal to
+    // SHN_LORESERVE (0xff00), this member has the value zero and the actual
+    // number of section header table entries is contained in the sh_size field
+    // of the section header at index 0.
+    // """
+    auto Shnum = size(Obj.sections()) + 1;
+    if (Shnum >= SHN_LORESERVE)
+      Ehdr.e_shnum = 0;
+    else
+      Ehdr.e_shnum = Shnum;
+    // """
+    // If the section name string table section index is greater than or equal
+    // to SHN_LORESERVE (0xff00), this member has the value SHN_XINDEX (0xffff)
+    // and the actual index of the section name string table section is
+    // contained in the sh_link field of the section header at index 0.
+    // """
+    if (Obj.SectionNames->Index >= SHN_LORESERVE)
+      Ehdr.e_shstrndx = SHN_XINDEX;
+    else
+      Ehdr.e_shstrndx = Obj.SectionNames->Index;
   } else {
     Ehdr.e_shoff = 0;
     Ehdr.e_shnum = 0;
@@ -917,8 +1018,17 @@ template <class ELFT> void ELFWriter<ELFT>::writeShdrs() {
   Shdr.sh_flags = 0;
   Shdr.sh_addr = 0;
   Shdr.sh_offset = 0;
-  Shdr.sh_size = 0;
-  Shdr.sh_link = 0;
+  // See writeEhdr for why we do this.
+  uint64_t Shnum = size(Obj.sections()) + 1;
+  if (Shnum >= SHN_LORESERVE)
+    Shdr.sh_size = Shnum;
+  else
+    Shdr.sh_size = 0;
+  // See writeEhdr for why we do this.
+  if (Obj.SectionNames != nullptr && Obj.SectionNames->Index >= SHN_LORESERVE)
+    Shdr.sh_link = Obj.SectionNames->Index;
+  else
+    Shdr.sh_link = 0;
   Shdr.sh_info = 0;
   Shdr.sh_addralign = 0;
   Shdr.sh_entsize = 0;
@@ -946,9 +1056,10 @@ void Object::removeSections(std::function<bool(const SectionBase &)> ToRemove) {
       });
   if (SymbolTable != nullptr && ToRemove(*SymbolTable))
     SymbolTable = nullptr;
-  if (SectionNames != nullptr && ToRemove(*SectionNames)) {
+  if (SectionNames != nullptr && ToRemove(*SectionNames))
     SectionNames = nullptr;
-  }
+  if (SectionIndexTable != nullptr && ToRemove(*SectionIndexTable))
+    SectionIndexTable = nullptr;
   // Now make sure there are no remaining references to the sections that will
   // be removed. Sometimes it is impossible to remove a reference so we emit
   // an error here instead.
@@ -1109,16 +1220,59 @@ template <class ELFT> void ELFWriter<ELFT>::finalize() {
     error("Cannot write section header table because section header string "
           "table was removed.");
 
-  // Make sure we add the names of all the sections.
+  Obj.sortSections();
+
+  // We need to assign indexes before we perform layout because we need to know
+  // if we need large indexes or not. We can assign indexes first and check as
+  // we go to see if we will actully need large indexes.
+  bool NeedsLargeIndexes = false;
+  if (size(Obj.sections()) >= SHN_LORESERVE) {
+    auto Sections = Obj.sections();
+    NeedsLargeIndexes =
+        std::any_of(Sections.begin() + SHN_LORESERVE, Sections.end(),
+                    [](const SectionBase &Sec) { return Sec.HasSymbol; });
+    // TODO: handle case where only one section needs the large index table but
+    // only needs it because the large index table hasn't been removed yet.
+  }
+
+  if (NeedsLargeIndexes) {
+    // This means we definitely need to have a section index table but if we
+    // already have one then we should use it instead of making a new one.
+    if (Obj.SymbolTable != nullptr && Obj.SectionIndexTable == nullptr) {
+      // Addition of a section to the end does not invalidate the indexes of
+      // other sections and assigns the correct index to the new section.
+      auto &Shndx = Obj.addSection<SectionIndexSection>();
+      Obj.SymbolTable->setShndxTable(&Shndx);
+      Shndx.setSymTab(Obj.SymbolTable);
+    }
+  } else {
+    // Since we don't need SectionIndexTable we should remove it and all
+    // references to it.
+    if (Obj.SectionIndexTable != nullptr) {
+      Obj.removeSections([this](const SectionBase &Sec) {
+        return &Sec == Obj.SectionIndexTable;
+      });
+    }
+  }
+
+  // Make sure we add the names of all the sections. Importantly this must be
+  // done after we decide to add or remove SectionIndexes.
   if (Obj.SectionNames != nullptr)
     for (const auto &Section : Obj.sections()) {
       Obj.SectionNames->addString(Section.Name);
     }
-  // Make sure we add the names of all the symbols.
-  if (Obj.SymbolTable != nullptr)
-    Obj.SymbolTable->addSymbolNames();
 
-  Obj.sortSections();
+  // Before we can prepare for layout the indexes need to be finalized.
+  uint64_t Index = 0;
+  for (auto &Sec : Obj.sections())
+    Sec.Index = Index++;
+
+  // The symbol table does not update all other sections on update. For
+  // instance, symbol names are not added as new symbols are added. This means
+  // that some sections, like .strtab, don't yet have their final size.
+  if (Obj.SymbolTable != nullptr)
+    Obj.SymbolTable->prepareForLayout();
+
   assignOffsets();
 
   // Finalize SectionNames first so that we can assign name indexes.

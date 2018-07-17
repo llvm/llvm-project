@@ -11880,6 +11880,98 @@ then the result is the size in bits of the type of ``src`` if
 
 .. _int_overflow:
 
+'``llvm.fshl.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fshl`` on any
+integer bit width or any vector of integer elements. Not all targets
+support all bit widths or vector types, however.
+
+::
+
+      declare i8  @llvm.fshl.i8 (i8 %a, i8 %b, i8 %c)
+      declare i67 @llvm.fshl.i67(i67 %a, i67 %b, i67 %c)
+      declare <2 x i32> @llvm.fshl.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
+
+Overview:
+"""""""""
+
+The '``llvm.fshl``' family of intrinsic functions performs a funnel shift left:
+the first two values are concatenated as { %a : %b } (%a is the most significant
+bits of the wide value), the combined value is shifted left, and the most 
+significant bits are extracted to produce a result that is the same size as the 
+original arguments. If the first 2 arguments are identical, this is equivalent 
+to a rotate left operation. For vector types, the operation occurs for each 
+element of the vector. The shift argument is treated as an unsigned amount 
+modulo the element size of the arguments.
+
+Arguments:
+""""""""""
+
+The first two arguments are the values to be concatenated. The third
+argument is the shift amount. The arguments may be any integer type or a
+vector with integer element type. All arguments and the return value must
+have the same type.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %r = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %z)  ; %r = i8: msb_extract((concat(x, y) << (z % 8)), 8)
+      %r = call i8 @llvm.fshl.i8(i8 255, i8 0, i8 15)  ; %r = i8: 128 (0b10000000)
+      %r = call i8 @llvm.fshl.i8(i8 15, i8 15, i8 11)  ; %r = i8: 120 (0b01111000)
+      %r = call i8 @llvm.fshl.i8(i8 0, i8 255, i8 8)   ; %r = i8: 0   (0b00000000)
+
+'``llvm.fshr.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.fshr`` on any
+integer bit width or any vector of integer elements. Not all targets
+support all bit widths or vector types, however.
+
+::
+
+      declare i8  @llvm.fshr.i8 (i8 %a, i8 %b, i8 %c)
+      declare i67 @llvm.fshr.i67(i67 %a, i67 %b, i67 %c)
+      declare <2 x i32> @llvm.fshr.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
+
+Overview:
+"""""""""
+
+The '``llvm.fshr``' family of intrinsic functions performs a funnel shift right:
+the first two values are concatenated as { %a : %b } (%a is the most significant
+bits of the wide value), the combined value is shifted right, and the least 
+significant bits are extracted to produce a result that is the same size as the 
+original arguments. If the first 2 arguments are identical, this is equivalent 
+to a rotate right operation. For vector types, the operation occurs for each 
+element of the vector. The shift argument is treated as an unsigned amount 
+modulo the element size of the arguments.
+
+Arguments:
+""""""""""
+
+The first two arguments are the values to be concatenated. The third
+argument is the shift amount. The arguments may be any integer type or a
+vector with integer element type. All arguments and the return value must
+have the same type.
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      %r = call i8 @llvm.fshr.i8(i8 %x, i8 %y, i8 %z)  ; %r = i8: lsb_extract((concat(x, y) >> (z % 8)), 8)
+      %r = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)  ; %r = i8: 254 (0b11111110)
+      %r = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)  ; %r = i8: 225 (0b11100001)
+      %r = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)   ; %r = i8: 255 (0b11111111)
+
 Arithmetic with Overflow Intrinsics
 -----------------------------------
 

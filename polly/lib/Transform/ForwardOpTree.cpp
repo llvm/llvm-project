@@ -243,27 +243,27 @@ private:
     // (i.e. not: { Dom[0] -> A[0]; Dom[1] -> B[1] }).
     // Look through all spaces until we find one that contains at least the
     // wanted statement instance.s
-    MustKnown.foreach_map([&](isl::map Map) -> isl::stat {
+    for (isl::map Map : MustKnown.get_map_list()) {
       // Get the array this is accessing.
       isl::id ArrayId = Map.get_tuple_id(isl::dim::out);
       ScopArrayInfo *SAI = static_cast<ScopArrayInfo *>(ArrayId.get_user());
 
       // No support for generation of indirect array accesses.
       if (SAI->getBasePtrOriginSAI())
-        return isl::stat::ok; // continue
+        continue;
 
       // Determine whether this map contains all wanted values.
       isl::set MapDom = Map.domain();
       if (!Domain.is_subset(MapDom).is_true())
-        return isl::stat::ok; // continue
+        continue;
 
       // There might be multiple array elements that contain the same value, but
       // choose only one of them. lexmin is used because it returns a one-value
       // mapping, we do not care about which one.
       // TODO: Get the simplest access function.
       Result = Map.lexmin();
-      return isl::stat::error; // break
-    });
+      break;
+    }
 
     return Result;
   }

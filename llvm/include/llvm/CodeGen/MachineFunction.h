@@ -81,8 +81,8 @@ template <> struct ilist_alloc_traits<MachineBasicBlock> {
 };
 
 template <> struct ilist_callback_traits<MachineBasicBlock> {
-  void addNodeToList(MachineBasicBlock* MBB);
-  void removeNodeFromList(MachineBasicBlock* MBB);
+  void addNodeToList(MachineBasicBlock* N);
+  void removeNodeFromList(MachineBasicBlock* N);
 
   template <class Iterator>
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
@@ -366,7 +366,7 @@ public:
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
-  MachineFunction(const Function &F, const TargetMachine &TM,
+  MachineFunction(const Function &F, const TargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);
   MachineFunction(const MachineFunction &) = delete;
@@ -809,7 +809,7 @@ public:
   void addCleanup(MachineBasicBlock *LandingPad);
 
   void addSEHCatchHandler(MachineBasicBlock *LandingPad, const Function *Filter,
-                          const BlockAddress *RecoverLabel);
+                          const BlockAddress *RecoverBA);
 
   void addSEHCleanupHandler(MachineBasicBlock *LandingPad,
                             const Function *Cleanup);

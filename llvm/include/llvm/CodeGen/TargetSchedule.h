@@ -185,14 +185,14 @@ public:
   /// if converter after moving it to TargetSchedModel).
   unsigned computeInstrLatency(const MachineInstr *MI,
                                bool UseDefaultDefLatency = true) const;
-  unsigned computeInstrLatency(const MCInst &MI) const;
+  unsigned computeInstrLatency(const MCInst &Inst) const;
   unsigned computeInstrLatency(unsigned Opcode) const;
 
 
   /// Output dependency latency of a pair of defs of the same register.
   ///
   /// This is typically one cycle.
-  unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefIdx,
+  unsigned computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
                                 const MachineInstr *DepMI) const;
 
   /// Compute the reciprocal throughput of the given instruction.

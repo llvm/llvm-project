@@ -110,7 +110,7 @@ private:
   /// the given Type (which implies the number of blocks needed). The generic
   /// registers created are appended to Ops, starting at bit 0 of Reg.
   void extractParts(unsigned Reg, LLT Ty, int NumParts,
-                    SmallVectorImpl<unsigned> &Ops);
+                    SmallVectorImpl<unsigned> &VRegs);
 
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;

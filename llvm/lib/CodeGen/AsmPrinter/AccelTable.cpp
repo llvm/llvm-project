@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstddef>
@@ -180,8 +181,14 @@ public:
 #endif
 };
 
-/// Class responsible for emitting a DWARF v5 Accelerator Table. The only public
-/// function is emit(), which performs the actual emission.
+/// Class responsible for emitting a DWARF v5 Accelerator Table. The only
+/// public function is emit(), which performs the actual emission.
+///
+/// The class is templated in its data type. This allows us to emit both dyamic
+/// and static data entries. A callback abstract the logic to provide a CU
+/// index for a given entry, which is different per data type, but identical
+/// for every entry in the same table.
+template <typename DataT>
 class Dwarf5AccelTableWriter : public AccelTableWriter {
   struct Header {
     uint32_t UnitLength = 0;
@@ -209,8 +216,8 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
 
   Header Header;
   DenseMap<uint32_t, SmallVector<AttributeEncoding, 2>> Abbreviations;
-  const DwarfDebug &DD;
-  ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits;
+  ArrayRef<MCSymbol *> CompUnits;
+  llvm::function_ref<unsigned(const DataT &)> getCUIndexForEntry;
   MCSymbol *ContributionStart = Asm->createTempSymbol("names_start");
   MCSymbol *ContributionEnd = Asm->createTempSymbol("names_end");
   MCSymbol *AbbrevStart = Asm->createTempSymbol("names_abbrev_start");
@@ -226,13 +233,14 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   void emitBuckets() const;
   void emitStringOffsets() const;
   void emitAbbrevs() const;
-  void emitEntry(const DWARF5AccelTableData &Data) const;
+  void emitEntry(const DataT &Entry) const;
   void emitData() const;
 
 public:
-  Dwarf5AccelTableWriter(AsmPrinter *Asm, const AccelTableBase &Contents,
-                         const DwarfDebug &DD,
-                         ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits);
+  Dwarf5AccelTableWriter(
+      AsmPrinter *Asm, const AccelTableBase &Contents,
+      ArrayRef<MCSymbol *> CompUnits,
+      llvm::function_ref<unsigned(const DataT &)> GetCUIndexForEntry);
 
   void emit() const;
 };
@@ -354,7 +362,8 @@ void AppleAccelTableWriter::emit() const {
   emitData();
 }
 
-void Dwarf5AccelTableWriter::Header::emit(
+template <typename DataT>
+void Dwarf5AccelTableWriter<DataT>::Header::emit(
     const Dwarf5AccelTableWriter &Ctx) const {
   assert(CompUnitCount > 0 && "Index must have at least one CU.");
 
@@ -386,22 +395,23 @@ void Dwarf5AccelTableWriter::Header::emit(
   Asm->OutStreamer->EmitBytes({AugmentationString, AugmentationStringSize});
 }
 
-DenseSet<uint32_t> Dwarf5AccelTableWriter::getUniqueTags() const {
+template <typename DataT>
+DenseSet<uint32_t> Dwarf5AccelTableWriter<DataT>::getUniqueTags() const {
   DenseSet<uint32_t> UniqueTags;
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
       for (auto *Value : Hash->Values) {
-        const DIE &Die =
-            static_cast<const DWARF5AccelTableData *>(Value)->getDie();
-        UniqueTags.insert(Die.getTag());
+        unsigned Tag = static_cast<const DataT *>(Value)->getDieTag();
+        UniqueTags.insert(Tag);
       }
     }
   }
   return UniqueTags;
 }
 
-SmallVector<Dwarf5AccelTableWriter::AttributeEncoding, 2>
-Dwarf5AccelTableWriter::getUniformAttributes() const {
+template <typename DataT>
+SmallVector<typename Dwarf5AccelTableWriter<DataT>::AttributeEncoding, 2>
+Dwarf5AccelTableWriter<DataT>::getUniformAttributes() const {
   SmallVector<AttributeEncoding, 2> UA;
   if (CompUnits.size() > 1) {
     size_t LargestCUIndex = CompUnits.size() - 1;
@@ -412,17 +422,16 @@ Dwarf5AccelTableWriter::getUniformAttributes() const {
   return UA;
 }
 
-void Dwarf5AccelTableWriter::emitCUList() const {
+template <typename DataT>
+void Dwarf5AccelTableWriter<DataT>::emitCUList() const {
   for (const auto &CU : enumerate(CompUnits)) {
-    assert(CU.index() == CU.value()->getUniqueID());
     Asm->OutStreamer->AddComment("Compilation unit " + Twine(CU.index()));
-    const DwarfCompileUnit *MainCU =
-        DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
-    Asm->emitDwarfSymbolReference(MainCU->getLabelBegin());
+    Asm->emitDwarfSymbolReference(CU.value());
   }
 }
 
-void Dwarf5AccelTableWriter::emitBuckets() const {
+template <typename DataT>
+void Dwarf5AccelTableWriter<DataT>::emitBuckets() const {
   uint32_t Index = 1;
   for (const auto &Bucket : enumerate(Contents.getBuckets())) {
     Asm->OutStreamer->AddComment("Bucket " + Twine(Bucket.index()));
@@ -431,7 +440,8 @@ void Dwarf5AccelTableWriter::emitBuckets() const {
   }
 }
 
-void Dwarf5AccelTableWriter::emitStringOffsets() const {
+template <typename DataT>
+void Dwarf5AccelTableWriter<DataT>::emitStringOffsets() const {
   for (const auto &Bucket : enumerate(Contents.getBuckets())) {
     for (auto *Hash : Bucket.value()) {
       DwarfStringPoolEntryRef String = Hash->Name;
@@ -442,7 +452,8 @@ void Dwarf5AccelTableWriter::emitStringOffsets() const {
   }
 }
 
-void Dwarf5AccelTableWriter::emitAbbrevs() const {
+template <typename DataT>
+void Dwarf5AccelTableWriter<DataT>::emitAbbrevs() const {
   Asm->OutStreamer->EmitLabel(AbbrevStart);
   for (const auto &Abbrev : Abbreviations) {
     Asm->OutStreamer->AddComment("Abbrev code");
@@ -462,9 +473,9 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
   Asm->OutStreamer->EmitLabel(AbbrevEnd);
 }
 
-void Dwarf5AccelTableWriter::emitEntry(
-    const DWARF5AccelTableData &Entry) const {
-  auto AbbrevIt = Abbreviations.find(Entry.getDie().getTag());
+template <typename DataT>
+void Dwarf5AccelTableWriter<DataT>::emitEntry(const DataT &Entry) const {
+  auto AbbrevIt = Abbreviations.find(Entry.getDieTag());
   assert(AbbrevIt != Abbreviations.end() &&
          "Why wasn't this abbrev generated?");
 
@@ -473,14 +484,13 @@ void Dwarf5AccelTableWriter::emitEntry(
     Asm->OutStreamer->AddComment(dwarf::IndexString(AttrEnc.Index));
     switch (AttrEnc.Index) {
     case dwarf::DW_IDX_compile_unit: {
-      const DIE *CUDie = Entry.getDie().getUnitDie();
-      DIEInteger ID(DD.lookupCU(CUDie)->getUniqueID());
+      DIEInteger ID(getCUIndexForEntry(Entry));
       ID.EmitValue(Asm, AttrEnc.Form);
       break;
     }
     case dwarf::DW_IDX_die_offset:
       assert(AttrEnc.Form == dwarf::DW_FORM_ref4);
-      Asm->emitInt32(Entry.getDie().getOffset());
+      Asm->emitInt32(Entry.getDieOffset());
       break;
     default:
       llvm_unreachable("Unexpected index attribute!");
@@ -488,27 +498,29 @@ void Dwarf5AccelTableWriter::emitEntry(
   }
 }
 
-void Dwarf5AccelTableWriter::emitData() const {
+template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emitData() const {
   Asm->OutStreamer->EmitLabel(EntryPool);
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
       // Remember to emit the label for our offset.
       Asm->OutStreamer->EmitLabel(Hash->Sym);
       for (const auto *Value : Hash->Values)
-        emitEntry(*static_cast<const DWARF5AccelTableData *>(Value));
+        emitEntry(*static_cast<const DataT *>(Value));
       Asm->OutStreamer->AddComment("End of list: " + Hash->Name.getString());
       Asm->emitInt32(0);
     }
   }
 }
 
-Dwarf5AccelTableWriter::Dwarf5AccelTableWriter(
-    AsmPrinter *Asm, const AccelTableBase &Contents, const DwarfDebug &DD,
-    ArrayRef<std::unique_ptr<DwarfCompileUnit>> CompUnits)
+template <typename DataT>
+Dwarf5AccelTableWriter<DataT>::Dwarf5AccelTableWriter(
+    AsmPrinter *Asm, const AccelTableBase &Contents,
+    ArrayRef<MCSymbol *> CompUnits,
+    llvm::function_ref<unsigned(const DataT &)> getCUIndexForEntry)
     : AccelTableWriter(Asm, Contents, false),
       Header(CompUnits.size(), Contents.getBucketCount(),
              Contents.getUniqueNameCount()),
-      DD(DD), CompUnits(CompUnits) {
+      CompUnits(CompUnits), getCUIndexForEntry(std::move(getCUIndexForEntry)) {
   DenseSet<uint32_t> UniqueTags = getUniqueTags();
   SmallVector<AttributeEncoding, 2> UniformAttributes = getUniformAttributes();
 
@@ -517,7 +529,7 @@ Dwarf5AccelTableWriter::Dwarf5AccelTableWriter(
     Abbreviations.try_emplace(Tag, UniformAttributes);
 }
 
-void Dwarf5AccelTableWriter::emit() const {
+template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emit() const {
   Header.emit(*this);
   emitCUList();
   emitBuckets();
@@ -540,8 +552,33 @@ void llvm::emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
 void llvm::emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableData> &Contents,
     const DwarfDebug &DD, ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs) {
+  std::vector<MCSymbol *> CompUnits;
+  for (const auto &CU : enumerate(CUs)) {
+    assert(CU.index() == CU.value()->getUniqueID());
+    const DwarfCompileUnit *MainCU =
+        DD.useSplitDwarf() ? CU.value()->getSkeleton() : CU.value().get();
+    CompUnits.push_back(MainCU->getLabelBegin());
+  }
+
   Contents.finalize(Asm, "names");
-  Dwarf5AccelTableWriter(Asm, Contents, DD, CUs).emit();
+  Dwarf5AccelTableWriter<DWARF5AccelTableData>(
+      Asm, Contents, CompUnits,
+      [&DD](const DWARF5AccelTableData &Entry) {
+        const DIE *CUDie = Entry.getDie().getUnitDie();
+        return DD.lookupCU(CUDie)->getUniqueID();
+      })
+      .emit();
+}
+
+void llvm::emitDWARF5AccelTable(
+    AsmPrinter *Asm, AccelTable<DWARF5AccelTableStaticData> &Contents,
+    ArrayRef<MCSymbol *> CUs,
+    llvm::function_ref<unsigned(const DWARF5AccelTableStaticData &)>
+        getCUIndexForEntry) {
+  Contents.finalize(Asm, "names");
+  Dwarf5AccelTableWriter<DWARF5AccelTableStaticData>(Asm, Contents, CUs,
+                                                     getCUIndexForEntry)
+      .emit();
 }
 
 void AppleAccelTableOffsetData::emit(AsmPrinter *Asm) const {
@@ -651,8 +688,13 @@ void AccelTableBase::print(raw_ostream &OS) const {
 }
 
 void DWARF5AccelTableData::print(raw_ostream &OS) const {
-  OS << "  Offset: " << Die.getOffset() << "\n";
-  OS << "  Tag: " << dwarf::TagString(Die.getTag()) << "\n";
+  OS << "  Offset: " << getDieOffset() << "\n";
+  OS << "  Tag: " << dwarf::TagString(getDieTag()) << "\n";
+}
+
+void DWARF5AccelTableStaticData::print(raw_ostream &OS) const {
+  OS << "  Offset: " << getDieOffset() << "\n";
+  OS << "  Tag: " << dwarf::TagString(getDieTag()) << "\n";
 }
 
 void AppleAccelTableOffsetData::print(raw_ostream &OS) const {

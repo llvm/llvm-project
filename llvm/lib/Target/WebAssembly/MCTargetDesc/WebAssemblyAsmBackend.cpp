@@ -17,7 +17,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -26,17 +25,17 @@
 #include "llvm/MC/MCWasmObjectWriter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 namespace {
 
 class WebAssemblyAsmBackend final : public MCAsmBackend {
   bool Is64Bit;
-  bool IsELF;
 
- public:
-  explicit WebAssemblyAsmBackend(bool Is64Bit, bool IsELF)
-      : MCAsmBackend(support::little), Is64Bit(Is64Bit), IsELF(IsELF) {}
+public:
+  explicit WebAssemblyAsmBackend(bool Is64Bit)
+      : MCAsmBackend(support::little), Is64Bit(Is64Bit) {}
   ~WebAssemblyAsmBackend() override {}
 
   unsigned getNumFixupKinds() const override {
@@ -126,12 +125,11 @@ void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
 
 std::unique_ptr<MCObjectTargetWriter>
 WebAssemblyAsmBackend::createObjectTargetWriter() const {
-  return IsELF ? createWebAssemblyELFObjectWriter(Is64Bit, 0)
-               : createWebAssemblyWasmObjectWriter(Is64Bit);
+  return createWebAssemblyWasmObjectWriter(Is64Bit);
 }
 
 } // end anonymous namespace
 
 MCAsmBackend *llvm::createWebAssemblyAsmBackend(const Triple &TT) {
-  return new WebAssemblyAsmBackend(TT.isArch64Bit(), TT.isOSBinFormatELF());
+  return new WebAssemblyAsmBackend(TT.isArch64Bit());
 }

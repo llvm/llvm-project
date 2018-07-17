@@ -445,7 +445,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &Func) override;
 
 private:
   /// Used in collectMarkers

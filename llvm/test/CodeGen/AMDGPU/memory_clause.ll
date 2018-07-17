@@ -77,6 +77,7 @@ bb:
 ; GCN-NEXT: buffer_load_dword
 ; GCN-NEXT: buffer_load_dword
 ; GCN-NEXT: s_nop
+; GCN-NEXT: s_nop
 ; GCN-NEXT: buffer_load_dword
 define void @mubuf_clause(<4 x i32> addrspace(5)* noalias nocapture readonly %arg, <4 x i32> addrspace(5)* noalias nocapture %arg1) {
 bb:
@@ -105,8 +106,9 @@ bb:
 
 ; GCN-LABEL: {{^}}vector_clause_indirect:
 ; GCN: global_load_dwordx2 [[ADDR:v\[[0-9:]+\]]], v[{{[0-9:]+}}], off
-; GCN-NEXT: s_nop
+; GCN-NEXT: s_nop 0
 ; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_nop 0
 ; GCN-NEXT: global_load_dwordx4 v[{{[0-9:]+}}], [[ADDR]], off
 ; GCN-NEXT: global_load_dwordx4 v[{{[0-9:]+}}], [[ADDR]], off offset:16
 define amdgpu_kernel void @vector_clause_indirect(i64 addrspace(1)* noalias nocapture readonly %arg, <4 x i32> addrspace(1)* noalias nocapture readnone %arg1, <4 x i32> addrspace(1)* noalias nocapture %arg2) {
@@ -128,6 +130,7 @@ bb:
 ; GCN-LABEL: {{^}}load_global_d16_hi:
 ; GCN:      global_load_short_d16_hi v
 ; GCN-NEXT: s_nop
+; GCN-NEXT: s_nop
 ; GCN-NEXT: global_load_short_d16_hi v
 define void @load_global_d16_hi(i16 addrspace(1)* %in, i16 %reg, <2 x i16> addrspace(1)* %out) {
 entry:
@@ -146,6 +149,7 @@ entry:
 
 ; GCN-LABEL: {{^}}load_global_d16_lo:
 ; GCN:      global_load_short_d16 v
+; GCN-NEXT: s_nop
 ; GCN-NEXT: s_nop
 ; GCN-NEXT: global_load_short_d16 v
 define void @load_global_d16_lo(i16 addrspace(1)* %in, i32 %reg, <2 x i16> addrspace(1)* %out) {

@@ -262,7 +262,7 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
       errs() << "Importing " << FunctionName << " from " << FileName << "\n";
 
     auto &Entry = ImportList[FileName];
-    Entry.insert(std::make_pair(F->getGUID(), /* (Unused) threshold */ 1.0));
+    Entry.insert(F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
     return ModuleLoaderCache.takeModule(Identifier);

@@ -167,7 +167,7 @@ private:
                           SDValue NewIntValue) const;
   SDValue ExpandFCOPYSIGN(SDNode *Node) const;
   SDValue ExpandFABS(SDNode *Node) const;
-  SDValue ExpandLegalINT_TO_FP(bool isSigned, SDValue LegalOp, EVT DestVT,
+  SDValue ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0, EVT DestVT,
                                const SDLoc &dl);
   SDValue PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT, bool isSigned,
                                 const SDLoc &dl);

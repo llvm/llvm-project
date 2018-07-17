@@ -84,3 +84,21 @@ fmul    z31.d, z31.d, z15.d[1]
 // CHECK-ENCODING: [0xff,0x23,0xff,0x64]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff 23 ff 64 <unknown>
+
+fmul    z0.h, p7/m, z0.h, z31.h
+// CHECK-INST: fmul	z0.h, p7/m, z0.h, z31.h
+// CHECK-ENCODING: [0xe0,0x9f,0x42,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 9f 42 65 <unknown>
+
+fmul    z0.s, p7/m, z0.s, z31.s
+// CHECK-INST: fmul	z0.s, p7/m, z0.s, z31.s
+// CHECK-ENCODING: [0xe0,0x9f,0x82,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 9f 82 65 <unknown>
+
+fmul    z0.d, p7/m, z0.d, z31.d
+// CHECK-INST: fmul	z0.d, p7/m, z0.d, z31.d
+// CHECK-ENCODING: [0xe0,0x9f,0xc2,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 9f c2 65 <unknown>

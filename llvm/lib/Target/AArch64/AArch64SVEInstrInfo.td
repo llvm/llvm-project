@@ -85,6 +85,20 @@ let Predicates = [HasSVE] in {
   defm FMUL_ZPmI    : sve_fp_2op_i_p_zds<0b010, "fmul", sve_fpimm_half_two>;
   defm FMAX_ZPmI    : sve_fp_2op_i_p_zds<0b110, "fmax", sve_fpimm_zero_one>;
 
+  defm FADD_ZPmZ   : sve_fp_2op_p_zds<0b0000, "fadd">;
+  defm FSUB_ZPmZ   : sve_fp_2op_p_zds<0b0001, "fsub">;
+  defm FMUL_ZPmZ   : sve_fp_2op_p_zds<0b0010, "fmul">;
+  defm FSUBR_ZPmZ  : sve_fp_2op_p_zds<0b0011, "fsubr">;
+  defm FMAXNM_ZPmZ : sve_fp_2op_p_zds<0b0100, "fmaxnm">;
+  defm FMINNM_ZPmZ : sve_fp_2op_p_zds<0b0101, "fminnm">;
+  defm FMAX_ZPmZ   : sve_fp_2op_p_zds<0b0110, "fmax">;
+  defm FMIN_ZPmZ   : sve_fp_2op_p_zds<0b0111, "fmin">;
+  defm FABD_ZPmZ   : sve_fp_2op_p_zds<0b1000, "fabd">;
+  defm FSCALE_ZPmZ : sve_fp_2op_p_zds<0b1001, "fscale">;
+  defm FMULX_ZPmZ  : sve_fp_2op_p_zds<0b1010, "fmulx">;
+  defm FDIVR_ZPmZ  : sve_fp_2op_p_zds<0b1100, "fdivr">;
+  defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv">;
+
   defm FCADD_ZPmZ : sve_fp_fcadd<"fcadd">;
   defm FCMLA_ZPmZZ : sve_fp_fcmla<"fcmla">;
 
@@ -112,9 +126,11 @@ let Predicates = [HasSVE] in {
   // Select elements from either vector (predicated)
   defm SEL_ZPZZ    : sve_int_sel_vvv<"sel">;
 
+  defm SPLICE_ZPZ : sve_int_perm_splice<"splice">;
   defm COMPACT_ZPZ : sve_int_perm_compact<"compact">;
   defm INSR_ZR : sve_int_perm_insrs<"insr">;
   defm INSR_ZV : sve_int_perm_insrv<"insr">;
+  def  EXT_ZZI : sve_int_perm_extract_i<"ext">;
 
   defm SUNPKLO_ZZ : sve_int_perm_unpk<0b00, "sunpklo">;
   defm SUNPKHI_ZZ : sve_int_perm_unpk<0b01, "sunpkhi">;
