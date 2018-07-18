@@ -5,6 +5,7 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx | FileCheck %s
 ; RUN: llc < %s -O0 -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=970 -mattr=-vsx | FileCheck %s --check-prefix=PPC970
+; RUN: llc < %s -O0 -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 -mattr=spe | FileCheck %s --check-prefix=SPE
 
 ;; Tests for 970 don't use -fast-isel-abort=1 because we intentionally punt
 ;; to SelectionDAG in some cases.
@@ -42,6 +43,7 @@ entry:
 ; PPC970: lfd
 ; PPC970: fcfid
 ; PPC970: frsp
+; SPE: efscfsi
   store float %conv, float* %b.addr, align 4
   ret void
 }
@@ -61,6 +63,8 @@ entry:
 ; PPC970: lfd
 ; PPC970: fcfid
 ; PPC970: frsp
+; SPE: extsh
+; SPE: efscfsi
   store float %conv, float* %b.addr, align 4
   ret void
 }
@@ -80,6 +84,8 @@ entry:
 ; PPC970: lfd
 ; PPC970: fcfid
 ; PPC970: frsp
+; SPE: extsb
+; SPE: efscfsi
   store float %conv, float* %b.addr, align 4
   ret void
 }
@@ -99,6 +105,7 @@ entry:
 ; PPC970: std
 ; PPC970: lfd
 ; PPC970: fcfid
+; SPE: efdcfsi
   store double %conv, double* %b.addr, align 8
   ret void
 }
@@ -133,6 +140,8 @@ entry:
 ; PPC970: std
 ; PPC970: lfd
 ; PPC970: fcfid
+; SPE: extsh
+; SPE: efdcfsi
   store double %conv, double* %b.addr, align 8
   ret void
 }
@@ -151,6 +160,8 @@ entry:
 ; PPC970: std
 ; PPC970: lfd
 ; PPC970: fcfid
+; SPE: extsb
+; SPE: efdcfsi
   store double %conv, double* %b.addr, align 8
   ret void
 }
@@ -185,6 +196,7 @@ entry:
 ; CHECK: fcfidus
 ; PPC970-NOT: lfiwzx
 ; PPC970-NOT: fcfidus
+; SPE: efscfui
   store float %conv, float* %b.addr, align 4
   ret void
 }
@@ -204,6 +216,8 @@ entry:
 ; PPC970: lfd
 ; PPC970: fcfid
 ; PPC970: frsp
+; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 16
+; SPE: efscfui
   store float %conv, float* %b.addr, align 4
   ret void
 }
@@ -223,6 +237,8 @@ entry:
 ; PPC970: lfd
 ; PPC970: fcfid
 ; PPC970: frsp
+; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 24
+; SPE: efscfui
   store float %conv, float* %b.addr, align 4
   ret void
 }
@@ -254,6 +270,7 @@ entry:
 ; CHECKLE: fcfidu
 ; PPC970-NOT: lfiwzx
 ; PPC970-NOT: fcfidu
+; SPE: efdcfui
   store double %conv, double* %b.addr, align 8
   ret void
 }
@@ -272,6 +289,8 @@ entry:
 ; PPC970: std
 ; PPC970: lfd
 ; PPC970: fcfid
+; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 16
+; SPE: efdcfui
   store double %conv, double* %b.addr, align 8
   ret void
 }
@@ -290,6 +309,8 @@ entry:
 ; PPC970: std
 ; PPC970: lfd
 ; PPC970: fcfid
+; SPE: clrlwi {{[0-9]+}}, {{[0-9]+}}, 24
+; SPE: efdcfui
   store double %conv, double* %b.addr, align 8
   ret void
 }
@@ -308,6 +329,7 @@ entry:
 ; PPC970: fctiwz
 ; PPC970: stfd
 ; PPC970: lwa
+; SPE: efsctsi
   store i32 %conv, i32* %b.addr, align 4
   ret void
 }
@@ -340,6 +362,7 @@ entry:
 ; PPC970: fctiwz
 ; PPC970: stfd
 ; PPC970: lwa
+; SPE: efdctsi
   store i32 %conv, i32* %b.addr, align 8
   ret void
 }
@@ -374,6 +397,7 @@ entry:
 ; PPC970: fctidz
 ; PPC970: stfd
 ; PPC970: lwz
+; SPE: efsctui
   store i32 %conv, i32* %b.addr, align 4
   ret void
 }
@@ -404,6 +428,7 @@ entry:
 ; PPC970: fctidz
 ; PPC970: stfd
 ; PPC970: lwz
+; SPE: efdctui
   store i32 %conv, i32* %b.addr, align 8
   ret void
 }

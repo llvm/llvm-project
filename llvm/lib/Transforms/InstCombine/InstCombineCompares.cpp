@@ -2975,8 +2975,8 @@ foldICmpWithTruncSignExtendedVal(ICmpInst &I,
   // The shift amount must be equal.
   if (*C0 != *C1)
     return nullptr;
-  const uint64_t MaskedBits = C0->getZExtValue();
-  assert(MaskedBits && "shift of %x by zero should be folded to %x already.");
+  const APInt &MaskedBits = *C0;
+  assert(MaskedBits != 0 && "shift by zero should be folded away already.");
 
   ICmpInst::Predicate DstPred;
   switch (SrcPred) {
@@ -2997,15 +2997,24 @@ foldICmpWithTruncSignExtendedVal(ICmpInst &I,
     return nullptr;
   }
 
-  const uint64_t XBitWidth = C0->getBitWidth();
-  const uint64_t KeptBits = XBitWidth - MaskedBits;
-  const uint64_t ICmpCst = (uint64_t)1 << KeptBits; // (1 << KeptBits)
-  const uint64_t AddCst = ICmpCst >> 1;   // (1 << (KeptBits-1))
-
   auto *XType = X->getType();
-  // (add %x, (1 << (KeptBits-1)))
+  const unsigned XBitWidth = XType->getScalarSizeInBits();
+  const APInt BitWidth = APInt(XBitWidth, XBitWidth);
+  assert(BitWidth.ugt(MaskedBits) && "shifts should leave some bits untouched");
+
+  // KeptBits = bitwidth(%x) - MaskedBits
+  const APInt KeptBits = BitWidth - MaskedBits;
+  assert(KeptBits.ugt(0) && KeptBits.ult(BitWidth) && "unreachable");
+  // ICmpCst = (1 << KeptBits)
+  const APInt ICmpCst = APInt(XBitWidth, 1).shl(KeptBits);
+  assert(ICmpCst.isPowerOf2());
+  // AddCst = (1 << (KeptBits-1))
+  const APInt AddCst = ICmpCst.lshr(1);
+  assert(AddCst.ult(ICmpCst) && AddCst.isPowerOf2());
+
+  // T0 = add %x, AddCst
   Value *T0 = Builder.CreateAdd(X, ConstantInt::get(XType, AddCst));
-  // add %x, (1 << (KeptBits-1))) DstPred (1 << KeptBits)
+  // T1 = T0 DstPred ICmpCst
   Value *T1 = Builder.CreateICmp(DstPred, T0, ConstantInt::get(XType, ICmpCst));
 
   return T1;

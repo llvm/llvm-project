@@ -73,6 +73,7 @@ public:
                              StringRef MethodName);
   void expandCheckIsRegOperand(formatted_raw_ostream &OS, int OpIndex);
   void expandCheckIsImmOperand(formatted_raw_ostream &OS, int OpIndex);
+  void expandCheckInvalidRegOperand(formatted_raw_ostream &OS, int OpIndex);
   void expandCheckFunctionPredicate(formatted_raw_ostream &OS,
                                     StringRef MCInstFn,
                                     StringRef MachineInstrFn);

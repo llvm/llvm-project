@@ -62,6 +62,22 @@ let Predicates = [HasSVE] in {
   defm UMAX_ZI   : sve_int_arith_imm1<0b01, "umax", imm0_255>;
   defm UMIN_ZI   : sve_int_arith_imm1<0b11, "umin", imm0_255>;
 
+  defm MUL_ZI    : sve_int_arith_imm2<"mul">;
+  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul">;
+  defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh">;
+  defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh">;
+
+  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv">;
+  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv">;
+  defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr">;
+  defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr">;
+
+  defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot">;
+  defm UDOT_ZZZ : sve_intx_dot<0b1, "udot">;
+
+  defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot">;
+  defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot">;
+
   defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb">;
   defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb">;
   defm SXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b010, "sxth">;
@@ -108,6 +124,13 @@ let Predicates = [HasSVE] in {
   defm FMULX_ZPmZ  : sve_fp_2op_p_zds<0b1010, "fmulx">;
   defm FDIVR_ZPmZ  : sve_fp_2op_p_zds<0b1100, "fdivr">;
   defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv">;
+
+  defm FADD_ZZZ    : sve_fp_3op_u_zd<0b000, "fadd">;
+  defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub">;
+  defm FMUL_ZZZ    : sve_fp_3op_u_zd<0b010, "fmul">;
+  defm FTSMUL_ZZZ  : sve_fp_3op_u_zd<0b011, "ftsmul">;
+  defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps">;
+  defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts">;
 
   defm FCADD_ZPmZ : sve_fp_fcadd<"fcadd">;
   defm FCMLA_ZPmZZ : sve_fp_fcmla<"fcmla">;

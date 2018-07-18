@@ -308,13 +308,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
           setCmpLibcallCC(LC.Op, LC.Cond);
       }
     }
-
-    // Set the correct calling convention for ARMv7k WatchOS. It's just
-    // AAPCS_VFP for functions as simple as libcalls.
-    if (Subtarget->isTargetWatchABI()) {
-      for (int i = 0; i < RTLIB::UNKNOWN_LIBCALL; ++i)
-        setLibcallCallingConv((RTLIB::Libcall)i, CallingConv::ARM_AAPCS_VFP);
-    }
   }
 
   // These libcalls are not available in 32-bit.

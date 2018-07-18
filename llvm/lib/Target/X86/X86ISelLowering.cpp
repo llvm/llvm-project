@@ -29387,14 +29387,14 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
     if (isTargetShuffleEquivalent(Mask, {0, 0}) && AllowFloatDomain) {
       V2 = V1;
       V1 = (SM_SentinelUndef == Mask[0] ? DAG.getUNDEF(MVT::v4f32) : V1);
-      Shuffle = X86ISD::MOVLHPS;
-      SrcVT = DstVT = MVT::v4f32;
+      Shuffle = Subtarget.hasSSE2() ? X86ISD::UNPCKL : X86ISD::MOVLHPS;
+      SrcVT = DstVT = Subtarget.hasSSE2() ? MVT::v2f64 : MVT::v4f32;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {1, 1}) && AllowFloatDomain) {
       V2 = V1;
-      Shuffle = X86ISD::MOVHLPS;
-      SrcVT = DstVT = MVT::v4f32;
+      Shuffle = Subtarget.hasSSE2() ? X86ISD::UNPCKH : X86ISD::MOVHLPS;
+      SrcVT = DstVT = Subtarget.hasSSE2() ? MVT::v2f64 : MVT::v4f32;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {0, 3}) && Subtarget.hasSSE2() &&
@@ -30694,31 +30694,6 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       if (isShuffleEquivalent(Op1, ShufOp, Mask, ExpectedMask))
         return DAG.getNode(X86ISD::UNPCKH, DL, VT, N.getOperand(0), ShufOp);
     }
-    return SDValue();
-  }
-  case X86ISD::BLENDI: {
-    SDValue V0 = N->getOperand(0);
-    SDValue V1 = N->getOperand(1);
-    assert(VT == V0.getSimpleValueType() && VT == V1.getSimpleValueType() &&
-           "Unexpected input vector types");
-
-    // Canonicalize a v2f64 blend with a mask of 2 by swapping the vector
-    // operands and changing the mask to 1. This saves us a bunch of
-    // pattern-matching possibilities related to scalar math ops in SSE/AVX.
-    // x86InstrInfo knows how to commute this back after instruction selection
-    // if it would help register allocation.
-
-    // TODO: If optimizing for size or a processor that doesn't suffer from
-    // partial register update stalls, this should be transformed into a MOVSD
-    // instruction because a MOVSD is 1-2 bytes smaller than a BLENDPD.
-
-    if (VT == MVT::v2f64)
-      if (auto *Mask = dyn_cast<ConstantSDNode>(N->getOperand(2)))
-        if (Mask->getZExtValue() == 2 && !isShuffleFoldableLoad(V0)) {
-          SDValue NewMask = DAG.getConstant(1, DL, MVT::i8);
-          return DAG.getNode(X86ISD::BLENDI, DL, VT, V1, V0, NewMask);
-        }
-
     return SDValue();
   }
   case X86ISD::MOVSD:

@@ -961,7 +961,7 @@ public:
   /// \param InsInstrs - Vector of new instructions that implement P
   /// \param DelInstrs - Old instructions, including Root, that could be
   /// replaced by InsInstr
-  /// \param InstrIdxForVirtReg - map of virtual register to instruction in
+  /// \param InstIdxForVirtReg - map of virtual register to instruction in
   /// InsInstr that defines it
   virtual void genAlternativeCodeSequence(
       MachineInstr &Root, MachineCombinerPattern Pattern,

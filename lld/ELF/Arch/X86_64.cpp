@@ -471,6 +471,10 @@ void X86_64<ELFT>::relaxGot(uint8_t *Loc, uint64_t Val) const {
   write32le(Loc - 1, Val + 1);
 }
 
+// This anonymous namespace works around a warning bug in
+// old versions of gcc. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=56480
+namespace {
+
 // A split-stack prologue starts by checking the amount of stack remaining
 // in one of two ways:
 // A) Comparing of the stack pointer to a field in the tcb.
@@ -504,6 +508,8 @@ bool X86_64<ELF32LE>::adjustPrologueForCrossSplitStack(uint8_t *Loc,
                                                        uint8_t *End) const {
   llvm_unreachable("Target doesn't support split stacks.");
 }
+
+} // namespace
 
 // These nonstandard PLT entries are to migtigate Spectre v2 security
 // vulnerability. In order to mitigate Spectre v2, we want to avoid indirect

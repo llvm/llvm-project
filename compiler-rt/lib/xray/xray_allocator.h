@@ -16,10 +16,11 @@
 #ifndef XRAY_ALLOCATOR_H
 #define XRAY_ALLOCATOR_H
 
-#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#include "sanitizer_common/sanitizer_posix.h"
+#include "sys/mman.h"
 #include "xray_utils.h"
 #include <cstddef>
 #include <cstdint>
@@ -36,130 +37,87 @@ namespace __xray {
 /// allocation function. N is used to compute the size of a block, which is
 /// cache-line-size multiples worth of memory. We compute the size of a block by
 /// determining how many cache lines worth of memory is required to subsume N.
+///
+/// The Allocator instance will manage its own memory acquired through mmap.
+/// This severely constrains the platforms on which this can be used to POSIX
+/// systems where mmap semantics are well-defined.
+///
+/// FIXME: Isolate the lower-level memory management to a different abstraction
+/// that can be platform-specific.
 template <size_t N> struct Allocator {
   // The Allocator returns memory as Block instances.
   struct Block {
     /// Compute the minimum cache-line size multiple that is >= N.
     static constexpr auto Size = nearest_boundary(N, kCacheLineSize);
-    void *Data = nullptr;
+    void *Data;
   };
 
 private:
-  // A BlockLink will contain a fixed number of blocks, each with an identifier
-  // to specify whether it's been handed out or not. We keep track of BlockLink
-  // iterators, which are basically a pointer to the link and an offset into
-  // the fixed set of blocks associated with a link. The iterators are
-  // bidirectional.
-  //
-  // We're calling it a "link" in the context of seeing these as a chain of
-  // block pointer containers (i.e. links in a chain).
-  struct BlockLink {
-    static_assert(kCacheLineSize % sizeof(void *) == 0,
-                  "Cache line size is not divisible by size of void*; none of "
-                  "the assumptions of the BlockLink will hold.");
-
-    // We compute the number of pointers to areas in memory where we consider as
-    // individual blocks we've allocated. To ensure that instances of the
-    // BlockLink object are cache-line sized, we deduct two pointers worth
-    // representing the pointer to the previous link and the backing store for
-    // the whole block.
-    //
-    // This structure corresponds to the following layout:
-    //
-    //   Blocks [ 0, 1, 2, .., BlockPtrCount - 2]
-    //
-    static constexpr auto BlockPtrCount =
-        (kCacheLineSize / sizeof(Block *)) - 2;
-
-    BlockLink() {
-      // Zero out Blocks.
-      // FIXME: Use a braced member initializer when we drop support for GCC
-      // 4.8.
-      internal_memset(Blocks, 0, sizeof(Blocks));
-    }
-
-    // FIXME: Align this to cache-line address boundaries?
-    Block Blocks[BlockPtrCount];
-    BlockLink *Prev = nullptr;
-    void *BackingStore = nullptr;
-  };
-
-  static_assert(sizeof(BlockLink) == kCacheLineSize,
-                "BlockLink instances must be cache-line-sized.");
-
-  static BlockLink NullLink;
-
-  // FIXME: Implement a freelist, in case we actually do intend to return memory
-  // to the allocator, as opposed to just de-allocating everything in one go?
-
-  size_t MaxMemory;
+  const size_t MaxMemory{0};
+  void *BackingStore = nullptr;
+  void *AlignedNextBlock = nullptr;
+  size_t AllocatedBlocks = 0;
   SpinMutex Mutex{};
-  BlockLink *Tail = &NullLink;
-  size_t Counter = 0;
 
-  BlockLink *NewChainLink(uint64_t Alignment) {
-    auto NewChain = reinterpret_cast<BlockLink *>(
-        InternalAlloc(sizeof(BlockLink), nullptr, kCacheLineSize));
-    auto BackingStore = reinterpret_cast<char *>(InternalAlloc(
-        (BlockLink::BlockPtrCount + 1) * Block::Size, nullptr, Alignment));
-    size_t Offset = 0;
-    DCHECK_NE(NewChain, nullptr);
-    DCHECK_NE(BackingStore, nullptr);
-    NewChain->BackingStore = BackingStore;
+  void *Alloc() {
+    SpinMutexLock Lock(&Mutex);
+    if (UNLIKELY(BackingStore == nullptr)) {
+      BackingStore = reinterpret_cast<void *>(
+          internal_mmap(NULL, MaxMemory, PROT_READ | PROT_WRITE,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, 0, 0));
+      if (BackingStore == MAP_FAILED) {
+        BackingStore = nullptr;
+        if (Verbosity())
+          Report("XRay Profiling: Failed to allocate memory for allocator.\n");
+        return nullptr;
+      }
 
-    // Here we ensure that the alignment of the pointers we're handing out
-    // adhere to the alignment requirements of the call to Allocate().
-    for (auto &B : NewChain->Blocks) {
-      auto AlignmentAdjustment =
-          nearest_boundary(reinterpret_cast<uintptr_t>(BackingStore + Offset),
-                           Alignment) -
-          reinterpret_cast<uintptr_t>(BackingStore + Offset);
-      B.Data = BackingStore + AlignmentAdjustment + Offset;
-      DCHECK_EQ(reinterpret_cast<uintptr_t>(B.Data) % Alignment, 0);
-      Offset += AlignmentAdjustment + Block::Size;
+      AlignedNextBlock = BackingStore;
+
+      // Ensure that NextBlock is aligned appropriately.
+      auto BackingStoreNum = reinterpret_cast<uintptr_t>(BackingStore);
+      auto AlignedNextBlockNum = nearest_boundary(
+          reinterpret_cast<uintptr_t>(AlignedNextBlock), kCacheLineSize);
+      if (diff(AlignedNextBlockNum, BackingStoreNum) > ptrdiff_t(MaxMemory)) {
+        munmap(BackingStore, MaxMemory);
+        AlignedNextBlock = BackingStore = nullptr;
+        if (Verbosity())
+          Report("XRay Profiling: Cannot obtain enough memory from "
+                 "preallocated region.\n");
+        return nullptr;
+      }
+
+      AlignedNextBlock = reinterpret_cast<void *>(AlignedNextBlockNum);
+
+      // Assert that AlignedNextBlock is cache-line aligned.
+      DCHECK_EQ(reinterpret_cast<uintptr_t>(AlignedNextBlock) % kCacheLineSize,
+                0);
     }
-    NewChain->Prev = Tail;
-    return NewChain;
+
+    if ((AllocatedBlocks * Block::Size) >= MaxMemory)
+      return nullptr;
+
+    // Align the pointer we'd like to return to an appropriate alignment, then
+    // advance the pointer from where to start allocations.
+    void *Result = AlignedNextBlock;
+    AlignedNextBlock = reinterpret_cast<void *>(
+        reinterpret_cast<char *>(AlignedNextBlock) + N);
+    ++AllocatedBlocks;
+    return Result;
   }
 
 public:
-  Allocator(size_t M, size_t PreAllocate) : MaxMemory(M) {
-    // FIXME: Implement PreAllocate support!
-  }
+  explicit Allocator(size_t M)
+      : MaxMemory(nearest_boundary(M, kCacheLineSize)) {}
 
-  Block Allocate(uint64_t Alignment = 8) {
-    SpinMutexLock Lock(&Mutex);
-    // Check whether we're over quota.
-    if (Counter * Block::Size >= MaxMemory)
-      return {};
-
-    size_t ChainOffset = Counter % BlockLink::BlockPtrCount;
-
-    Block B{};
-    BlockLink *Link = Tail;
-    if (UNLIKELY(Counter == 0 || ChainOffset == 0))
-      Tail = Link = NewChainLink(Alignment);
-
-    B = Link->Blocks[ChainOffset];
-    ++Counter;
-    return B;
-  }
+  Block Allocate() { return {Alloc()}; }
 
   ~Allocator() NOEXCEPT {
-    // We need to deallocate all the blocks, including the chain links.
-    for (auto *C = Tail; C != &NullLink;) {
-      // We know that the data block is a large contiguous page, we deallocate
-      // that at once.
-      InternalFree(C->BackingStore);
-      auto Prev = C->Prev;
-      InternalFree(C);
-      C = Prev;
+    if (BackingStore != nullptr) {
+      internal_munmap(BackingStore, MaxMemory);
     }
   }
-}; // namespace __xray
-
-// Storage for the NullLink sentinel.
-template <size_t N> typename Allocator<N>::BlockLink Allocator<N>::NullLink;
+};
 
 } // namespace __xray
 

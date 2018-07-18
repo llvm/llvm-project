@@ -15,6 +15,8 @@
 #ifndef XRAY_UTILS_H
 #define XRAY_UTILS_H
 
+#include <cstddef>
+#include <cstdint>
 #include <sys/types.h>
 #include <utility>
 
@@ -52,6 +54,14 @@ constexpr size_t next_pow2_helper(size_t num, size_t acc) {
 
 constexpr size_t next_pow2(size_t number) {
   return next_pow2_helper(number, 1);
+}
+
+template <class T> constexpr T &max(T &A, T &B) { return A > B ? A : B; }
+
+template <class T> constexpr T &min(T &A, T &B) { return A <= B ? A : B; }
+
+constexpr ptrdiff_t diff(uintptr_t A, uintptr_t B) {
+  return max(A, B) - min(A, B);
 }
 
 } // namespace __xray

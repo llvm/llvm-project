@@ -72,3 +72,21 @@ fsub    z0.d, p7/m, z0.d, z31.d
 // CHECK-ENCODING: [0xe0,0x9f,0xc1,0x65]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 9f c1 65 <unknown>
+
+fsub z0.h, z1.h, z31.h
+// CHECK-INST: fsub	z0.h, z1.h, z31.h
+// CHECK-ENCODING: [0x20,0x04,0x5f,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 04 5f 65 <unknown>
+
+fsub z0.s, z1.s, z31.s
+// CHECK-INST: fsub	z0.s, z1.s, z31.s
+// CHECK-ENCODING: [0x20,0x04,0x9f,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 04 9f 65 <unknown>
+
+fsub z0.d, z1.d, z31.d
+// CHECK-INST: fsub	z0.d, z1.d, z31.d
+// CHECK-ENCODING: [0x20,0x04,0xdf,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 04 df 65 <unknown>

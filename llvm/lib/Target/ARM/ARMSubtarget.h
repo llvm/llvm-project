@@ -666,13 +666,7 @@ public:
            !isTargetDarwin() && !isTargetWindows();
   }
 
-  bool isTargetHardFloat() const {
-    // FIXME: this is invalid for WindowsCE
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           isTargetWindows() || isAAPCS16_ABI();
-  }
+  bool isTargetHardFloat() const;
 
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 

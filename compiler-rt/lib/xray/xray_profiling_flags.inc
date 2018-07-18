@@ -18,7 +18,7 @@ XRAY_FLAG(uptr, per_thread_allocator_max, 2 << 20,
           "Maximum size of any single per-thread allocator.")
 XRAY_FLAG(uptr, global_allocator_max, 2 << 24,
           "Maximum size of the global allocator for profile storage.")
-XRAY_FLAG(uptr, stack_allocator_max, 2 << 24,
+XRAY_FLAG(uptr, stack_allocator_max, 2 << 20,
           "Maximum size of the traversal stack allocator.")
 XRAY_FLAG(int, grace_period_ms, 1,
           "Profile collection will wait this much time in milliseconds before "
