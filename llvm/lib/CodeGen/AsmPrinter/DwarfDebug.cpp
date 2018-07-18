@@ -2002,22 +2002,23 @@ static void emitRangeList(AsmPrinter *Asm, DwarfCompileUnit *CU,
     // or optnone where there may be holes in a single CU's section
     // contributions.
     auto *Base = CUBase;
-    if (!Base && P.second.size() > 1 && UseDwarfRangesBaseAddressSpecifier) {
+    if (!Base && P.second.size() > 1 &&
+        (UseDwarfRangesBaseAddressSpecifier || DwarfVersion >= 5)) {
       BaseIsSet = true;
       // FIXME/use care: This may not be a useful base address if it's not
       // the lowest address/range in this object.
       Base = P.second.front()->getStart();
-      if (DwarfVersion >= 5)
+      if (DwarfVersion >= 5) {
+        Asm->OutStreamer->AddComment("DW_RLE_base_address");
         Asm->OutStreamer->EmitIntValue(dwarf::DW_RLE_base_address, 1);
-      else
+      } else
         Asm->OutStreamer->EmitIntValue(-1, Size);
+      Asm->OutStreamer->AddComment("  base address");
       Asm->OutStreamer->EmitSymbolValue(Base, Size);
-    } else if (BaseIsSet) {
+    } else if (BaseIsSet && DwarfVersion < 5) {
       BaseIsSet = false;
-      if (DwarfVersion >= 5)
-        Asm->OutStreamer->EmitIntValue(dwarf::DW_RLE_base_address, 1);
-      else
-        Asm->OutStreamer->EmitIntValue(-1, Size);
+      assert(!Base);
+      Asm->OutStreamer->EmitIntValue(-1, Size);
       Asm->OutStreamer->EmitIntValue(0, Size);
     }
 
@@ -2029,16 +2030,22 @@ static void emitRangeList(AsmPrinter *Asm, DwarfCompileUnit *CU,
       if (Base) {
         if (DwarfVersion >= 5) {
           // Emit DW_RLE_offset_pair when we have a base.
+          Asm->OutStreamer->AddComment("DW_RLE_offset_pair");
           Asm->OutStreamer->EmitIntValue(dwarf::DW_RLE_offset_pair, 1);
+          Asm->OutStreamer->AddComment("  starting offset");
           Asm->EmitLabelDifferenceAsULEB128(Begin, Base);
+          Asm->OutStreamer->AddComment("  ending offset");
           Asm->EmitLabelDifferenceAsULEB128(End, Base);
         } else {
           Asm->EmitLabelDifference(Begin, Base, Size);
           Asm->EmitLabelDifference(End, Base, Size);
         }
       } else if (DwarfVersion >= 5) {
+        Asm->OutStreamer->AddComment("DW_RLE_start_length");
         Asm->OutStreamer->EmitIntValue(dwarf::DW_RLE_start_length, 1);
+        Asm->OutStreamer->AddComment("  start");
         Asm->OutStreamer->EmitSymbolValue(Begin, Size);
+        Asm->OutStreamer->AddComment("  length");
         Asm->EmitLabelDifferenceAsULEB128(End, Begin);
       } else {
         Asm->OutStreamer->EmitSymbolValue(Begin, Size);
@@ -2046,9 +2053,10 @@ static void emitRangeList(AsmPrinter *Asm, DwarfCompileUnit *CU,
       }
     }
   }
-  if (DwarfVersion >= 5)
+  if (DwarfVersion >= 5) {
+    Asm->OutStreamer->AddComment("DW_RLE_end_of_list");
     Asm->OutStreamer->EmitIntValue(dwarf::DW_RLE_end_of_list, 1);
-  else {
+  } else {
     // Terminate the list with two 0 values.
     Asm->OutStreamer->EmitIntValue(0, Size);
     Asm->OutStreamer->EmitIntValue(0, Size);

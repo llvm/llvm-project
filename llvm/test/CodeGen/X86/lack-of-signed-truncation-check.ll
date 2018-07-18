@@ -12,7 +12,7 @@
 ;   trunc + sext + icmp ne <- not canonical
 ;   shl   + ashr + icmp ne
 ;   add          + icmp ult
-;   add          + icmp uge
+;   add          + icmp uge/ugt
 ; However only the simplest form (with two shifts) gets lowered best.
 
 ; ---------------------------------------------------------------------------- ;
@@ -418,6 +418,29 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
   ret i1 %tmp1
 }
 
+; Slightly more canonical variant
+define i1 @add_ugtcmp_i16_i8(i16 %x) nounwind {
+; X86-LABEL: add_ugtcmp_i16_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $128, %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl %ax, %eax
+; X86-NEXT:    cmpl $255, %eax
+; X86-NEXT:    seta %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_ugtcmp_i16_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    subl $-128, %edi
+; X64-NEXT:    movzwl %di, %eax
+; X64-NEXT:    cmpl $255, %eax
+; X64-NEXT:    seta %al
+; X64-NEXT:    retq
+  %tmp0 = add i16 %x, 128 ; 1U << (8-1)
+  %tmp1 = icmp ugt i16 %tmp0, 255 ; (1U << 8) - 1
+  ret i1 %tmp1
+}
+
 ; Negative tests
 ; ---------------------------------------------------------------------------- ;
 
@@ -600,5 +623,16 @@ define i1 @add_ugecmp_bad_i24_i8(i24 %x) nounwind {
 ; X64-NEXT:    retq
   %tmp0 = add i24 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp uge i24 %tmp0, 256 ; 1U << 8
+  ret i1 %tmp1
+}
+
+; Slightly more canonical variant
+define i1 @add_ugtcmp_bad_i16_i8(i16 %x) nounwind {
+; CHECK-LABEL: add_ugtcmp_bad_i16_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %tmp0 = add i16 %x, 128 ; 1U << (8-1)
+  %tmp1 = icmp ugt i16 %tmp0, -1 ; when we +1 it, it will wrap to 0
   ret i1 %tmp1
 }

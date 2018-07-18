@@ -6,11 +6,12 @@ set(DEBUGINFO_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(DEBUGINFO_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(DEBUGINFO_TEST_DEPS
-  clang
   FileCheck
+  clang
   count
   llvm-objdump
   not
+  safestack
   )
 
 configure_lit_site_cfg(

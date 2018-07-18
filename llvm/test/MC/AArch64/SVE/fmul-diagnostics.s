@@ -43,17 +43,17 @@ fmul z0.h, z0.h, z8.b[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 fmul z0.h, z0.h, z8.h[0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid restricted vector register, expected z0.h..z7.h
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fmul z0.h, z0.h, z8.h[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 fmul z0.s, z0.s, z8.s[0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid restricted vector register, expected z0.s..z7.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fmul z0.s, z0.s, z8.s[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 fmul z0.d, z0.d, z16.d[0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid restricted vector register, expected z0.d..z15.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fmul z0.d, z0.d, z16.d[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -112,6 +112,16 @@ fmul    z0.b, p7/m, z0.b, z31.b
 fmul    z0.h, p7/m, z0.h, z31.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: fmul    z0.h, p7/m, z0.h, z31.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmul z0.b, z1.b, z2.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK-NEXT: fmul z0.b, z1.b, z2.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmul z0.h, z1.s, z2.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK-NEXT: fmul z0.h, z1.s, z2.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 

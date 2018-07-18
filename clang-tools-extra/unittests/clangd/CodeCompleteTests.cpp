@@ -1309,6 +1309,18 @@ TEST(CompletionTest, IgnoreRecoveryResults) {
   EXPECT_THAT(Results.Completions, UnorderedElementsAre(Named("NotRecovered")));
 }
 
+TEST(CompletionTest, ScopeOfClassFieldInConstructorInitializer) {
+  auto Results = completions(
+      R"cpp(
+        namespace ns {
+          class X { public: X(); int x_; };
+          X::X() : x_^(0) {}
+        }
+      )cpp");
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Scope("ns::X::"), Named("x_"))));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
