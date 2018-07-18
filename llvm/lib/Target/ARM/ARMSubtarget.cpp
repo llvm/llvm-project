@@ -302,6 +302,8 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   }
 }
 
+bool ARMSubtarget::isTargetHardFloat() const { return TM.isTargetHardFloat(); }
+
 bool ARMSubtarget::isAPCS_ABI() const {
   assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
   return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;

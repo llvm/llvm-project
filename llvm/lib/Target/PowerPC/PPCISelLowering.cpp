@@ -1237,12 +1237,6 @@ MVT PPCTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   return PPCTargetLowering::getRegisterType(Context, VT);
 }
 
-MVT PPCTargetLowering::getRegisterTypeForCallingConv(MVT VT) const {
-  if (Subtarget.hasSPE() && VT == MVT::f64)
-    return MVT::i32;
-  return PPCTargetLowering::getRegisterType(VT);
-}
-
 bool PPCTargetLowering::useSoftFloat() const {
   return Subtarget.useSoftFloat();
 }

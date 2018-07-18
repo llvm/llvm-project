@@ -1692,14 +1692,22 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                    OpIdx1, OpIdx2);
   }
   case X86::MOVHLPSrr:
-  case X86::UNPCKHPDrr: {
+  case X86::UNPCKHPDrr:
+  case X86::VMOVHLPSrr:
+  case X86::VUNPCKHPDrr:
+  case X86::VMOVHLPSZrr:
+  case X86::VUNPCKHPDZ128rr: {
     assert(Subtarget.hasSSE2() && "Commuting MOVHLP/UNPCKHPD requires SSE2!");
 
     unsigned Opc = MI.getOpcode();
     switch (Opc) {
-      default: llvm_unreachable("Unreachable!");
-      case X86::MOVHLPSrr: Opc = X86::UNPCKHPDrr; break;
-      case X86::UNPCKHPDrr: Opc = X86::MOVHLPSrr; break;
+    default: llvm_unreachable("Unreachable!");
+    case X86::MOVHLPSrr:       Opc = X86::UNPCKHPDrr;      break;
+    case X86::UNPCKHPDrr:      Opc = X86::MOVHLPSrr;       break;
+    case X86::VMOVHLPSrr:      Opc = X86::VUNPCKHPDrr;     break;
+    case X86::VUNPCKHPDrr:     Opc = X86::VMOVHLPSrr;      break;
+    case X86::VMOVHLPSZrr:     Opc = X86::VUNPCKHPDZ128rr; break;
+    case X86::VUNPCKHPDZ128rr: Opc = X86::VMOVHLPSZrr;     break;
     }
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.setDesc(get(Opc));
@@ -1990,6 +1998,10 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
     return false;
   case X86::MOVHLPSrr:
   case X86::UNPCKHPDrr:
+  case X86::VMOVHLPSrr:
+  case X86::VUNPCKHPDrr:
+  case X86::VMOVHLPSZrr:
+  case X86::VUNPCKHPDZ128rr:
     if (Subtarget.hasSSE2())
       return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
     return false;

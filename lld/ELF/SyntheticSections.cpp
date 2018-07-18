@@ -505,9 +505,11 @@ std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
   for (CieRecord *Rec : CieRecords) {
     uint8_t Enc = getFdeEncoding(Rec->Cie);
     for (EhSectionPiece *Fde : Rec->Fdes) {
-      uint32_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
+      uint64_t Pc = getFdePc(Buf, Fde->OutputOff, Enc);
+      if (Pc > UINT32_MAX)
+        fatal(toString(Fde->Sec) + ": PC address is too large: " + Twine(Pc));
       uint32_t FdeVA = getParent()->Addr + Fde->OutputOff;
-      Ret.push_back({Pc, FdeVA});
+      Ret.push_back({(uint32_t)Pc, FdeVA});
     }
   }
   return Ret;

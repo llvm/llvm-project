@@ -72,3 +72,21 @@ fadd    z0.d, p7/m, z0.d, z31.d
 // CHECK-ENCODING: [0xe0,0x9f,0xc0,0x65]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 9f c0 65 <unknown>
+
+fadd z0.h, z1.h, z31.h
+// CHECK-INST: fadd	z0.h, z1.h, z31.h
+// CHECK-ENCODING: [0x20,0x00,0x5f,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 00 5f 65 <unknown>
+
+fadd z0.s, z1.s, z31.s
+// CHECK-INST: fadd	z0.s, z1.s, z31.s
+// CHECK-ENCODING: [0x20,0x00,0x9f,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 00 9f 65 <unknown>
+
+fadd z0.d, z1.d, z31.d
+// CHECK-INST: fadd	z0.d, z1.d, z31.d
+// CHECK-ENCODING: [0x20,0x00,0xdf,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 00 df 65 <unknown>
