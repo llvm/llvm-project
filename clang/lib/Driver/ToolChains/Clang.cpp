@@ -4777,6 +4777,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  if (Args.hasFlag(options::OPT_faddrsig, options::OPT_fno_addrsig,
+                   getToolChain().getTriple().isOSBinFormatELF() &&
+                       getToolChain().useIntegratedAs()))
+    CmdArgs.push_back("-faddrsig");
+
   // Finally add the compile command to the compilation.
   if (Args.hasArg(options::OPT__SLASH_fallback) &&
       Output.getType() == types::TY_Object &&

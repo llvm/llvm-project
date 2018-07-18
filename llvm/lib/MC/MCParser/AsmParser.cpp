@@ -506,6 +506,8 @@ private:
     DK_ERROR,
     DK_WARNING,
     DK_PRINT,
+    DK_ADDRSIG,
+    DK_ADDRSIG_SYM,
     DK_END
   };
 
@@ -653,6 +655,10 @@ private:
 
   // .print <double-quotes-string>
   bool parseDirectivePrint(SMLoc DirectiveLoc);
+
+  // Directives to support address-significance tables.
+  bool parseDirectiveAddrsig();
+  bool parseDirectiveAddrsigSym();
 
   void initializeDirectiveKindMap();
 };
@@ -2127,6 +2133,10 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveDS(IDVal, 12);
     case DK_PRINT:
       return parseDirectivePrint(IDLoc);
+    case DK_ADDRSIG:
+      return parseDirectiveAddrsig();
+    case DK_ADDRSIG_SYM:
+      return parseDirectiveAddrsigSym();
     }
 
     return Error(IDLoc, "unknown directive");
@@ -5291,6 +5301,8 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".ds.w"] = DK_DS_W;
   DirectiveKindMap[".ds.x"] = DK_DS_X;
   DirectiveKindMap[".print"] = DK_PRINT;
+  DirectiveKindMap[".addrsig"] = DK_ADDRSIG;
+  DirectiveKindMap[".addrsig_sym"] = DK_ADDRSIG_SYM;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
@@ -5527,6 +5539,21 @@ bool AsmParser::parseDirectivePrint(SMLoc DirectiveLoc) {
   if (parseToken(AsmToken::EndOfStatement, "expected end of statement"))
     return true;
   llvm::outs() << StrTok.getStringContents() << '\n';
+  return false;
+}
+
+bool AsmParser::parseDirectiveAddrsig() {
+  getStreamer().EmitAddrsig();
+  return false;
+}
+
+bool AsmParser::parseDirectiveAddrsigSym() {
+  StringRef Name;
+  if (check(parseIdentifier(Name),
+            "expected identifier in '.addrsig_sym' directive"))
+    return true;
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+  getStreamer().EmitAddrsigSym(Sym);
   return false;
 }
 

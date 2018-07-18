@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "xray_profile_collector.h"
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "xray_profiling_flags.h"
@@ -138,7 +139,7 @@ static void populateRecords(ProfileRecordArray &PRs,
                             const FunctionCallTrie &Trie) {
   using StackArray = Array<const FunctionCallTrie::Node *>;
   using StackAllocator = typename StackArray::AllocatorType;
-  StackAllocator StackAlloc(profilingFlags()->stack_allocator_max, 0);
+  StackAllocator StackAlloc(profilingFlags()->stack_allocator_max);
   StackArray DFSStack(StackAlloc);
   for (const auto R : Trie.getRoots()) {
     DFSStack.Append(R);
@@ -146,6 +147,8 @@ static void populateRecords(ProfileRecordArray &PRs,
       auto Node = DFSStack.back();
       DFSStack.trim(1);
       auto Record = PRs.AppendEmplace(PA, Node);
+      if (Record == nullptr)
+        return;
       DCHECK_NE(Record, nullptr);
 
       // Traverse the Node's parents and as we're doing so, get the FIds in
@@ -208,9 +211,9 @@ void serialize() {
   // Then repopulate the global ProfileBuffers.
   for (u32 I = 0; I < ThreadTries->Size(); ++I) {
     using ProfileRecordAllocator = typename ProfileRecordArray::AllocatorType;
-    ProfileRecordAllocator PRAlloc(profilingFlags()->global_allocator_max, 0);
+    ProfileRecordAllocator PRAlloc(profilingFlags()->global_allocator_max);
     ProfileRecord::PathAllocator PathAlloc(
-        profilingFlags()->global_allocator_max, 0);
+        profilingFlags()->global_allocator_max);
     ProfileRecordArray ProfileRecords(PRAlloc);
 
     // First, we want to compute the amount of space we're going to need. We'll

@@ -3,13 +3,16 @@
 ; When fastisel better supports VSX fix up this test case.
 ;
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s --check-prefix=ELF64
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -mtriple=powerpc-unknown-linux-gnu -mcpu=e500 -mattr=spe | FileCheck %s --check-prefix=SPE
 define void @t1a(float %a) nounwind {
 entry:
 ; ELF64: t1a
+; SPE: t1a
   %cmp = fcmp oeq float %a, 0.000000e+00
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
+; SPE: efscmpeq
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -25,10 +28,12 @@ declare void @foo()
 define void @t1b(float %a) nounwind {
 entry:
 ; ELF64: t1b
+; SPE: t1b
   %cmp = fcmp oeq float %a, -0.000000e+00
 ; ELF64: addis
 ; ELF64: lfs
 ; ELF64: fcmpu
+; SPE: efscmpeq
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -42,10 +47,12 @@ if.end:                                           ; preds = %if.then, %entry
 define void @t2a(double %a) nounwind {
 entry:
 ; ELF64: t2a
+; SPE: t2a
   %cmp = fcmp oeq double %a, 0.000000e+00
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
+; SPE: efdcmpeq
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -59,10 +66,12 @@ if.end:                                           ; preds = %if.then, %entry
 define void @t2b(double %a) nounwind {
 entry:
 ; ELF64: t2b
+; SPE: t2b
   %cmp = fcmp oeq double %a, -0.000000e+00
 ; ELF64: addis
 ; ELF64: lfd
 ; ELF64: fcmpu
+; SPE: efdcmpeq
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry

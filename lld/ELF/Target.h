@@ -59,6 +59,13 @@ public:
   virtual bool needsThunk(RelExpr Expr, RelType RelocType,
                           const InputFile *File, uint64_t BranchAddr,
                           const Symbol &S) const;
+
+  // The function with a prologue starting at Loc was compiled with
+  // -fsplit-stack and it calls a function compiled without. Adjust the prologue
+  // to do the right thing. See https://gcc.gnu.org/wiki/SplitStacks.
+  virtual bool adjustPrologueForCrossSplitStack(uint8_t *Loc,
+                                                uint8_t *End) const;
+
   // Return true if we can reach Dst from Src with Relocation RelocType
   virtual bool inBranchRange(RelType Type, uint64_t Src,
                              uint64_t Dst) const;

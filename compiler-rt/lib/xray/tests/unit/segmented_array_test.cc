@@ -12,27 +12,26 @@ struct TestData {
   TestData(s64 F, s64 S) : First(F), Second(S) {}
 };
 
-TEST(SegmentedArrayTest, Construction) {
-  Array<TestData> Data;
-  (void)Data;
-}
-
-TEST(SegmentedArrayTest, ConstructWithAllocator) {
+TEST(SegmentedArrayTest, ConstructWithAllocators) {
   using AllocatorType = typename Array<TestData>::AllocatorType;
-  AllocatorType A(1 << 4, 0);
+  AllocatorType A(1 << 4);
   Array<TestData> Data(A);
   (void)Data;
 }
 
 TEST(SegmentedArrayTest, ConstructAndPopulate) {
-  Array<TestData> data;
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  AllocatorType A(1 << 4);
+  Array<TestData> data(A);
   ASSERT_NE(data.Append(TestData{0, 0}), nullptr);
   ASSERT_NE(data.Append(TestData{1, 1}), nullptr);
   ASSERT_EQ(data.size(), 2u);
 }
 
 TEST(SegmentedArrayTest, ConstructPopulateAndLookup) {
-  Array<TestData> data;
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  AllocatorType A(1 << 4);
+  Array<TestData> data(A);
   ASSERT_NE(data.Append(TestData{0, 1}), nullptr);
   ASSERT_EQ(data.size(), 1u);
   ASSERT_EQ(data[0].First, 0);
@@ -40,7 +39,9 @@ TEST(SegmentedArrayTest, ConstructPopulateAndLookup) {
 }
 
 TEST(SegmentedArrayTest, PopulateWithMoreElements) {
-  Array<TestData> data;
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  AllocatorType A(1 << 24);
+  Array<TestData> data(A);
   static const auto kMaxElements = 100u;
   for (auto I = 0u; I < kMaxElements; ++I) {
     ASSERT_NE(data.Append(TestData{I, I + 1}), nullptr);
@@ -53,14 +54,18 @@ TEST(SegmentedArrayTest, PopulateWithMoreElements) {
 }
 
 TEST(SegmentedArrayTest, AppendEmplace) {
-  Array<TestData> data;
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  AllocatorType A(1 << 4);
+  Array<TestData> data(A);
   ASSERT_NE(data.AppendEmplace(1, 1), nullptr);
   ASSERT_EQ(data[0].First, 1);
   ASSERT_EQ(data[0].Second, 1);
 }
 
 TEST(SegmentedArrayTest, AppendAndTrim) {
-  Array<TestData> data;
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  AllocatorType A(1 << 4);
+  Array<TestData> data(A);
   ASSERT_NE(data.AppendEmplace(1, 1), nullptr);
   ASSERT_EQ(data.size(), 1u);
   data.trim(1);
@@ -69,7 +74,9 @@ TEST(SegmentedArrayTest, AppendAndTrim) {
 }
 
 TEST(SegmentedArrayTest, IteratorAdvance) {
-  Array<TestData> data;
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  AllocatorType A(1 << 4);
+  Array<TestData> data(A);
   ASSERT_TRUE(data.empty());
   ASSERT_EQ(data.begin(), data.end());
   auto I0 = data.begin();
@@ -88,7 +95,9 @@ TEST(SegmentedArrayTest, IteratorAdvance) {
 }
 
 TEST(SegmentedArrayTest, IteratorRetreat) {
-  Array<TestData> data;
+  using AllocatorType = typename Array<TestData>::AllocatorType;
+  AllocatorType A(1 << 4);
+  Array<TestData> data(A);
   ASSERT_TRUE(data.empty());
   ASSERT_EQ(data.begin(), data.end());
   ASSERT_NE(data.AppendEmplace(1, 1), nullptr);
@@ -108,17 +117,17 @@ TEST(SegmentedArrayTest, IteratorRetreat) {
 
 TEST(SegmentedArrayTest, IteratorTrimBehaviour) {
   using AllocatorType = typename Array<TestData>::AllocatorType;
-  AllocatorType A(1 << 10, 0);
+  AllocatorType A(1 << 20);
   Array<TestData> Data(A);
   ASSERT_TRUE(Data.empty());
   auto I0Begin = Data.begin(), I0End = Data.end();
   // Add enough elements in Data to have more than one chunk.
-  constexpr auto Chunk = Array<TestData>::ChunkSize;
-  constexpr auto ChunkX2 = Chunk * 2;
-  for (auto i = ChunkX2; i > 0u; --i) {
+  constexpr auto Segment = Array<TestData>::SegmentSize;
+  constexpr auto SegmentX2 = Segment * 2;
+  for (auto i = SegmentX2; i > 0u; --i) {
     Data.AppendEmplace(static_cast<s64>(i), static_cast<s64>(i));
   }
-  ASSERT_EQ(Data.size(), ChunkX2);
+  ASSERT_EQ(Data.size(), SegmentX2);
   {
     auto &Back = Data.back();
     ASSERT_EQ(Back.First, 1);
@@ -126,18 +135,18 @@ TEST(SegmentedArrayTest, IteratorTrimBehaviour) {
   }
 
   // Trim one chunk's elements worth.
-  Data.trim(Chunk);
-  ASSERT_EQ(Data.size(), Chunk);
+  Data.trim(Segment);
+  ASSERT_EQ(Data.size(), Segment);
 
   // Check that we are still able to access 'back' properly.
   {
     auto &Back = Data.back();
-    ASSERT_EQ(Back.First, static_cast<s64>(Chunk + 1));
-    ASSERT_EQ(Back.Second, static_cast<s64>(Chunk + 1));
+    ASSERT_EQ(Back.First, static_cast<s64>(Segment + 1));
+    ASSERT_EQ(Back.Second, static_cast<s64>(Segment + 1));
   }
 
   // Then trim until it's empty.
-  Data.trim(Chunk);
+  Data.trim(Segment);
   ASSERT_TRUE(Data.empty());
 
   // Here our iterators should be the same.
@@ -146,10 +155,10 @@ TEST(SegmentedArrayTest, IteratorTrimBehaviour) {
   EXPECT_EQ(I0End, I1End);
 
   // Then we ensure that adding elements back works just fine.
-  for (auto i = ChunkX2; i > 0u; --i) {
+  for (auto i = SegmentX2; i > 0u; --i) {
     Data.AppendEmplace(static_cast<s64>(i), static_cast<s64>(i));
   }
-  EXPECT_EQ(Data.size(), ChunkX2);
+  EXPECT_EQ(Data.size(), SegmentX2);
 }
 
 struct ShadowStackEntry {
@@ -160,7 +169,7 @@ struct ShadowStackEntry {
 
 TEST(SegmentedArrayTest, SimulateStackBehaviour) {
   using AllocatorType = typename Array<ShadowStackEntry>::AllocatorType;
-  AllocatorType A(1 << 10, 0);
+  AllocatorType A(1 << 10);
   Array<ShadowStackEntry> Data(A);
   static uint64_t Dummy = 0;
   constexpr uint64_t Max = 9;

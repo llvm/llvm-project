@@ -329,6 +329,36 @@ symbol is undefined, then that symbol is defined as if ``.weak symbol`` has been
 written at the end of the file.  This forces the symbol to show up in the symbol
 table.
 
+``SHT_LLVM_ADDRSIG`` Section (address-significance table)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to mark symbols as address-significant, i.e. the address
+of the symbol is used in a comparison or leaks outside the translation unit. It
+has the same meaning as the absence of the LLVM attributes ``unnamed_addr``
+and ``local_unnamed_addr``.
+
+Any sections referred to by symbols that are not marked as address-significant
+in any object file may be safely merged by a linker without breaking the
+address uniqueness guarantee provided by the C and C++ language standards.
+
+The contents of the section are a sequence of ULEB128-encoded integers
+referring to the symbol table indexes of the address-significant symbols.
+
+There are two associated assembly directives:
+
+.. code-block:: gas
+
+  .addrsig
+
+This instructs the assembler to emit an address-significance table. Without
+this directive, all symbols are considered address-significant.
+
+.. code-block:: gas
+
+  .addrsig_sym sym
+
+This marks ``sym`` as address-significant.
+
 CodeView-Dependent
 ------------------
 

@@ -44,6 +44,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MipsABIFlags.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -170,6 +171,7 @@ public:
   void printHashHistogram() override;
 
   void printCGProfile() override;
+  void printAddrsig() override;
 
   void printNotes() override;
 
@@ -219,6 +221,7 @@ private:
   const Elf_GnuHash *GnuHashTable = nullptr;
   const Elf_Shdr *DotSymtabSec = nullptr;
   const Elf_Shdr *DotCGProfileSec = nullptr;
+  const Elf_Shdr *DotAddrsigSec = nullptr;
   StringRef DynSymtabName;
   ArrayRef<Elf_Word> ShndxTable;
 
@@ -272,6 +275,7 @@ public:
   void printSymbolsHelper(bool IsDynamic) const;
   const Elf_Shdr *getDotSymtabSec() const { return DotSymtabSec; }
   const Elf_Shdr *getDotCGProfileSec() const { return DotCGProfileSec; }
+  const Elf_Shdr *getDotAddrsigSec() const { return DotAddrsigSec; }
   ArrayRef<Elf_Word> getShndxTable() const { return ShndxTable; }
   StringRef getDynamicStringTable() const { return DynamicStringTable; }
   const DynRegionInfo &getDynRelRegion() const { return DynRelRegion; }
@@ -352,6 +356,7 @@ public:
                                    StringRef SectionName) = 0;
   virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
   virtual void printCGProfile(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printAddrsig(const ELFFile<ELFT> *Obj) = 0;
   virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
   virtual void printELFLinkerOptions(const ELFFile<ELFT> *Obj) = 0;
   virtual void printMipsGOT(const MipsGOTParser<ELFT> &Parser) = 0;
@@ -384,6 +389,7 @@ public:
   void printSectionAsString(const ELFO *Obj, StringRef SectionName) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printCGProfile(const ELFFile<ELFT> *Obj) override;
+  void printAddrsig(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
   void printELFLinkerOptions(const ELFFile<ELFT> *Obj) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
@@ -448,6 +454,7 @@ public:
   void printSectionAsString(const ELFO *Obj, StringRef SectionName) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printCGProfile(const ELFFile<ELFT> *Obj) override;
+  void printAddrsig(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
   void printELFLinkerOptions(const ELFFile<ELFT> *Obj) override;
   void printMipsGOT(const MipsGOTParser<ELFT> &Parser) override;
@@ -1441,6 +1448,12 @@ ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
       if (DotCGProfileSec != nullptr)
         reportError("Multiple .note.llvm.cgprofile");
       DotCGProfileSec = &Sec;
+      break;
+    case ELF::SHT_LLVM_ADDRSIG:
+      if (DotAddrsigSec != nullptr)
+        reportError("Multiple .llvm_addrsig");
+      DotAddrsigSec = &Sec;
+      break;
     }
   }
 
@@ -2460,6 +2473,10 @@ template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {
   ELFDumperStyle->printGroupSections(Obj);
 }
 
+template <class ELFT> void ELFDumper<ELFT>::printAddrsig() {
+  ELFDumperStyle->printAddrsig(Obj);
+}
+
 static inline void printFields(formatted_raw_ostream &OS, StringRef Str1,
                                StringRef Str2) {
   OS.PadToColumn(2u);
@@ -2840,6 +2857,8 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     return "LLVM_LINKER_OPTIONS";
   case SHT_LLVM_CALL_GRAPH_PROFILE:
     return "LLVM_CALL_GRAPH_PROFILE";
+  case SHT_LLVM_ADDRSIG:
+    return "LLVM_ADDRSIG";
   // FIXME: Parse processor specific GNU attributes
   case SHT_GNU_ATTRIBUTES:
     return "ATTRIBUTES";
@@ -3539,6 +3558,11 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
   OS << "GNUStyle::printCGProfile not implemented\n";
+}
+
+template <class ELFT>
+void GNUStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
+    OS << "GNUStyle::printAddrsig not implemented\n";
 }
 
 static std::string getGNUNoteTypeName(const uint32_t NT) {
@@ -4404,6 +4428,27 @@ void LLVMStyle<ELFT>::printCGProfile(const ELFFile<ELFT> *Obj) {
     W.printNumber("To", this->dumper()->getStaticSymbolName(CGPE.cgp_to),
                   CGPE.cgp_to);
     W.printNumber("Weight", CGPE.cgp_weight);
+  }
+}
+
+template <class ELFT>
+void LLVMStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
+  ListScope L(W, "Addrsig");
+  if (!this->dumper()->getDotAddrsigSec())
+    return;
+  ArrayRef<uint8_t> Contents = unwrapOrError(
+      Obj->getSectionContents(this->dumper()->getDotAddrsigSec()));
+  const uint8_t *Cur = Contents.begin();
+  const uint8_t *End = Contents.end();
+  while (Cur != End) {
+    unsigned Size;
+    const char *Err;
+    uint64_t SymIndex = decodeULEB128(Cur, &Size, Contents.end(), &Err);
+    if (Err)
+      reportError(Err);
+    W.printNumber("Sym", this->dumper()->getStaticSymbolName(SymIndex),
+                  SymIndex);
+    Cur += Size;
   }
 }
 

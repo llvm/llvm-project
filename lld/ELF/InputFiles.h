@@ -207,6 +207,14 @@ public:
   // symbol table.
   StringRef SourceFile;
 
+  // True if the file defines functions compiled with
+  // -fsplit-stack. Usually false.
+  bool SplitStack = false;
+
+  // True if the file defines functions compiled with -fsplit-stack,
+  // but had one or more functions with the no_split_stack attribute.
+  bool SomeNoSplitStack = false;
+
 private:
   void
   initializeSections(llvm::DenseSet<llvm::CachedHashStringRef> &ComdatGroups);

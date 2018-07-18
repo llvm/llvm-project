@@ -660,6 +660,15 @@ void MCObjectStreamer::EmitFileDirective(StringRef Filename) {
   getAssembler().addFileName(Filename);
 }
 
+void MCObjectStreamer::EmitAddrsig() {
+  getAssembler().getWriter().emitAddrsigSection();
+}
+
+void MCObjectStreamer::EmitAddrsigSym(const MCSymbol *Sym) {
+  getAssembler().registerSymbol(*Sym);
+  getAssembler().getWriter().addAddrsigSymbol(Sym);
+}
+
 void MCObjectStreamer::FinishImpl() {
   getContext().RemapDebugPaths();
 
