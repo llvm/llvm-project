@@ -30698,8 +30698,37 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   }
   case X86ISD::MOVSD:
   case X86ISD::MOVSS: {
-    SDValue V0 = peekThroughBitcasts(N->getOperand(0));
-    SDValue V1 = peekThroughBitcasts(N->getOperand(1));
+    SDValue N0 = N.getOperand(0);
+    SDValue N1 = N.getOperand(1);
+
+    // Canonicalize scalar FPOps:
+    // MOVS*(N0, OP(N0, N1)) --> MOVS*(N0, SCALAR_TO_VECTOR(OP(N0[0], N1[0])))
+    // If commutable, allow OP(N1[0], N0[0]).
+    unsigned Opcode1 = N1.getOpcode();
+    if (Opcode1 == ISD::FADD || Opcode1 == ISD::FMUL || Opcode1 == ISD::FSUB ||
+        Opcode1 == ISD::FDIV) {
+      SDValue N10 = N1.getOperand(0);
+      SDValue N11 = N1.getOperand(1);
+      if (N10 == N0 ||
+          (N11 == N0 && (Opcode1 == ISD::FADD || Opcode1 == ISD::FMUL))) {
+        if (N10 != N0)
+          std::swap(N10, N11);
+        MVT SVT = VT.getVectorElementType();
+        SDValue ZeroIdx = DAG.getIntPtrConstant(0, DL);
+        N10 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SVT, N10, ZeroIdx);
+        N11 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SVT, N11, ZeroIdx);
+        SDValue Scl = DAG.getNode(Opcode1, DL, SVT, N10, N11);
+        SDValue SclVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Scl);
+        DCI.AddToWorklist(N10.getNode());
+        DCI.AddToWorklist(N11.getNode());
+        DCI.AddToWorklist(Scl.getNode());
+        DCI.AddToWorklist(SclVec.getNode());
+        return DAG.getNode(Opcode, DL, VT, N0, SclVec);
+      }
+    }
+
+    SDValue V0 = peekThroughBitcasts(N0);
+    SDValue V1 = peekThroughBitcasts(N1);
     bool isZero0 = ISD::isBuildVectorAllZeros(V0.getNode());
     bool isZero1 = ISD::isBuildVectorAllZeros(V1.getNode());
     if (isZero0 && isZero1)

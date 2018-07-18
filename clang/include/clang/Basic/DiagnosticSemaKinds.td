@@ -2668,11 +2668,19 @@ def err_only_annotate_after_access_spec : Error<
   "access specifier can only have annotation attributes">;
 
 def err_attribute_section_invalid_for_target : Error<
-  "argument to 'section' attribute is not valid for this target: %0">;
+  "argument to %select{'code_seg'|'section'}1 attribute is not valid for this target: %0">;
 def warn_mismatched_section : Warning<
-  "section does not match previous declaration">, InGroup<Section>;
+  "%select{codeseg|section}0 does not match previous declaration">, InGroup<Section>;
 def warn_attribute_section_on_redeclaration : Warning<
   "section attribute is specified on redeclared variable">, InGroup<Section>;
+def err_mismatched_code_seg_base : Error<
+  "derived class must specify the same code segment as its base classes">;
+def err_mismatched_code_seg_override : Error<
+  "overriding virtual function must specify the same code segment as its overridden function">;
+def err_conflicting_codeseg_attribute : Error<
+  "conflicting code segment specifiers">;
+def warn_duplicate_codeseg_attribute : Warning<
+  "duplicate code segment specifiers">, InGroup<Section>;
 
 def err_anonymous_property: Error<
   "anonymous property is not supported">;

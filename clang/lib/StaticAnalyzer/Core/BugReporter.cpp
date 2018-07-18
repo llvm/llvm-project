@@ -2562,7 +2562,6 @@ generateVisitorsDiagnostics(BugReport *R, const ExplodedNode *ErrorNode,
           assert(!LastPiece &&
                  "There can only be one final piece in a diagnostic.");
           LastPiece = std::move(Piece);
-          llvm::errs() << "Writing to last piece" << "\n";
           (*Notes)[ErrorNode].push_back(LastPiece);
         }
       }

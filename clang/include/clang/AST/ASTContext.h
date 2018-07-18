@@ -2289,6 +2289,7 @@ public:
                            const ObjCMethodDecl *MethodImp);
 
   bool UnwrapSimilarTypes(QualType &T1, QualType &T2);
+  bool UnwrapSimilarArrayTypes(QualType &T1, QualType &T2);
 
   /// Determine if two types are similar, according to the C++ rules. That is,
   /// determine if they are the same other than qualifiers on the initial

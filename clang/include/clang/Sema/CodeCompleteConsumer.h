@@ -895,9 +895,11 @@ public:
     computeCursorKindAndAvailability();
   }
 
-  /// Retrieve the declaration stored in this result.
+  /// Retrieve the declaration stored in this result. This might be nullptr if
+  /// Kind is RK_Pattern.
   const NamedDecl *getDeclaration() const {
-    assert(Kind == RK_Declaration && "Not a declaration result");
+    assert(((Kind == RK_Declaration) || (Kind == RK_Pattern)) &&
+           "Not a declaration or pattern result");
     return Declaration;
   }
 

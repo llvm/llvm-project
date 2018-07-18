@@ -236,8 +236,8 @@ defm pack_dyn_relocs:
   MetaVarName<"[none,android,relr,android+relr]">;
 
 defm use_android_relr_tags: B<"use-android-relr-tags",
-    "use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
-    "use SHT_RELR / DT_RELR* tags (default)">;
+    "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
+    "Use SHT_RELR / DT_RELR* tags (default)">;
 
 defm pie: B<"pie",
     "Create a position independent executable",

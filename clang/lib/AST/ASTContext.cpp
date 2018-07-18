@@ -5008,28 +5008,29 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
 /// Attempt to unwrap two types that may both be array types with the same bound
 /// (or both be array types of unknown bound) for the purpose of comparing the
 /// cv-decomposition of two types per C++ [conv.qual].
-static void unwrapSimilarArrayTypes(ASTContext &Ctx, QualType &T1,
-                                    QualType &T2) {
+bool ASTContext::UnwrapSimilarArrayTypes(QualType &T1, QualType &T2) {
+  bool UnwrappedAny = false;
   while (true) {
-    auto *AT1 = Ctx.getAsArrayType(T1);
-    if (!AT1) return;
+    auto *AT1 = getAsArrayType(T1);
+    if (!AT1) return UnwrappedAny;
 
-    auto *AT2 = Ctx.getAsArrayType(T2);
-    if (!AT2) return;
+    auto *AT2 = getAsArrayType(T2);
+    if (!AT2) return UnwrappedAny;
 
     // If we don't have two array types with the same constant bound nor two
     // incomplete array types, we've unwrapped everything we can.
     if (auto *CAT1 = dyn_cast<ConstantArrayType>(AT1)) {
       auto *CAT2 = dyn_cast<ConstantArrayType>(AT2);
       if (!CAT2 || CAT1->getSize() != CAT2->getSize())
-        return;
+        return UnwrappedAny;
     } else if (!isa<IncompleteArrayType>(AT1) ||
                !isa<IncompleteArrayType>(AT2)) {
-      return;
+      return UnwrappedAny;
     }
 
     T1 = AT1->getElementType();
     T2 = AT2->getElementType();
+    UnwrappedAny = true;
   }
 }
 
@@ -5046,7 +5047,7 @@ static void unwrapSimilarArrayTypes(ASTContext &Ctx, QualType &T1,
 /// \return \c true if a pointer type was unwrapped, \c false if we reached a
 /// pair of types that can't be unwrapped further.
 bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2) {
-  unwrapSimilarArrayTypes(*this, T1, T2);
+  UnwrapSimilarArrayTypes(T1, T2);
 
   const auto *T1PtrType = T1->getAs<PointerType>();
   const auto *T2PtrType = T2->getAs<PointerType>();
@@ -5055,7 +5056,7 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2) {
     T2 = T2PtrType->getPointeeType();
     return true;
   }
-  
+
   const auto *T1MPType = T1->getAs<MemberPointerType>();
   const auto *T2MPType = T2->getAs<MemberPointerType>();
   if (T1MPType && T2MPType && 

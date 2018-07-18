@@ -57,36 +57,36 @@ size_t TracePC::GetTotalPCCoverage() {
   return Res;
 }
 
-// Initializes unstable counters by copying Inline8bitCounters to unstable
-// counters.
-void TracePC::InitializeUnstableCounters() {
+template<class CallBack>
+void TracePC::IterateInline8bitCounters(CallBack CB) const {
   if (NumInline8bitCounters && NumInline8bitCounters == NumPCsInPCTables) {
-    size_t UnstableIdx = 0;
+    size_t CounterIdx = 0;
     for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
       uint8_t *Beg = ModuleCounters[i].Start;
       size_t Size = ModuleCounters[i].Stop - Beg;
       assert(Size == (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
-      for (size_t j = 0; j < Size; j++, UnstableIdx++)
-        if (UnstableCounters[UnstableIdx] != kUnstableCounter)
-          UnstableCounters[UnstableIdx] = Beg[j];
+      for (size_t j = 0; j < Size; j++, CounterIdx++)
+        CB(i, j, CounterIdx);
     }
   }
+}
+
+// Initializes unstable counters by copying Inline8bitCounters to unstable
+// counters.
+void TracePC::InitializeUnstableCounters() {
+  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
+    if (UnstableCounters[UnstableIdx] != kUnstableCounter)
+      UnstableCounters[UnstableIdx] = ModuleCounters[i].Start[j];
+  });
 }
 
 // Compares the current counters with counters from previous runs
 // and records differences as unstable edges.
 void TracePC::UpdateUnstableCounters() {
-  if (NumInline8bitCounters && NumInline8bitCounters == NumPCsInPCTables) {
-    size_t UnstableIdx = 0;
-    for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
-      uint8_t *Beg = ModuleCounters[i].Start;
-      size_t Size = ModuleCounters[i].Stop - Beg;
-      assert(Size == (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
-      for (size_t j = 0; j < Size; j++, UnstableIdx++)
-        if (Beg[j] != UnstableCounters[UnstableIdx])
-          UnstableCounters[UnstableIdx] = kUnstableCounter;
-    }
-  }
+  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
+    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx])
+      UnstableCounters[UnstableIdx] = kUnstableCounter;
+  });
 }
 
 void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
@@ -191,15 +191,10 @@ void TracePC::UpdateObservedPCs() {
 
   if (NumPCsInPCTables) {
     if (NumInline8bitCounters == NumPCsInPCTables) {
-      for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++) {
-        uint8_t *Beg = ModuleCounters[i].Start;
-        size_t Size = ModuleCounters[i].Stop - Beg;
-        assert(Size ==
-               (size_t)(ModulePCTable[i].Stop - ModulePCTable[i].Start));
-        for (size_t j = 0; j < Size; j++)
-          if (Beg[j])
-            Observe(ModulePCTable[i].Start[j]);
-      }
+      IterateInline8bitCounters([&](int i, int j, int CounterIdx) {
+        if (ModuleCounters[i].Start[j])
+          Observe(ModulePCTable[i].Start[j]);
+      });
     } else if (NumGuards == NumPCsInPCTables) {
       size_t GuardIdx = 1;
       for (size_t i = 0; i < NumModules; i++) {
