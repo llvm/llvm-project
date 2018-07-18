@@ -39,7 +39,6 @@ public:
   template <class ELFT> void addCombinedLTOObject();
   template <class ELFT> void addSymbolWrap(StringRef Name);
   void applySymbolWrap();
-  void applySymbolWrapReloc();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 

@@ -183,6 +183,18 @@ struct S {
   double x;
 };
 
+void implicit_store(_Atomic(struct S) *a, struct S s) {
+  // CHECK-LABEL: @implicit_store(
+  // CHECK: store atomic i64 %{{.*}}, i64* %{{.*}} seq_cst, align 8
+  *a = s;
+}
+
+struct S implicit_load(_Atomic(struct S) *a) {
+  // CHECK-LABEL: @implicit_load(
+  // CHECK: load atomic i64, i64* %{{.*}} seq_cst, align 8
+  return *a;
+}
+
 struct S fd1(struct S *a) {
   // CHECK-LABEL: @fd1
   // CHECK: [[RETVAL:%.*]] = alloca %struct.S, align 4

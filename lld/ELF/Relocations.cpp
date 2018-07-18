@@ -1010,7 +1010,7 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   }
 
   // If a relocation needs PLT, we create PLT and GOTPLT slots for the symbol.
-  if (needsPlt(Expr) && !Sym.isInPlt() && Sym.IsUsedInRegularObj) {
+  if (needsPlt(Expr) && !Sym.isInPlt()) {
     if (Sym.isGnuIFunc() && !Sym.IsPreemptible)
       addPltEntry<ELFT>(InX::Iplt, InX::IgotPlt, InX::RelaIplt,
                         Target->IRelativeRel, Sym);

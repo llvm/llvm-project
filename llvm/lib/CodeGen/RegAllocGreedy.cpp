@@ -127,7 +127,8 @@ static cl::opt<bool> EnableDeferredSpilling(
 
 static cl::opt<unsigned>
     HugeSizeForSplit("huge-size-for-split", cl::Hidden,
-                     cl::desc("Last chance recoloring max depth"),
+                     cl::desc("A threshold of live range size which may cause "
+                              "high compile time cost in global splitting."),
                      cl::init(5000));
 
 // FIXME: Find a good default for this flag and remove the flag.

@@ -7,19 +7,19 @@ CHECK: Module [[MOD:.*]]
 CHECK: SymbolVendor ([[MOD]])
 CHECK:     CompileUnit{{.*}}, language = "c++", file = '{{.*}}\VariablesTest.cpp'
 CHECK-DAG:   Variable{{.*}}, name = "g_IntVar"
-CHECK-SAME:  scope = global, external
+CHECK-SAME:  scope = global, location = {{.*}}, external
 CHECK-DAG:   Variable{{.*}}, name = "m_StaticClassMember"
-CHECK-SAME:  scope = global, external
+CHECK-SAME:  scope = global, location = {{.*}}, external
 CHECK-DAG:   Variable{{.*}}, name = "g_pConst"
-CHECK-SAME:  scope = global, external
+CHECK-SAME:  scope = global, location = {{.*}}, external
 CHECK-DAG:   Variable{{.*}}, name = "same_name_var"
-CHECK-SAME:  scope = global, external
+CHECK-SAME:  scope = global, location = {{.*}}, external
 CHECK-DAG:   Variable{{.*}}, name = "g_EnumVar"
-CHECK-SAME:  scope = global, external
+CHECK-SAME:  scope = global, location = {{.*}}, external
 CHECK-DAG:   Variable{{.*}}, name = "g_tls"
-CHECK-SAME:  scope = thread local, external
+CHECK-SAME:  scope = thread local, location = {{.*}}, external
 CHECK-DAG:   Variable{{.*}}, name = "ClassVar"
-CHECK-SAME:  scope = global, external
+CHECK-SAME:  scope = global, location = {{.*}}, external
 CHECK-DAG:   Variable{{.*}}, name = "g_Const"
 CHECK-SAME:  scope = ??? (2)
 

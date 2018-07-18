@@ -1,0 +1,47 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump -d -C %t | FileCheck --check-prefix=DEMANGLE %s
+# RUN: llvm-objdump -d --demangle=itanium %t | FileCheck --check-prefix=DEMANGLE %s
+# RUN: llvm-objdump -d %t | FileCheck --check-prefix=NO-DEMANGLE %s
+# RUN: llvm-objdump -d --demangle=none %t | FileCheck --check-prefix=NO-DEMANGLE %s
+# RUN: llvm-objdump -d -C=wrong-style %t 2>&1 | FileCheck --check-prefix=BAD-STYLE %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Content:         "0000000000000000"
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1010
+    AddressAlign:    0x0000000000000010
+    Content:         "0000000000000000"
+Symbols:
+  Local:
+    - Name:     _Z3fooi
+      Type:     STT_FUNC
+      Section:  .text1
+      Value:    0x1000
+    - Name:     _Z3foov
+      Type:     STT_FUNC
+      Section:  .text2
+      Value:    0x1010
+
+# We just want to check that the symbols are demangled
+# DEMANGLE: foo(int)
+# DEMANGLE: foo()
+
+# NO-DEMANGLE: _Z3fooi
+# NO-DEMANGLE: _Z3foov
+
+# BAD-STYLE: warning: Unsupported demangling style.
+# BAD-STYLE: _Z3fooi
+# BAD-STYLE: _Z3foov
