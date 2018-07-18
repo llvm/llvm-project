@@ -98,9 +98,14 @@ FileSpec HostInfoWindows::GetProgramFileSpec() {
 }
 
 FileSpec HostInfoWindows::GetDefaultShell() {
+  // Try to retrieve ComSpec from the environment. On the rare occasion
+  // that it fails, try a well-known path for ComSpec instead.
+
   std::string shell;
-  GetEnvironmentVar("ComSpec", shell);
-  return FileSpec(shell, false);
+  if (GetEnvironmentVar("ComSpec", shell))
+    return FileSpec(shell, false);
+
+  return FileSpec("C:\\Windows\\system32\\cmd.exe", false);
 }
 
 bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,
