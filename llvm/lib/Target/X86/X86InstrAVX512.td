@@ -6452,7 +6452,9 @@ multiclass avx512_mov_hilo_packed<bits<8> opc, string OpcodeStr,
                   Sched<[SchedWriteFShuffle.XMM.Folded, ReadAfterLd]>, EVEX_4V;
 }
 
-defm VMOVHPSZ128 : avx512_mov_hilo_packed<0x16, "vmovhps", X86Movlhps,
+// No patterns for MOVLPS/MOVHPS as the Movlhps node should only be created in
+// SSE1. And MOVLPS pattern is even more complex.
+defm VMOVHPSZ128 : avx512_mov_hilo_packed<0x16, "vmovhps", null_frag,
                                   v4f32x_info>, EVEX_CD8<32, CD8VT2>, PS;
 defm VMOVHPDZ128 : avx512_mov_hilo_packed<0x16, "vmovhpd", X86Unpckl,
                                   v2f64x_info>, EVEX_CD8<64, CD8VT1>, PD, VEX_W;

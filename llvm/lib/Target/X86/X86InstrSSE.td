@@ -661,19 +661,16 @@ let Predicates = [UseSSE1] in {
 // SSE 1 & 2 - Move Low packed FP Instructions
 //===----------------------------------------------------------------------===//
 
-multiclass sse12_mov_hilo_packed_base<bits<8>opc, SDNode psnode, SDNode pdnode,
+multiclass sse12_mov_hilo_packed_base<bits<8>opc,  SDNode pdnode,
                                       string base_opc, string asm_opr> {
+  // No pattern as they need be special cased between high and low.
   let hasSideEffects = 0, mayLoad = 1 in
   def PSrm : PI<opc, MRMSrcMem,
-         (outs VR128:$dst), (ins VR128:$src1, f64mem:$src2),
-         !strconcat(base_opc, "s", asm_opr),
-     [(set VR128:$dst,
-       (psnode VR128:$src1,
-              (bc_v4f32 (v2f64 (scalar_to_vector (loadf64 addr:$src2))))))],
-              SSEPackedSingle>, PS,
-     Sched<[SchedWriteFShuffle.XMM.Folded, ReadAfterLd]>;
+                (outs VR128:$dst), (ins VR128:$src1, f64mem:$src2),
+                !strconcat(base_opc, "s", asm_opr),
+                [], SSEPackedSingle>, PS,
+                Sched<[SchedWriteFShuffle.XMM.Folded, ReadAfterLd]>;
 
-  let hasSideEffects = 0, mayLoad = 1 in
   def PDrm : PI<opc, MRMSrcMem,
          (outs VR128:$dst), (ins VR128:$src1, f64mem:$src2),
          !strconcat(base_opc, "d", asm_opr),
@@ -683,19 +680,19 @@ multiclass sse12_mov_hilo_packed_base<bits<8>opc, SDNode psnode, SDNode pdnode,
      Sched<[SchedWriteFShuffle.XMM.Folded, ReadAfterLd]>;
 }
 
-multiclass sse12_mov_hilo_packed<bits<8>opc, SDPatternOperator psnode,
-                                 SDPatternOperator pdnode, string base_opc> {
+multiclass sse12_mov_hilo_packed<bits<8>opc, SDPatternOperator pdnode,
+                                 string base_opc> {
   let Predicates = [UseAVX] in
-    defm V#NAME : sse12_mov_hilo_packed_base<opc, psnode, pdnode, base_opc,
+    defm V#NAME : sse12_mov_hilo_packed_base<opc, pdnode, base_opc,
                                     "\t{$src2, $src1, $dst|$dst, $src1, $src2}">,
                                     VEX_4V, VEX_WIG;
 
   let Constraints = "$src1 = $dst" in
-    defm NAME : sse12_mov_hilo_packed_base<opc, psnode, pdnode, base_opc,
+    defm NAME : sse12_mov_hilo_packed_base<opc,  pdnode, base_opc,
                                     "\t{$src2, $dst|$dst, $src2}">;
 }
 
-defm MOVL : sse12_mov_hilo_packed<0x12, null_frag, X86Movsd, "movlp">;
+defm MOVL : sse12_mov_hilo_packed<0x12, X86Movsd, "movlp">;
 
 let SchedRW = [WriteFStore] in {
 let Predicates = [UseAVX] in {
@@ -725,13 +722,19 @@ let Predicates = [UseSSE1] in {
   def : Pat<(store (i64 (extractelt (bc_v2i64 (v4f32 VR128:$src2)),
                                  (iPTR 0))), addr:$src1),
             (MOVLPSmr addr:$src1, VR128:$src2)>;
+
+  // This pattern helps select MOVLPS on SSE1 only targets. With SSE2 we'll
+  // end up with a movsd or bleand instead of shufp.
+  // No need for aligned load, we're only loading 64-bits.
+  def : Pat<(X86Shufp (loadv4f32 addr:$src2), VR128:$src1, (i8 -28)),
+            (MOVLPSrm VR128:$src1, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Move Hi packed FP Instructions
 //===----------------------------------------------------------------------===//
 
-defm MOVH : sse12_mov_hilo_packed<0x16, X86Movlhps, X86Unpckl, "movhp">;
+defm MOVH : sse12_mov_hilo_packed<0x16, X86Unpckl, "movhp">;
 
 let SchedRW = [WriteFStore] in {
 // v2f64 extract element 1 is always custom lowered to unpack high to low
@@ -795,6 +798,12 @@ let Predicates = [UseSSE1] in {
             (MOVHPSrm VR128:$src1, addr:$src2)>;
   def : Pat<(X86Movlhps VR128:$src1,
                  (bc_v4f32 (v2i64 (X86vzload addr:$src2)))),
+            (MOVHPSrm VR128:$src1, addr:$src2)>;
+
+  // This pattern helps select MOVHPS on SSE1 only targets. With SSE2 we'll
+  // end up with a movsd or bleand instead of shufp.
+  // No need for aligned load, we're only loading 64-bits.
+  def : Pat<(X86Movlhps VR128:$src1, (loadv4f32 addr:$src2)),
             (MOVHPSrm VR128:$src1, addr:$src2)>;
 }
 

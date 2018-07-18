@@ -145,7 +145,7 @@ HasNoAccessDtorBase HNADBb(HNADBa); // expected-error{{implicitly-deleted copy c
 // The restriction on rvalue reference members applies to only the copy
 // constructor.
 struct RValue {
-  int &&ri = 1; // expected-warning {{binding reference member 'ri' to a temporary}} expected-note {{here}}
+  int &&ri = 1;
   RValue(RValue&&);
 };
 RValue::RValue(RValue&&) = default;

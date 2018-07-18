@@ -444,6 +444,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_ODRTAB);
   ECase(SHT_LLVM_LINKER_OPTIONS);
   ECase(SHT_LLVM_CALL_GRAPH_PROFILE);
+  ECase(SHT_LLVM_ADDRSIG);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);
   ECase(SHT_GNU_verdef);

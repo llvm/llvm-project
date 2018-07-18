@@ -27,6 +27,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::objcopy;
 using namespace object;
 using namespace ELF;
 
@@ -1387,6 +1388,7 @@ void BinaryWriter::finalize() {
 }
 
 namespace llvm {
+namespace objcopy {
 
 template class ELFBuilder<ELF64LE>;
 template class ELFBuilder<ELF64BE>;
@@ -1397,4 +1399,5 @@ template class ELFWriter<ELF64LE>;
 template class ELFWriter<ELF64BE>;
 template class ELFWriter<ELF32LE>;
 template class ELFWriter<ELF32BE>;
+} // end namespace objcopy
 } // end namespace llvm
