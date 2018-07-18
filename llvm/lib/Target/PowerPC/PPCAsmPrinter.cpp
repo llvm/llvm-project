@@ -510,6 +510,32 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
+#ifndef NDEBUG
+  // Validate that SPE and FPU are mutually exclusive in codegen
+  if (!MI->isInlineAsm()) {
+    for (const MachineOperand &MO: MI->operands()) {
+      if (MO.isReg()) {
+        unsigned Reg = MO.getReg();
+        if (Subtarget->hasSPE()) {
+          if (PPC::F4RCRegClass.contains(Reg) ||
+              PPC::F8RCRegClass.contains(Reg) ||
+              PPC::QBRCRegClass.contains(Reg) ||
+              PPC::QFRCRegClass.contains(Reg) ||
+              PPC::QSRCRegClass.contains(Reg) ||
+              PPC::VFRCRegClass.contains(Reg) ||
+              PPC::VRRCRegClass.contains(Reg) ||
+              PPC::VSFRCRegClass.contains(Reg) ||
+              PPC::VSSRCRegClass.contains(Reg)
+              )
+            llvm_unreachable("SPE targets cannot have FPRegs!");
+        } else {
+          if (PPC::SPERCRegClass.contains(Reg))
+            llvm_unreachable("SPE register found in FPU-targeted code!");
+        }
+      }
+    }
+  }
+#endif
   // Lower multi-instruction pseudo operations.
   switch (MI->getOpcode()) {
   default: break;
@@ -1486,6 +1512,7 @@ void PPCDarwinAsmPrinter::EmitStartOfAsmFile(Module &M) {
     "ppc750",
     "ppc970",
     "ppcA2",
+    "ppce500",
     "ppce500mc",
     "ppce5500",
     "power3",

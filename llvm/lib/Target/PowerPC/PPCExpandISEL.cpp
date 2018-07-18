@@ -285,7 +285,7 @@ void PPCExpandISEL::handleSpecialCases(BlockISELList &BIL,
 
     // Special case 1, all registers used by ISEL are the same one.
     if (!IsADDIInstRequired && !IsORIInstRequired) {
-      LLVM_DEBUG(dbgs() << "Remove redudant ISEL instruction.");
+      LLVM_DEBUG(dbgs() << "Remove redundant ISEL instruction.");
       // FIXME: if the CR field used has no other uses, we could eliminate the
       // instruction that defines it. This would have to be done manually
       // since this pass runs too late to run DCE after it.
@@ -305,7 +305,7 @@ void PPCExpandISEL::handleSpecialCases(BlockISELList &BIL,
     // thereby preventing this ISEL from being folded.
     if (useSameRegister(TrueValue, FalseValue) && (BIL.size() == 1)) {
       LLVM_DEBUG(
-          dbgs() << "Fold the ISEL instruction to an unconditonal copy.");
+          dbgs() << "Fold the ISEL instruction to an unconditional copy.");
       NumFolded++;
       // Note: we're using both the TrueValue and FalseValue operands so as
       // not to lose the kill flag if it is set on either of them.

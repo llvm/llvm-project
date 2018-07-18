@@ -67,7 +67,7 @@ static void updatePHIs(MachineBasicBlock *Successor, MachineBasicBlock *OrigMBB,
     for (unsigned i = 2, e = MI.getNumOperands() + 1; i != e; i += 2) {
       MachineOperand &MO = MI.getOperand(i);
       if (MO.getMBB() == OrigMBB) {
-        // Check if the instruction is actualy defined in NewMBB.
+        // Check if the instruction is actually defined in NewMBB.
         if (MI.getOperand(i - 1).isReg()) {
           MachineInstr *DefMI = MRI->getVRegDef(MI.getOperand(i - 1).getReg());
           if (DefMI->getParent() == NewMBB ||
@@ -152,7 +152,7 @@ static bool splitMBB(BlockSplitInfo &BSI) {
   if (ThisMBB->succ_size() != 2) {
     LLVM_DEBUG(
         dbgs() << "Don't know how to handle blocks that don't have exactly"
-               << " two succesors.\n");
+               << " two successors.\n");
     return false;
   }
 

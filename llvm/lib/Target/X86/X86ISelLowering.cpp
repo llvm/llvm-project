@@ -29387,14 +29387,14 @@ static bool matchBinaryVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
     if (isTargetShuffleEquivalent(Mask, {0, 0}) && AllowFloatDomain) {
       V2 = V1;
       V1 = (SM_SentinelUndef == Mask[0] ? DAG.getUNDEF(MVT::v4f32) : V1);
-      Shuffle = X86ISD::MOVLHPS;
-      SrcVT = DstVT = MVT::v4f32;
+      Shuffle = Subtarget.hasSSE2() ? X86ISD::UNPCKL : X86ISD::MOVLHPS;
+      SrcVT = DstVT = Subtarget.hasSSE2() ? MVT::v2f64 : MVT::v4f32;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {1, 1}) && AllowFloatDomain) {
       V2 = V1;
-      Shuffle = X86ISD::MOVHLPS;
-      SrcVT = DstVT = MVT::v4f32;
+      Shuffle = Subtarget.hasSSE2() ? X86ISD::UNPCKH : X86ISD::MOVHLPS;
+      SrcVT = DstVT = Subtarget.hasSSE2() ? MVT::v2f64 : MVT::v4f32;
       return true;
     }
     if (isTargetShuffleEquivalent(Mask, {0, 3}) && Subtarget.hasSSE2() &&

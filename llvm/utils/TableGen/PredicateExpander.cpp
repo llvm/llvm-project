@@ -44,6 +44,12 @@ void PredicateExpander::expandCheckRegOperand(formatted_raw_ostream &OS,
   OS << Reg->getName();
 }
 
+void PredicateExpander::expandCheckInvalidRegOperand(formatted_raw_ostream &OS,
+                                                     int OpIndex) {
+  OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
+     << ").getReg() " << (shouldNegate() ? "!= " : "== ") << "0";
+}
+
 void PredicateExpander::expandCheckSameRegOperand(formatted_raw_ostream &OS,
                                                   int First, int Second) {
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << First
@@ -205,6 +211,9 @@ void PredicateExpander::expandPredicate(formatted_raw_ostream &OS,
   if (Rec->isSubClassOf("CheckRegOperand"))
     return expandCheckRegOperand(OS, Rec->getValueAsInt("OpIndex"),
                                  Rec->getValueAsDef("Reg"));
+
+  if (Rec->isSubClassOf("CheckInvalidRegOperand"))
+    return expandCheckInvalidRegOperand(OS, Rec->getValueAsInt("OpIndex"));
 
   if (Rec->isSubClassOf("CheckImmOperand"))
     return expandCheckImmOperand(OS, Rec->getValueAsInt("OpIndex"),

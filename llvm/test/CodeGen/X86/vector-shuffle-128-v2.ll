@@ -1301,3 +1301,18 @@ define <2 x double> @shuffle_mem_v2f64_10(<2 x double>* %ptr) {
   %shuffle = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 1, i32 0>
   ret <2 x double> %shuffle
 }
+
+define <2 x double> @shuffle_mem_v2f64_31(<2 x double> %a, <2 x double>* %b) {
+; SSE-LABEL: shuffle_mem_v2f64_31:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shuffle_mem_v2f64_31:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; AVX-NEXT:    retq
+  %c = load <2 x double>, <2 x double>* %b
+  %f = shufflevector <2 x double> %a, <2 x double> %c, <2 x i32> <i32 3, i32 1>
+  ret <2 x double> %f
+}

@@ -2242,8 +2242,6 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_ehsize = sizeof(Elf_Ehdr);
   EHdr->e_phnum = Phdrs.size();
   EHdr->e_shentsize = sizeof(Elf_Shdr);
-  EHdr->e_shnum = OutputSections.size() + 1;
-  EHdr->e_shstrndx = InX::ShStrTab->getParent()->SectionIndex;
 
   if (!Config->Relocatable) {
     EHdr->e_phoff = sizeof(Elf_Ehdr);
@@ -2264,8 +2262,30 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
     ++HBuf;
   }
 
-  // Write the section header table. Note that the first table entry is null.
+  // Write the section header table.
+  //
+  // The ELF header can only store numbers up to SHN_LORESERVE in the e_shnum
+  // and e_shstrndx fields. When the value of one of these fields exceeds
+  // SHN_LORESERVE ELF requires us to put sentinel values in the ELF header and
+  // use fields in the section header at index 0 to store
+  // the value. The sentinel values and fields are:
+  // e_shnum = 0, SHdrs[0].sh_size = number of sections.
+  // e_shstrndx = SHN_XINDEX, SHdrs[0].sh_link = .shstrtab section index.
   auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
+  size_t Num = OutputSections.size() + 1;
+  if (Num >= SHN_LORESERVE)
+    SHdrs->sh_size = Num;
+  else
+    EHdr->e_shnum = Num;
+
+  uint32_t StrTabIndex = InX::ShStrTab->getParent()->SectionIndex;
+  if (StrTabIndex >= SHN_LORESERVE) {
+    SHdrs->sh_link = StrTabIndex;
+    EHdr->e_shstrndx = SHN_XINDEX;
+  } else {
+    EHdr->e_shstrndx = StrTabIndex;
+  }
+
   for (OutputSection *Sec : OutputSections)
     Sec->writeHeaderTo<ELFT>(++SHdrs);
 }

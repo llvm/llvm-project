@@ -173,7 +173,27 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       {PPC::V23, -144},
       {PPC::V22, -160},
       {PPC::V21, -176},
-      {PPC::V20, -192}};
+      {PPC::V20, -192},
+  
+      // SPE register save area (overlaps Vector save area).
+      {PPC::S31, -8},
+      {PPC::S30, -16},
+      {PPC::S29, -24},
+      {PPC::S28, -32},
+      {PPC::S27, -40},
+      {PPC::S26, -48},
+      {PPC::S25, -56},
+      {PPC::S24, -64},
+      {PPC::S23, -72},
+      {PPC::S22, -80},
+      {PPC::S21, -88},
+      {PPC::S20, -96},
+      {PPC::S19, -104},
+      {PPC::S18, -112},
+      {PPC::S17, -120},
+      {PPC::S16, -128},
+      {PPC::S15, -136},
+      {PPC::S14, -144}};
 
   static const SpillSlot Offsets64[] = {
       // Floating-point register save area offsets.
@@ -1676,7 +1696,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   unsigned MinGPR = PPC::R31;
   unsigned MinG8R = PPC::X31;
   unsigned MinFPR = PPC::F31;
-  unsigned MinVR = PPC::V31;
+  unsigned MinVR = Subtarget.hasSPE() ? PPC::S31 : PPC::V31;
 
   bool HasGPSaveArea = false;
   bool HasG8SaveArea = false;
@@ -1691,7 +1711,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     unsigned Reg = CSI[i].getReg();
-    if (PPC::GPRCRegClass.contains(Reg)) {
+    if (PPC::GPRCRegClass.contains(Reg) ||
+        PPC::SPE4RCRegClass.contains(Reg)) {
       HasGPSaveArea = true;
 
       GPRegs.push_back(CSI[i]);
@@ -1720,7 +1741,10 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
       ; // do nothing, as we already know whether CRs are spilled
     } else if (PPC::VRSAVERCRegClass.contains(Reg)) {
       HasVRSAVESaveArea = true;
-    } else if (PPC::VRRCRegClass.contains(Reg)) {
+    } else if (PPC::VRRCRegClass.contains(Reg) ||
+               PPC::SPERCRegClass.contains(Reg)) {
+      // Altivec and SPE are mutually exclusive, but have the same stack
+      // alignment requirements, so overload the save area for both cases.
       HasVRSaveArea = true;
 
       VRegs.push_back(CSI[i]);
@@ -1863,6 +1887,8 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
     LowerBound -= 4; // The VRSAVE save area is always 4 bytes long.
   }
 
+  // Both Altivec and SPE have the same alignment and padding requirements
+  // within the stack frame.
   if (HasVRSaveArea) {
     // Insert alignment padding, we need 16-byte alignment. Note: for positive
     // number the alignment formula is : y = (x + (n-1)) & (~(n-1)). But since

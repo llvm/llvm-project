@@ -2486,6 +2486,30 @@ static inline void printFields(formatted_raw_ostream &OS, StringRef Str1,
   OS.flush();
 }
 
+template <class ELFT>
+static std::string getSectionHeadersNumString(const ELFFile<ELFT> *Obj) {
+  const typename ELFT::Ehdr *ElfHeader = Obj->getHeader();
+  if (ElfHeader->e_shnum != 0)
+    return to_string(ElfHeader->e_shnum);
+
+  ArrayRef<typename ELFT::Shdr> Arr = unwrapOrError(Obj->sections());
+  if (Arr.empty())
+    return "0";
+  return "0 (" + to_string(Arr[0].sh_size) + ")";
+}
+
+template <class ELFT>
+static std::string getSectionHeaderTableIndexString(const ELFFile<ELFT> *Obj) {
+  const typename ELFT::Ehdr *ElfHeader = Obj->getHeader();
+  if (ElfHeader->e_shstrndx != SHN_XINDEX)
+    return to_string(ElfHeader->e_shstrndx);
+
+  ArrayRef<typename ELFT::Shdr> Arr = unwrapOrError(Obj->sections());
+  if (Arr.empty())
+    return "65535 (corrupt: out of range)";
+  return to_string(ElfHeader->e_shstrndx) + " (" + to_string(Arr[0].sh_link) + ")";
+}
+
 template <class ELFT> void GNUStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
   const Elf_Ehdr *e = Obj->getHeader();
   OS << "ELF Header:\n";
@@ -2531,9 +2555,9 @@ template <class ELFT> void GNUStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
   printFields(OS, "Number of program headers:", Str);
   Str = to_string(e->e_shentsize) + " (bytes)";
   printFields(OS, "Size of section headers:", Str);
-  Str = to_string(e->e_shnum);
+  Str = getSectionHeadersNumString(Obj);
   printFields(OS, "Number of section headers:", Str);
-  Str = to_string(e->e_shstrndx);
+  Str = getSectionHeaderTableIndexString(Obj);
   printFields(OS, "Section header string table index:", Str);
 }
 
@@ -4019,8 +4043,8 @@ template <class ELFT> void LLVMStyle<ELFT>::printFileHeaders(const ELFO *Obj) {
     W.printNumber("ProgramHeaderEntrySize", e->e_phentsize);
     W.printNumber("ProgramHeaderCount", e->e_phnum);
     W.printNumber("SectionHeaderEntrySize", e->e_shentsize);
-    W.printNumber("SectionHeaderCount", e->e_shnum);
-    W.printNumber("StringTableSectionIndex", e->e_shstrndx);
+    W.printString("SectionHeaderCount", getSectionHeadersNumString(Obj));
+    W.printString("StringTableSectionIndex", getSectionHeaderTableIndexString(Obj));
   }
 }
 
