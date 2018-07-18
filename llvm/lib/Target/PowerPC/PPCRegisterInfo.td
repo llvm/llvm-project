@@ -38,6 +38,13 @@ class GP8<GPR SubReg, string n> : PPCReg<n> {
   let SubRegIndices = [sub_32];
 }
 
+// SPE - One of the 32 64-bit general-purpose registers (SPE)
+class SPE<GPR SubReg, string n> : PPCReg<n> {
+  let HWEncoding = SubReg.HWEncoding;
+  let SubRegs = [SubReg];
+  let SubRegIndices = [sub_32];
+}
+
 // SPR - One of the 32-bit special-purpose registers
 class SPR<bits<10> num, string n> : PPCReg<n> {
   let HWEncoding{9-0} = num;
@@ -98,6 +105,12 @@ foreach Index = 0-31 in {
 foreach Index = 0-31 in {
   def X#Index : GP8<!cast<GPR>("R"#Index), "r"#Index>,
                     DwarfRegNum<[Index, -2]>;
+}
+
+// SPE registers
+foreach Index = 0-31 in {
+  def S#Index : SPE<!cast<GPR>("R"#Index), "r"#Index>,
+                    DwarfRegNum<[!add(Index, 1200), !add(Index, 1200)]>;
 }
 
 // Floating-point registers
@@ -208,6 +221,12 @@ def CTR8 : SPR<9, "ctr">, DwarfRegNum<[66, -2]>;
 // VRsave register
 def VRSAVE: SPR<256, "vrsave">, DwarfRegNum<[109]>;
 
+// SPE extra registers
+// SPE Accumulator for multiply-accumulate SPE operations.  Never directly
+// accessed, so there's no real encoding for it.
+def SPEACC: DwarfRegNum<[99, 111]>;
+def SPEFSCR: SPR<512, "spefscr">, DwarfRegNum<[612, 112]>;
+
 def XER: SPR<1, "xer">, DwarfRegNum<[76]>;
 
 // Carry bit.  In the architecture this is really bit 0 of the XER register
@@ -275,6 +294,12 @@ def G8RC_NOX0 : RegisterClass<"PPC", [i64], 64, (add (sub G8RC, X0), ZERO8)> {
     return S.isPPC64() && S.isSVR4ABI();
   }];
 }
+
+def SPERC : RegisterClass<"PPC", [f64], 64, (add (sequence "S%u", 2, 12),
+                                                (sequence "S%u", 30, 13),
+                                                S31, S0, S1)>;
+
+def SPE4RC : RegisterClass<"PPC", [f32], 32, (add GPRC)>;
 
 // Allocate volatiles first, then non-volatiles in reverse order. With the SVR4
 // ABI the size of the Floating-point register save area is determined by the

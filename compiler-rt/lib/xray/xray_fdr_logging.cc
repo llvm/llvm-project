@@ -15,11 +15,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "xray_fdr_logging.h"
-#include <pthread.h>
 #include <cassert>
 #include <errno.h>
 #include <limits>
 #include <memory>
+#include <pthread.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <time.h>
@@ -80,6 +80,16 @@ static constexpr auto FunctionRecSize = sizeof(FunctionRecord);
 // Use a global pthread key to identify thread-local data for logging.
 static pthread_key_t Key;
 
+// Global BufferQueue.
+static BufferQueue *BQ = nullptr;
+
+static atomic_sint32_t LogFlushStatus = {
+    XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
+
+static FDRLoggingOptions FDROptions;
+
+static SpinMutex FDROptionsMutex;
+
 // This function will initialize the thread-local data structure used by the FDR
 // logging implementation and return a reference to it. The implementation
 // details require a bit of care to maintain.
@@ -114,15 +124,18 @@ static pthread_key_t Key;
 // critical section, calling a function that might be XRay instrumented (and
 // thus in turn calling into malloc by virtue of registration of the
 // thread_local's destructor).
+static_assert(alignof(ThreadLocalData) >= 64,
+              "ThreadLocalData must be cache line aligned.");
 static ThreadLocalData &getThreadLocalData() {
-  static_assert(alignof(ThreadLocalData) >= 64,
-                "ThreadLocalData must be cache line aligned.");
-  thread_local ThreadLocalData TLD;
-  thread_local bool UNUSED ThreadOnce = [] {
-    pthread_setspecific(Key, &TLD);
-    return false;
-  }();
-  return TLD;
+  thread_local typename std::aligned_storage<
+      sizeof(ThreadLocalData), alignof(ThreadLocalData)>::type TLDStorage{};
+
+  if (pthread_getspecific(Key) == NULL) {
+    new (reinterpret_cast<ThreadLocalData *>(&TLDStorage)) ThreadLocalData{};
+    pthread_setspecific(Key, &TLDStorage);
+  }
+
+  return *reinterpret_cast<ThreadLocalData *>(&TLDStorage);
 }
 
 static void writeNewBufferPreamble(tid_t Tid, timespec TS,
@@ -416,7 +429,7 @@ static bool prepareBuffer(uint64_t TSC, unsigned char CPU,
       return false;
     auto EC = TLD.BQ->getBuffer(TLD.Buffer);
     if (EC != BufferQueue::ErrorCode::Ok) {
-      Report("Failed to acquire a buffer; error=%s\n",
+      Report("Failed to prepare a buffer; error = '%s'\n",
              BufferQueue::getErrorString(EC));
       return false;
     }
@@ -462,7 +475,7 @@ isLogInitializedAndReady(BufferQueue *LBQ, uint64_t TSC, unsigned char CPU,
       auto LS = atomic_load(&LoggingStatus, memory_order_acquire);
       if (LS != XRayLogInitStatus::XRAY_LOG_FINALIZING &&
           LS != XRayLogInitStatus::XRAY_LOG_FINALIZED)
-        Report("Failed to acquire a buffer; error=%s\n",
+        Report("Failed to acquire a buffer; error = '%s'\n",
                BufferQueue::getErrorString(EC));
       return false;
     }
@@ -541,8 +554,8 @@ thread_local atomic_uint8_t Running{0};
 static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
                                 uint64_t TSC, unsigned char CPU, uint64_t Arg1,
                                 int (*wall_clock_reader)(clockid_t,
-                                                         struct timespec *),
-                                BufferQueue *BQ) XRAY_NEVER_INSTRUMENT {
+                                                         struct timespec *))
+    XRAY_NEVER_INSTRUMENT {
   __asm volatile("# LLVM-MCA-BEGIN processFunctionHook");
   // Prevent signal handler recursion, so in case we're already in a log writing
   // mode and the signal handler comes in (and is also instrumented) then we
@@ -557,8 +570,6 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
 
   auto &TLD = getThreadLocalData();
 
-  // In case the reference has been cleaned up before, we make sure we
-  // initialize it to the provided BufferQueue.
   if (TLD.BQ == nullptr)
     TLD.BQ = BQ;
 
@@ -655,15 +666,6 @@ static void processFunctionHook(int32_t FuncId, XRayEntryType Entry,
   endBufferIfFull();
   __asm volatile("# LLVM-MCA-END");
 }
-
-// Global BufferQueue.
-BufferQueue *BQ = nullptr;
-
-atomic_sint32_t LogFlushStatus = {XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
-
-FDRLoggingOptions FDROptions;
-
-SpinMutex FDROptionsMutex;
 
 static XRayFileHeader &fdrCommonHeaderInfo() {
   static std::aligned_storage<sizeof(XRayFileHeader)>::type HStorage;
@@ -789,14 +791,27 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
   // we decide to do anything further with the global buffer queue.
   __xray_log_remove_buffer_iterator();
 
+  // Once flushed, we should set the global status of the logging implementation
+  // to "uninitialized" to allow for FDR-logging multiple runs.
+  auto ResetToUnitialized = at_scope_exit([] {
+    atomic_store(&LoggingStatus, XRayLogInitStatus::XRAY_LOG_UNINITIALIZED,
+                 memory_order_release);
+  });
+
+  auto CleanupBuffers = at_scope_exit([] {
+    if (BQ != nullptr) {
+      auto &TLD = getThreadLocalData();
+      if (TLD.RecordPtr != nullptr && TLD.BQ != nullptr)
+        releaseThreadLocalBuffer(*TLD.BQ);
+      BQ->~BufferQueue();
+      InternalFree(BQ);
+      BQ = nullptr;
+    }
+  });
+
   if (fdrFlags()->no_file_flush) {
     if (Verbosity())
       Report("XRay FDR: Not flushing to file, 'no_file_flush=true'.\n");
-
-    // Clean up the buffer queue, and do not bother writing out the files!
-    BQ->~BufferQueue();
-    InternalFree(BQ);
-    BQ = nullptr;
 
     atomic_store(&LogFlushStatus, XRayLogFlushStatus::XRAY_LOG_FLUSHED,
                  memory_order_release);
@@ -913,13 +928,13 @@ static TSCAndCPU getTimestamp() XRAY_NEVER_INSTRUMENT {
 void fdrLoggingHandleArg0(int32_t FuncId,
                           XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
   auto TC = getTimestamp();
-  processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, 0, clock_gettime, BQ);
+  processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, 0, clock_gettime);
 }
 
 void fdrLoggingHandleArg1(int32_t FuncId, XRayEntryType Entry,
                           uint64_t Arg) XRAY_NEVER_INSTRUMENT {
   auto TC = getTimestamp();
-  processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, Arg, clock_gettime, BQ);
+  processFunctionHook(FuncId, Entry, TC.TSC, TC.CPU, Arg, clock_gettime);
 }
 
 void fdrLoggingHandleCustomEvent(void *Event,
@@ -1121,8 +1136,10 @@ XRayLogInitStatus fdrLoggingInit(size_t BufferSize, size_t BufferMax,
                  probeRequiredCPUFeatures() ? getTSCFrequency()
                                             : __xray::NanosecondsPerSecond,
                  memory_order_release);
-    pthread_key_create(&Key, +[](void *) {
-      auto &TLD = getThreadLocalData();
+    pthread_key_create(&Key, +[](void *TLDPtr) {
+      if (TLDPtr == nullptr)
+        return;
+      auto &TLD = *reinterpret_cast<ThreadLocalData *>(TLDPtr);
       if (TLD.BQ == nullptr)
         return;
       auto EC = TLD.BQ->releaseBuffer(TLD.Buffer);

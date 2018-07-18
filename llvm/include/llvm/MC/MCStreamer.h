@@ -924,6 +924,9 @@ public:
     return true;
   }
 
+  virtual void EmitAddrsig() {}
+  virtual void EmitAddrsigSym(const MCSymbol *Sym) {}
+
   /// Emit the given \p Instruction into the current section.
   /// PrintSchedInfo == true then schedul comment should be added to output
   virtual void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,

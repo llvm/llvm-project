@@ -22,16 +22,16 @@ struct TestData {
   s64 Second;
 };
 
-TEST(AllocatorTest, Construction) { Allocator<sizeof(TestData)> A(2 << 11, 0); }
+TEST(AllocatorTest, Construction) { Allocator<sizeof(TestData)> A(2 << 11); }
 
 TEST(AllocatorTest, Allocate) {
-  Allocator<sizeof(TestData)> A(2 << 11, 0);
+  Allocator<sizeof(TestData)> A(2 << 11);
   auto B = A.Allocate();
   ASSERT_NE(B.Data, nullptr);
 }
 
 TEST(AllocatorTest, OverAllocate) {
-  Allocator<sizeof(TestData)> A(sizeof(TestData), 0);
+  Allocator<sizeof(TestData)> A(sizeof(TestData));
   auto B1 = A.Allocate();
   (void)B1;
   auto B2 = A.Allocate();

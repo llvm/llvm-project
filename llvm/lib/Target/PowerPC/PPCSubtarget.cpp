@@ -65,6 +65,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasHardFloat = false;
   HasAltivec = false;
   HasSPE = false;
+  HasFPU = false;
   HasQPX = false;
   HasVSX = false;
   HasP8Vector = false;
@@ -136,6 +137,16 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // Set up darwin-specific properties.
   if (isDarwin())
     HasLazyResolverStubs = true;
+
+  if (HasSPE && IsPPC64)
+    report_fatal_error( "SPE is only supported for 32-bit targets.\n", false);
+  if (HasSPE && (HasAltivec || HasQPX || HasVSX || HasFPU))
+    report_fatal_error(
+        "SPE and traditional floating point cannot both be enabled.\n", false);
+
+  // If not SPE, set standard FPU
+  if (!HasSPE)
+    HasFPU = true;
 
   // QPX requires a 32-byte aligned stack. Note that we need to do this if
   // we're compiling for a BG/Q system regardless of whether or not QPX

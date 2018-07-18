@@ -43,6 +43,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/StringSaver.h"
@@ -199,6 +200,8 @@ public:
                           const RevGroupMapTy &RevGroupMap,
                           SectionOffsetsTy &SectionOffsets);
 
+  void writeAddrsigSection();
+
   MCSectionELF *createRelocationSection(MCContext &Ctx,
                                         const MCSectionELF &Sec);
 
@@ -231,6 +234,9 @@ class ELFObjectWriter : public MCObjectWriter {
   DenseMap<const MCSectionELF *, std::vector<ELFRelocationEntry>> Relocations;
 
   DenseMap<const MCSymbolELF *, const MCSymbolELF *> Renames;
+
+  bool EmitAddrsigSection = false;
+  std::vector<const MCSymbol *> AddrsigSyms;
 
   bool hasRelocationAddend() const;
 
@@ -266,6 +272,11 @@ public:
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
+
+  void emitAddrsigSection() override { EmitAddrsigSection = true; }
+  void addAddrsigSymbol(const MCSymbol *Sym) override {
+    AddrsigSyms.push_back(Sym);
+  }
 
   friend struct ELFWriter;
 };
@@ -747,6 +758,11 @@ void ELFWriter::computeSymbolTable(
   SectionOffsets[SymtabShndxSection] = std::make_pair(SecStart, SecEnd);
 }
 
+void ELFWriter::writeAddrsigSection() {
+  for (const MCSymbol *Sym : OWriter.AddrsigSyms)
+    encodeULEB128(Sym->getIndex(), W.OS);
+}
+
 MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
                                                  const MCSectionELF &Sec) {
   if (OWriter.Relocations[&Sec].empty())
@@ -977,6 +993,7 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
 
   case ELF::SHT_SYMTAB_SHNDX:
   case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
+  case ELF::SHT_LLVM_ADDRSIG:
     sh_link = SymbolTableIndex;
     break;
 
@@ -1123,6 +1140,13 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
     // string tables.
     StrTabBuilder.finalize();
   } else {
+    MCSectionELF *AddrsigSection;
+    if (OWriter.EmitAddrsigSection) {
+      AddrsigSection = Ctx.getELFSection(".llvm_addrsig", ELF::SHT_LLVM_ADDRSIG,
+                                         ELF::SHF_EXCLUDE);
+      addToSectionTable(AddrsigSection);
+    }
+
     // Compute symbol table information.
     computeSymbolTable(Asm, Layout, SectionIndexMap, RevGroupMap,
                        SectionOffsets);
@@ -1138,6 +1162,13 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) {
 
       uint64_t SecEnd = W.OS.tell();
       SectionOffsets[RelSection] = std::make_pair(SecStart, SecEnd);
+    }
+
+    if (OWriter.EmitAddrsigSection) {
+      uint64_t SecStart = W.OS.tell();
+      writeAddrsigSection();
+      uint64_t SecEnd = W.OS.tell();
+      SectionOffsets[AddrsigSection] = std::make_pair(SecStart, SecEnd);
     }
   }
 
@@ -1237,6 +1268,12 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                          Symbol.getName());
 
     Renames.insert(std::make_pair(&Symbol, Alias));
+  }
+
+  for (const MCSymbol *&Sym : AddrsigSyms) {
+    if (const MCSymbol *R = Renames.lookup(cast<MCSymbolELF>(Sym)))
+      Sym = R;
+    Sym->setUsedInReloc();
   }
 }
 

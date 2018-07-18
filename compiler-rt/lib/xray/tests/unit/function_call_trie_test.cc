@@ -19,8 +19,6 @@ namespace __xray {
 namespace {
 
 TEST(FunctionCallTrieTest, ConstructWithTLSAllocators) {
-  // FIXME: Support passing in configuration for allocators in the allocator
-  // constructors.
   profilingFlags()->setDefaults();
   FunctionCallTrie::Allocators Allocators = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(Allocators);
@@ -47,6 +45,7 @@ TEST(FunctionCallTrieTest, EnterAndExitFunction) {
 }
 
 TEST(FunctionCallTrieTest, MissingFunctionEntry) {
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
   Trie.exitFunction(1, 1);
@@ -56,6 +55,7 @@ TEST(FunctionCallTrieTest, MissingFunctionEntry) {
 }
 
 TEST(FunctionCallTrieTest, NoMatchingEntersForExit) {
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
   Trie.enterFunction(2, 1);
@@ -63,16 +63,19 @@ TEST(FunctionCallTrieTest, NoMatchingEntersForExit) {
   Trie.exitFunction(1, 5);
   const auto &R = Trie.getRoots();
 
-  ASSERT_TRUE(R.empty());
+  ASSERT_FALSE(R.empty());
+  EXPECT_EQ(R.size(), size_t{1});
 }
 
 TEST(FunctionCallTrieTest, MissingFunctionExit) {
+  profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
   Trie.enterFunction(1, 1);
   const auto &R = Trie.getRoots();
 
-  ASSERT_TRUE(R.empty());
+  ASSERT_FALSE(R.empty());
+  EXPECT_EQ(R.size(), size_t{1});
 }
 
 TEST(FunctionCallTrieTest, MultipleRoots) {

@@ -1119,6 +1119,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
+  Opts.Addrsig = Args.hasArg(OPT_faddrsig);
+
   return Success;
 }
 

@@ -46,6 +46,7 @@ namespace PPC {
     DIR_750,
     DIR_970,
     DIR_A2,
+    DIR_E500,
     DIR_E500mc,
     DIR_E5500,
     DIR_PWR3,
@@ -94,6 +95,7 @@ protected:
   bool HasHardFloat;
   bool IsPPC64;
   bool HasAltivec;
+  bool HasFPU;
   bool HasSPE;
   bool HasQPX;
   bool HasVSX;
@@ -239,6 +241,7 @@ public:
   bool hasFPCVT() const { return HasFPCVT; }
   bool hasAltivec() const { return HasAltivec; }
   bool hasSPE() const { return HasSPE; }
+  bool hasFPU() const { return HasFPU; }
   bool hasQPX() const { return HasQPX; }
   bool hasVSX() const { return HasVSX; }
   bool hasP8Vector() const { return HasP8Vector; }

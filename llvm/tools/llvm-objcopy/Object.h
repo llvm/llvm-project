@@ -26,6 +26,7 @@
 #include <vector>
 
 namespace llvm {
+namespace objcopy {
 
 class Buffer;
 class SectionBase;
@@ -714,6 +715,7 @@ public:
     return *Segments.back();
   }
 };
+} // end namespace objcopy
 } // end namespace llvm
 
 #endif // LLVM_TOOLS_OBJCOPY_OBJECT_H

@@ -6464,13 +6464,6 @@ defm VMOVLPDZ128 : avx512_mov_hilo_packed<0x12, "vmovlpd", X86Movsd,
                                   v2f64x_info>, EVEX_CD8<64, CD8VT1>, PD, VEX_W;
 
 let Predicates = [HasAVX512] in {
-  // VMOVHPS patterns
-  def : Pat<(X86Movlhps VR128X:$src1,
-               (bc_v4f32 (v2i64 (scalar_to_vector (loadi64 addr:$src2))))),
-          (VMOVHPSZ128rm VR128X:$src1, addr:$src2)>;
-  def : Pat<(X86Movlhps VR128X:$src1,
-               (bc_v4f32 (v2i64 (X86vzload addr:$src2)))),
-          (VMOVHPSZ128rm VR128X:$src1, addr:$src2)>;
   // VMOVHPD patterns
   def : Pat<(v2f64 (X86Unpckl VR128X:$src1,
                     (bc_v2f64 (v2i64 (scalar_to_vector (loadi64 addr:$src2)))))),

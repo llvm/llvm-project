@@ -319,6 +319,9 @@ public:
                           const MCExpr *Expr, SMLoc Loc,
                           const MCSubtargetInfo &STI) override;
 
+  void EmitAddrsig() override;
+  void EmitAddrsigSym(const MCSymbol *Sym) override;
+
   /// If this file is backed by an assembly streamer, this dumps the specified
   /// string in the output .s file. This capability is indicated by the
   /// hasRawTextSupport() predicate.
@@ -1844,6 +1847,17 @@ bool MCAsmStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
   }
   EmitEOL();
   return false;
+}
+
+void MCAsmStreamer::EmitAddrsig() {
+  OS << "\t.addrsig";
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitAddrsigSym(const MCSymbol *Sym) {
+  OS << "\t.addrsig_sym ";
+  Sym->print(OS, MAI);
+  EmitEOL();
 }
 
 /// EmitRawText - If this file is backed by an assembly streamer, this dumps

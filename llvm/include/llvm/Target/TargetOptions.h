@@ -108,10 +108,10 @@ namespace llvm {
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
           UniqueSectionNames(true), TrapUnreachable(false),
-          NoTrapAfterNoreturn(false),
-          EmulatedTLS(false), ExplicitEmulatedTLS(false),
-          EnableIPRA(false), EmitStackSizeSection(false),
-          EnableMachineOutliner(false), SupportsDefaultOutlining(false) {}
+          NoTrapAfterNoreturn(false), EmulatedTLS(false),
+          ExplicitEmulatedTLS(false), EnableIPRA(false),
+          EmitStackSizeSection(false), EnableMachineOutliner(false),
+          SupportsDefaultOutlining(false), EmitAddrsig(false) {}
 
     /// PrintMachineCode - This flag is enabled when the -print-machineinstrs
     /// option is specified on the command line, and should enable debugging
@@ -237,6 +237,9 @@ namespace llvm {
 
     /// Set if the target supports default outlining behaviour.
     unsigned SupportsDefaultOutlining : 1;
+
+    /// Emit address-significance table.
+    unsigned EmitAddrsig : 1;
 
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.
