@@ -1010,6 +1010,34 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
     computeLatency(LoadSU);
   }
 
+  bool isNewN = true;
+  SUnit *NewSU;
+  // This can only happen when isNewLoad is false.
+  if (N->getNodeId() != -1) {
+    NewSU = &SUnits[N->getNodeId()];
+    // If NewSU has already been scheduled, we need to clone it, but this
+    // negates the benefit to unfolding so just return SU.
+    if (NewSU->isScheduled)
+      return SU;
+    isNewN = false;
+  } else {
+    NewSU = CreateNewSUnit(N);
+    N->setNodeId(NewSU->NodeNum);
+
+    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
+    for (unsigned i = 0; i != MCID.getNumOperands(); ++i) {
+      if (MCID.getOperandConstraint(i, MCOI::TIED_TO) != -1) {
+        NewSU->isTwoAddress = true;
+        break;
+      }
+    }
+    if (MCID.isCommutable())
+      NewSU->isCommutable = true;
+
+    InitNumRegDefsLeft(NewSU);
+    computeLatency(NewSU);
+  }
+
   LLVM_DEBUG(dbgs() << "Unfolding SU #" << SU->NodeNum << "\n");
 
   // Now that we are committed to unfolding replace DAG Uses.
@@ -1017,23 +1045,6 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
     DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), i), SDValue(N, i));
   DAG->ReplaceAllUsesOfValueWith(SDValue(SU->getNode(), OldNumVals - 1),
                                  SDValue(LoadNode, 1));
-
-  SUnit *NewSU = CreateNewSUnit(N);
-  assert(N->getNodeId() == -1 && "Node already inserted!");
-  N->setNodeId(NewSU->NodeNum);
-
-  const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-  for (unsigned i = 0; i != MCID.getNumOperands(); ++i) {
-    if (MCID.getOperandConstraint(i, MCOI::TIED_TO) != -1) {
-      NewSU->isTwoAddress = true;
-      break;
-    }
-  }
-  if (MCID.isCommutable())
-    NewSU->isCommutable = true;
-
-  InitNumRegDefsLeft(NewSU);
-  computeLatency(NewSU);
 
   // Record all the edges to and from the old SU, by category.
   SmallVector<SDep, 4> ChainPreds;
@@ -1100,7 +1111,8 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
 
   if (isNewLoad)
     AvailableQueue->addNode(LoadSU);
-  AvailableQueue->addNode(NewSU);
+  if (isNewN)
+    AvailableQueue->addNode(NewSU);
 
   ++NumUnfolds;
 

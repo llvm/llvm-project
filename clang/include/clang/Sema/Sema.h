@@ -1952,6 +1952,7 @@ public:
   bool shouldLinkDependentDeclWithPrevious(Decl *D, Decl *OldDecl);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
+  Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD, bool IsDefinition);
   Decl *ActOnParamDeclarator(Scope *S, Declarator &D);
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
@@ -2445,6 +2446,8 @@ public:
                               IdentifierInfo *Format, int FormatIdx,
                               int FirstArg, unsigned AttrSpellingListIndex);
   SectionAttr *mergeSectionAttr(Decl *D, SourceRange Range, StringRef Name,
+                                unsigned AttrSpellingListIndex);
+  CodeSegAttr *mergeCodeSegAttr(Decl *D, SourceRange Range, StringRef Name,
                                 unsigned AttrSpellingListIndex);
   AlwaysInlineAttr *mergeAlwaysInlineAttr(Decl *D, SourceRange Range,
                                           IdentifierInfo *Ident,
@@ -5852,6 +5855,7 @@ public:
   /// ensure that referenceDLLExportedClassMethods is called some point later
   /// when all outer classes of Class are complete.
   void checkClassLevelDLLAttribute(CXXRecordDecl *Class);
+  void checkClassLevelCodeSegAttribute(CXXRecordDecl *Class);
 
   void referenceDLLExportedClassMethods();
 

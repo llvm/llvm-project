@@ -28,3 +28,16 @@ half_a_dozen_daffodils:
 # CHECK: .long	3674148113
 # CHECK: .long	3674148113
 
+
+nested_reps:	
+	.rep 2
+	.rep 2
+	.long 0xdeadbeef
+	.endr
+	.endr
+
+# CHECK-LABEL: nested_reps
+# CHECK: .long   3735928559
+# CHECK: .long   3735928559
+# CHECK: .long   3735928559
+# CHECK: .long   3735928559	

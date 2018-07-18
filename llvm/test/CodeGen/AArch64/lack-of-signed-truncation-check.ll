@@ -11,7 +11,7 @@
 ;   trunc + sext + icmp ne <- not canonical
 ;   shl   + ashr + icmp ne
 ;   add          + icmp ult
-;   add          + icmp uge
+;   add          + icmp uge/ugt
 ; However only the simplest form (with two shifts) gets lowered best.
 
 ; ---------------------------------------------------------------------------- ;
@@ -253,6 +253,20 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
   ret i1 %tmp1
 }
 
+; Slightly more canonical variant
+define i1 @add_ugtcmp_i16_i8(i16 %x) nounwind {
+; CHECK-LABEL: add_ugtcmp_i16_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, #128 // =128
+; CHECK-NEXT:    and w8, w8, #0xffff
+; CHECK-NEXT:    cmp w8, #255 // =255
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
+  %tmp0 = add i16 %x, 128 ; 1U << (8-1)
+  %tmp1 = icmp ugt i16 %tmp0, 255 ; (1U << 8) - 1
+  ret i1 %tmp1
+}
+
 ; Negative tests
 ; ---------------------------------------------------------------------------- ;
 
@@ -365,5 +379,16 @@ define i1 @add_ugecmp_bad_i24_i8(i24 %x) nounwind {
 ; CHECK-NEXT:    ret
   %tmp0 = add i24 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp uge i24 %tmp0, 256 ; 1U << 8
+  ret i1 %tmp1
+}
+
+; Slightly more canonical variant
+define i1 @add_ugtcmp_bad_i16_i8(i16 %x) nounwind {
+; CHECK-LABEL: add_ugtcmp_bad_i16_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+  %tmp0 = add i16 %x, 128 ; 1U << (8-1)
+  %tmp1 = icmp ugt i16 %tmp0, -1 ; when we +1 it, it will wrap to 0
   ret i1 %tmp1
 }
