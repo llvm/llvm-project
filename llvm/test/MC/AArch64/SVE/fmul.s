@@ -102,3 +102,21 @@ fmul    z0.d, p7/m, z0.d, z31.d
 // CHECK-ENCODING: [0xe0,0x9f,0xc2,0x65]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 9f c2 65 <unknown>
+
+fmul z0.h, z1.h, z31.h
+// CHECK-INST: fmul	z0.h, z1.h, z31.h
+// CHECK-ENCODING: [0x20,0x08,0x5f,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 08 5f 65 <unknown>
+
+fmul z0.s, z1.s, z31.s
+// CHECK-INST: fmul	z0.s, z1.s, z31.s
+// CHECK-ENCODING: [0x20,0x08,0x9f,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 08 9f 65 <unknown>
+
+fmul z0.d, z1.d, z31.d
+// CHECK-INST: fmul	z0.d, z1.d, z31.d
+// CHECK-ENCODING: [0x20,0x08,0xdf,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 20 08 df 65 <unknown>

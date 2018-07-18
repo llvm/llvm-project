@@ -1223,13 +1223,11 @@ bool PPCFastISel::SelectFPToI(const Instruction *I, bool IsSigned) {
   unsigned Opc;
 
   if (PPCSubTarget->hasSPE()) {
-    if (DstVT == MVT::i32) {
-      DestReg = createResultReg(&PPC::GPRCRegClass);
-      if (IsSigned)
-        Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTSIZ : PPC::EFDCTSIZ;
-      else
-        Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTUIZ : PPC::EFDCTUIZ;
-    }
+    DestReg = createResultReg(&PPC::GPRCRegClass);
+    if (IsSigned)
+      Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTSIZ : PPC::EFDCTSIZ;
+    else
+      Opc = InRC == &PPC::SPE4RCRegClass ? PPC::EFSCTUIZ : PPC::EFDCTUIZ;
   } else {
     DestReg = createResultReg(&PPC::F8RCRegClass);
     if (DstVT == MVT::i32)

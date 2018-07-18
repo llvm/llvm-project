@@ -560,6 +560,45 @@ namespace {
 
       Out << "\n";
     }
+
+    /// Tells the \c ASTReaderListener that we want to receive the
+    /// input files of the AST file via \c visitInputFile.
+    bool needsInputFileVisitation() override { return true; }
+
+    /// Tells the \c ASTReaderListener that we want to receive the
+    /// input files of the AST file via \c visitInputFile.
+    bool needsSystemInputFileVisitation() override { return true; }
+
+    /// Indicates that the AST file contains particular input file.
+    ///
+    /// \returns true to continue receiving the next input file, false to stop.
+    bool visitInputFile(StringRef Filename, bool isSystem,
+                        bool isOverridden, bool isExplicitModule) override {
+
+      Out.indent(2) << "Input file: " << Filename;
+
+      if (isSystem || isOverridden || isExplicitModule) {
+        Out << " [";
+        if (isSystem) {
+          Out << "System";
+          if (isOverridden || isExplicitModule)
+            Out << ", ";
+        }
+        if (isOverridden) {
+          Out << "Overridden";
+          if (isExplicitModule)
+            Out << ", ";
+        }
+        if (isExplicitModule)
+          Out << "ExplicitModule";
+
+        Out << "]";
+      }
+
+      Out << "\n";
+
+      return true;
+    }
 #undef DUMP_BOOLEAN
   };
 }

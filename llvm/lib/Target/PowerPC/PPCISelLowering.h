@@ -874,9 +874,8 @@ namespace llvm {
     unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                            EVT VT) const override;
 
-    MVT getRegisterTypeForCallingConv(MVT VT) const;
     MVT getRegisterTypeForCallingConv(LLVMContext &Context,
-                                      EVT VT) const;
+                                      EVT VT) const override;
 
   private:
     struct ReuseLoadInfo {
