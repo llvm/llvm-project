@@ -83,7 +83,7 @@ enum AvailabilityResult {
 /// (and its subclasses) in its Decl::operator new(). Proper alignment
 /// of all subclasses (not requiring more than the alignment of Decl) is
 /// asserted in DeclBase.cpp.
-class LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8) Decl {
+class alignas(8) Decl {
 public:
   /// Lists the kind of concrete classes of Decl.
   enum Kind {

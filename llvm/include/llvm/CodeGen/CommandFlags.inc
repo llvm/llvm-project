@@ -261,6 +261,10 @@ static cl::opt<bool> EnableStackSizeSection(
     "stack-size-section",
     cl::desc("Emit a section containing stack size metadata"), cl::init(false));
 
+static cl::opt<bool>
+    EnableAddrsig("addrsig", cl::desc("Emit an address-significance table"),
+                  cl::init(false));
+
 // Common utility function tightly tied to the options listed here. Initializes
 // a TargetOptions object with CodeGen flags and returns it.
 static TargetOptions InitTargetOptionsFromCodeGenFlags() {
@@ -289,6 +293,7 @@ static TargetOptions InitTargetOptionsFromCodeGenFlags() {
   Options.ExplicitEmulatedTLS = EmulatedTLS.getNumOccurrences() > 0;
   Options.ExceptionModel = ExceptionModel;
   Options.EmitStackSizeSection = EnableStackSizeSection;
+  Options.EmitAddrsig = EnableAddrsig;
 
   Options.MCOptions = InitMCTargetOptionsFromFlags();
 

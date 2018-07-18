@@ -732,8 +732,8 @@ static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
   return RValue::get(CS.getInstruction());
 }
 
-// Many of MSVC builtins are on both x64 and ARM; to avoid repeating code, we
-// handle them here.
+// Many of MSVC builtins are on x64, ARM and AArch64; to avoid repeating code,
+// we handle them here.
 enum class CodeGenFunction::MSVCIntrin {
   _BitScanForward,
   _BitScanReverse,
@@ -8385,6 +8385,28 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case AArch64::BI__iso_volatile_store32:
   case AArch64::BI__iso_volatile_store64:
     return EmitISOVolatileStore(E);
+  case AArch64::BI_BitScanForward:
+  case AArch64::BI_BitScanForward64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanForward, E);
+  case AArch64::BI_BitScanReverse:
+  case AArch64::BI_BitScanReverse64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_BitScanReverse, E);
+  case AArch64::BI_InterlockedAnd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedAnd, E);
+  case AArch64::BI_InterlockedExchange64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange, E);
+  case AArch64::BI_InterlockedExchangeAdd64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeAdd, E);
+  case AArch64::BI_InterlockedExchangeSub64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchangeSub, E);
+  case AArch64::BI_InterlockedOr64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr, E);
+  case AArch64::BI_InterlockedXor64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedXor, E);
+  case AArch64::BI_InterlockedDecrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedDecrement, E);
+  case AArch64::BI_InterlockedIncrement64:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedIncrement, E);
   }
 }
 

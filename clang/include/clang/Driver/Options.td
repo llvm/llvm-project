@@ -758,6 +758,10 @@ def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
 
+def faddrsig : Flag<["-"], "faddrsig">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
+  HelpText<"Emit an address-significance table">;
+def fno_addrsig : Flag<["-"], "fno-addrsig">, Group<f_Group>, Flags<[CoreOption]>,
+  HelpText<"Don't emit an address-significance table">;
 def fblocks : Flag<["-"], "fblocks">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable the 'blocks' language feature">;
 def fbootclasspath_EQ : Joined<["-"], "fbootclasspath=">, Group<f_Group>;

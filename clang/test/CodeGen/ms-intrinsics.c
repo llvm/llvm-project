@@ -7,6 +7,9 @@
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple x86_64--windows -Oz -emit-llvm -target-feature +cx16 %s -o - \
 // RUN:         | FileCheck %s --check-prefixes CHECK,CHECK-X64,CHECK-ARM-X64,CHECK-INTEL
+// RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
+// RUN:         -triple aarch64-windows -Oz -emit-llvm %s -o - \
+// RUN:         | FileCheck %s --check-prefix CHECK-ARM-X64
 
 // intrin.h needs size_t, but -ffreestanding prevents us from getting it from
 // stddef.h.  Work around it with this typedef.
@@ -172,7 +175,7 @@ unsigned char test_BitScanReverse(unsigned long *Index, unsigned long Mask) {
 // CHECK:   store i32 [[INDEX]], i32* %Index, align 4
 // CHECK:   br label %[[END_LABEL]]
 
-#if defined(__x86_64__) || defined(__arm__)
+#if defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
 unsigned char test_BitScanForward64(unsigned long *Index, unsigned __int64 Mask) {
   return _BitScanForward64(Index, Mask);
 }
@@ -469,7 +472,7 @@ long test_InterlockedDecrement(long volatile *Addend) {
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
 
-#if defined(__x86_64__) || defined(__arm__)
+#if defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
 __int64 test_InterlockedExchange64(__int64 volatile *value, __int64 mask) {
   return _InterlockedExchange64(value, mask);
 }
@@ -587,6 +590,7 @@ __int64 test_InterlockedCompareExchange64_HLERelease(__int64 volatile *Destinati
 }
 #endif
 
+#if !defined(__aarch64__)
 void test__fastfail() {
   __fastfail(42);
 }
@@ -597,4 +601,4 @@ void test__fastfail() {
 // Attributes come last.
 
 // CHECK: attributes #[[NORETURN]] = { noreturn{{.*}} }
-
+#endif

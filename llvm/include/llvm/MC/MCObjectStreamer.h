@@ -170,6 +170,9 @@ public:
                 SMLoc Loc = SMLoc()) override;
   void EmitFileDirective(StringRef Filename) override;
 
+  void EmitAddrsig() override;
+  void EmitAddrsigSym(const MCSymbol *Sym) override;
+
   void FinishImpl() override;
 
   /// Emit the absolute difference between two symbols if possible.

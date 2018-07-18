@@ -797,6 +797,8 @@ enum : unsigned {
   SHT_LLVM_ODRTAB = 0x6fff4c00,         // LLVM ODR table.
   SHT_LLVM_LINKER_OPTIONS = 0x6fff4c01, // LLVM Linker Options.
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c02, // LLVM Call Graph Profile.
+  SHT_LLVM_ADDRSIG = 0x6fff4c03,        // List of address-significant symbols
+                                        // for safe ICF.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,        // Relocation entries; only offsets.

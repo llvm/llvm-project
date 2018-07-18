@@ -38,7 +38,7 @@
 #include <armintr.h>
 #endif
 
-#if defined(_M_ARM64)
+#if defined(__aarch64__)
 #include <arm64intr.h>
 #endif
 
@@ -299,7 +299,7 @@ unsigned __int64 _umul128(unsigned __int64,
 
 #endif /* __x86_64__ */
 
-#if defined(__x86_64__) || defined(__arm__)
+#if defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
 
 static __inline__
 unsigned char _BitScanForward64(unsigned long *_Index, unsigned __int64 _Mask);

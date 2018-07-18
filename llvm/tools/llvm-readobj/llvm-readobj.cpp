@@ -302,6 +302,9 @@ namespace opts {
 
   cl::opt<bool> CGProfile("elf-cg-profile", cl::desc("Display callgraph profile section"));
 
+  cl::opt<bool> Addrsig("elf-addrsig",
+                        cl::desc("Display address-significance table"));
+
   cl::opt<OutputStyleTy>
       Output("elf-output-style", cl::desc("Specify ELF dump style"),
              cl::values(clEnumVal(LLVM, "LLVM default style"),
@@ -469,6 +472,8 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer) {
       Dumper->printHashHistogram();
     if (opts::CGProfile)
       Dumper->printCGProfile();
+    if (opts::Addrsig)
+      Dumper->printAddrsig();
     if (opts::Notes)
       Dumper->printNotes();
   }

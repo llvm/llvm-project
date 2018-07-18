@@ -92,6 +92,15 @@ public:
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
+  /// Tell the object writer to emit an address-significance table during
+  /// writeObject(). If this function is not called, all symbols are treated as
+  /// address-significant.
+  virtual void emitAddrsigSection() {}
+
+  /// Record the given symbol in the address-significance table to be written
+  /// diring writeObject().
+  virtual void addAddrsigSymbol(const MCSymbol *Sym) {}
+
   /// Write the object file and returns the number of bytes written.
   ///
   /// This routine is called by the assembler after layout and relaxation is

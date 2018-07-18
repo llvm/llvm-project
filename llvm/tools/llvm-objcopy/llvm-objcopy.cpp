@@ -43,6 +43,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::objcopy;
 using namespace object;
 using namespace ELF;
 
@@ -114,35 +115,6 @@ public:
   StripOptTable() : OptTable(StripInfoTable, true) {}
 };
 
-} // namespace
-
-// The name this program was invoked as.
-static StringRef ToolName;
-
-namespace llvm {
-
-LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
-  errs() << ToolName << ": " << Message << ".\n";
-  errs().flush();
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
-  assert(EC);
-  errs() << ToolName << ": '" << File << "': " << EC.message() << ".\n";
-  exit(1);
-}
-
-LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
-  assert(E);
-  std::string Buf;
-  raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
-  OS.flush();
-  errs() << ToolName << ": '" << File << "': " << Buf;
-  exit(1);
-}
-
 struct CopyConfig {
   StringRef OutputFilename;
   StringRef InputFilename;
@@ -179,6 +151,37 @@ struct CopyConfig {
 
 using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
+} // namespace
+
+namespace llvm {
+namespace objcopy {
+
+// The name this program was invoked as.
+StringRef ToolName;
+
+LLVM_ATTRIBUTE_NORETURN void error(Twine Message) {
+  errs() << ToolName << ": " << Message << ".\n";
+  errs().flush();
+  exit(1);
+}
+
+LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
+  assert(EC);
+  errs() << ToolName << ": '" << File << "': " << EC.message() << ".\n";
+  exit(1);
+}
+
+LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
+  assert(E);
+  std::string Buf;
+  raw_string_ostream OS(Buf);
+  logAllUnhandledErrors(std::move(E), OS, "");
+  OS.flush();
+  errs() << ToolName << ": '" << File << "': " << Buf;
+  exit(1);
+}
+
+} // end namespace objcopy
 } // end namespace llvm
 
 static bool IsDWOSection(const SectionBase &Sec) {
