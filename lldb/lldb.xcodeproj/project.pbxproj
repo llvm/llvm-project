@@ -1769,7 +1769,6 @@
 		2657AFB61B86910100958979 /* CompilerDeclContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompilerDeclContext.cpp; path = source/Symbol/CompilerDeclContext.cpp; sourceTree = "<group>"; };
 		2657AFB51B8690EC00958979 /* CompilerDeclContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CompilerDeclContext.h; path = include/lldb/Symbol/CompilerDeclContext.h; sourceTree = "<group>"; };
 		49E45FAD11F660FE008F7B28 /* CompilerType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompilerType.cpp; path = source/Symbol/CompilerType.cpp; sourceTree = "<group>"; };
-		49E45FAD11F660FE008F7B28 /* CompilerType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompilerType.cpp; path = source/Symbol/CompilerType.cpp; sourceTree = "<group>"; };
 		49E45FA911F660DC008F7B28 /* CompilerType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CompilerType.h; path = include/lldb/Symbol/CompilerType.h; sourceTree = "<group>"; };
 		58EC744020EAEB5200695209 /* CompletionRequest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CompletionRequest.cpp; path = source/Utility/CompletionRequest.cpp; sourceTree = "<group>"; };
 		58EC744220EAEB6C00695209 /* CompletionRequest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CompletionRequest.h; path = include/lldb/Utility/CompletionRequest.h; sourceTree = "<group>"; };
@@ -2529,7 +2528,6 @@
 		6D55BAEB1A8CD08C00A70529 /* PlatformAndroidRemoteGDBServer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAndroidRemoteGDBServer.cpp; sourceTree = "<group>"; };
 		6D55BAEC1A8CD08C00A70529 /* PlatformAndroidRemoteGDBServer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformAndroidRemoteGDBServer.h; sourceTree = "<group>"; };
 		9455630A1BEAD0570073F75F /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
-		9455630B1BEAD0570073F75F /* PlatformAppleSimulator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformAppleSimulator.h; sourceTree = "<group>"; };
 		AF8AD62A1BEC28A400150209 /* PlatformAppleTVSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleTVSimulator.cpp; sourceTree = "<group>"; };
 		AF8AD62B1BEC28A400150209 /* PlatformAppleTVSimulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlatformAppleTVSimulator.h; sourceTree = "<group>"; };
 		AF8AD62C1BEC28A400150209 /* PlatformAppleWatchSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleWatchSimulator.cpp; sourceTree = "<group>"; };
@@ -5227,7 +5225,6 @@
 				2657AFB51B8690EC00958979 /* CompilerDeclContext.h */,
 				2657AFB61B86910100958979 /* CompilerDeclContext.cpp */,
 				49E45FA911F660DC008F7B28 /* CompilerType.h */,
-				49E45FAD11F660FE008F7B28 /* CompilerType.cpp */,
 				495B38431489714C002708C5 /* ClangExternalASTSourceCommon.h */,
 				4966DCC3148978A10028481B /* ClangExternalASTSourceCommon.cpp */,
 				26E6902E129C6BD500DDECD9 /* ClangExternalASTSourceCallbacks.h */,
@@ -5815,7 +5812,6 @@
 				AF254E2F170CCC33007AE5C9 /* PlatformDarwinKernel.cpp */,
 				AF254E30170CCC33007AE5C9 /* PlatformDarwinKernel.h */,
 				26B7564C14F89356008D9CB3 /* PlatformiOSSimulator.cpp */,
-				26B7564D14F89356008D9CB3 /* PlatformiOSSimulator.h */,
 				26C5577B132575AD008FD8FE /* PlatformMacOSX.cpp */,
 				AF3A4AD11EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h */,
 				AF8AD6331BEC28C400150209 /* PlatformRemoteAppleTV.cpp */,
@@ -9348,6 +9344,8 @@
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
 					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -10912,6 +10910,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/../../../System/Library/PrivateFrameworks",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -10923,6 +10923,8 @@
 					"-Wl,-rpath,@loader_path/../../../SharedFrameworks",
 					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
 					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -11534,6 +11536,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -11560,6 +11564,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -11940,6 +11946,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -12639,6 +12647,8 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -13617,6 +13627,8 @@
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
 					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -14216,6 +14228,8 @@
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
 					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
 				);
 				PRODUCT_NAME = lldb;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
