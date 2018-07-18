@@ -86,11 +86,16 @@ public:
 
   Random &GetRand() { return Rand; }
 
-private:
+  void PrintMutationStats();
 
+  void RecordUsefulMutations();
+
+ private:
   struct Mutator {
     size_t (MutationDispatcher::*Fn)(uint8_t *Data, size_t Size, size_t Max);
     const char *Name;
+    uint64_t UsefulCount;
+    uint64_t TotalCount;
   };
 
   size_t AddWordFromDictionary(Dictionary &D, uint8_t *Data, size_t Size,
@@ -128,8 +133,8 @@ private:
   // entries that led to successful discoveries in the past mutations.
   Dictionary PersistentAutoDictionary;
 
-  Vector<Mutator> CurrentMutatorSequence;
   Vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
+  Vector<Mutator *> CurrentMutatorSequence;
 
   static const size_t kCmpDictionaryEntriesDequeSize = 16;
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
