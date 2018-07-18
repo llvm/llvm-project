@@ -48,6 +48,11 @@ let Predicates = [HasSVE] in {
   defm SQSUB_ZI : sve_int_arith_imm0<0b110, "sqsub">;
   defm UQSUB_ZI : sve_int_arith_imm0<0b111, "uqsub">;
 
+  defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad">;
+  defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb">;
+  defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla">;
+  defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls">;
+
   defm ORR_ZI : sve_int_log_imm<0b00, "orr", "orn">;
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon">;
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic">;
@@ -56,6 +61,22 @@ let Predicates = [HasSVE] in {
   defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", simm8>;
   defm UMAX_ZI   : sve_int_arith_imm1<0b01, "umax", imm0_255>;
   defm UMIN_ZI   : sve_int_arith_imm1<0b11, "umin", imm0_255>;
+
+  defm MUL_ZI    : sve_int_arith_imm2<"mul">;
+  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul">;
+  defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh">;
+  defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh">;
+
+  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv">;
+  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv">;
+  defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr">;
+  defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr">;
+
+  defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot">;
+  defm UDOT_ZZZ : sve_intx_dot<0b1, "udot">;
+
+  defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot">;
+  defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot">;
 
   defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb">;
   defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb">;
@@ -82,8 +103,13 @@ let Predicates = [HasSVE] in {
   defm UABD_ZPmZ : sve_int_bin_pred_arit_1<0b101, "uabd">;
 
   defm FADD_ZPmI    : sve_fp_2op_i_p_zds<0b000, "fadd", sve_fpimm_half_one>;
+  defm FSUB_ZPmI    : sve_fp_2op_i_p_zds<0b001, "fsub", sve_fpimm_half_one>;
   defm FMUL_ZPmI    : sve_fp_2op_i_p_zds<0b010, "fmul", sve_fpimm_half_two>;
+  defm FSUBR_ZPmI   : sve_fp_2op_i_p_zds<0b011, "fsubr", sve_fpimm_half_one>;
+  defm FMAXNM_ZPmI  : sve_fp_2op_i_p_zds<0b100, "fmaxnm", sve_fpimm_zero_one>;
+  defm FMINNM_ZPmI  : sve_fp_2op_i_p_zds<0b101, "fminnm", sve_fpimm_zero_one>;
   defm FMAX_ZPmI    : sve_fp_2op_i_p_zds<0b110, "fmax", sve_fpimm_zero_one>;
+  defm FMIN_ZPmI    : sve_fp_2op_i_p_zds<0b111, "fmin", sve_fpimm_zero_one>;
 
   defm FADD_ZPmZ   : sve_fp_2op_p_zds<0b0000, "fadd">;
   defm FSUB_ZPmZ   : sve_fp_2op_p_zds<0b0001, "fsub">;
@@ -101,6 +127,19 @@ let Predicates = [HasSVE] in {
 
   defm FCADD_ZPmZ : sve_fp_fcadd<"fcadd">;
   defm FCMLA_ZPmZZ : sve_fp_fcmla<"fcmla">;
+
+  defm FMLA_ZPmZZ  : sve_fp_3op_p_zds_a<0b00, "fmla">;
+  defm FMLS_ZPmZZ  : sve_fp_3op_p_zds_a<0b01, "fmls">;
+  defm FNMLA_ZPmZZ : sve_fp_3op_p_zds_a<0b10, "fnmla">;
+  defm FNMLS_ZPmZZ : sve_fp_3op_p_zds_a<0b11, "fnmls">;
+
+  defm FMAD_ZPmZZ  : sve_fp_3op_p_zds_b<0b00, "fmad">;
+  defm FMSB_ZPmZZ  : sve_fp_3op_p_zds_b<0b01, "fmsb">;
+  defm FNMAD_ZPmZZ : sve_fp_3op_p_zds_b<0b10, "fnmad">;
+  defm FNMSB_ZPmZZ : sve_fp_3op_p_zds_b<0b11, "fnmsb">;
+
+  defm FMLA_ZZZI : sve_fp_fma_by_indexed_elem<0b0, "fmla">;
+  defm FMLS_ZZZI : sve_fp_fma_by_indexed_elem<0b1, "fmls">;
 
   defm FCMLA_ZZZI : sve_fp_fcmla_by_indexed_elem<"fcmla">;
   defm FMUL_ZZZI   : sve_fp_fmul_by_indexed_elem<"fmul">;

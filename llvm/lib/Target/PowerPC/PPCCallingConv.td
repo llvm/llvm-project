@@ -83,8 +83,14 @@ def RetCC_PPC : CallingConv<[
 
   // Floating point types returned as "direct" go into F1 .. F8; note that
   // only the ELFv2 ABI fully utilizes all these registers.
-  CCIfType<[f32], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
-  CCIfType<[f64], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
+  CCIfNotSubtarget<"hasSPE()",
+       CCIfType<[f32], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>>,
+  CCIfNotSubtarget<"hasSPE()",
+       CCIfType<[f64], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>>,
+  CCIfSubtarget<"hasSPE()",
+       CCIfType<[f32], CCAssignToReg<[R3, R4, R5, R6, R7, R8, R9, R10]>>>,
+  CCIfSubtarget<"hasSPE()",
+       CCIfType<[f64], CCAssignToReg<[S3, S4, S5, S6, S7, S8, S9, S10]>>>,
 
   // For P9, f128 are passed in vector registers.
   CCIfType<[f128],
@@ -188,7 +194,15 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   CCIfType<[f64], CCIfSplit<CCCustom<"CC_PPC32_SVR4_Custom_AlignFPArgRegs">>>,
   
   // FP values are passed in F1 - F8.
-  CCIfType<[f32, f64], CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>,
+  CCIfType<[f32, f64],
+           CCIfNotSubtarget<"hasSPE()",
+                            CCAssignToReg<[F1, F2, F3, F4, F5, F6, F7, F8]>>>,
+  CCIfType<[f64],
+           CCIfSubtarget<"hasSPE()",
+                         CCAssignToReg<[S3, S4, S5, S6, S7, S8, S9, S10]>>>,
+  CCIfType<[f32],
+           CCIfSubtarget<"hasSPE()",
+                         CCAssignToReg<[R3, R4, R5, R6, R7, R8, R9, R10]>>>,
 
   // Split arguments have an alignment of 8 bytes on the stack.
   CCIfType<[i32], CCIfSplit<CCAssignToStack<4, 8>>>,
@@ -197,7 +211,11 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   
   // Floats are stored in double precision format, thus they have the same
   // alignment and size as doubles.
-  CCIfType<[f32,f64], CCAssignToStack<8, 8>>,  
+  // With SPE floats are stored as single precision, so have alignment and
+  // size of int.
+  CCIfType<[f32,f64], CCIfNotSubtarget<"hasSPE()", CCAssignToStack<8, 8>>>,
+  CCIfType<[f32], CCIfSubtarget<"hasSPE()", CCAssignToStack<4, 4>>>,
+  CCIfType<[f64], CCIfSubtarget<"hasSPE()", CCAssignToStack<8, 8>>>,
 
   // QPX vectors that are stored in double precision need 32-byte alignment.
   CCIfType<[v4f64, v4i1], CCAssignToStack<32, 32>>,
@@ -265,14 +283,22 @@ def CSR_Darwin32 : CalleeSavedRegs<(add R13, R14, R15, R16, R17, R18, R19, R20,
 
 def CSR_Darwin32_Altivec : CalleeSavedRegs<(add CSR_Darwin32, CSR_Altivec)>;
 
-def CSR_SVR432   : CalleeSavedRegs<(add R14, R15, R16, R17, R18, R19, R20,
-                                        R21, R22, R23, R24, R25, R26, R27, R28,
-                                        R29, R30, R31, F14, F15, F16, F17, F18,
+// SPE does not use FPRs, so break out the common register set as base.
+def CSR_SVR432_COMM : CalleeSavedRegs<(add R14, R15, R16, R17, R18, R19, R20,
+                                          R21, R22, R23, R24, R25, R26, R27,
+                                          R28, R29, R30, R31, CR2, CR3, CR4
+                                      )>;
+def CSR_SVR432 :  CalleeSavedRegs<(add CSR_SVR432_COMM, F14, F15, F16, F17, F18,
                                         F19, F20, F21, F22, F23, F24, F25, F26,
-                                        F27, F28, F29, F30, F31, CR2, CR3, CR4
+                                        F27, F28, F29, F30, F31
                                    )>;
+def CSR_SPE : CalleeSavedRegs<(add S14, S15, S16, S17, S18, S19, S20, S21, S22,
+                                   S23, S24, S25, S26, S27, S28, S29, S30, S31
+                              )>;
 
 def CSR_SVR432_Altivec : CalleeSavedRegs<(add CSR_SVR432, CSR_Altivec)>;
+
+def CSR_SVR432_SPE : CalleeSavedRegs<(add CSR_SVR432_COMM, CSR_SPE)>;
 
 def CSR_Darwin64 : CalleeSavedRegs<(add X13, X14, X15, X16, X17, X18, X19, X20,
                                         X21, X22, X23, X24, X25, X26, X27, X28,

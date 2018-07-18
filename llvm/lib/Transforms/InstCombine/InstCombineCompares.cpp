@@ -2945,72 +2945,6 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
   return Builder.CreateICmp(DstPred, X, M);
 }
 
-/// Some comparisons can be simplified.
-/// In this case, we are looking for comparisons that look like
-/// a check for a lossy signed truncation.
-/// Folds:   (MaskedBits is a constant.)
-///   ((%x << MaskedBits) a>> MaskedBits) SrcPred %x
-/// Into:
-///   (add %x, (1 << (KeptBits-1))) DstPred (1 << KeptBits)
-/// Where  KeptBits = bitwidth(%x) - MaskedBits
-static Value *
-foldICmpWithTruncSignExtendedVal(ICmpInst &I,
-                                 InstCombiner::BuilderTy &Builder) {
-  ICmpInst::Predicate SrcPred;
-  Value *X;
-  const APInt *C0, *C1; // FIXME: non-splats, potentially with undef.
-  // We are ok with 'shl' having multiple uses, but 'ashr' must be one-use.
-  if (!match(&I, m_c_ICmp(SrcPred,
-                          m_OneUse(m_AShr(m_Shl(m_Value(X), m_APInt(C0)),
-                                          m_APInt(C1))),
-                          m_Deferred(X))))
-    return nullptr;
-
-  // Potential handling of non-splats: for each element:
-  //  * if both are undef, replace with constant 0.
-  //    Because (1<<0) is OK and is 1, and ((1<<0)>>1) is also OK and is 0.
-  //  * if both are not undef, and are different, bailout.
-  //  * else, only one is undef, then pick the non-undef one.
-
-  // The shift amount must be equal.
-  if (*C0 != *C1)
-    return nullptr;
-  const uint64_t MaskedBits = C0->getZExtValue();
-  assert(MaskedBits && "shift of %x by zero should be folded to %x already.");
-
-  ICmpInst::Predicate DstPred;
-  switch (SrcPred) {
-  case ICmpInst::Predicate::ICMP_EQ:
-    // ((%x << MaskedBits) a>> MaskedBits) == %x
-    //   =>
-    // (add %x, (1 << (KeptBits-1))) u< (1 << KeptBits)
-    DstPred = ICmpInst::Predicate::ICMP_ULT;
-    break;
-  case ICmpInst::Predicate::ICMP_NE:
-    // ((%x << MaskedBits) a>> MaskedBits) != %x
-    //   =>
-    // (add %x, (1 << (KeptBits-1))) u>= (1 << KeptBits)
-    DstPred = ICmpInst::Predicate::ICMP_UGE;
-    break;
-  // FIXME: are more folds possible?
-  default:
-    return nullptr;
-  }
-
-  const uint64_t XBitWidth = C0->getBitWidth();
-  const uint64_t KeptBits = XBitWidth - MaskedBits;
-  const uint64_t ICmpCst = (uint64_t)1 << KeptBits; // (1 << KeptBits)
-  const uint64_t AddCst = ICmpCst >> 1;   // (1 << (KeptBits-1))
-
-  auto *XType = X->getType();
-  // (add %x, (1 << (KeptBits-1)))
-  Value *T0 = Builder.CreateAdd(X, ConstantInt::get(XType, AddCst));
-  // add %x, (1 << (KeptBits-1))) DstPred (1 << KeptBits)
-  Value *T1 = Builder.CreateICmp(DstPred, T0, ConstantInt::get(XType, ICmpCst));
-
-  return T1;
-}
-
 /// Try to fold icmp (binop), X or icmp X, (binop).
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
@@ -3349,9 +3283,6 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I) {
   }
 
   if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
-    return replaceInstUsesWith(I, V);
-
-  if (Value *V = foldICmpWithTruncSignExtendedVal(I, Builder))
     return replaceInstUsesWith(I, V);
 
   return nullptr;

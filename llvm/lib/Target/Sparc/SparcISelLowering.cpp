@@ -3489,7 +3489,7 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
-      if (VT == MVT::v2i32)
+      if (VT == MVT::v2i32 || VT == MVT::f64)
         return std::make_pair(0U, &SP::IntPairRegClass);
       else
         return std::make_pair(0U, &SP::IntRegsRegClass);

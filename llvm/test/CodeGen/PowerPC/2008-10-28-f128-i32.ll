@@ -7,27 +7,27 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -464(1)
-; CHECK-NEXT:    lis 3, .LCPI0_0@ha
-; CHECK-NEXT:    stfd 27, 424(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mfcr 12
-; CHECK-NEXT:    lfs 27, .LCPI0_0@l(3)
+; CHECK-NEXT:    lis 3, .LCPI0_0@ha
 ; CHECK-NEXT:    stw 29, 412(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    stw 30, 416(1) # 4-byte Folded Spill
+; CHECK-NEXT:    stw 12, 408(1)
+; CHECK-NEXT:    stfd 27, 424(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 28, 432(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 29, 440(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 30, 448(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd 31, 456(1) # 8-byte Folded Spill
-; CHECK-NEXT:    fcmpu 0, 2, 27
-; CHECK-NEXT:    stw 12, 408(1)
-; CHECK-NEXT:    fcmpu 1, 1, 27
+; CHECK-NEXT:    lfs 27, .LCPI0_0@l(3)
 ; CHECK-NEXT:    stfd 2, 376(1)
-; CHECK-NEXT:    crand 20, 6, 0
 ; CHECK-NEXT:    stfd 1, 384(1)
-; CHECK-NEXT:    cror 20, 4, 20
+; CHECK-NEXT:    fcmpu 0, 2, 27
 ; CHECK-NEXT:    lwz 3, 380(1)
 ; CHECK-NEXT:    lwz 4, 376(1)
 ; CHECK-NEXT:    lwz 5, 388(1)
 ; CHECK-NEXT:    lwz 6, 384(1)
+; CHECK-NEXT:    fcmpu 1, 1, 27
+; CHECK-NEXT:    crand 20, 6, 0
+; CHECK-NEXT:    cror 20, 4, 20
 ; CHECK-NEXT:    stw 3, 396(1)
 ; CHECK-NEXT:    stw 4, 392(1)
 ; CHECK-NEXT:    stw 5, 404(1)
@@ -293,14 +293,14 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:  .LBB0_15: # %bb3
 ; CHECK-NEXT:    mr 3, 30
 ; CHECK-NEXT:  .LBB0_16: # %bb5
-; CHECK-NEXT:    lwz 12, 408(1)
 ; CHECK-NEXT:    lfd 31, 456(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lfd 30, 448(1) # 8-byte Folded Reload
-; CHECK-NEXT:    mtcrf 32, 12 # cr2
 ; CHECK-NEXT:    lfd 29, 440(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lfd 28, 432(1) # 8-byte Folded Reload
+; CHECK-NEXT:    lwz 12, 408(1)
 ; CHECK-NEXT:    lfd 27, 424(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lwz 30, 416(1) # 4-byte Folded Reload
+; CHECK-NEXT:    mtcrf 32, 12 # cr2
 ; CHECK-NEXT:    lwz 29, 412(1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz 0, 468(1)
 ; CHECK-NEXT:    addi 1, 1, 464

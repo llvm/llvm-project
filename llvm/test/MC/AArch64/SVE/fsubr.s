@@ -7,6 +7,54 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+fsubr   z0.h, p0/m, z0.h, #0.500000000000000
+// CHECK-INST: fsubr	z0.h, p0/m, z0.h, #0.5
+// CHECK-ENCODING: [0x00,0x80,0x5b,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 5b 65 <unknown>
+
+fsubr   z0.h, p0/m, z0.h, #0.5
+// CHECK-INST: fsubr	z0.h, p0/m, z0.h, #0.5
+// CHECK-ENCODING: [0x00,0x80,0x5b,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 5b 65 <unknown>
+
+fsubr   z0.s, p0/m, z0.s, #0.5
+// CHECK-INST: fsubr	z0.s, p0/m, z0.s, #0.5
+// CHECK-ENCODING: [0x00,0x80,0x9b,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 9b 65 <unknown>
+
+fsubr   z0.d, p0/m, z0.d, #0.5
+// CHECK-INST: fsubr	z0.d, p0/m, z0.d, #0.5
+// CHECK-ENCODING: [0x00,0x80,0xdb,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 80 db 65 <unknown>
+
+fsubr   z31.h, p7/m, z31.h, #1.000000000000000
+// CHECK-INST: fsubr	z31.h, p7/m, z31.h, #1.0
+// CHECK-ENCODING: [0x3f,0x9c,0x5b,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 3f 9c 5b 65 <unknown>
+
+fsubr   z31.h, p7/m, z31.h, #1.0
+// CHECK-INST: fsubr	z31.h, p7/m, z31.h, #1.0
+// CHECK-ENCODING: [0x3f,0x9c,0x5b,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 3f 9c 5b 65 <unknown>
+
+fsubr   z31.s, p7/m, z31.s, #1.0
+// CHECK-INST: fsubr	z31.s, p7/m, z31.s, #1.0
+// CHECK-ENCODING: [0x3f,0x9c,0x9b,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 3f 9c 9b 65 <unknown>
+
+fsubr   z31.d, p7/m, z31.d, #1.0
+// CHECK-INST: fsubr	z31.d, p7/m, z31.d, #1.0
+// CHECK-ENCODING: [0x3f,0x9c,0xdb,0x65]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 3f 9c db 65 <unknown>
+
 fsubr   z0.h, p7/m, z0.h, z31.h
 // CHECK-INST: fsubr	z0.h, p7/m, z0.h, z31.h
 // CHECK-ENCODING: [0xe0,0x9f,0x43,0x65]

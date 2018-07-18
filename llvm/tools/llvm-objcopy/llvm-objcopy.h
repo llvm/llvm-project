@@ -17,6 +17,7 @@
 #include <string>
 
 namespace llvm {
+namespace objcopy {
 
 LLVM_ATTRIBUTE_NORETURN extern void error(Twine Message);
 LLVM_ATTRIBUTE_NORETURN extern void reportError(StringRef File, Error E);
@@ -35,6 +36,7 @@ template <class T> T unwrapOrError(Expected<T> EO) {
   error(Buf);
 }
 
+} // end namespace objcopy
 } // end namespace llvm
 
 #endif // LLVM_TOOLS_OBJCOPY_OBJCOPY_H
