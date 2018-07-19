@@ -38,7 +38,7 @@ struct InputInfo {
   bool Reduced = false;
   bool HasFocusFunction = false;
   Vector<uint32_t> UniqFeatureSet;
-  Vector<bool> DataFlowTraceForFocusFunction;
+  Vector<uint8_t> DataFlowTraceForFocusFunction;
 };
 
 class InputCorpus {
@@ -88,7 +88,7 @@ class InputCorpus {
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
                    bool HasFocusFunction, const Vector<uint32_t> &FeatureSet,
-                   const DataFlowTrace &DFT) {
+                   const DataFlowTrace &DFT, const InputInfo *BaseII) {
     assert(!U.empty());
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
@@ -106,6 +106,11 @@ class InputCorpus {
     if (HasFocusFunction)
       if (auto V = DFT.Get(Sha1Str))
         II.DataFlowTraceForFocusFunction = *V;
+    // This is a gross heuristic.
+    // Ideally, when we add an element to a corpus we need to know its DFT.
+    // But if we don't, we'll use the DFT of its base input.
+    if (II.DataFlowTraceForFocusFunction.empty() && BaseII)
+      II.DataFlowTraceForFocusFunction = BaseII->DataFlowTraceForFocusFunction;
     UpdateCorpusDistribution();
     PrintCorpus();
     // ValidateFeatureSet();

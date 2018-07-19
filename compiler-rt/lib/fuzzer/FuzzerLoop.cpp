@@ -503,8 +503,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   if (NumNewFeatures) {
     TPC.UpdateObservedPCs();
     Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
-                       TPC.ObservedFocusFunction(),
-                       UniqFeatureSetTmp, DFT);
+                       TPC.ObservedFocusFunction(), UniqFeatureSetTmp, DFT, II);
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
@@ -687,7 +686,12 @@ void Fuzzer::MutateAndTestOne() {
       break;
     MaybeExitGracefully();
     size_t NewSize = 0;
-    NewSize = MD.Mutate(CurrentUnitData, Size, CurrentMaxMutationLen);
+    if (II.HasFocusFunction && !II.DataFlowTraceForFocusFunction.empty() &&
+        Size <= CurrentMaxMutationLen)
+      NewSize = MD.MutateWithMask(CurrentUnitData, Size, Size,
+                                  II.DataFlowTraceForFocusFunction);
+    else
+      NewSize = MD.Mutate(CurrentUnitData, Size, CurrentMaxMutationLen);
     assert(NewSize > 0 && "Mutator returned empty unit");
     assert(NewSize <= CurrentMaxMutationLen && "Mutator return oversized unit");
     Size = NewSize;

@@ -1543,6 +1543,14 @@ Specifies the largest alignment guaranteed by '::operator new(size\_t)'
 
 Disable implicit builtin knowledge of a specific function
 
+.. option:: -fdelete-null-pointer-checks, -fno-delete-null-pointer-checks
+
+When enabled, treat null pointer dereference, creation of a reference to null,
+or passing a null pointer to a function parameter annotated with the "nonnull"
+attribute as undefined behavior. (And, thus the optimizer may assume that any
+pointer used in such a way must not have been null and optimize away the
+branches accordingly.) On by default.
+
 .. option:: -fno-elide-type
 
 Do not elide types when printing diagnostics
