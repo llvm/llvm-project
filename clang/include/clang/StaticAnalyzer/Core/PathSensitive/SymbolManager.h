@@ -270,6 +270,12 @@ public:
     // Otherwise, 'To' should also be a valid type.
   }
 
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = 1 + Operand->computeComplexity();
+    return Complexity;
+  }
+
   QualType getType() const override { return ToTy; }
 
   const SymExpr *getOperand() const { return Operand; }
@@ -337,6 +343,12 @@ public:
   const SymExpr *getLHS() const { return LHS; }
   const llvm::APSInt &getRHS() const { return RHS; }
 
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = 1 + LHS->computeComplexity();
+    return Complexity;
+  }
+
   static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
                       BinaryOperator::Opcode op, const llvm::APSInt& rhs,
                       QualType t) {
@@ -373,6 +385,12 @@ public:
 
   const SymExpr *getRHS() const { return RHS; }
   const llvm::APSInt &getLHS() const { return LHS; }
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = 1 + RHS->computeComplexity();
+    return Complexity;
+  }
 
   static void Profile(llvm::FoldingSetNodeID& ID, const llvm::APSInt& lhs,
                       BinaryOperator::Opcode op, const SymExpr *rhs,
@@ -411,6 +429,12 @@ public:
   const SymExpr *getRHS() const { return RHS; }
 
   void dumpToStream(raw_ostream &os) const override;
+
+  unsigned computeComplexity() const override {
+    if (Complexity == 0)
+      Complexity = RHS->computeComplexity() + LHS->computeComplexity();
+    return Complexity;
+  }
 
   static void Profile(llvm::FoldingSetNodeID& ID, const SymExpr *lhs,
                     BinaryOperator::Opcode op, const SymExpr *rhs, QualType t) {

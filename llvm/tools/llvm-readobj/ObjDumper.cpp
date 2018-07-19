@@ -37,7 +37,7 @@ getSecNameOrIndexAsSecRef(const object::ObjectFile *Obj, StringRef SecName) {
   char *StrPtr;
   long SectionIndex = strtol(SecName.data(), &StrPtr, 10);
   object::SectionRef Section;
-  unsigned SecIndex = 0;
+  long SecIndex = 0;
   for (object::SectionRef SecRef : Obj->sections()) {
     if (*StrPtr) {
       StringRef SectionName;

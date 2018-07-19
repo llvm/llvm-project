@@ -10834,8 +10834,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     // Account for endianness by treating this as just a shuffle. So we use the
     // same indices for both LE and BE in order to produce expected results in
     // both cases.
-    unsigned ElemIdx0 = (Index & 2) >> 1;;
-    unsigned ElemIdx1 = 2 + (Index & 1);;
+    unsigned ElemIdx0 = (Index & 2) >> 1;
+    unsigned ElemIdx1 = 2 + (Index & 1);
 
     Constant *ShuffleElts[2] = {ConstantInt::get(Int32Ty, ElemIdx0),
                                 ConstantInt::get(Int32Ty, ElemIdx1)};

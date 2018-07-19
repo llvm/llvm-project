@@ -1,5 +1,4 @@
 add_lldb_unittest(ObjectFileELFTests
-  TestELFHeader.cpp
   TestObjectFileELF.cpp
 
   LINK_LIBS

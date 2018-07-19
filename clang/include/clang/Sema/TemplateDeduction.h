@@ -51,6 +51,10 @@ class TemplateDeductionInfo {
   /// The template parameter depth for which we're performing deduction.
   unsigned DeducedDepth;
 
+  /// The number of parameters with explicitly-specified template arguments,
+  /// up to and including the partially-specified pack (if any).
+  unsigned ExplicitArgs = 0;
+
   /// Warnings (and follow-on notes) that were suppressed due to
   /// SFINAE while performing template argument deduction.
   SmallVector<PartialDiagnosticAt, 4> SuppressedDiagnostics;
@@ -71,6 +75,11 @@ public:
   /// performed.
   unsigned getDeducedDepth() const {
     return DeducedDepth;
+  }
+
+  /// Get the number of explicitly-specified arguments.
+  unsigned getNumExplicitArgs() const {
+    return ExplicitArgs;
   }
 
   /// Take ownership of the deduced template argument list.
@@ -98,6 +107,13 @@ public:
   const PartialDiagnosticAt &peekSFINAEDiagnostic() const {
     assert(HasSFINAEDiagnostic);
     return SuppressedDiagnostics.front();
+  }
+
+  /// Provide an initial template argument list that contains the
+  /// explicitly-specified arguments.
+  void setExplicitArgs(TemplateArgumentList *NewDeduced) {
+    Deduced = NewDeduced;
+    ExplicitArgs = Deduced->size();
   }
 
   /// Provide a new template argument list that contains the
@@ -149,6 +165,9 @@ public:
   ///   TDK_Incomplete: this is the first template parameter whose
   ///   corresponding template argument was not deduced.
   ///
+  ///   TDK_IncompletePack: this is the expanded parameter pack for
+  ///   which we deduced too few arguments.
+  ///
   ///   TDK_Inconsistent: this is the template parameter for which
   ///   two different template argument values were deduced.
   TemplateParameter Param;
@@ -158,6 +177,9 @@ public:
   ///
   /// Depending on the result of the template argument deduction,
   /// this template argument may have different meanings:
+  ///
+  ///   TDK_IncompletePack: this is the number of arguments we deduced
+  ///   for the pack.
   ///
   ///   TDK_Inconsistent: this argument is the first value deduced
   ///   for the corresponding template parameter.

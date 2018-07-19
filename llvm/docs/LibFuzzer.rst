@@ -75,11 +75,13 @@ Recent versions of Clang (starting from 6.0) include libFuzzer, and no extra ins
 
 In order to build your fuzzer binary, use the `-fsanitize=fuzzer` flag during the
 compilation and linking. In most cases you may want to combine libFuzzer with
-AddressSanitizer_ (ASAN), UndefinedBehaviorSanitizer_ (UBSAN), or both::
+AddressSanitizer_ (ASAN), UndefinedBehaviorSanitizer_ (UBSAN), or both.  You can
+also build with MemorySanitizer_ (MSAN), but support is experimental::
 
    clang -g -O1 -fsanitize=fuzzer                         mytarget.c # Builds the fuzz target w/o sanitizers
    clang -g -O1 -fsanitize=fuzzer,address                 mytarget.c # Builds the fuzz target with ASAN
    clang -g -O1 -fsanitize=fuzzer,signed-integer-overflow mytarget.c # Builds the fuzz target with a part of UBSAN
+   clang -g -O1 -fsanitize=fuzzer,memory                  mytarget.c # Builds the fuzz target with MSAN
 
 This will perform the necessary instrumentation, as well as linking with the libFuzzer library.
 Note that ``-fsanitize=fuzzer`` links in the libFuzzer's ``main()`` symbol.
@@ -92,10 +94,6 @@ instrumentation without linking::
 
 Then libFuzzer can be linked to the desired driver by passing in
 ``-fsanitize=fuzzer`` during the linking stage.
-
-Using MemorySanitizer_ (MSAN) with libFuzzer is possible too, but tricky.
-The exact details are out of scope, we expect to simplify this in future
-versions.
 
 .. _libfuzzer-corpus:
 

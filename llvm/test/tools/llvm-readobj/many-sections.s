@@ -11,10 +11,11 @@
 ## space, but its e_shnum, e_shstrndx, sh_size and sh_link fields are set
 ## according to the above description, so that we can test the dumper.
 
-# RUN: llvm-readobj -file-headers -elf-output-style GNU \
+# RUN: llvm-readobj -file-headers -sections -elf-output-style GNU \
 # RUN:   %p/Inputs/many-sections.elf-x86_64 | FileCheck %s --check-prefix=GNU1
 # GNU1: Number of section headers:         0 (5)
 # GNU1: Section header string table index: 65535 (3)
+# GNU1: There are 5 section headers, starting at offset 0xb8
 
 # RUN: llvm-readobj -file-headers -elf-output-style LLVM \
 # RUN:   %p/Inputs/many-sections.elf-x86_64 | FileCheck %s --check-prefix=LLVM1
