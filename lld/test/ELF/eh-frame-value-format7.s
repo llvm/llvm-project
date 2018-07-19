@@ -6,7 +6,28 @@
 
 ## Check we are able to handle DW_EH_PE_udata2 encoding.
 
+# CHECK:      Section {
+# CHECK:        Index:
 # CHECK:        Name: .eh_frame_hdr
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x2000
+# CHECK-NEXT:   Offset: 0x2000
+# CHECK-NEXT:   Size: 20
+# CHECK-NEXT:   Link: 0
+# CHECK-NEXT:   Info: 0
+# CHECK-NEXT:   AddressAlignment: 4
+# CHECK-NEXT:   EntrySize: 0
+# CHECK-NEXT:   SectionData (
+# CHECK-NEXT:     0000: 011B033B 10000000 01000000 34F2FFFF
+# CHECK-NEXT:     0010: 24000000
+# Header (always 4 bytes): 011B033B
+#    10000000 = .eh_frame(0x2014) - .eh_frame_hdr(0x2000) - 4
+#    01000000 = 1 = the number of FDE pointers in the table.
+# 34F2FFFF = foo(0x1000) - 0x234(addend) - .eh_frame_hdr(0x2000)
+  
 # CHECK:      Section {
 # CHECK:        Index:
 # CHECK:        Name: .eh_frame
@@ -14,8 +35,8 @@
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address:
-# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Address: 0x2014
+# CHECK-NEXT:   Offset: 0x2014
 # CHECK-NEXT:   Size:
 # CHECK-NEXT:   Link:
 # CHECK-NEXT:   Info:

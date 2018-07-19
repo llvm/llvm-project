@@ -403,6 +403,28 @@ namespace dr330 { // dr330: 7
     (void) reinterpret_cast<T>(q); // expected-error {{casts away qualifiers}}
     (void) reinterpret_cast<Q>(t);
   }
+
+  namespace swift_17882 {
+    typedef const char P[72];
+    typedef int *Q;
+    void f(P &pr, P *pp) {
+      (void) reinterpret_cast<const Q&>(pr);
+      (void) reinterpret_cast<const Q*>(pp);
+    }
+
+    struct X {};
+    typedef const volatile int A[1][2][3];
+    typedef int *const X::*volatile *B1;
+    typedef int *const X::*         *B2;
+    typedef int *X::*      volatile *B3;
+    typedef volatile int *(*const B4)[4];
+    void f(A *a) {
+      (void) reinterpret_cast<B1*>(a);
+      (void) reinterpret_cast<B2*>(a); // expected-error {{casts away qualifiers}}
+      (void) reinterpret_cast<B3*>(a); // expected-error {{casts away qualifiers}}
+      (void) reinterpret_cast<B4*>(a);
+    }
+  }
 }
 
 namespace dr331 { // dr331: yes

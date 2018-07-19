@@ -348,7 +348,6 @@
 // RUN: -fwhole-program                                                       \
 // RUN: -fcaller-saves                                                        \
 // RUN: -freorder-blocks                                                      \
-// RUN: -fdelete-null-pointer-checks                                          \
 // RUN: -ffat-lto-objects                                                     \
 // RUN: -fmerge-constants                                                     \
 // RUN: -finline-small-functions                                              \
@@ -414,7 +413,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fwhole-program' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fcaller-saves' is not supported
 // CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
-// CHECK-WARNING-DAG: optimization flag '-fdelete-null-pointer-checks' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ffat-lto-objects' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fmerge-constants' is not supported
 // CHECK-WARNING-DAG: optimization flag '-finline-small-functions' is not supported
@@ -526,3 +524,10 @@
 // RUN: %clang -### -S -fno-merge-all-constants -fmerge-all-constants %s 2>&1 | FileCheck -check-prefix=CHECK-MERGE-ALL-CONSTANTS %s
 // CHECK-NO-MERGE-ALL-CONSTANTS-NOT: "-fmerge-all-constants"
 // CHECK-MERGE-ALL-CONSTANTS: "-fmerge-all-constants"
+
+// RUN: %clang -### -S -fdelete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NULL-POINTER-CHECKS %s
+// RUN: %clang -### -S -fno-delete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NO-NULL-POINTER-CHECKS %s
+// RUN: %clang -### -S -fdelete-null-pointer-checks -fno-delete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NO-NULL-POINTER-CHECKS %s
+// RUN: %clang -### -S -fno-delete-null-pointer-checks -fdelete-null-pointer-checks %s 2>&1 | FileCheck -check-prefix=CHECK-NULL-POINTER-CHECKS %s
+// CHECK-NO-NULL-POINTER-CHECKS: "-fno-delete-null-pointer-checks"
+// CHECK-NULL-POINTER-CHECKS-NOT: "-fno-delete-null-pointer-checks"

@@ -173,8 +173,9 @@ static bool isEligible(InputSection *S) {
     return false;
 
   // Don't merge read only data sections unless
-  // --ignore-data-address-equality was passed.
-  if (!(S->Flags & SHF_EXECINSTR) && !Config->IgnoreDataAddressEquality)
+  // --ignore-data-address-equality or --icf=safe was passed.
+  if (!(S->Flags & SHF_EXECINSTR) &&
+      !(Config->IgnoreDataAddressEquality || Config->ICF == ICFLevel::Safe))
     return false;
 
   // Don't merge synthetic sections as their Data member is not valid and empty.

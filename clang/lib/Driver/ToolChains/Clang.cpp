@@ -3348,6 +3348,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_merge_all_constants, false))
     CmdArgs.push_back("-fmerge-all-constants");
 
+  if (Args.hasFlag(options::OPT_fno_delete_null_pointer_checks,
+                   options::OPT_fdelete_null_pointer_checks, false))
+    CmdArgs.push_back("-fno-delete-null-pointer-checks");
+
   // LLVM Code Generator Options.
 
   if (Args.hasArg(options::OPT_frewrite_map_file) ||

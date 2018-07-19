@@ -1387,8 +1387,10 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         F->addAttributes(llvm::AttributeList::FunctionIndex, Attrs);
       }
     }
-
-    if (const SectionAttr *SA = D->getAttr<SectionAttr>())
+    
+    if (const auto *CSA = D->getAttr<CodeSegAttr>())
+      GO->setSection(CSA->getName());
+    else if (const auto *SA = D->getAttr<SectionAttr>())
       GO->setSection(SA->getName());
   }
 
@@ -1485,8 +1487,10 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   setLinkageForGV(F, FD);
   setGVProperties(F, FD);
 
-  if (const SectionAttr *SA = FD->getAttr<SectionAttr>())
-    F->setSection(SA->getName());
+  if (const auto *CSA = FD->getAttr<CodeSegAttr>())
+    F->setSection(CSA->getName());
+  else if (const auto *SA = FD->getAttr<SectionAttr>())
+     F->setSection(SA->getName());
 
   if (FD->isReplaceableGlobalAllocationFunction()) {
     // A replaceable global allocation function does not act like a builtin by

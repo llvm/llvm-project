@@ -913,6 +913,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // This represents the function body for the lambda function, check if we
   // have to apply optnone due to a pragma.
   AddRangeBasedOptnone(Method);
+
+  // code_seg attribute on lambda apply to the method.
+  if (Attr *A = getImplicitCodeSegOrSectionAttrForFunction(Method, /*IsDefinition=*/true))
+    Method->addAttr(A);
   
   // Attributes on the lambda apply to the method.  
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
