@@ -1080,6 +1080,13 @@ def frewrite_imports : Flag<["-"], "frewrite-imports">, Group<f_Group>,
   Flags<[CC1Option]>;
 def fno_rewrite_imports : Flag<["-"], "fno-rewrite-imports">, Group<f_Group>;
 
+def fdelete_null_pointer_checks : Flag<["-"],
+  "fdelete-null-pointer-checks">, Group<f_Group>,
+  HelpText<"Treat usage of null pointers as undefined behavior.">;
+def fno_delete_null_pointer_checks : Flag<["-"],
+  "fno-delete-null-pointer-checks">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Do not treat usage of null pointers as undefined behavior.">;
+
 def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
                         Group<f_Group>,
                         Flags<[ DriverOption, CC1Option ]>;
@@ -2855,8 +2862,6 @@ defm reorder_blocks : BooleanFFlag<"reorder-blocks">, Group<clang_ignored_gcc_op
 defm eliminate_unused_debug_types : BooleanFFlag<"eliminate-unused-debug-types">, Group<clang_ignored_f_Group>;
 defm branch_count_reg : BooleanFFlag<"branch-count-reg">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm default_inline : BooleanFFlag<"default-inline">, Group<clang_ignored_gcc_optimization_f_Group>;
-defm delete_null_pointer_checks : BooleanFFlag<"delete-null-pointer-checks">,
-    Group<clang_ignored_gcc_optimization_f_Group>;
 defm fat_lto_objects : BooleanFFlag<"fat-lto-objects">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm float_store : BooleanFFlag<"float-store">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm friend_injection : BooleanFFlag<"friend-injection">, Group<clang_ignored_f_Group>;

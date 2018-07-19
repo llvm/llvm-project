@@ -1,6 +1,6 @@
-; RUN: %llc_dwarf -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -use-dwarf-ranges-base-address-specifier | FileCheck --check-prefix=COMMON --check-prefix=BASE %s
-; RUN: %llc_dwarf -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=COMMON --check-prefix=NOBASE %s
-; RUN: %llc_dwarf -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -dwarf-version 5 | FileCheck --check-prefix=DWARF5 %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -use-dwarf-ranges-base-address-specifier | FileCheck --check-prefix=COMMON --check-prefix=BASE %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=COMMON --check-prefix=NOBASE %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -dwarf-version 5 | FileCheck --check-prefix=DWARF5 %s
 
 ; Group ranges in a range list that apply to the same section and use a base
 ; address selection entry to reduce the number of relocations to one reloc per

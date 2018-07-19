@@ -20,5 +20,5 @@ define double @double_op(double %lhs, double %rhs) {
 ; CHECK-M3: bl ___adddf3
 
 ; CHECK-M4-LABEL: double_op:
-; CHECK-M4: {{(bl|blx|b.w)}} ___adddf3
+; CHECK-M4: {{(blx|b.w)}} ___adddf3
 }

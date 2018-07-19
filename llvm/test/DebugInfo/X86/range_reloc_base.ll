@@ -1,6 +1,6 @@
-; RUN: %llc_dwarf -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -use-dwarf-ranges-base-address-specifier | FileCheck %s
-; RUN: %llc_dwarf -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck %s
-; RUN: %llc_dwarf -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -dwarf-version 5 | FileCheck --check-prefix=DWARF5 %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -use-dwarf-ranges-base-address-specifier | FileCheck %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -dwarf-version 5 | FileCheck --check-prefix=DWARF5 %s
 
 ; CHECK: {{^.Ldebug_ranges0}}
 ; CHECK-NEXT:   .quad   .Ltmp0-.Lfunc_begin0
