@@ -1,3 +1,13 @@
+include_directories(../Plugins/Process/Utility)
+
+# libswiftReflection is placed in a subdirectory which depends
+# on the host we're currently running on.
+# FIXME: There must be a better way to get at libswiftReflection.a
+string(REPLACE "-" ";" TRIPLE_LIST "${LLVM_HOST_TRIPLE}")
+list(GET TRIPLE_LIST 0 ARCH)
+list(GET TRIPLE_LIST 2 HOST_OS_VERSION)
+string(REGEX MATCHALL "[a-z]+" HOST_OS "${HOST_OS_VERSION}")
+
 add_lldb_library(lldbTarget
   ABI.cpp
   CPPLanguageRuntime.cpp
@@ -65,6 +75,7 @@ add_lldb_library(lldbTarget
     swiftBasic
     swiftFrontend
     swiftRemoteAST
+    swiftReflection-${HOST_OS}-${ARCH}
     lldbBreakpoint
     lldbCore
     lldbExpression
