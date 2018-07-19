@@ -70,12 +70,12 @@ int main()
 	if(fork())
 	{
 		print_parent_or_child();
-  		// CHECK: Parent with tid
+  		// CHECK-DAG: Parent with tid
 	}
 	else
 	{
 		print_parent_or_child();
-  		// CHECK: Child with tid
+  		// CHECK-DAG: Child with tid
 	}
 	return 0;
 }

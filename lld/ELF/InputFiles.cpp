@@ -420,6 +420,17 @@ void ObjFile<ELFT>::initializeSections(
     // if -r is given, we'll let the final link discard such sections.
     // This is compatible with GNU.
     if ((Sec.sh_flags & SHF_EXCLUDE) && !Config->Relocatable) {
+      if (Sec.sh_type == SHT_LLVM_ADDRSIG) {
+        // We ignore the address-significance table if we know that the object
+        // file was created by objcopy or ld -r. This is because these tools
+        // will reorder the symbols in the symbol table, invalidating the data
+        // in the address-significance table, which refers to symbols by index.
+        if (Sec.sh_link != 0)
+          this->AddrsigSec = &Sec;
+        else if (Config->ICF == ICFLevel::Safe)
+          warn(toString(this) + ": --icf=safe is incompatible with object "
+                                "files created using objcopy or ld -r");
+      }
       this->Sections[I] = &InputSection::Discarded;
       continue;
     }
