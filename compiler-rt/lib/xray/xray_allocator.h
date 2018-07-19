@@ -20,10 +20,15 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_posix.h"
-#include "sys/mman.h"
 #include "xray_utils.h"
+#include <sys/mman.h>
 #include <cstddef>
 #include <cstdint>
+
+#ifndef MAP_NORESERVE
+// no-op on NetBSD (at least), unsupported flag on FreeBSD basically because unneeded
+#define MAP_NORESERVE 0
+#endif
 
 namespace __xray {
 

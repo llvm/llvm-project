@@ -402,6 +402,7 @@ include "X86RegisterBanks.td"
 
 include "X86Schedule.td"
 include "X86InstrInfo.td"
+include "X86SchedPredicates.td"
 
 def X86InstrInfo : InstrInfo;
 

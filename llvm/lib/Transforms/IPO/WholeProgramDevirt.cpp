@@ -611,7 +611,8 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
     return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
   };
-  if (!DevirtModule(M, AARGetter, OREGetter, nullptr, nullptr).run())
+  if (!DevirtModule(M, AARGetter, OREGetter, ExportSummary, ImportSummary)
+           .run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

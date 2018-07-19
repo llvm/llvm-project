@@ -148,13 +148,13 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
       break;
 
     case lldb::eDescriptionLevelBrief:
-      if (offset > start_offset)
+      if (op_offset > start_offset)
         s->PutChar(' ');
       break;
 
     case lldb::eDescriptionLevelFull:
     case lldb::eDescriptionLevelVerbose:
-      if (offset > start_offset)
+      if (op_offset > start_offset)
         s->EOL();
       s->Indent();
       if (level == lldb::eDescriptionLevelFull)
@@ -173,34 +173,34 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
       *s << "DW_OP_deref";
       break; // 0x06
     case DW_OP_const1u:
-      s->Printf("DW_OP_const1u(0x%2.2x) ", m_data.GetU8(&offset));
+      s->Printf("DW_OP_const1u(0x%2.2x)", m_data.GetU8(&offset));
       break; // 0x08 1 1-byte constant
     case DW_OP_const1s:
-      s->Printf("DW_OP_const1s(0x%2.2x) ", m_data.GetU8(&offset));
+      s->Printf("DW_OP_const1s(0x%2.2x)", m_data.GetU8(&offset));
       break; // 0x09 1 1-byte constant
     case DW_OP_const2u:
-      s->Printf("DW_OP_const2u(0x%4.4x) ", m_data.GetU16(&offset));
+      s->Printf("DW_OP_const2u(0x%4.4x)", m_data.GetU16(&offset));
       break; // 0x0a 1 2-byte constant
     case DW_OP_const2s:
-      s->Printf("DW_OP_const2s(0x%4.4x) ", m_data.GetU16(&offset));
+      s->Printf("DW_OP_const2s(0x%4.4x)", m_data.GetU16(&offset));
       break; // 0x0b 1 2-byte constant
     case DW_OP_const4u:
-      s->Printf("DW_OP_const4u(0x%8.8x) ", m_data.GetU32(&offset));
+      s->Printf("DW_OP_const4u(0x%8.8x)", m_data.GetU32(&offset));
       break; // 0x0c 1 4-byte constant
     case DW_OP_const4s:
-      s->Printf("DW_OP_const4s(0x%8.8x) ", m_data.GetU32(&offset));
+      s->Printf("DW_OP_const4s(0x%8.8x)", m_data.GetU32(&offset));
       break; // 0x0d 1 4-byte constant
     case DW_OP_const8u:
-      s->Printf("DW_OP_const8u(0x%16.16" PRIx64 ") ", m_data.GetU64(&offset));
+      s->Printf("DW_OP_const8u(0x%16.16" PRIx64 ")", m_data.GetU64(&offset));
       break; // 0x0e 1 8-byte constant
     case DW_OP_const8s:
-      s->Printf("DW_OP_const8s(0x%16.16" PRIx64 ") ", m_data.GetU64(&offset));
+      s->Printf("DW_OP_const8s(0x%16.16" PRIx64 ")", m_data.GetU64(&offset));
       break; // 0x0f 1 8-byte constant
     case DW_OP_constu:
-      s->Printf("DW_OP_constu(0x%" PRIx64 ") ", m_data.GetULEB128(&offset));
+      s->Printf("DW_OP_constu(0x%" PRIx64 ")", m_data.GetULEB128(&offset));
       break; // 0x10 1 ULEB128 constant
     case DW_OP_consts:
-      s->Printf("DW_OP_consts(0x%" PRId64 ") ", m_data.GetSLEB128(&offset));
+      s->Printf("DW_OP_consts(0x%" PRId64 ")", m_data.GetSLEB128(&offset));
       break; // 0x11 1 SLEB128 constant
     case DW_OP_dup:
       s->PutCString("DW_OP_dup");
@@ -212,7 +212,7 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
       s->PutCString("DW_OP_over");
       break; // 0x14
     case DW_OP_pick:
-      s->Printf("DW_OP_pick(0x%2.2x) ", m_data.GetU8(&offset));
+      s->Printf("DW_OP_pick(0x%2.2x)", m_data.GetU8(&offset));
       break; // 0x15 1 1-byte stack index
     case DW_OP_swap:
       s->PutCString("DW_OP_swap");
@@ -254,7 +254,7 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::offset_t offset,
       s->PutCString("DW_OP_plus");
       break;                // 0x22
     case DW_OP_plus_uconst: // 0x23 1 ULEB128 addend
-      s->Printf("DW_OP_plus_uconst(0x%" PRIx64 ") ",
+      s->Printf("DW_OP_plus_uconst(0x%" PRIx64 ")",
                 m_data.GetULEB128(&offset));
       break;
 

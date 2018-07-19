@@ -443,6 +443,13 @@ def : DiagGroup<"synth">;
 def SizeofArrayArgument : DiagGroup<"sizeof-array-argument">;
 def SizeofArrayDecay : DiagGroup<"sizeof-array-decay">;
 def SizeofPointerMemaccess : DiagGroup<"sizeof-pointer-memaccess">;
+def MemsetTransposedArgs : DiagGroup<"memset-transposed-args">;
+def DynamicClassMemaccess : DiagGroup<"dynamic-class-memaccess">;
+def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess">;
+def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
+def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
+  [SizeofPointerMemaccess, DynamicClassMemaccess,
+   NonTrivialMemaccess, MemsetTransposedArgs, SuspiciousBzero]>;
 def StaticInInline : DiagGroup<"static-in-inline">;
 def StaticLocalInInline : DiagGroup<"static-local-in-inline">;
 def GNUStaticFloatInit : DiagGroup<"gnu-static-float-init">;
