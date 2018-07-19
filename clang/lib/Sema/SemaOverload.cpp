@@ -629,6 +629,8 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
   }
 
+  case Sema::TDK_IncompletePack:
+    // FIXME: It's slightly wasteful to allocate two TemplateArguments for this.
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified: {
     // FIXME: Should allocate from normal heap so that we can free this later.
@@ -671,6 +673,7 @@ void DeductionFailureInfo::Destroy() {
   case Sema::TDK_NonDependentConversionFailure:
     break;
 
+  case Sema::TDK_IncompletePack:
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
   case Sema::TDK_DeducedMismatch:
@@ -720,6 +723,7 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case Sema::TDK_InvalidExplicitArguments:
     return TemplateParameter::getFromOpaqueValue(Data);
 
+  case Sema::TDK_IncompletePack:
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
     return static_cast<DFIParamWithArguments*>(Data)->Param;
@@ -740,6 +744,7 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   case Sema::TDK_TooManyArguments:
   case Sema::TDK_TooFewArguments:
   case Sema::TDK_Incomplete:
+  case Sema::TDK_IncompletePack:
   case Sema::TDK_InvalidExplicitArguments:
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
@@ -777,6 +782,7 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case Sema::TDK_NonDependentConversionFailure:
     return nullptr;
 
+  case Sema::TDK_IncompletePack:
   case Sema::TDK_Inconsistent:
   case Sema::TDK_Underqualified:
   case Sema::TDK_DeducedMismatch:
@@ -798,6 +804,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case Sema::TDK_Invalid:
   case Sema::TDK_InstantiationDepth:
   case Sema::TDK_Incomplete:
+  case Sema::TDK_IncompletePack:
   case Sema::TDK_TooManyArguments:
   case Sema::TDK_TooFewArguments:
   case Sema::TDK_InvalidExplicitArguments:
@@ -9893,6 +9900,17 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     return;
   }
 
+  case Sema::TDK_IncompletePack: {
+    assert(ParamD && "no parameter found for incomplete deduction result");
+    S.Diag(Templated->getLocation(),
+           diag::note_ovl_candidate_incomplete_deduction_pack)
+        << ParamD->getDeclName()
+        << (DeductionFailure.getFirstArg()->pack_size() + 1)
+        << *DeductionFailure.getFirstArg();
+    MaybeEmitInheritedConstructorNote(S, Found);
+    return;
+  }
+
   case Sema::TDK_Underqualified: {
     assert(ParamD && "no parameter found for bad qualifiers deduction result");
     TemplateTypeParmDecl *TParam = cast<TemplateTypeParmDecl>(ParamD);
@@ -10372,6 +10390,7 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
 
   case Sema::TDK_Invalid:
   case Sema::TDK_Incomplete:
+  case Sema::TDK_IncompletePack:
     return 1;
 
   case Sema::TDK_Underqualified:

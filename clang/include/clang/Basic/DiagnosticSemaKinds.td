@@ -619,14 +619,14 @@ def warn_cstruct_memaccess : Warning<
   "%select{destination for|source of|first operand of|second operand of}0 this "
   "%1 call is a pointer to record %2 that is not trivial to "
   "%select{primitive-default-initialize|primitive-copy}3">,
-  InGroup<DiagGroup<"nontrivial-memaccess">>;
+  InGroup<NonTrivialMemaccess>;
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
 def warn_dyn_class_memaccess : Warning<
   "%select{destination for|source of|first operand of|second operand of}0 this "
   "%1 call is a pointer to %select{|class containing a }2dynamic class %3; "
   "vtable pointer will be %select{overwritten|copied|moved|compared}4">,
-  InGroup<DiagGroup<"dynamic-class-memaccess">>;
+  InGroup<DynamicClassMemaccess>;
 def note_bad_memaccess_silence : Note<
   "explicitly cast the pointer to silence this warning">;
 def warn_sizeof_pointer_expr_memaccess : Warning<
@@ -655,7 +655,19 @@ def note_memsize_comparison_paren : Note<
   "did you mean to compare the result of %0 instead?">;
 def note_memsize_comparison_cast_silence : Note<
   "explicitly cast the argument to size_t to silence this warning">;
-  
+def warn_suspicious_sizeof_memset : Warning<
+  "%select{'size' argument to memset is '0'|"
+  "setting buffer to a 'sizeof' expression}0"
+  "; did you mean to transpose the last two arguments?">,
+  InGroup<MemsetTransposedArgs>;
+def note_suspicious_sizeof_memset_silence : Note<
+  "%select{parenthesize the third argument|"
+  "cast the second argument to 'int'}0 to silence">;
+def warn_suspicious_bzero_size : Warning<"'size' argument to bzero is '0'">,
+  InGroup<SuspiciousBzero>;
+def note_suspicious_bzero_size_silence : Note<
+  "parenthesize the second argument to silence">;
+
 def warn_strncat_large_size : Warning<
   "the value of the size argument in 'strncat' is too large, might lead to a " 
   "buffer overflow">, InGroup<StrncatSize>;
@@ -3651,6 +3663,9 @@ def note_ovl_candidate_bad_deduction : Note<
     "candidate template ignored: failed template argument deduction">;
 def note_ovl_candidate_incomplete_deduction : Note<"candidate template ignored: "
     "couldn't infer template argument %0">;
+def note_ovl_candidate_incomplete_deduction_pack : Note<"candidate template ignored: "
+    "deduced too few arguments for expanded pack %0; no argument for %ordinal1 "
+    "expanded parameter in deduced argument pack %2">;
 def note_ovl_candidate_inconsistent_deduction : Note<
     "candidate template ignored: deduced conflicting %select{types|values|"
     "templates}0 for parameter %1%diff{ ($ vs. $)|}2,3">;
@@ -4165,6 +4180,13 @@ def ext_explicit_specialization_storage_class : ExtWarn<
 def err_explicit_specialization_inconsistent_storage_class : Error<
   "explicit specialization has extraneous, inconsistent storage class "
   "'%select{none|extern|static|__private_extern__|auto|register}0'">;
+def err_dependent_function_template_spec_no_match : Error<
+  "no candidate function template was found for dependent"
+  " friend function template specialization">;
+def note_dependent_function_template_spec_discard_reason : Note<
+  "candidate ignored: %select{not a function template"
+  "|not a member of the enclosing namespace;"
+  " did you mean to explicitly qualify the specialization?}0">;
 
 // C++ class template specializations and out-of-line definitions
 def err_template_spec_needs_header : Error<
@@ -4524,6 +4546,9 @@ def err_pack_expansion_length_conflict : Error<
 def err_pack_expansion_length_conflict_multilevel : Error<
   "pack expansion contains parameter pack %0 that has a different "
   "length (%1 vs. %2) from outer parameter packs">;
+def err_pack_expansion_length_conflict_partial : Error<
+  "pack expansion contains parameter pack %0 that has a different "
+  "length (at least %1 vs. %2) from outer parameter packs">;
 def err_pack_expansion_member_init : Error<
   "pack expansion for initialization of member %0">;
 

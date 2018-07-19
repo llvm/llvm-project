@@ -49,6 +49,8 @@ protected:
     return !T.isNull() && !T->isVoidType();
   }
 
+  mutable unsigned Complexity = 0;
+
 public:
   virtual ~SymExpr() = default;
 
@@ -85,7 +87,7 @@ public:
   symbol_iterator symbol_begin() const { return symbol_iterator(this); }
   static symbol_iterator symbol_end() { return symbol_iterator(); }
 
-  unsigned computeComplexity() const;
+  virtual unsigned computeComplexity() const = 0;
 
   /// Find the region from which this symbol originates.
   ///
@@ -126,6 +128,10 @@ public:
   ~SymbolData() override = default;
 
   SymbolID getSymbolID() const { return Sym; }
+
+  unsigned computeComplexity() const override {
+    return 1;
+  };
 
   // Implement isa<T> support.
   static inline bool classof(const SymExpr *SE) {

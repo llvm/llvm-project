@@ -646,7 +646,9 @@ bool Sema::CheckParameterPacksForExpansion(
   RetainExpansion = false;
   std::pair<IdentifierInfo *, SourceLocation> FirstPack;
   bool HaveFirstPack = false;
-  
+  Optional<unsigned> NumPartialExpansions;
+  SourceLocation PartiallySubstitutedPackLoc;
+
   for (ArrayRef<UnexpandedParameterPack>::iterator i = Unexpanded.begin(),
                                                  end = Unexpanded.end();
                                                   i != end; ++i) {
@@ -711,8 +713,13 @@ bool Sema::CheckParameterPacksForExpansion(
                     = CurrentInstantiationScope->getPartiallySubstitutedPack()){
         unsigned PartialDepth, PartialIndex;
         std::tie(PartialDepth, PartialIndex) = getDepthAndIndex(PartialPack);
-        if (PartialDepth == Depth && PartialIndex == Index)
+        if (PartialDepth == Depth && PartialIndex == Index) {
           RetainExpansion = true;
+          // We don't actually know the new pack size yet.
+          NumPartialExpansions = NewPackSize;
+          PartiallySubstitutedPackLoc = i->second;
+          continue;
+        }
       }
     }
     
@@ -740,6 +747,28 @@ bool Sema::CheckParameterPacksForExpansion(
           << SourceRange(i->second);
       return true;
     }
+  }
+
+  // If we're performing a partial expansion but we also have a full expansion,
+  // expand to the number of common arguments. For example, given:
+  //
+  //   template<typename ...T> struct A {
+  //     template<typename ...U> void f(pair<T, U>...);
+  //   };
+  //
+  // ... a call to 'A<int, int>().f<int>' should expand the pack once and
+  // retain an expansion.
+  if (NumPartialExpansions) {
+    if (NumExpansions && *NumExpansions < *NumPartialExpansions) {
+      NamedDecl *PartialPack =
+          CurrentInstantiationScope->getPartiallySubstitutedPack();
+      Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_partial)
+        << PartialPack << *NumPartialExpansions << *NumExpansions
+        << SourceRange(PartiallySubstitutedPackLoc);
+      return true;
+    }
+
+    NumExpansions = NumPartialExpansions;
   }
 
   return false;
