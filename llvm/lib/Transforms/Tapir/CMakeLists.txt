@@ -1,4 +1,5 @@
 add_llvm_library(LLVMTapirOpts
+  AnalyzeTapir.cpp
   CilkABI.cpp
   CilkRABI.cpp
   LoopSpawning.cpp

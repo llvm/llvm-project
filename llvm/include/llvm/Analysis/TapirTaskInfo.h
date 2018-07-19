@@ -320,6 +320,8 @@ protected:
   ~Spindle() {
     Blocks.clear();
     DenseBlockSet.clear();
+    Incoming.clear();
+    Outgoing.clear();
     ParentTask = nullptr;
   }
 };
@@ -512,8 +514,10 @@ public:
     return SubTasks;
   }
   using iterator = typename std::vector<Task *>::const_iterator;
+  using const_iterator = iterator;
   using reverse_iterator =
                        typename std::vector<Task *>::const_reverse_iterator;
+  using const_reverse_iterator = reverse_iterator;
   inline iterator begin() const { return getSubTasks().begin(); }
   inline iterator end() const { return getSubTasks().end(); }
   inline reverse_iterator rbegin() const { return getSubTasks().rbegin(); }
@@ -679,7 +683,14 @@ protected:
     for (auto *Spindle : Spindles)
       Spindle->~Spindle();
 
+    for (auto *SharedEH : SharedSubTaskEH)
+      SharedEH->~Spindle();
+
     SubTasks.clear();
+    Spindles.clear();
+    SharedSubTaskEH.clear();
+    DenseSpindleSet.clear();
+    DenseEHSpindleSet.clear();
     ParentTask = nullptr;
   }
 };
@@ -691,7 +702,7 @@ protected:
 // Allow clients to walk the list of nested tasks.
 template <> struct GraphTraits<const Task *> {
   using NodeRef = const Task *;
-  using ChildIteratorType = Task::iterator;
+  using ChildIteratorType = Task::const_iterator;
 
   static NodeRef getEntryNode(const Task *T) { return T; }
   static ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
@@ -737,21 +748,25 @@ public:
         RootTask(std::move(Arg.RootTask)),
         DomTree(Arg.DomTree),
         TaskAllocator(std::move(Arg.TaskAllocator)) {
+    Arg.RootTask = nullptr;
   }
   TaskInfo &operator=(TaskInfo &&RHS) {
     BBMap = std::move(RHS.BBMap);
     SpindleMap = std::move(RHS.SpindleMap);
-    RootTask->~Task();
+    if (RootTask)
+      RootTask->~Task();
     RootTask = std::move(RHS.RootTask);
     TaskAllocator = std::move(RHS.TaskAllocator);
     DomTree = std::move(RHS.DomTree);
+    RHS.RootTask = nullptr;
     return *this;
   }
 
   void releaseMemory() {
     BBMap.clear();
     SpindleMap.clear();
-    RootTask->~Task();
+    if (RootTask)
+      RootTask->~Task();
     TaskAllocator.Reset();
   }
 
@@ -764,23 +779,25 @@ public:
     return new (Storage) Task(std::forward<ArgsTy>(Args)...);
   }
 
+  Task *getRootTask() const { return RootTask; }
+
   /// Return true if this function is "serial," meaning it does not itself
   /// perform a detach.  This method does not preclude functions called by this
   /// function from performing a detach.
-  bool isSerial() const { return RootTask->SubTasks.empty(); }
-
-  Task *getRootTask() const { return RootTask; }
+  bool isSerial() const { return getRootTask()->SubTasks.empty(); }
 
   /// iterator/begin/end - The interface to the top-level tasks in the current
   /// function.
   ///
   using iterator = Task::iterator;
+  using const_iterator = Task::const_iterator;
   using reverse_iterator = Task::reverse_iterator;
-  iterator begin() const { return getRootTask()->begin(); }
-  iterator end() const { return getRootTask()->end(); }
-  reverse_iterator rbegin() const { return getRootTask()->rbegin(); }
-  reverse_iterator rend() const { return getRootTask()->rend(); }
-  bool empty() const { return getRootTask()->empty(); }
+  using const_reverse_iterator = Task::const_reverse_iterator;
+  inline iterator begin() const { return getRootTask()->begin(); }
+  inline iterator end() const { return getRootTask()->end(); }
+  inline reverse_iterator rbegin() const { return getRootTask()->rbegin(); }
+  inline reverse_iterator rend() const { return getRootTask()->rend(); }
+  inline bool empty() const { return getRootTask()->empty(); }
 
   /// Return the innermost spindle that BB lives in.
   // const Spindle *getSpindleFor(const BasicBlock *BB) const {
@@ -890,7 +907,10 @@ public:
       }
     }
   }
-  
+
+  /// Check if a alloca AI is promotable based on task structure.
+  bool isAllocaParallelPromotable(const AllocaInst *AI) const;
+
   /// Create the task forest using a stable algorithm.
   void analyze(Function &F);
 
@@ -914,6 +934,7 @@ public:
   /// Callers that don't naturally handle this themselves should probably call
   /// `erase' instead.
   void destroy(Task *T) {
+    assert(T && "Cannot destroy a null task.");
     T->~Task();
 
     // Since TaskAllocator is a BumpPtrAllocator, this Deallocate only poisons

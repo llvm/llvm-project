@@ -63,6 +63,12 @@ FunctionPass *createSpawnUnswitchPass();
 //
 ModulePass *createLowerTapirToTargetPass(TapirTarget*);
 
+//===----------------------------------------------------------------------===//
+//
+// LowerTapirToTarget - Lower Tapir constructs to a specified parallel runtime.
+//
+FunctionPass *createAnalyzeTapirPass();
+
 } // End llvm namespace
 
 #endif

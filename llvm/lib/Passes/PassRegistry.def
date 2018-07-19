@@ -135,6 +135,7 @@ FUNCTION_ANALYSIS("stack-safety-local", StackSafetyAnalysis())
 FUNCTION_ANALYSIS("targetlibinfo", TargetLibraryAnalysis())
 FUNCTION_ANALYSIS("targetir",
                   TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis())
+FUNCTION_ANALYSIS("tasks", TaskAnalysis())
 FUNCTION_ANALYSIS("verify", VerifierAnalysis())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 

@@ -332,6 +332,163 @@ void TaskInfo::analyze(Function &F) {
   computeSpindleEdges(this);
 }
 
+/// \brief Determine which blocks the value is live in.
+///
+/// These are blocks which lead to uses.  Knowing this allows us to avoid
+/// inserting PHI nodes into blocks which don't lead to uses (thus, the inserted
+/// phi nodes would be dead).
+static void ComputeLiveInBlocks(
+    const AllocaInst *AI,
+    const SmallVectorImpl<BasicBlock *> &UsingBlocks,
+    const SmallPtrSetImpl<BasicBlock *> &DefBlocks,
+    SmallPtrSetImpl<BasicBlock *> &LiveInBlocks) {
+  // To determine liveness, we must iterate through the predecessors of blocks
+  // where the def is live.  Blocks are added to the worklist if we need to
+  // check their predecessors.  Start with all the using blocks.
+  SmallVector<BasicBlock *, 64> LiveInBlockWorklist(UsingBlocks.begin(),
+                                                    UsingBlocks.end());
+
+  // If any of the using blocks is also a definition block, check to see if the
+  // definition occurs before or after the use.  If it happens before the use,
+  // the value isn't really live-in.
+  for (unsigned i = 0, e = LiveInBlockWorklist.size(); i != e; ++i) {
+    BasicBlock *BB = LiveInBlockWorklist[i];
+    if (!DefBlocks.count(BB))
+      continue;
+
+    // Okay, this is a block that both uses and defines the value.  If the first
+    // reference to the alloca is a def (store), then we know it isn't live-in.
+    for (BasicBlock::iterator I = BB->begin();; ++I) {
+      if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
+        if (SI->getOperand(1) != AI)
+          continue;
+
+        // We found a store to the alloca before a load.  The alloca is not
+        // actually live-in here.
+        LiveInBlockWorklist[i] = LiveInBlockWorklist.back();
+        LiveInBlockWorklist.pop_back();
+        --i;
+        --e;
+        break;
+      }
+
+      if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
+        if (LI->getOperand(0) != AI)
+          continue;
+
+        // Okay, we found a load before a store to the alloca.  It is actually
+        // live into this block.
+        break;
+      }
+    }
+  }
+
+  // Now that we have a set of blocks where the phi is live-in, recursively add
+  // their predecessors until we find the full region the value is live.
+  while (!LiveInBlockWorklist.empty()) {
+    BasicBlock *BB = LiveInBlockWorklist.pop_back_val();
+
+    // The block really is live in here, insert it into the set.  If already in
+    // the set, then it has already been processed.
+    if (!LiveInBlocks.insert(BB).second)
+      continue;
+
+    // Since the value is live into BB, it is either defined in a predecessor or
+    // live into it to.  Add the preds to the worklist unless they are a
+    // defining block.
+    for (BasicBlock *P : predecessors(BB)) {
+      // The value is not live into a predecessor if it defines the value.
+      if (DefBlocks.count(P))
+        continue;
+
+      // Otherwise it is, add to the worklist.
+      LiveInBlockWorklist.push_back(P);
+    }
+  }
+}
+
+// Check the set PHIBlocks if a PHI needs to be inserted in a task-continue
+// block.
+static bool needPhiInTaskContinue(
+    const TaskInfo &TI, const AllocaInst *AI,
+    SmallVectorImpl<BasicBlock *> &PHIBlocks) {
+  // Determine which PHI nodes want to use a value from a detached predecessor.
+  // Because register state is not preserved across a reattach, these alloca's
+  // cannot be promoted.
+  for (unsigned i = 0, e = PHIBlocks.size(); i != e; ++i) {
+    const BasicBlock *BB = PHIBlocks[i];
+    for (const_pred_iterator PI = pred_begin(BB), E = pred_end(BB);
+         PI != E; ++PI) {
+      const BasicBlock *P = *PI;
+      // if (isa<ReattachInst>(P->getTerminator())) {
+      if (TI.getSpindleFor(BB)->predInDifferentTask(TI.getSpindleFor(P))) {
+        DEBUG(dbgs() << "Alloca " << *AI << " has use reattached from " <<
+              P->getName() << "\n");
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// Check if a alloca AI is promotable based on task structure.
+bool TaskInfo::isAllocaParallelPromotable(const AllocaInst *AIP) const {
+  if (getTaskFor(AIP->getParent())->isSerial()) return true;
+
+  AllocaInst *AI = const_cast<AllocaInst *>(AIP);
+  SmallPtrSet<BasicBlock *, 32> DefBlocks;
+  SmallVector<BasicBlock *, 32> UsingBlocks;
+  const Spindle *OnlySpindle = nullptr;
+  bool OnlyUsedInOneSpindle = true;
+
+  // As we scan the uses of the alloca instruction, keep track of stores, and
+  // decide whether all of the loads and stores to the alloca are within the
+  // same basic block.
+  for (auto UI = AI->user_begin(), E = AI->user_end(); UI != E;) {
+    Instruction *User = cast<Instruction>(*UI++);
+    if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
+      // Remember the basic blocks which define new values for the alloca
+      DefBlocks.insert(SI->getParent());
+    } else if (LoadInst *LI = dyn_cast<LoadInst>(User)) {
+      // Otherwise it must be a load instruction, keep track of variable reads.
+      UsingBlocks.push_back(LI->getParent());
+    } else continue;
+
+    if (OnlyUsedInOneSpindle) {
+      if (!OnlySpindle)
+        OnlySpindle = getSpindleFor(User->getParent());
+      else if (OnlySpindle != getSpindleFor(User->getParent()))
+        OnlyUsedInOneSpindle = false;
+    }
+  }
+
+  if (OnlyUsedInOneSpindle) return true;
+
+  ForwardIDFCalculator IDF(DomTree);
+  // Determine which blocks the value is live in.  These are blocks which lead
+  // to uses.
+  SmallPtrSet<BasicBlock *, 32> LiveInBlocks;
+  ComputeLiveInBlocks(AI, UsingBlocks, DefBlocks, LiveInBlocks);
+  // Filter out live-in blocks that are not dominated by the alloca.
+  if (AI->getParent() != DomTree.getRoot()) {
+    SmallVector<BasicBlock *, 32> LiveInToRemove;
+    for (BasicBlock *LiveIn : LiveInBlocks)
+      if (!DomTree.dominates(AI->getParent(), LiveIn))
+        LiveInToRemove.push_back(LiveIn);
+    for (BasicBlock *ToRemove : LiveInToRemove)
+      LiveInBlocks.erase(ToRemove);
+  }
+
+  // Determine which blocks need PHI nodes and see if we can optimize out some
+  // work by avoiding insertion of dead phi nodes.
+  IDF.setLiveInBlocks(LiveInBlocks);
+  IDF.setDefiningBlocks(DefBlocks);
+  SmallVector<BasicBlock *, 32> PHIBlocks;
+  IDF.calculate(PHIBlocks);
+
+  return !needPhiInTaskContinue(*this, AI, PHIBlocks);
+}
+
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Spindle &S) {
   S.print(OS);
   return OS;
@@ -465,11 +622,8 @@ void Task::print(raw_ostream &OS, unsigned Depth, bool Verbose) const {
   OS.indent(Depth * 2) << "task at depth " << Depth << " containing: ";
 
   // Print the spindles in this task.
-  const Spindle *Entry = getEntrySpindle();
   SmallPtrSet<const Spindle *, 1> VisitedSharedEHSpindles;
   for (const Spindle *S : spindles()) {
-    // if (S == Entry)
-    //   OS << "<entry>";
     S->print(OS, Verbose);
     // If this spindle exits to a shared EH spindle, print those shared EH
     // spindles.
