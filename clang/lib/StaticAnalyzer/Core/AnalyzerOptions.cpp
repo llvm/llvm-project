@@ -390,7 +390,7 @@ unsigned AnalyzerOptions::getGraphTrimInterval() {
 
 unsigned AnalyzerOptions::getMaxSymbolComplexity() {
   if (!MaxSymbolComplexity.hasValue())
-    MaxSymbolComplexity = getOptionAsInteger("max-symbol-complexity", 25);
+    MaxSymbolComplexity = getOptionAsInteger("max-symbol-complexity", 35);
   return MaxSymbolComplexity.getValue();
 }
 

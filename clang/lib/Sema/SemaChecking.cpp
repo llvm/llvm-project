@@ -8629,24 +8629,26 @@ static const CXXRecordDecl *getContainedDynamicClass(QualType T,
   return nullptr;
 }
 
+static const UnaryExprOrTypeTraitExpr *getAsSizeOfExpr(const Expr *E) {
+  if (const auto *Unary = dyn_cast<UnaryExprOrTypeTraitExpr>(E))
+    if (Unary->getKind() == UETT_SizeOf)
+      return Unary;
+  return nullptr;
+}
+
 /// If E is a sizeof expression, returns its argument expression,
 /// otherwise returns NULL.
 static const Expr *getSizeOfExprArg(const Expr *E) {
-  if (const UnaryExprOrTypeTraitExpr *SizeOf =
-      dyn_cast<UnaryExprOrTypeTraitExpr>(E))
-    if (SizeOf->getKind() == UETT_SizeOf && !SizeOf->isArgumentType())
+  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
+    if (!SizeOf->isArgumentType())
       return SizeOf->getArgumentExpr()->IgnoreParenImpCasts();
-
   return nullptr;
 }
 
 /// If E is a sizeof expression, returns its argument type.
 static QualType getSizeOfArgType(const Expr *E) {
-  if (const UnaryExprOrTypeTraitExpr *SizeOf =
-      dyn_cast<UnaryExprOrTypeTraitExpr>(E))
-    if (SizeOf->getKind() == UETT_SizeOf)
-      return SizeOf->getTypeOfArgument();
-
+  if (const UnaryExprOrTypeTraitExpr *SizeOf = getAsSizeOfExpr(E))
+    return SizeOf->getTypeOfArgument();
   return QualType();
 }
 
@@ -8742,6 +8744,86 @@ struct SearchNonTrivialToCopyField
 
 }
 
+/// Detect if \c SizeofExpr is likely to calculate the sizeof an object.
+static bool doesExprLikelyComputeSize(const Expr *SizeofExpr) {
+  SizeofExpr = SizeofExpr->IgnoreParenImpCasts();
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(SizeofExpr)) {
+    if (BO->getOpcode() != BO_Mul && BO->getOpcode() != BO_Add)
+      return false;
+
+    return doesExprLikelyComputeSize(BO->getLHS()) ||
+           doesExprLikelyComputeSize(BO->getRHS());
+  }
+
+  return getAsSizeOfExpr(SizeofExpr) != nullptr;
+}
+
+/// Check if the ArgLoc originated from a macro passed to the call at CallLoc.
+///
+/// \code
+///   #define MACRO 0
+///   foo(MACRO);
+///   foo(0);
+/// \endcode
+///
+/// This should return true for the first call to foo, but not for the second
+/// (regardless of whether foo is a macro or function).
+static bool isArgumentExpandedFromMacro(SourceManager &SM,
+                                        SourceLocation CallLoc,
+                                        SourceLocation ArgLoc) {
+  if (!CallLoc.isMacroID())
+    return SM.getFileID(CallLoc) != SM.getFileID(ArgLoc);
+
+  return SM.getFileID(SM.getImmediateMacroCallerLoc(CallLoc)) !=
+         SM.getFileID(SM.getImmediateMacroCallerLoc(ArgLoc));
+}
+
+/// Diagnose cases like 'memset(buf, sizeof(buf), 0)', which should have the
+/// last two arguments transposed.
+static void CheckMemaccessSize(Sema &S, unsigned BId, const CallExpr *Call) {
+  if (BId != Builtin::BImemset && BId != Builtin::BIbzero)
+    return;
+
+  const Expr *SizeArg =
+    Call->getArg(BId == Builtin::BImemset ? 2 : 1)->IgnoreImpCasts();
+
+  // If we're memsetting or bzeroing 0 bytes, then this is likely an error.
+  SourceLocation CallLoc = Call->getRParenLoc();
+  SourceManager &SM = S.getSourceManager();
+  if (isa<IntegerLiteral>(SizeArg) &&
+      cast<IntegerLiteral>(SizeArg)->getValue() == 0 &&
+      !isArgumentExpandedFromMacro(SM, CallLoc, SizeArg->getExprLoc())) {
+
+    SourceLocation DiagLoc = SizeArg->getExprLoc();
+
+    // Some platforms #define bzero to __builtin_memset. See if this is the
+    // case, and if so, emit a better diagnostic.
+    if (BId == Builtin::BIbzero ||
+        (CallLoc.isMacroID() && Lexer::getImmediateMacroName(
+                                    CallLoc, SM, S.getLangOpts()) == "bzero")) {
+      S.Diag(DiagLoc, diag::warn_suspicious_bzero_size);
+      S.Diag(DiagLoc, diag::note_suspicious_bzero_size_silence);
+    } else {
+      S.Diag(DiagLoc, diag::warn_suspicious_sizeof_memset) << 0;
+      S.Diag(DiagLoc, diag::note_suspicious_sizeof_memset_silence) << 0;
+    }
+    return;
+  }
+
+  // If the second argument to a memset is a sizeof expression and the third
+  // isn't, this is also likely an error. This should catch
+  // 'memset(buf, sizeof(buf), 0xff)'.
+  if (BId == Builtin::BImemset &&
+      doesExprLikelyComputeSize(Call->getArg(1)) &&
+      !doesExprLikelyComputeSize(Call->getArg(2))) {
+    SourceLocation DiagLoc = Call->getArg(1)->getExprLoc();
+    S.Diag(DiagLoc, diag::warn_suspicious_sizeof_memset) << 1;
+    S.Diag(DiagLoc, diag::note_suspicious_sizeof_memset_silence) << 1;
+    return;
+  }
+}
+
 /// Check for dangerous or invalid arguments to memset().
 ///
 /// This issues warnings on known problematic, dangerous or unspecified
@@ -8770,6 +8852,9 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
   if (CheckMemorySizeofForComparison(*this, LenExpr, FnName,
                                      Call->getLocStart(), Call->getRParenLoc()))
     return;
+
+  // Catch cases like 'memset(buf, sizeof(buf), 0)'.
+  CheckMemaccessSize(*this, BId, Call);
 
   // We have special checking when the length is a sizeof expression.
   QualType SizeOfArgTy = getSizeOfArgType(LenExpr);

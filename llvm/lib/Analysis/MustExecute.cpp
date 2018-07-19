@@ -26,7 +26,7 @@ using namespace llvm;
 /// for the possibility of may throw exception.
 ///
 void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
-  assert(CurLoop != nullptr && "CurLoop cant be null");
+  assert(CurLoop != nullptr && "CurLoop can't be null");
   BasicBlock *Header = CurLoop->getHeader();
   // Setting default safety values.
   SafetyInfo->MayThrow = false;

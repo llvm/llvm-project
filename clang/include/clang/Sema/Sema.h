@@ -6911,6 +6911,9 @@ public:
     /// Template argument deduction did not deduce a value
     /// for every template parameter.
     TDK_Incomplete,
+    /// Template argument deduction did not deduce a value for every
+    /// expansion of an expanded template parameter pack.
+    TDK_IncompletePack,
     /// Template argument deduction produced inconsistent
     /// deduced values for the given template parameter.
     TDK_Inconsistent,

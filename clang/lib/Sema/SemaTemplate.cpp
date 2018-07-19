@@ -4914,27 +4914,6 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
   return false;
 }
 
-/// Diagnose an arity mismatch in the
-static bool diagnoseArityMismatch(Sema &S, TemplateDecl *Template,
-                                  SourceLocation TemplateLoc,
-                                  TemplateArgumentListInfo &TemplateArgs) {
-  TemplateParameterList *Params = Template->getTemplateParameters();
-  unsigned NumParams = Params->size();
-  unsigned NumArgs = TemplateArgs.size();
-
-  SourceRange Range;
-  if (NumArgs > NumParams)
-    Range = SourceRange(TemplateArgs[NumParams].getLocation(),
-                        TemplateArgs.getRAngleLoc());
-  S.Diag(TemplateLoc, diag::err_template_arg_list_different_arity)
-    << (NumArgs > NumParams)
-    << (int)S.getTemplateNameKindForDiagnostics(TemplateName(Template))
-    << Template << Range;
-  S.Diag(Template->getLocation(), diag::note_template_decl_here)
-    << Params->getSourceRange();
-  return true;
-}
-
 /// Check whether the template parameter is a pack expansion, and if so,
 /// determine the number of parameters produced by that expansion. For instance:
 ///
@@ -4988,7 +4967,15 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
   // FIXME: If there's a more recent default argument that *is* visible,
   // diagnose that it was declared too late.
 
-  return diagnoseArityMismatch(S, TD, Loc, Args);
+  TemplateParameterList *Params = TD->getTemplateParameters();
+
+  S.Diag(Loc, diag::err_template_arg_list_different_arity)
+    << /*not enough args*/0
+    << (int)S.getTemplateNameKindForDiagnostics(TemplateName(TD))
+    << TD;
+  S.Diag(TD->getLocation(), diag::note_template_decl_here)
+    << Params->getSourceRange();
+  return true;
 }
 
 /// Check that the given template argument list is well-formed
@@ -5040,7 +5027,7 @@ bool Sema::CheckTemplateArgumentList(
       } else if (ArgIdx == NumArgs && !PartialTemplateArgs) {
         // Not enough arguments for this parameter pack.
         Diag(TemplateLoc, diag::err_template_arg_list_different_arity)
-          << false
+          << /*not enough args*/0
           << (int)getTemplateNameKindForDiagnostics(TemplateName(Template))
           << Template;
         Diag(Template->getLocation(), diag::note_template_decl_here)
@@ -5235,8 +5222,16 @@ bool Sema::CheckTemplateArgumentList(
 
   // If we have any leftover arguments, then there were too many arguments.
   // Complain and fail.
-  if (ArgIdx < NumArgs)
-    return diagnoseArityMismatch(*this, Template, TemplateLoc, NewArgs);
+  if (ArgIdx < NumArgs) {
+    Diag(TemplateLoc, diag::err_template_arg_list_different_arity)
+        << /*too many args*/1
+        << (int)getTemplateNameKindForDiagnostics(TemplateName(Template))
+        << Template
+        << SourceRange(NewArgs[ArgIdx].getLocation(), NewArgs.getRAngleLoc());
+    Diag(Template->getLocation(), diag::note_template_decl_here)
+        << Params->getSourceRange();
+    return true;
+  }
 
   // No problems found with the new argument list, propagate changes back
   // to caller.
@@ -8008,17 +8003,34 @@ Sema::CheckDependentFunctionTemplateSpecialization(FunctionDecl *FD,
   // the correct context.
   DeclContext *FDLookupContext = FD->getDeclContext()->getRedeclContext();
   LookupResult::Filter F = Previous.makeFilter();
+  enum DiscardReason { NotAFunctionTemplate, NotAMemberOfEnclosing };
+  SmallVector<std::pair<DiscardReason, Decl *>, 8> DiscardedCandidates;
   while (F.hasNext()) {
     NamedDecl *D = F.next()->getUnderlyingDecl();
-    if (!isa<FunctionTemplateDecl>(D) ||
-        !FDLookupContext->InEnclosingNamespaceSetOf(
-                              D->getDeclContext()->getRedeclContext()))
+    if (!isa<FunctionTemplateDecl>(D)) {
       F.erase();
+      DiscardedCandidates.push_back(std::make_pair(NotAFunctionTemplate, D));
+      continue;
+    }
+
+    if (!FDLookupContext->InEnclosingNamespaceSetOf(
+            D->getDeclContext()->getRedeclContext())) {
+      F.erase();
+      DiscardedCandidates.push_back(std::make_pair(NotAMemberOfEnclosing, D));
+      continue;
+    }
   }
   F.done();
 
-  // Should this be diagnosed here?
-  if (Previous.empty()) return true;
+  if (Previous.empty()) {
+    Diag(FD->getLocation(),
+         diag::err_dependent_function_template_spec_no_match);
+    for (auto &P : DiscardedCandidates)
+      Diag(P.second->getLocation(),
+           diag::note_dependent_function_template_spec_discard_reason)
+          << P.first;
+    return true;
+  }
 
   FD->setDependentTemplateSpecialization(Context, Previous.asUnresolvedSet(),
                                          ExplicitTemplateArgs);

@@ -28,6 +28,7 @@ template <typename T> class ArrayRef;
 template <typename T> class MutableArrayRef;
 class Function;
 class GlobalVariable;
+class ModuleSummaryIndex;
 
 namespace wholeprogramdevirt {
 
@@ -218,6 +219,13 @@ void setAfterReturnValues(MutableArrayRef<VirtualCallTarget> Targets,
 } // end namespace wholeprogramdevirt
 
 struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
+  ModuleSummaryIndex *ExportSummary;
+  const ModuleSummaryIndex *ImportSummary;
+  WholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
+                         const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
+    assert(!(ExportSummary && ImportSummary));
+  }
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
