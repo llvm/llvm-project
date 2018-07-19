@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines and computes precedence levels for binary/ternary operators.
+/// \brief Defines and computes precedence levels for binary/ternary operators.
 ///
 //===----------------------------------------------------------------------===//
 #include "clang/Basic/OperatorPrecedence.h"

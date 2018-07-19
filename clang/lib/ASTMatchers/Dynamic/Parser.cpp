@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Recursive parser implementation for the matcher expression grammar.
+/// \brief Recursive parser implementation for the matcher expression grammar.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -34,9 +34,9 @@ namespace clang {
 namespace ast_matchers {
 namespace dynamic {
 
-/// Simple structure to hold information for one token from the parser.
+/// \brief Simple structure to hold information for one token from the parser.
 struct Parser::TokenInfo {
-  /// Different possible tokens.
+  /// \brief Different possible tokens.
   enum TokenKind {
     TK_Eof,
     TK_OpenParen,
@@ -50,7 +50,7 @@ struct Parser::TokenInfo {
     TK_CodeCompletion
   };
 
-  /// Some known identifiers.
+  /// \brief Some known identifiers.
   static const char* const ID_Bind;
 
   TokenInfo() = default;
@@ -63,7 +63,7 @@ struct Parser::TokenInfo {
 
 const char* const Parser::TokenInfo::ID_Bind = "bind";
 
-/// Simple tokenizer for the parser.
+/// \brief Simple tokenizer for the parser.
 class Parser::CodeTokenizer {
 public:
   explicit CodeTokenizer(StringRef MatcherCode, Diagnostics *Error)
@@ -78,10 +78,10 @@ public:
     NextToken = getNextToken();
   }
 
-  /// Returns but doesn't consume the next token.
+  /// \brief Returns but doesn't consume the next token.
   const TokenInfo &peekNextToken() const { return NextToken; }
 
-  /// Consumes and returns the next token.
+  /// \brief Consumes and returns the next token.
   TokenInfo consumeNextToken() {
     TokenInfo ThisToken = NextToken;
     NextToken = getNextToken();
@@ -185,7 +185,7 @@ private:
     return Result;
   }
 
-  /// Consume an unsigned and float literal.
+  /// \brief Consume an unsigned and float literal.
   void consumeNumberLiteral(TokenInfo *Result) {
     bool isFloatingLiteral = false;
     unsigned Length = 1;
@@ -238,7 +238,7 @@ private:
     Result->Kind = TokenInfo::TK_Error;
   }
 
-  /// Consume a string literal.
+  /// \brief Consume a string literal.
   ///
   /// \c Code must be positioned at the start of the literal (the opening
   /// quote). Consumed until it finds the same closing quote character.
@@ -272,7 +272,7 @@ private:
     Result->Kind = TokenInfo::TK_Error;
   }
 
-  /// Consume all leading whitespace from \c Code.
+  /// \brief Consume all leading whitespace from \c Code.
   void consumeWhitespace() {
     while (!Code.empty() && isWhitespace(Code[0])) {
       if (Code[0] == '\n') {
@@ -326,7 +326,7 @@ struct Parser::ScopedContextEntry {
   }
 };
 
-/// Parse expressions that start with an identifier.
+/// \brief Parse expressions that start with an identifier.
 ///
 /// This function can parse named values and matchers.
 /// In case of failure it will try to determine the user's intent to give
@@ -359,7 +359,7 @@ bool Parser::parseIdentifierPrefixImpl(VariantValue *Value) {
   return parseMatcherExpressionImpl(NameToken, Value);
 }
 
-/// Parse and validate a matcher expression.
+/// \brief Parse and validate a matcher expression.
 /// \return \c true on success, in which case \c Value has the matcher parsed.
 ///   If the input is malformed, or some argument has an error, it
 ///   returns \c false.
@@ -524,7 +524,7 @@ void Parser::addExpressionCompletions() {
   }
 }
 
-/// Parse an <Expression>
+/// \brief Parse an <Expresssion>
 bool Parser::parseExpressionImpl(VariantValue *Value) {
   switch (Tokenizer->nextTokenKind()) {
   case TokenInfo::TK_Literal:
@@ -619,8 +619,8 @@ Parser::completeExpression(StringRef Code, unsigned CompletionOffset, Sema *S,
   P.parseExpressionImpl(&Dummy);
 
   // Sort by specificity, then by name.
-  llvm::sort(P.Completions.begin(), P.Completions.end(),
-             [](const MatcherCompletion &A, const MatcherCompletion &B) {
+  std::sort(P.Completions.begin(), P.Completions.end(),
+            [](const MatcherCompletion &A, const MatcherCompletion &B) {
     if (A.Specificity != B.Specificity)
       return A.Specificity > B.Specificity;
     return A.TypedText < B.TypedText;

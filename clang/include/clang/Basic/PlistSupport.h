@@ -1,4 +1,4 @@
-//===- PlistSupport.h - Plist Output Utilities ------------------*- C++ -*-===//
+//===---------- PlistSupport.h - Plist Output Utilities ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,20 +10,12 @@
 #ifndef LLVM_CLANG_BASIC_PLISTSUPPORT_H
 #define LLVM_CLANG_BASIC_PLISTSUPPORT_H
 
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <cstdint>
 
 namespace clang {
 namespace markup {
-
-using FIDMap = llvm::DenseMap<FileID, unsigned>;
+typedef llvm::DenseMap<FileID, unsigned> FIDMap;
 
 inline void AddFID(FIDMap &FIDs, SmallVectorImpl<FileID> &V,
                    const SourceManager &SM, SourceLocation L) {
@@ -120,8 +112,7 @@ inline void EmitRange(raw_ostream &o, const SourceManager &SM,
   EmitLocation(o, SM, R.getEnd(), FM, indent + 1);
   Indent(o, indent) << "</array>\n";
 }
+}
+}
 
-} // namespace markup
-} // namespace clang
-
-#endif // LLVM_CLANG_BASIC_PLISTSUPPORT_H
+#endif

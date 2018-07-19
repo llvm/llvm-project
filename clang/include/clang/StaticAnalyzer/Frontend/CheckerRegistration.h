@@ -11,7 +11,6 @@
 #define LLVM_CLANG_STATICANALYZER_FRONTEND_CHECKERREGISTRATION_H
 
 #include "clang/Basic/LLVM.h"
-#include <functional>
 #include <memory>
 #include <string>
 
@@ -22,13 +21,10 @@ namespace clang {
 
 namespace ento {
   class CheckerManager;
-  class CheckerRegistry;
 
-  std::unique_ptr<CheckerManager> createCheckerManager(
-      AnalyzerOptions &opts, const LangOptions &langOpts,
-      ArrayRef<std::string> plugins,
-      ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns,
-      DiagnosticsEngine &diags);
+  std::unique_ptr<CheckerManager>
+  createCheckerManager(AnalyzerOptions &opts, const LangOptions &langOpts,
+                       ArrayRef<std::string> plugins, DiagnosticsEngine &diags);
 
 } // end ento namespace
 

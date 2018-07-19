@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements an indenter that manages the indentation of
+/// \brief This file implements an indenter that manages the indentation of
 /// continuations.
 ///
 //===----------------------------------------------------------------------===//
@@ -38,19 +38,15 @@ class WhitespaceManager;
 
 struct RawStringFormatStyleManager {
   llvm::StringMap<FormatStyle> DelimiterStyle;
-  llvm::StringMap<FormatStyle> EnclosingFunctionStyle;
 
   RawStringFormatStyleManager(const FormatStyle &CodeStyle);
 
-  llvm::Optional<FormatStyle> getDelimiterStyle(StringRef Delimiter) const;
-
-  llvm::Optional<FormatStyle>
-  getEnclosingFunctionStyle(StringRef EnclosingFunction) const;
+  llvm::Optional<FormatStyle> get(StringRef Delimiter) const;
 };
 
 class ContinuationIndenter {
 public:
-  /// Constructs a \c ContinuationIndenter to format \p Line starting in
+  /// \brief Constructs a \c ContinuationIndenter to format \p Line starting in
   /// column \p FirstIndent.
   ContinuationIndenter(const FormatStyle &Style,
                        const AdditionalKeywords &Keywords,
@@ -59,7 +55,7 @@ public:
                        encoding::Encoding Encoding,
                        bool BinPackInconclusiveFunctions);
 
-  /// Get the initial state, i.e. the state after placing \p Line's
+  /// \brief Get the initial state, i.e. the state after placing \p Line's
   /// first token at \p FirstIndent. When reformatting a fragment of code, as in
   /// the case of formatting inside raw string literals, \p FirstStartColumn is
   /// the column at which the state of the parent formatter is.
@@ -68,13 +64,13 @@ public:
 
   // FIXME: canBreak and mustBreak aren't strictly indentation-related. Find a
   // better home.
-  /// Returns \c true, if a line break after \p State is allowed.
+  /// \brief Returns \c true, if a line break after \p State is allowed.
   bool canBreak(const LineState &State);
 
-  /// Returns \c true, if a line break after \p State is mandatory.
+  /// \brief Returns \c true, if a line break after \p State is mandatory.
   bool mustBreak(const LineState &State);
 
-  /// Appends the next token to \p State and updates information
+  /// \brief Appends the next token to \p State and updates information
   /// necessary for indentation.
   ///
   /// Puts the token on the current line if \p Newline is \c false and adds a
@@ -85,28 +81,28 @@ public:
   unsigned addTokenToState(LineState &State, bool Newline, bool DryRun,
                            unsigned ExtraSpaces = 0);
 
-  /// Get the column limit for this line. This is the style's column
+  /// \brief Get the column limit for this line. This is the style's column
   /// limit, potentially reduced for preprocessor definitions.
   unsigned getColumnLimit(const LineState &State) const;
 
 private:
-  /// Mark the next token as consumed in \p State and modify its stacks
+  /// \brief Mark the next token as consumed in \p State and modify its stacks
   /// accordingly.
   unsigned moveStateToNextToken(LineState &State, bool DryRun, bool Newline);
 
-  /// Update 'State' according to the next token's fake left parentheses.
+  /// \brief Update 'State' according to the next token's fake left parentheses.
   void moveStatePastFakeLParens(LineState &State, bool Newline);
-  /// Update 'State' according to the next token's fake r_parens.
+  /// \brief Update 'State' according to the next token's fake r_parens.
   void moveStatePastFakeRParens(LineState &State);
 
-  /// Update 'State' according to the next token being one of "(<{[".
+  /// \brief Update 'State' according to the next token being one of "(<{[".
   void moveStatePastScopeOpener(LineState &State, bool Newline);
-  /// Update 'State' according to the next token being one of ")>}]".
+  /// \brief Update 'State' according to the next token being one of ")>}]".
   void moveStatePastScopeCloser(LineState &State);
-  /// Update 'State' with the next token opening a nested block.
+  /// \brief Update 'State' with the next token opening a nested block.
   void moveStateToNewBlock(LineState &State);
 
-  /// Reformats a raw string literal.
+  /// \brief Reformats a raw string literal.
   /// 
   /// \returns An extra penalty induced by reformatting the token.
   unsigned reformatRawStringLiteral(const FormatToken &Current,
@@ -114,17 +110,17 @@ private:
                                     const FormatStyle &RawStringStyle,
                                     bool DryRun);
 
-  /// If the current token is at the end of the current line, handle
+  /// \brief If the current token is at the end of the current line, handle
   /// the transition to the next line.
   unsigned handleEndOfLine(const FormatToken &Current, LineState &State,
                            bool DryRun, bool AllowBreak);
 
-  /// If \p Current is a raw string that is configured to be reformatted,
+  /// \brief If \p Current is a raw string that is configured to be reformatted,
   /// return the style to be used.
   llvm::Optional<FormatStyle> getRawStringStyle(const FormatToken &Current,
                                                 const LineState &State);
 
-  /// If the current token sticks out over the end of the line, break
+  /// \brief If the current token sticks out over the end of the line, break
   /// it if possible.
   ///
   /// \returns A pair (penalty, exceeded), where penalty is the extra penalty
@@ -147,13 +143,13 @@ private:
                                                  bool AllowBreak, bool DryRun,
                                                  bool Strict);
 
-  /// Returns the \c BreakableToken starting at \p Current, or nullptr
+  /// \brief Returns the \c BreakableToken starting at \p Current, or nullptr
   /// if the current token cannot be broken.
   std::unique_ptr<BreakableToken>
   createBreakableToken(const FormatToken &Current, LineState &State,
                        bool AllowBreak);
 
-  /// Appends the next token to \p State and updates information
+  /// \brief Appends the next token to \p State and updates information
   /// necessary for indentation.
   ///
   /// Puts the token on the current line.
@@ -163,7 +159,7 @@ private:
   void addTokenOnCurrentLine(LineState &State, bool DryRun,
                              unsigned ExtraSpaces);
 
-  /// Appends the next token to \p State and updates information
+  /// \brief Appends the next token to \p State and updates information
   /// necessary for indentation.
   ///
   /// Adds a line break and necessary indentation.
@@ -172,17 +168,17 @@ private:
   /// \c Replacement.
   unsigned addTokenOnNewLine(LineState &State, bool DryRun);
 
-  /// Calculate the new column for a line wrap before the next token.
+  /// \brief Calculate the new column for a line wrap before the next token.
   unsigned getNewLineColumn(const LineState &State);
 
-  /// Adds a multiline token to the \p State.
+  /// \brief Adds a multiline token to the \p State.
   ///
   /// \returns Extra penalty for the first line of the literal: last line is
   /// handled in \c addNextStateToQueue, and the penalty for other lines doesn't
   /// matter, as we don't change them.
   unsigned addMultilineToken(const FormatToken &Current, LineState &State);
 
-  /// Returns \c true if the next token starts a multiline string
+  /// \brief Returns \c true if the next token starts a multiline string
   /// literal.
   ///
   /// This includes implicitly concatenated strings, strings that will be broken
@@ -200,135 +196,123 @@ private:
 };
 
 struct ParenState {
-  ParenState(const FormatToken *Tok, unsigned Indent, unsigned LastSpace,
-             bool AvoidBinPacking, bool NoLineBreak)
-      : Tok(Tok), Indent(Indent), LastSpace(LastSpace),
-        NestedBlockIndent(Indent), BreakBeforeClosingBrace(false),
-        AvoidBinPacking(AvoidBinPacking), BreakBeforeParameter(false),
-        NoLineBreak(NoLineBreak), NoLineBreakInOperand(false),
-        LastOperatorWrapped(true), ContainsLineBreak(false),
-        ContainsUnwrappedBuilder(false), AlignColons(true),
-        ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
-        NestedBlockInlined(false), IsInsideObjCArrayLiteral(false) {}
+  ParenState(unsigned Indent, unsigned LastSpace, bool AvoidBinPacking,
+             bool NoLineBreak)
+      : Indent(Indent), LastSpace(LastSpace), NestedBlockIndent(Indent),
+        BreakBeforeClosingBrace(false), AvoidBinPacking(AvoidBinPacking),
+        BreakBeforeParameter(false), NoLineBreak(NoLineBreak),
+        NoLineBreakInOperand(false), LastOperatorWrapped(true),
+        ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
+        AlignColons(true), ObjCSelectorNameFound(false),
+        HasMultipleNestedBlocks(false), NestedBlockInlined(false) {}
 
-  /// \brief The token opening this parenthesis level, or nullptr if this level
-  /// is opened by fake parenthesis.
-  ///
-  /// Not considered for memoization as it will always have the same value at
-  /// the same token.
-  const FormatToken *Tok;
-
-  /// The position to which a specific parenthesis level needs to be
+  /// \brief The position to which a specific parenthesis level needs to be
   /// indented.
   unsigned Indent;
 
-  /// The position of the last space on each level.
+  /// \brief The position of the last space on each level.
   ///
   /// Used e.g. to break like:
   /// functionCall(Parameter, otherCall(
   ///                             OtherParameter));
   unsigned LastSpace;
 
-  /// If a block relative to this parenthesis level gets wrapped, indent
+  /// \brief If a block relative to this parenthesis level gets wrapped, indent
   /// it this much.
   unsigned NestedBlockIndent;
 
-  /// The position the first "<<" operator encountered on each level.
+  /// \brief The position the first "<<" operator encountered on each level.
   ///
   /// Used to align "<<" operators. 0 if no such operator has been encountered
   /// on a level.
   unsigned FirstLessLess = 0;
 
-  /// The column of a \c ? in a conditional expression;
+  /// \brief The column of a \c ? in a conditional expression;
   unsigned QuestionColumn = 0;
 
-  /// The position of the colon in an ObjC method declaration/call.
+  /// \brief The position of the colon in an ObjC method declaration/call.
   unsigned ColonPos = 0;
 
-  /// The start of the most recent function in a builder-type call.
+  /// \brief The start of the most recent function in a builder-type call.
   unsigned StartOfFunctionCall = 0;
 
-  /// Contains the start of array subscript expressions, so that they
+  /// \brief Contains the start of array subscript expressions, so that they
   /// can be aligned.
   unsigned StartOfArraySubscripts = 0;
 
-  /// If a nested name specifier was broken over multiple lines, this
+  /// \brief If a nested name specifier was broken over multiple lines, this
   /// contains the start column of the second line. Otherwise 0.
   unsigned NestedNameSpecifierContinuation = 0;
 
-  /// If a call expression was broken over multiple lines, this
+  /// \brief If a call expression was broken over multiple lines, this
   /// contains the start column of the second line. Otherwise 0.
   unsigned CallContinuation = 0;
 
-  /// The column of the first variable name in a variable declaration.
+  /// \brief The column of the first variable name in a variable declaration.
   ///
   /// Used to align further variables if necessary.
   unsigned VariablePos = 0;
 
-  /// Whether a newline needs to be inserted before the block's closing
+  /// \brief Whether a newline needs to be inserted before the block's closing
   /// brace.
   ///
   /// We only want to insert a newline before the closing brace if there also
   /// was a newline after the beginning left brace.
   bool BreakBeforeClosingBrace : 1;
 
-  /// Avoid bin packing, i.e. multiple parameters/elements on multiple
+  /// \brief Avoid bin packing, i.e. multiple parameters/elements on multiple
   /// lines, in this context.
   bool AvoidBinPacking : 1;
 
-  /// Break after the next comma (or all the commas in this context if
+  /// \brief Break after the next comma (or all the commas in this context if
   /// \c AvoidBinPacking is \c true).
   bool BreakBeforeParameter : 1;
 
-  /// Line breaking in this context would break a formatting rule.
+  /// \brief Line breaking in this context would break a formatting rule.
   bool NoLineBreak : 1;
 
-  /// Same as \c NoLineBreak, but is restricted until the end of the
+  /// \brief Same as \c NoLineBreak, but is restricted until the end of the
   /// operand (including the next ",").
   bool NoLineBreakInOperand : 1;
 
-  /// True if the last binary operator on this level was wrapped to the
+  /// \brief True if the last binary operator on this level was wrapped to the
   /// next line.
   bool LastOperatorWrapped : 1;
 
-  /// \c true if this \c ParenState already contains a line-break.
+  /// \brief \c true if this \c ParenState already contains a line-break.
   ///
   /// The first line break in a certain \c ParenState causes extra penalty so
   /// that clang-format prefers similar breaks, i.e. breaks in the same
   /// parenthesis.
   bool ContainsLineBreak : 1;
 
-  /// \c true if this \c ParenState contains multiple segments of a
+  /// \brief \c true if this \c ParenState contains multiple segments of a
   /// builder-type call on one line.
   bool ContainsUnwrappedBuilder : 1;
 
-  /// \c true if the colons of the curren ObjC method expression should
+  /// \brief \c true if the colons of the curren ObjC method expression should
   /// be aligned.
   ///
   /// Not considered for memoization as it will always have the same value at
   /// the same token.
   bool AlignColons : 1;
 
-  /// \c true if at least one selector name was found in the current
+  /// \brief \c true if at least one selector name was found in the current
   /// ObjC method expression.
   ///
   /// Not considered for memoization as it will always have the same value at
   /// the same token.
   bool ObjCSelectorNameFound : 1;
 
-  /// \c true if there are multiple nested blocks inside these parens.
+  /// \brief \c true if there are multiple nested blocks inside these parens.
   ///
   /// Not considered for memoization as it will always have the same value at
   /// the same token.
   bool HasMultipleNestedBlocks : 1;
 
-  /// The start of a nested block (e.g. lambda introducer in C++ or
-  /// "function" in JavaScript) is not wrapped to a new line.
+  // \brief The start of a nested block (e.g. lambda introducer in C++ or
+  // "function" in JavaScript) is not wrapped to a new line.
   bool NestedBlockInlined : 1;
-
-  /// \c true if the current \c ParenState represents an Objective-C
-  /// array literal.
-  bool IsInsideObjCArrayLiteral : 1;
 
   bool operator<(const ParenState &Other) const {
     if (Indent != Other.Indent)
@@ -371,37 +355,37 @@ struct ParenState {
   }
 };
 
-/// The current state when indenting a unwrapped line.
+/// \brief The current state when indenting a unwrapped line.
 ///
 /// As the indenting tries different combinations this is copied by value.
 struct LineState {
-  /// The number of used columns in the current line.
+  /// \brief The number of used columns in the current line.
   unsigned Column;
 
-  /// The token that needs to be next formatted.
+  /// \brief The token that needs to be next formatted.
   FormatToken *NextToken;
 
-  /// \c true if this line contains a continued for-loop section.
+  /// \brief \c true if this line contains a continued for-loop section.
   bool LineContainsContinuedForLoopSection;
 
-  /// \c true if \p NextToken should not continue this line.
+  /// \brief \c true if \p NextToken should not continue this line.
   bool NoContinuation;
 
-  /// The \c NestingLevel at the start of this line.
+  /// \brief The \c NestingLevel at the start of this line.
   unsigned StartOfLineLevel;
 
-  /// The lowest \c NestingLevel on the current line.
+  /// \brief The lowest \c NestingLevel on the current line.
   unsigned LowestLevelOnLine;
 
-  /// The start column of the string literal, if we're in a string
+  /// \brief The start column of the string literal, if we're in a string
   /// literal sequence, 0 otherwise.
   unsigned StartOfStringLiteral;
 
-  /// A stack keeping track of properties applying to parenthesis
+  /// \brief A stack keeping track of properties applying to parenthesis
   /// levels.
   std::vector<ParenState> Stack;
 
-  /// Ignore the stack of \c ParenStates for state comparison.
+  /// \brief Ignore the stack of \c ParenStates for state comparison.
   ///
   /// In long and deeply nested unwrapped lines, the current algorithm can
   /// be insufficient for finding the best formatting with a reasonable amount
@@ -416,15 +400,15 @@ struct LineState {
   /// FIXME: Come up with a better algorithm instead.
   bool IgnoreStackForComparison;
 
-  /// The indent of the first token.
+  /// \brief The indent of the first token.
   unsigned FirstIndent;
 
-  /// The line that is being formatted.
+  /// \brief The line that is being formatted.
   ///
   /// Does not need to be considered for memoization because it doesn't change.
   const AnnotatedLine *Line;
 
-  /// Comparison operator to be able to used \c LineState in \c map.
+  /// \brief Comparison operator to be able to used \c LineState in \c map.
   bool operator<(const LineState &Other) const {
     if (NextToken != Other.NextToken)
       return NextToken < Other.NextToken;

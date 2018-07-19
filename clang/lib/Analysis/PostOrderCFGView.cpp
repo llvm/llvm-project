@@ -1,4 +1,4 @@
-//===- PostOrderCFGView.cpp - Post order view of CFG blocks ---------------===//
+//===- PostOrderCFGView.cpp - Post order view of CFG blocks -------*- C++ --*-//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,12 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
-#include "clang/Analysis/CFG.h"
 
 using namespace clang;
 
-void PostOrderCFGView::anchor() {}
+void PostOrderCFGView::anchor() { }
 
 PostOrderCFGView::PostOrderCFGView(const CFG *cfg) {
   Blocks.reserve(cfg->getNumBlockIDs());
@@ -48,3 +46,4 @@ bool PostOrderCFGView::BlockOrderCompare::operator()(const CFGBlock *b1,
   unsigned b2V = (b2It == POV.BlockOrder.end()) ? 0 : b2It->second;
   return b1V > b2V;
 }
+

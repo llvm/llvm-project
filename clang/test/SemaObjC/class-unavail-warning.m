@@ -115,9 +115,9 @@ UNAVAILABLE __attribute__((objc_root_class))
 }
 @end
 
-typedef int unavailable_int UNAVAILABLE; // expected-note {{'unavailable_int' has been explicitly marked unavailable here}}
+typedef int unavailable_int UNAVAILABLE;
 
 UNAVAILABLE
 @interface A
-extern unavailable_int global_unavailable; // expected-error {{'unavailable_int' is unavailable: not available}}
+extern unavailable_int global_unavailable; // FIXME: this should be an error!
 @end

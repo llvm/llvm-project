@@ -148,13 +148,13 @@ public:
   /// Retrieves the source range for the friend declaration.
   SourceRange getSourceRange() const override LLVM_READONLY {
     if (NamedDecl *ND = getFriendDecl()) {
-      if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(ND))
         return FD->getSourceRange();
-      if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND))
+      if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(ND))
         return FTD->getSourceRange();
-      if (const auto *CTD = dyn_cast<ClassTemplateDecl>(ND))
+      if (ClassTemplateDecl *CTD = dyn_cast<ClassTemplateDecl>(ND))
         return CTD->getSourceRange();
-      if (const auto *DD = dyn_cast<DeclaratorDecl>(ND)) {
+      if (DeclaratorDecl *DD = dyn_cast<DeclaratorDecl>(ND)) {
         if (DD->getOuterLocStart() != DD->getInnerLocStart())
           return DD->getSourceRange();
       }

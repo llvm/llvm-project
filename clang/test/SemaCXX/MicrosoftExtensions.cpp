@@ -489,6 +489,7 @@ void AfterClassBody() {
 namespace PR24246 {
 template <typename TX> struct A {
   template <bool> struct largest_type_select;
+  // expected-warning@+1 {{explicit specialization of 'largest_type_select' within class scope is a Microsoft extension}}
   template <> struct largest_type_select<false> {
     blah x;  // expected-error {{unknown type name 'blah'}}
   };

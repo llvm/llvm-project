@@ -29,27 +29,26 @@ const Builtin::Info AArch64TargetInfo::BuiltinInfo[] = {
    {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
   {#ID, TYPE, ATTRS, nullptr, LANG, nullptr},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, HEADER, LANGS, FEATURE},
 #include "clang/Basic/BuiltinsAArch64.def"
 };
 
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
-  if (getTriple().getOS() == llvm::Triple::OpenBSD) {
+  if (getTriple().getOS() == llvm::Triple::NetBSD ||
+      getTriple().getOS() == llvm::Triple::OpenBSD) {
+    // NetBSD apparently prefers consistency across ARM targets to
+    // consistency across 64-bit targets.
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {
-    if (!getTriple().isOSDarwin() && getTriple().getOS() != llvm::Triple::NetBSD)
+    if (!getTriple().isOSDarwin())
       WCharType = UnsignedInt;
 
     Int64Type = SignedLong;
     IntMaxType = SignedLong;
   }
 
-  // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
-  HasLegalHalfType = true;
 
   LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
   MaxVectorAlign = 128;
@@ -100,11 +99,6 @@ bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
   return isValidCPUName(Name);
-}
-
-void AArch64TargetInfo::fillValidCPUList(
-    SmallVectorImpl<StringRef> &Values) const {
-  llvm::AArch64::fillValidCPUArchList(Values);
 }
 
 void AArch64TargetInfo::getTargetDefinesARMV81A(const LangOptions &Opts,
@@ -189,11 +183,6 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if ((FPU & NeonMode) && HasFullFP16)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
-  if (HasFullFP16)
-   Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
-
-  if (HasDotProd)
-    Builder.defineMacro("__ARM_FEATURE_DOTPROD", "1");
 
   switch (ArchKind) {
   default:
@@ -231,7 +220,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   Crypto = 0;
   Unaligned = 1;
   HasFullFP16 = 0;
-  HasDotProd = 0;
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
@@ -251,8 +239,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_2A;
     if (Feature == "+fullfp16")
       HasFullFP16 = 1;
-    if (Feature == "+dotprod")
-      HasDotProd = 1;
   }
 
   setDataLayout();
@@ -313,40 +299,7 @@ ArrayRef<const char *> AArch64TargetInfo::getGCCRegNames() const {
 }
 
 const TargetInfo::GCCRegAlias AArch64TargetInfo::GCCRegAliases[] = {
-    {{"w31"}, "wsp"},
-    {{"x31"}, "sp"},
-    // GCC rN registers are aliases of xN registers.
-    {{"r0"}, "x0"},
-    {{"r1"}, "x1"},
-    {{"r2"}, "x2"},
-    {{"r3"}, "x3"},
-    {{"r4"}, "x4"},
-    {{"r5"}, "x5"},
-    {{"r6"}, "x6"},
-    {{"r7"}, "x7"},
-    {{"r8"}, "x8"},
-    {{"r9"}, "x9"},
-    {{"r10"}, "x10"},
-    {{"r11"}, "x11"},
-    {{"r12"}, "x12"},
-    {{"r13"}, "x13"},
-    {{"r14"}, "x14"},
-    {{"r15"}, "x15"},
-    {{"r16"}, "x16"},
-    {{"r17"}, "x17"},
-    {{"r18"}, "x18"},
-    {{"r19"}, "x19"},
-    {{"r20"}, "x20"},
-    {{"r21"}, "x21"},
-    {{"r22"}, "x22"},
-    {{"r23"}, "x23"},
-    {{"r24"}, "x24"},
-    {{"r25"}, "x25"},
-    {{"r26"}, "x26"},
-    {{"r27"}, "x27"},
-    {{"r28"}, "x28"},
-    {{"r29", "x29"}, "fp"},
-    {{"r30", "x30"}, "lr"},
+    {{"w31"}, "wsp"}, {{"x29"}, "fp"}, {{"x30"}, "lr"}, {{"x31"}, "sp"},
     // The S/D/Q and W/X registers overlap, but aren't really aliases; we
     // don't want to substitute one of these for a different-sized one.
 };

@@ -101,7 +101,7 @@ namespace ExplicitInst {
   struct X {
     template<typename T> struct C {};
     template<typename T> C(T) -> C<T>;
-    template<> C(int) -> C<int>; // expected-error {{deduction guide cannot be explicitly specialized}}
+    template<> C(int) -> C<int>; // expected-error {{explicit specialization of '<deduction guide for C>' in class scope}}
     extern template C(float) -> C<float>; // expected-error {{expected member name or ';'}}
     template C(char) -> C<char>; // expected-error {{expected '<' after 'template'}}
   };

@@ -27,14 +27,14 @@ class MemoryBuffer;
 
 namespace clang {
 
-/// Enumerate the kinds of standard library that 
+/// \brief Enumerate the kinds of standard library that 
 enum ObjCXXARCStandardLibraryKind {
   ARCXX_nolib,
 
-  /// libc++
+  /// \brief libc++
   ARCXX_libcxx,
 
-  /// libstdc++
+  /// \brief libstdc++
   ARCXX_libstdcxx
 };
   
@@ -46,59 +46,47 @@ public:
   std::vector<std::string> Includes;
   std::vector<std::string> MacroIncludes;
 
-  /// Initialize the preprocessor with the compiler and target specific
+  /// \brief Initialize the preprocessor with the compiler and target specific
   /// predefines.
   bool UsePredefines = true;
 
-  /// Whether we should maintain a detailed record of all macro
+  /// \brief Whether we should maintain a detailed record of all macro
   /// definitions and expansions.
   bool DetailedRecord = false;
-
-  /// If non-empty, the filename used in an #include directive in the primary
-  /// source file (or command-line preinclude) that is used to implement
-  /// MSVC-style precompiled headers. When creating a PCH, after the #include
-  /// of this header, the PCH generation stops. When using a PCH, tokens are
-  /// skipped until after an #include of this header is seen.
-  std::string PCHThroughHeader;
 
   /// The implicit PCH included at the start of the translation unit, or empty.
   std::string ImplicitPCHInclude;
 
-  /// Headers that will be converted to chained PCHs in memory.
+  /// \brief Headers that will be converted to chained PCHs in memory.
   std::vector<std::string> ChainedIncludes;
 
-  /// When true, disables most of the normal validation performed on
+  /// \brief When true, disables most of the normal validation performed on
   /// precompiled headers.
   bool DisablePCHValidation = false;
 
-  /// When true, a PCH with compiler errors will not be rejected.
+  /// \brief When true, a PCH with compiler errors will not be rejected.
   bool AllowPCHWithCompilerErrors = false;
 
-  /// Dump declarations that are deserialized from PCH, for testing.
+  /// \brief Dump declarations that are deserialized from PCH, for testing.
   bool DumpDeserializedPCHDecls = false;
 
-  /// This is a set of names for decls that we do not want to be
+  /// \brief This is a set of names for decls that we do not want to be
   /// deserialized, and we emit an error if they are; for testing purposes.
   std::set<std::string> DeserializedPCHDeclsToErrorOn;
 
-  /// If non-zero, the implicit PCH include is actually a precompiled
+  /// \brief If non-zero, the implicit PCH include is actually a precompiled
   /// preamble that covers this number of bytes in the main source file.
   ///
   /// The boolean indicates whether the preamble ends at the start of a new
   /// line.
   std::pair<unsigned, bool> PrecompiledPreambleBytes;
 
-  /// True indicates that a preamble is being generated.
+  /// \brief True indicates that a preamble is being generated.
   ///
   /// When the lexer is done, one of the things that need to be preserved is the
   /// conditional #if stack, so the ASTWriter/ASTReader can save/restore it when
   /// processing the rest of the file.
   bool GeneratePreamble = false;
-
-  /// Whether to write comment locations into the PCH when building it.
-  /// Reading the comments from the PCH can be a performance hit even if the
-  /// clients don't use them.
-  bool WriteCommentListToPCH = true;
 
   /// The implicit PTH input included at the start of the translation unit, or
   /// empty.
@@ -117,22 +105,22 @@ public:
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
-  /// True if the SourceManager should report the original file name for
+  /// \brief True if the SourceManager should report the original file name for
   /// contents of files that were remapped to other files. Defaults to true.
   bool RemappedFilesKeepOriginalName = true;
 
-  /// The set of file remappings, which take existing files on
+  /// \brief The set of file remappings, which take existing files on
   /// the system (the first part of each pair) and gives them the
   /// contents of other files on the system (the second part of each
   /// pair).
   std::vector<std::pair<std::string, std::string>> RemappedFiles;
 
-  /// The set of file-to-buffer remappings, which take existing files
+  /// \brief The set of file-to-buffer remappings, which take existing files
   /// on the system (the first part of each pair) and gives them the contents
   /// of the specified memory buffer (the second part of each pair).
   std::vector<std::pair<std::string, llvm::MemoryBuffer *>> RemappedFileBuffers;
 
-  /// Whether the compiler instance should retain (i.e., not free)
+  /// \brief Whether the compiler instance should retain (i.e., not free)
   /// the buffers associated with remapped files.
   ///
   /// This flag defaults to false; it can be set true only through direct
@@ -140,12 +128,12 @@ public:
   /// compiler invocation and its buffers will be reused.
   bool RetainRemappedFileBuffers = false;
   
-  /// The Objective-C++ ARC standard library that we should support,
+  /// \brief The Objective-C++ ARC standard library that we should support,
   /// by providing appropriate definitions to retrofit the standard library
   /// with support for lifetime-qualified pointers.
   ObjCXXARCStandardLibraryKind ObjCXXARCStandardLibrary = ARCXX_nolib;
     
-  /// Records the set of modules
+  /// \brief Records the set of modules
   class FailedModulesSet {
     llvm::StringSet<> Failed;
 
@@ -159,7 +147,7 @@ public:
     }
   };
   
-  /// The set of modules that failed to build.
+  /// \brief The set of modules that failed to build.
   ///
   /// This pointer will be shared among all of the compiler instances created
   /// to (re)build modules, so that once a module fails to build anywhere,
@@ -186,7 +174,7 @@ public:
     RemappedFileBuffers.clear();
   }
   
-  /// Reset any options that are not considered when building a
+  /// \brief Reset any options that are not considered when building a
   /// module.
   void resetNonModularOptions() {
     Includes.clear();

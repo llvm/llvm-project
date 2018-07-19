@@ -30,7 +30,6 @@ namespace clang {
   class CXXDestructorDecl;
   class CXXMethodDecl;
   class FunctionDecl;
-  struct MethodVFTableLocation;
   class NamedDecl;
   class ObjCMethodDecl;
   class StringLiteral;
@@ -183,14 +182,14 @@ public:
   explicit MicrosoftMangleContext(ASTContext &C, DiagnosticsEngine &D)
       : MangleContext(C, D, MK_Microsoft) {}
 
-  /// Mangle vftable symbols.  Only a subset of the bases along the path
+  /// \brief Mangle vftable symbols.  Only a subset of the bases along the path
   /// to the vftable are included in the name.  It's up to the caller to pick
   /// them correctly.
   virtual void mangleCXXVFTable(const CXXRecordDecl *Derived,
                                 ArrayRef<const CXXRecordDecl *> BasePath,
                                 raw_ostream &Out) = 0;
 
-  /// Mangle vbtable symbols.  Only a subset of the bases along the path
+  /// \brief Mangle vbtable symbols.  Only a subset of the bases along the path
   /// to the vbtable are included in the name.  It's up to the caller to pick
   /// them correctly.
   virtual void mangleCXXVBTable(const CXXRecordDecl *Derived,
@@ -202,8 +201,7 @@ public:
                                                    raw_ostream &Out) = 0;
 
   virtual void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
-                                        const MethodVFTableLocation &ML,
-                                        raw_ostream &Out) = 0;
+                                        raw_ostream &) = 0;
 
   virtual void mangleCXXVirtualDisplacementMap(const CXXRecordDecl *SrcRD,
                                                const CXXRecordDecl *DstRD,

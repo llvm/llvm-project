@@ -185,11 +185,6 @@ bool TemplateName::isInstantiationDependent() const {
 }
 
 bool TemplateName::containsUnexpandedParameterPack() const {
-  if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
-    if (QTN->getQualifier()->containsUnexpandedParameterPack())
-      return true;
-  }
-
   if (TemplateDecl *Template = getAsTemplateDecl()) {
     if (TemplateTemplateParmDecl *TTP 
                                   = dyn_cast<TemplateTemplateParmDecl>(Template))

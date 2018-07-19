@@ -86,7 +86,8 @@ void HTMLPrinter::HandleTranslationUnit(ASTContext &Ctx) {
 
   // Emit the HTML.
   const RewriteBuffer &RewriteBuf = R.getEditBuffer(FID);
-  std::unique_ptr<char[]> Buffer(new char[RewriteBuf.size()]);
-  std::copy(RewriteBuf.begin(), RewriteBuf.end(), Buffer.get());
-  Out->write(Buffer.get(), RewriteBuf.size());
+  char *Buffer = (char*)malloc(RewriteBuf.size());
+  std::copy(RewriteBuf.begin(), RewriteBuf.end(), Buffer);
+  Out->write(Buffer, RewriteBuf.size());
+  free(Buffer);
 }

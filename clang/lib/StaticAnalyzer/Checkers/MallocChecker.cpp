@@ -30,7 +30,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "AllocationState.h"
 #include <climits>
 #include <utility>
 
@@ -46,8 +45,7 @@ enum AllocationFamily {
   AF_CXXNew,
   AF_CXXNewArray,
   AF_IfNameIndex,
-  AF_Alloca,
-  AF_InternalBuffer
+  AF_Alloca
 };
 
 class RefState {
@@ -136,10 +134,10 @@ enum ReallocPairKind {
 };
 
 /// \class ReallocPair
-/// Stores information about the symbol being reallocated by a call to
+/// \brief Stores information about the symbol being reallocated by a call to
 /// 'realloc' to allow modeling failed reallocation later in the path.
 struct ReallocPair {
-  // The symbol which realloc reallocated.
+  // \brief The symbol which realloc reallocated.
   SymbolRef ReallocatedSym;
   ReallocPairKind Kind;
 
@@ -258,20 +256,20 @@ private:
 
   void initIdentifierInfo(ASTContext &C) const;
 
-  /// Determine family of a deallocation expression.
+  /// \brief Determine family of a deallocation expression.
   AllocationFamily getAllocationFamily(CheckerContext &C, const Stmt *S) const;
 
-  /// Print names of allocators and deallocators.
+  /// \brief Print names of allocators and deallocators.
   ///
   /// \returns true on success.
   bool printAllocDeallocName(raw_ostream &os, CheckerContext &C,
                              const Expr *E) const;
 
-  /// Print expected name of an allocator based on the deallocator's
+  /// \brief Print expected name of an allocator based on the deallocator's
   /// family derived from the DeallocExpr.
   void printExpectedAllocName(raw_ostream &os, CheckerContext &C,
                               const Expr *DeallocExpr) const;
-  /// Print expected name of a deallocator based on the allocator's
+  /// \brief Print expected name of a deallocator based on the allocator's
   /// family.
   void printExpectedDeallocName(raw_ostream &os, AllocationFamily Family) const;
 
@@ -286,12 +284,12 @@ private:
   bool isStandardNewDelete(const FunctionDecl *FD, ASTContext &C) const;
   ///@}
 
-  /// Process C++ operator new()'s allocation, which is the part of C++
+  /// \brief Process C++ operator new()'s allocation, which is the part of C++
   /// new-expression that goes before the constructor.
   void processNewAllocation(const CXXNewExpr *NE, CheckerContext &C,
                             SVal Target) const;
 
-  /// Perform a zero-allocation check.
+  /// \brief Perform a zero-allocation check.
   /// The optional \p RetVal parameter specifies the newly allocated pointer
   /// value; if unspecified, the value of expression \p E is used.
   ProgramStateRef ProcessZeroAllocation(CheckerContext &C, const Expr *E,
@@ -353,7 +351,7 @@ private:
   static ProgramStateRef CallocMem(CheckerContext &C, const CallExpr *CE,
                                    ProgramStateRef State);
 
-  ///Check if the memory associated with this symbol was released.
+  ///\brief Check if the memory associated with this symbol was released.
   bool isReleased(SymbolRef Sym, CheckerContext &C) const;
 
   bool checkUseAfterFree(SymbolRef Sym, CheckerContext &C, const Stmt *S) const;
@@ -431,7 +429,8 @@ private:
   /// The bug visitor which allows us to print extra diagnostics along the
   /// BugReport path. For example, showing the allocation site of the leaked
   /// region.
-  class MallocBugVisitor final : public BugReporterVisitor {
+  class MallocBugVisitor final
+      : public BugReporterVisitorImpl<MallocBugVisitor> {
   protected:
     enum NotificationMode {
       Normal,
@@ -480,13 +479,8 @@ private:
     inline bool isReleased(const RefState *S, const RefState *SPrev,
                            const Stmt *Stmt) {
       // Did not track -> released. Other state (allocated) -> released.
-      // The statement associated with the release might be missing.
-      bool IsReleased = (S && S->isReleased()) &&
-                        (!SPrev || !SPrev->isReleased());
-      assert(!IsReleased ||
-             (Stmt && (isa<CallExpr>(Stmt) || isa<CXXDeleteExpr>(Stmt))) ||
-             (!Stmt && S->getAllocationFamily() == AF_InternalBuffer));
-      return IsReleased;
+      return (Stmt && (isa<CallExpr>(Stmt) || isa<CXXDeleteExpr>(Stmt)) &&
+              (S && S->isReleased()) && (!SPrev || !SPrev->isReleased()));
     }
 
     inline bool isRelinquished(const RefState *S, const RefState *SPrev,
@@ -515,7 +509,7 @@ private:
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
-    std::shared_ptr<PathDiagnosticPiece>
+    std::unique_ptr<PathDiagnosticPiece>
     getEndPath(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
                BugReport &BR) override {
       if (!IsLeak)
@@ -525,7 +519,7 @@ private:
         PathDiagnosticLocation::createEndOfPath(EndPathNode,
                                                 BRC.getSourceManager());
       // Do not add the statement itself as a range in case of leak.
-      return std::make_shared<PathDiagnosticEventPiece>(L, BR.getDescription(),
+      return llvm::make_unique<PathDiagnosticEventPiece>(L, BR.getDescription(),
                                                          false);
     }
 
@@ -1239,8 +1233,7 @@ MallocChecker::MallocMemReturnsAttr(CheckerContext &C, const CallExpr *CE,
 
   OwnershipAttr::args_iterator I = Att->args_begin(), E = Att->args_end();
   if (I != E) {
-    return MallocMemAux(C, CE, CE->getArg(I->getASTIndex()), UndefinedVal(),
-                        State);
+    return MallocMemAux(C, CE, CE->getArg(*I), UndefinedVal(), State);
   }
   return MallocMemAux(C, CE, UnknownVal(), UndefinedVal(), State);
 }
@@ -1279,7 +1272,7 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
 
   // Fill the region with the initialization value.
-  State = State->bindDefaultInitial(RetVal, Init, LCtx);
+  State = State->bindDefault(RetVal, Init, LCtx);
 
   // Set the region's extent equal to the Size parameter.
   const SymbolicRegion *R =
@@ -1338,9 +1331,9 @@ ProgramStateRef MallocChecker::FreeMemAttr(CheckerContext &C,
   bool ReleasedAllocated = false;
 
   for (const auto &Arg : Att->args()) {
-    ProgramStateRef StateI = FreeMemAux(
-        C, CE, State, Arg.getASTIndex(),
-        Att->getOwnKind() == OwnershipAttr::Holds, ReleasedAllocated);
+    ProgramStateRef StateI = FreeMemAux(C, CE, State, Arg,
+                               Att->getOwnKind() == OwnershipAttr::Holds,
+                               ReleasedAllocated);
     if (StateI)
       State = StateI;
   }
@@ -1473,7 +1466,6 @@ void MallocChecker::printExpectedAllocName(raw_ostream &os, CheckerContext &C,
     case AF_CXXNew: os << "'new'"; return;
     case AF_CXXNewArray: os << "'new[]'"; return;
     case AF_IfNameIndex: os << "'if_nameindex()'"; return;
-    case AF_InternalBuffer: os << "container-specific allocator"; return;
     case AF_Alloca:
     case AF_None: llvm_unreachable("not a deallocation expression");
   }
@@ -1486,7 +1478,6 @@ void MallocChecker::printExpectedDeallocName(raw_ostream &os,
     case AF_CXXNew: os << "'delete'"; return;
     case AF_CXXNewArray: os << "'delete[]'"; return;
     case AF_IfNameIndex: os << "'if_freenameindex()'"; return;
-    case AF_InternalBuffer: os << "container-specific deallocator"; return;
     case AF_Alloca:
     case AF_None: llvm_unreachable("suspicious argument");
   }
@@ -1661,9 +1652,7 @@ MallocChecker::getCheckIfTracked(AllocationFamily Family,
     return Optional<MallocChecker::CheckKind>();
   }
   case AF_CXXNew:
-  case AF_CXXNewArray:
-  // FIXME: Add new CheckKind for AF_InternalBuffer.
-  case AF_InternalBuffer: {
+  case AF_CXXNewArray: {
     if (IsALeakCheck) {
       if (ChecksEnabled[CK_NewDeleteLeaksChecker])
         return CK_NewDeleteLeaksChecker;
@@ -1993,11 +1982,6 @@ void MallocChecker::ReportUseAfterFree(CheckerContext &C, SourceRange Range,
     R->markInteresting(Sym);
     R->addRange(Range);
     R->addVisitor(llvm::make_unique<MallocBugVisitor>(Sym));
-
-    const RefState *RS = C.getState()->get<RegionState>(Sym);
-    if (RS->getAllocationFamily() == AF_InternalBuffer)
-      R->addVisitor(allocation_state::getDanglingBufferBRVisitor(Sym));
-
     C.emitReport(std::move(R));
   }
 }
@@ -2268,7 +2252,7 @@ MallocChecker::getAllocationSite(const ExplodedNode *N, SymbolRef Sym,
             // Do not show local variables belonging to a function other than
             // where the error is reported.
             if (!VR ||
-                (VR->getStackFrame() == LeakContext->getStackFrame()))
+                (VR->getStackFrame() == LeakContext->getCurrentStackFrame()))
               ReferenceRegion = MR;
           }
         }
@@ -2844,33 +2828,11 @@ static SymbolRef findFailedReallocSymbol(ProgramStateRef currState,
   return nullptr;
 }
 
-static bool isReferenceCountingPointerDestructor(const CXXDestructorDecl *DD) {
-  if (const IdentifierInfo *II = DD->getParent()->getIdentifier()) {
-    StringRef N = II->getName();
-    if (N.contains_lower("ptr") || N.contains_lower("pointer")) {
-      if (N.contains_lower("ref") || N.contains_lower("cnt") ||
-          N.contains_lower("intrusive") || N.contains_lower("shared")) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
     const ExplodedNode *N, const ExplodedNode *PrevN, BugReporterContext &BRC,
     BugReport &BR) {
-
-  ProgramStateRef state = N->getState();
-  ProgramStateRef statePrev = PrevN->getState();
-
-  const RefState *RS = state->get<RegionState>(Sym);
-  const RefState *RSPrev = statePrev->get<RegionState>(Sym);
-
   const Stmt *S = PathDiagnosticLocation::getStmt(N);
-  // When dealing with containers, we sometimes want to give a note
-  // even if the statement is missing.
-  if (!S && (!RS || RS->getAllocationFamily() != AF_InternalBuffer))
+  if (!S)
     return nullptr;
 
   const LocationContext *CurrentLC = N->getLocationContext();
@@ -2895,80 +2857,45 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
     }
   }
 
+  ProgramStateRef state = N->getState();
+  ProgramStateRef statePrev = PrevN->getState();
+
+  const RefState *RS = state->get<RegionState>(Sym);
+  const RefState *RSPrev = statePrev->get<RegionState>(Sym);
+  if (!RS)
+    return nullptr;
+
   // FIXME: We will eventually need to handle non-statement-based events
   // (__attribute__((cleanup))).
 
   // Find out if this is an interesting point and what is the kind.
-  StringRef Msg;
+  const char *Msg = nullptr;
   StackHintGeneratorForSymbol *StackHint = nullptr;
-  SmallString<256> Buf;
-  llvm::raw_svector_ostream OS(Buf);
-  
   if (Mode == Normal) {
     if (isAllocated(RS, RSPrev, S)) {
       Msg = "Memory is allocated";
       StackHint = new StackHintGeneratorForSymbol(Sym,
                                                   "Returned allocated memory");
     } else if (isReleased(RS, RSPrev, S)) {
-      const auto Family = RS->getAllocationFamily();
-      switch (Family) {
-        case AF_Alloca:
-        case AF_Malloc:
-        case AF_CXXNew:
-        case AF_CXXNewArray:
-        case AF_IfNameIndex:
-          Msg = "Memory is released";
-          break;
-        case AF_InternalBuffer: {
-          OS << "Inner pointer invalidated by call to ";
-          if (N->getLocation().getKind() == ProgramPoint::PostImplicitCallKind) {
-            OS << "destructor";
-          } else {
-            OS << "'";
-            const Stmt *S = RS->getStmt();
-            if (const auto *MemCallE = dyn_cast<CXXMemberCallExpr>(S)) {
-              OS << MemCallE->getMethodDecl()->getNameAsString();
-            } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(S)) {
-              OS << OpCallE->getDirectCallee()->getNameAsString();
-            }
-            OS << "'";
-          }
-          Msg = OS.str();
-          break;
-        }
-        case AF_None:
-          llvm_unreachable("Unhandled allocation family!");
-      }
+      Msg = "Memory is released";
       StackHint = new StackHintGeneratorForSymbol(Sym,
                                              "Returning; memory was released");
 
-      // See if we're releasing memory while inlining a destructor
-      // (or one of its callees). This turns on various common
-      // false positive suppressions.
-      bool FoundAnyDestructor = false;
+      // See if we're releasing memory while inlining a destructor (or one of
+      // its callees). If so, enable the atomic-related suppression within that
+      // destructor (and all of its callees), which would kick in while visiting
+      // other nodes (the visit order is from the bug to the graph root).
       for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
-        if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
-          if (isReferenceCountingPointerDestructor(DD)) {
-            // This immediately looks like a reference-counting destructor.
-            // We're bad at guessing the original reference count of the object,
-            // so suppress the report for now.
-            BR.markInvalid(getTag(), DD);
-          } else if (!FoundAnyDestructor) {
-            assert(!ReleaseDestructorLC &&
-                   "There can be only one release point!");
-            // Suspect that it's a reference counting pointer destructor.
-            // On one of the next nodes might find out that it has atomic
-            // reference counting operations within it (see the code above),
-            // and if so, we'd conclude that it likely is a reference counting
-            // pointer destructor.
-            ReleaseDestructorLC = LC->getStackFrame();
-            // It is unlikely that releasing memory is delegated to a destructor
-            // inside a destructor of a shared pointer, because it's fairly hard
-            // to pass the information that the pointer indeed needs to be
-            // released into it. So we're only interested in the innermost
-            // destructor.
-            FoundAnyDestructor = true;
-          }
+        if (isa<CXXDestructorDecl>(LC->getDecl())) {
+          assert(!ReleaseDestructorLC &&
+                 "There can be only one release point!");
+          ReleaseDestructorLC = LC->getCurrentStackFrame();
+          // It is unlikely that releasing memory is delegated to a destructor
+          // inside a destructor of a shared pointer, because it's fairly hard
+          // to pass the information that the pointer indeed needs to be
+          // released into it. So we're only interested in the innermost
+          // destructor.
+          break;
         }
       }
     } else if (isRelinquished(RS, RSPrev, S)) {
@@ -3004,24 +2931,13 @@ std::shared_ptr<PathDiagnosticPiece> MallocChecker::MallocBugVisitor::VisitNode(
     }
   }
 
-  if (Msg.empty())
+  if (!Msg)
     return nullptr;
   assert(StackHint);
 
   // Generate the extra diagnostic.
-  PathDiagnosticLocation Pos;
-  if (!S) {
-    assert(RS->getAllocationFamily() == AF_InternalBuffer);
-    auto PostImplCall = N->getLocation().getAs<PostImplicitCall>();
-    if (!PostImplCall)
-      return nullptr;
-    Pos = PathDiagnosticLocation(PostImplCall->getLocation(),
-                                 BRC.getSourceManager());
-  } else {
-    Pos = PathDiagnosticLocation(S, BRC.getSourceManager(),
-                                 N->getLocationContext());
-  }
-
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
+                             N->getLocationContext());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true, StackHint);
 }
 
@@ -3048,20 +2964,6 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
     }
   }
 }
-
-namespace clang {
-namespace ento {
-namespace allocation_state {
-
-ProgramStateRef
-markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
-  AllocationFamily Family = AF_InternalBuffer;
-  return State->set<RegionState>(Sym, RefState::getReleased(Family, Origin));
-}
-
-} // end namespace allocation_state
-} // end namespace ento
-} // end namespace clang
 
 void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
   registerCStringCheckerBasic(mgr);

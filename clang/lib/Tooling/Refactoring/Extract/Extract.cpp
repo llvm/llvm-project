@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implements the "extract" refactoring that can pull code into
+/// \brief Implements the "extract" refactoring that can pull code into
 /// new functions, methods or declare new variables.
 ///
 //===----------------------------------------------------------------------===//

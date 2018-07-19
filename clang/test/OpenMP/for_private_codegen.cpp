@@ -47,7 +47,7 @@ T tmain() {
 int main() {
   static int svar;
 #ifdef LAMBDA
-  // LAMBDA: [[G:@.+]] = {{(dso_local )?}}global double
+  // LAMBDA: [[G:@.+]] = global double
   // LAMBDA-LABEL: @main
   // LAMBDA: call{{.*}} void [[OUTER_LAMBDA:@.+]](
   [&]() {
@@ -109,7 +109,7 @@ int main() {
   }();
   return 0;
 #elif defined(BLOCKS)
-  // BLOCKS: [[G:@.+]] = {{(dso_local )?}}global double
+  // BLOCKS: [[G:@.+]] = global double
   // BLOCKS-LABEL: @main
   // BLOCKS: call {{.*}}void {{%.+}}(i8
   ^{

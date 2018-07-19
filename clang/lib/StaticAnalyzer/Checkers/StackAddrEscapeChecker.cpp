@@ -47,7 +47,7 @@ public:
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
-  void checkEndFunction(const ReturnStmt *RS, CheckerContext &Ctx) const;
+  void checkEndFunction(CheckerContext &Ctx) const;
 
 private:
   void checkReturnedBlockCaptures(const BlockDataRegion &B,
@@ -120,7 +120,7 @@ bool StackAddrEscapeChecker::isArcManagedBlock(const MemRegion *R,
 bool StackAddrEscapeChecker::isNotInCurrentFrame(const MemRegion *R,
                                                  CheckerContext &C) {
   const StackSpaceRegion *S = cast<StackSpaceRegion>(R->getMemorySpace());
-  return S->getStackFrame() != C.getStackFrame();
+  return S->getStackFrame() != C.getLocationContext()->getCurrentStackFrame();
 }
 
 bool StackAddrEscapeChecker::isSemaphoreCaptured(const BlockDecl &B) const {
@@ -287,8 +287,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   EmitStackError(C, R, RetE);
 }
 
-void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
-                                              CheckerContext &Ctx) const {
+void StackAddrEscapeChecker::checkEndFunction(CheckerContext &Ctx) const {
   if (!ChecksEnabled[CK_StackAddrEscapeChecker])
     return;
 
@@ -304,7 +303,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   public:
     SmallVector<std::pair<const MemRegion *, const MemRegion *>, 10> V;
 
-    CallBack(CheckerContext &CC) : Ctx(CC), CurSFC(CC.getStackFrame()) {}
+    CallBack(CheckerContext &CC)
+        : Ctx(CC), CurSFC(CC.getLocationContext()->getCurrentStackFrame()) {}
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {

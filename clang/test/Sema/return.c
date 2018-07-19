@@ -283,18 +283,6 @@ lbl:
     goto lbl;
 }
 
-int test36a(int b) {
-  if (b)
-    return 43;
-  __builtin_unreachable();
-}
-
-int test36b(int b) {
-  if (b)
-    return 43;
-  __builtin_assume(0);
-}
-
 // PR19074.
 void abort(void) __attribute__((noreturn));
 #define av_assert0(cond) do {\

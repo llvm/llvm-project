@@ -1,4 +1,4 @@
-//===- Commit.cpp - A unit of edits ---------------------------------------===//
+//===----- Commit.cpp - A unit of edits -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,16 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Edit/Commit.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Edit/EditedSource.h"
-#include "clang/Edit/FileOffset.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPConditionalDirectiveRecord.h"
-#include "llvm/ADT/StringRef.h"
-#include <cassert>
-#include <utility>
 
 using namespace clang;
 using namespace edit;
@@ -42,9 +36,9 @@ CharSourceRange Commit::Edit::getInsertFromRange(SourceManager &SM) const {
 }
 
 Commit::Commit(EditedSource &Editor)
-    : SourceMgr(Editor.getSourceManager()), LangOpts(Editor.getLangOpts()),
-      PPRec(Editor.getPPCondDirectiveRecord()),
-      Editor(&Editor) {}
+  : SourceMgr(Editor.getSourceManager()), LangOpts(Editor.getLangOpts()),
+    PPRec(Editor.getPPCondDirectiveRecord()),
+    Editor(&Editor), IsCommitable(true) { }
 
 bool Commit::insert(SourceLocation loc, StringRef text,
                     bool afterToken, bool beforePreviousInsertions) {
@@ -231,7 +225,8 @@ bool Commit::canInsert(SourceLocation loc, FileOffset &offs) {
     isAtStartOfMacroExpansion(loc, &loc);
 
   const SourceManager &SM = SourceMgr;
-  loc = SM.getTopMacroCallerLoc(loc);
+  while (SM.isMacroArgExpansion(loc))
+    loc = SM.getImmediateSpellingLoc(loc);
 
   if (loc.isMacroID())
     if (!isAtStartOfMacroExpansion(loc, &loc))
@@ -261,7 +256,8 @@ bool Commit::canInsertAfterToken(SourceLocation loc, FileOffset &offs,
     isAtEndOfMacroExpansion(loc, &loc);
 
   const SourceManager &SM = SourceMgr;
-  loc = SM.getTopMacroCallerLoc(loc);
+  while (SM.isMacroArgExpansion(loc))
+    loc = SM.getImmediateSpellingLoc(loc);
 
   if (loc.isMacroID())
     if (!isAtEndOfMacroExpansion(loc, &loc))
@@ -282,12 +278,14 @@ bool Commit::canInsertAfterToken(SourceLocation loc, FileOffset &offs,
 }
 
 bool Commit::canInsertInOffset(SourceLocation OrigLoc, FileOffset Offs) {
-  for (const auto &act : CachedEdits)
+  for (unsigned i = 0, e = CachedEdits.size(); i != e; ++i) {
+    Edit &act = CachedEdits[i];
     if (act.Kind == Act_Remove) {
       if (act.Offset.getFID() == Offs.getFID() &&
           Offs > act.Offset && Offs < act.Offset.getWithOffset(act.Length))
         return false; // position has been removed.
     }
+  }
 
   if (!Editor)
     return true;
@@ -342,7 +340,6 @@ bool Commit::isAtStartOfMacroExpansion(SourceLocation loc,
                                        SourceLocation *MacroBegin) const {
   return Lexer::isAtStartOfMacroExpansion(loc, SourceMgr, LangOpts, MacroBegin);
 }
-
 bool Commit::isAtEndOfMacroExpansion(SourceLocation loc,
                                      SourceLocation *MacroEnd) const {
   return Lexer::isAtEndOfMacroExpansion(loc, SourceMgr, LangOpts, MacroEnd);

@@ -1,4 +1,4 @@
-//===- Store.h - Interface for maps from Locations to Values ----*- C++ -*-===//
+//== Store.h - Interface for maps from Locations to Values ------*- C++ -*--==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,42 +14,27 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_STORE_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_STORE_H
 
-#include "clang/AST/Type.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "clang/Basic/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
-#include <cassert>
-#include <cstdint>
-#include <memory>
 
 namespace clang {
 
-class ASTContext;
-class CastExpr;
-class CompoundLiteralExpr;
-class CXXBasePath;
-class Decl;
+class Stmt;
 class Expr;
-class LocationContext;
 class ObjCIvarDecl;
+class CXXBasePath;
 class StackFrameContext;
 
 namespace ento {
 
 class CallEvent;
+class ProgramState;
 class ProgramStateManager;
 class ScanReachableSymbols;
-class SymbolReaper;
 
-using InvalidatedSymbols = llvm::DenseSet<SymbolRef>;
+typedef llvm::DenseSet<SymbolRef> InvalidatedSymbols;
 
 class StoreManager {
 protected:
@@ -63,7 +48,7 @@ protected:
   StoreManager(ProgramStateManager &stateMgr);
 
 public:
-  virtual ~StoreManager() = default;
+  virtual ~StoreManager() {}
 
   /// Return the value bound to specified location in a given state.
   /// \param[in] store The store in which to make the lookup.
@@ -107,17 +92,9 @@ public:
   ///   by \c val bound to the location given for \c loc.
   virtual StoreRef Bind(Store store, Loc loc, SVal val) = 0;
 
-  /// Return a store with the specified value bound to all sub-regions of the
-  /// region. The region must not have previous bindings. If you need to
-  /// invalidate existing bindings, consider invalidateRegions().
-  virtual StoreRef BindDefaultInitial(Store store, const MemRegion *R,
-                                      SVal V) = 0;
+  virtual StoreRef BindDefault(Store store, const MemRegion *R, SVal V);
 
-  /// Return a store with in which all values within the given region are
-  /// reset to zero. This method is allowed to overwrite previous bindings.
-  virtual StoreRef BindDefaultZero(Store store, const MemRegion *R) = 0;
-
-  /// Create a new store with the specified binding removed.
+  /// \brief Create a new store with the specified binding removed.
   /// \param ST the original store, that is the basis for the new store.
   /// \param L the location whose binding should be removed.
   virtual StoreRef killBinding(Store ST, Loc L) = 0;
@@ -170,7 +147,7 @@ public:
   SVal evalDerivedToBase(SVal Derived, QualType DerivedPtrType,
                          bool IsVirtual);
 
-  /// Attempts to do a down cast. Used to model BaseToDerived and C++
+  /// \brief Attempts to do a down cast. Used to model BaseToDerived and C++
   ///        dynamic_cast.
   /// The callback may result in the following 3 scenarios:
   ///  - Successful cast (ex: derived is subclass of base).
@@ -191,7 +168,7 @@ public:
   const MemRegion *castRegion(const MemRegion *region, QualType CastToTy);
 
   virtual StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
-                                      SymbolReaper &SymReaper) = 0;
+                                      SymbolReaper& SymReaper) = 0;
 
   virtual bool includedInBindings(Store store,
                                   const MemRegion *region) const = 0;
@@ -205,7 +182,7 @@ public:
   /// associated with the object is recycled.
   virtual void decrementReferenceCount(Store store) {}
 
-  using InvalidatedRegions = SmallVector<const MemRegion *, 8>;
+  typedef SmallVector<const MemRegion *, 8> InvalidatedRegions;
 
   /// invalidateRegions - Clears out the specified regions from the store,
   ///  marking their values as unknown. Depending on the store, this may also
@@ -258,7 +235,6 @@ public:
   class BindingsHandler {
   public:
     virtual ~BindingsHandler();
-
     virtual bool HandleBinding(StoreManager& SMgr, Store store,
                                const MemRegion *region, SVal val) = 0;
   };
@@ -266,16 +242,16 @@ public:
   class FindUniqueBinding :
   public BindingsHandler {
     SymbolRef Sym;
-    const MemRegion* Binding = nullptr;
-    bool First = true;
+    const MemRegion* Binding;
+    bool First;
 
   public:
-    FindUniqueBinding(SymbolRef sym) : Sym(sym) {}
-
-    explicit operator bool() { return First && Binding; }
+    FindUniqueBinding(SymbolRef sym)
+      : Sym(sym), Binding(nullptr), First(true) {}
 
     bool HandleBinding(StoreManager& SMgr, Store store, const MemRegion* R,
                        SVal val) override;
+    explicit operator bool() { return First && Binding; }
     const MemRegion *getRegion() { return Binding; }
   };
 
@@ -290,21 +266,22 @@ protected:
   /// CastRetrievedVal - Used by subclasses of StoreManager to implement
   ///  implicit casts that arise from loads from regions that are reinterpreted
   ///  as another region.
-  SVal CastRetrievedVal(SVal val, const TypedValueRegion *region,
-                        QualType castTy);
+  SVal CastRetrievedVal(SVal val, const TypedValueRegion *region, 
+                        QualType castTy, bool performTestOnly = true);
 
 private:
   SVal getLValueFieldOrIvar(const Decl *decl, SVal base);
 };
 
+
 inline StoreRef::StoreRef(Store store, StoreManager & smgr)
-    : store(store), mgr(smgr) {
+  : store(store), mgr(smgr) {
   if (store)
     mgr.incrementReferenceCount(store);
 }
 
-inline StoreRef::StoreRef(const StoreRef &sr)
-    : store(sr.store), mgr(sr.mgr)
+inline StoreRef::StoreRef(const StoreRef &sr) 
+  : store(sr.store), mgr(sr.mgr)
 { 
   if (store)
     mgr.incrementReferenceCount(store);
@@ -331,8 +308,8 @@ CreateRegionStoreManager(ProgramStateManager &StMgr);
 std::unique_ptr<StoreManager>
 CreateFieldsOnlyRegionStoreManager(ProgramStateManager &StMgr);
 
-} // namespace ento
+} // end GR namespace
 
-} // namespace clang
+} // end clang namespace
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_STORE_H
+#endif

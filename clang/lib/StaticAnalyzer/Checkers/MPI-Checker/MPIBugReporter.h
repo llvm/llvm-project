@@ -78,7 +78,7 @@ private:
 
   /// Bug visitor class to find the node where the request region was previously
   /// used in order to include it into the BugReport path.
-  class RequestNodeVisitor : public BugReporterVisitor {
+  class RequestNodeVisitor : public BugReporterVisitorImpl<RequestNodeVisitor> {
   public:
     RequestNodeVisitor(const MemRegion *const MemoryRegion,
                        const std::string &ErrText)

@@ -1,5 +1,5 @@
 // RUN: rm -f %t
-// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,unix.Malloc -analyzer-output=plist -verify -o %t %s
+// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,unix.Malloc -analyzer-output=plist -analyzer-config path-diagnostics-alternate=false -o %t %s
 // RUN: FileCheck -input-file %t %s
 
 typedef __typeof(sizeof(int)) size_t;
@@ -19,8 +19,8 @@ void diagnosticTest(int in) {
 void myArrayAllocation() {
     int **A;
     A = malloc(2*sizeof(int*));
-    A[0] = 0;
-}//expected-warning{{Potential leak}}
+    A[0] = 0;// expected-warning {{leak}}
+}
 
 void reallocDiagnostics() {
     char * buf = malloc(100);
@@ -44,7 +44,7 @@ void *wrapper() {
 void test_wrapper() {
   void *buf = wrapper();
   (void) buf;
-}//expected-warning{{Potential leak}}
+}
 
 // Test what happens when the same call frees and allocated memory.
 // Also tests the stack hint for parameters, when they are passed directly or via pointer.
@@ -60,7 +60,7 @@ void my_malloc_and_free(void **x) {
 void *test_double_action_call() {
     void *buf;
     my_malloc_and_free(&buf);
-    return buf; //expected-warning{{Use of memory after it is freed}}
+    return buf;
 }
 
 // Test stack hint for 'reallocation failed'.
@@ -75,7 +75,7 @@ char *my_realloc(char *buf) {
 void reallocIntra() {
     char *buf = (char *)malloc(100);
     buf = my_realloc(buf);
-    free(buf);//expected-warning{{Potential leak}}
+    free(buf);
 }
 
 // Test stack hint when returning a result.
@@ -85,7 +85,7 @@ static char *malloc_wrapper_ret() {
 void use_ret() {
     char *v;
     v = malloc_wrapper_ret();
-}//expected-warning{{Potential leak}}
+}
 
 // Passing a block as a parameter to an inlined call for which we generate
 // a stack hint message caused crashes.
@@ -99,7 +99,7 @@ void call_myfree_takingblock() {
 
   int *p = malloc(sizeof(int));
   myfree_takingblock(some_block, p);
-  *p = 3;//expected-warning{{Use of memory after it is freed}}
+  *p = 3;
 }
 
 // Test that we refer to the last symbol used in the leak diagnostic.
@@ -112,13 +112,13 @@ void LeakedSymbol(int in) {
     m = p;
     p = 0;
     (*m)++;
-    in++;//expected-warning{{Potential leak}}
+    in++;
 }
 
 // Tests that exercise running remove dead bindings at Call exit.
 static void function_with_leak1() {
     char *x = (char*)malloc(12);
-} //expected-warning{{Potential leak}}
+}
 void use_function_with_leak1() {
     function_with_leak1();
     int y = 0;
@@ -126,7 +126,7 @@ void use_function_with_leak1() {
 
 static void function_with_leak2() {
     char *x = (char*)malloc(12);
-    int m = 0; //expected-warning{{Potential leak}}
+    int m = 0;
 }
 void use_function_with_leak2() {
     function_with_leak2();
@@ -136,7 +136,7 @@ static void function_with_leak3(int y) {
     char *x = (char*)malloc(12);
     if (y)
         y++;
-}//expected-warning{{Potential leak}}
+}
 void use_function_with_leak3(int y) {
     function_with_leak3(y);
 }
@@ -146,7 +146,7 @@ static void function_with_leak4(int y) {
     if (y)
         y++;
     else
-        y--;//expected-warning{{Potential leak}}
+        y--;
 }
 void use_function_with_leak4(int y) {
     function_with_leak4(y);
@@ -157,7 +157,7 @@ int anotherFunction5() {
 }
 static int function_with_leak5() {
     char *x = (char*)malloc(12);
-    return anotherFunction5();//expected-warning{{Potential leak}}
+    return anotherFunction5();
 }
 void use_function_with_leak5() {
     function_with_leak5();
@@ -168,7 +168,7 @@ void anotherFunction6(int m) {
 }
 static void function_with_leak6() {
     char *x = (char*)malloc(12);
-    anotherFunction6(3);//expected-warning{{Potential leak}}
+    anotherFunction6(3);
 }
 void use_function_with_leak6() {
     function_with_leak6();
@@ -184,7 +184,7 @@ static char *function_with_leak7() {
 }
 void use_function_with_leak7() {
     function_with_leak7();
-}//expected-warning{{Potential memory leak}}
+}
 
 // Test that we do not print the name of a variable not visible from where
 // the issue is reported.
@@ -194,7 +194,7 @@ int *my_malloc() {
 }
 void testOnlyRefferToVisibleVariables() {
   my_malloc();
-} // expected-warning{{Potential memory leak}}
+} // expected-warning {{Potential leak of memory}}
 
 struct PointerWrapper{
   int*p;
@@ -205,8 +205,8 @@ int *my_malloc_into_struct() {
   return w.p;
 }
 void testMyMalloc() {
-  my_malloc_into_struct();
-} // expected-warning{{Potential memory leak}}
+  my_malloc_into_struct(); // expected-warning {{Potential leak of memory}}
+}
 
 // CHECK:   <key>diagnostics</key>
 // CHECK-NEXT:   <array>
@@ -311,6 +311,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>12</integer>
+// CHECK-NEXT:             <key>col</key><integer>9</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>12</integer>
+// CHECK-NEXT:             <key>col</key><integer>11</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>12</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>12</integer>
+// CHECK-NEXT:             <key>col</key><integer>23</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -348,46 +382,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>12</integer>
-// CHECK-NEXT:             <key>col</key><integer>9</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>12</integer>
-// CHECK-NEXT:             <key>col</key><integer>11</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>14</integer>
-// CHECK-NEXT:             <key>col</key><integer>9</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>14</integer>
-// CHECK-NEXT:             <key>col</key><integer>9</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>14</integer>
-// CHECK-NEXT:             <key>col</key><integer>9</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>14</integer>
-// CHECK-NEXT:             <key>col</key><integer>9</integer>
+// CHECK-NEXT:             <key>col</key><integer>23</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -476,6 +476,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>21</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>21</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>21</integer>
+// CHECK-NEXT:             <key>col</key><integer>9</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>21</integer>
+// CHECK-NEXT:             <key>col</key><integer>14</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -513,46 +547,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>21</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>9</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>21</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>22</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>22</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>22</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>22</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>14</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -607,6 +607,40 @@ void testMyMalloc() {
 // CHECK-NEXT:     <key>path</key>
 // CHECK-NEXT:     <array>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>26</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>26</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>26</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>26</integer>
+// CHECK-NEXT:             <key>col</key><integer>23</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -644,12 +678,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>26</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>26</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>col</key><integer>23</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -663,6 +697,40 @@ void testMyMalloc() {
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>28</integer>
 // CHECK-NEXT:             <key>col</key><integer>7</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>28</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>28</integer>
+// CHECK-NEXT:             <key>col</key><integer>7</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>28</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>28</integer>
+// CHECK-NEXT:             <key>col</key><integer>24</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -707,12 +775,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>28</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>28</integer>
-// CHECK-NEXT:             <key>col</key><integer>7</integer>
+// CHECK-NEXT:             <key>col</key><integer>24</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -1038,6 +1106,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>37</integer>
+// CHECK-NEXT:             <key>col</key><integer>3</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>37</integer>
+// CHECK-NEXT:             <key>col</key><integer>6</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>37</integer>
+// CHECK-NEXT:             <key>col</key><integer>13</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>37</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -1075,12 +1177,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>37</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
+// CHECK-NEXT:             <key>col</key><integer>13</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>37</integer>
-// CHECK-NEXT:             <key>col</key><integer>6</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -1247,74 +1349,6 @@ void testMyMalloc() {
 // CHECK-NEXT:          <key>end</key>
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>45</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>45</integer>
-// CHECK-NEXT:             <key>col</key><integer>6</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>45</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>45</integer>
-// CHECK-NEXT:             <key>col</key><integer>6</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>46</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>46</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>46</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>46</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>47</integer>
 // CHECK-NEXT:             <key>col</key><integer>1</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
@@ -1474,6 +1508,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>55</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>55</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>55</integer>
+// CHECK-NEXT:             <key>col</key><integer>10</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>55</integer>
+// CHECK-NEXT:             <key>col</key><integer>15</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -1511,12 +1579,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>55</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>10</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>55</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>15</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -1915,6 +1983,40 @@ void testMyMalloc() {
 // CHECK-NEXT:     <key>path</key>
 // CHECK-NEXT:     <array>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>76</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>76</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>76</integer>
+// CHECK-NEXT:             <key>col</key><integer>25</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>76</integer>
+// CHECK-NEXT:             <key>col</key><integer>30</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -1952,46 +2054,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>76</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>25</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>76</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>7</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>7</integer>
+// CHECK-NEXT:             <key>col</key><integer>30</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -2123,6 +2191,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>69</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>69</integer>
+// CHECK-NEXT:             <key>col</key><integer>7</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>69</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>69</integer>
+// CHECK-NEXT:             <key>col</key><integer>24</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -2160,12 +2262,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>69</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>18</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>69</integer>
-// CHECK-NEXT:             <key>col</key><integer>7</integer>
+// CHECK-NEXT:             <key>col</key><integer>24</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -2395,40 +2497,6 @@ void testMyMalloc() {
 // CHECK-NEXT:          <key>end</key>
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>7</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>77</integer>
-// CHECK-NEXT:             <key>col</key><integer>7</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>78</integer>
 // CHECK-NEXT:             <key>col</key><integer>5</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
@@ -2491,40 +2559,6 @@ void testMyMalloc() {
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>86</integer>
 // CHECK-NEXT:             <key>col</key><integer>8</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -2622,6 +2656,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>83</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>83</integer>
+// CHECK-NEXT:             <key>col</key><integer>10</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>83</integer>
+// CHECK-NEXT:             <key>col</key><integer>19</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>83</integer>
+// CHECK-NEXT:             <key>col</key><integer>24</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -2694,40 +2762,6 @@ void testMyMalloc() {
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>87</integer>
 // CHECK-NEXT:             <key>col</key><integer>26</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>87</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -2816,6 +2850,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>100</integer>
+// CHECK-NEXT:             <key>col</key><integer>3</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>100</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>100</integer>
+// CHECK-NEXT:             <key>col</key><integer>12</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>100</integer>
+// CHECK-NEXT:             <key>col</key><integer>17</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -2853,12 +2921,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>100</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
+// CHECK-NEXT:             <key>col</key><integer>12</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>100</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>17</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -3035,40 +3103,6 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>102</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>102</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>102</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>102</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>102</integer>
 // CHECK-NEXT:             <key>col</key><integer>6</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
@@ -3165,6 +3199,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>109</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>109</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>109</integer>
+// CHECK-NEXT:             <key>col</key><integer>15</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>109</integer>
+// CHECK-NEXT:             <key>col</key><integer>20</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -3202,12 +3270,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>109</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>15</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>109</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>20</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -3339,6 +3407,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>120</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>120</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>120</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>120</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -3376,12 +3478,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>120</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>120</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -3513,6 +3615,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>128</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>128</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>128</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>128</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -3550,12 +3686,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>128</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>128</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -3687,6 +3823,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>136</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>136</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>136</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>136</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -3724,12 +3894,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>136</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>136</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -3958,6 +4128,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>145</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>145</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>145</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>145</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -3995,12 +4199,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>145</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>145</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -4229,6 +4433,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>159</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>159</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>159</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>159</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -4266,46 +4504,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>159</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>159</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>160</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>160</integer>
-// CHECK-NEXT:             <key>col</key><integer>10</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>160</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>160</integer>
-// CHECK-NEXT:             <key>col</key><integer>10</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -4437,6 +4641,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>170</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>170</integer>
+// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>170</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>170</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -4474,12 +4712,12 @@ void testMyMalloc() {
 // CHECK-NEXT:           <array>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>170</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>col</key><integer>22</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>170</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
+// CHECK-NEXT:             <key>col</key><integer>27</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -4604,6 +4842,40 @@ void testMyMalloc() {
 // CHECK-NEXT:            <dict>
 // CHECK-NEXT:             <key>line</key><integer>183</integer>
 // CHECK-NEXT:             <key>col</key><integer>10</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>183</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>183</integer>
+// CHECK-NEXT:             <key>col</key><integer>10</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>183</integer>
+// CHECK-NEXT:             <key>col</key><integer>19</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>183</integer>
+// CHECK-NEXT:             <key>col</key><integer>24</integer>
 // CHECK-NEXT:             <key>file</key><integer>0</integer>
 // CHECK-NEXT:            </dict>
 // CHECK-NEXT:           </array>
@@ -4814,6 +5086,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>192</integer>
+// CHECK-NEXT:             <key>col</key><integer>3</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>192</integer>
+// CHECK-NEXT:             <key>col</key><integer>5</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>192</integer>
+// CHECK-NEXT:             <key>col</key><integer>12</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>192</integer>
+// CHECK-NEXT:             <key>col</key><integer>17</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -4841,40 +5147,6 @@ void testMyMalloc() {
 // CHECK-NEXT:       <string>Memory is allocated</string>
 // CHECK-NEXT:       <key>message</key>
 // CHECK-NEXT:       <string>Memory is allocated</string>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>192</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>192</integer>
-// CHECK-NEXT:             <key>col</key><integer>5</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>193</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>193</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
@@ -5085,6 +5357,40 @@ void testMyMalloc() {
 // CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
+// CHECK-NEXT:       <key>kind</key><string>control</string>
+// CHECK-NEXT:       <key>edges</key>
+// CHECK-NEXT:        <array>
+// CHECK-NEXT:         <dict>
+// CHECK-NEXT:          <key>start</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>204</integer>
+// CHECK-NEXT:             <key>col</key><integer>3</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>204</integer>
+// CHECK-NEXT:             <key>col</key><integer>3</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:          <key>end</key>
+// CHECK-NEXT:           <array>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>204</integer>
+// CHECK-NEXT:             <key>col</key><integer>9</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:            <dict>
+// CHECK-NEXT:             <key>line</key><integer>204</integer>
+// CHECK-NEXT:             <key>col</key><integer>14</integer>
+// CHECK-NEXT:             <key>file</key><integer>0</integer>
+// CHECK-NEXT:            </dict>
+// CHECK-NEXT:           </array>
+// CHECK-NEXT:         </dict>
+// CHECK-NEXT:        </array>
+// CHECK-NEXT:      </dict>
+// CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
 // CHECK-NEXT:       <key>location</key>
 // CHECK-NEXT:       <dict>
@@ -5112,40 +5418,6 @@ void testMyMalloc() {
 // CHECK-NEXT:       <string>Memory is allocated</string>
 // CHECK-NEXT:       <key>message</key>
 // CHECK-NEXT:       <string>Memory is allocated</string>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>kind</key><string>control</string>
-// CHECK-NEXT:       <key>edges</key>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>start</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>204</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>204</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:          <key>end</key>
-// CHECK-NEXT:           <array>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>205</integer>
-// CHECK-NEXT:             <key>col</key><integer>3</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:            <dict>
-// CHECK-NEXT:             <key>line</key><integer>205</integer>
-// CHECK-NEXT:             <key>col</key><integer>8</integer>
-// CHECK-NEXT:             <key>file</key><integer>0</integer>
-// CHECK-NEXT:            </dict>
-// CHECK-NEXT:           </array>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
 // CHECK-NEXT:      </dict>
 // CHECK-NEXT:      <dict>
 // CHECK-NEXT:       <key>kind</key><string>event</string>
@@ -5242,3 +5514,5 @@ void testMyMalloc() {
 // CHECK-NEXT:    </dict>
 // CHECK-NEXT:    </dict>
 // CHECK-NEXT:   </array>
+// CHECK-NEXT:  </dict>
+// CHECK-NEXT:  </plist>

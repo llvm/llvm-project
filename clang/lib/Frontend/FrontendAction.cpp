@@ -79,7 +79,7 @@ public:
   }
 };
 
-/// Dumps deserialized declarations.
+/// \brief Dumps deserialized declarations.
 class DeserializedDeclsDumper : public DelegatingDeserializationListener {
 public:
   explicit DeserializedDeclsDumper(ASTDeserializationListener *Previous,
@@ -88,17 +88,15 @@ public:
 
   void DeclRead(serialization::DeclID ID, const Decl *D) override {
     llvm::outs() << "PCH DECL: " << D->getDeclKindName();
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
-      llvm::outs() << " - ";
-      ND->printQualifiedName(llvm::outs());
-    }
+    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
+      llvm::outs() << " - " << *ND;
     llvm::outs() << "\n";
 
     DelegatingDeserializationListener::DeclRead(ID, D);
   }
 };
 
-/// Checks deserialized declarations and emits error if a name
+/// \brief Checks deserialized declarations and emits error if a name
 /// matches one given in command-line using -error-on-deserialized-decl.
 class DeserializedDeclsChecker : public DelegatingDeserializationListener {
   ASTContext &Ctx;
@@ -153,10 +151,6 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
 
   // If there are no registered plugins we don't need to wrap the consumer
   if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
-    return Consumer;
-
-  // If this is a code completion run, avoid invoking the plugin consumers
-  if (CI.hasCodeCompletionConsumer())
     return Consumer;
 
   // Collect the list of plugins that go before the main action (in Consumers)
@@ -288,7 +282,7 @@ static void addHeaderInclude(StringRef HeaderName,
     Includes += "}\n";
 }
 
-/// Collect the set of header includes needed to construct the given 
+/// \brief Collect the set of header includes needed to construct the given 
 /// module and update the TopHeaders file set of the module.
 ///
 /// \param Module The module we're collecting includes from.
@@ -700,6 +694,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 CI.getLangOpts(), CI.getTargetOpts(), CI.getPreprocessorOpts(),
                 SpecificModuleCachePath)) {
           PPOpts.ImplicitPCHInclude = Dir->getName();
+          CI.getLangOpts().NeededByPCHOrCompilationUsesPCH = true;
           Found = true;
           break;
         }
@@ -765,22 +760,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // Initialize the action.
   if (!BeginSourceFileAction(CI))
     goto failure;
-
-  // If we were asked to load any module map files, do so now.
-  for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
-    if (auto *File = CI.getFileManager().getFile(Filename))
-      CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
-          File, /*IsSystem*/false);
-    else
-      CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
-  }
-
-  // Add a module declaration scope so that modules from -fmodule-map-file
-  // arguments may shadow modules found implicitly in search paths.
-  CI.getPreprocessor()
-      .getHeaderSearchInfo()
-      .getModuleMap()
-      .finishModuleDeclarationScope();
 
   // Create the AST context and consumer unless this is a preprocessor only
   // action.
@@ -870,6 +849,22 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
            "modules enabled but created an external source that "
            "doesn't support modules");
   }
+
+  // If we were asked to load any module map files, do so now.
+  for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
+    if (auto *File = CI.getFileManager().getFile(Filename))
+      CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
+          File, /*IsSystem*/false);
+    else
+      CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
+  }
+
+  // Add a module declaration scope so that modules from -fmodule-map-file
+  // arguments may shadow modules found implicitly in search paths.
+  CI.getPreprocessor()
+      .getHeaderSearchInfo()
+      .getModuleMap()
+      .finishModuleDeclarationScope();
 
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)

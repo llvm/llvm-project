@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
   Coverage
   IPO
   IRReader
-  AggressiveInstCombine
   InstCombine
   Instrumentation
   LTO
@@ -30,10 +29,6 @@ set(LLVM_LINK_COMPONENTS
 set(codegen_deps intrinsics_gen)
 if (CLANG_BUILT_STANDALONE)
   set(codegen_deps)
-endif()
-
-if (MSVC)
-  set_source_files_properties(CodeGenModule.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()
 
 add_clang_library(clangCodeGen
@@ -99,6 +94,7 @@ add_clang_library(clangCodeGen
   LINK_LIBS
   clangAnalysis
   clangAST
+  clangAnalysis
   clangBasic
   clangFrontend
   clangLex

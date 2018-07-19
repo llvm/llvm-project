@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file defines the list of supported OpenMP directives and
+/// \brief This file defines the list of supported OpenMP directives and
 /// clauses.
 ///
 //===----------------------------------------------------------------------===//

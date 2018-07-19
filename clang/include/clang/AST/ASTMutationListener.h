@@ -41,86 +41,86 @@ namespace clang {
   class VarTemplateDecl;
   class VarTemplateSpecializationDecl;
 
-/// An abstract interface that should be implemented by listeners
+/// \brief An abstract interface that should be implemented by listeners
 /// that want to be notified when an AST entity gets modified after its
 /// initial creation.
 class ASTMutationListener {
 public:
   virtual ~ASTMutationListener();
 
-  /// A new TagDecl definition was completed.
+  /// \brief A new TagDecl definition was completed.
   virtual void CompletedTagDefinition(const TagDecl *D) { }
 
-  /// A new declaration with name has been added to a DeclContext.
+  /// \brief A new declaration with name has been added to a DeclContext.
   virtual void AddedVisibleDecl(const DeclContext *DC, const Decl *D) {}
 
-  /// An implicit member was added after the definition was completed.
+  /// \brief An implicit member was added after the definition was completed.
   virtual void AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) {}
 
-  /// A template specialization (or partial one) was added to the
+  /// \brief A template specialization (or partial one) was added to the
   /// template declaration.
   virtual void AddedCXXTemplateSpecialization(const ClassTemplateDecl *TD,
                                     const ClassTemplateSpecializationDecl *D) {}
 
-  /// A template specialization (or partial one) was added to the
+  /// \brief A template specialization (or partial one) was added to the
   /// template declaration.
   virtual void
   AddedCXXTemplateSpecialization(const VarTemplateDecl *TD,
                                  const VarTemplateSpecializationDecl *D) {}
 
-  /// A template specialization (or partial one) was added to the
+  /// \brief A template specialization (or partial one) was added to the
   /// template declaration.
   virtual void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
                                               const FunctionDecl *D) {}
 
-  /// A function's exception specification has been evaluated or
+  /// \brief A function's exception specification has been evaluated or
   /// instantiated.
   virtual void ResolvedExceptionSpec(const FunctionDecl *FD) {}
 
-  /// A function's return type has been deduced.
+  /// \brief A function's return type has been deduced.
   virtual void DeducedReturnType(const FunctionDecl *FD, QualType ReturnType);
 
-  /// A virtual destructor's operator delete has been resolved.
+  /// \brief A virtual destructor's operator delete has been resolved.
   virtual void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
                                       const FunctionDecl *Delete,
                                       Expr *ThisArg) {}
 
-  /// An implicit member got a definition.
+  /// \brief An implicit member got a definition.
   virtual void CompletedImplicitDefinition(const FunctionDecl *D) {}
 
-  /// The instantiation of a templated function or variable was
+  /// \brief The instantiation of a templated function or variable was
   /// requested. In particular, the point of instantiation and template
   /// specialization kind of \p D may have changed.
   virtual void InstantiationRequested(const ValueDecl *D) {}
 
-  /// A templated variable's definition was implicitly instantiated.
+  /// \brief A templated variable's definition was implicitly instantiated.
   virtual void VariableDefinitionInstantiated(const VarDecl *D) {}
 
-  /// A function template's definition was instantiated.
+  /// \brief A function template's definition was instantiated.
   virtual void FunctionDefinitionInstantiated(const FunctionDecl *D) {}
 
-  /// A default argument was instantiated.
+  /// \brief A default argument was instantiated.
   virtual void DefaultArgumentInstantiated(const ParmVarDecl *D) {}
 
-  /// A default member initializer was instantiated.
+  /// \brief A default member initializer was instantiated.
   virtual void DefaultMemberInitializerInstantiated(const FieldDecl *D) {}
 
-  /// A new objc category class was added for an interface.
+  /// \brief A new objc category class was added for an interface.
   virtual void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                             const ObjCInterfaceDecl *IFD) {}
 
-  /// A declaration is marked used which was not previously marked used.
+  /// \brief A declaration is marked used which was not previously marked used.
   ///
   /// \param D the declaration marked used
   virtual void DeclarationMarkedUsed(const Decl *D) {}
 
-  /// A declaration is marked as OpenMP threadprivate which was not
+  /// \brief A declaration is marked as OpenMP threadprivate which was not
   /// previously marked as threadprivate.
   ///
   /// \param D the declaration marked OpenMP threadprivate.
   virtual void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {}
 
-  /// A declaration is marked as OpenMP declaretarget which was not
+  /// \brief A declaration is marked as OpenMP declaretarget which was not
   /// previously marked as declaretarget.
   ///
   /// \param D the declaration marked OpenMP declaretarget.
@@ -128,14 +128,14 @@ public:
   virtual void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                                     const Attr *Attr) {}
 
-  /// A definition has been made visible by being redefined locally.
+  /// \brief A definition has been made visible by being redefined locally.
   ///
   /// \param D The definition that was previously not visible.
   /// \param M The containing module in which the definition was made visible,
   ///        if any.
   virtual void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) {}
   
-  /// An attribute was added to a RecordDecl
+  /// \brief An attribute was added to a RecordDecl
   ///
   /// \param Attr The attribute that was added to the Record
   ///

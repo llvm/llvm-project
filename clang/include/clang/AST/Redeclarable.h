@@ -36,7 +36,7 @@ class Decl;
 //    DeclLink that may point to one of 3 possible states:
 //      - the "previous" (temporal) element in the chain
 //      - the "latest" (temporal) element in the chain
-//      - the "uninitialized-latest" value (when newly-constructed)
+//      - the an "uninitialized-latest" value (when newly-constructed)
 //
 //  - The first element is also often called the canonical element. Every
 //    element has a pointer to it so that "getCanonical" can be fast.
@@ -48,8 +48,10 @@ class Decl;
 //    "most-recent" when referring to temporal order: order of addition
 //    to the chain.
 //
-//  - It's easiest to just ignore the implementation of DeclLink when making
-//    sense of the redeclaration chain.
+//  - To make matters confusing, the DeclLink type uses the term "next"
+//    for its pointer-storage internally (thus functions like
+//    NextIsPrevious). It's easiest to just ignore the implementation of
+//    DeclLink when making sense of the redeclaration chain.
 //
 //  - There's also a "definition" link for several types of
 //    redeclarable, where only one definition should exist at any given
@@ -80,7 +82,7 @@ class Decl;
 //        | link                +-----+                  |
 //        +-->-------------------------------------------+
 
-/// Provides common interface for the Decls that can be redeclared.
+/// \brief Provides common interface for the Decls that can be redeclared.
 template<typename decl_type>
 class Redeclarable {
 protected:
@@ -103,64 +105,66 @@ protected:
     /// previous declaration.
     using NotKnownLatest = llvm::PointerUnion<Previous, UninitializedLatest>;
 
-    mutable llvm::PointerUnion<NotKnownLatest, KnownLatest> Link;
+    mutable llvm::PointerUnion<NotKnownLatest, KnownLatest> Next;
 
   public:
     enum PreviousTag { PreviousLink };
     enum LatestTag { LatestLink };
 
     DeclLink(LatestTag, const ASTContext &Ctx)
-        : Link(NotKnownLatest(reinterpret_cast<UninitializedLatest>(&Ctx))) {}
-    DeclLink(PreviousTag, decl_type *D) : Link(NotKnownLatest(Previous(D))) {}
+        : Next(NotKnownLatest(reinterpret_cast<UninitializedLatest>(&Ctx))) {}
+    DeclLink(PreviousTag, decl_type *D) : Next(NotKnownLatest(Previous(D))) {}
 
-    bool isFirst() const {
-      return Link.is<KnownLatest>() ||
+    bool NextIsPrevious() const {
+      return Next.is<NotKnownLatest>() &&
              // FIXME: 'template' is required on the next line due to an
              // apparent clang bug.
-             Link.get<NotKnownLatest>().template is<UninitializedLatest>();
+             Next.get<NotKnownLatest>().template is<Previous>();
     }
 
-    decl_type *getPrevious(const decl_type *D) const {
-      if (Link.is<NotKnownLatest>()) {
-        NotKnownLatest NKL = Link.get<NotKnownLatest>();
+    bool NextIsLatest() const { return !NextIsPrevious(); }
+
+    decl_type *getNext(const decl_type *D) const {
+      if (Next.is<NotKnownLatest>()) {
+        NotKnownLatest NKL = Next.get<NotKnownLatest>();
         if (NKL.is<Previous>())
           return static_cast<decl_type*>(NKL.get<Previous>());
 
         // Allocate the generational 'most recent' cache now, if needed.
-        Link = KnownLatest(*reinterpret_cast<const ASTContext *>(
+        Next = KnownLatest(*reinterpret_cast<const ASTContext *>(
                                NKL.get<UninitializedLatest>()),
                            const_cast<decl_type *>(D));
       }
 
-      return static_cast<decl_type*>(Link.get<KnownLatest>().get(D));
+      return static_cast<decl_type*>(Next.get<KnownLatest>().get(D));
     }
 
     void setPrevious(decl_type *D) {
-      assert(!isFirst() && "decl became non-canonical unexpectedly");
-      Link = Previous(D);
+      assert(NextIsPrevious() && "decl became non-canonical unexpectedly");
+      Next = Previous(D);
     }
 
     void setLatest(decl_type *D) {
-      assert(isFirst() && "decl became canonical unexpectedly");
-      if (Link.is<NotKnownLatest>()) {
-        NotKnownLatest NKL = Link.get<NotKnownLatest>();
-        Link = KnownLatest(*reinterpret_cast<const ASTContext *>(
+      assert(NextIsLatest() && "decl became canonical unexpectedly");
+      if (Next.is<NotKnownLatest>()) {
+        NotKnownLatest NKL = Next.get<NotKnownLatest>();
+        Next = KnownLatest(*reinterpret_cast<const ASTContext *>(
                                NKL.get<UninitializedLatest>()),
                            D);
       } else {
-        auto Latest = Link.get<KnownLatest>();
+        auto Latest = Next.get<KnownLatest>();
         Latest.set(D);
-        Link = Latest;
+        Next = Latest;
       }
     }
 
-    void markIncomplete() { Link.get<KnownLatest>().markIncomplete(); }
+    void markIncomplete() { Next.get<KnownLatest>().markIncomplete(); }
 
     Decl *getLatestNotUpdated() const {
-      assert(isFirst() && "expected a canonical decl");
-      if (Link.is<NotKnownLatest>())
+      assert(NextIsLatest() && "expected a canonical decl");
+      if (Next.is<NotKnownLatest>())
         return nullptr;
-      return Link.get<KnownLatest>().getNotUpdated();
+      return Next.get<KnownLatest>().getNotUpdated();
     }
   };
 
@@ -172,10 +176,10 @@ protected:
     return DeclLink(DeclLink::LatestLink, Ctx);
   }
 
-  /// Points to the next redeclaration in the chain.
+  /// \brief Points to the next redeclaration in the chain.
   ///
-  /// If isFirst() is false, this is a link to the previous declaration
-  /// of this same Decl. If isFirst() is true, this is the first
+  /// If NextIsPrevious() is true, this is a link to the previous declaration
+  /// of this same Decl. If NextIsLatest() is true, this is the first
   /// declaration and Link points to the latest declaration. For example:
   ///
   ///  #1 int f(int x, int y = 1); // <pointer to #3, true>
@@ -188,7 +192,7 @@ protected:
   decl_type *First;
 
   decl_type *getNextRedeclaration() const {
-    return RedeclLink.getPrevious(static_cast<const decl_type *>(this));
+    return RedeclLink.getNext(static_cast<const decl_type *>(this));
   }
 
 public:
@@ -199,10 +203,10 @@ public:
       : RedeclLink(LatestDeclLink(Ctx)),
         First(static_cast<decl_type *>(this)) {}
 
-  /// Return the previous declaration of this declaration or NULL if this
+  /// \brief Return the previous declaration of this declaration or NULL if this
   /// is the first declaration.
   decl_type *getPreviousDecl() {
-    if (!RedeclLink.isFirst())
+    if (RedeclLink.NextIsPrevious())
       return getNextRedeclaration();
     return nullptr;
   }
@@ -211,32 +215,32 @@ public:
                  static_cast<const decl_type*>(this))->getPreviousDecl();
   }
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   decl_type *getFirstDecl() { return First; }
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   const decl_type *getFirstDecl() const { return First; }
 
-  /// True if this is the first declaration in its redeclaration chain.
-  bool isFirstDecl() const { return RedeclLink.isFirst(); }
+  /// \brief True if this is the first declaration in its redeclaration chain.
+  bool isFirstDecl() const { return RedeclLink.NextIsLatest(); }
 
-  /// Returns the most recent (re)declaration of this declaration.
+  /// \brief Returns the most recent (re)declaration of this declaration.
   decl_type *getMostRecentDecl() {
     return getFirstDecl()->getNextRedeclaration();
   }
 
-  /// Returns the most recent (re)declaration of this declaration.
+  /// \brief Returns the most recent (re)declaration of this declaration.
   const decl_type *getMostRecentDecl() const {
     return getFirstDecl()->getNextRedeclaration();
   }
 
-  /// Set the previous declaration. If PrevDecl is NULL, set this as the
+  /// \brief Set the previous declaration. If PrevDecl is NULL, set this as the
   /// first and only declaration.
   void setPreviousDecl(decl_type *PrevDecl);
 
-  /// Iterates through all the redeclarations of the same decl.
+  /// \brief Iterates through all the redeclarations of the same decl.
   class redecl_iterator {
     /// Current - The current declaration.
     decl_type *Current = nullptr;
@@ -290,7 +294,7 @@ public:
 
   using redecl_range = llvm::iterator_range<redecl_iterator>;
 
-  /// Returns an iterator range for all the redeclarations of the same
+  /// \brief Returns an iterator range for all the redeclarations of the same
   /// decl. It will iterate at least once (when this decl is the only one).
   redecl_range redecls() const {
     return redecl_range(redecl_iterator(const_cast<decl_type *>(
@@ -302,11 +306,11 @@ public:
   redecl_iterator redecls_end() const { return redecls().end(); }
 };
 
-/// Get the primary declaration for a declaration from an AST file. That
+/// \brief Get the primary declaration for a declaration from an AST file. That
 /// will be the first-loaded declaration.
 Decl *getPrimaryMergedDecl(Decl *D);
 
-/// Provides common interface for the Decls that cannot be redeclared,
+/// \brief Provides common interface for the Decls that cannot be redeclared,
 /// but can be merged if the same declaration is brought in from multiple
 /// modules.
 template<typename decl_type>
@@ -314,25 +318,25 @@ class Mergeable {
 public:
   Mergeable() = default;
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   decl_type *getFirstDecl() {
-    auto *D = static_cast<decl_type *>(this);
+    decl_type *D = static_cast<decl_type*>(this);
     if (!D->isFromASTFile())
       return D;
     return cast<decl_type>(getPrimaryMergedDecl(const_cast<decl_type*>(D)));
   }
 
-  /// Return the first declaration of this declaration or itself if this
+  /// \brief Return the first declaration of this declaration or itself if this
   /// is the only declaration.
   const decl_type *getFirstDecl() const {
-    const auto *D = static_cast<const decl_type *>(this);
+    const decl_type *D = static_cast<const decl_type*>(this);
     if (!D->isFromASTFile())
       return D;
     return cast<decl_type>(getPrimaryMergedDecl(const_cast<decl_type*>(D)));
   }
 
-  /// Returns true if this is the first declaration.
+  /// \brief Returns true if this is the first declaration.
   bool isFirstDecl() const { return getFirstDecl() == this; }
 };
 

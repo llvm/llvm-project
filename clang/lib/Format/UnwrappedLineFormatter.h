@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implements a combinartorial exploration of all the different
+/// \brief Implements a combinartorial exploration of all the different
 /// linebreaks unwrapped lines can be formatted in.
 ///
 //===----------------------------------------------------------------------===//
@@ -37,7 +37,7 @@ public:
       : Indenter(Indenter), Whitespaces(Whitespaces), Style(Style),
         Keywords(Keywords), SourceMgr(SourceMgr), Status(Status) {}
 
-  /// Format the current block and return the penalty.
+  /// \brief Format the current block and return the penalty.
   unsigned format(const SmallVectorImpl<AnnotatedLine *> &Lines,
                   bool DryRun = false, int AdditionalIndent = 0,
                   bool FixBadIndentation = false,
@@ -46,14 +46,13 @@ public:
                   unsigned LastStartColumn = 0);
 
 private:
-  /// Add a new line and the required indent before the first Token
+  /// \brief Add a new line and the required indent before the first Token
   /// of the \c UnwrappedLine if there was no structural parsing error.
   void formatFirstToken(const AnnotatedLine &Line,
-                        const AnnotatedLine *PreviousLine,
-                        const SmallVectorImpl<AnnotatedLine *> &Lines,
-                        unsigned Indent, unsigned NewlineIndent);
+                        const AnnotatedLine *PreviousLine, unsigned Indent,
+                        unsigned NewlineIndent);
 
-  /// Returns the column limit for a line, taking into account whether we
+  /// \brief Returns the column limit for a line, taking into account whether we
   /// need an escaped newline due to a continued preprocessor directive.
   unsigned getColumnLimit(bool InPPDirective,
                           const AnnotatedLine *NextLine) const;

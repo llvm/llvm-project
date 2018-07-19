@@ -20,7 +20,7 @@ namespace clang {
 
 class TypeSourceInfo;
 
-/// Holds a QualType and a TypeSourceInfo* that came out of a declarator
+/// \brief Holds a QualType and a TypeSourceInfo* that came out of a declarator
 /// parsing.
 ///
 /// LocInfoType is a "transient" type, only needed for passing to/from Parser

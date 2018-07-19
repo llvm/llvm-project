@@ -62,8 +62,6 @@ public:
     return None;
   }
 
-  ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
-
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
@@ -76,13 +74,11 @@ public:
     return TargetInfo::SystemZBuiltinVaList;
   }
 
-  int getISARevision(StringRef Name) const;
+  int getISARevision(const StringRef &Name) const;
 
   bool isValidCPUName(StringRef Name) const override {
     return getISARevision(Name) != -1;
   }
-
-  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
     CPU = Name;

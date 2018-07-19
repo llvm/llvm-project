@@ -479,6 +479,3 @@ void foo1() {
 // expected-error@-2{{cast of 'E' to 'INTFPtrTy' (aka 'INTF *') is disallowed with ARC}}
 #endif
 }
-
-@class NSString;
-static NSString* const kGlobal = @"";

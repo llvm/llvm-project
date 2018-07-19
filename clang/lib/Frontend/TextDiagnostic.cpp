@@ -42,7 +42,7 @@ static const enum raw_ostream::Colors fatalColor = raw_ostream::RED;
 static const enum raw_ostream::Colors savedColor =
   raw_ostream::SAVEDCOLOR;
 
-/// Add highlights to differences in template strings.
+/// \brief Add highlights to differences in template strings.
 static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
                                       bool &Normal, bool Bold) {
   while (1) {
@@ -63,7 +63,7 @@ static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
   }
 }
 
-/// Number of spaces to indent when word-wrapping.
+/// \brief Number of spaces to indent when word-wrapping.
 const unsigned WordWrapIndentation = 6;
 
 static int bytesSincePreviousTabOrLineBegin(StringRef SourceLine, size_t i) {
@@ -76,7 +76,7 @@ static int bytesSincePreviousTabOrLineBegin(StringRef SourceLine, size_t i) {
   return bytes;
 }
 
-/// returns a printable representation of first item from input range
+/// \brief returns a printable representation of first item from input range
 ///
 /// This function returns a printable representation of the next item in a line
 ///  of source. If the next byte begins a valid and printable character, that
@@ -269,14 +269,14 @@ struct SourceColumnMap {
   int columns() const { return m_byteToColumn.back(); }
   int bytes() const { return m_columnToByte.back(); }
 
-  /// Map a byte to the column which it is at the start of, or return -1
+  /// \brief Map a byte to the column which it is at the start of, or return -1
   /// if it is not at the start of a column (for a UTF-8 trailing byte).
   int byteToColumn(int n) const {
     assert(0<=n && n<static_cast<int>(m_byteToColumn.size()));
     return m_byteToColumn[n];
   }
 
-  /// Map a byte to the first column which contains it.
+  /// \brief Map a byte to the first column which contains it.
   int byteToContainingColumn(int N) const {
     assert(0 <= N && N < static_cast<int>(m_byteToColumn.size()));
     while (m_byteToColumn[N] == -1)
@@ -284,7 +284,7 @@ struct SourceColumnMap {
     return m_byteToColumn[N];
   }
 
-  /// Map a column to the byte which starts the column, or return -1 if
+  /// \brief Map a column to the byte which starts the column, or return -1 if
   /// the column the second or subsequent column of an expanded tab or similar
   /// multi-column entity.
   int columnToByte(int n) const {
@@ -292,14 +292,14 @@ struct SourceColumnMap {
     return m_columnToByte[n];
   }
 
-  /// Map from a byte index to the next byte which starts a column.
+  /// \brief Map from a byte index to the next byte which starts a column.
   int startOfNextColumn(int N) const {
     assert(0 <= N && N < static_cast<int>(m_byteToColumn.size() - 1));
     while (byteToColumn(++N) == -1) {}
     return N;
   }
 
-  /// Map from a byte index to the previous byte which starts a column.
+  /// \brief Map from a byte index to the previous byte which starts a column.
   int startOfPreviousColumn(int N) const {
     assert(0 < N && N < static_cast<int>(m_byteToColumn.size()));
     while (byteToColumn(--N) == -1) {}
@@ -317,7 +317,7 @@ private:
 };
 } // end anonymous namespace
 
-/// When the source code line we want to print is too long for
+/// \brief When the source code line we want to print is too long for
 /// the terminal, select the "interesting" region.
 static void selectInterestingSourceRegion(std::string &SourceLine,
                                           std::string &CaretLine,
@@ -507,7 +507,7 @@ static void selectInterestingSourceRegion(std::string &SourceLine,
   }
 }
 
-/// Skip over whitespace in the string, starting at the given
+/// \brief Skip over whitespace in the string, starting at the given
 /// index.
 ///
 /// \returns The index of the first non-whitespace character that is
@@ -519,7 +519,7 @@ static unsigned skipWhitespace(unsigned Idx, StringRef Str, unsigned Length) {
   return Idx;
 }
 
-/// If the given character is the start of some kind of
+/// \brief If the given character is the start of some kind of
 /// balanced punctuation (e.g., quotes or parentheses), return the
 /// character that will terminate the punctuation.
 ///
@@ -539,7 +539,7 @@ static inline char findMatchingPunctuation(char c) {
   return 0;
 }
 
-/// Find the end of the word starting at the given offset
+/// \brief Find the end of the word starting at the given offset
 /// within a string.
 ///
 /// \returns the index pointing one character past the end of the
@@ -596,7 +596,7 @@ static unsigned findEndOfWord(unsigned Start, StringRef Str,
   return findEndOfWord(Start + 1, Str, Length, Column + 1, Columns);
 }
 
-/// Print the given string to a stream, word-wrapping it to
+/// \brief Print the given string to a stream, word-wrapping it to
 /// some number of columns in the process.
 ///
 /// \param OS the stream to which the word-wrapping string will be
@@ -777,7 +777,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
   OS << Filename;
 }
 
-/// Print out the file/line/column information and include trace.
+/// \brief Print out the file/line/column information and include trace.
 ///
 /// This method handlen the emission of the diagnostic location information.
 /// This includes extracting as much location information as is present for
@@ -852,14 +852,23 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
       // Ignore invalid ranges.
       if (!RI->isValid()) continue;
 
-      auto &SM = Loc.getManager();
-      SourceLocation B = SM.getExpansionLoc(RI->getBegin());
-      CharSourceRange ERange = SM.getExpansionRange(RI->getEnd());
-      SourceLocation E = ERange.getEnd();
-      bool IsTokenRange = ERange.isTokenRange();
+      FullSourceLoc B =
+          FullSourceLoc(RI->getBegin(), Loc.getManager()).getExpansionLoc();
+      FullSourceLoc E =
+          FullSourceLoc(RI->getEnd(), Loc.getManager()).getExpansionLoc();
 
-      std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(B);
-      std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(E);
+      // If the End location and the start location are the same and are a
+      // macro location, then the range was something that came from a
+      // macro expansion or _Pragma.  If this is an object-like macro, the
+      // best we can do is to highlight the range.  If this is a
+      // function-like macro, we'd also like to highlight the arguments.
+      if (B == E && RI->getEnd().isMacroID())
+        E = FullSourceLoc(RI->getEnd(), Loc.getManager())
+                .getExpansionRange()
+                .second;
+
+      std::pair<FileID, unsigned> BInfo = B.getDecomposedLoc();
+      std::pair<FileID, unsigned> EInfo = E.getDecomposedLoc();
 
       // If the start or end of the range is in another file, just discard
       // it.
@@ -869,14 +878,11 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
       // Add in the length of the token, so that we cover multi-char
       // tokens.
       unsigned TokSize = 0;
-      if (IsTokenRange)
-        TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
+      if (RI->isTokenRange())
+        TokSize = Lexer::MeasureTokenLength(E, E.getManager(), LangOpts);
 
-      FullSourceLoc BF(B, SM), EF(E, SM);
-      OS << '{'
-         << BF.getLineNumber() << ':' << BF.getColumnNumber() << '-'
-         << EF.getLineNumber() << ':' << (EF.getColumnNumber() + TokSize)
-         << '}';
+      OS << '{' << B.getLineNumber() << ':' << B.getColumnNumber() << '-'
+         << E.getLineNumber() << ':' << (E.getColumnNumber() + TokSize) << '}';
       PrintedRange = true;
     }
 
@@ -913,7 +919,7 @@ void TextDiagnostic::emitBuildingModuleLocation(FullSourceLoc Loc,
     OS << "While building module '" << ModuleName << "':\n";
 }
 
-/// Find the suitable set of lines to show to include a set of ranges.
+/// \brief Find the suitable set of lines to show to include a set of ranges.
 static llvm::Optional<std::pair<unsigned, unsigned>>
 findLinesForRange(const CharSourceRange &R, FileID FID,
                   const SourceManager &SM) {
@@ -963,7 +969,7 @@ maybeAddRange(std::pair<unsigned, unsigned> A, std::pair<unsigned, unsigned> B,
   return A;
 }
 
-/// Highlight a SourceRange (with ~'s) for any characters on LineNo.
+/// \brief Highlight a SourceRange (with ~'s) for any characters on LineNo.
 static void highlightRange(const CharSourceRange &R,
                            unsigned LineNo, FileID FID,
                            const SourceColumnMap &map,
@@ -1110,7 +1116,7 @@ static std::string buildFixItInsertionLine(FileID FID,
   return FixItInsertionLine;
 }
 
-/// Emit a code snippet and caret line.
+/// \brief Emit a code snippet and caret line.
 ///
 /// This routine emits a single line's code snippet and caret line..
 ///

@@ -7,8 +7,6 @@
 // expected-no-diagnostics
 #endif
 
-// dr1425: na abi
-
 namespace dr1460 { // dr1460: 3.5
 #if __cplusplus >= 201103L
   namespace DRExample {

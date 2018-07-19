@@ -95,23 +95,16 @@ void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
   CC1Args.push_back("-nostdsysteminc");
 }
 
-void BareMetal::AddClangCXXStdlibIncludeArgs(
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
-      DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
-    return;
-
+std::string BareMetal::findLibCxxIncludePath(CXXStdlibType LibType) const {
   StringRef SysRoot = getDriver().SysRoot;
   if (SysRoot.empty())
-    return;
+    return "";
 
-  switch (GetCXXStdlibType(DriverArgs)) {
+  switch (LibType) {
   case ToolChain::CST_Libcxx: {
     SmallString<128> Dir(SysRoot);
     llvm::sys::path::append(Dir, "include", "c++", "v1");
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    break;
+    return Dir.str();
   }
   case ToolChain::CST_Libstdcxx: {
     SmallString<128> Dir(SysRoot);
@@ -131,12 +124,24 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(
       Version = CandidateVersion;
     }
     if (Version.Major == -1)
-      return;
+      return "";
     llvm::sys::path::append(Dir, Version.Text);
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    break;
+    return Dir.str();
   }
   }
+  llvm_unreachable("unhandled LibType");
+}
+
+void BareMetal::AddClangCXXStdlibIncludeArgs(
+    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  std::string Path = findLibCxxIncludePath(GetCXXStdlibType(DriverArgs));
+  if (!Path.empty())
+    addSystemInclude(DriverArgs, CC1Args, Path);
 }
 
 void BareMetal::AddCXXStdlibLibArgs(const ArgList &Args,

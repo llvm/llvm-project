@@ -40,15 +40,15 @@ typedef struct _CXCursorAndRangeVisitorBlock {
 
 #endif // !__has_feature(blocks)
 
-/// The result of comparing two source ranges.
+/// \brief The result of comparing two source ranges.
 enum RangeComparisonResult {
-  /// Either the ranges overlap or one of the ranges is invalid.
+  /// \brief Either the ranges overlap or one of the ranges is invalid.
   RangeOverlap,
 
-  /// The first range ends before the second range starts.
+  /// \brief The first range ends before the second range starts.
   RangeBefore,
 
-  /// The first range starts after the second range ends.
+  /// \brief The first range starts after the second range ends.
   RangeAfter
 };
 

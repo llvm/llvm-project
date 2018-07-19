@@ -252,12 +252,6 @@ namespace std {
       return size_t(_finish - _start);
     }
 
-    void clear();
-
-    void push_back(const T &value);
-    void push_back(T &&value);
-    void pop_back();
-
     T &operator[](size_t n) {
       return _start[n];
     }
@@ -301,8 +295,6 @@ namespace std {
     list& operator=(list &&other);
     list& operator=(std::initializer_list<T> ilist);
 
-    void clear();
-
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
     const_iterator cbegin() const { return const_iterator(_start); }
@@ -338,16 +330,6 @@ namespace std {
       return size_t(_finish - _start);
     }
     
-    void clear();
-
-    void push_back(const T &value);
-    void push_back(T &&value);
-    void pop_back();
-
-    void push_front(const T &value);
-    void push_front(T &&value);
-    void pop_front();
-
     T &operator[](size_t n) {
       return _start[n];
     }
@@ -387,12 +369,6 @@ namespace std {
     forward_list(forward_list &&other);
     ~forward_list();
     
-    void clear();
-
-    void push_front(const T &value);
-    void push_front(T &&value);
-    void pop_front();
-
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
     const_iterator cbegin() const { return const_iterator(_start); }

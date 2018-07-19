@@ -53,58 +53,7 @@ public:
     MemberPointer,
     AddrLabelDiff
   };
-
-  class LValueBase {
-  public:
-    typedef llvm::PointerUnion<const ValueDecl *, const Expr *> PtrTy;
-
-    LValueBase() : CallIndex(0), Version(0) {}
-
-    template <class T>
-    LValueBase(T P, unsigned I = 0, unsigned V = 0)
-        : Ptr(P), CallIndex(I), Version(V) {}
-
-    template <class T>
-    bool is() const { return Ptr.is<T>(); }
-
-    template <class T>
-    T get() const { return Ptr.get<T>(); }
-
-    template <class T>
-    T dyn_cast() const { return Ptr.dyn_cast<T>(); }
-
-    void *getOpaqueValue() const;
-
-    bool isNull() const;
-
-    explicit operator bool () const;
-
-    PtrTy getPointer() const {
-      return Ptr;
-    }
-
-    unsigned getCallIndex() const {
-      return CallIndex;
-    }
-
-    void setCallIndex(unsigned Index) {
-      CallIndex = Index;
-    }
-
-    unsigned getVersion() const {
-      return Version;
-    }
-
-    bool operator==(const LValueBase &Other) const {
-      return Ptr == Other.Ptr && CallIndex == Other.CallIndex &&
-             Version == Other.Version;
-    }
-
-  private:
-    PtrTy Ptr;
-    unsigned CallIndex, Version;
-  };
-
+  typedef llvm::PointerUnion<const ValueDecl *, const Expr *> LValueBase;
   typedef llvm::PointerIntPair<const Decl *, 1, bool> BaseOrMemberType;
   union LValuePathEntry {
     /// BaseOrMember - The FieldDecl or CXXRecordDecl indicating the next item
@@ -186,15 +135,15 @@ public:
   }
   APValue(const APValue &RHS);
   APValue(APValue &&RHS) : Kind(Uninitialized) { swap(RHS); }
-  APValue(LValueBase B, const CharUnits &O, NoLValuePath N,
+  APValue(LValueBase B, const CharUnits &O, NoLValuePath N, unsigned CallIndex,
           bool IsNullPtr = false)
       : Kind(Uninitialized) {
-    MakeLValue(); setLValue(B, O, N, IsNullPtr);
+    MakeLValue(); setLValue(B, O, N, CallIndex, IsNullPtr);
   }
   APValue(LValueBase B, const CharUnits &O, ArrayRef<LValuePathEntry> Path,
-          bool OnePastTheEnd, bool IsNullPtr = false)
+          bool OnePastTheEnd, unsigned CallIndex, bool IsNullPtr = false)
       : Kind(Uninitialized) {
-    MakeLValue(); setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
+    MakeLValue(); setLValue(B, O, Path, OnePastTheEnd, CallIndex, IsNullPtr);
   }
   APValue(UninitArray, unsigned InitElts, unsigned Size) : Kind(Uninitialized) {
     MakeArray(InitElts, Size);
@@ -219,14 +168,14 @@ public:
     MakeUninit();
   }
 
-  /// Returns whether the object performed allocations.
+  /// \brief Returns whether the object performed allocations.
   ///
   /// If APValues are constructed via placement new, \c needsCleanup()
   /// indicates whether the destructor must be called in order to correctly
   /// free all allocated memory.
   bool needsCleanup() const;
 
-  /// Swaps the contents of this and the given APValue.
+  /// \brief Swaps the contents of this and the given APValue.
   void swap(APValue &RHS);
 
   ValueKind getKind() const { return Kind; }
@@ -306,7 +255,6 @@ public:
   bool hasLValuePath() const;
   ArrayRef<LValuePathEntry> getLValuePath() const;
   unsigned getLValueCallIndex() const;
-  unsigned getLValueVersion() const;
   bool isNullPointer() const;
 
   APValue &getVectorElt(unsigned I) {
@@ -428,10 +376,10 @@ public:
     ((ComplexAPFloat *)(char *)Data.buffer)->Imag = std::move(I);
   }
   void setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
-                 bool IsNullPtr);
+                 unsigned CallIndex, bool IsNullPtr);
   void setLValue(LValueBase B, const CharUnits &O,
                  ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
-                 bool IsNullPtr);
+                 unsigned CallIndex, bool IsNullPtr);
   void setUnion(const FieldDecl *Field, const APValue &Value) {
     assert(isUnion() && "Invalid accessor");
     ((UnionData*)(char*)Data.buffer)->Field = Field;
@@ -502,15 +450,5 @@ private:
 };
 
 } // end namespace clang.
-
-namespace llvm {
-template<> struct DenseMapInfo<clang::APValue::LValueBase> {
-  static clang::APValue::LValueBase getEmptyKey();
-  static clang::APValue::LValueBase getTombstoneKey();
-  static unsigned getHashValue(const clang::APValue::LValueBase &Base);
-  static bool isEqual(const clang::APValue::LValueBase &LHS,
-                      const clang::APValue::LValueBase &RHS);
-};
-}
 
 #endif

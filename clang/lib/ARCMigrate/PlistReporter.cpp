@@ -107,7 +107,8 @@ void arcmt::writeARCDiagsToPlist(const std::string &outPath,
       o << "   <key>ranges</key>\n";
       o << "   <array>\n";
       for (auto &R : D.getRanges()) {
-        CharSourceRange ExpansionRange = SM.getExpansionRange(R);
+        CharSourceRange ExpansionRange(SM.getExpansionRange(R.getAsRange()),
+                                       R.isTokenRange());
         EmitRange(o, SM, Lexer::getAsCharRange(ExpansionRange, SM, LangOpts),
                   FM, 4);
       }

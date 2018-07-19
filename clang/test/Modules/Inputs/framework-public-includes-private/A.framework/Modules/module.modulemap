@@ -1,4 +1,0 @@
-// framework-public-includes-private/A.framework/Modules/module.modulemap
-framework module A {
-  header "A.h"
-}

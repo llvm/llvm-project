@@ -58,17 +58,16 @@ int4 vectorVectorTest(int4 a,int4 b) {
   return f;
 }
 
-//NOOPT-LABEL: @vectorScalarTest
+//OPT: @vectorScalarTest
 int4 vectorScalarTest(int4 a,int b) {
-  //NOOPT: [[SP0:%.+]] = insertelement <4 x i32> undef
-  //NOOPT: [[SP1:%.+]] = shufflevector <4 x i32> [[SP0]], <4 x i32> undef, <4 x i32> zeroinitializer
-  //NOOPT: [[VSM:%.+]] = and <4 x i32> [[SP1]], <i32 31, i32 31, i32 31, i32 31>
-  //NOOPT: [[VSC:%.+]] = shl <4 x i32> [[VSS:%.+]], [[VSM]]
+  //OPT: [[SP0:%.+]] = insertelement <4 x i32> undef, i32 %b, i32 0
+  //OPT: [[SP1:%.+]] = shufflevector <4 x i32> [[SP0]], <4 x i32> undef, <4 x i32> zeroinitializer
+  //OPT: [[VSM:%.+]] = and <4 x i32> [[SP1]], <i32 31, i32 31, i32 31, i32 31>
+  //OPT-NEXT: [[VSC:%.+]] = shl <4 x i32> %a, [[VSM]]
   int4 c = a << b;
-  //NOOPT: [[VSF:%.+]] = shl <4 x i32> [[VSC1:%.+]], <i32 2, i32 2, i32 2, i32 2>
-  //NOOPT: [[VSA:%.+]] = add <4 x i32> [[VSC2:%.+]], [[VSF]]
+  //OPT-NEXT: [[VSF:%.+]] = add <4 x i32> [[VSC]], <i32 4, i32 4, i32 4, i32 4>
   int4 d = {1, 1, 1, 1};
   int4 f = c + (d << 34);
-  //NOOPT: ret <4 x i32>
+  //OPT-NEXT: ret <4 x i32> [[VSF]]
   return f;
 }

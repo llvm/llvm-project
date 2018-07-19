@@ -30,8 +30,8 @@ namespace use_in_top_level_funcs {
 
   void no_deduce() {
     // template arguments are not deduced for uses of variable templates.
-    int ipi = pi; // expected-error {{use of variable template 'pi' requires template arguments}}
-    int icpi = cpi; // expected-error {{use of variable template 'cpi' requires template arguments}}
+    int ipi = pi; // expected-error {{cannot refer to variable template 'pi' without a template argument list}}
+    int icpi = cpi; // expected-error {{cannot refer to variable template 'cpi' without a template argument list}}
   }
   
   template<typename T>
@@ -409,7 +409,7 @@ namespace nested {
 #endif
     float f1 = pi1a<float>;
     
-    template<> double pi1a<double> = 5.2; // expected-error {{not in a namespace enclosing 'n1'}}
+    template<> double pi1a<double> = 5.2;  // expected-error {{variable template specialization of 'pi1a' must originally be declared in namespace 'n1'}}
     double d1 = pi1a<double>;
   }
   
@@ -422,7 +422,8 @@ namespace nested {
 #endif
     float f1 = n1::pi1b<float>;
     
-    template<> double n1::pi1b<double> = 5.2;  // expected-error {{not in a namespace enclosing 'n1'}}
+    template<> double n1::pi1b<double> = 5.2;  // expected-error {{cannot define or redeclare 'pi1b' here because namespace 'use_n1b' does not enclose namespace 'n1'}} \
+                                               // expected-error {{variable template specialization of 'pi1b' must originally be declared in namespace 'n1'}}
     double d1 = n1::pi1b<double>;
   }
 }
@@ -465,5 +466,5 @@ auto variadic2 = Variadic<int, int>;
 
 namespace VexingParse {
   template <typename> int var; // expected-note {{declared here}}
-  int x(var); // expected-error {{use of variable template 'var' requires template arguments}}
+  int x(var); // expected-error {{cannot refer to variable template 'var' without a template argument list}}
 }

@@ -100,6 +100,4 @@
 @implementation I15 : I12
 @end
 
-@interface ImportSelectorSLoc { }
--(int)addInt:(int)a toInt:(int)b moduloInt:(int)c; // don't crash here
-@end
+

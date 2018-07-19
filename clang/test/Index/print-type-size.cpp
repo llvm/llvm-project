@@ -4,8 +4,8 @@
 
 namespace basic {
 
-// CHECK64: VarDecl=v:[[@LINE+2]]:6 (Definition) (invalid) [type=void] [typekind=Void]
-// CHECK32: VarDecl=v:[[@LINE+1]]:6 (Definition) (invalid) [type=void] [typekind=Void]
+// CHECK64: VarDecl=v:[[@LINE+2]]:6 (Definition) [type=void] [typekind=Void]
+// CHECK32: VarDecl=v:[[@LINE+1]]:6 (Definition) [type=void] [typekind=Void]
 void v;
 
 // CHECK64: VarDecl=v1:[[@LINE+2]]:7 (Definition) [type=void *] [typekind=Pointer] [sizeof=8] [alignof=8]

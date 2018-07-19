@@ -21,7 +21,7 @@
 
 namespace clang {
 
-/// A source location that has been parsed on the command line.
+/// \brief A source location that has been parsed on the command line.
 struct ParsedSourceLocation {
   std::string FileName;
   unsigned Line;
@@ -101,7 +101,7 @@ struct ParsedSourceRange {
 
 namespace llvm {
   namespace cl {
-    /// Command-line option parser that parses source locations.
+    /// \brief Command-line option parser that parses source locations.
     ///
     /// Source locations are of the form filename:line:column.
     template<>

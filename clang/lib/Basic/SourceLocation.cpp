@@ -1,4 +1,4 @@
-//===- SourceLocation.cpp - Compact identifier for Source Files -----------===//
+//==--- SourceLocation.cpp - Compact identifier for Source Files -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,17 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <string>
-#include <utility>
-
+#include <cstdio>
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -88,6 +81,7 @@ FileID FullSourceLoc::getFileID() const {
   return SrcMgr->getFileID(*this);
 }
 
+
 FullSourceLoc FullSourceLoc::getExpansionLoc() const {
   assert(isValid());
   return FullSourceLoc(SrcMgr->getExpansionLoc(*this), *SrcMgr);
@@ -101,6 +95,15 @@ FullSourceLoc FullSourceLoc::getSpellingLoc() const {
 FullSourceLoc FullSourceLoc::getFileLoc() const {
   assert(isValid());
   return FullSourceLoc(SrcMgr->getFileLoc(*this), *SrcMgr);
+}
+
+std::pair<FullSourceLoc, FullSourceLoc>
+FullSourceLoc::getImmediateExpansionRange() const {
+  assert(isValid());
+  std::pair<SourceLocation, SourceLocation> Range =
+      SrcMgr->getImmediateExpansionRange(*this);
+  return std::make_pair(FullSourceLoc(Range.first, *SrcMgr),
+                        FullSourceLoc(Range.second, *SrcMgr));
 }
 
 PresumedLoc FullSourceLoc::getPresumedLoc(bool UseLineDirectives) const {
@@ -143,6 +146,15 @@ unsigned FullSourceLoc::getLineNumber(bool *Invalid) const {
 unsigned FullSourceLoc::getColumnNumber(bool *Invalid) const {
   assert(isValid());
   return SrcMgr->getColumnNumber(getFileID(), getFileOffset(), Invalid);
+}
+
+std::pair<FullSourceLoc, FullSourceLoc>
+FullSourceLoc::getExpansionRange() const {
+  assert(isValid());
+  std::pair<SourceLocation, SourceLocation> Range =
+      SrcMgr->getExpansionRange(*this);
+  return std::make_pair(FullSourceLoc(Range.first, *SrcMgr),
+                        FullSourceLoc(Range.second, *SrcMgr));
 }
 
 const FileEntry *FullSourceLoc::getFileEntry() const {

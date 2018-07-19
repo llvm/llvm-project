@@ -1,4 +1,0 @@
-// framework-public-includes-private/A.framework/Modules/module.private.modulemap
-framework module A_Private {
-  header "APriv.h"
-}

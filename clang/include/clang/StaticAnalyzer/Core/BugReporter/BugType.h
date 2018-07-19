@@ -1,4 +1,4 @@
-//===---  BugType.h - Bug Information Description ---------------*- C++ -*-===//
+//===---  BugType.h - Bug Information Desciption ----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Provides functionality for finding all instances of a USR in a given
+/// \brief Provides functionality for finding all instances of a USR in a given
 /// AST.
 ///
 //===----------------------------------------------------------------------===//

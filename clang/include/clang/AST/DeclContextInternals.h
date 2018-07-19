@@ -30,17 +30,17 @@ namespace clang {
 
 class DependentDiagnostic;
 
-/// An array of decls optimized for the common case of only containing
+/// \brief An array of decls optimized for the common case of only containing
 /// one entry.
 struct StoredDeclsList {
-  /// When in vector form, this is what the Data pointer points to.
+  /// \brief When in vector form, this is what the Data pointer points to.
   using DeclsTy = SmallVector<NamedDecl *, 4>;
 
-  /// A collection of declarations, with a flag to indicate if we have
+  /// \brief A collection of declarations, with a flag to indicate if we have
   /// further external declarations.
   using DeclsAndHasExternalTy = llvm::PointerIntPair<DeclsTy *, 1, bool>;
 
-  /// The stored data, which will be either a pointer to a NamedDecl,
+  /// \brief The stored data, which will be either a pointer to a NamedDecl,
   /// or a pointer to a vector with a flag to indicate if there are further
   /// external declarations.
   llvm::PointerUnion<NamedDecl *, DeclsAndHasExternalTy> Data;
@@ -122,7 +122,7 @@ public:
              == Vec.end() && "list still contains decl");
   }
 
-  /// Remove any declarations which were imported from an external
+  /// \brief Remove any declarations which were imported from an external
   /// AST source.
   void removeExternalDecls() {
     if (isNull()) {

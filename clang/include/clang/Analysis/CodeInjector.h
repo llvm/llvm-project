@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Defines the clang::CodeInjector interface which is responsible for
+/// \brief Defines the clang::CodeInjector interface which is responsible for
 /// injecting AST of function definitions that may not be available in the
 /// original source.
 ///
@@ -23,7 +23,7 @@ class Stmt;
 class FunctionDecl;
 class ObjCMethodDecl;
 
-/// CodeInjector is an interface which is responsible for injecting AST
+/// \brief CodeInjector is an interface which is responsible for injecting AST
 /// of function definitions that may not be available in the original source.
 ///
 /// The getBody function will be called each time the static analyzer examines a

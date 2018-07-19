@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -emit-llvm -w -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o %t %s
 
-// CHECK-DAG: @r = common {{(dso_local )?}}global [1 x {{.*}}] zeroinitializer
+// RUN: grep '@r = common global \[1 x .*\] zeroinitializer' %t
 
 int r[];
 int (*a)[] = &r;
 
 struct s0;
 struct s0 x;
-// CHECK-DAG: @x = common {{(dso_local )?}}global %struct.s0 zeroinitializer
+// RUN: grep '@x = common global .struct.s0 zeroinitializer' %t
 
 struct s0 y;
-// CHECK-DAG: @y = common {{(dso_local )?}}global %struct.s0 zeroinitializer
+// RUN: grep '@y = common global .struct.s0 zeroinitializer' %t
 struct s0 *f0() {
   return &y;
 }
@@ -19,19 +19,19 @@ struct s0 {
   int x;
 };
 
-// CHECK-DAG: @b = common {{(dso_local )?}}global [1 x {{.*}}] zeroinitializer
+// RUN: grep '@b = common global \[1 x .*\] zeroinitializer' %t
 int b[];
 int *f1() {
   return b;
 }
 
 // Check that the most recent tentative definition wins.
-// CHECK-DAG: @c = common {{(dso_local )?}}global [4 x {{.*}}] zeroinitializer
+// RUN: grep '@c = common global \[4 x .*\] zeroinitializer' %t
 int c[];
 int c[4];
 
 // Check that we emit static tentative definitions
-// CHECK-DAG: @c5 = internal global [1 x {{.*}}] zeroinitializer
+// RUN: grep '@c5 = internal global \[1 x .*\] zeroinitializer' %t
 static int c5[];
 static int func() { return c5[0]; }
 int callfunc() { return func(); }

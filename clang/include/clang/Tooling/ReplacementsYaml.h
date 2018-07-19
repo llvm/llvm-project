@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the structure of a YAML document for serializing
+/// \brief This file defines the structure of a YAML document for serializing
 /// replacements.
 ///
 //===----------------------------------------------------------------------===//
@@ -25,10 +25,10 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tooling::Replacement)
 namespace llvm {
 namespace yaml {
 
-/// Specialized MappingTraits to describe how a Replacement is
+/// \brief Specialized MappingTraits to describe how a Replacement is
 /// (de)serialized.
 template <> struct MappingTraits<clang::tooling::Replacement> {
-  /// Helper to (de)serialize a Replacement since we don't have direct
+  /// \brief Helper to (de)serialize a Replacement since we don't have direct
   /// access to its data members.
   struct NormalizedReplacement {
     NormalizedReplacement(const IO &)
@@ -59,7 +59,7 @@ template <> struct MappingTraits<clang::tooling::Replacement> {
   }
 };
 
-/// Specialized MappingTraits to describe how a
+/// \brief Specialized MappingTraits to describe how a
 /// TranslationUnitReplacements is (de)serialized.
 template <> struct MappingTraits<clang::tooling::TranslationUnitReplacements> {
   static void mapping(IO &Io,

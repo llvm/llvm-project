@@ -32,7 +32,7 @@ extern "C" {
  */
 
 /**
- * A parsed comment.
+ * \brief A parsed comment.
  */
 typedef struct {
   const void *ASTNode;
@@ -40,38 +40,38 @@ typedef struct {
 } CXComment;
 
 /**
- * Given a cursor that represents a documentable entity (e.g.,
+ * \brief Given a cursor that represents a documentable entity (e.g.,
  * declaration), return the associated parsed comment as a
  * \c CXComment_FullComment AST node.
  */
 CINDEX_LINKAGE CXComment clang_Cursor_getParsedComment(CXCursor C);
 
 /**
- * Describes the type of the comment AST node (\c CXComment).  A comment
+ * \brief Describes the type of the comment AST node (\c CXComment).  A comment
  * node can be considered block content (e. g., paragraph), inline content
  * (plain text) or neither (the root AST node).
  */
 enum CXCommentKind {
   /**
-   * Null comment.  No AST node is constructed at the requested location
+   * \brief Null comment.  No AST node is constructed at the requested location
    * because there is no text or a syntax error.
    */
   CXComment_Null = 0,
 
   /**
-   * Plain text.  Inline content.
+   * \brief Plain text.  Inline content.
    */
   CXComment_Text = 1,
 
   /**
-   * A command with word-like arguments that is considered inline content.
+   * \brief A command with word-like arguments that is considered inline content.
    *
    * For example: \\c command.
    */
   CXComment_InlineCommand = 2,
 
   /**
-   * HTML start tag with attributes (name-value pairs).  Considered
+   * \brief HTML start tag with attributes (name-value pairs).  Considered
    * inline content.
    *
    * For example:
@@ -82,7 +82,7 @@ enum CXCommentKind {
   CXComment_HTMLStartTag = 3,
 
   /**
-   * HTML end tag.  Considered inline content.
+   * \brief HTML end tag.  Considered inline content.
    *
    * For example:
    * \verbatim
@@ -92,19 +92,19 @@ enum CXCommentKind {
   CXComment_HTMLEndTag = 4,
 
   /**
-   * A paragraph, contains inline comment.  The paragraph itself is
+   * \brief A paragraph, contains inline comment.  The paragraph itself is
    * block content.
    */
   CXComment_Paragraph = 5,
 
   /**
-   * A command that has zero or more word-like arguments (number of
+   * \brief A command that has zero or more word-like arguments (number of
    * word-like arguments depends on command name) and a paragraph as an
    * argument.  Block command is block content.
    *
    * Paragraph argument is also a child of the block command.
    *
-   * For example: \has 0 word-like arguments and a paragraph argument.
+   * For example: \\brief has 0 word-like arguments and a paragraph argument.
    *
    * AST nodes of special kinds that parser knows about (e. g., \\param
    * command) have their own node kinds.
@@ -112,7 +112,7 @@ enum CXCommentKind {
   CXComment_BlockCommand = 6,
 
   /**
-   * A \\param or \\arg command that describes the function parameter
+   * \brief A \\param or \\arg command that describes the function parameter
    * (name, passing direction, description).
    *
    * For example: \\param [in] ParamName description.
@@ -120,7 +120,7 @@ enum CXCommentKind {
   CXComment_ParamCommand = 7,
 
   /**
-   * A \\tparam command that describes a template parameter (name and
+   * \brief A \\tparam command that describes a template parameter (name and
    * description).
    *
    * For example: \\tparam T description.
@@ -128,7 +128,7 @@ enum CXCommentKind {
   CXComment_TParamCommand = 8,
 
   /**
-   * A verbatim block command (e. g., preformatted code).  Verbatim
+   * \brief A verbatim block command (e. g., preformatted code).  Verbatim
    * block has an opening and a closing command and contains multiple lines of
    * text (\c CXComment_VerbatimBlockLine child nodes).
    *
@@ -140,67 +140,67 @@ enum CXCommentKind {
   CXComment_VerbatimBlockCommand = 9,
 
   /**
-   * A line of text that is contained within a
+   * \brief A line of text that is contained within a
    * CXComment_VerbatimBlockCommand node.
    */
   CXComment_VerbatimBlockLine = 10,
 
   /**
-   * A verbatim line command.  Verbatim line has an opening command,
+   * \brief A verbatim line command.  Verbatim line has an opening command,
    * a single line of text (up to the newline after the opening command) and
    * has no closing command.
    */
   CXComment_VerbatimLine = 11,
 
   /**
-   * A full comment attached to a declaration, contains block content.
+   * \brief A full comment attached to a declaration, contains block content.
    */
   CXComment_FullComment = 12
 };
 
 /**
- * The most appropriate rendering mode for an inline command, chosen on
+ * \brief The most appropriate rendering mode for an inline command, chosen on
  * command semantics in Doxygen.
  */
 enum CXCommentInlineCommandRenderKind {
   /**
-   * Command argument should be rendered in a normal font.
+   * \brief Command argument should be rendered in a normal font.
    */
   CXCommentInlineCommandRenderKind_Normal,
 
   /**
-   * Command argument should be rendered in a bold font.
+   * \brief Command argument should be rendered in a bold font.
    */
   CXCommentInlineCommandRenderKind_Bold,
 
   /**
-   * Command argument should be rendered in a monospaced font.
+   * \brief Command argument should be rendered in a monospaced font.
    */
   CXCommentInlineCommandRenderKind_Monospaced,
 
   /**
-   * Command argument should be rendered emphasized (typically italic
+   * \brief Command argument should be rendered emphasized (typically italic
    * font).
    */
   CXCommentInlineCommandRenderKind_Emphasized
 };
 
 /**
- * Describes parameter passing direction for \\param or \\arg command.
+ * \brief Describes parameter passing direction for \\param or \\arg command.
  */
 enum CXCommentParamPassDirection {
   /**
-   * The parameter is an input parameter.
+   * \brief The parameter is an input parameter.
    */
   CXCommentParamPassDirection_In,
 
   /**
-   * The parameter is an output parameter.
+   * \brief The parameter is an output parameter.
    */
   CXCommentParamPassDirection_Out,
 
   /**
-   * The parameter is an input and output parameter.
+   * \brief The parameter is an input and output parameter.
    */
   CXCommentParamPassDirection_InOut
 };
@@ -230,7 +230,7 @@ CINDEX_LINKAGE
 CXComment clang_Comment_getChild(CXComment Comment, unsigned ChildIdx);
 
 /**
- * A \c CXComment_Paragraph node is considered whitespace if it contains
+ * \brief A \c CXComment_Paragraph node is considered whitespace if it contains
  * only \c CXComment_Text nodes that are empty or whitespace.
  *
  * Other AST nodes (except \c CXComment_Paragraph and \c CXComment_Text) are
@@ -487,7 +487,7 @@ CXString clang_VerbatimBlockLineComment_getText(CXComment Comment);
 CINDEX_LINKAGE CXString clang_VerbatimLineComment_getText(CXComment Comment);
 
 /**
- * Convert an HTML tag AST node to string.
+ * \brief Convert an HTML tag AST node to string.
  *
  * \param Comment a \c CXComment_HTMLStartTag or \c CXComment_HTMLEndTag AST
  * node.
@@ -497,13 +497,13 @@ CINDEX_LINKAGE CXString clang_VerbatimLineComment_getText(CXComment Comment);
 CINDEX_LINKAGE CXString clang_HTMLTagComment_getAsString(CXComment Comment);
 
 /**
- * Convert a given full parsed comment to an HTML fragment.
+ * \brief Convert a given full parsed comment to an HTML fragment.
  *
  * Specific details of HTML layout are subject to change.  Don't try to parse
  * this HTML back into an AST, use other APIs instead.
  *
  * Currently the following CSS classes are used:
- * \li "para-brief" for \paragraph and equivalent commands;
+ * \li "para-brief" for \\brief paragraph and equivalent commands;
  * \li "para-returns" for \\returns paragraph and equivalent commands;
  * \li "word-returns" for the "Returns" word in \\returns paragraph.
  *
@@ -530,7 +530,7 @@ CINDEX_LINKAGE CXString clang_HTMLTagComment_getAsString(CXComment Comment);
 CINDEX_LINKAGE CXString clang_FullComment_getAsHTML(CXComment Comment);
 
 /**
- * Convert a given full parsed comment to an XML document.
+ * \brief Convert a given full parsed comment to an XML document.
  *
  * A Relax NG schema for the XML can be found in comment-xml-schema.rng file
  * inside clang source tree.

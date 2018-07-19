@@ -1,4 +1,4 @@
-//===- CFGReachabilityAnalysis.h - Basic reachability analysis --*- C++ -*-===//
+//==- CFGReachabilityAnalysis.h - Basic reachability analysis ----*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -30,12 +30,10 @@ class CFGBlock;
 // from the destination node and cache the results to prevent work
 // duplication.
 class CFGReverseBlockReachabilityAnalysis {
-  using ReachableSet = llvm::BitVector;
-  using ReachableMap = llvm::DenseMap<unsigned, ReachableSet>;
-
+  typedef llvm::BitVector ReachableSet;
+  typedef llvm::DenseMap<unsigned, ReachableSet> ReachableMap;
   ReachableSet analyzed;
   ReachableMap reachable;
-
 public:
   CFGReverseBlockReachabilityAnalysis(const CFG &cfg);
 
@@ -46,6 +44,6 @@ private:
   void mapReachability(const CFGBlock *Dst);
 };
   
-} // namespace clang
+}
 
-#endif // LLVM_CLANG_ANALYSIS_ANALYSES_CFGREACHABILITYANALYSIS_H
+#endif

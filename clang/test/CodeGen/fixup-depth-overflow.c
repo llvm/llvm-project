@@ -22,5 +22,5 @@ L1:
   return;
 }
 
-// CHECK-LABEL: define {{(dso_local )?}}void @f
+// CHECK-LABEL: define void @f
 // CHECK-NOT: cleanup

@@ -1,6 +1,0 @@
-{
-  "mappings" :
-    {
-     "Foo/Foo.h" : "headers/foo/Foo.h"
-    }
-}

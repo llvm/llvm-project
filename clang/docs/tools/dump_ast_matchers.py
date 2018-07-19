@@ -95,7 +95,7 @@ def strip_doxygen(comment):
 def unify_arguments(args):
   """Gets rid of anything the user doesn't care about in the argument list."""
   args = re.sub(r'internal::', r'', args)
-  args = re.sub(r'extern const\s+(.*)&', r'\1 ', args)
+  args = re.sub(r'const\s+(.*)&', r'\1 ', args)
   args = re.sub(r'&', r' ', args)
   args = re.sub(r'(^|\s)M\d?(\s)', r'\1Matcher<*>\2', args)
   return args
@@ -150,11 +150,11 @@ def act_on_decl(declaration, comment, allowed_types):
                   comment, is_dyncast=True)
       return
 
-    # Special case of type matchers:
-    #   AstTypeMatcher<ArgumentType> name
-    m = re.match(r""".*AstTypeMatcher\s*<
-                       \s*([^\s>]+)\s*>
-                       \s*([^\s;]+)\s*;\s*$""", declaration, flags=re.X)
+    # Parse the various matcher definition macros.
+    m = re.match(""".*AST_TYPE_MATCHER\(
+                       \s*([^\s,]+\s*),
+                       \s*([^\s,]+\s*)
+                     \)\s*;\s*$""", declaration, flags=re.X)
     if m:
       inner, name = m.groups()
       add_matcher('Type', name, 'Matcher<%s>...' % inner,
@@ -165,8 +165,7 @@ def act_on_decl(declaration, comment, allowed_types):
       #             comment, is_dyncast=True)
       return
 
-    # Parse the various matcher definition macros.
-    m = re.match(""".*AST_TYPE(LOC)?_TRAVERSE_MATCHER(?:_DECL)?\(
+    m = re.match(""".*AST_TYPE(LOC)?_TRAVERSE_MATCHER\(
                        \s*([^\s,]+\s*),
                        \s*(?:[^\s,]+\s*),
                        \s*AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\)
@@ -237,7 +236,7 @@ def act_on_decl(declaration, comment, allowed_types):
                        (?:,\s*([^\s,]+)\s*
                           ,\s*([^\s,]+)\s*)?
                        (?:,\s*\d+\s*)?
-                      \)\s*{""", declaration, flags=re.X)
+                      \)\s*{\s*$""", declaration, flags=re.X)
     if m:
       p, n, result, name = m.groups()[0:4]
       args = m.groups()[4:]
@@ -257,8 +256,8 @@ def act_on_decl(declaration, comment, allowed_types):
 
     # Parse ArgumentAdapting matchers.
     m = re.match(
-        r"""^.*ArgumentAdaptingMatcherFunc<.*>\s*
-              ([a-zA-Z]*);$""",
+        r"""^.*ArgumentAdaptingMatcherFunc<.*>\s*(?:LLVM_ATTRIBUTE_UNUSED\s*)
+              ([a-zA-Z]*)\s*=\s*{};$""",
         declaration, flags=re.X)
     if m:
       name = m.groups()[0]
@@ -268,7 +267,7 @@ def act_on_decl(declaration, comment, allowed_types):
     # Parse Variadic functions.
     m = re.match(
         r"""^.*internal::VariadicFunction\s*<\s*([^,]+),\s*([^,]+),\s*[^>]+>\s*
-              ([a-zA-Z]*);$""",
+              ([a-zA-Z]*)\s*=\s*{.*};$""",
         declaration, flags=re.X)
     if m:
       result, arg, name = m.groups()[:3]
@@ -277,15 +276,15 @@ def act_on_decl(declaration, comment, allowed_types):
 
     # Parse Variadic operator matchers.
     m = re.match(
-        r"""^.*VariadicOperatorMatcherFunc\s*<\s*([^,]+),\s*([^\s]+)\s*>\s*
-              ([a-zA-Z]*);$""",
+        r"""^.*VariadicOperatorMatcherFunc\s*<\s*([^,]+),\s*([^\s>]+)\s*>\s*
+              ([a-zA-Z]*)\s*=\s*{.*};$""",
         declaration, flags=re.X)
     if m:
       min_args, max_args, name = m.groups()[:3]
       if max_args == '1':
         add_matcher('*', name, 'Matcher<*>', comment)
         return
-      elif max_args == 'std::numeric_limits<unsigned>::max()':
+      elif max_args == 'UINT_MAX':
         add_matcher('*', name, 'Matcher<*>, ..., Matcher<*>', comment)
         return
 

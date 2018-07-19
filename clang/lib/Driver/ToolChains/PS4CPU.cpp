@@ -76,15 +76,6 @@ static void AddPS4SanitizerArgs(const ToolChain &TC, ArgStringList &CmdArgs) {
   }
 }
 
-void tools::PS4cpu::addSanitizerArgs(const ToolChain &TC,
-                                     ArgStringList &CmdArgs) {
-  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
-  if (SanArgs.needsUbsanRt())
-    CmdArgs.push_back("--dependent-lib=libSceDbgUBSanitizer_stub_weak.a");
-  if (SanArgs.needsAsanRt())
-    CmdArgs.push_back("--dependent-lib=libSceDbgAddressSanitizer_stub_weak.a");
-}
-
 static void ConstructPS4LinkJob(const Tool &T, Compilation &C,
                                 const JobAction &JA, const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -312,7 +303,7 @@ static void ConstructGoldLinkJob(const Tool &T, Compilation &C,
   }
 
   const char *Exec =
-#ifdef _WIN32
+#ifdef LLVM_ON_WIN32
       Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld.gold"));
 #else
       Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));

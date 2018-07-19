@@ -37,6 +37,18 @@ def which(command, paths=None):
     return None
 
 
+class flushfile(object):
+    """
+    Wrapper to flush the output after every print statement.
+    """
+    def __init__(self, f):
+        self.f = f
+
+    def write(self, x):
+        self.f.write(x)
+        self.f.flush()
+
+
 def hasNoExtension(FileName):
     (Root, Ext) = os.path.splitext(FileName)
     return (Ext == "")
@@ -59,15 +71,14 @@ def getSDKPath(SDKName):
     return check_output(Cmd, shell=True).rstrip()
 
 
-def runScript(ScriptPath, PBuildLogFile, Cwd, Stdout=sys.stdout,
-              Stderr=sys.stderr):
+def runScript(ScriptPath, PBuildLogFile, Cwd):
     """
     Run the provided script if it exists.
     """
     if os.path.exists(ScriptPath):
         try:
             if Verbose == 1:
-                Stdout.write("  Executing: %s\n" % (ScriptPath,))
+                print "  Executing: %s" % (ScriptPath,)
             check_call("chmod +x '%s'" % ScriptPath, cwd=Cwd,
                        stderr=PBuildLogFile,
                        stdout=PBuildLogFile,
@@ -77,8 +88,8 @@ def runScript(ScriptPath, PBuildLogFile, Cwd, Stdout=sys.stdout,
                        stdout=PBuildLogFile,
                        shell=True)
         except:
-            Stderr.write("Error: Running %s failed. See %s for details.\n" % (
-                         ScriptPath, PBuildLogFile.name))
+            print "Error: Running %s failed. See %s for details." % (
+                  ScriptPath, PBuildLogFile.name)
             sys.exit(-1)
 
 

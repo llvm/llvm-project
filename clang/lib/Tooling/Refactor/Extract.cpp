@@ -187,12 +187,10 @@ Optional<CompoundStatementRange> getExtractedStatements(const CompoundStmt *CS,
   assert(Begin && End);
   CompoundStatementRange Result;
   Result.First = findSelectedStmt(CS->body(), Begin);
-  if (Result.First == CS->body_end())
-    return None;
+  assert(Result.First != CS->body_end());
   Result.Last = findSelectedStmt(
       CompoundStmt::body_const_range(Result.First, CS->body_end()), End);
-  if (Result.Last == CS->body_end())
-    return None;
+  assert(Result.Last != CS->body_end());
   return Result;
 }
 
@@ -308,9 +306,8 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
         Context.getSourceManager().isMacroArgExpansion(Range.getEnd()))
       Range.setEnd(Context.getSourceManager().getSpellingLoc(Range.getEnd()));
     else
-      Range.setEnd(Context.getSourceManager()
-                       .getExpansionRange(Range.getEnd())
-                       .getEnd());
+      Range.setEnd(
+          Context.getSourceManager().getExpansionRange(Range.getEnd()).second);
   }
   CandidateExtractionInfo.push_back(ExtractOperation::CandidateInfo(Range));
   Result.RefactoringOp = std::move(Operation);
@@ -1855,22 +1852,20 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
       OS << "static ";
     else if (!isMethodExtraction())
       OS << (isInHeader(FunctionExtractionLoc, SM) ? "inline " : "static ");
-    std::string QualifiedName;
-    llvm::raw_string_ostream NameOS(QualifiedName);
+    ReturnType.print(OS, PP);
+    OS << ' ';
     if (isMethodExtraction() && IsDefinition)
-      printEnclosingMethodScope(FunctionLikeParentDecl, NameOS, PP);
-    NameOS << ExtractedName;
-    NameOS << '(';
+      printEnclosingMethodScope(FunctionLikeParentDecl, OS, PP);
+    unsigned NameOffset = OS.str().size();
+    OS << ExtractedName << '(';
     bool IsFirst = true;
     for (const auto &Var : CapturedVariables) {
       if (!IsFirst)
-        NameOS << ", ";
+        OS << ", ";
       IsFirst = false;
-      Var.ParameterType.print(NameOS, PP, /*PlaceHolder=*/Var.getName());
+      Var.ParameterType.print(OS, PP, /*PlaceHolder=*/Var.getName());
     }
-    NameOS << ')';
-    ReturnType.print(OS, PP, NameOS.str());
-    unsigned NameOffset = OS.str().find(ExtractedName);
+    OS << ')';
     if (isMethodExtraction() && isEnclosingMethodConst(FunctionLikeParentDecl))
       OS << " const";
     return RefactoringReplacement::AssociatedSymbolLocation(
@@ -1928,18 +1923,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   auto Semicolons = computeSemicolonExtractionPolicy(
       ExtractedStmtRange ? *(ExtractedStmtRange->Last) : S, ExtractedTokenRange,
       SM, LangOpts);
-  bool ShouldCopyBlock = false;
-  if (IsExpr && !LangOpts.ObjCAutoRefCount &&
-      ReturnType->isBlockPointerType()) {
-    // We can't return local blocks directly without ARC; they should be copied.
-    // FIXME: This is overly pessimistic, as we only need the copy for local
-    // blocks.
-    ExtractedOS << "[(";
-    ShouldCopyBlock = true;
-  }
   ExtractedOS << SourceRewriter.getRewrittenText(ExtractedTokenRange);
-  if (ShouldCopyBlock)
-    ExtractedOS << ") copy]";
   if (Semicolons.IsNeededInExtractedFunction)
     ExtractedOS << ';';
   if (CanUseReturnForVariablesUsedAfterwards)

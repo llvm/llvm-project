@@ -73,7 +73,7 @@ void ento::createPlistHTMLDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
                                              const Preprocessor &PP) {
   createHTMLDiagnosticConsumer(AnalyzerOpts, C,
                                llvm::sys::path::parent_path(prefix), PP);
-  createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP);
+  createPlistDiagnosticConsumer(AnalyzerOpts, C, prefix, PP);
 }
 
 void ento::createTextPathDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
@@ -164,8 +164,6 @@ class AnalysisConsumer : public AnalysisASTConsumer,
   /// Bug Reporter to use while recursively visiting Decls.
   BugReporter *RecVisitorBR;
 
-  std::vector<std::function<void(CheckerRegistry &)>> CheckerRegistrationFns;
-
 public:
   ASTContext *Ctx;
   const Preprocessor &PP;
@@ -175,7 +173,7 @@ public:
   CodeInjector *Injector;
   cross_tu::CrossTranslationUnitContext CTU;
 
-  /// Stores the declarations from the local translation unit.
+  /// \brief Stores the declarations from the local translation unit.
   /// Note, we pre-compute the local declarations at parse time as an
   /// optimization to make sure we do not deserialize everything from disk.
   /// The local declaration to all declarations ratio might be very small when
@@ -295,33 +293,32 @@ public:
 
   void Initialize(ASTContext &Context) override {
     Ctx = &Context;
-    checkerMgr =
-        createCheckerManager(*Opts, PP.getLangOpts(), Plugins,
-                             CheckerRegistrationFns, PP.getDiagnostics());
+    checkerMgr = createCheckerManager(*Opts, PP.getLangOpts(), Plugins,
+                                      PP.getDiagnostics());
 
     Mgr = llvm::make_unique<AnalysisManager>(
         *Ctx, PP.getDiagnostics(), PP.getLangOpts(), PathConsumers,
         CreateStoreMgr, CreateConstraintMgr, checkerMgr.get(), *Opts, Injector);
   }
 
-  /// Store the top level decls in the set to be processed later on.
+  /// \brief Store the top level decls in the set to be processed later on.
   /// (Doing this pre-processing avoids deserialization of data from PCH.)
   bool HandleTopLevelDecl(DeclGroupRef D) override;
   void HandleTopLevelDeclInObjCContainer(DeclGroupRef D) override;
 
   void HandleTranslationUnit(ASTContext &C) override;
 
-  /// Determine which inlining mode should be used when this function is
+  /// \brief Determine which inlining mode should be used when this function is
   /// analyzed. This allows to redefine the default inlining policies when
   /// analyzing a given function.
   ExprEngine::InliningModes
     getInliningModeForFunction(const Decl *D, const SetOfConstDecls &Visited);
 
-  /// Build the call graph for all the top level decls of this TU and
+  /// \brief Build the call graph for all the top level decls of this TU and
   /// use it to define the order in which the functions should be visited.
   void HandleDeclsCallGraph(const unsigned LocalTUDeclsSize);
 
-  /// Run analyzes(syntax or path sensitive) on the given function.
+  /// \brief Run analyzes(syntax or path sensitive) on the given function.
   /// \param Mode - determines if we are requesting syntax only or path
   /// sensitive only analysis.
   /// \param VisitedCallees - The output parameter, which is populated with the
@@ -388,15 +385,11 @@ public:
     PathConsumers.push_back(Consumer);
   }
 
-  void AddCheckerRegistrationFn(std::function<void(CheckerRegistry&)> Fn) override {
-    CheckerRegistrationFns.push_back(std::move(Fn));
-  }
-
 private:
   void storeTopLevelDecls(DeclGroupRef DG);
   std::string getFunctionName(const Decl *D);
 
-  /// Check if we should skip (not analyze) the given function.
+  /// \brief Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
   void runAnalysisOnTranslationUnit(ASTContext &C);
 
@@ -685,7 +678,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   SourceLocation SL = Body ? Body->getLocStart() : D->getLocation();
   SL = SM.getExpansionLoc(SL);
 
-  if (!Opts->AnalyzeAll && !Mgr->isInCodeFile(SL)) {
+  if (!Opts->AnalyzeAll && !SM.isWrittenInMainFile(SL)) {
     if (SL.isInvalid() || SM.isInSystemHeader(SL))
       return AM_None;
     return Mode & ~AM_Path;
@@ -890,9 +883,9 @@ UbigraphViz::~UbigraphViz() {
   std::string Ubiviz;
   if (auto Path = llvm::sys::findProgramByName("ubiviz"))
     Ubiviz = *Path;
-  std::array<StringRef, 2> Args{{Ubiviz, Filename}};
+  const char *args[] = {Ubiviz.c_str(), Filename.c_str(), nullptr};
 
-  if (llvm::sys::ExecuteAndWait(Ubiviz, Args, llvm::None, {}, 0, 0, &ErrMsg)) {
+  if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, {}, 0, 0, &ErrMsg)) {
     llvm::errs() << "Error viewing graph: " << ErrMsg << "\n";
   }
 

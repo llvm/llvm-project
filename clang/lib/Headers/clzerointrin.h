@@ -20,18 +20,18 @@
  *
  *===-----------------------------------------------------------------------===
  */
-#if !defined __X86INTRIN_H && !defined __IMMINTRIN_H
+#ifndef __X86INTRIN_H
 #error "Never use <clzerointrin.h> directly; include <x86intrin.h> instead."
 #endif
 
-#ifndef __CLZEROINTRIN_H
-#define __CLZEROINTRIN_H
+#ifndef _CLZEROINTRIN_H
+#define _CLZEROINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS \
   __attribute__((__always_inline__, __nodebug__,  __target__("clzero")))
 
-/// Loads the cache line address and zero's out the cacheline
+/// \brief Loads the cache line address and zero's out the cacheline
 ///
 /// \headerfile <clzerointrin.h>
 ///
@@ -47,4 +47,4 @@ _mm_clzero (void * __line)
 
 #undef __DEFAULT_FN_ATTRS 
 
-#endif /* __CLZEROINTRIN_H */
+#endif /* _CLZEROINTRIN_H */

@@ -15,7 +15,7 @@
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tooling::AtomicChange)
 
 namespace {
-/// Helper to (de)serialize an AtomicChange since we don't have direct
+/// \brief Helper to (de)serialize an AtomicChange since we don't have direct
 /// access to its data members.
 /// Data members of a normalized AtomicChange can be directly mapped from/to
 /// YAML string.
@@ -50,7 +50,7 @@ struct NormalizedAtomicChange {
 namespace llvm {
 namespace yaml {
 
-/// Specialized MappingTraits to describe how an AtomicChange is
+/// \brief Specialized MappingTraits to describe how an AtomicChange is
 /// (de)serialized.
 template <> struct MappingTraits<NormalizedAtomicChange> {
   static void mapping(IO &Io, NormalizedAtomicChange &Doc) {
@@ -63,7 +63,7 @@ template <> struct MappingTraits<NormalizedAtomicChange> {
   }
 };
 
-/// Specialized MappingTraits to describe how an AtomicChange is
+/// \brief Specialized MappingTraits to describe how an AtomicChange is
 /// (de)serialized.
 template <> struct MappingTraits<clang::tooling::AtomicChange> {
   static void mapping(IO &Io, clang::tooling::AtomicChange &Doc) {

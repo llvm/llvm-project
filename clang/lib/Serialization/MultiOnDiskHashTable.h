@@ -37,7 +37,7 @@
 namespace clang {
 namespace serialization {
 
-/// A collection of on-disk hash tables, merged when relevant for performance.
+/// \brief A collection of on-disk hash tables, merged when relevant for performance.
 template<typename Info> class MultiOnDiskHashTable {
 public:
   /// A handle to a file, used when overriding tables.
@@ -57,7 +57,7 @@ private:
   template<typename ReaderInfo, typename WriterInfo>
   friend class MultiOnDiskHashTableGenerator;
 
-  /// A hash table stored on disk.
+  /// \brief A hash table stored on disk.
   struct OnDiskTable {
     using HashTable = llvm::OnDiskIterableChainedHashTable<Info>;
 
@@ -79,14 +79,14 @@ private:
   using Table = llvm::PointerUnion<OnDiskTable *, MergedTable *>;
   using TableVector = llvm::TinyPtrVector<void *>;
 
-  /// The current set of on-disk and merged tables.
+  /// \brief The current set of on-disk and merged tables.
   /// We manually store the opaque value of the Table because TinyPtrVector
   /// can't cope with holding a PointerUnion directly.
   /// There can be at most one MergedTable in this vector, and if present,
   /// it is the first table.
   TableVector Tables;
 
-  /// Files corresponding to overridden tables that we've not yet
+  /// \brief Files corresponding to overridden tables that we've not yet
   /// discarded.
   llvm::TinyPtrVector<file_type> PendingOverrides;
 
@@ -102,7 +102,7 @@ private:
       llvm::mapped_iterator<TableVector::iterator, AsOnDiskTable>;
   using table_range = llvm::iterator_range<table_iterator>;
 
-  /// The current set of on-disk tables.
+  /// \brief The current set of on-disk tables.
   table_range tables() {
     auto Begin = Tables.begin(), End = Tables.end();
     if (getMergedTable())
@@ -117,7 +117,7 @@ private:
                                           .template dyn_cast<MergedTable*>();
   }
 
-  /// Delete all our current on-disk tables.
+  /// \brief Delete all our current on-disk tables.
   void clear() {
     for (auto *T : tables())
       delete T;
@@ -194,7 +194,7 @@ public:
 
   ~MultiOnDiskHashTable() { clear(); }
 
-  /// Add the table \p Data loaded from file \p File.
+  /// \brief Add the table \p Data loaded from file \p File.
   void add(file_type File, storage_type Data, Info InfoObj = Info()) {
     using namespace llvm::support;
 
@@ -225,7 +225,7 @@ public:
     Tables.push_back(NewTable.getOpaqueValue());
   }
 
-  /// Find and read the lookup results for \p EKey.
+  /// \brief Find and read the lookup results for \p EKey.
   data_type find(const external_key_type &EKey) {
     data_type Result;
 
@@ -257,7 +257,7 @@ public:
     return Result;
   }
 
-  /// Read all the lookup results into a single value. This only makes
+  /// \brief Read all the lookup results into a single value. This only makes
   /// sense if merging values across keys is meaningful.
   data_type findAll() {
     data_type Result;
@@ -288,7 +288,7 @@ public:
   }
 };
 
-/// Writer for the on-disk hash table.
+/// \brief Writer for the on-disk hash table.
 template<typename ReaderInfo, typename WriterInfo>
 class MultiOnDiskHashTableGenerator {
   using BaseTable = MultiOnDiskHashTable<ReaderInfo>;
@@ -312,7 +312,7 @@ public:
 
     // Write our header information.
     {
-      endian::Writer Writer(OutStream, little);
+      endian::Writer<little> Writer(OutStream);
 
       // Reserve four bytes for the bucket offset.
       Writer.write<uint32_t>(0);

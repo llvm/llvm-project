@@ -1,4 +1,4 @@
-//===- ArgumentsAdjusters.cpp - Command line arguments adjuster -----------===//
+//===--- ArgumentsAdjusters.cpp - Command line arguments adjuster ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,9 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/ArgumentsAdjusters.h"
-#include "clang/Basic/LLVM.h"
-#include "llvm/ADT/StringRef.h"
-#include <cstddef>
 
 namespace clang {
 namespace tooling {
@@ -24,7 +21,7 @@ namespace tooling {
 ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
     CommandLineArguments AdjustedArgs;
-    for (size_t i = 0, e = Args.size(); i < e; ++i) {
+    for (size_t i = 0, e = Args.size(); i != e; ++i) {
       StringRef Arg = Args[i];
       // FIXME: Remove options that generate output.
       if (!Arg.startswith("-fcolor-diagnostics") &&

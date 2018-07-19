@@ -107,6 +107,7 @@ void tools::SHAVE::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(
         Args.MakeArgString(std::string("-i:") + A->getValue(0)));
   }
+  CmdArgs.push_back("-elf"); // Output format.
   CmdArgs.push_back(II.getFilename());
   CmdArgs.push_back(
       Args.MakeArgString(std::string("-o:") + Output.getFilename()));
@@ -242,11 +243,9 @@ void MyriadToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
 }
 
-void MyriadToolChain::addLibCxxIncludePaths(
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args) const {
+std::string MyriadToolChain::findLibCxxIncludePath() const {
   std::string Path(getDriver().getInstalledDir());
-  addSystemInclude(DriverArgs, CC1Args, Path + "/../include/c++/v1");
+  return Path + "/../include/c++/v1";
 }
 
 void MyriadToolChain::addLibStdCxxIncludePaths(

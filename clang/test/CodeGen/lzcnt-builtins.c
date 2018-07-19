@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +lzcnt -emit-llvm -o - | FileCheck %s
 
 
-#include <immintrin.h>
+#include <x86intrin.h>
 
 unsigned short test__lzcnt16(unsigned short __X)
 {

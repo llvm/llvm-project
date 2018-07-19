@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output --check-prefixes=CHECK,NULL-INVALID
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -fno-delete-null-pointer-checks -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output --check-prefixes=CHECK,NULL-VALID
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -emit-llvm -o - | FileCheck %s --implicit-check-not=should_not_appear_in_output
 
 struct Member { int x; Member(); Member(int); Member(const Member &); };
 struct VBase { int x; VBase(); VBase(int); VBase(const VBase &); };
@@ -22,12 +21,10 @@ struct A {
 A::A(struct Undeclared &ref) : mem(0) {}
 
 // Check that delegation works.
-// NULL-INVALID-LABEL: define void @_ZN1AC2ER10Undeclared(%struct.A* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1AC2ER10Undeclared(%struct.A* %this, %struct.Undeclared* %ref) unnamed_addr
+// CHECK-LABEL: define void @_ZN1AC2ER10Undeclared(%struct.A* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
 // CHECK: call void @_ZN6MemberC1Ei(
 
-// NULL-INVALID-LABEL: define void @_ZN1AC1ER10Undeclared(%struct.A* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1AC1ER10Undeclared(%struct.A* %this, %struct.Undeclared* %ref) unnamed_addr
+// CHECK-LABEL: define void @_ZN1AC1ER10Undeclared(%struct.A* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
 // CHECK: call void @_ZN1AC2ER10Undeclared(
 
 A::A(ValueClass v) : mem(v.y - v.x) {}
@@ -46,13 +43,11 @@ struct B : A {
 
 B::B(struct Undeclared &ref) : A(ref), mem(1) {}
 
-// NULL-INVALID-LABEL: define void @_ZN1BC2ER10Undeclared(%struct.B* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1BC2ER10Undeclared(%struct.B* %this, %struct.Undeclared* %ref) unnamed_addr
+// CHECK-LABEL: define void @_ZN1BC2ER10Undeclared(%struct.B* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
 // CHECK: call void @_ZN1AC2ER10Undeclared(
 // CHECK: call void @_ZN6MemberC1Ei(
 
-// NULL-INVALID-LABEL: define void @_ZN1BC1ER10Undeclared(%struct.B* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1BC1ER10Undeclared(%struct.B* %this, %struct.Undeclared* %ref) unnamed_addr
+// CHECK-LABEL: define void @_ZN1BC1ER10Undeclared(%struct.B* %this, %struct.Undeclared* nonnull %ref) unnamed_addr
 // CHECK: call void @_ZN1BC2ER10Undeclared(
 
 

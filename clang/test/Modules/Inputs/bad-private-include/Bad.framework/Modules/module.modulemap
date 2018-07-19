@@ -1,5 +1,0 @@
-framework module Bad {
-  umbrella header "Bad.h"
-  export *
-  module * { export * }
-}

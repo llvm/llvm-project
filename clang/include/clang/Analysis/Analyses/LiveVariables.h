@@ -33,18 +33,15 @@ public:
 
     llvm::ImmutableSet<const Stmt *> liveStmts;
     llvm::ImmutableSet<const VarDecl *> liveDecls;
-    llvm::ImmutableSet<const BindingDecl *> liveBindings;
     
     bool equals(const LivenessValues &V) const;
 
     LivenessValues()
-      : liveStmts(nullptr), liveDecls(nullptr), liveBindings(nullptr) {}
+      : liveStmts(nullptr), liveDecls(nullptr) {}
 
     LivenessValues(llvm::ImmutableSet<const Stmt *> LiveStmts,
-                   llvm::ImmutableSet<const VarDecl *> LiveDecls,
-                   llvm::ImmutableSet<const BindingDecl *> LiveBindings)
-        : liveStmts(LiveStmts), liveDecls(LiveDecls),
-          liveBindings(LiveBindings) {}
+                   llvm::ImmutableSet<const VarDecl *> LiveDecls)
+      : liveStmts(LiveStmts), liveDecls(LiveDecls) {}
 
     bool isLive(const Stmt *S) const;
     bool isLive(const VarDecl *D) const;

@@ -175,7 +175,7 @@ bool darwin::Linker::NeedsTempPath(const InputInfoList &Inputs) const {
   return false;
 }
 
-/// Pass -no_deduplicate to ld64 under certain conditions:
+/// \brief Pass -no_deduplicate to ld64 under certain conditions:
 ///
 /// - Either -O0 or -O1 is explicitly specified
 /// - No -O option is specified *and* this is a compile+link (implicit -O0)
@@ -409,7 +409,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddLastArg(CmdArgs, options::OPT_Mach);
 }
 
-/// Determine whether we are linking the ObjC runtime.
+/// \brief Determine whether we are linking the ObjC runtime.
 static bool isObjCRuntimeLinked(const ArgList &Args) {
   if (isObjCAutoRefCount(Args)) {
     Args.ClaimAllArgs(options::OPT_fobjc_link_runtime);
@@ -456,8 +456,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // we follow suite for ease of comparison.
   AddLinkArgs(C, Args, CmdArgs, Inputs);
 
-  // For LTO, pass the name of the optimization record file and other
-  // opt-remarks flags.
+  // For LTO, pass the name of the optimization record file.
   if (Args.hasFlag(options::OPT_fsave_optimization_record,
                    options::OPT_fno_save_optimization_record, false)) {
     CmdArgs.push_back("-mllvm");
@@ -472,26 +471,6 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (getLastProfileUseArg(Args)) {
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-lto-pass-remarks-with-hotness");
-
-      if (const Arg *A =
-              Args.getLastArg(options::OPT_fdiagnostics_hotness_threshold_EQ)) {
-        CmdArgs.push_back("-mllvm");
-        std::string Opt =
-            std::string("-lto-pass-remarks-hotness-threshold=") + A->getValue();
-        CmdArgs.push_back(Args.MakeArgString(Opt));
-      }
-    }
-  }
-
-  // Propagate the -moutline flag to the linker in LTO.
-  if (Args.hasFlag(options::OPT_moutline, options::OPT_mno_outline, false)) {
-    if (getMachOToolChain().getMachOArchName(Args) == "arm64") {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-machine-outliner");
-
-      // Outline from linkonceodr functions by default in LTO.
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-linkonceodr-outlining");
     }
   }
 
@@ -1004,8 +983,6 @@ StringRef Darwin::getOSLibraryNameSuffix() const {
 /// Check if the link command contains a symbol export directive.
 static bool hasExportSymbolDirective(const ArgList &Args) {
   for (Arg *A : Args) {
-    if (A->getOption().matches(options::OPT_exported__symbols__list))
-      return true;
     if (!A->getOption().matches(options::OPT_Wl_COMMA) &&
         !A->getOption().matches(options::OPT_Xlinker))
       continue;
@@ -1035,6 +1012,7 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // runtime, automatically export symbols necessary to implement some of the
   // runtime's functionality.
   if (hasExportSymbolDirective(Args)) {
+    addExportedSymbol(CmdArgs, "_VPMergeHook");
     addExportedSymbol(CmdArgs, "___llvm_profile_filename");
     addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
     addExportedSymbol(CmdArgs, "_lprofCurFilename");
@@ -1212,11 +1190,6 @@ struct DarwinPlatform {
 
   DarwinEnvironmentKind getEnvironment() const { return Environment; }
 
-  void setEnvironment(DarwinEnvironmentKind Kind) {
-    Environment = Kind;
-    InferSimulatorFromArch = false;
-  }
-
   StringRef getOSVersion() const {
     if (Kind == OSVersionArg)
       return Argument->getValue();
@@ -1232,9 +1205,6 @@ struct DarwinPlatform {
 
   /// Returns true if the target OS was explicitly specified.
   bool isExplicitlySpecified() const { return Kind <= DeploymentTargetEnv; }
-
-  /// Returns true if the simulator environment can be inferred from the arch.
-  bool canInferSimulatorFromArch() const { return InferSimulatorFromArch; }
 
   /// Adds the -m<os>-version-min argument to the compiler invocation.
   void addOSVersionMinArgument(DerivedArgList &Args, const OptTable &Opts) {
@@ -1305,13 +1275,8 @@ struct DarwinPlatform {
     return Result;
   }
   static DarwinPlatform createFromSDK(DarwinPlatformKind Platform,
-                                      StringRef Value,
-                                      bool IsSimulator = false) {
-    DarwinPlatform Result(InferredFromSDK, Platform, Value);
-    if (IsSimulator)
-      Result.Environment = DarwinEnvironmentKind::Simulator;
-    Result.InferSimulatorFromArch = false;
-    return Result;
+                                      StringRef Value) {
+    return DarwinPlatform(InferredFromSDK, Platform, Value);
   }
   static DarwinPlatform createFromArch(llvm::Triple::OSType OS,
                                        StringRef Value) {
@@ -1345,7 +1310,7 @@ private:
   DarwinPlatformKind Platform;
   DarwinEnvironmentKind Environment = DarwinEnvironmentKind::NativeEnvironment;
   std::string OSVersion;
-  bool HasOSVersion = true, InferSimulatorFromArch = true;
+  bool HasOSVersion = true;
   Arg *Argument;
   StringRef EnvVarName;
 };
@@ -1467,20 +1432,14 @@ Optional<DarwinPlatform> inferDeploymentTargetFromSDK(DerivedArgList &Args) {
   if (StartVer != StringRef::npos && EndVer > StartVer) {
     StringRef Version = SDK.slice(StartVer, EndVer + 1);
     if (SDK.startswith("iPhoneOS") || SDK.startswith("iPhoneSimulator"))
-      return DarwinPlatform::createFromSDK(
-          Darwin::IPhoneOS, Version,
-          /*IsSimulator=*/SDK.startswith("iPhoneSimulator"));
+      return DarwinPlatform::createFromSDK(Darwin::IPhoneOS, Version);
     else if (SDK.startswith("MacOSX"))
       return DarwinPlatform::createFromSDK(Darwin::MacOS,
                                            getSystemOrSDKMacOSVersion(Version));
     else if (SDK.startswith("WatchOS") || SDK.startswith("WatchSimulator"))
-      return DarwinPlatform::createFromSDK(
-          Darwin::WatchOS, Version,
-          /*IsSimulator=*/SDK.startswith("WatchSimulator"));
+      return DarwinPlatform::createFromSDK(Darwin::WatchOS, Version);
     else if (SDK.startswith("AppleTVOS") || SDK.startswith("AppleTVSimulator"))
-      return DarwinPlatform::createFromSDK(
-          Darwin::TvOS, Version,
-          /*IsSimulator=*/SDK.startswith("AppleTVSimulator"));
+      return DarwinPlatform::createFromSDK(Darwin::TvOS, Version);
   }
   return None;
 }
@@ -1488,16 +1447,10 @@ Optional<DarwinPlatform> inferDeploymentTargetFromSDK(DerivedArgList &Args) {
 std::string getOSVersion(llvm::Triple::OSType OS, const llvm::Triple &Triple,
                          const Driver &TheDriver) {
   unsigned Major, Minor, Micro;
-  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
   switch (OS) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
-    // If there is no version specified on triple, and both host and target are
-    // macos, use the host triple to infer OS version.
-    if (Triple.isMacOSX() && SystemTriple.isMacOSX() &&
-        !Triple.getOSMajorVersion())
-      SystemTriple.getMacOSXVersion(Major, Minor, Micro);
-    else if (!Triple.getMacOSXVersion(Major, Minor, Micro))
+    if (!Triple.getMacOSXVersion(Major, Minor, Micro))
       TheDriver.Diag(diag::err_drv_invalid_darwin_version)
           << Triple.getOSName();
     break;
@@ -1620,16 +1573,9 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     OSTarget = getDeploymentTargetFromOSVersionArg(Args, getDriver());
     // If no deployment target was specified on the command line, check for
     // environment defines.
-    if (!OSTarget) {
+    if (!OSTarget)
       OSTarget =
           getDeploymentTargetFromEnvironmentVariables(getDriver(), getTriple());
-      if (OSTarget) {
-        // Don't infer simulator from the arch when the SDK is also specified.
-        Optional<DarwinPlatform> SDKTarget = inferDeploymentTargetFromSDK(Args);
-        if (SDKTarget)
-          OSTarget->setEnvironment(SDKTarget->getEnvironment());
-      }
-    }
     // If there is no command-line argument to specify the Target version and
     // no environment variable defined, see if we can set the default based
     // on -isysroot.
@@ -1694,7 +1640,6 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   DarwinEnvironmentKind Environment = OSTarget->getEnvironment();
   // Recognize iOS targets with an x86 architecture as the iOS simulator.
   if (Environment == NativeEnvironment && Platform != MacOS &&
-      OSTarget->canInferSimulatorFromArch() &&
       (getTriple().getArch() == llvm::Triple::x86 ||
        getTriple().getArch() == llvm::Triple::x86_64))
     Environment = Simulator;

@@ -121,21 +121,12 @@ extern HasNoAccessDtorBase HNADBa;
 HasNoAccessDtorBase HNADBb(HNADBa); // expected-error{{implicitly-deleted copy constructor}}
 
 // -- a non-static data member of rvalue reference type
-int some_int;
 struct RValue {
-  int && ri = static_cast<int&&>(some_int); // expected-note{{copy constructor of 'RValue' is implicitly deleted because field 'ri' is of rvalue reference type 'int &&'}}
+  int && ri = 1; // expected-note{{copy constructor of 'RValue' is implicitly deleted because field 'ri' is of rvalue reference type 'int &&'}}
+  // expected-warning@-1{{binding reference member 'ri' to a temporary}} expected-note@-1 {{here}}
 };
 RValue RVa;
 RValue RVb(RVa); // expected-error{{call to implicitly-deleted copy constructor}}
-
-// FIXME: The note on the class-name is attached to the location of the
-// constructor. This is not especially clear.
-struct RValueTmp { // expected-note {{used here}}
-  int && ri = 1; // expected-note{{copy constructor of 'RValueTmp' is implicitly deleted because field 'ri' is of rvalue reference type 'int &&'}}
-  // expected-error@-1 {{reference member 'ri' binds to a temporary}}
-};
-RValueTmp RVTa; // expected-note {{implicit default constructor for 'RValueTmp' first required here}}
-RValueTmp RVTb(RVTa); // expected-error{{call to implicitly-deleted copy constructor}}
 
 namespace PR13381 {
   struct S {

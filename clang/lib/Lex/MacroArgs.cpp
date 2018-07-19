@@ -49,8 +49,7 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
   if (!ResultEnt) {
     // Allocate memory for a MacroArgs object with the lexer tokens at the end,
     // and construct the MacroArgs object.
-    Result = new (
-        llvm::safe_malloc(totalSizeToAlloc<Token>(UnexpArgTokens.size())))
+    Result = new (std::malloc(totalSizeToAlloc<Token>(UnexpArgTokens.size())))
         MacroArgs(UnexpArgTokens.size(), VarargsElided, MI->getNumParams());
   } else {
     Result = *ResultEnt;
@@ -273,7 +272,7 @@ Token MacroArgs::StringifyArgument(const Token *ArgToks,
   // If the last character of the string is a \, and if it isn't escaped, this
   // is an invalid string literal, diagnose it as specified in C99.
   if (Result.back() == '\\') {
-    // Count the number of consecutive \ characters.  If even, then they are
+    // Count the number of consequtive \ characters.  If even, then they are
     // just escaped backslashes, otherwise it's an error.
     unsigned FirstNonSlash = Result.size()-2;
     // Guaranteed to find the starting " if nothing else.

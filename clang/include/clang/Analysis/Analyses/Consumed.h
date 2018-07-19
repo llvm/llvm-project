@@ -1,4 +1,4 @@
-//===- Consumed.h -----------------------------------------------*- C++ -*-===//
+//===- Consumed.h ----------------------------------------------*- C++ --*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,32 +15,16 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_CONSUMED_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_CONSUMED_H
 
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/StmtCXX.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
-#include "clang/Analysis/CFG.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include <list>
-#include <memory>
-#include <utility>
-#include <vector>
 
 namespace clang {
-
-class AnalysisDeclContext;
-class CXXBindTemporaryExpr;
-class FunctionDecl;
-class PostOrderCFGView;
-class Stmt;
-class VarDecl;
-
 namespace consumed {
   
-  class ConsumedStmtVisitor;
-
   enum ConsumedState {
     // No state information for the given variable.
     CS_None,
@@ -50,18 +34,22 @@ namespace consumed {
     CS_Consumed
   };
   
-  using OptionalNotes = SmallVector<PartialDiagnosticAt, 1>;
-  using DelayedDiag = std::pair<PartialDiagnosticAt, OptionalNotes>;
-  using DiagList = std::list<DelayedDiag>;
+  class ConsumedStmtVisitor;
+  
+  typedef SmallVector<PartialDiagnosticAt, 1> OptionalNotes;
+  typedef std::pair<PartialDiagnosticAt, OptionalNotes> DelayedDiag;
+  typedef std::list<DelayedDiag> DiagList;
 
   class ConsumedWarningsHandlerBase {
+
   public:
+
     virtual ~ConsumedWarningsHandlerBase();
 
-    /// Emit the warnings and notes left by the analysis.
+    /// \brief Emit the warnings and notes left by the analysis.
     virtual void emitDiagnostics() {}
     
-    /// Warn that a variable's state doesn't match at the entry and exit
+    /// \brief Warn that a variable's state doesn't match at the entry and exit
     /// of a loop.
     ///
     /// \param Loc -- The location of the end of the loop.
@@ -71,7 +59,7 @@ namespace consumed {
     virtual void warnLoopStateMismatch(SourceLocation Loc,
                                        StringRef VariableName) {}
     
-    /// Warn about parameter typestate mismatches upon return.
+    /// \brief Warn about parameter typestate mismatches upon return.
     ///
     /// \param Loc -- The SourceLocation of the return statement.
     ///
@@ -92,7 +80,7 @@ namespace consumed {
     
     // FIXME: This can be removed when the attr propagation fix for templated
     //        classes lands.
-    /// Warn about return typestates set for unconsumable types.
+    /// \brief Warn about return typestates set for unconsumable types.
     /// 
     /// \param Loc -- The location of the attributes.
     ///
@@ -100,7 +88,7 @@ namespace consumed {
     virtual void warnReturnTypestateForUnconsumableType(SourceLocation Loc,
                                                         StringRef TypeName) {}
     
-    /// Warn about return typestate mismatches.
+    /// \brief Warn about return typestate mismatches.
     ///
     /// \param Loc -- The SourceLocation of the return statement.
     ///
@@ -113,7 +101,7 @@ namespace consumed {
                                              StringRef ExpectedState,
                                              StringRef ObservedState) {}
 
-    /// Warn about use-while-consumed errors.
+    /// \brief Warn about use-while-consumed errors.
     /// \param MethodName -- The name of the method that was incorrectly
     /// invoked.
     ///
@@ -124,7 +112,7 @@ namespace consumed {
                                              StringRef State,
                                              SourceLocation Loc) {}
 
-    /// Warn about use-while-consumed errors.
+    /// \brief Warn about use-while-consumed errors.
     /// \param MethodName -- The name of the method that was incorrectly
     /// invoked.
     ///
@@ -141,64 +129,66 @@ namespace consumed {
   };
 
   class ConsumedStateMap {
-    using VarMapType = llvm::DenseMap<const VarDecl *, ConsumedState>;
-    using TmpMapType =
-        llvm::DenseMap<const CXXBindTemporaryExpr *, ConsumedState>;
+    
+    typedef llvm::DenseMap<const VarDecl *, ConsumedState> VarMapType;
+    typedef llvm::DenseMap<const CXXBindTemporaryExpr *, ConsumedState>
+            TmpMapType;
     
   protected:
-    bool Reachable = true;
-    const Stmt *From = nullptr;
+    
+    bool Reachable;
+    const Stmt *From;
     VarMapType VarMap;
     TmpMapType TmpMap;
     
   public:
-    ConsumedStateMap() = default;
+    ConsumedStateMap() : Reachable(true), From(nullptr) {}
     ConsumedStateMap(const ConsumedStateMap &Other)
-        : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap),
-          TmpMap() {}
+      : Reachable(Other.Reachable), From(Other.From), VarMap(Other.VarMap),
+        TmpMap() {}
     
-    /// Warn if any of the parameters being tracked are not in the state
+    /// \brief Warn if any of the parameters being tracked are not in the state
     /// they were declared to be in upon return from a function.
     void checkParamsForReturnTypestate(SourceLocation BlameLoc,
       ConsumedWarningsHandlerBase &WarningsHandler) const;
     
-    /// Clear the TmpMap.
+    /// \brief Clear the TmpMap.
     void clearTemporaries();
     
-    /// Get the consumed state of a given variable.
+    /// \brief Get the consumed state of a given variable.
     ConsumedState getState(const VarDecl *Var) const;
     
-    /// Get the consumed state of a given temporary value.
+    /// \brief Get the consumed state of a given temporary value.
     ConsumedState getState(const CXXBindTemporaryExpr *Tmp) const;
     
-    /// Merge this state map with another map.
+    /// \brief Merge this state map with another map.
     void intersect(const ConsumedStateMap &Other);
 
     void intersectAtLoopHead(const CFGBlock *LoopHead, const CFGBlock *LoopBack,
       const ConsumedStateMap *LoopBackStates,
       ConsumedWarningsHandlerBase &WarningsHandler);
     
-    /// Return true if this block is reachable.
+    /// \brief Return true if this block is reachable.
     bool isReachable() const { return Reachable; }
     
-    /// Mark the block as unreachable.
+    /// \brief Mark the block as unreachable.
     void markUnreachable();
     
-    /// Set the source for a decision about the branching of states.
+    /// \brief Set the source for a decision about the branching of states.
     /// \param Source -- The statement that was the origin of a branching
     /// decision.
     void setSource(const Stmt *Source) { this->From = Source; }
     
-    /// Set the consumed state of a given variable.
+    /// \brief Set the consumed state of a given variable.
     void setState(const VarDecl *Var, ConsumedState State);
     
-    /// Set the consumed state of a given temporary value.
+    /// \brief Set the consumed state of a given temporary value.
     void setState(const CXXBindTemporaryExpr *Tmp, ConsumedState State);
     
-    /// Remove the temporary value from our state map.
+    /// \brief Remove the temporary value from our state map.
     void remove(const CXXBindTemporaryExpr *Tmp);
     
-    /// Tests to see if there is a mismatch in the states stored in two
+    /// \brief Tests to see if there is a mismatch in the states stored in two
     /// maps.
     ///
     /// \param Other -- The second map to compare against.
@@ -215,8 +205,10 @@ namespace consumed {
     ConsumedBlockInfo(unsigned int NumBlocks, PostOrderCFGView *SortedGraph)
         : StateMapsArray(NumBlocks), VisitOrder(NumBlocks, 0) {
       unsigned int VisitOrderCounter = 0;
-      for (const auto BI : *SortedGraph)
-        VisitOrder[BI->getBlockID()] = VisitOrderCounter++;
+      for (PostOrderCFGView::iterator BI = SortedGraph->begin(),
+           BE = SortedGraph->end(); BI != BE; ++BI) {
+        VisitOrder[(*BI)->getBlockID()] = VisitOrderCounter++;
+      }
     }
     
     bool allBackEdgesVisited(const CFGBlock *CurrBlock,
@@ -239,6 +231,7 @@ namespace consumed {
 
   /// A class that handles the analysis of uniqueness violations.
   class ConsumedAnalyzer {
+    
     ConsumedBlockInfo BlockInfo;
     std::unique_ptr<ConsumedStateMap> CurrStates;
 
@@ -250,6 +243,7 @@ namespace consumed {
                     const ConsumedStmtVisitor &Visitor);
     
   public:
+    
     ConsumedWarningsHandlerBase &WarningsHandler;
 
     ConsumedAnalyzer(ConsumedWarningsHandlerBase &WarningsHandler)
@@ -257,7 +251,7 @@ namespace consumed {
 
     ConsumedState getExpectedReturnState() const { return ExpectedReturnState; }
     
-    /// Check a function's CFG for consumed violations.
+    /// \brief Check a function's CFG for consumed violations.
     ///
     /// We traverse the blocks in the CFG, keeping track of the state of each
     /// value who's type has uniquness annotations.  If methods are invoked in
@@ -265,9 +259,6 @@ namespace consumed {
     /// exactly once.
     void run(AnalysisDeclContext &AC);
   };
+}} // end namespace clang::consumed
 
-} // namespace consumed
-
-} // namespace clang
-
-#endif // LLVM_CLANG_ANALYSIS_ANALYSES_CONSUMED_H
+#endif

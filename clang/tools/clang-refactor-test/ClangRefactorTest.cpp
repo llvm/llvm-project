@@ -262,7 +262,6 @@ static const char *renameOccurrenceKindString(CXSymbolOccurrenceKind Kind,
   case CXSymbolOccurrence_ExtractedDeclaration_Reference:
     return "extracted-decl-ref";
   }
-  llvm_unreachable("unexpected CXSymbolOccurrenceKind value");
 }
 
 static int apply(ArrayRef<CXRefactoringReplacement> Replacements,

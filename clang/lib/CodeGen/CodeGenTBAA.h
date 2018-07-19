@@ -177,10 +177,6 @@ public:
   /// given type.
   llvm::MDNode *getTypeInfo(QualType QTy);
 
-  /// getAccessInfo - Get TBAA information that describes an access to
-  /// an object of the given type.
-  TBAAAccessInfo getAccessInfo(QualType AccessType);
-
   /// getVTablePtrAccessInfo - Get the TBAA information that describes an
   /// access to a virtual table pointer.
   TBAAAccessInfo getVTablePtrAccessInfo(llvm::Type *VTablePtrType);
@@ -205,11 +201,6 @@ public:
   /// purpose of conditional operator.
   TBAAAccessInfo mergeTBAAInfoForConditionalOperator(TBAAAccessInfo InfoA,
                                                      TBAAAccessInfo InfoB);
-
-  /// mergeTBAAInfoForMemoryTransfer - Get merged TBAA information for the
-  /// purpose of memory transfer calls.
-  TBAAAccessInfo mergeTBAAInfoForMemoryTransfer(TBAAAccessInfo DestInfo,
-                                                TBAAAccessInfo SrcInfo);
 };
 
 }  // end namespace CodeGen

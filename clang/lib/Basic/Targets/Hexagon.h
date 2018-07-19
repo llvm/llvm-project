@@ -112,8 +112,6 @@ public:
     return getHexagonCPUSuffix(Name);
   }
 
-  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-
   bool setCPU(const std::string &Name) override {
     if (!isValidCPUName(Name))
       return false;

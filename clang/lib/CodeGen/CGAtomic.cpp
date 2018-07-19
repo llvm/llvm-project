@@ -18,7 +18,6 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -187,7 +186,7 @@ namespace {
     RValue convertAtomicTempToRValue(Address addr, AggValueSlot resultSlot,
                                      SourceLocation loc, bool AsValue) const;
 
-    /// Converts a rvalue to integer value.
+    /// \brief Converts a rvalue to integer value.
     llvm::Value *convertRValueToInt(RValue RVal) const;
 
     RValue ConvertIntToValueOrAtomic(llvm::Value *IntVal,
@@ -208,13 +207,13 @@ namespace {
                               LVal.getBaseInfo(), LVal.getTBAAInfo());
     }
 
-    /// Emits atomic load.
+    /// \brief Emits atomic load.
     /// \returns Loaded value.
     RValue EmitAtomicLoad(AggValueSlot ResultSlot, SourceLocation Loc,
                           bool AsValue, llvm::AtomicOrdering AO,
                           bool IsVolatile);
 
-    /// Emits atomic compare-and-exchange sequence.
+    /// \brief Emits atomic compare-and-exchange sequence.
     /// \param Expected Expected value.
     /// \param Desired Desired value.
     /// \param Success Atomic ordering for success operation.
@@ -230,13 +229,13 @@ namespace {
                                   llvm::AtomicOrdering::SequentiallyConsistent,
                               bool IsWeak = false);
 
-    /// Emits atomic update.
+    /// \brief Emits atomic update.
     /// \param AO Atomic ordering.
     /// \param UpdateOp Update operation for the current lvalue.
     void EmitAtomicUpdate(llvm::AtomicOrdering AO,
                           const llvm::function_ref<RValue(RValue)> &UpdateOp,
                           bool IsVolatile);
-    /// Emits atomic update.
+    /// \brief Emits atomic update.
     /// \param AO Atomic ordering.
     void EmitAtomicUpdate(llvm::AtomicOrdering AO, RValue UpdateRVal,
                           bool IsVolatile);
@@ -244,25 +243,25 @@ namespace {
     /// Materialize an atomic r-value in atomic-layout memory.
     Address materializeRValue(RValue rvalue) const;
 
-    /// Creates temp alloca for intermediate operations on atomic value.
+    /// \brief Creates temp alloca for intermediate operations on atomic value.
     Address CreateTempAlloca() const;
   private:
     bool requiresMemSetZero(llvm::Type *type) const;
 
 
-    /// Emits atomic load as a libcall.
+    /// \brief Emits atomic load as a libcall.
     void EmitAtomicLoadLibcall(llvm::Value *AddForLoaded,
                                llvm::AtomicOrdering AO, bool IsVolatile);
-    /// Emits atomic load as LLVM instruction.
+    /// \brief Emits atomic load as LLVM instruction.
     llvm::Value *EmitAtomicLoadOp(llvm::AtomicOrdering AO, bool IsVolatile);
-    /// Emits atomic compare-and-exchange op as a libcall.
+    /// \brief Emits atomic compare-and-exchange op as a libcall.
     llvm::Value *EmitAtomicCompareExchangeLibcall(
         llvm::Value *ExpectedAddr, llvm::Value *DesiredAddr,
         llvm::AtomicOrdering Success =
             llvm::AtomicOrdering::SequentiallyConsistent,
         llvm::AtomicOrdering Failure =
             llvm::AtomicOrdering::SequentiallyConsistent);
-    /// Emits atomic compare-and-exchange op as LLVM instruction.
+    /// \brief Emits atomic compare-and-exchange op as LLVM instruction.
     std::pair<llvm::Value *, llvm::Value *> EmitAtomicCompareExchangeOp(
         llvm::Value *ExpectedVal, llvm::Value *DesiredVal,
         llvm::AtomicOrdering Success =
@@ -270,19 +269,19 @@ namespace {
         llvm::AtomicOrdering Failure =
             llvm::AtomicOrdering::SequentiallyConsistent,
         bool IsWeak = false);
-    /// Emit atomic update as libcalls.
+    /// \brief Emit atomic update as libcalls.
     void
     EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO,
                             const llvm::function_ref<RValue(RValue)> &UpdateOp,
                             bool IsVolatile);
-    /// Emit atomic update as LLVM instructions.
+    /// \brief Emit atomic update as LLVM instructions.
     void EmitAtomicUpdateOp(llvm::AtomicOrdering AO,
                             const llvm::function_ref<RValue(RValue)> &UpdateOp,
                             bool IsVolatile);
-    /// Emit atomic update as libcalls.
+    /// \brief Emit atomic update as libcalls.
     void EmitAtomicUpdateLibcall(llvm::AtomicOrdering AO, RValue UpdateRVal,
                                  bool IsVolatile);
-    /// Emit atomic update as LLVM instructions.
+    /// \brief Emit atomic update as LLVM instructions.
     void EmitAtomicUpdateOp(llvm::AtomicOrdering AO, RValue UpdateRal,
                             bool IsVolatile);
   };
@@ -591,13 +590,11 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     break;
 
   case AtomicExpr::AO__opencl_atomic_fetch_min:
-  case AtomicExpr::AO__atomic_fetch_min:
     Op = E->getValueType()->isSignedIntegerType() ? llvm::AtomicRMWInst::Min
                                                   : llvm::AtomicRMWInst::UMin;
     break;
 
   case AtomicExpr::AO__opencl_atomic_fetch_max:
-  case AtomicExpr::AO__atomic_fetch_max:
     Op = E->getValueType()->isSignedIntegerType() ? llvm::AtomicRMWInst::Max
                                                   : llvm::AtomicRMWInst::UMax;
     break;
@@ -754,13 +751,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   Address Dest = Address::invalid();
   Address Ptr = EmitPointerWithAlignment(E->getPtr());
 
-  if (E->getOp() == AtomicExpr::AO__c11_atomic_init ||
-      E->getOp() == AtomicExpr::AO__opencl_atomic_init) {
-    LValue lvalue = MakeAddrLValue(Ptr, AtomicTy);
-    EmitAtomicInit(E->getVal1(), lvalue);
-    return RValue::get(nullptr);
-  }
-
   CharUnits sizeChars, alignChars;
   std::tie(sizeChars, alignChars) = getContext().getTypeInfoInChars(AtomicTy);
   uint64_t Size = sizeChars.getQuantity();
@@ -768,8 +758,12 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool UseLibcall = ((Ptr.getAlignment() % sizeChars) != 0 ||
                      getContext().toBits(sizeChars) > MaxInlineWidthInBits);
 
-  if (UseLibcall)
-    CGM.getDiags().Report(E->getLocStart(), diag::warn_atomic_op_misaligned);
+  if (E->getOp() == AtomicExpr::AO__c11_atomic_init ||
+      E->getOp() == AtomicExpr::AO__opencl_atomic_init) {
+    LValue lvalue = MakeAddrLValue(Ptr, AtomicTy);
+    EmitAtomicInit(E->getVal1(), lvalue);
+    return RValue::get(nullptr);
+  }
 
   llvm::Value *Order = EmitScalarExpr(E->getOrder());
   llvm::Value *Scope =
@@ -861,8 +855,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
-  case AtomicExpr::AO__atomic_fetch_min:
-  case AtomicExpr::AO__atomic_fetch_max:
     Val1 = EmitValToTemp(*this, E->getVal1());
     break;
   }
@@ -917,8 +909,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__atomic_or_fetch:
     case AtomicExpr::AO__atomic_sub_fetch:
     case AtomicExpr::AO__atomic_xor_fetch:
-    case AtomicExpr::AO__atomic_fetch_min:
-    case AtomicExpr::AO__atomic_fetch_max:
       // For these, only library calls for certain sizes exist.
       UseOptimizedLibcall = true;
       break;
@@ -1101,7 +1091,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         MemTy, E->getExprLoc(), sizeChars);
       break;
-    case AtomicExpr::AO__atomic_fetch_min:
     case AtomicExpr::AO__opencl_atomic_fetch_min:
       LibCallName = E->getValueType()->isSignedIntegerType()
                         ? "__atomic_fetch_min"
@@ -1109,7 +1098,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       AddDirectArgument(*this, Args, UseOptimizedLibcall, Val1.getPointer(),
                         LoweredMemTy, E->getExprLoc(), sizeChars);
       break;
-    case AtomicExpr::AO__atomic_fetch_max:
     case AtomicExpr::AO__opencl_atomic_fetch_max:
       LibCallName = E->getValueType()->isSignedIntegerType()
                         ? "__atomic_fetch_max"
@@ -1172,7 +1160,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     if (UseOptimizedLibcall && Res.getScalarVal()) {
       llvm::Value *ResVal = Res.getScalarVal();
       if (PostOp) {
-        llvm::Value *LoadVal1 = Args[1].getRValue(*this).getScalarVal();
+        llvm::Value *LoadVal1 = Args[1].RV.getScalarVal();
         ResVal = Builder.CreateBinOp(PostOp, ResVal, LoadVal1);
       }
       if (E->getOp() == AtomicExpr::AO__atomic_nand_fetch)
@@ -1520,13 +1508,11 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
   // which means that the caller is responsible for having zeroed
   // any padding.  Just do an aggregate copy of that type.
   if (rvalue.isAggregate()) {
-    LValue Dest = CGF.MakeAddrLValue(getAtomicAddress(), getAtomicType());
-    LValue Src = CGF.MakeAddrLValue(rvalue.getAggregateAddress(),
-                                    getAtomicType());
-    bool IsVolatile = rvalue.isVolatileQualified() ||
-                      LVal.isVolatileQualified();
-    CGF.EmitAggregateCopy(Dest, Src, getAtomicType(),
-                          AggValueSlot::DoesNotOverlap, IsVolatile);
+    CGF.EmitAggregateCopy(getAtomicAddress(),
+                          rvalue.getAggregateAddress(),
+                          getAtomicType(),
+                          (rvalue.isVolatileQualified()
+                           || LVal.isVolatileQualified()));
     return;
   }
 
@@ -2021,7 +2007,6 @@ void CodeGenFunction::EmitAtomicInit(Expr *init, LValue dest) {
                                         AggValueSlot::IsNotDestructed,
                                         AggValueSlot::DoesNotNeedGCBarriers,
                                         AggValueSlot::IsNotAliased,
-                                        AggValueSlot::DoesNotOverlap,
                                         Zeroed ? AggValueSlot::IsZeroed :
                                                  AggValueSlot::IsNotZeroed);
 

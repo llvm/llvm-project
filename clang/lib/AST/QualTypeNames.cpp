@@ -22,7 +22,7 @@ namespace clang {
 
 namespace TypeName {
 
-/// Create a NestedNameSpecifier for Namesp and its enclosing
+/// \brief Create a NestedNameSpecifier for Namesp and its enclosing
 /// scopes.
 ///
 /// \param[in] Ctx - the AST Context to be used.
@@ -35,7 +35,7 @@ static NestedNameSpecifier *createNestedNameSpecifier(
     const NamespaceDecl *Namesp,
     bool WithGlobalNsPrefix);
 
-/// Create a NestedNameSpecifier for TagDecl and its enclosing
+/// \brief Create a NestedNameSpecifier for TagDecl and its enclosing
 /// scopes.
 ///
 /// \param[in] Ctx - the AST Context to be used.
@@ -210,7 +210,7 @@ static NestedNameSpecifier *createOuterNNS(const ASTContext &Ctx, const Decl *D,
   return nullptr;  // no starting '::' if |WithGlobalNsPrefix| is false
 }
 
-/// Return a fully qualified version of this name specifier.
+/// \brief Return a fully qualified version of this name specifier.
 static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
     const ASTContext &Ctx, NestedNameSpecifier *Scope,
     bool WithGlobalNsPrefix) {
@@ -262,7 +262,7 @@ static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
   llvm_unreachable("bad NNS kind");
 }
 
-/// Create a nested name specifier for the declaring context of
+/// \brief Create a nested name specifier for the declaring context of
 /// the type.
 static NestedNameSpecifier *createNestedNameSpecifierForScopeOf(
     const ASTContext &Ctx, const Decl *Decl,
@@ -314,7 +314,7 @@ static NestedNameSpecifier *createNestedNameSpecifierForScopeOf(
   return nullptr;
 }
 
-/// Create a nested name specifier for the declaring context of
+/// \brief Create a nested name specifier for the declaring context of
 /// the type.
 static NestedNameSpecifier *createNestedNameSpecifierForScopeOf(
     const ASTContext &Ctx, const Type *TypePtr,
@@ -366,7 +366,7 @@ NestedNameSpecifier *createNestedNameSpecifier(const ASTContext &Ctx,
       TD->getTypeForDecl());
 }
 
-/// Return the fully qualified type, including fully-qualified
+/// \brief Return the fully qualified type, including fully-qualified
 /// versions of any template parameters.
 QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
                                bool WithGlobalNsPrefix) {
@@ -408,7 +408,7 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     // Get the qualifiers.
     Qualifiers Quals = QT.getQualifiers();
 
-    QT = cast<SubstTemplateTypeParmType>(QT.getTypePtr())->desugar();
+    QT = dyn_cast<SubstTemplateTypeParmType>(QT.getTypePtr())->desugar();
 
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
@@ -452,8 +452,12 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
 
 std::string getFullyQualifiedName(QualType QT,
                                   const ASTContext &Ctx,
-                                  const PrintingPolicy &Policy,
                                   bool WithGlobalNsPrefix) {
+  PrintingPolicy Policy(Ctx.getPrintingPolicy());
+  Policy.SuppressScope = false;
+  Policy.AnonymousTagLocations = false;
+  Policy.PolishForDeclaration = true;
+  Policy.SuppressUnwrittenScope = true;
   QualType FQQT = getFullyQualifiedType(QT, Ctx, WithGlobalNsPrefix);
   return FQQT.getAsString(Policy);
 }

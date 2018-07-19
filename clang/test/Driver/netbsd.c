@@ -5,9 +5,6 @@
 // RUN: -pie --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=PIE %s
 // RUN: %clang -no-canonical-prefixes -target x86_64--netbsd \
-// RUN: -static -pie --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
-// RUN: | FileCheck -check-prefix=STATIC-PIE %s
-// RUN: %clang -no-canonical-prefixes -target x86_64--netbsd \
 // RUN: -shared --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=SHARED %s
 
@@ -141,16 +138,6 @@
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o"
 // STATIC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
-
-// STATIC-PIE: ld{{.*}}" "--eh-frame-hdr"
-// STATIC-PIE-NOT: "-dynamic-linker" "/libexec/ld.elf_so"
-// STATIC-PIE-NOT: "-Bshareable"
-// STATIC-PIE: "-pie"
-// STATIC-PIE-NOT: "-dynamic-linker" "/libexec/ld.elf_so"
-// STATIC-PIE-NOT: "-Bshareable"
-// STATIC-PIE: "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
-// STATIC-PIE: "{{.*}}/usr/lib{{/|\\\\}}crti.o" "{{.*}}/usr/lib{{/|\\\\}}crtbeginS.o"
-// STATIC-PIE: "{{.*}}/usr/lib{{/|\\\\}}crtendS.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SHARED: ld{{.*}}" "--eh-frame-hdr"
 // SHARED-NOT: "-pie"

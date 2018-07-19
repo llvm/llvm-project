@@ -1,4 +1,4 @@
-//===-- ASTMerge.cpp - AST Merging Frontend Action --------------*- C++ -*-===//
+//===-- ASTMerge.cpp - AST Merging Frontent Action --------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

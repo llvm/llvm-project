@@ -1,4 +1,4 @@
-//===- Linkage.h - Linkage enumeration and utilities ------------*- C++ -*-===//
+//===--- Linkage.h - Linkage enumeration and utilities ----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,32 +6,33 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+///
 /// \file
-/// Defines the Linkage enumeration and various utility functions.
-//
+/// \brief Defines the Linkage enumeration and various utility functions.
+///
 //===----------------------------------------------------------------------===//
-
 #ifndef LLVM_CLANG_BASIC_LINKAGE_H
 #define LLVM_CLANG_BASIC_LINKAGE_H
 
+#include <assert.h>
+#include <stdint.h>
 #include <utility>
 
 namespace clang {
 
-/// Describes the different kinds of linkage 
+/// \brief Describes the different kinds of linkage 
 /// (C++ [basic.link], C99 6.2.2) that an entity may have.
 enum Linkage : unsigned char {
-  /// No linkage, which means that the entity is unique and
+  /// \brief No linkage, which means that the entity is unique and
   /// can only be referred to from within its scope.
   NoLinkage = 0,
 
-  /// Internal linkage, which indicates that the entity can
+  /// \brief Internal linkage, which indicates that the entity can
   /// be referred to from within the translation unit (but not other
   /// translation units).
   InternalLinkage,
 
-  /// External linkage within a unique namespace. 
+  /// \brief External linkage within a unique namespace. 
   ///
   /// From the language perspective, these entities have external
   /// linkage. However, since they reside in an anonymous namespace,
@@ -40,27 +41,27 @@ enum Linkage : unsigned char {
   /// point of view.
   UniqueExternalLinkage,
 
-  /// No linkage according to the standard, but is visible from other
+  /// \brief No linkage according to the standard, but is visible from other
   /// translation units because of types defined in a inline function.
   VisibleNoLinkage,
 
-  /// Internal linkage according to the Modules TS, but can be referred
+  /// \brief Internal linkage according to the Modules TS, but can be referred
   /// to from other translation units indirectly through inline functions and
   /// templates in the module interface.
   ModuleInternalLinkage,
 
-  /// Module linkage, which indicates that the entity can be referred
+  /// \brief Module linkage, which indicates that the entity can be referred
   /// to from other translation units within the same module, and indirectly
   /// from arbitrary other translation units through inline functions and
   /// templates in the module interface.
   ModuleLinkage,
 
-  /// External linkage, which indicates that the entity can
+  /// \brief External linkage, which indicates that the entity can
   /// be referred to from other translation units.
   ExternalLinkage
 };
 
-/// Describes the different kinds of language linkage
+/// \brief Describes the different kinds of language linkage
 /// (C++ [dcl.link]) that an entity may have.
 enum LanguageLinkage {
   CLanguageLinkage,
@@ -68,7 +69,7 @@ enum LanguageLinkage {
   NoLanguageLinkage
 };
 
-/// A more specific kind of linkage than enum Linkage.
+/// \brief A more specific kind of linkage than enum Linkage.
 ///
 /// This is relevant to CodeGen and AST file reading.
 enum GVALinkage {
@@ -104,7 +105,7 @@ inline bool isExternalFormalLinkage(Linkage L) {
   return getFormalLinkage(L) == ExternalLinkage;
 }
 
-/// Compute the minimum linkage given two linkages.
+/// \brief Compute the minimum linkage given two linkages.
 ///
 /// The linkage can be interpreted as a pair formed by the formal linkage and
 /// a boolean for external visibility. This is just what getFormalLinkage and
@@ -124,6 +125,6 @@ inline Linkage minLinkage(Linkage L1, Linkage L2) {
   return L1 < L2 ? L1 : L2;
 }
 
-} // namespace clang
+} // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_LINKAGE_H

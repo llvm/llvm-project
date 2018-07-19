@@ -283,12 +283,13 @@ private:
     SourceManager &SM = Pass.Ctx.getSourceManager();
     SourceLocation Loc = E->getExprLoc();
     assert(Loc.isMacroID());
-    CharSourceRange MacroRange = SM.getImmediateExpansionRange(Loc);
+    SourceLocation MacroBegin, MacroEnd;
+    std::tie(MacroBegin, MacroEnd) = SM.getImmediateExpansionRange(Loc);
     SourceRange SubRange = E->getSubExpr()->IgnoreParenImpCasts()->getSourceRange();
     SourceLocation InnerBegin = SM.getImmediateMacroCallerLoc(SubRange.getBegin());
     SourceLocation InnerEnd = SM.getImmediateMacroCallerLoc(SubRange.getEnd());
 
-    Outer = MacroRange.getAsRange();
+    Outer = SourceRange(MacroBegin, MacroEnd);
     Inner = SourceRange(InnerBegin, InnerEnd);
   }
 

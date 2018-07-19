@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin10 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NOCOMPAT
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin10 -fclang-abi-compat=6.0 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-scei-ps4 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V6COMPAT
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple=x86_64-apple-darwin10 | FileCheck %s
 
 extern int int_source();
 extern void int_sink(int x);
@@ -56,13 +54,11 @@ namespace test0 {
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B]]*
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
     // CHECK: [[TRUNC:%.*]] = trunc i32 [[CALL]] to i8
-    // CHECK-V6COMPAT: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 4
+    // CHECK: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
     // CHECK: [[T0:%.*]] = and i8 [[TRUNC]], 3
     // CHECK: [[T1:%.*]] = and i8 [[OLD_VALUE]], -4
     // CHECK: [[T2:%.*]] = or i8 [[T1]], [[T0]]
-    // CHECK-V6COMPAT: store i8 [[T2]], i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: store i8 [[T2]], i8* [[FIELD_P]], align 4
+    // CHECK: store i8 [[T2]], i8* [[FIELD_P]], align 2
     c.onebit = int_source();
 
     // CHECK: [[C_P:%.*]] = load [[C]]*, [[C]]**
@@ -70,8 +66,7 @@ namespace test0 {
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B]]*
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
-    // CHECK-V6COMPAT: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 4
+    // CHECK: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
@@ -88,13 +83,11 @@ namespace test0 {
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B]]*
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
     // CHECK: [[TRUNC:%.*]] = trunc i32 [[CALL]] to i8
-    // CHECK-V6COMPAT: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 4
+    // CHECK: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
     // CHECK: [[T0:%.*]] = and i8 [[TRUNC]], 3
     // CHECK: [[T1:%.*]] = and i8 [[OLD_VALUE]], -4
     // CHECK: [[T2:%.*]] = or i8 [[T1]], [[T0]]
-    // CHECK-V6COMPAT: store i8 [[T2]], i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: store i8 [[T2]], i8* [[FIELD_P]], align 4
+    // CHECK: store i8 [[T2]], i8* [[FIELD_P]], align 2
     c->onebit = int_source();
 
     // CHECK: [[C_P:%.*]] = load [[C:%.*]]*, [[C]]**
@@ -102,8 +95,7 @@ namespace test0 {
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B:%.*]]*
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
-    // CHECK-V6COMPAT: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 4
+    // CHECK: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
@@ -115,8 +107,7 @@ namespace test0 {
   // in an alignment-2 variable.
   // CHECK-LABEL: @_ZN5test01dEv
   void d() {
-    // CHECK-V6COMPAT: [[C_P:%.*]] = alloca [[C:%.*]], align 2
-    // CHECK-NOCOMPAT: [[C_P:%.*]] = alloca [[C:%.*]], align 4
+    // CHECK: [[C_P:%.*]] = alloca [[C:%.*]], align 2
     C c;
 
     // CHECK: [[CALL:%.*]] = call i32 @_Z10int_sourcev()
@@ -125,21 +116,18 @@ namespace test0 {
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B]]*
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
     // CHECK: [[TRUNC:%.*]] = trunc i32 [[CALL]] to i8
-    // CHECK-V6COMPAT: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 4
+    // CHECK: [[OLD_VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
     // CHECK: [[T0:%.*]] = and i8 [[TRUNC]], 3
     // CHECK: [[T1:%.*]] = and i8 [[OLD_VALUE]], -4
     // CHECK: [[T2:%.*]] = or i8 [[T1]], [[T0]]
-    // CHECK-V6COMPAT: store i8 [[T2]], i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: store i8 [[T2]], i8* [[FIELD_P]], align 4
+    // CHECK: store i8 [[T2]], i8* [[FIELD_P]], align 2
     c.onebit = int_source();
 
     // CHECK: [[T0:%.*]] = bitcast [[C]]* [[C_P]] to i8*
     // CHECK: [[T1:%.*]] = getelementptr inbounds i8, i8* [[T0]], i64 8
     // CHECK: [[B_P:%.*]] = bitcast i8* [[T1]] to [[B:%.*]]*
     // CHECK: [[FIELD_P:%.*]] = bitcast [[B]]* [[B_P]] to i8*
-    // CHECK-V6COMPAT: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
-    // CHECK-NOCOMPAT: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 4
+    // CHECK: [[VALUE:%.*]] = load i8, i8* [[FIELD_P]], align 2
     // CHECK: [[T0:%.*]] = shl i8 [[VALUE]], 6
     // CHECK: [[T1:%.*]] = ashr i8 [[T0]], 6
     // CHECK: [[T2:%.*]] = sext i8 [[T1]] to i32
@@ -216,7 +204,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A_P]], i32 0, i32 0
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     AlignedArray result = a.aArray;
   }
 
@@ -235,7 +223,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A_P]], i32 0, i32 0
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     AlignedArray result = b.aArray;
   }
 
@@ -246,7 +234,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 8 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 8, i1 false)
     AlignedArray result = b.bArray;
   }
 
@@ -257,7 +245,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 8 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 8, i1 false)
     AlignedArray result = b->bArray;
   }
 
@@ -268,7 +256,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     B b;
     AlignedArray result = b.bArray;
   }
@@ -289,7 +277,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[A]], [[A]]* [[A_P]], i32 0, i32 0
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 16 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 16, i1 false)
     D d;
     AlignedArray result = d.aArray;
   }
@@ -304,7 +292,7 @@ namespace test1 {
     // CHECK: [[ARRAY_P:%.*]] = getelementptr inbounds [[B]], [[B]]* [[B_P]], i32 0, i32 2
     // CHECK: [[T0:%.*]] = bitcast [[ARRAY]]* [[RESULT]] to i8*
     // CHECK: [[T1:%.*]] = bitcast [[ARRAY]]* [[ARRAY_P]] to i8*
-    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 64 [[T0]], i8* align 8 [[T1]], i64 16, i1 false)
+    // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[T0]], i8* [[T1]], i64 16, i32 8, i1 false)
     D d;
     AlignedArray result = d.bArray;
   }

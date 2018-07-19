@@ -27,12 +27,12 @@
 namespace clang {
 namespace tooling {
 
-/// Represents the diagnostic message with the error message associated
+/// \brief Represents the diagnostic message with the error message associated
 /// and the information on the location of the problem.
 struct DiagnosticMessage {
   DiagnosticMessage(llvm::StringRef Message = "");
 
-  /// Constructs a diagnostic message with anoffset to the diagnostic
+  /// \brief Constructs a diagnostic message with anoffset to the diagnostic
   /// within the file where the problem occurred.
   ///
   /// \param Loc Should be a file location, it is not meaningful for a macro
@@ -45,7 +45,7 @@ struct DiagnosticMessage {
   unsigned FileOffset;
 };
 
-/// Represents the diagnostic with the level of severity and possible
+/// \brief Represents the diagnostic with the level of severity and possible
 /// fixes to be applied.
 struct Diagnostic {
   enum Level {
@@ -63,22 +63,22 @@ struct Diagnostic {
              const SmallVector<DiagnosticMessage, 1> &Notes, Level DiagLevel,
              llvm::StringRef BuildDirectory);
 
-  /// Name identifying the Diagnostic.
+  /// \brief Name identifying the Diagnostic.
   std::string DiagnosticName;
 
-  /// Message associated to the diagnostic.
+  /// \brief Message associated to the diagnostic.
   DiagnosticMessage Message;
 
-  /// Fixes to apply, grouped by file path.
+  /// \brief Fixes to apply, grouped by file path.
   llvm::StringMap<Replacements> Fix;
 
-  /// Potential notes about the diagnostic.
+  /// \brief Potential notes about the diagnostic.
   SmallVector<DiagnosticMessage, 1> Notes;
 
-  /// Diagnostic level. Can indicate either an error or a warning.
+  /// \brief Diagnostic level. Can indicate either an error or a warning.
   Level DiagLevel;
 
-  /// A build directory of the diagnostic source file.
+  /// \brief A build directory of the diagnostic source file.
   ///
   /// It's an absolute path which is `directory` field of the source file in
   /// compilation database. If users don't specify the compilation database
@@ -88,7 +88,7 @@ struct Diagnostic {
   std::string BuildDirectory;
 };
 
-/// Collection of Diagnostics generated from a single translation unit.
+/// \brief Collection of Diagnostics generated from a single translation unit.
 struct TranslationUnitDiagnostics {
   /// Name of the main source for the translation unit.
   std::string MainSourceFile;

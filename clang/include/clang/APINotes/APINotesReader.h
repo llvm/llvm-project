@@ -17,9 +17,9 @@
 #define LLVM_CLANG_API_NOTES_READER_H
 
 #include "clang/APINotes/Types.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/VersionTuple.h"
 #include <memory>
 
 namespace clang {
@@ -33,7 +33,7 @@ class APINotesReader {
   Implementation &Impl;
 
   APINotesReader(llvm::MemoryBuffer *inputBuffer, bool ownsInputBuffer,
-                 llvm::VersionTuple swiftVersion, bool &failed);
+                 VersionTuple swiftVersion, bool &failed);
 
 public:
   /// Create a new API notes reader from the given member buffer, which
@@ -42,7 +42,7 @@ public:
   /// \returns the new API notes reader, or null if an error occurred.
   static std::unique_ptr<APINotesReader>
   get(std::unique_ptr<llvm::MemoryBuffer> inputBuffer,
-      llvm::VersionTuple swiftVersion);
+      VersionTuple swiftVersion);
 
   /// Create a new API notes reader from the given member buffer, which
   /// contains the contents of a binary API notes file.
@@ -50,7 +50,7 @@ public:
   /// \returns the new API notes reader, or null if an error occurred.
   static std::unique_ptr<APINotesReader>
   getUnmanaged(llvm::MemoryBuffer *inputBuffer,
-               llvm::VersionTuple swiftVersion);
+               VersionTuple swiftVersion);
 
   ~APINotesReader();
 
@@ -86,8 +86,8 @@ public:
     
     /// Form a versioned info set given the desired version and a set of
     /// results.
-    VersionedInfo(llvm::VersionTuple version,
-                  SmallVector<std::pair<llvm::VersionTuple, T>, 1> results);
+    VersionedInfo(VersionTuple version,
+                  SmallVector<std::pair<VersionTuple, T>, 1> results);
 
     /// Determine whether there is a result that should be applied directly
     /// to the AST.
@@ -109,11 +109,11 @@ public:
     unsigned size() const { return Results.size(); }
 
     /// Access all versioned results.
-    const std::pair<llvm::VersionTuple, T> *begin() const { return Results.begin(); }
-    const std::pair<llvm::VersionTuple, T> *end() const { return Results.end(); }
+    const std::pair<VersionTuple, T> *begin() const { return Results.begin(); }
+    const std::pair<VersionTuple, T> *end() const { return Results.end(); }
 
     /// Access a specific versioned result.
-    const std::pair<llvm::VersionTuple, T> &operator[](unsigned index) const {
+    const std::pair<VersionTuple, T> &operator[](unsigned index) const {
       return Results[index];
     }
   };
@@ -215,47 +215,47 @@ public:
     /// Visit an Objective-C class.
     virtual void visitObjCClass(ContextID contextID, StringRef name,
                                 const ObjCContextInfo &info,
-                                llvm::VersionTuple swiftVersion);
+                                VersionTuple swiftVersion);
 
     /// Visit an Objective-C protocol.
     virtual void visitObjCProtocol(ContextID contextID, StringRef name,
                                    const ObjCContextInfo &info,
-                                   llvm::VersionTuple swiftVersion);
+                                   VersionTuple swiftVersion);
 
     /// Visit an Objective-C method.
     virtual void visitObjCMethod(ContextID contextID, StringRef selector,
                                  bool isInstanceMethod,
                                  const ObjCMethodInfo &info,
-                                 llvm::VersionTuple swiftVersion);
+                                 VersionTuple swiftVersion);
 
     /// Visit an Objective-C property.
     virtual void visitObjCProperty(ContextID contextID, StringRef name,
                                    bool isInstance,
                                    const ObjCPropertyInfo &info,
-                                   llvm::VersionTuple swiftVersion);
+                                   VersionTuple swiftVersion);
 
     /// Visit a global variable.
     virtual void visitGlobalVariable(StringRef name,
                                      const GlobalVariableInfo &info,
-                                     llvm::VersionTuple swiftVersion);
+                                     VersionTuple swiftVersion);
 
     /// Visit a global function.
     virtual void visitGlobalFunction(StringRef name,
                                      const GlobalFunctionInfo &info,
-                                     llvm::VersionTuple swiftVersion);
+                                     VersionTuple swiftVersion);
 
     /// Visit an enumerator.
     virtual void visitEnumConstant(StringRef name,
                                    const EnumConstantInfo &info,
-                                   llvm::VersionTuple swiftVersion);
+                                   VersionTuple swiftVersion);
 
     /// Visit a tag.
     virtual void visitTag(StringRef name, const TagInfo &info,
-                          llvm::VersionTuple swiftVersion);
+                          VersionTuple swiftVersion);
 
     /// Visit a typedef.
     virtual void visitTypedef(StringRef name, const TypedefInfo &info,
-                              llvm::VersionTuple swiftVersion);
+                              VersionTuple swiftVersion);
   };
 
   /// Visit the contents of the API notes file, passing each entity to the

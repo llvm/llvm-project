@@ -20,7 +20,7 @@ namespace CodeGen {
 
 class CodeGenFunction;
 
-/// This is an IRBuilder insertion helper that forwards to
+/// \brief This is an IRBuilder insertion helper that forwards to
 /// CodeGenFunction::InsertHelper, which adds necessary metadata to
 /// instructions.
 class CGBuilderInserter : protected llvm::IRBuilderDefaultInserter {
@@ -29,7 +29,7 @@ public:
   explicit CGBuilderInserter(CodeGenFunction *CGF) : CGF(CGF) {}
 
 protected:
-  /// This forwards to CodeGenFunction::InsertHelper.
+  /// \brief This forwards to CodeGenFunction::InsertHelper.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
                     llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const;
@@ -244,21 +244,6 @@ public:
                    Addr.getAlignment().alignmentAtOffset(Offset));
   }
 
-  using CGBuilderBaseTy::CreateConstInBoundsGEP2_32;
-  Address CreateConstInBoundsGEP2_32(Address Addr, unsigned Idx0,
-                                      unsigned Idx1, const llvm::DataLayout &DL,
-                                      const llvm::Twine &Name = "") {
-    auto *GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
-        Addr.getElementType(), Addr.getPointer(), Idx0, Idx1, Name));
-    llvm::APInt Offset(
-        DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
-        /*IsSigned=*/true);
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      llvm_unreachable("offset of GEP with constants is always computable");
-    return Address(GEP, Addr.getAlignment().alignmentAtOffset(
-                            CharUnits::fromQuantity(Offset.getSExtValue())));
-  }
-
   llvm::Value *CreateConstInBoundsByteGEP(llvm::Value *Ptr, CharUnits Offset,
                                           const llvm::Twine &Name = "") {
     assert(Ptr->getType()->getPointerElementType() == TypeCache.Int8Ty);
@@ -273,23 +258,23 @@ public:
   using CGBuilderBaseTy::CreateMemCpy;
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, llvm::Value *Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                        Src.getPointer(), Src.getAlignment().getQuantity(),
-                        Size,IsVolatile);
+    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
+    return CreateMemCpy(Dest.getPointer(), Src.getPointer(), Size,
+                        Align.getQuantity(), IsVolatile);
   }
   llvm::CallInst *CreateMemCpy(Address Dest, Address Src, uint64_t Size,
                                bool IsVolatile = false) {
-    return CreateMemCpy(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                        Src.getPointer(), Src.getAlignment().getQuantity(),
-                        Size, IsVolatile);
+    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
+    return CreateMemCpy(Dest.getPointer(), Src.getPointer(), Size,
+                        Align.getQuantity(), IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemMove;
   llvm::CallInst *CreateMemMove(Address Dest, Address Src, llvm::Value *Size,
                                 bool IsVolatile = false) {
-    return CreateMemMove(Dest.getPointer(), Dest.getAlignment().getQuantity(),
-                         Src.getPointer(), Src.getAlignment().getQuantity(),
-                         Size, IsVolatile);
+    auto Align = std::min(Dest.getAlignment(), Src.getAlignment());
+    return CreateMemMove(Dest.getPointer(), Src.getPointer(), Size,
+                         Align.getQuantity(), IsVolatile);
   }
 
   using CGBuilderBaseTy::CreateMemSet;

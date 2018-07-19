@@ -21,7 +21,7 @@
 
 namespace clang {
   
-/// Records preprocessor conditional directive regions and allows
+/// \brief Records preprocessor conditional directive regions and allows
 /// querying in which region source locations belong to.
 class PPConditionalDirectiveRecord : public PPCallbacks {
   SourceManager &SourceMgr;
@@ -57,25 +57,25 @@ class PPConditionalDirectiveRecord : public PPCallbacks {
   };
 
   typedef std::vector<CondDirectiveLoc> CondDirectiveLocsTy;
-  /// The locations of conditional directives in source order.
+  /// \brief The locations of conditional directives in source order.
   CondDirectiveLocsTy CondDirectiveLocs;
 
   void addCondDirectiveLoc(CondDirectiveLoc DirLoc);
 
 public:
-  /// Construct a new preprocessing record.
+  /// \brief Construct a new preprocessing record.
   explicit PPConditionalDirectiveRecord(SourceManager &SM);
 
   size_t getTotalMemory() const;
 
   SourceManager &getSourceManager() const { return SourceMgr; }
 
-  /// Returns true if the given range intersects with a conditional
+  /// \brief Returns true if the given range intersects with a conditional
   /// directive. if a \#if/\#endif block is fully contained within the range,
   /// this function will return false.
   bool rangeIntersectsConditionalDirective(SourceRange Range) const;
 
-  /// Returns true if the given locations are in different regions,
+  /// \brief Returns true if the given locations are in different regions,
   /// separated by conditional directive blocks.
   bool areInDifferentConditionalDirectiveRegion(SourceLocation LHS,
                                                 SourceLocation RHS) const {

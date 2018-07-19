@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Declares BreakableToken, BreakableStringLiteral, BreakableComment,
+/// \brief Declares BreakableToken, BreakableStringLiteral, BreakableComment,
 /// BreakableBlockComment and BreakableLineCommentSection classes, that contain
 /// token type-specific logic to break long lines in tokens and reflow content
 /// between tokens.
@@ -27,13 +27,13 @@
 namespace clang {
 namespace format {
 
-/// Checks if \p Token switches formatting, like /* clang-format off */.
+/// \brief Checks if \p Token switches formatting, like /* clang-format off */.
 /// \p Token must be a comment.
 bool switchesFormatting(const FormatToken &Token);
 
 struct FormatStyle;
 
-/// Base class for tokens / ranges of tokens that can allow breaking
+/// \brief Base class for tokens / ranges of tokens that can allow breaking
 /// within the tokens - for example, to avoid whitespace beyond the column
 /// limit, or to reflow text.
 ///
@@ -88,15 +88,15 @@ struct FormatStyle;
 ///
 class BreakableToken {
 public:
-  /// Contains starting character index and length of split.
+  /// \brief Contains starting character index and length of split.
   typedef std::pair<StringRef::size_type, unsigned> Split;
 
   virtual ~BreakableToken() {}
 
-  /// Returns the number of lines in this token in the original code.
+  /// \brief Returns the number of lines in this token in the original code.
   virtual unsigned getLineCount() const = 0;
 
-  /// Returns the number of columns required to format the text in the
+  /// \brief Returns the number of columns required to format the text in the
   /// byte range [\p Offset, \p Offset \c + \p Length).
   ///
   /// \p Offset is the byte offset from the start of the content of the line
@@ -108,7 +108,7 @@ public:
                                   StringRef::size_type Length,
                                   unsigned StartColumn) const = 0;
 
-  /// Returns the number of columns required to format the text following
+  /// \brief Returns the number of columns required to format the text following
   /// the byte \p Offset in the line \p LineIndex, including potentially
   /// unbreakable sequences of tokens following after the end of the token.
   ///
@@ -125,7 +125,7 @@ public:
     return getRangeLength(LineIndex, Offset, StringRef::npos, StartColumn);
   }
 
-  /// Returns the column at which content in line \p LineIndex starts,
+  /// \brief Returns the column at which content in line \p LineIndex starts,
   /// assuming no reflow.
   ///
   /// If \p Break is true, returns the column at which the line should start
@@ -135,7 +135,7 @@ public:
   virtual unsigned getContentStartColumn(unsigned LineIndex,
                                          bool Break) const = 0;
 
-  /// Returns a range (offset, length) at which to break the line at
+  /// \brief Returns a range (offset, length) at which to break the line at
   /// \p LineIndex, if previously broken at \p TailOffset. If possible, do not
   /// violate \p ColumnLimit, assuming the text starting at \p TailOffset in
   /// the token is formatted starting at ContentStartColumn in the reformatted
@@ -144,27 +144,27 @@ public:
                          unsigned ColumnLimit, unsigned ContentStartColumn,
                          llvm::Regex &CommentPragmasRegex) const = 0;
 
-  /// Emits the previously retrieved \p Split via \p Whitespaces.
+  /// \brief Emits the previously retrieved \p Split via \p Whitespaces.
   virtual void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
                            WhitespaceManager &Whitespaces) const = 0;
 
-  /// Returns the number of columns needed to format
+  /// \brief Returns the number of columns needed to format
   /// \p RemainingTokenColumns, assuming that Split is within the range measured
   /// by \p RemainingTokenColumns, and that the whitespace in Split is reduced
   /// to a single space.
   unsigned getLengthAfterCompression(unsigned RemainingTokenColumns,
                                      Split Split) const;
 
-  /// Replaces the whitespace range described by \p Split with a single
+  /// \brief Replaces the whitespace range described by \p Split with a single
   /// space.
   virtual void compressWhitespace(unsigned LineIndex, unsigned TailOffset,
                                   Split Split,
                                   WhitespaceManager &Whitespaces) const = 0;
 
-  /// Returns whether the token supports reflowing text.
+  /// \brief Returns whether the token supports reflowing text.
   virtual bool supportsReflow() const { return false; }
 
-  /// Returns a whitespace range (offset, length) of the content at \p
+  /// \brief Returns a whitespace range (offset, length) of the content at \p
   /// LineIndex such that the content of that line is reflown to the end of the
   /// previous one.
   ///
@@ -180,21 +180,21 @@ public:
     return Split(StringRef::npos, 0);
   }
 
-  /// Reflows the current line into the end of the previous one.
+  /// \brief Reflows the current line into the end of the previous one.
   virtual void reflow(unsigned LineIndex,
                       WhitespaceManager &Whitespaces) const {}
 
-  /// Returns whether there will be a line break at the start of the
+  /// \brief Returns whether there will be a line break at the start of the
   /// token.
   virtual bool introducesBreakBeforeToken() const {
     return false;
   }
 
-  /// Replaces the whitespace between \p LineIndex-1 and \p LineIndex.
+  /// \brief Replaces the whitespace between \p LineIndex-1 and \p LineIndex.
   virtual void adaptStartOfLine(unsigned LineIndex,
                                 WhitespaceManager &Whitespaces) const {}
 
-  /// Returns a whitespace range (offset, length) of the content at
+  /// \brief Returns a whitespace range (offset, length) of the content at
   /// the last line that needs to be reformatted after the last line has been
   /// reformatted.
   ///
@@ -204,7 +204,7 @@ public:
     return Split(StringRef::npos, 0);
   }
 
-  /// Replaces the whitespace from \p SplitAfterLastLine on the last line
+  /// \brief Replaces the whitespace from \p SplitAfterLastLine on the last line
   /// after the last line has been formatted by performing a reformatting.
   void replaceWhitespaceAfterLastLine(unsigned TailOffset,
                                       Split SplitAfterLastLine,
@@ -213,7 +213,7 @@ public:
                 Whitespaces);
   }
 
-  /// Updates the next token of \p State to the next token after this
+  /// \brief Updates the next token of \p State to the next token after this
   /// one. This can be used when this token manages a set of underlying tokens
   /// as a unit and is responsible for the formatting of the them.
   virtual void updateNextToken(LineState &State) const {}
@@ -232,17 +232,17 @@ protected:
 
 class BreakableStringLiteral : public BreakableToken {
 public:
-  /// Creates a breakable token for a single line string literal.
+  /// \brief Creates a breakable token for a single line string literal.
   ///
   /// \p StartColumn specifies the column in which the token will start
   /// after formatting.
   BreakableStringLiteral(const FormatToken &Tok, unsigned StartColumn,
                          StringRef Prefix, StringRef Postfix,
-                         unsigned UnbreakableTailLength, bool InPPDirective,
-                         encoding::Encoding Encoding, const FormatStyle &Style);
+                         bool InPPDirective, encoding::Encoding Encoding,
+                         const FormatStyle &Style);
 
   Split getSplit(unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
-                 unsigned ContentStartColumn,
+                 unsigned ReflowColumn,
                  llvm::Regex &CommentPragmasRegex) const override;
   void insertBreak(unsigned LineIndex, unsigned TailOffset, Split Split,
                    WhitespaceManager &Whitespaces) const override;
@@ -272,7 +272,7 @@ protected:
 
 class BreakableComment : public BreakableToken {
 protected:
-  /// Creates a breakable token for a comment.
+  /// \brief Creates a breakable token for a comment.
   ///
   /// \p StartColumn specifies the column in which the comment will start after
   /// formatting.
@@ -284,7 +284,7 @@ public:
   bool supportsReflow() const override { return true; }
   unsigned getLineCount() const override;
   Split getSplit(unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
-                 unsigned ContentStartColumn,
+                 unsigned ReflowColumn,
                  llvm::Regex &CommentPragmasRegex) const override;
   void compressWhitespace(unsigned LineIndex, unsigned TailOffset, Split Split,
                           WhitespaceManager &Whitespaces) const override;
@@ -453,7 +453,7 @@ private:
 
   SmallVector<unsigned, 16> OriginalContentColumn;
 
-  /// The token to which the last line of this breakable token belongs
+  /// \brief The token to which the last line of this breakable token belongs
   /// to; nullptr if that token is the initial token.
   ///
   /// The distinction is because if the token of the last line of this breakable

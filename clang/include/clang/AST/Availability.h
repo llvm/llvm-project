@@ -15,12 +15,12 @@
 #define LLVM_CLANG_AST_AVAILABILITY_H
 
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/VersionTuple.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/VersionTuple.h"
 
 namespace clang {
 
-/// One specifier in an @available expression.
+/// \brief One specifier in an @available expression.
 ///
 /// \code
 ///   @available(macos 10.10, *)

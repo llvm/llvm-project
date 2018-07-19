@@ -1,4 +1,0 @@
-// double-quotes/flat-header-path/Z.modulemap
-framework module Z {
-  header "Z.h"
-}

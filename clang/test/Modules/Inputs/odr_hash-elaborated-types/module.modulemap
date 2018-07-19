@@ -1,5 +1,0 @@
-module M {
-  module first { header "first.h" export *}
-  module second { header "second.h" export *}
-  export *
-}

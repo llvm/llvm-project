@@ -35,18 +35,6 @@ public:
   bool usesPreprocessorOnly() const override { return false; }
 };
 
-class DumpCompilerOptionsAction : public FrontendAction {
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override {
-    return nullptr;
-  }
-
-  void ExecuteAction() override;
-
-public:
-  bool usesPreprocessorOnly() const override { return true; }
-};
-
 //===----------------------------------------------------------------------===//
 // AST Consumer Actions
 //===----------------------------------------------------------------------===//
@@ -95,14 +83,14 @@ protected:
   bool shouldEraseOutputFiles() override;
 
 public:
-  /// Compute the AST consumer arguments that will be used to
+  /// \brief Compute the AST consumer arguments that will be used to
   /// create the PCHGenerator instance returned by CreateASTConsumer.
   ///
   /// \returns false if an error occurred, true otherwise.
   static bool ComputeASTConsumerArguments(CompilerInstance &CI,
                                           std::string &Sysroot);
 
-  /// Creates file to write the PCH into and returns a stream to write it
+  /// \brief Creates file to write the PCH into and returns a stream to write it
   /// into. On error, returns null.
   static std::unique_ptr<llvm::raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile,
@@ -152,7 +140,7 @@ public:
   bool hasCodeCompletionSupport() const override { return true; }
 };
 
-/// Dump information about the given module file, to be used for
+/// \brief Dump information about the given module file, to be used for
 /// basic debugging and discovery.
 class DumpModuleInfoAction : public ASTFrontendAction {
 protected:
@@ -179,16 +167,8 @@ public:
   bool hasCodeCompletionSupport() const override { return false; }
 };
 
-class TemplightDumpAction : public ASTFrontendAction {
-protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override;
-
-  void ExecuteAction() override;
-};
-
 /**
- * Frontend action adaptor that merges ASTs together.
+ * \brief Frontend action adaptor that merges ASTs together.
  *
  * This action takes an existing AST file and "merges" it into the AST
  * context, producing a merged context. This action is an action
@@ -196,10 +176,10 @@ protected:
  * will consume the merged context.
  */
 class ASTMergeAction : public FrontendAction {
-  /// The action that the merge action adapts.
+  /// \brief The action that the merge action adapts.
   std::unique_ptr<FrontendAction> AdaptedAction;
   
-  /// The set of AST files to merge.
+  /// \brief The set of AST files to merge.
   std::vector<std::string> ASTFiles;
 
 protected:

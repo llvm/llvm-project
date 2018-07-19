@@ -25,7 +25,7 @@ namespace clang {
   // TODO: move ParsingClassDefinition here.
   // TODO: move TentativeParsingAction here.
 
-  /// A RAII object used to temporarily suppress access-like
+  /// \brief A RAII object used to temporarily suppress access-like
   /// checking.  Access-like checks are those associated with
   /// controlling the use of a declaration, like C++ access control
   /// errors and deprecation warnings.  They are contextually
@@ -84,7 +84,7 @@ namespace clang {
     }
   };
 
-  /// RAII object used to inform the actions that we're
+  /// \brief RAII object used to inform the actions that we're
   /// currently parsing a declaration.  This is active when parsing a
   /// variable's initializer, but not when parsing the body of a
   /// class or function definition.
@@ -288,7 +288,7 @@ namespace clang {
     }
   };
   
-  /// RAII object that makes '>' behave either as an operator
+  /// \brief RAII object that makes '>' behave either as an operator
   /// or as the closing angle bracket for a template argument list.
   class GreaterThanIsOperatorScope {
     bool &GreaterThanIsOperator;
@@ -320,7 +320,7 @@ namespace clang {
     }
   };
   
-  /// RAII object that makes sure paren/bracket/brace count is correct
+  /// \brief RAII object that makes sure paren/bracket/brace count is correct
   /// after declaration/statement parsing, even when there's a parsing error.
   class ParenBraceBracketBalancer {
     Parser &P;
@@ -331,7 +331,6 @@ namespace clang {
         BraceCount(p.BraceCount) { }
     
     ~ParenBraceBracketBalancer() {
-      P.AngleBrackets.clear(P);
       P.ParenCount = ParenCount;
       P.BracketCount = BracketCount;
       P.BraceCount = BraceCount;
@@ -362,7 +361,7 @@ namespace clang {
     }
   };
 
-  /// RAII class that helps handle the parsing of an open/close delimiter
+  /// \brief RAII class that helps handle the parsing of an open/close delimiter
   /// pair, such as braces { ... } or parentheses ( ... ).
   class BalancedDelimiterTracker : public GreaterThanIsOperatorScope {
     Parser& P;
@@ -378,6 +377,8 @@ namespace clang {
         default: llvm_unreachable("Wrong token kind");
       }
     }
+    
+    enum { MaxDepth = 256 };
     
     bool diagnoseOverflow();
     bool diagnoseMissingClose();
@@ -442,7 +443,7 @@ namespace clang {
     void skipToEnd();
   };
 
-  /// RAIIObject to destroy the contents of a SmallVector of
+  /// \brief RAIIObject to destroy the contents of a SmallVector of
   /// TemplateIdAnnotation pointers and clear the vector.
   class DestroyTemplateIdAnnotationsRAIIObj {
     SmallVectorImpl<TemplateIdAnnotation *> &Container;

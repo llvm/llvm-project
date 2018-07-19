@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the UnwrappedLineParser,
+/// \brief This file contains the declaration of the UnwrappedLineParser,
 /// which turns a stream of tokens into UnwrappedLines.
 ///
 //===----------------------------------------------------------------------===//
@@ -28,7 +28,7 @@ namespace format {
 
 struct UnwrappedLineNode;
 
-/// An unwrapped line is a sequence of \c Token, that we would like to
+/// \brief An unwrapped line is a sequence of \c Token, that we would like to
 /// put on a single line if there was no column limit.
 ///
 /// This is used as a main interface between the \c UnwrappedLineParser and the
@@ -38,26 +38,22 @@ struct UnwrappedLine {
   UnwrappedLine();
 
   // FIXME: Don't use std::list here.
-  /// The \c Tokens comprising this \c UnwrappedLine.
+  /// \brief The \c Tokens comprising this \c UnwrappedLine.
   std::list<UnwrappedLineNode> Tokens;
 
-  /// The indent level of the \c UnwrappedLine.
+  /// \brief The indent level of the \c UnwrappedLine.
   unsigned Level;
 
-  /// Whether this \c UnwrappedLine is part of a preprocessor directive.
+  /// \brief Whether this \c UnwrappedLine is part of a preprocessor directive.
   bool InPPDirective;
 
   bool MustBeDeclaration;
 
-  /// If this \c UnwrappedLine closes a block in a sequence of lines,
+  /// \brief If this \c UnwrappedLine closes a block in a sequence of lines,
   /// \c MatchingOpeningBlockLineIndex stores the index of the corresponding
   /// opening line. Otherwise, \c MatchingOpeningBlockLineIndex must be
   /// \c kInvalidIndex.
-  size_t MatchingOpeningBlockLineIndex = kInvalidIndex;
-
-  /// If this \c UnwrappedLine opens a block, stores the index of the
-  /// line with the corresponding closing brace.
-  size_t MatchingClosingBlockLineIndex = kInvalidIndex;
+  size_t MatchingOpeningBlockLineIndex;
 
   static const size_t kInvalidIndex = -1;
 
@@ -120,11 +116,10 @@ private:
   // parses the record as a child block, i.e. if the class declaration is an
   // expression.
   void parseRecord(bool ParseAsExpr = false);
-  void parseObjCMethod();
   void parseObjCProtocolList();
   void parseObjCUntilAtEnd();
   void parseObjCInterfaceOrImplementation();
-  bool parseObjCProtocol();
+  void parseObjCProtocol();
   void parseJavaScriptEs6ImportExport();
   bool tryToParseLambda();
   bool tryToParseLambdaIntroducer();
@@ -146,7 +141,7 @@ private:
   // token.
   //
   // NextTok specifies the next token. A null pointer NextTok is supported, and
-  // signifies either the absence of a next token, or that the next token
+  // signifies either the absense of a next token, or that the next token
   // shouldn't be taken into accunt for the analysis.
   void distributeComments(const SmallVectorImpl<FormatToken *> &Comments,
                           const FormatToken *NextTok);

@@ -15,12 +15,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 
-namespace clang {
-
-namespace ento {
-
 // Recursively find any substatements containing macros
-bool containsMacro(const Stmt *S) {
+bool clang::ento::containsMacro(const Stmt *S) {
   if (S->getLocStart().isMacroID())
     return true;
 
@@ -35,7 +31,7 @@ bool containsMacro(const Stmt *S) {
 }
 
 // Recursively find any substatements containing enum constants
-bool containsEnum(const Stmt *S) {
+bool clang::ento::containsEnum(const Stmt *S) {
   const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(S);
 
   if (DR && isa<EnumConstantDecl>(DR->getDecl()))
@@ -49,7 +45,7 @@ bool containsEnum(const Stmt *S) {
 }
 
 // Recursively find any substatements containing static vars
-bool containsStaticLocal(const Stmt *S) {
+bool clang::ento::containsStaticLocal(const Stmt *S) {
   const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(S);
 
   if (DR)
@@ -65,7 +61,7 @@ bool containsStaticLocal(const Stmt *S) {
 }
 
 // Recursively find any substatements containing __builtin_offsetof
-bool containsBuiltinOffsetOf(const Stmt *S) {
+bool clang::ento::containsBuiltinOffsetOf(const Stmt *S) {
   if (isa<OffsetOfExpr>(S))
     return true;
 
@@ -78,7 +74,7 @@ bool containsBuiltinOffsetOf(const Stmt *S) {
 
 // Extract lhs and rhs from assignment statement
 std::pair<const clang::VarDecl *, const clang::Expr *>
-parseAssignment(const Stmt *S) {
+clang::ento::parseAssignment(const Stmt *S) {
   const VarDecl *VD = nullptr;
   const Expr *RHS = nullptr;
 
@@ -98,18 +94,3 @@ parseAssignment(const Stmt *S) {
 
   return std::make_pair(VD, RHS);
 }
-
-Nullability getNullabilityAnnotation(QualType Type) {
-  const auto *AttrType = Type->getAs<AttributedType>();
-  if (!AttrType)
-    return Nullability::Unspecified;
-  if (AttrType->getAttrKind() == AttributedType::attr_nullable)
-    return Nullability::Nullable;
-  else if (AttrType->getAttrKind() == AttributedType::attr_nonnull)
-    return Nullability::Nonnull;
-  return Nullability::Unspecified;
-}
-
-
-} // end namespace ento
-} // end namespace clang

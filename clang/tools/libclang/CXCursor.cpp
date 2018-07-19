@@ -305,10 +305,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_IntegerLiteral;
     break;
 
-  case Stmt::FixedPointLiteralClass:
-    K = CXCursor_FixedPointLiteral;
-    break;
-
   case Stmt::FloatingLiteralClass:
     K = CXCursor_FloatingLiteral;
     break;
@@ -1200,19 +1196,19 @@ int clang_Cursor_getNumTemplateArguments(CXCursor C) {
 }
 
 enum CXGetTemplateArgumentStatus {
-  /** The operation completed successfully */
+  /** \brief The operation completed successfully */
   CXGetTemplateArgumentStatus_Success = 0,
 
-  /** The specified cursor did not represent a FunctionDecl. */
+  /** \brief The specified cursor did not represent a FunctionDecl. */
   CXGetTemplateArgumentStatus_CursorNotFunctionDecl = -1,
 
-  /** The specified cursor was not castable to a FunctionDecl. */
+  /** \brief The specified cursor was not castable to a FunctionDecl. */
   CXGetTemplateArgumentStatus_BadFunctionDeclCast = -2,
 
-  /** A NULL FunctionTemplateSpecializationInfo was retrieved. */
+  /** \brief A NULL FunctionTemplateSpecializationInfo was retrieved. */
   CXGetTemplateArgumentStatus_NullTemplSpecInfo = -3,
 
-  /** An invalid (OOB) argument index was specified */
+  /** \brief An invalid (OOB) argument index was specified */
   CXGetTemplateArgumentStatus_InvalidIndex = -4
 };
 
@@ -1473,17 +1469,17 @@ void clang_getOverriddenCursors(CXCursor cursor,
   assert(cxcursor::getCursorTU(backRefCursor) == TU);
   Vec->push_back(backRefCursor);
 
-  // Get the overridden cursors.
+  // Get the overriden cursors.
   cxcursor::getOverriddenCursors(cursor, *Vec);
   
-  // Did we get any overridden cursors?  If not, return Vec to the pool
+  // Did we get any overriden cursors?  If not, return Vec to the pool
   // of available cursor vectors.
   if (Vec->size() == 1) {
     pool.AvailableCursors.push_back(Vec);
     return;
   }
 
-  // Now tell the caller about the overridden cursors.
+  // Now tell the caller about the overriden cursors.
   assert(Vec->size() > 1);
   *overridden = &((*Vec)[1]);
   *num_overridden = Vec->size() - 1;

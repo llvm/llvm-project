@@ -145,22 +145,17 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return (DeclNode == nullptr) || traverse(*DeclNode);
   }
-  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr) {
-    // If we need to keep track of the depth, we can't perform data recursion.
-    if (CurrentDepth == 0 || (CurrentDepth <= MaxDepth && MaxDepth < INT_MAX))
-      Queue = nullptr;
-
+  bool TraverseStmt(Stmt *StmtNode) {
     ScopedIncrement ScopedDepth(&CurrentDepth);
-    Stmt *StmtToTraverse = StmtNode;
-    if (Traversal == ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses) {
-      if (Expr *ExprNode = dyn_cast_or_null<Expr>(StmtNode))
+    const Stmt *StmtToTraverse = StmtNode;
+    if (Traversal ==
+        ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses) {
+      const Expr *ExprNode = dyn_cast_or_null<Expr>(StmtNode);
+      if (ExprNode) {
         StmtToTraverse = ExprNode->IgnoreParenImpCasts();
+      }
     }
-    if (!StmtToTraverse)
-      return true;
-    if (!match(*StmtToTraverse))
-      return false;
-    return VisitorBase::TraverseStmt(StmtToTraverse, Queue);
+    return (StmtToTraverse == nullptr) || traverse(*StmtToTraverse);
   }
   // We assume that the QualType and the contained type are on the same
   // hierarchy level. Thus, we try to match either of them.
@@ -383,7 +378,7 @@ public:
   }
 
   bool TraverseDecl(Decl *DeclNode);
-  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr);
+  bool TraverseStmt(Stmt *StmtNode);
   bool TraverseType(QualType TypeNode);
   bool TraverseTypeLoc(TypeLoc TypeNode);
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
@@ -511,7 +506,7 @@ private:
     TimeBucketRegion() : Bucket(nullptr) {}
     ~TimeBucketRegion() { setBucket(nullptr); }
 
-    /// Start timing for \p NewBucket.
+    /// \brief Start timing for \p NewBucket.
     ///
     /// If there was a bucket already set, it will finish the timing for that
     /// other bucket.
@@ -534,7 +529,7 @@ private:
     llvm::TimeRecord *Bucket;
   };
 
-  /// Runs all the \p Matchers on \p Node.
+  /// \brief Runs all the \p Matchers on \p Node.
   ///
   /// Used by \c matchDispatch() below.
   template <typename T, typename MC>
@@ -590,7 +585,7 @@ private:
   }
 
   /// @{
-  /// Overloads to pair the different node types to their matchers.
+  /// \brief Overloads to pair the different node types to their matchers.
   void matchDispatch(const Decl *Node) {
     return matchWithFilter(ast_type_traits::DynTypedNode::create(*Node));
   }
@@ -752,14 +747,14 @@ private:
     return false;
   }
 
-  /// Bucket to record map.
+  /// \brief Bucket to record map.
   ///
   /// Used to get the appropriate bucket for each matcher.
   llvm::StringMap<llvm::TimeRecord> TimeByBucket;
 
   const MatchFinder::MatchersByType *Matchers;
 
-  /// Filtered list of matcher indices for each matcher kind.
+  /// \brief Filtered list of matcher indices for each matcher kind.
   ///
   /// \c Decl and \c Stmt toplevel matchers usually apply to a specific node
   /// kind (and derived kinds) so it is a waste to try every matcher on every
@@ -846,12 +841,12 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseDecl(DeclNode);
 }
 
-bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
+bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode) {
   if (!StmtNode) {
     return true;
   }
   match(*StmtNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode, Queue);
+  return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode);
 }
 
 bool MatchASTVisitor::TraverseType(QualType TypeNode) {

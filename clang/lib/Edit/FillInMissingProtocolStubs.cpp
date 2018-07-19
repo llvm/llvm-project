@@ -248,12 +248,12 @@ public:
       return SourceLocation();
     SourceLocation Loc = MethodsFromProtocolInContainer[0]->getLocEnd();
     if (Loc.isMacroID())
-      Loc = SM.getExpansionRange(Loc).getEnd();
+      Loc = SM.getExpansionRange(Loc).second;
     for (const ObjCMethodDecl *M :
          makeArrayRef(MethodsFromProtocolInContainer).drop_front()) {
       SourceLocation EndLoc = M->getLocEnd();
       if (EndLoc.isMacroID())
-        EndLoc = SM.getExpansionRange(EndLoc).getEnd();
+        EndLoc = SM.getExpansionRange(EndLoc).second;
       if (SM.isBeforeInTranslationUnit(Loc, EndLoc))
         Loc = EndLoc;
     }

@@ -1,4 +1,4 @@
-//===- DiagnosticOptions.h --------------------------------------*- C++ -*-===//
+//===--- DiagnosticOptions.h ------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,17 +18,14 @@
 
 namespace clang {
 
-/// Specifies which overload candidates to display when overload
+/// \brief Specifies which overload candidates to display when overload
 /// resolution fails.
 enum OverloadsShown : unsigned {
-  /// Show all overloads.
-  Ovl_All,
-
-  /// Show just the "best" overload candidates.
-  Ovl_Best
+  Ovl_All,  ///< Show all overloads.
+  Ovl_Best  ///< Show just the "best" overload candidates.
 };
 
-/// A bitmask representing the diagnostic levels used by
+/// \brief A bitmask representing the diagnostic levels used by
 /// VerifyDiagnosticConsumer.
 enum class DiagnosticLevelMask : unsigned {
   None    = 0,
@@ -60,7 +57,7 @@ inline DiagnosticLevelMask operator&(DiagnosticLevelMask LHS,
 
 raw_ostream& operator<<(raw_ostream& Out, DiagnosticLevelMask M);
 
-/// Options for controlling the compiler diagnostics engine.
+/// \brief Options for controlling the compiler diagnostics engine.
 class DiagnosticOptions : public RefCountedBase<DiagnosticOptions>{
 public:
   enum TextDiagnosticFormat { Clang, MSVC, Vi };
@@ -89,10 +86,10 @@ protected:
 #include "clang/Basic/DiagnosticOptions.def"
 
 public:
-  /// The file to log diagnostic output to.
+  /// \brief The file to log diagnostic output to.
   std::string DiagnosticLogFile;
   
-  /// The file to serialize diagnostics to (non-appending).
+  /// \brief The file to serialize diagnostics to (non-appending).
   std::string DiagnosticSerializationFile;
 
   /// The list of -W... options used to alter the diagnostic mappings, with the
@@ -122,8 +119,8 @@ public:
   }
 };
 
-using TextDiagnosticFormat = DiagnosticOptions::TextDiagnosticFormat;
+typedef DiagnosticOptions::TextDiagnosticFormat TextDiagnosticFormat;
 
-} // namespace clang
+}  // end namespace clang
 
-#endif // LLVM_CLANG_BASIC_DIAGNOSTICOPTIONS_H
+#endif

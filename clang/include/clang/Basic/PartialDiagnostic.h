@@ -1,4 +1,4 @@
-//===- PartialDiagnostic.h - Diagnostic "closures" --------------*- C++ -*-===//
+//===--- PartialDiagnostic.h - Diagnostic "closures" ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,31 +6,24 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+///
 /// \file
-/// Implements a partial diagnostic that can be emitted anwyhere
+/// \brief Implements a partial diagnostic that can be emitted anwyhere
 /// in a DiagnosticBuilder stream.
-//
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_BASIC_PARTIALDIAGNOSTIC_H
 #define LLVM_CLANG_BASIC_PARTIALDIAGNOSTIC_H
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataTypes.h"
 #include <cassert>
-#include <cstdint>
-#include <string>
-#include <type_traits>
-#include <utility>
 
 namespace clang {
-
-class DeclContext;
-class IdentifierInfo;
 
 class PartialDiagnostic {
 public:
@@ -43,8 +36,10 @@ public:
   };
 
   struct Storage {
+    Storage() : NumDiagArgs(0) { }
+
     enum {
-        /// The maximum number of arguments we can hold. We
+        /// \brief The maximum number of arguments we can hold. We
         /// currently only support up to 10 arguments (%0-%9).
         ///
         /// A single diagnostic with more than that almost certainly has to
@@ -52,35 +47,33 @@ public:
         MaxArguments = PartialDiagnostic::MaxArguments
     };
 
-    /// The number of entries in Arguments.
-    unsigned char NumDiagArgs = 0;
+    /// \brief The number of entries in Arguments.
+    unsigned char NumDiagArgs;
 
-    /// Specifies for each argument whether it is in DiagArgumentsStr
+    /// \brief Specifies for each argument whether it is in DiagArgumentsStr
     /// or in DiagArguments.
     unsigned char DiagArgumentsKind[MaxArguments];
 
-    /// The values for the various substitution positions.
+    /// \brief The values for the various substitution positions.
     ///
     /// This is used when the argument is not an std::string. The specific value
     /// is mangled into an intptr_t and the interpretation depends on exactly
     /// what sort of argument kind it is.
     intptr_t DiagArgumentsVal[MaxArguments];
 
-    /// The values for the various substitution positions that have
+    /// \brief The values for the various substitution positions that have
     /// string arguments.
     std::string DiagArgumentsStr[MaxArguments];
 
-    /// The list of ranges added to this diagnostic.
+    /// \brief The list of ranges added to this diagnostic.
     SmallVector<CharSourceRange, 8> DiagRanges;
 
-    /// If valid, provides a hint with some code to insert, remove, or
+    /// \brief If valid, provides a hint with some code to insert, remove, or
     /// modify at a particular position.
     SmallVector<FixItHint, 6>  FixItHints;
-
-    Storage() = default;
   };
 
-  /// An allocator for Storage objects, which uses a small cache to
+  /// \brief An allocator for Storage objects, which uses a small cache to
   /// objects, used to reduce malloc()/free() traffic for partial diagnostics.
   class StorageAllocator {
     static const unsigned NumCached = 16;
@@ -92,7 +85,7 @@ public:
     StorageAllocator();
     ~StorageAllocator();
 
-    /// Allocate new storage.
+    /// \brief Allocate new storage.
     Storage *Allocate() {
       if (NumFreeListEntries == 0)
         return new Storage;
@@ -104,7 +97,7 @@ public:
       return Result;
     }
 
-    /// Free the given storage object.
+    /// \brief Free the given storage object.
     void Deallocate(Storage *S) {
       if (S >= Cached && S <= Cached + NumCached) {
         FreeList[NumFreeListEntries++] = S;
@@ -120,16 +113,16 @@ private:
   // in the sense that its bits can be safely memcpy'ed and destructed
   // in the new location.
 
-  /// The diagnostic ID.
-  mutable unsigned DiagID = 0;
+  /// \brief The diagnostic ID.
+  mutable unsigned DiagID;
 
-  /// Storage for args and ranges.
-  mutable Storage *DiagStorage = nullptr;
+  /// \brief Storage for args and ranges.
+  mutable Storage *DiagStorage;
 
-  /// Allocator used to allocate storage for this diagnostic.
-  StorageAllocator *Allocator = nullptr;
+  /// \brief Allocator used to allocate storage for this diagnostic.
+  StorageAllocator *Allocator;
 
-  /// Retrieve storage for this particular diagnostic.
+  /// \brief Retrieve storage for this particular diagnostic.
   Storage *getStorage() const {
     if (DiagStorage)
       return DiagStorage;
@@ -183,16 +176,17 @@ private:
 
 public:
   struct NullDiagnostic {};
-
-  /// Create a null partial diagnostic, which cannot carry a payload,
+  /// \brief Create a null partial diagnostic, which cannot carry a payload,
   /// and only exists to be swapped with a real partial diagnostic.
-  PartialDiagnostic(NullDiagnostic) {}
+  PartialDiagnostic(NullDiagnostic)
+    : DiagID(0), DiagStorage(nullptr), Allocator(nullptr) { }
 
   PartialDiagnostic(unsigned DiagID, StorageAllocator &Allocator)
-      : DiagID(DiagID), Allocator(&Allocator) {}
+    : DiagID(DiagID), DiagStorage(nullptr), Allocator(&Allocator) { }
 
   PartialDiagnostic(const PartialDiagnostic &Other)
-      : DiagID(Other.DiagID), Allocator(Other.Allocator) {
+    : DiagID(Other.DiagID), DiagStorage(nullptr), Allocator(Other.Allocator)
+  {
     if (Other.DiagStorage) {
       DiagStorage = getStorage();
       *DiagStorage = *Other.DiagStorage;
@@ -200,20 +194,22 @@ public:
   }
 
   PartialDiagnostic(PartialDiagnostic &&Other)
-      : DiagID(Other.DiagID), DiagStorage(Other.DiagStorage),
-        Allocator(Other.Allocator) {
+    : DiagID(Other.DiagID), DiagStorage(Other.DiagStorage),
+      Allocator(Other.Allocator) {
     Other.DiagStorage = nullptr;
   }
 
   PartialDiagnostic(const PartialDiagnostic &Other, Storage *DiagStorage)
-      : DiagID(Other.DiagID), DiagStorage(DiagStorage),
-        Allocator(reinterpret_cast<StorageAllocator *>(~uintptr_t(0))) {
+    : DiagID(Other.DiagID), DiagStorage(DiagStorage),
+      Allocator(reinterpret_cast<StorageAllocator *>(~uintptr_t(0)))
+  {
     if (Other.DiagStorage)
       *this->DiagStorage = *Other.DiagStorage;
   }
 
   PartialDiagnostic(const Diagnostic &Other, StorageAllocator &Allocator)
-      : DiagID(Other.getID()), Allocator(&Allocator) {
+    : DiagID(Other.getID()), DiagStorage(nullptr), Allocator(&Allocator)
+  {
     // Copy arguments.
     for (unsigned I = 0, N = Other.getNumArgs(); I != N; ++I) {
       if (Other.getArgKind(I) == DiagnosticsEngine::ak_std_string)
@@ -324,7 +320,7 @@ public:
     Diags.Clear();
   }
 
-  /// Clear out this partial diagnostic, giving it a new diagnostic ID
+  /// \brief Clear out this partial diagnostic, giving it a new diagnostic ID
   /// and removing all of its arguments, ranges, and fix-it hints.
   void Reset(unsigned DiagID = 0) {
     this->DiagID = DiagID;
@@ -406,6 +402,7 @@ public:
     PD.AddFixItHint(Hint);
     return PD;
   }
+
 };
 
 inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
@@ -414,10 +411,9 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
   return DB;
 }
 
-/// A partial diagnostic along with the source location where this
+/// \brief A partial diagnostic along with the source location where this
 /// diagnostic occurs.
-using PartialDiagnosticAt = std::pair<SourceLocation, PartialDiagnostic>;
+typedef std::pair<SourceLocation, PartialDiagnostic> PartialDiagnosticAt;
 
-} // namespace clang
-
-#endif // LLVM_CLANG_BASIC_PARTIALDIAGNOSTIC_H
+}  // end namespace clang
+#endif

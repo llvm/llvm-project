@@ -1,4 +1,4 @@
-//===- RewriteBuffer.h - Buffer rewriting interface -------------*- C++ -*-===//
+//===--- RewriteBuffer.h - Buffer rewriting interface -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
+  class Rewriter;
 
 /// RewriteBuffer - As code is rewritten, SourceBuffer's from the original
 /// input with modifications get a new RewriteBuffer associated with them.  The
@@ -25,16 +26,12 @@ namespace clang {
 /// locations after the insertion point have to be mapped.
 class RewriteBuffer {
   friend class Rewriter;
-
   /// Deltas - Keep track of all the deltas in the source code due to insertions
   /// and deletions.
   DeltaTree Deltas;
-
   RewriteRope Buffer;
-
 public:
-  using iterator = RewriteRope::const_iterator;
-
+  typedef RewriteRope::const_iterator iterator;
   iterator begin() const { return Buffer.begin(); }
   iterator end() const { return Buffer.end(); }
   unsigned size() const { return Buffer.size(); }
@@ -48,7 +45,7 @@ public:
     Initialize(Input.begin(), Input.end());
   }
 
-  /// Write to \p Stream the result of applying all changes to the
+  /// \brief Write to \p Stream the result of applying all changes to the
   /// original buffer.
   /// Note that it isn't safe to use this function to overwrite memory mapped
   /// files in-place (PR17960). Consider using a higher-level utility such as
@@ -64,6 +61,7 @@ public:
   /// InsertText - Insert some text at the specified point, where the offset in
   /// the buffer is specified relative to the original SourceBuffer.  The
   /// text is inserted after the specified location.
+  ///
   void InsertText(unsigned OrigOffset, StringRef Str,
                   bool InsertAfter = true);
 
@@ -89,7 +87,8 @@ public:
   void ReplaceText(unsigned OrigOffset, unsigned OrigLength,
                    StringRef NewStr);
 
-private:
+private:  // Methods only usable by Rewriter.
+
   /// getMappedOffset - Given an offset into the original SourceBuffer that this
   /// RewriteBuffer is based on, map it into the offset space of the
   /// RewriteBuffer.  If AfterInserts is true and if the OrigOffset indicates a
@@ -113,6 +112,6 @@ private:
   }
 };
 
-} // namespace clang
+} // end namespace clang
 
-#endif // LLVM_CLANG_REWRITE_CORE_REWRITEBUFFER_H
+#endif

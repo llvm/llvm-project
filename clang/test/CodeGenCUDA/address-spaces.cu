@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple nvptx-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple amdgcn | FileCheck %s
 
 // Verifies Clang emits correct address spaces and addrspacecast instructions
 // for CUDA code.
@@ -20,11 +19,11 @@ struct MyStruct {
   int data2;
 };
 
-// CHECK: @_ZZ5func0vE1a = internal addrspace(3) global %struct.MyStruct undef
-// CHECK: @_ZZ5func1vE1a = internal addrspace(3) global float undef
-// CHECK: @_ZZ5func2vE1a = internal addrspace(3) global [256 x float] undef
-// CHECK: @_ZZ5func3vE1a = internal addrspace(3) global float undef
-// CHECK: @_ZZ5func4vE1a = internal addrspace(3) global float undef
+// CHECK: @_ZZ5func0vE1a = internal addrspace(3) global %struct.MyStruct zeroinitializer
+// CHECK: @_ZZ5func1vE1a = internal addrspace(3) global float 0.000000e+00
+// CHECK: @_ZZ5func2vE1a = internal addrspace(3) global [256 x float] zeroinitializer
+// CHECK: @_ZZ5func3vE1a = internal addrspace(3) global float 0.000000e+00
+// CHECK: @_ZZ5func4vE1a = internal addrspace(3) global float 0.000000e+00
 // CHECK: @b = addrspace(3) global float undef
 
 __device__ void foo() {
@@ -49,7 +48,7 @@ __device__ void func0() {
   ap->data2 = 2;
 }
 // CHECK: define void @_Z5func0v()
-// CHECK: store %struct.MyStruct* addrspacecast (%struct.MyStruct addrspace(3)* @_ZZ5func0vE1a to %struct.MyStruct*), %struct.MyStruct** %{{.*}}
+// CHECK: store %struct.MyStruct* addrspacecast (%struct.MyStruct addrspace(3)* @_ZZ5func0vE1a to %struct.MyStruct*), %struct.MyStruct** %ap
 
 __device__ void callee(float *ap) {
   *ap = 1.0f;
@@ -68,7 +67,7 @@ __device__ void func2() {
   *ap = 1.0f;
 }
 // CHECK: define void @_Z5func2v()
-// CHECK: store float* getelementptr inbounds ([256 x float], [256 x float]* addrspacecast ([256 x float] addrspace(3)* @_ZZ5func2vE1a to [256 x float]*), i{{32|64}} 0, i{{32|64}} 128), float** %{{.*}}
+// CHECK: store float* getelementptr inbounds ([256 x float], [256 x float]* addrspacecast ([256 x float] addrspace(3)* @_ZZ5func2vE1a to [256 x float]*), i32 0, i32 128), float** %ap
 
 __device__ void func3() {
   __shared__ float a;
@@ -76,7 +75,7 @@ __device__ void func3() {
   *ap = 1.0f;
 }
 // CHECK: define void @_Z5func3v()
-// CHECK: store float* addrspacecast (float addrspace(3)* @_ZZ5func3vE1a to float*), float** %{{.*}}
+// CHECK: store float* addrspacecast (float addrspace(3)* @_ZZ5func3vE1a to float*), float** %ap
 
 __device__ void func4() {
   __shared__ float a;
@@ -84,7 +83,7 @@ __device__ void func4() {
   *ap = 1.0f;
 }
 // CHECK: define void @_Z5func4v()
-// CHECK: store float* addrspacecast (float addrspace(3)* @_ZZ5func4vE1a to float*), float** %{{.*}}
+// CHECK: store float* addrspacecast (float addrspace(3)* @_ZZ5func4vE1a to float*), float** %ap
 
 __shared__ float b;
 

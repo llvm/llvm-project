@@ -24,7 +24,7 @@ namespace clang {
   
 class ASTContext;
   
-/// Given a potentially-evaluated expression, this visitor visits all
+/// \brief Given a potentially-evaluated expression, this visitor visits all
 /// of its potentially-evaluated subexpressions, recursively.
 template<template <typename> class Ptr, typename ImplClass>
 class EvaluatedExprVisitorBase : public StmtVisitorBase<Ptr, ImplClass, void> {
@@ -95,7 +95,7 @@ public:
         this->Visit(*I);
   }
 
-  /// The basis case walks all of the children of the statement or
+  /// \brief The basis case walks all of the children of the statement or
   /// expression, assuming they are all potentially evaluated.
   void VisitStmt(PTR(Stmt) S) {
     for (auto *SubStmt : S->children())

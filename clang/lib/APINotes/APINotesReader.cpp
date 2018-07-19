@@ -16,7 +16,6 @@
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
 #include "llvm/Bitcode/BitstreamReader.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/ADT/DenseMap.h"
@@ -161,7 +160,7 @@ namespace {
     }
 
     hash_value_type ComputeHash(internal_key_type key) {
-      return llvm::djbHash(key);
+      return llvm::HashString(key);
     }
     
     static bool EqualKey(internal_key_type lhs, internal_key_type rhs) {

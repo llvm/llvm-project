@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Includes all the separate Diagnostic headers & some related helpers.
+/// \brief Includes all the separate Diagnostic headers & some related helpers.
 ///
 //===----------------------------------------------------------------------===//
 

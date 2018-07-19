@@ -24,6 +24,3 @@ void g() {
 }
 
 namespace M = N; // expected-warning {{'N' is deprecated}}
-
-// Shouldn't diag:
-[[nodiscard, deprecated("")]] int PR37935();

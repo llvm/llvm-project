@@ -89,7 +89,7 @@ public:
     SourceLocation Loc;
     QualType ModifiedType;
     Decl *Dcl;
-    /// true if the attribute is owned, e.g. it is in a body and not just
+    /// \brief true if the attribute is owned, e.g. it is in a body and not just
     /// in an interface.
     bool FullyMigratable;
   };
@@ -97,7 +97,7 @@ public:
   llvm::DenseSet<unsigned> AttrSet;
   llvm::DenseSet<unsigned> RemovedAttrSet;
 
-  /// Set of raw '@' locations for 'assign' properties group that contain
+  /// \brief Set of raw '@' locations for 'assign' properties group that contain
   /// GC __weak.
   llvm::DenseSet<unsigned> AtPropsWeak;
 
@@ -156,21 +156,21 @@ public:
 // Helpers.
 //===----------------------------------------------------------------------===//
 
-/// Determine whether we can add weak to the given type.
+/// \brief Determine whether we can add weak to the given type.
 bool canApplyWeak(ASTContext &Ctx, QualType type,
                   bool AllowOnUnknownClass = false);
 
 bool isPlusOneAssign(const BinaryOperator *E);
 bool isPlusOne(const Expr *E);
 
-/// 'Loc' is the end of a statement range. This returns the location
+/// \brief 'Loc' is the end of a statement range. This returns the location
 /// immediately after the semicolon following the statement.
 /// If no semicolon is found or the location is inside a macro, the returned
 /// source location will be invalid.
 SourceLocation findLocationAfterSemi(SourceLocation loc, ASTContext &Ctx,
                                      bool IsDecl = false);
 
-/// 'Loc' is the end of a statement range. This returns the location
+/// \brief 'Loc' is the end of a statement range. This returns the location
 /// of the semicolon following the statement.
 /// If no semicolon is found or the location is inside a macro, the returned
 /// source location will be invalid.
@@ -179,7 +179,7 @@ SourceLocation findSemiAfterLocation(SourceLocation loc, ASTContext &Ctx,
 
 bool hasSideEffects(Expr *E, ASTContext &Ctx);
 bool isGlobalVar(Expr *E);
-/// Returns "nil" or "0" if 'nil' macro is not actually defined.
+/// \brief Returns "nil" or "0" if 'nil' macro is not actually defined.
 StringRef getNilString(MigrationPass &Pass);
 
 template <typename BODY_TRANS>

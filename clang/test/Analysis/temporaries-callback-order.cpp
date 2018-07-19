@@ -8,7 +8,11 @@ struct Sub : Super {
 };
 
 void testTemporaries() {
-  // This triggers RegionChanges once for zero-initialization of the structure.
+  // This triggers RegionChanges twice:
+  // - Once for zero-initialization of the structure.
+  // - Once for creating a temporary region and copying the structure there.
+  // FIXME: This code shouldn't really produce the extra temporary, however
+  // that's how we behave for now.
   Sub().m();
 }
 
@@ -24,6 +28,7 @@ void seeIfCheckBindWorks() {
 // CHECK-NEXT: RegionChanges
 
 // testTemporaries():
+// CHECK-NEXT: RegionChanges
 // CHECK-NEXT: RegionChanges
 
 // Make sure there's no further output.

@@ -29,7 +29,7 @@ public:
   };
   Opcode kind() const { return Kind; }
 
-  /// Logical implication. Returns true if the LExpr implies RHS, i.e. if
+  /// \brief Logical implication. Returns true if the LExpr implies RHS, i.e. if
   /// the LExpr holds, then RHS must hold. For example, (A & B) implies A.
   inline bool implies(const LExpr *RHS) const;
 
@@ -92,7 +92,7 @@ public:
   static bool classof(const LExpr *E) { return E->kind() == LExpr::Not; }
 };
 
-/// Logical implication. Returns true if LHS implies RHS, i.e. if LHS
+/// \brief Logical implication. Returns true if LHS implies RHS, i.e. if LHS
 /// holds, then RHS must hold. For example, (A & B) implies A.
 bool implies(const LExpr *LHS, const LExpr *RHS);
 

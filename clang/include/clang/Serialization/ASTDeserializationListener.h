@@ -32,28 +32,28 @@ class ASTDeserializationListener {
 public:
   virtual ~ASTDeserializationListener();
 
-  /// The ASTReader was initialized.
+  /// \brief The ASTReader was initialized.
   virtual void ReaderInitialized(ASTReader *Reader) { }
 
-  /// An identifier was deserialized from the AST file.
+  /// \brief An identifier was deserialized from the AST file.
   virtual void IdentifierRead(serialization::IdentID ID,
                               IdentifierInfo *II) { }
-  /// A macro was read from the AST file.
+  /// \brief A macro was read from the AST file.
   virtual void MacroRead(serialization::MacroID ID, MacroInfo *MI) { }
-  /// A type was deserialized from the AST file. The ID here has the
+  /// \brief A type was deserialized from the AST file. The ID here has the
   ///        qualifier bits already removed, and T is guaranteed to be locally
   ///        unqualified.
   virtual void TypeRead(serialization::TypeIdx Idx, QualType T) { }
-  /// A decl was deserialized from the AST file.
+  /// \brief A decl was deserialized from the AST file.
   virtual void DeclRead(serialization::DeclID ID, const Decl *D) { }
-  /// A selector was read from the AST file.
+  /// \brief A selector was read from the AST file.
   virtual void SelectorRead(serialization::SelectorID iD, Selector Sel) {}
-  /// A macro definition was read from the AST file.
+  /// \brief A macro definition was read from the AST file.
   virtual void MacroDefinitionRead(serialization::PreprocessedEntityID,
                                    MacroDefinitionRecord *MD) {}
-  /// A module definition was read from the AST file.
+  /// \brief A module definition was read from the AST file.
   virtual void ModuleRead(serialization::SubmoduleID ID, Module *Mod) {}
-  /// A module import was read from the AST file.
+  /// \brief A module import was read from the AST file.
   virtual void ModuleImportRead(serialization::SubmoduleID ID,
                                 SourceLocation ImportLoc) {}
 };

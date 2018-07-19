@@ -49,8 +49,6 @@ namespace clang {
 
   llvm::Expected<llvm::BitcodeModule>
   FindThinLTOModule(llvm::MemoryBufferRef MBRef);
-  llvm::BitcodeModule *
-  FindThinLTOModule(llvm::MutableArrayRef<llvm::BitcodeModule> BMs);
 }
 
 #endif

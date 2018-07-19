@@ -1,4 +1,4 @@
-//===- Dominators.cpp - Implementation of dominators tree for Clang CFG ---===//
+//=- Dominators.cpp - Implementation of dominators tree for Clang CFG C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,4 +11,4 @@
 
 using namespace clang;
 
-void DominatorTree::anchor() {}
+void DominatorTree::anchor() { }

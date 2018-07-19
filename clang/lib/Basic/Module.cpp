@@ -38,20 +38,14 @@ using namespace clang;
 Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
                bool IsFramework, bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent), Directory(),
-      Umbrella(), ASTFile(nullptr),
-      VisibilityID(VisibilityID), IsMissingRequirement(false),
-      HasIncompatibleModuleFile(false), IsAvailable(true),
-      IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
-      IsSystem(false), IsExternC(false), IsInferred(false),
+      Umbrella(), ASTFile(nullptr), VisibilityID(VisibilityID),
+      IsMissingRequirement(false), HasIncompatibleModuleFile(false),
+      IsAvailable(true), IsFromModuleFile(false), IsFramework(IsFramework),
+      IsExplicit(IsExplicit), IsSystem(false), IsExternC(false),
+      IsInferred(false), IsSwiftInferImportAsMember(false),
       InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
-      NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
-
-      // SWIFT-SPECIFIC FIELDS HERE. Handling them separately helps avoid merge
-      // conflicts.
-      IsSwiftInferImportAsMember(false),
-
-      NameVisibility(Hidden) {
+      NoUndeclaredIncludes(false), NameVisibility(Hidden) {
   if (Parent) {
     if (!Parent->isAvailable())
       IsAvailable = false;
@@ -61,8 +55,6 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       IsExternC = true;
     if (Parent->NoUndeclaredIncludes)
       NoUndeclaredIncludes = true;
-    if (Parent->ModuleMapIsPrivate)
-      ModuleMapIsPrivate = true;
     IsMissingRequirement = Parent->IsMissingRequirement;
     
     Parent->SubModuleIndex[Name] = Parent->SubModules.size();
@@ -77,7 +69,7 @@ Module::~Module() {
   }
 }
 
-/// Determine whether a translation unit built using the current
+/// \brief Determine whether a translation unit built using the current
 /// language options has the given feature.
 static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                        const TargetInfo &Target) {

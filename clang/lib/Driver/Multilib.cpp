@@ -1,4 +1,4 @@
-//===- Multilib.cpp - Multilib Implementation -----------------------------===//
+//===--- Multilib.cpp - Multilib Implementation ---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,22 +8,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Multilib.h"
-#include "clang/Basic/LLVM.h"
-#include "llvm/ADT/SmallString.h"
+#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/Options.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/YAMLParser.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cassert>
-#include <string>
 
+using namespace clang::driver;
 using namespace clang;
-using namespace driver;
+using namespace llvm::opt;
 using namespace llvm::sys;
 
 /// normalize Segment to "/foo/bar" or "".
@@ -31,7 +34,7 @@ static void normalizePathSegment(std::string &Segment) {
   StringRef seg = Segment;
 
   // Prune trailing "/" or "./"
-  while (true) {
+  while (1) {
     StringRef last = path::filename(seg);
     if (last != ".")
       break;
@@ -39,7 +42,7 @@ static void normalizePathSegment(std::string &Segment) {
   }
 
   if (seg.empty() || seg == "/") {
-    Segment.clear();
+    Segment = "";
     return;
   }
 
@@ -195,8 +198,8 @@ MultilibSet &MultilibSet::Either(ArrayRef<Multilib> MultilibSegments) {
     Multilibs.insert(Multilibs.end(), MultilibSegments.begin(),
                      MultilibSegments.end());
   else {
-    for (const auto &New : MultilibSegments) {
-      for (const auto &Base : *this) {
+    for (const Multilib &New : MultilibSegments) {
+      for (const Multilib &Base : *this) {
         Multilib MO = compose(Base, New);
         if (MO.isValid())
           Composed.push_back(MO);
@@ -259,7 +262,7 @@ bool MultilibSet::select(const Multilib::flags_list &Flags, Multilib &M) const {
     return false;
   }, Multilibs);
 
-  if (Filtered.empty())
+  if (Filtered.size() == 0)
     return false;
   if (Filtered.size() == 1) {
     M = Filtered[0];
@@ -276,7 +279,7 @@ LLVM_DUMP_METHOD void MultilibSet::dump() const {
 }
 
 void MultilibSet::print(raw_ostream &OS) const {
-  for (const auto &M : *this)
+  for (const Multilib &M : *this)
     OS << M << "\n";
 }
 

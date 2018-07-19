@@ -21,8 +21,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef __WMMINTRIN_H
-#define __WMMINTRIN_H
+#ifndef _WMMINTRIN_H
+#define _WMMINTRIN_H
 
 #include <emmintrin.h>
 
@@ -30,4 +30,4 @@
 
 #include <__wmmintrin_pclmul.h>
 
-#endif /* __WMMINTRIN_H */
+#endif /* _WMMINTRIN_H */

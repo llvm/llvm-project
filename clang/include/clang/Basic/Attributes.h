@@ -32,7 +32,7 @@ enum class AttrSyntax {
   Pragma
 };
 
-/// Return the version number associated with the attribute if we
+/// \brief Return the version number associated with the attribute if we
 /// recognize and implement the attribute specified by the given information.
 int hasAttribute(AttrSyntax Syntax, const IdentifierInfo *Scope,
                  const IdentifierInfo *Attr, const TargetInfo &Target,

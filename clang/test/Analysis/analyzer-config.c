@@ -16,15 +16,14 @@ void foo() {
 // CHECK-NEXT: cfg-lifetime = false
 // CHECK-NEXT: cfg-loopexit = false
 // CHECK-NEXT: cfg-rich-constructors = true
-// CHECK-NEXT: cfg-scopes = false
 // CHECK-NEXT: cfg-temporary-dtors = true
-// CHECK-NEXT: elide-constructors = true
 // CHECK-NEXT: exploration_strategy = unexplored_first_queue
 // CHECK-NEXT: faux-bodies = true
 // CHECK-NEXT: graph-trim-interval = 1000
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
 // CHECK-NEXT: ipa-always-inline-size = 3
+// CHECK-NEXT: leak-diagnostics-reference-allocation = false
 // CHECK-NEXT: max-inlinable-size = 100
 // CHECK-NEXT: max-nodes = 225000
 // CHECK-NEXT: max-times-inline-large = 32
@@ -35,4 +34,4 @@ void foo() {
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 23
+// CHECK-NEXT: num-entries = 22
