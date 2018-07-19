@@ -111,6 +111,9 @@ class CheckRegOperand<int Index, Register R> : MCOperandPredicate<Index> {
   Register Reg = R;
 }
 
+// Check if register operand at index `Index` is the invalid register.
+class CheckInvalidRegOperand<int Index> : MCOperandPredicate<Index>;
+
 // Check that the operand at position `Index` is immediate `Imm`.
 class CheckImmOperand<int Index, int Imm> : MCOperandPredicate<Index> {
   int ImmVal = Imm;

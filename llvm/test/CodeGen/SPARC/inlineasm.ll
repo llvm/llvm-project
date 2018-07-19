@@ -130,12 +130,3 @@ entry:
   tail call void asm sideeffect "faddd $0,$1,$2", "{f20},{f20},{f20}"(double 9.0, double 10.0, double 11.0)
   ret void
 }
-
-; CHECK-LABEL: test_constraint_r_f64:
-; CHECK: std %o0, [%sp+96]
-; CHECK: ldd [%sp+96], %f0
-define double @test_constraint_r_f64() {
-entry:
-  %0 = call double asm sideeffect "", "=r"()
-  ret double %0
-}

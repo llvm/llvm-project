@@ -61,6 +61,14 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  bool isTargetHardFloat() const {
+    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
+           TargetTriple.getEnvironment() == Triple::EABIHF ||
+           TargetTriple.isOSWindows() ||
+           TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+  }
 };
 
 /// ARM/Thumb little endian target machine.

@@ -894,7 +894,7 @@ def : MipsPat<(f64 (sint_to_fp GPR64Opnd:$src)),
               (PseudoCVT_D64_L GPR64Opnd:$src)>, FGR_64;
 
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
-              (TRUNC_W_D64 FGR64Opnd:$src)>, ISA_MIPS3, FGR_64;
+              (TRUNC_W_D64 FGR64Opnd:$src)>, ISA_MIPS2, FGR_64;
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
               (TRUNC_L_S FGR32Opnd:$src)>, ISA_MIPS2, FGR_64;
 def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),

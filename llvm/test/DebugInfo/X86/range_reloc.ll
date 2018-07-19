@@ -1,11 +1,12 @@
 ; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -use-dwarf-ranges-base-address-specifier | FileCheck --check-prefix=COMMON --check-prefix=BASE %s
 ; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=COMMON --check-prefix=NOBASE %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -dwarf-version 5 | FileCheck --check-prefix=DWARF5 %s
 
 ; Group ranges in a range list that apply to the same section and use a base
 ; address selection entry to reduce the number of relocations to one reloc per
-; section per range list. DWARF5 debug_rnglist will be more efficient than this
-; in terms of relocations, but it's still better than one reloc per entry in a
-; range list.
+; section per range list. DWARF5 debug_rnglist (with *x variants) are more
+; efficient than this in terms of relocations, but it's still better than one
+; reloc per entry in a range list.
 
 ; This is an object/executable size tradeoff - shrinking objects, but growing
 ; the linked executable. In one large binary tested, total object size (not just
@@ -35,6 +36,26 @@
 ; COMMON-NEXT:   .quad   .Lfunc_end5
 ; COMMON-NEXT:   .quad   0
 ; COMMON-NEXT:   .quad   0
+
+; DWARF5: {{^.Ldebug_ranges0}}
+; DWARF5-NEXT:                                      # DW_RLE_start_length
+; DWARF5-NEXT: .quad    .Lfunc_begin0               #   start
+; DWARF5-NEXT: .uleb128 .Lfunc_end0-.Lfunc_begin0   #   length
+; DWARF5-NEXT:                                      # DW_RLE_base_address
+; DWARF5-NEXT: .quad    .Lfunc_begin1               #   base address
+; DWARF5-NEXT:                                      # DW_RLE_offset_pair
+; DWARF5-NEXT: .uleb128 .Lfunc_begin1-.Lfunc_begin1 #   starting offset
+; DWARF5-NEXT: .uleb128 .Lfunc_end1-.Lfunc_begin1   #   ending offset
+; DWARF5-NEXT:                                      # DW_RLE_offset_pair
+; DWARF5-NEXT: .uleb128 .Lfunc_begin3-.Lfunc_begin1 #   starting offset
+; DWARF5-NEXT: .uleb128 .Lfunc_end3-.Lfunc_begin1   #   ending offset
+; DWARF5-NEXT:                                      # DW_RLE_start_length
+; DWARF5-NEXT: .quad	   .Lfunc_begin4               #   start
+; DWARF5-NEXT: .uleb128 .Lfunc_end4-.Lfunc_begin4   #   length
+; DWARF5-NEXT:                                      # DW_RLE_start_length
+; DWARF5-NEXT: .quad	   .Lfunc_begin5               #   start
+; DWARF5-NEXT: .uleb128 .Lfunc_end5-.Lfunc_begin5   #   length
+; DWARF5-NEXT:                                      # DW_RLE_end_of_list
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @_Z2f1v() #0 section "a" !dbg !7 {

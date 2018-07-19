@@ -51,6 +51,15 @@ fadd    z0.h, p7/m, z0.h, z31.s
 // CHECK-NEXT: fadd    z0.h, p7/m, z0.h, z31.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+fadd z0.b, z1.b, z2.b
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK-NEXT: fadd z0.b, z1.b, z2.b
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fadd z0.h, z1.s, z2.s
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK-NEXT: fadd z0.h, z1.s, z2.s
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // ------------------------------------------------------------------------- //
 // Invalid predicate

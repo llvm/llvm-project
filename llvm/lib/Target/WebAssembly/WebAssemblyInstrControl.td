@@ -140,6 +140,8 @@ defm UNREACHABLE : NRI<(outs), (ins), [(trap)], "unreachable", 0x00>;
 // Exception handling instructions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [HasExceptionHandling] in {
+
 // Throwing an exception: throw / rethrow
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
 defm THROW_I32 : I<(outs), (ins i32imm:$tag, I32:$val),
@@ -186,6 +188,7 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
   defm CLEANUPRET : NRI<(outs), (ins), [(cleanupret)], "", 0>;
   defm CATCHRET : NRI<(outs), (ins bb_op:$dst, bb_op:$from),
                    [(catchret bb:$dst, bb:$from)], "", 0>;
+}
 }
 
 } // Defs = [ARGUMENTS]
