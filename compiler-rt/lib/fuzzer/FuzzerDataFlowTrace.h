@@ -40,7 +40,7 @@ class DataFlowTrace {
  public:
   void Init(const std::string &DirPath, const std::string &FocusFunction);
   void Clear() { Traces.clear(); }
-  const Vector<bool> *Get(const std::string &InputSha1) const {
+  const Vector<uint8_t> *Get(const std::string &InputSha1) const {
     auto It = Traces.find(InputSha1);
     if (It != Traces.end())
       return &It->second;
@@ -49,7 +49,7 @@ class DataFlowTrace {
 
  private:
   // Input's sha1 => DFT for the FocusFunction.
-  std::unordered_map<std::string, Vector<bool> > Traces;
+  std::unordered_map<std::string, Vector<uint8_t> > Traces;
 };
 }  // namespace fuzzer
 

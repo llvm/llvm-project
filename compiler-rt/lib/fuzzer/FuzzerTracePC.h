@@ -178,6 +178,9 @@ private:
   Set<uintptr_t> ObservedPCs;
   Set<uintptr_t> ObservedFuncs;
 
+  template <class Callback>
+  void IterateInline8bitCounters(Callback CB) const;
+
   std::pair<size_t, size_t> FocusFunction = {-1, -1};  // Module and PC IDs.
 
   ValueBitMap ValueProfileMap;
